@@ -7,9 +7,9 @@
     "dev": "pnpm run --parallel dev",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build:server": "pnpm --filter server build",
-    "build:web": "pnpm --filter web build",
+    "build:web": "pnpm --filter sectors build",
     "start:server": "pnpm --filter server start:prod",
-    "start:web": "pnpm --filter web start"
+    "start:web": "pnpm --filter sectors start"
   },
   "keywords": [],
   "author": "",
