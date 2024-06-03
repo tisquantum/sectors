@@ -2,9 +2,15 @@ import { z } from 'zod';
 import { RoomMessageService } from '@server/room-messages/room-messages.service';
 import { TrpcService } from '../trpc.service';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import { PusherService } from 'nestjs-pusher';
+import {
+  EVENT_ROOM_MESSAGE,
+  getRoomChannelId,
+} from '@server/pusher/pusher.types';
 
 type Context = {
   roomMessageService: RoomMessageService;
+  pusherService: PusherService;
 };
 
 export default (trpc: TrpcService, ctx: Context) =>
@@ -47,7 +53,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           roomId: z.number(),
           userId: z.string(),
           content: z.string(),
-          timestamp: z.date(),
+          timestamp: z.string().pipe(z.coerce.date()),
         }),
       )
       .mutation(async ({ input }) => {
@@ -64,6 +70,13 @@ export default (trpc: TrpcService, ctx: Context) =>
               connect: { id: userId },
             },
           });
+
+          //pusher logic
+          ctx.pusherService
+            .trigger(getRoomChannelId(roomId), EVENT_ROOM_MESSAGE, roomMessage)
+            .catch((error) => {
+              console.error('Error triggering pusher event:', error);
+            });
 
           return {
             success: true,

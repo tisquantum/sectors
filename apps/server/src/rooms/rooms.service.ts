@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
-import { Room, Prisma } from '@prisma/client';
+import { Room, Prisma, User } from '@prisma/client';
 import { PusherChannel, PusherEvent } from 'nestjs-pusher';
 import {
   CHANNEL_ROOM_GLOBAL,
@@ -13,9 +13,16 @@ export class RoomService {
 
   async room(
     roomWhereUniqueInput: Prisma.RoomWhereUniqueInput,
-  ): Promise<Room | null> {
+  ): Promise<(Room & { users: { user: User }[] }) | null> {
     return this.prisma.room.findUnique({
       where: roomWhereUniqueInput,
+      include: {
+        users: {
+          include: {
+            user: true, // Assuming RoomUser has a relation to User
+          },
+        },
+      },
     });
   }
 
@@ -25,7 +32,7 @@ export class RoomService {
     cursor?: Prisma.RoomWhereUniqueInput;
     where?: Prisma.RoomWhereInput;
     orderBy?: Prisma.RoomOrderByWithRelationInput;
-  }): Promise<Room[]> {
+  }): Promise<(Room & { users: { user: User }[] })[]> {
     const { skip, take, cursor, where, orderBy } = params;
     return this.prisma.room.findMany({
       skip,
@@ -33,6 +40,13 @@ export class RoomService {
       cursor,
       where,
       orderBy,
+      include: {
+        users: {
+          include: {
+            user: true, // Assuming RoomUser has a relation to User
+          },
+        },
+      },
     });
   }
 

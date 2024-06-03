@@ -2,11 +2,11 @@
 
 import { trpc } from "@sectors/app/trpc";
 import { useEffect, useState } from "react";
-import { Room } from "@server/prisma/prisma.client";
-import RoomComponent from "./Room";
+import RoomList from "./RoomList";
+import { RoomWithUser } from "@server/prisma/prisma.types";
 
-export default function ClientSide() {
-  const [rooms, setRooms] = useState<Room[]>([]);
+export default function RoomBrowser() {
+  const [rooms, setRooms] = useState<RoomWithUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,12 +34,12 @@ export default function ClientSide() {
 
   return (
     <div className="container mx-auto">
-      <h1>Rooms</h1>
-      <div className="grid grid-flow-row auto-rows-max">
-        {rooms.map((room) => (
-          <RoomComponent room={room} key={room.id} />
-        ))}
-      </div>
+    <h1 className="text-2xl font-bold mb-4">Rooms</h1>
+    <div className="grid grid-flow-row auto-rows-max">
+      {rooms.map((room) => (
+        <RoomList room={room} key={room.id} />
+      ))}
     </div>
+  </div>
   );
 }

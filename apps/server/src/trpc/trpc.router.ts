@@ -39,6 +39,7 @@ export class TrpcRouter {
     room: roomRouter(this.trpc, { roomService: this.roomService }),
     roomMessage: roomMessageRouter(this.trpc, {
       roomMessageService: this.roomMessageService,
+      pusherService: this.pusherService,
     }),
     roomUser: roomUserRouter(this.trpc, {
       roomUserService: this.roomUserService,

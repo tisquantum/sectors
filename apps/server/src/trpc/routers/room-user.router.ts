@@ -68,16 +68,7 @@ export default (trpc: TrpcService, ctx: Context) =>
 
           //pusher logic
           ctx.pusherService
-            .trigger(getRoomChannelId(roomId), EVENT_ROOM_JOINED, roomUser)
-            .then((event) => {
-              console.log('Pusher event triggered', event);
-              console.log(
-                'RoomUser:',
-                roomUser,
-                EVENT_ROOM_JOINED,
-                getRoomChannelId(roomId),
-              );
-            })
+            .trigger(getRoomChannelId(roomId), EVENT_ROOM_JOINED, roomUser.user)
             .catch((error) => {
               console.error('Error triggering pusher event:', error);
             });

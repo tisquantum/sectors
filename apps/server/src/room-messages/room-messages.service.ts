@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
-import { RoomMessage, Prisma } from '@prisma/client';
+import { RoomMessage, Prisma, User } from '@prisma/client';
 
 @Injectable()
 export class RoomMessageService {
@@ -8,9 +8,12 @@ export class RoomMessageService {
 
   async roomMessage(
     roomMessageWhereUniqueInput: Prisma.RoomMessageWhereUniqueInput,
-  ): Promise<RoomMessage | null> {
+  ): Promise<(RoomMessage & { user: User }) | null> {
     return this.prisma.roomMessage.findUnique({
       where: roomMessageWhereUniqueInput,
+      include: {
+        user: true,
+      },
     });
   }
 
@@ -20,7 +23,7 @@ export class RoomMessageService {
     cursor?: Prisma.RoomMessageWhereUniqueInput;
     where?: Prisma.RoomMessageWhereInput;
     orderBy?: Prisma.RoomMessageOrderByWithRelationInput;
-  }): Promise<RoomMessage[]> {
+  }): Promise<(RoomMessage & { user: User })[]> {
     const { skip, take, cursor, where, orderBy } = params;
     return this.prisma.roomMessage.findMany({
       skip,
@@ -28,14 +31,20 @@ export class RoomMessageService {
       cursor,
       where,
       orderBy,
+      include: {
+        user: true,
+      },
     });
   }
 
   async createRoomMessage(
     data: Prisma.RoomMessageCreateInput,
-  ): Promise<RoomMessage> {
+  ): Promise<RoomMessage & { user: User }> {
     return this.prisma.roomMessage.create({
       data,
+      include: {
+        user: true,
+      },
     });
   }
 

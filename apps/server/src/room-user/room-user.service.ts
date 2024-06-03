@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
-import { RoomUser, Prisma } from '@prisma/client';
+import { RoomUser, Prisma, User } from '@prisma/client';
 
 @Injectable()
 export class RoomUserService {
@@ -8,9 +8,12 @@ export class RoomUserService {
 
   async roomUser(
     roomUserWhereUniqueInput: Prisma.RoomUserWhereUniqueInput,
-  ): Promise<RoomUser | null> {
+  ): Promise<(RoomUser & { user: User }) | null> {
     return this.prisma.roomUser.findUnique({
       where: roomUserWhereUniqueInput,
+      include: {
+        user: true,
+      },
     });
   }
 
@@ -20,7 +23,7 @@ export class RoomUserService {
     cursor?: Prisma.RoomUserWhereUniqueInput;
     where?: Prisma.RoomUserWhereInput;
     orderBy?: Prisma.RoomUserOrderByWithRelationInput;
-  }): Promise<RoomUser[]> {
+  }): Promise<(RoomUser & { user: User })[]> {
     const { skip, take, cursor, where, orderBy } = params;
     return this.prisma.roomUser.findMany({
       skip,
@@ -28,12 +31,20 @@ export class RoomUserService {
       cursor,
       where,
       orderBy,
+      include: {
+        user: true,
+      },
     });
   }
 
-  async createRoomUser(data: Prisma.RoomUserCreateInput): Promise<RoomUser> {
+  async createRoomUser(
+    data: Prisma.RoomUserCreateInput,
+  ): Promise<RoomUser & { user: User }> {
     return this.prisma.roomUser.create({
       data,
+      include: {
+        user: true,
+      },
     });
   }
 
