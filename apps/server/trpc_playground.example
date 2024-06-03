@@ -1,0 +1,9 @@
+await trpc.user.listUsers.query({}) 
+
+await trpc.room.createRoom.mutate({name: 'Fun Room'})
+
+await trpc.room.listRooms.query({}) 
+
+await trpc.roomUser.joinRoom.mutate({userId: '3a169655-aa35-47ce-b55f-6277f2e11c4a', roomId: 1})
+
+export {}

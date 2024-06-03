@@ -1,0 +1,195 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String        @id @default(uuid())
+  authUserId  String        @unique @default(uuid())
+  RoomMessage RoomMessage[]
+  RoomUser    RoomUser[]
+}
+
+model Room {
+  id       Int        @id @default(autoincrement())
+  name     String
+  users    RoomUser[]
+  messages RoomMessage[]
+  gameId   String?
+  game     Game?         @relation(fields: [gameId], references: [id])
+}
+
+model RoomMessage {
+  id        String   @id @default(uuid())
+  roomId    Int
+  userId    String
+  content   String
+  timestamp DateTime
+
+  room Room @relation(fields: [roomId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([roomId])
+  @@index([userId])
+}
+
+model RoomUser {
+  userId String
+  roomId Int
+
+  user User @relation(fields: [userId], references: [id])
+  room Room @relation(fields: [roomId], references: [id])
+
+  @@id([userId, roomId])
+}
+
+model Player {
+  id          String        @id @default(uuid())
+  nickname    String
+  cashOnHand  Float
+  gameId      String
+  Game        Game          @relation(fields: [gameId], references: [id])
+  PlayerStock PlayerStock[]
+  GamePlayer  GamePlayer[]
+}
+
+model PlayerStock {
+  playerId            String
+  stockId             String
+  ownershipPercentage Float
+
+  Player Player @relation(fields: [playerId], references: [id])
+  Stock  Stock  @relation(fields: [stockId], references: [id])
+
+  @@id([playerId, stockId])
+}
+
+model Stock {
+  id           String         @id @default(uuid())
+  currentPrice Float
+  companyId    String
+  location     String
+  gameId       String
+  Company      Company        @relation(fields: [companyId], references: [id])
+  StockHistory StockHistory[]
+  PlayerStock  PlayerStock[]
+  CompanyStock CompanyStock[]
+}
+
+model Company {
+  id                 String         @id @default(uuid())
+  name               String
+  currentStockPrice  Float
+  cashOnHand         Float
+  throughput         Int
+  sector             String
+  gameId             String
+  insolvent          Int
+  mergedWithParent   String?
+  mergedWithChildren Json
+  lastRevenueValue   Float
+  Game               Game           @relation(fields: [gameId], references: [id])
+  CompanyStock       CompanyStock[]
+  Stock              Stock[]
+  GameCompany        GameCompany[]
+}
+
+model CompanyStock {
+  companyId String
+  stockId   String
+
+  Company Company @relation(fields: [companyId], references: [id])
+  Stock   Stock   @relation(fields: [stockId], references: [id])
+
+  @@id([companyId, stockId])
+}
+
+model StockHistory {
+  id                Int @id @default(autoincrement())
+  stockId           String
+  price             Float
+  productionRevenue Float
+  gameId            String
+  timestamp         Int
+  Stock             Stock  @relation(fields: [stockId], references: [id])
+}
+
+model StockRound {
+  id     Int @id @default(autoincrement())
+  phase  String
+  gameId String
+  Game   Game   @relation(fields: [gameId], references: [id])
+}
+
+model OperatingRound {
+  id      Int @id @default(autoincrement())
+  actions Json
+  gameId  String
+  Game    Game   @relation(fields: [gameId], references: [id])
+}
+
+model ResearchDeck {
+  id     Int @id @default(autoincrement())
+  gameId String
+  cards  Json
+  Game   Game   @relation(fields: [gameId], references: [id])
+}
+
+model Sector {
+  id             String @id @default(uuid())
+  name           String
+  supply         Int
+  demand         Int
+  marketingPrice Float
+  floatNumber    Int
+}
+
+model Game {
+  id                  String           @id @default(uuid())
+  name                String
+  currentTurn         Int
+  currentOrSubRound   Int
+  currentRound        String
+  currentActivePlayer String?
+  bankPoolNumber      Int
+  consumerPoolNumber  Int
+  gameStatus          String
+  players             GamePlayer[]
+  companies           GameCompany[]
+  Player              Player[]
+  Company             Company[]
+  StockRound          StockRound[]
+  OperatingRound      OperatingRound[]
+  ResearchDeck        ResearchDeck[]
+  Room                Room[]
+}
+
+model GamePlayer {
+  gameId   String
+  playerId String
+
+  Game   Game   @relation(fields: [gameId], references: [id])
+  Player Player @relation(fields: [playerId], references: [id])
+
+  @@id([gameId, playerId])
+}
+
+model GameCompany {
+  gameId    String
+  companyId String
+
+  Game    Game    @relation(fields: [gameId], references: [id])
+  Company Company @relation(fields: [companyId], references: [id])
+
+  @@id([gameId, companyId])
+}

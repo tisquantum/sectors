@@ -1,0 +1,116 @@
+import { z } from 'zod';
+import { RoomMessageService } from '@server/room-messages/room-messages.service';
+import { TrpcService } from '../trpc.service';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+
+type Context = {
+  roomMessageService: RoomMessageService;
+};
+
+export default (trpc: TrpcService, ctx: Context) =>
+  trpc.router({
+    getRoomMessage: trpc.procedure
+      .input(z.object({ id: z.string() }))
+      .query(async ({ input }) => {
+        const { id } = input;
+        const roomMessage = await ctx.roomMessageService.roomMessage({ id });
+        if (!roomMessage) {
+          throw new Error('RoomMessage not found');
+        }
+        return roomMessage;
+      }),
+
+    listRoomMessages: trpc.procedure
+      .input(
+        z.object({
+          skip: z.number().optional(),
+          take: z.number().optional(),
+          cursor: z.string().optional(),
+          where: z.any().optional(),
+          orderBy: z.any().optional(),
+        }),
+      )
+      .query(async ({ input }) => {
+        const { skip, take, cursor, where, orderBy } = input;
+        return ctx.roomMessageService.roomMessages({
+          skip,
+          take,
+          cursor: cursor ? { id: cursor } : undefined,
+          where,
+          orderBy,
+        });
+      }),
+
+    createRoomMessage: trpc.procedure
+      .input(
+        z.object({
+          roomId: z.number(),
+          userId: z.string(),
+          content: z.string(),
+          timestamp: z.date(),
+        }),
+      )
+      .mutation(async ({ input }) => {
+        const { roomId, userId, content, timestamp } = input;
+
+        try {
+          const roomMessage = await ctx.roomMessageService.createRoomMessage({
+            content,
+            timestamp,
+            room: {
+              connect: { id: roomId },
+            },
+            user: {
+              connect: { id: userId },
+            },
+          });
+
+          return {
+            success: true,
+            message: 'Message successfully sent to the room',
+            data: roomMessage,
+          };
+        } catch (error) {
+          if (
+            error instanceof PrismaClientKnownRequestError &&
+            error.code === 'P2025'
+          ) {
+            return {
+              success: false,
+              message: 'The room does not exist',
+            };
+          }
+
+          return {
+            success: false,
+            message: 'An unexpected error occurred',
+            error: error.message,
+          };
+        }
+      }),
+
+    updateRoomMessage: trpc.procedure
+      .input(
+        z.object({
+          id: z.string(),
+          data: z.object({
+            content: z.string().optional(),
+            timestamp: z.date().optional(),
+          }),
+        }),
+      )
+      .mutation(async ({ input }) => {
+        const { id, data } = input;
+        return ctx.roomMessageService.updateRoomMessage({
+          where: { id },
+          data,
+        });
+      }),
+
+    deleteRoomMessage: trpc.procedure
+      .input(z.object({ id: z.string() }))
+      .mutation(async ({ input }) => {
+        const { id } = input;
+        return ctx.roomMessageService.deleteRoomMessage({ id });
+      }),
+  });
