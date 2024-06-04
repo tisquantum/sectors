@@ -11,6 +11,10 @@ import { RoomUserService } from '@server/room-user/room-user.service';
 import roomMessageRouter from './routers/room-message.router';
 import roomUserRouter from './routers/room-user.router';
 import { PusherService } from 'nestjs-pusher';
+import { GamesService } from '@server/games/games.service';
+import gameRouter from './routers/game.router';
+import gamePlayerRouter from './routers/game-player.router';
+import { GamePlayerService } from '@server/game-player/game-player.service';
 @Injectable()
 export class TrpcRouter {
   constructor(
@@ -19,6 +23,8 @@ export class TrpcRouter {
     private readonly roomService: RoomService,
     private readonly roomMessageService: RoomMessageService,
     private readonly roomUserService: RoomUserService,
+    private readonly gamesService: GamesService,
+    private readonly gamePlayerService: GamePlayerService,
     private readonly pusherService: PusherService,
   ) {}
 
@@ -43,6 +49,15 @@ export class TrpcRouter {
     }),
     roomUser: roomUserRouter(this.trpc, {
       roomUserService: this.roomUserService,
+      pusherService: this.pusherService,
+    }),
+    game: gameRouter(this.trpc, {
+      gamesService: this.gamesService,
+      gamePlayersService: this.gamePlayerService,
+      pusherService: this.pusherService,
+    }),
+    gamePlayer: gamePlayerRouter(this.trpc, {
+      gamePlayersService: this.gamePlayerService,
       pusherService: this.pusherService,
     }),
   });

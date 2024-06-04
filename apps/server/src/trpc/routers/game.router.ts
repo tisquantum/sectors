@@ -7,7 +7,7 @@ import { GamePlayerService } from '@server/game-player/game-player.service';
 
 type Context = {
   gamesService: GamesService;
-  gamePlayerService: GamePlayerService;
+  gamePlayersService: GamePlayerService;
   pusherService: PusherService;
 };
 
@@ -74,7 +74,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           const game = await ctx.gamesService.createGame(data);
 
           try {
-            ctx.gamePlayerService.addPlayersToGame(
+            ctx.gamePlayersService.addPlayersToGame(
               game.id,
               input.roomId,
               input.startingCashOnHand,
