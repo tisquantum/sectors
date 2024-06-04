@@ -3,34 +3,53 @@ import React from "react";
 import { Room, User } from "@server/prisma/prisma.client";
 import { Avatar, Button } from "@nextui-org/react";
 import { trpc } from "@sectors/app/trpc";
-
+import { useAuthUser } from "@sectors/app/components/AuthUser.context";
+import GameOptions from "./GameOptions";
 interface SidebarProps {
   users: User[];
   room: Room;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ users, room}) => {
+const Sidebar: React.FC<SidebarProps> = ({ users, room }) => {
+  const { user } = useAuthUser();
+
+  if (!user) return null;
+
   const handleJoin = (roomId: number) => {
     trpc.roomUser.joinRoom.mutate({
       roomId,
-      userId: "3a169655-aa35-47ce-b55f-6277f2e11c4a",
+      userId: user.id,
     });
   };
 
   const handleLeave = (roomId: number) => {
     trpc.roomUser.leaveRoom.mutate({
       roomId,
-      userId: "3a169655-aa35-47ce-b55f-6277f2e11c4a",
+      userId: user.id,
     });
+  };
+
+  const handleStartGame = (roomId: number) => {
+    //TODO: Start the game.
   };
   return (
     <div className="w-1/4 bg-gray-800 text-white p-6 flex flex-col">
       <div className="mb-6">
-        <Button color="primary" onClick={() => handleLeave(room.id)} className="mb-4 w-full">
+        <Button
+          color="primary"
+          onClick={() => handleLeave(room.id)}
+          className="mb-4 w-full"
+        >
           Leave
         </Button>
-        <Button color="primary" onClick={() => handleJoin(room.id)} className="w-full">
-          Join
+        <GameOptions />
+        <Button
+          color="primary"
+          onClick={() => handleStartGame(room.id)}
+          radius="none"
+          className="w-full rounded-b-md"
+        >
+          Start Game
         </Button>
       </div>
       <ul className="flex-1 overflow-y-auto">

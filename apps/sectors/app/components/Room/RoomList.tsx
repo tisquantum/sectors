@@ -1,20 +1,26 @@
-// components/RoomList.tsx
+'use client'
+
 import React from "react";
-import { Room, User } from "@server/prisma/prisma.client";
 import { AvatarGroup, Avatar, Button } from "@nextui-org/react";
 import { trpc } from "@sectors/app/trpc";
 import { RoomWithUser } from "@server/prisma/prisma.types";
-
+import { useAuthUser } from "@sectors/app/components/AuthUser.context";
+import { useRouter } from "next/navigation";
 interface RoomListProps {
   room: RoomWithUser;
 }
 
 const RoomList: React.FC<RoomListProps> = ({ room }) => {
+  const { user } = useAuthUser();
+  const router = useRouter();
+  if(!user) return null;
+
   const handleJoin = (roomId: number) => {
     trpc.roomUser.joinRoom.mutate({
       roomId,
-      userId: "3a169655-aa35-47ce-b55f-6277f2e11c4a",
+      userId: user.id,
     });
+    router.push(`/rooms/${roomId}`);
   };
 
   return (

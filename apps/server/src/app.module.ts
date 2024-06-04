@@ -10,6 +10,8 @@ import { RoomMessagesModule } from './room-messages/room-messages.module';
 import { RoomUserModule } from './room-user/room-user.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { PusherModule } from 'nestjs-pusher';
+import { GamesModule } from './games/games.module';
+import { GamePlayerModule } from './game-player/game-player.module';
 
 const yourPusherOptions = {
   cluster: process.env.PUSHER_CLUSTER ?? 'CLUSTER',
@@ -34,6 +36,8 @@ const chunkingOptions = {
     RoomUserModule,
     PrismaModule,
     PusherModule.forRoot(yourPusherOptions, chunkingOptions, true),
+    GamesModule,
+    GamePlayerModule,
   ],
   controllers: [AppController],
   providers: [AppService],

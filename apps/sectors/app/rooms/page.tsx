@@ -1,5 +1,5 @@
 import RoomBrowser from "../components/Room/RoomBrowser";
 
-export default function Test() {
+export default function RoomBrowserPage() {
     return <RoomBrowser />;
 }

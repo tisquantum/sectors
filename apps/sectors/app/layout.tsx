@@ -3,6 +3,8 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { NextUIProvider } from "@nextui-org/react";
 import { PusherProvider } from "./components/Pusher.context";
+import { AuthUserProvider } from "./components/AuthUser.context";
+import TopBar from "./components/TopBar";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -20,7 +22,14 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <NextUIProvider>
-          <PusherProvider>{children}</PusherProvider>
+          <AuthUserProvider>
+            <PusherProvider>
+              <div className="flex flex-col h-screen">
+                <TopBar />
+                {children}
+              </div>
+            </PusherProvider>
+          </AuthUserProvider>
         </NextUIProvider>
       </body>
     </html>

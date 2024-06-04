@@ -11,6 +11,9 @@ export class PlayersService {
   ): Promise<Player | null> {
     return this.prisma.player.findUnique({
       where: playerWhereUniqueInput,
+      include: {
+        Game: true,
+      },
     });
   }
 

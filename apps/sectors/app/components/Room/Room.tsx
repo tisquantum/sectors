@@ -18,8 +18,10 @@ import { RoomMessageWithUser } from "@server/prisma/prisma.types";
 import Sidebar from "./Sidebar";
 import MessagePane from "./MessagePane";
 import SendMessage from "./SendMessage";
+import { useAuthUser } from "@sectors/app/components/AuthUser.context";
 
 const RoomComponent = ({ room }: { room: Room }) => {
+  const { user } = useAuthUser();
   const { pusher } = usePusher();
   const [roomUsers, setRoomUsers] = useState<User[]>([]);
   const [messages, setMessages] = useState<RoomMessageWithUser[]>([]);
@@ -92,26 +94,30 @@ const RoomComponent = ({ room }: { room: Room }) => {
     };
   }, [pusher, id, loading]);
 
-  const handleSendMessage = (content: string) => {
-    //this data update is broadcast through a socket
-    trpc.roomMessage.createRoomMessage.mutate({
-      roomId: id,
-      userId: "3a169655-aa35-47ce-b55f-6277f2e11c4a",
-      content,
-      timestamp: new Date(),
-    });
-  };
-
   if (loading) {
     return <div>Loading...</div>;
+  }
+
+  if(!user) {
+    return <div>Not authenticated</div>
   }
 
   if (error) {
     return <div>Error: {error}</div>;
   }
 
+  const handleSendMessage = (content: string) => {
+    //this data update is broadcast through a socket
+    trpc.roomMessage.createRoomMessage.mutate({
+      roomId: id,
+      userId: user.id,
+      content,
+      timestamp: new Date().toISOString(),
+    });
+  };
+
   return (
-    <div className="h-screen w-full flex" key={room.id}>
+    <div className="flex h-screen overflow-hidden">
       <Sidebar users={roomUsers} room={room} />
       <div className="flex flex-col flex-grow bg-gray-100">
         <div className="bg-gray-800 text-white p-4">
