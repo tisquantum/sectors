@@ -15,6 +15,7 @@ import { GamesService } from '@server/games/games.service';
 import gameRouter from './routers/game.router';
 import gamePlayerRouter from './routers/game-player.router';
 import { GamePlayerService } from '@server/game-player/game-player.service';
+import { GameManagementService } from '@server/game-management/game-management.service';
 @Injectable()
 export class TrpcRouter {
   constructor(
@@ -26,6 +27,7 @@ export class TrpcRouter {
     private readonly gamesService: GamesService,
     private readonly gamePlayerService: GamePlayerService,
     private readonly pusherService: PusherService,
+    private readonly gameManagementService: GameManagementService,
   ) {}
 
   appRouter = this.trpc.router({
@@ -53,7 +55,7 @@ export class TrpcRouter {
     }),
     game: gameRouter(this.trpc, {
       gamesService: this.gamesService,
-      gamePlayersService: this.gamePlayerService,
+      gameManagementService: this.gameManagementService,
       pusherService: this.pusherService,
     }),
     gamePlayer: gamePlayerRouter(this.trpc, {

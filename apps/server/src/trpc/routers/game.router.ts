@@ -3,11 +3,11 @@ import { z } from 'zod';
 import { GamesService } from '@server/games/games.service';
 import { TrpcService } from '../trpc.service';
 import { Prisma } from '@prisma/client';
-import { GamePlayerService } from '@server/game-player/game-player.service';
+import { GameManagementService } from '@server/game-management/game-management.service';
 
 type Context = {
   gamesService: GamesService;
-  gamePlayersService: GamePlayerService;
+  gameManagementService: GameManagementService;
   pusherService: PusherService;
 };
 
@@ -74,7 +74,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           const game = await ctx.gamesService.createGame(data);
 
           try {
-            ctx.gamePlayersService.addPlayersToGame(
+            ctx.gameManagementService.addPlayersToGame(
               game.id,
               input.roomId,
               input.startingCashOnHand,

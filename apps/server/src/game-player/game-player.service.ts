@@ -61,39 +61,4 @@ export class GamePlayerService {
       where,
     });
   }
-
-  async addPlayersToGame(
-    gameId: string,
-    roomId: number,
-    startingCashOnHand: number,
-  ): Promise<GamePlayer[]> {
-    const users = await this.prisma.roomUser.findMany({
-      where: {
-        roomId,
-      },
-      include: {
-        user: true,
-      },
-    });
-
-    //create players for the game
-    const players = await Promise.all(
-      users.map((user) =>
-        this.playersService.createPlayer({
-          nickname: user.user.name,
-          cashOnHand: startingCashOnHand,
-          Game: { connect: { id: gameId } },
-        }),
-      ),
-    );
-
-    return Promise.all(
-      players.map((player) =>
-        this.createGamePlayer({
-          Game: { connect: { id: gameId } },
-          Player: { connect: { id: player.id } },
-        }),
-      ),
-    );
-  }
 }

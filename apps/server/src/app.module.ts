@@ -12,6 +12,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { PusherModule } from 'nestjs-pusher';
 import { GamesModule } from './games/games.module';
 import { GamePlayerModule } from './game-player/game-player.module';
+import { GameManagementModule } from './game-management/game-management.module';
 
 const yourPusherOptions = {
   cluster: process.env.PUSHER_CLUSTER ?? 'CLUSTER',
@@ -38,6 +39,7 @@ const chunkingOptions = {
     PusherModule.forRoot(yourPusherOptions, chunkingOptions, true),
     GamesModule,
     GamePlayerModule,
+    GameManagementModule,
   ],
   controllers: [AppController],
   providers: [AppService],
