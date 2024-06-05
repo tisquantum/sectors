@@ -7,6 +7,9 @@ type Context = {
   playersService: PlayersService;
 };
 
+// Nested Map: gameId -> Map<playerId, boolean>
+const gamePlayerReadyStatus = new Map<string, Map<string, boolean>>();
+
 export default (trpc: TrpcService, ctx: Context) =>
   trpc.router({
     getPlayer: trpc.procedure
@@ -75,7 +78,19 @@ export default (trpc: TrpcService, ctx: Context) =>
       )
       .mutation(async ({ input }) => {
         const data: Prisma.PlayerCreateInput = input;
-        return ctx.playersService.createPlayer(data);
+        const player = await ctx.playersService.createPlayer(data);
+        // Initialize the player as not ready for the game
+        // Initialize the player's ready status to false in the game
+        if (data.Game?.connect?.id || data.Game?.create?.id) {
+          const gameId = data.Game.connect?.id || data.Game.create?.id;
+          if (gameId) {
+            if (!gamePlayerReadyStatus.has(gameId)) {
+              gamePlayerReadyStatus.set(gameId, new Map<string, boolean>());
+            }
+            gamePlayerReadyStatus.get(gameId)!.set(player.id, false);
+          }
+        }
+        return player;
       }),
 
     updatePlayer: trpc.procedure
@@ -125,5 +140,51 @@ export default (trpc: TrpcService, ctx: Context) =>
       .mutation(async ({ input }) => {
         const { id } = input;
         return ctx.playersService.deletePlayer({ id });
+      }),
+
+    playerReady: trpc.procedure
+      .input(z.object({ playerId: z.string(), gameId: z.string() }))
+      .mutation(async ({ input }) => {
+        const { playerId, gameId } = input;
+        const player = await ctx.playersService.player({ id: playerId });
+        if (!player) {
+          throw new Error('Player not found');
+        }
+
+        // Mark the player as ready in the specified game
+        if (!gamePlayerReadyStatus.has(gameId)) {
+          throw new Error('Game not found');
+        }
+
+        const gamePlayers = gamePlayerReadyStatus.get(gameId);
+        if (!gamePlayers?.has(playerId)) {
+          throw new Error('Player not found in the specified game');
+        }
+
+        gamePlayers.set(playerId, true);
+        return { success: true, message: 'Player marked as ready' };
+      }),
+
+    areAllPlayersReady: trpc.procedure
+      .input(z.object({ gameId: z.string() }))
+      .query(async ({ input }) => {
+        const { gameId } = input;
+
+        if (!gamePlayerReadyStatus.has(gameId)) {
+          throw new Error('Game not found');
+        }
+
+        const gamePlayers = gamePlayerReadyStatus.get(gameId);
+        if (!gamePlayers) {
+          return { allReady: false };
+        }
+
+        for (const ready of gamePlayers.values()) {
+          if (!ready) {
+            return { allReady: false };
+          }
+        }
+
+        return { allReady: true };
       }),
   });

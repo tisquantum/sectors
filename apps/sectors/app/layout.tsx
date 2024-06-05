@@ -24,7 +24,7 @@ export default function RootLayout({
         <NextUIProvider>
           <AuthUserProvider>
             <PusherProvider>
-              <div className="flex flex-col h-screen">
+              <div className="flex flex-col h-screen dark text-foreground bg-background">
                 <TopBar />
                 {children}
               </div>

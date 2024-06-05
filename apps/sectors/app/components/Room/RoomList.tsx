@@ -3,11 +3,11 @@
 import React from "react";
 import { AvatarGroup, Avatar, Button } from "@nextui-org/react";
 import { trpc } from "@sectors/app/trpc";
-import { RoomWithUser } from "@server/prisma/prisma.types";
+import { RoomWithUsers } from "@server/prisma/prisma.types";
 import { useAuthUser } from "@sectors/app/components/AuthUser.context";
 import { useRouter } from "next/navigation";
 interface RoomListProps {
-  room: RoomWithUser;
+  room: RoomWithUsers;
 }
 
 const RoomList: React.FC<RoomListProps> = ({ room }) => {

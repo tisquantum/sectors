@@ -22,7 +22,7 @@ model User {
 }
 
 model Room {
-  id       Int        @id @default(autoincrement())
+  id       Int           @id @default(autoincrement())
   name     String
   users    RoomUser[]
   messages RoomMessage[]
@@ -93,12 +93,12 @@ model Company {
   currentStockPrice  Float
   cashOnHand         Float
   throughput         Int
-  sector             String
+  sectorId           String
   gameId             String
-  insolvent          Int
+  insolvent          Boolean
   mergedWithParent   String?
   mergedWithChildren Json
-  lastRevenueValue   Float
+  Sector             Sector         @relation(fields: [sectorId], references: [id])
   Game               Game           @relation(fields: [gameId], references: [id])
   CompanyStock       CompanyStock[]
   Stock              Stock[]
@@ -116,7 +116,7 @@ model CompanyStock {
 }
 
 model StockHistory {
-  id                Int @id @default(autoincrement())
+  id                Int    @id @default(autoincrement())
   stockId           String
   price             Float
   productionRevenue Float
@@ -126,33 +126,35 @@ model StockHistory {
 }
 
 model StockRound {
-  id     Int @id @default(autoincrement())
+  id     Int    @id @default(autoincrement())
   phase  String
   gameId String
   Game   Game   @relation(fields: [gameId], references: [id])
 }
 
 model OperatingRound {
-  id      Int @id @default(autoincrement())
+  id      Int    @id @default(autoincrement())
   actions Json
   gameId  String
   Game    Game   @relation(fields: [gameId], references: [id])
 }
 
 model ResearchDeck {
-  id     Int @id @default(autoincrement())
+  id     Int    @id @default(autoincrement())
   gameId String
   cards  Json
   Game   Game   @relation(fields: [gameId], references: [id])
 }
 
 model Sector {
-  id             String @id @default(uuid())
+  id             String    @id @default(uuid())
   name           String
   supply         Int
   demand         Int
   marketingPrice Float
-  floatNumber    Int
+  floatNumberMin Int
+  floatNumberMax Int
+  Company        Company[]
 }
 
 model Game {

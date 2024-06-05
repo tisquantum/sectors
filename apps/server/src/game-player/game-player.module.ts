@@ -6,5 +6,6 @@ import { PlayersModule } from '@server/players/players.module';
 @Module({
   imports: [PrismaModule, PlayersModule],
   providers: [GamePlayerService],
+  exports: [GamePlayerService],
 })
 export class GamePlayerModule {}

@@ -1,3 +1,4 @@
+import { PlayersService } from '@server/players/players.service';
 import { INestApplication, Injectable } from '@nestjs/common';
 import { z } from 'zod';
 import { TrpcService } from '@server/trpc/trpc.service';
@@ -16,6 +17,7 @@ import gameRouter from './routers/game.router';
 import gamePlayerRouter from './routers/game-player.router';
 import { GamePlayerService } from '@server/game-player/game-player.service';
 import { GameManagementService } from '@server/game-management/game-management.service';
+import playerRouter from './routers/player.router';
 @Injectable()
 export class TrpcRouter {
   constructor(
@@ -27,6 +29,7 @@ export class TrpcRouter {
     private readonly gamesService: GamesService,
     private readonly gamePlayerService: GamePlayerService,
     private readonly pusherService: PusherService,
+    private readonly playersService: PlayersService,
     private readonly gameManagementService: GameManagementService,
   ) {}
 
@@ -61,6 +64,9 @@ export class TrpcRouter {
     gamePlayer: gamePlayerRouter(this.trpc, {
       gamePlayersService: this.gamePlayerService,
       pusherService: this.pusherService,
+    }),
+    player: playerRouter(this.trpc, {
+      playersService: this.playersService,
     }),
   });
 

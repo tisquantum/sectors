@@ -3,10 +3,10 @@
 import { trpc } from "@sectors/app/trpc";
 import { useEffect, useState } from "react";
 import RoomList from "./RoomList";
-import { RoomWithUser } from "@server/prisma/prisma.types";
+import { RoomWithUsers } from "@server/prisma/prisma.types";
 
 export default function RoomBrowser() {
-  const [rooms, setRooms] = useState<RoomWithUser[]>([]);
+  const [rooms, setRooms] = useState<RoomWithUsers[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
