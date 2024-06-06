@@ -1,12 +1,8 @@
-import React from 'react';
-import GameComponent from '@sectors/app/components/Game/Game';
+import React from "react";
+import GameComponent from "@sectors/app/components/Game/Game";
 
 const GamePage = () => {
-    return (
-        <div className="min-h-screen bg-gray-100">
-            <GameComponent />
-        </div>
-    );
+  return <GameComponent />;
 };
 
 export default GamePage;

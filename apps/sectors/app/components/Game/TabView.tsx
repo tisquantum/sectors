@@ -230,7 +230,7 @@ export const companies = [
 
 const TabView = () => {
   return (
-    <Tabs aria-label="Options">
+    <Tabs aria-label="Options" isVertical>
       <Tab key="players" title="Players">
         <Card>
           <PlayersOverview players={players} />

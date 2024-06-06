@@ -9,6 +9,13 @@ import {
   RocketLaunchIcon,
   StarIcon,
 } from "@heroicons/react/24/solid";
+const sectorColors: { [key: string]: string } = {
+    sector1: "bg-red-400",
+    sector2: "bg-green-400",
+    sector3: "bg-blue-400",
+    // Add more sectors and their corresponding colors as needed
+  };
+
 const SectorComponent = ({ sectors, companies }: any) => {
   const sectorsWithCompanies = sectors.map((sector: any) => {
     const sectorCompanies = companies.filter(
@@ -19,12 +26,15 @@ const SectorComponent = ({ sectors, companies }: any) => {
       companies: sectorCompanies,
     };
   });
+  const getSectorColor = (sectorId: string) => {
+    return sectorColors[sectorId];
+  }
   return (
     <Accordion selectionMode="multiple">
       {sectorsWithCompanies.map((sector: any) => (
         <AccordionItem
           key={sector.id}
-          startContent={<Avatar name={sector.name} size="md" />}
+          startContent={<Avatar className={`text-stone-800 ${getSectorColor(sector.id)}`} name={String(sector.name).toUpperCase()} size="md" />}
           title={sector.name}
           subtitle={
             <div className="flex items-center">

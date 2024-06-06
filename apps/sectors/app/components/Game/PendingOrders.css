@@ -1,0 +1,13 @@
+.vertical-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  justify-content: center;
+  font-size: larger;
+}
+
+.vertical-text span {
+  transform: rotate(90deg);
+  margin: 2px 0; /* Adjust the margin to control spacing between letters */
+}
