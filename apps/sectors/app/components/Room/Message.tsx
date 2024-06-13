@@ -15,7 +15,7 @@ const MessageComponent: React.FC<MessageProps> = ({ message }) => {
           <div className="flex content-center">
             <Avatar name={message.user.name} size="lg" className="mr-4" />
             <div className="flex flex-col">
-              <p className="text-black mb-2">{message.content}</p>
+              <p className="mb-2">{message.content}</p>
               <Divider />
               <div className="flex items-center mt-2 gap-2">
                   <div className="font-bold">{message.user.name}</div>

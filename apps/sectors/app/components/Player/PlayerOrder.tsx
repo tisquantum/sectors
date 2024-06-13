@@ -59,9 +59,11 @@ const PlayerOrder: React.FC<{
               <div className="flex items-center">
                 <span>{order.orderType}</span>
                 {(order.orderType === "LO" || order.orderType === "MO") && (
-                  <span>{order.isSell ? "-" : "+"}</span>
+                  <>
+                    <span>{order.isSell ? "-" : "+"}</span>
+                    <span>{order.orderAmount}</span>
+                  </>
                 )}
-                {order.orderType === "LO" && <span>{order.orderAmount}</span>}
                 {order.orderType === "SO" && <span>{order.term}</span>}
               </div>
             </Chip>

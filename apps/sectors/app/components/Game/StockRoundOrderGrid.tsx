@@ -11,12 +11,12 @@ import PlayerOrder from "../Player/PlayerOrder";
 import PlayerOrderInput from "../Player/PlayerOrderInput";
 
 const orders = [
-  { orderType: "MO", isSell: false, playerName: "Alice" },
+  { orderType: "MO", orderAmount: 2, isSell: false, playerName: "Alice" },
   { orderType: "LO", orderAmount: 5, isSell: true, playerName: "Bob" },
   { orderType: "SO", term: 3, playerName: "Charlie" },
   { orderType: "SO", term: 1, playerName: "Dave" },
   { orderType: "LO", orderAmount: 10, isSell: false, playerName: "Eve" },
-  { orderType: "MO", isSell: true, playerName: "Frank" },
+  { orderType: "MO", orderAmount: 4, isSell: true, playerName: "Frank" },
 ];
 
 // Define colors for each sector

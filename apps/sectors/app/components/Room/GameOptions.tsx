@@ -1,5 +1,5 @@
-import { Input } from '@nextui-org/react';
-import { useState } from 'react';
+import { Select, SelectItem } from "@nextui-org/react";
+import { useState } from "react";
 
 interface GameOptionsProps {
   initialBankPoolNumber?: number;
@@ -26,62 +26,80 @@ const GameOptions: React.FC<GameOptionsProps> = ({
     startingCashOnHand: initialStartingCashOnHand,
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
+  const handleSelectChange = (name: string, value: number) => {
     const newOptions = {
       ...options,
-      [name]: Number(value),
+      [name]: value,
     };
     setOptions(newOptions);
-    onOptionsChange && onOptionsChange(newOptions);
+    onOptionsChange && onOptionsChange(newOptions as GameOptionsState);
   };
 
   return (
-    <div className="p-4 bg-white rounded-t shadow-md">
+    <div className="p-4 rounded-t shadow-md bg-background">
       <h2 className="text-lg font-bold mb-4 text-sky-400/100">Game Options</h2>
       <div className="mb-4">
-        <Input
-          id="bankPoolNumber"
-          type="number"
+        <Select
           label="Bank Pool"
-          placeholder="0.00"
-          labelPlacement="inside"
-          startContent={
-            <div className="pointer-events-none flex items-center">
-              <span className="text-default-400 text-small">$</span>
-            </div>
+          size="lg"
+          className="max-w-xs"
+          onChange={(e) =>
+            handleSelectChange("bankPoolNumber", Number(e.target.value))
           }
         >
-            {options.bankPoolNumber}
-        </Input>
+          <SelectItem key={1} value={7500}>
+            7,500 (Quick Game)
+          </SelectItem>
+          <SelectItem key={2} value={10000}>
+            10,000 (Short Game)
+          </SelectItem>
+          <SelectItem key={3} value={15000}>
+            15,000 (Normal Game)
+          </SelectItem>
+          <SelectItem key={4} value={20000}>
+            20,000 (Long Game)
+          </SelectItem>
+          <SelectItem key={5} value={30000}>
+            30,000 (Marathon)
+          </SelectItem>
+        </Select>
       </div>
       <div className="mb-4">
-        <Input
-          id="consumerPoolNumber"
-          type="number"
-          label="Consumer Pool Number"
-          placeholder="0.00"
-          labelPlacement="inside"
-        >
-            {options.consumerPoolNumber}
-        </Input>
-      </div>
-      <div className="mb-4">
-        <Input
-          id="startingCashOnHand"
-          type="number"
+        <Select
           label="Starting Cash On Hand"
-          placeholder="0.00"
-          labelPlacement="inside"
-          startContent={
-            <div className="pointer-events-none flex items-center">
-              <span className="text-default-400 text-small">$</span>
-            </div>
+          size="lg"
+          className="max-w-xs"
+          onChange={(e) =>
+            handleSelectChange("startingCashOnHand", Number(e.target.value))
           }
         >
-            {options.startingCashOnHand}
-        </Input>
-
+          <SelectItem key={1} value={500}>
+            500 (Standard)
+          </SelectItem>
+          <SelectItem key={2} value={750}>
+            750 (Beginner Friendly)
+          </SelectItem>
+        </Select>
+      </div>
+      <div className="mb-4">
+        <Select
+          label="Consumer Pool Number"
+          size="lg"
+          className="max-w-xs"
+          onChange={(e) =>
+            handleSelectChange("consumerPoolNumber", Number(e.target.value))
+          }
+        >
+          <SelectItem key={1} value={50}>
+            50 (Cut-throat)
+          </SelectItem>
+          <SelectItem key={2} value={75}>
+            75 (Standard)
+          </SelectItem>
+          <SelectItem key={3} value={100}>
+            100 (Friendly Game)
+          </SelectItem>
+        </Select>
       </div>
     </div>
   );

@@ -37,6 +37,9 @@ importers:
       next:
         specifier: 14.2.3
         version: 14.2.3(react-dom@18.3.1)(react@18.3.1)
+      next-themes:
+        specifier: ^0.3.0
+        version: 0.3.0(react-dom@18.3.1)(react@18.3.1)
       pusher-js:
         specifier: 8.4.0-rc2
         version: 8.4.0-rc2
@@ -8530,6 +8533,16 @@ packages:
 
   /nestjs-supabase-auth-v2@0.0.1:
     resolution: {integrity: sha512-fOAayI8ZYqVf72nDnO97lmE9yYzKM0cbS8YsJdUO10OD5ZSsgf6adbajPAiRZ9IbrRUT7faNUQ2lvm0U6nV/rA==}
+    dev: false
+
+  /next-themes@0.3.0(react-dom@18.3.1)(react@18.3.1):
+    resolution: {integrity: sha512-/QHIrsYpd6Kfk7xakK4svpDI5mmXP0gfvCoJdGpZQ2TOrQZmsW0QxjaiLn8wbIKjtm4BTSqLoix4lxYYOnLJ/w==}
+    peerDependencies:
+      react: ^16.8 || ^17 || ^18
+      react-dom: ^16.8 || ^17 || ^18
+    dependencies:
+      react: 18.3.1
+      react-dom: 18.3.1(react@18.3.1)
     dev: false
 
   /next@14.2.3(react-dom@18.3.1)(react@18.3.1):

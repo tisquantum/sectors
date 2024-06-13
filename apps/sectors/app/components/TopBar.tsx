@@ -2,6 +2,7 @@
 
 import { Navbar, Button, Link, NavbarBrand, NavbarContent, NavbarItem } from '@nextui-org/react';
 import { useAuthUser } from './AuthUser.context';
+import ThemeSwitcher from './ThemeSwitcher';
 
 const TopBar = () => {
   const { user, loading } = useAuthUser();
@@ -32,6 +33,7 @@ const TopBar = () => {
             </Button>
           </NavbarItem>
         )}
+        <ThemeSwitcher />
       </NavbarContent>
     </Navbar>
   );

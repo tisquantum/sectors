@@ -13,6 +13,7 @@ import { PusherModule } from 'nestjs-pusher';
 import { GamesModule } from './games/games.module';
 import { GamePlayerModule } from './game-player/game-player.module';
 import { GameManagementModule } from './game-management/game-management.module';
+import { GameCompanyModule } from './game-company/game-company.module';
 
 const yourPusherOptions = {
   cluster: process.env.PUSHER_CLUSTER ?? 'CLUSTER',
@@ -40,6 +41,7 @@ const chunkingOptions = {
     GamesModule,
     GamePlayerModule,
     GameManagementModule,
+    GameCompanyModule,
   ],
   controllers: [AppController],
   providers: [AppService],

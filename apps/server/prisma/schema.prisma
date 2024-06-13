@@ -90,8 +90,9 @@ model Stock {
 model Company {
   id                 String         @id @default(uuid())
   name               String
-  currentStockPrice  Float
-  cashOnHand         Float
+  currentStockPrice  Float?
+  cashOnHand         Float?
+  unitPrice          Float
   throughput         Int
   sectorId           String
   gameId             String
@@ -142,8 +143,17 @@ model OperatingRound {
 model ResearchDeck {
   id     Int    @id @default(autoincrement())
   gameId String
-  cards  Json
+  cards  Card[]
   Game   Game   @relation(fields: [gameId], references: [id])
+}
+
+model Card {
+  id          Int    @id @default(autoincrement())
+  name        String
+  description String
+  effect      Json
+  deckId      Int
+  ResearchDeck ResearchDeck @relation(fields: [deckId], references: [id])
 }
 
 model Sector {
@@ -152,6 +162,7 @@ model Sector {
   supply         Int
   demand         Int
   marketingPrice Float
+  basePrice      Float
   floatNumberMin Int
   floatNumberMax Int
   Company        Company[]
