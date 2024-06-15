@@ -2,8 +2,9 @@ import { PusherService } from 'nestjs-pusher';
 import { z } from 'zod';
 import { GamesService } from '@server/games/games.service';
 import { TrpcService } from '../trpc.service';
-import { Prisma } from '@prisma/client';
+import { Game, Prisma } from '@prisma/client';
 import { GameManagementService } from '@server/game-management/game-management.service';
+import { EVENT_GAME_STARTED } from '@server/pusher/pusher.types';
 
 type Context = {
   gamesService: GamesService;
@@ -64,8 +65,9 @@ export default (trpc: TrpcService, ctx: Context) =>
         }),
       )
       .mutation(async ({ input }) => {
+        let game: Game;
         try {
-          ctx.gameManagementService.startGame({
+          game = await ctx.gameManagementService.startGame({
             roomId: input.roomId,
             startingCashOnHand: input.startingCashOnHand,
             consumerPoolNumber: input.consumerPoolNumber,
@@ -78,6 +80,11 @@ export default (trpc: TrpcService, ctx: Context) =>
             data: error,
           };
         }
+
+        // Notify all users in the room that the game has started
+        ctx.pusherService.trigger(`room-${input.roomId}`, EVENT_GAME_STARTED, {
+          gameId: game.id,
+        });
 
         return {
           success: true,

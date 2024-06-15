@@ -1,16 +1,26 @@
 import { CircularProgress } from "@nextui-org/react";
 import { useEffect, useState } from "react";
 
-const Timer = () => {
-  const [value, setValue] = useState(10);
+interface TimerProps {
+  countdownTime?: number;
+  onEnd?: () => void;
+}
+
+const Timer: React.FC<TimerProps> = ({ countdownTime = 10, onEnd }) => {
+  const [value, setValue] = useState(countdownTime);
 
   useEffect(() => {
+    if (value <= 0) {
+      onEnd && onEnd();
+      return;
+    }
+
     const interval = setInterval(() => {
-      setValue((v) => (v <= 0 ? 10 : v - 1));
+      setValue((v) => (v <= 0 ? countdownTime : v - 1));
     }, 1000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [value, countdownTime, onEnd]);
 
   return (
     <CircularProgress
@@ -21,7 +31,7 @@ const Timer = () => {
         value: "text-3xl font-semibold text-white",
       }}
       aria-label="Loading..."
-      value={(value / 10) * 100}
+      value={(value / countdownTime) * 100}
       color="warning"
       showValueLabel={true}
       valueLabel={`${value}s`}

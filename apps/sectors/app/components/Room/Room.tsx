@@ -3,12 +3,9 @@
 import { trpc } from "@sectors/app/trpc";
 import { useEffect, useState } from "react";
 import { usePusher } from "@sectors/app/components/Pusher.context";
+import { Room, RoomUser, User } from "@server/prisma/prisma.client";
 import {
-  Room,
-  RoomUser,
-  User,
-} from "@server/prisma/prisma.client";
-import {
+  EVENT_GAME_STARTED,
   EVENT_ROOM_JOINED,
   EVENT_ROOM_LEFT,
   EVENT_ROOM_MESSAGE,
@@ -19,15 +16,22 @@ import Sidebar from "./Sidebar";
 import MessagePane from "./MessagePane";
 import SendMessage from "./SendMessage";
 import { useAuthUser } from "@sectors/app/components/AuthUser.context";
+import CountdownModal from "../Modal/CountdownModal";
+import { Router } from "next/router";
+import { useRouter } from "next/navigation";
+import { useDisclosure } from "@nextui-org/react";
 
 const RoomComponent = ({ room }: { room: Room }) => {
   const { user } = useAuthUser();
   const { pusher } = usePusher();
+  const router = useRouter();
   const [roomUsers, setRoomUsers] = useState<User[]>([]);
   const [messages, setMessages] = useState<RoomMessageWithUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { id, name, gameId } = room;
+  const [isOpen, setIsOpen] = useState(false);
+  const [gameId, setGameId] = useState<string | null>(null);
+  const { id } = room;
 
   useEffect(() => {
     const fetchRoomsAndUsers = async () => {
@@ -86,6 +90,12 @@ const RoomComponent = ({ room }: { room: Room }) => {
       setMessages((prev) => [...prev, data]);
     });
 
+    channel.bind(EVENT_GAME_STARTED, (data: { gameId: string }) => {
+      console.log("Game started");
+      setIsOpen(true);
+      setGameId(data.gameId);
+    });
+
     return () => {
       console.log("Unsubscribing from channel");
       channel.unbind(EVENT_ROOM_JOINED);
@@ -98,8 +108,8 @@ const RoomComponent = ({ room }: { room: Room }) => {
     return <div>Loading...</div>;
   }
 
-  if(!user) {
-    return <div>Not authenticated</div>
+  if (!user) {
+    return <div>Not authenticated</div>;
   }
 
   if (error) {
@@ -116,17 +126,24 @@ const RoomComponent = ({ room }: { room: Room }) => {
     });
   };
 
+  const handleGameStart = () => {
+    router.push(`/games/${gameId}`);
+  }
+
   return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar users={roomUsers} room={room} />
-      <div className="flex flex-col flex-grow bg-gray-100">
-        <div className="bg-gray-800 text-white p-4">
-          <h1 className="text-xl font-bold">{room.name}</h1>
+    <>
+      <div className="flex h-screen overflow-hidden">
+        <Sidebar users={roomUsers} room={room} />
+        <div className="flex flex-col flex-grow bg-gray-100">
+          <div className="bg-gray-800 text-white p-4">
+            <h1 className="text-xl font-bold">{room.name}</h1>
+          </div>
+          <MessagePane messages={messages} />
+          <SendMessage onSendMessage={handleSendMessage} />
         </div>
-        <MessagePane messages={messages} />
-        <SendMessage onSendMessage={handleSendMessage} />
       </div>
-    </div>
+      <CountdownModal title={"Game Started"} countdownTime={5} countdownCallback={handleGameStart} isOpen={isOpen} />
+    </>
   );
 };
 
