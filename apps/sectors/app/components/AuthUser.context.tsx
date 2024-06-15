@@ -23,9 +23,10 @@ export const AuthUserProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
   const { data: user, isLoading: userLoading } = trpc.user.getUser.useQuery(
-    { id: "1349641b-358f-4248-a069-9c2a51305d60" }
+    { id: supabaseUser?.id ?? '' },
+    { enabled: !!supabaseUser }
   );
-  const loading = userLoading || !supabaseUser;
+  const loading = userLoading;
 
   useEffect(() => {
     const fetchUser = async () => {

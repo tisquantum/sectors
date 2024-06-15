@@ -19,15 +19,19 @@ model User {
   name        String        @default("anon")
   RoomMessage RoomMessage[]
   RoomUser    RoomUser[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 }
 
 model Room {
-  id       Int           @id @default(autoincrement())
-  name     String
-  users    RoomUser[]
-  messages RoomMessage[]
-  gameId   String?
-  game     Game?         @relation(fields: [gameId], references: [id])
+  id        Int           @id @default(autoincrement())
+  name      String
+  users     RoomUser[]
+  messages  RoomMessage[]
+  gameId    String?
+  game      Game?         @relation(fields: [gameId], references: [id])
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
 }
 
 model RoomMessage {
@@ -36,6 +40,8 @@ model RoomMessage {
   userId    String
   content   String
   timestamp String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   room Room @relation(fields: [roomId], references: [id])
   user User @relation(fields: [userId], references: [id])
@@ -45,8 +51,8 @@ model RoomMessage {
 }
 
 model RoomUser {
-  userId String
-  roomId Int
+  userId   String
+  roomId   Int
   roomHost Boolean?
 
   user User @relation(fields: [userId], references: [id])
@@ -63,6 +69,8 @@ model Player {
   Game        Game          @relation(fields: [gameId], references: [id])
   PlayerStock PlayerStock[]
   GamePlayer  GamePlayer[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 }
 
 model PlayerStock {
@@ -86,6 +94,8 @@ model Stock {
   StockHistory StockHistory[]
   PlayerStock  PlayerStock[]
   CompanyStock CompanyStock[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 }
 
 model Company {
@@ -105,6 +115,8 @@ model Company {
   CompanyStock       CompanyStock[]
   Stock              Stock[]
   GameCompany        GameCompany[]
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
 }
 
 model CompanyStock {
@@ -118,34 +130,42 @@ model CompanyStock {
 }
 
 model StockHistory {
-  id                Int    @id @default(autoincrement())
+  id                Int      @id @default(autoincrement())
   stockId           String
   price             Float
   productionRevenue Float
   gameId            String
   timestamp         Int
-  Stock             Stock  @relation(fields: [stockId], references: [id])
+  Stock             Stock    @relation(fields: [stockId], references: [id])
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
 
 model StockRound {
-  id     Int    @id @default(autoincrement())
-  phase  String
-  gameId String
-  Game   Game   @relation(fields: [gameId], references: [id])
+  id        Int      @id @default(autoincrement())
+  phase     String
+  gameId    String
+  Game      Game     @relation(fields: [gameId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model OperatingRound {
-  id      Int    @id @default(autoincrement())
-  actions Json
-  gameId  String
-  Game    Game   @relation(fields: [gameId], references: [id])
+  id        Int      @id @default(autoincrement())
+  actions   Json
+  gameId    String
+  Game      Game     @relation(fields: [gameId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model ResearchDeck {
-  id     Int    @id @default(autoincrement())
-  gameId String
-  cards  Card[]
-  Game   Game   @relation(fields: [gameId], references: [id])
+  id        Int      @id @default(autoincrement())
+  gameId    String
+  cards     Card[]
+  Game      Game     @relation(fields: [gameId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Card {
@@ -155,6 +175,8 @@ model Card {
   effect       Json
   deckId       Int
   ResearchDeck ResearchDeck @relation(fields: [deckId], references: [id])
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 }
 
 model Sector {
@@ -169,6 +191,8 @@ model Sector {
   Company        Company[]
   Game           Game?     @relation(fields: [gameId], references: [id])
   gameId         String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 }
 
 model Game {
@@ -190,6 +214,8 @@ model Game {
   OperatingRound      OperatingRound[]
   ResearchDeck        ResearchDeck[]
   Room                Room[]
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
 }
 
 model GamePlayer {
