@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { Select, SelectItem } from "@nextui-org/react";
 
+type ValueMap = {
+  bankPoolNumber: { [key: number]: number };
+  startingCashOnHand: { [key: number]: number };
+  consumerPoolNumber: { [key: number]: number };
+};
+
+type GameOptionsKeys = keyof ValueMap;
+
 interface GameOptionsProps {
   initialBankPoolNumber?: number;
   initialConsumerPoolNumber?: number;
@@ -30,14 +38,31 @@ const GameOptions: React.FC<GameOptionsProps> = ({
     onOptionsChange && onOptionsChange(options);
   }, [options]);
 
-  const handleSelectChange = (name: string, value: number) => {
-    setOptions((prevOptions) => {
-      const newOptions = {
-        ...prevOptions,
-        [name]: value,
-      };
-      return newOptions;
-    });
+  const valueMap: ValueMap = {
+    bankPoolNumber: {
+      1: 7500,
+      2: 10000,
+      3: 15000,
+      4: 20000,
+      5: 30000,
+    },
+    startingCashOnHand: {
+      1: 500,
+      2: 750,
+    },
+    consumerPoolNumber: {
+      1: 50,
+      2: 75,
+      3: 100,
+    },
+  };
+
+  const handleSelectChange = (name: GameOptionsKeys, key: number) => {
+    const value = valueMap[name][key];
+    setOptions((prevOptions) => ({
+      ...prevOptions,
+      [name]: value,
+    }));
   };
 
   return (
@@ -52,19 +77,19 @@ const GameOptions: React.FC<GameOptionsProps> = ({
             handleSelectChange("bankPoolNumber", Number(e.target.value))
           }
         >
-          <SelectItem key={1} value={7500}>
+          <SelectItem key={1} value={1}>
             7,500 (Quick Game)
           </SelectItem>
-          <SelectItem key={2} value={10000}>
+          <SelectItem key={2} value={2}>
             10,000 (Short Game)
           </SelectItem>
-          <SelectItem key={3} value={15000}>
+          <SelectItem key={3} value={3}>
             15,000 (Normal Game)
           </SelectItem>
-          <SelectItem key={4} value={20000}>
+          <SelectItem key={4} value={4}>
             20,000 (Long Game)
           </SelectItem>
-          <SelectItem key={5} value={30000}>
+          <SelectItem key={5} value={5}>
             30,000 (Marathon)
           </SelectItem>
         </Select>
@@ -78,10 +103,10 @@ const GameOptions: React.FC<GameOptionsProps> = ({
             handleSelectChange("startingCashOnHand", Number(e.target.value))
           }
         >
-          <SelectItem key={1} value={500}>
+          <SelectItem key={1} value={1}>
             500 (Standard)
           </SelectItem>
-          <SelectItem key={2} value={750}>
+          <SelectItem key={2} value={2}>
             750 (Beginner Friendly)
           </SelectItem>
         </Select>
@@ -95,13 +120,13 @@ const GameOptions: React.FC<GameOptionsProps> = ({
             handleSelectChange("consumerPoolNumber", Number(e.target.value))
           }
         >
-          <SelectItem key={1} value={50}>
+          <SelectItem key={1} value={1}>
             50 (Cut-throat)
           </SelectItem>
-          <SelectItem key={2} value={75}>
+          <SelectItem key={2} value={2}>
             75 (Standard)
           </SelectItem>
-          <SelectItem key={3} value={100}>
+          <SelectItem key={3} value={3}>
             100 (Friendly Game)
           </SelectItem>
         </Select>

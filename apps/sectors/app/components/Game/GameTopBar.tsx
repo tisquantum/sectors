@@ -1,10 +1,11 @@
 import { Button, ButtonGroup } from "@nextui-org/react";
 import GameGeneralInfo from "./GameGeneralInfo";
-import Timer from "./Timer";
 
 const GameTopBar = ({
+  gameId,
   handleCurrentView,
 }: {
+  gameId: string;
   handleCurrentView: (view: string) => void;
 }) => {
   return (
@@ -15,7 +16,7 @@ const GameTopBar = ({
         <Button onClick={() => handleCurrentView('stock-chart')}>Stock Chart</Button>
         <Button onClick={() => handleCurrentView('company')}>Company</Button>
       </ButtonGroup>
-      <GameGeneralInfo />
+      <GameGeneralInfo gameId={gameId} />
     </div>
   );
 };

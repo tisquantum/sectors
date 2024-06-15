@@ -35,7 +35,7 @@ model RoomMessage {
   roomId    Int
   userId    String
   content   String
-  timestamp DateTime
+  timestamp String
 
   room Room @relation(fields: [roomId], references: [id])
   user User @relation(fields: [userId], references: [id])
@@ -47,6 +47,7 @@ model RoomMessage {
 model RoomUser {
   userId String
   roomId Int
+  roomHost Boolean?
 
   user User @relation(fields: [userId], references: [id])
   room Room @relation(fields: [roomId], references: [id])

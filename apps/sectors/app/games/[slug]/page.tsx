@@ -1,8 +1,8 @@
 import React from "react";
 import GameComponent from "@sectors/app/components/Game/Game";
 
-const GamePage = ({ params }: { params: { slug: string } }) => {
-  return <GameComponent />;
-};
+export default async function GamePage ({ params }: { params: { slug: string } }) {
+  const gameId = params.slug;
 
-export default GamePage;
+  return <GameComponent gameId={gameId} />;
+};

@@ -1,10 +1,25 @@
-import { createTRPCProxyClient, httpBatchLink } from "@trpc/client";
-import { AppRouter } from "@server/trpc/trpc.router";
+import { createTRPCClientProxy, httpBatchLink } from "@trpc/client";
+import {
+  createTRPCReact,
+  httpBatchLink as httpBatchLinkReact,
+} from "@trpc/react-query";
+import type { AppRouter } from "@server/trpc/trpc.router";
+import superjson from 'superjson';
+// export const trpc = createTRPCClientProxy<AppRouter>({
+//   links: [
+//     httpBatchLink({
+//       url: `${process.env.NEXT_PUBLIC_NESTJS_SERVER}/trpc`,
+//     }),
+//   ],
+// });
 
-export const trpc = createTRPCProxyClient<AppRouter>({
+export const trpc = createTRPCReact<AppRouter>();
+
+export const trpcClient = trpc.createClient({
   links: [
-    httpBatchLink({
+    httpBatchLinkReact({
       url: `${process.env.NEXT_PUBLIC_NESTJS_SERVER}/trpc`,
+      //transformer: superjson
     }),
   ],
 });

@@ -29,7 +29,8 @@
     "@nestjs/platform-express": "^10.0.0",
     "@nestjs/websockets": "^10.3.8",
     "@prisma/client": "5.14.0",
-    "@trpc/server": "^10.45.2",
+    "@trpc/server": "11.0.0-rc.403",
+    "devalue": "^5.0.0",
     "nestjs-pusher": "^2.1.0",
     "nestjs-supabase-auth-v2": "^0.0.1",
     "passport": "^0.7.0",
@@ -38,6 +39,7 @@
     "pusher": "^5.2.0",
     "reflect-metadata": "^0.2.0",
     "rxjs": "^7.8.1",
+    "superjson": "^2.2.1",
     "trpc-playground": "^1.0.4",
     "zod": "^3.23.8"
   },

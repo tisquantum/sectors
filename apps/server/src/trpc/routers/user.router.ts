@@ -12,6 +12,7 @@ export default (trpc: TrpcService, ctx: Context) =>
       .input(z.object({ id: z.string() }))
       .query(async ({ input }) => {
         const { id } = input;
+        console.log('getUser id', id);
         const user = await ctx.userService.user({ id });
         if (!user) {
           throw new Error('User not found');

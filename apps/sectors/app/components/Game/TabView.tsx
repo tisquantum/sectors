@@ -228,17 +228,17 @@ export const companies = [
   },
 ];
 
-const TabView = () => {
+const TabView = ({ gameId }: { gameId: string }) => {
   return (
     <Tabs aria-label="Options" isVertical>
       <Tab key="players" title="Players">
         <Card>
-          <PlayersOverview players={players} />
+          <PlayersOverview gameId={gameId} />
         </Card>
       </Tab>
       <Tab key="sectors" title="Sectors">
         <Card>
-          <SectorComponent sectors={sectors} companies={companies} />
+          {/* <SectorComponent sectors={sectors} companies={companies} /> */}
         </Card>
       </Tab>
       <Tab key="history" title="History">

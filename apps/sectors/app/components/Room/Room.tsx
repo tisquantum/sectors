@@ -11,83 +11,73 @@ import {
   EVENT_ROOM_MESSAGE,
   getRoomChannelId,
 } from "@server/pusher/pusher.types";
-import { RoomMessageWithUser } from "@server/prisma/prisma.types";
+import {
+  RoomMessageWithUser,
+  RoomUserWithUser,
+} from "@server/prisma/prisma.types";
 import Sidebar from "./Sidebar";
 import MessagePane from "./MessagePane";
 import SendMessage from "./SendMessage";
 import { useAuthUser } from "@sectors/app/components/AuthUser.context";
 import CountdownModal from "../Modal/CountdownModal";
-import { Router } from "next/router";
 import { useRouter } from "next/navigation";
-import { useDisclosure } from "@nextui-org/react";
 
 const RoomComponent = ({ room }: { room: Room }) => {
   const { user } = useAuthUser();
   const { pusher } = usePusher();
   const router = useRouter();
-  const [roomUsers, setRoomUsers] = useState<User[]>([]);
-  const [messages, setMessages] = useState<RoomMessageWithUser[]>([]);
-  const [loading, setLoading] = useState(true);
+  const utils = trpc.useUtils();
   const [error, setError] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [gameId, setGameId] = useState<string | null>(null);
   const { id } = room;
 
-  useEffect(() => {
-    const fetchRoomsAndUsers = async () => {
-      try {
-        const roomUsersResults = await trpc.roomUser.listRoomUsers.query({
-          where: { roomId: id },
-        });
+  const { data: roomUsers, isLoading: isLoadingRoomUsers } =
+    trpc.roomUser.listRoomUsers.useQuery({
+      where: { roomId: id },
+    });
 
-        setRoomUsers(roomUsersResults.map((roomUser) => roomUser.user));
-      } catch (error) {
-      } finally {
-        setLoading(false);
-      }
-    };
+  const { data: messages, isLoading: isLoadingMessages } =
+    trpc.roomMessage.listRoomMessages.useQuery({
+      where: { roomId: id },
+    });
 
-    fetchRoomsAndUsers();
-
-    const fetchMessages = async () => {
-      try {
-        const messages = await trpc.roomMessage.listRoomMessages.query({
-          where: { roomId: id },
-        });
-
-        const messagesWithDate: RoomMessageWithUser[] = messages.map(
-          (message) => {
-            return { ...message, timestamp: new Date(message.timestamp) };
-          }
-        );
-
-        setMessages(messagesWithDate);
-      } catch (error) {}
-    };
-
-    fetchMessages();
-  }, [id]);
+  const createRoomMessageMutation =
+    trpc.roomMessage.createRoomMessage.useMutation();
 
   useEffect(() => {
-    if (!pusher || loading) return;
+    if (!pusher) return;
 
     console.log("Subscribing to channel");
     const channel = pusher.subscribe(getRoomChannelId(id));
-    channel.bind(EVENT_ROOM_JOINED, (data: User) => {
+
+    channel.bind(EVENT_ROOM_JOINED, (data: RoomUserWithUser) => {
       console.log("User joined:", data);
-      setRoomUsers((prev) => [...prev, data]);
+      utils.roomUser.listRoomUsers.setData(
+        {},
+        (oldData: RoomUserWithUser[] | undefined) => [...(oldData || []), data]
+      );
     });
 
     channel.bind(EVENT_ROOM_LEFT, (data: RoomUser) => {
       console.log("User left:", data);
-      setRoomUsers((prev) => prev.filter((user) => user.id !== data.userId));
+      utils.roomUser.listRoomUsers.setData(
+        {},
+        (oldData: RoomUserWithUser[] | undefined) =>
+          oldData?.filter((user) => user.user.id !== data.userId)
+      );
     });
 
     channel.bind(EVENT_ROOM_MESSAGE, (data: RoomMessageWithUser) => {
       console.log("Message received:", data);
-      //modify data for string date to Date object
-      data.timestamp = new Date(data.timestamp);
-      setMessages((prev) => [...prev, data]);
+      // Ensure timestamp remains a string in the cache
+      utils.roomMessage.listRoomMessages.setData(
+        { where: { roomId: id } },
+        (oldData: RoomMessageWithUser[] | undefined) => [
+          ...(oldData || []),
+          { ...data, timestamp: new Date(data.timestamp).toISOString() }, // Keep as string
+        ]
+      );
     });
 
     channel.bind(EVENT_GAME_STARTED, (data: { gameId: string }) => {
@@ -100,12 +90,14 @@ const RoomComponent = ({ room }: { room: Room }) => {
       console.log("Unsubscribing from channel");
       channel.unbind(EVENT_ROOM_JOINED);
       channel.unbind(EVENT_ROOM_LEFT);
+      channel.unbind(EVENT_ROOM_MESSAGE);
+      channel.unbind(EVENT_GAME_STARTED);
       channel.unsubscribe();
     };
-  }, [pusher, id, loading]);
+  }, [pusher, id, isLoadingRoomUsers, isLoadingMessages]);
 
-  if (loading) {
-    return <div>Loading...</div>;
+  if (isLoadingRoomUsers || isLoadingMessages) {
+    return <div>Loading Inner Component...</div>;
   }
 
   if (!user) {
@@ -117,8 +109,7 @@ const RoomComponent = ({ room }: { room: Room }) => {
   }
 
   const handleSendMessage = (content: string) => {
-    //this data update is broadcast through a socket
-    trpc.roomMessage.createRoomMessage.mutate({
+    createRoomMessageMutation.mutate({
       roomId: id,
       userId: user.id,
       content,
@@ -128,21 +119,26 @@ const RoomComponent = ({ room }: { room: Room }) => {
 
   const handleGameStart = () => {
     router.push(`/games/${gameId}`);
-  }
+  };
 
   return (
     <>
       <div className="flex h-screen overflow-hidden">
-        <Sidebar users={roomUsers} room={room} />
+        {roomUsers && <Sidebar roomUsers={roomUsers} room={room} />}
         <div className="flex flex-col flex-grow bg-gray-100">
           <div className="bg-gray-800 text-white p-4">
             <h1 className="text-xl font-bold">{room.name}</h1>
           </div>
-          <MessagePane messages={messages} />
+          {messages && <MessagePane messages={messages} />}
           <SendMessage onSendMessage={handleSendMessage} />
         </div>
       </div>
-      <CountdownModal title={"Game Started"} countdownTime={5} countdownCallback={handleGameStart} isOpen={isOpen} />
+      <CountdownModal
+        title={"Game Started"}
+        countdownTime={5}
+        countdownCallback={handleGameStart}
+        isOpen={isOpen}
+      />
     </>
   );
 };

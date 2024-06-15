@@ -32,7 +32,7 @@ export class TrpcRouter {
     private readonly playersService: PlayersService,
     private readonly gameManagementService: GameManagementService,
   ) {}
-
+  
   appRouter = this.trpc.router({
     hello: this.trpc.procedure
       .input(

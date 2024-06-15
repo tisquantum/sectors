@@ -25,12 +25,18 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.43.4
         version: 2.43.4
+      '@tanstack/react-query':
+        specifier: ^5.45.0
+        version: 5.45.0(react@18.3.1)
       '@trpc/client':
-        specifier: ^10.45.2
-        version: 10.45.2(@trpc/server@10.45.2)
+        specifier: 11.0.0-rc.403
+        version: 11.0.0-rc.403(@trpc/server@11.0.0-rc.403)
+      '@trpc/react-query':
+        specifier: 11.0.0-rc.403
+        version: 11.0.0-rc.403(@tanstack/react-query@5.45.0)(@trpc/client@11.0.0-rc.403)(@trpc/server@11.0.0-rc.403)(react-dom@18.3.1)(react@18.3.1)
       '@trpc/server':
-        specifier: ^10.45.2
-        version: 10.45.2
+        specifier: 11.0.0-rc.403
+        version: 11.0.0-rc.403
       framer-motion:
         specifier: ^11.2.10
         version: 11.2.10(react-dom@18.3.1)(react@18.3.1)
@@ -49,6 +55,9 @@ importers:
       react-dom:
         specifier: ^18
         version: 18.3.1(react@18.3.1)
+      superjson:
+        specifier: ^2.2.1
+        version: 2.2.1
     devDependencies:
       '@types/node':
         specifier: ^20
@@ -105,8 +114,11 @@ importers:
         specifier: 5.14.0
         version: 5.14.0(prisma@5.14.0)
       '@trpc/server':
-        specifier: ^10.45.2
-        version: 10.45.2
+        specifier: 11.0.0-rc.403
+        version: 11.0.0-rc.403
+      devalue:
+        specifier: ^5.0.0
+        version: 5.0.0
       nestjs-pusher:
         specifier: ^2.1.0
         version: 2.1.0(@nestjs/common@10.3.8)(@nestjs/core@10.3.8)(pusher@5.2.0)
@@ -131,9 +143,12 @@ importers:
       rxjs:
         specifier: ^7.8.1
         version: 7.8.1
+      superjson:
+        specifier: ^2.2.1
+        version: 2.2.1
       trpc-playground:
         specifier: ^1.0.4
-        version: 1.0.4(@trpc/server@10.45.2)(@types/node@20.13.0)(typescript@5.4.5)(zod@3.23.8)
+        version: 1.0.4(@trpc/server@11.0.0-rc.403)(@types/node@20.13.0)(typescript@5.4.5)(zod@3.23.8)
       zod:
         specifier: ^3.23.8
         version: 3.23.8
@@ -4513,6 +4528,19 @@ packages:
       tslib: 2.6.2
     dev: false
 
+  /@tanstack/query-core@5.45.0:
+    resolution: {integrity: sha512-RVfIZQmFUTdjhSAAblvueimfngYyfN6HlwaJUPK71PKd7yi43Vs1S/rdimmZedPWX/WGppcq/U1HOj7O7FwYxw==}
+    dev: false
+
+  /@tanstack/react-query@5.45.0(react@18.3.1):
+    resolution: {integrity: sha512-y272cKRJp1BvehrWG4ashOBuqBj1Qm2O6fgYJ9LYSHrLdsCXl74GbSVjUQTReUdHuRIl9cEOoyPa6HYag400lw==}
+    peerDependencies:
+      react: ^18.0.0
+    dependencies:
+      '@tanstack/query-core': 5.45.0
+      react: 18.3.1
+    dev: false
+
   /@trpc-playground/html@1.0.4(@types/node@20.13.0):
     resolution: {integrity: sha512-HVnqaUXxEJJcrAHvVgivwtZFqTE6NNxXxrXEnd+rCxun97xnZknwdiTxq69wQEsZYxPrgtwPmO/nAEZL8AReWg==}
     dependencies:
@@ -4528,27 +4556,43 @@ packages:
       - terser
     dev: false
 
-  /@trpc-playground/types@1.0.0(@trpc/server@10.45.2)(typescript@5.4.5):
+  /@trpc-playground/types@1.0.0(@trpc/server@11.0.0-rc.403)(typescript@5.4.5):
     resolution: {integrity: sha512-Ap5aNaVlglfM9WLkPLKF2rHDZ8CwHcqK32A8YaqTyHUuoEFTSOh6oSgVU6Cv8toxClKiTXFvbWmE4aZxIoh4Zg==}
     peerDependencies:
       '@trpc/server': ^10
     dependencies:
-      '@trpc/server': 10.45.2
+      '@trpc/server': 11.0.0-rc.403
       ts-essentials: 9.4.2(typescript@5.4.5)
     transitivePeerDependencies:
       - typescript
     dev: false
 
-  /@trpc/client@10.45.2(@trpc/server@10.45.2):
-    resolution: {integrity: sha512-ykALM5kYWTLn1zYuUOZ2cPWlVfrXhc18HzBDyRhoPYN0jey4iQHEFSEowfnhg1RvYnrAVjNBgHNeSAXjrDbGwg==}
+  /@trpc/client@11.0.0-rc.403(@trpc/server@11.0.0-rc.403):
+    resolution: {integrity: sha512-4Elc4/PQI1H2Mpt3VWVINtYI8HhuPkvu/xowGDlHhYemmuvR3OqnE4H3I1XiPS9EXDOT397VadTJ5eGhQIZxPA==}
     peerDependencies:
-      '@trpc/server': 10.45.2
+      '@trpc/server': 11.0.0-rc.403+ab71a1be6
     dependencies:
-      '@trpc/server': 10.45.2
+      '@trpc/server': 11.0.0-rc.403
     dev: false
 
-  /@trpc/server@10.45.2:
-    resolution: {integrity: sha512-wOrSThNNE4HUnuhJG6PfDRp4L2009KDVxsd+2VYH8ro6o/7/jwYZ8Uu5j+VaW+mOmc8EHerHzGcdbGNQSAUPgg==}
+  /@trpc/react-query@11.0.0-rc.403(@tanstack/react-query@5.45.0)(@trpc/client@11.0.0-rc.403)(@trpc/server@11.0.0-rc.403)(react-dom@18.3.1)(react@18.3.1):
+    resolution: {integrity: sha512-a4emDWo0EBTPULqzC92pJaJYTjM71GzdZfYcKYMxGMaevruUQAgmnXumeTkUUrj3QP6eszxVgolSu69Jw+iiSQ==}
+    peerDependencies:
+      '@tanstack/react-query': ^5.40.0
+      '@trpc/client': 11.0.0-rc.403+ab71a1be6
+      '@trpc/server': 11.0.0-rc.403+ab71a1be6
+      react: '>=18.2.0'
+      react-dom: '>=18.2.0'
+    dependencies:
+      '@tanstack/react-query': 5.45.0(react@18.3.1)
+      '@trpc/client': 11.0.0-rc.403(@trpc/server@11.0.0-rc.403)
+      '@trpc/server': 11.0.0-rc.403
+      react: 18.3.1
+      react-dom: 18.3.1(react@18.3.1)
+    dev: false
+
+  /@trpc/server@11.0.0-rc.403:
+    resolution: {integrity: sha512-DIt0GijW3nzq3zk9rFw1Ly/b6E9eTcsKV+caOMSeJl6A7Pby8QpdKaN8yJZDHhEojULeIVFNE4Izals5T0fQgg==}
     dev: false
 
   /@tsconfig/node10@1.0.11:
@@ -5864,6 +5908,13 @@ packages:
     resolution: {integrity: sha512-LDx6oHrK+PhzLKJU9j5S7/Y3jM/mUHvD/DeI1WQmJn652iPC5Y4TBzC9l+5OMOXlyTTA+SmVUPm0HQUwpD5Jqw==}
     dev: true
 
+  /copy-anything@3.0.5:
+    resolution: {integrity: sha512-yCEafptTtb4bk7GLEQoM8KVJpxAfdBJYaXyzQEgQQQgYrZiDp8SJmGKlYza6CYjEDNstAdNdKA3UuoULlEbS6w==}
+    engines: {node: '>=12.13'}
+    dependencies:
+      is-what: 4.1.16
+    dev: false
+
   /core-util-is@1.0.3:
     resolution: {integrity: sha512-ZQBvi1DcpJ4GDqanjucZ2Hj3wEO5pZDS89BWbkcrvdxksJorwUDDZamX9ldFkp9aw2lmBDLgkObEA4DWNJ9FYQ==}
 
@@ -6067,6 +6118,10 @@ packages:
 
   /detect-node-es@1.1.0:
     resolution: {integrity: sha512-ypdmJU/TbBby2Dxibuv7ZLW3Bs1QEmM7nHjEANfohJLvE0XVujisn1qPJcZxg+qDucsr+bP6fLD1rPS3AhJ7EQ==}
+    dev: false
+
+  /devalue@5.0.0:
+    resolution: {integrity: sha512-gO+/OMXF7488D+u3ue+G7Y4AA3ZmUnB3eHJXmBTgNHvr4ZNzl36A0ZtG+XCRNYCkYx/bFmw4qtkoFLa+wSrwAA==}
     dev: false
 
   /dezalgo@1.0.4:
@@ -7547,6 +7602,11 @@ packages:
       call-bind: 1.0.7
       get-intrinsic: 1.2.4
     dev: true
+
+  /is-what@4.1.16:
+    resolution: {integrity: sha512-ZhMwEosbFJkA0YhFnNDgTM4ZxDRsS6HqTo7qsZM08fehyRYIYa0yHu5R6mgo1n/8MgaPBXiPimPD77baVFYg+A==}
+    engines: {node: '>=12.13'}
+    dev: false
 
   /isarray@1.0.0:
     resolution: {integrity: sha512-VLghIWNM6ELQzo7zwmcg0NmTVyWKYjvIeM83yjp0wRDTmUnrM678fQbcKBo6n2CJEF0szoG//ytg+TKla89ALQ==}
@@ -9826,6 +9886,13 @@ packages:
       - supports-color
     dev: true
 
+  /superjson@2.2.1:
+    resolution: {integrity: sha512-8iGv75BYOa0xRJHK5vRLEjE2H/i4lulTjzpUXic3Eg8akftYjkmQDa8JARQ42rlczXyFR3IeRoeFCc7RxHsYZA==}
+    engines: {node: '>=16'}
+    dependencies:
+      copy-anything: 3.0.5
+    dev: false
+
   /supertest@6.3.4:
     resolution: {integrity: sha512-erY3HFDG0dPnhw4U+udPfrzXa4xhSG+n4rxfRuZWCUvjFWwKl+OxWf/7zk50s84/fAAs7vf5QAb9uRa0cCykxw==}
     engines: {node: '>=6.4.0'}
@@ -10047,15 +10114,15 @@ packages:
     hasBin: true
     dev: true
 
-  /trpc-playground@1.0.4(@trpc/server@10.45.2)(@types/node@20.13.0)(typescript@5.4.5)(zod@3.23.8):
+  /trpc-playground@1.0.4(@trpc/server@11.0.0-rc.403)(@types/node@20.13.0)(typescript@5.4.5)(zod@3.23.8):
     resolution: {integrity: sha512-6nVf1o2LNoo1g6oTS24yajoH7xV4CFjxGAbAH7qLXqa3yo9qB5QHsWLbrm1hNt51SyCG++P0zHJaCdVfgvEVDg==}
     peerDependencies:
       '@trpc/server': ^10
       zod: ^3
     dependencies:
       '@trpc-playground/html': 1.0.4(@types/node@20.13.0)
-      '@trpc-playground/types': 1.0.0(@trpc/server@10.45.2)(typescript@5.4.5)
-      '@trpc/server': 10.45.2
+      '@trpc-playground/types': 1.0.0(@trpc/server@11.0.0-rc.403)(typescript@5.4.5)
+      '@trpc/server': 11.0.0-rc.403
       lodash: 4.17.21
       uttp: 0.1.3
       zod: 3.23.8

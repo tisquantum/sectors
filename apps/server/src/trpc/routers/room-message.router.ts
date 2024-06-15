@@ -7,6 +7,7 @@ import {
   EVENT_ROOM_MESSAGE,
   getRoomChannelId,
 } from '@server/pusher/pusher.types';
+import { RoomMessageWithUser } from '@server/prisma/prisma.types';
 
 type Context = {
   roomMessageService: RoomMessageService;
@@ -53,7 +54,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           roomId: z.number(),
           userId: z.string(),
           content: z.string(),
-          timestamp: z.string().pipe(z.coerce.date()),
+          timestamp: z.string(),
         }),
       )
       .mutation(async ({ input }) => {
@@ -108,7 +109,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           id: z.string(),
           data: z.object({
             content: z.string().optional(),
-            timestamp: z.date().optional(),
+            timestamp: z.string(),
           }),
         }),
       )

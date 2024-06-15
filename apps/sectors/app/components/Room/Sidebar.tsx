@@ -1,13 +1,15 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Room, User } from "@server/prisma/prisma.client";
 import { Avatar, Button } from "@nextui-org/react";
 import { trpc } from "@sectors/app/trpc";
 import { useAuthUser } from "@sectors/app/components/AuthUser.context";
 import GameOptions from "./GameOptions";
+import { RoomUserWithUser } from "@server/prisma/prisma.types";
+import { BeakerIcon, SunIcon } from "@heroicons/react/24/solid";
 interface SidebarProps {
-  users: User[];
+  roomUsers: RoomUserWithUser[];
   room: Room;
 }
 
@@ -17,13 +19,29 @@ interface GameOptionsState {
   startingCashOnHand: number;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ users, room }) => {
+const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
   const { user } = useAuthUser();
   const [gameOptions, setGameOptions] = useState<GameOptionsState>({
     bankPoolNumber: 0,
     consumerPoolNumber: 0,
     startingCashOnHand: 0,
   });
+  const joinRoomMutation = trpc.roomUser.joinRoom.useMutation();
+  const leaveRoomMutation = trpc.roomUser.leaveRoom.useMutation();
+  const startGameMutation = trpc.game.startGame.useMutation();
+
+  useEffect(() => {
+    console.log("gameOptions", gameOptions);
+  }, [gameOptions]);
+
+  let roomHostAuthUser: RoomUserWithUser | undefined;
+  if (user && roomUsers) {
+    roomHostAuthUser = roomUsers.find(
+      (roomUser) => roomUser.user.id === user.id
+    );
+  } else {
+    return null;
+  }
 
   const handleOptionsChange = (options: GameOptionsState) => {
     setGameOptions(options);
@@ -32,14 +50,14 @@ const Sidebar: React.FC<SidebarProps> = ({ users, room }) => {
   if (!user) return null;
 
   const handleJoin = (roomId: number) => {
-    trpc.roomUser.joinRoom.mutate({
+    joinRoomMutation.mutate({
       roomId,
       userId: user.id,
     });
   };
 
   const handleLeave = (roomId: number) => {
-    trpc.roomUser.leaveRoom.mutate({
+    leaveRoomMutation.mutate({
       roomId,
       userId: user.id,
     });
@@ -51,13 +69,19 @@ const Sidebar: React.FC<SidebarProps> = ({ users, room }) => {
     consumerPoolNumber: number,
     bankPoolNumber: number
   ) => {
-    trpc.game.startGame.mutate({
+    //response happens through pusher to all clients.
+    startGameMutation.mutate({
       roomId,
       startingCashOnHand,
       consumerPoolNumber,
       bankPoolNumber,
     });
   };
+
+  const handleGameOptionsChange = (options: GameOptionsState) => {
+    setGameOptions(options);
+  };
+
   return (
     <div className="w-1/4 bg-gray-800 text-white p-6 flex flex-col">
       <div className="mb-6">
@@ -68,28 +92,34 @@ const Sidebar: React.FC<SidebarProps> = ({ users, room }) => {
         >
           Leave
         </Button>
-        <GameOptions />
-        <Button
-          color="primary"
-          onClick={() =>
-            handleStartGame(
-              room.id,
-              gameOptions.startingCashOnHand,
-              gameOptions.consumerPoolNumber,
-              gameOptions.bankPoolNumber
-            )
-          }
-          radius="none"
-          className="w-full rounded-b-md"
-        >
-          Start Game
-        </Button>
+        {roomHostAuthUser?.roomHost && (
+          <>
+            <GameOptions onOptionsChange={handleGameOptionsChange} />
+
+            <Button
+              color="primary"
+              onClick={() =>
+                handleStartGame(
+                  room.id,
+                  gameOptions.startingCashOnHand,
+                  gameOptions.consumerPoolNumber,
+                  gameOptions.bankPoolNumber
+                )
+              }
+              radius="none"
+              className="w-full rounded-b-md"
+            >
+              Start Game
+            </Button>
+          </>
+        )}
       </div>
       <ul className="flex-1 overflow-y-auto">
-        {users.map((user) => (
-          <li key={user.id} className="flex items-center mb-4">
-            <Avatar name={user.name} size="sm" className="mr-2" />
-            <span>{user.name}</span>
+        {roomUsers.map((roomUser) => (
+          <li key={roomUser.user.id} className="flex items-center mb-4 gap-1">
+            <Avatar name={roomUser.user.name} size="sm" className="mr-2" />
+            <span>{roomUser.user.name}</span>
+            {roomUser.roomHost && <BeakerIcon className="size-5" />}
           </li>
         ))}
       </ul>

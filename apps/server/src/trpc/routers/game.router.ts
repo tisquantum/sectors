@@ -127,4 +127,11 @@ export default (trpc: TrpcService, ctx: Context) =>
         const { id } = input;
         return ctx.gamesService.deleteGame({ id });
       }),
+
+    getPlayersWithStocks: trpc.procedure
+      .input(z.object({ gameId: z.string() }))
+      .query(async ({ input }) => {
+        const { gameId } = input;
+        return ctx.gameManagementService.getPlayersWithStocks(gameId);
+      }),
   });

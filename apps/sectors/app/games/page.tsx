@@ -2,7 +2,7 @@ import React from "react";
 import GameComponent from "@sectors/app/components/Game/Game";
 
 const GamePage = () => {
-  return <GameComponent />;
+  return <></>;
 };
 
 export default GamePage;

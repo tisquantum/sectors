@@ -9,6 +9,7 @@ import { SectorService } from '@server/sector/sector.service';
 import { gameDataJson } from '@server/data/gameData';
 import { StartGameInput } from './game-management.interface';
 import { GameCompanyService } from '@server/game-company/game-company.service';
+import { GamePlayerWithStock } from '@server/prisma/prisma.types';
 
 @Injectable()
 export class GameManagementService {
@@ -166,5 +167,13 @@ export class GameManagementService {
       taken[x] = --len in taken ? taken[len] : len;
     }
     return result;
+  }
+
+  public getPlayersWithStocks(gameId: string): Promise<GamePlayerWithStock[]> {
+    return this.gamePlayerService.gamePlayersWithStocks({
+      where: {
+        gameId,
+      }
+    });
   }
 }

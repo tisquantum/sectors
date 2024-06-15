@@ -22,8 +22,10 @@ export const AuthUserProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: user, isLoading: userLoading } = trpc.user.getUser.useQuery(
+    { id: "1349641b-358f-4248-a069-9c2a51305d60" }
+  );
+  const loading = userLoading || !supabaseUser;
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -36,9 +38,8 @@ export const AuthUserProvider: React.FC<{ children: React.ReactNode }> = ({
       } else {
         setSupabaseUser(user);
       }
-      setLoading(false);
     };
-
+    // Initial fetch
     fetchUser();
 
     // Listen for auth state changes
@@ -54,24 +55,8 @@ export const AuthUserProvider: React.FC<{ children: React.ReactNode }> = ({
     };
   }, []);
 
-  useEffect(() => {
-    if (supabaseUser) {
-      const fetchUser = async () => {
-        try {
-            const user = await trpc.user.getUser.query({ id: supabaseUser.id });
-            setUser(user);
-          } catch (error) {
-          } finally {
-            setLoading(false);
-          }
-        setLoading(false);
-      };
-
-      fetchUser();
-    }
-  }, [supabaseUser]);
   return (
-    <AuthUserContext.Provider value={{ supabaseUser, user, loading }}>
+    <AuthUserContext.Provider value={{ supabaseUser, user: user ?? null, loading }}>
       {children}
     </AuthUserContext.Provider>
   );
