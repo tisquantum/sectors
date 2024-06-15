@@ -39,6 +39,15 @@ export class GameCompanyService {
     });
   }
 
+  async createManyGameCompanies(
+    data: Prisma.GameCompanyCreateManyInput[],
+  ): Promise<GameCompany[]> {
+    return this.prisma.gameCompany.createManyAndReturn({
+      data,
+      skipDuplicates: true,
+    });
+  }
+
   async updateGameCompany(params: {
     where: Prisma.GameCompanyWhereUniqueInput;
     data: Prisma.GameCompanyUpdateInput;

@@ -48,14 +48,9 @@ export default (trpc: TrpcService, ctx: Context) =>
     startGame: trpc.procedure
       .input(
         z.object({
-          name: z.string(),
-          currentTurn: z.number(),
-          currentOrSubRound: z.number(),
-          currentRound: z.string(),
           currentActivePlayer: z.string().nullable().optional(),
           bankPoolNumber: z.number(),
           consumerPoolNumber: z.number(),
-          gameStatus: z.string(),
           roomId: z.number(),
           startingCashOnHand: z.number(),
           players: z.any().optional(),
@@ -69,36 +64,25 @@ export default (trpc: TrpcService, ctx: Context) =>
         }),
       )
       .mutation(async ({ input }) => {
-        const data: Prisma.GameCreateInput = input;
         try {
-          const game = await ctx.gamesService.createGame(data);
-
-          try {
-            ctx.gameManagementService.addPlayersToGame(
-              game.id,
-              input.roomId,
-              input.startingCashOnHand,
-            );
-          } catch (error) {
-            return {
-              success: false,
-              message: 'Error adding players to game',
-              data: error,
-            };
-          }
-
-          return {
-            success: true,
-            message: 'Game started successfully',
-            data: game,
-          };
+          ctx.gameManagementService.startGame({
+            roomId: input.roomId,
+            startingCashOnHand: input.startingCashOnHand,
+            consumerPoolNumber: input.consumerPoolNumber,
+            bankPoolNumber: input.bankPoolNumber,
+          });
         } catch (error) {
           return {
             success: false,
-            message: 'Error starting game',
+            message: 'Error adding players to game',
             data: error,
           };
         }
+
+        return {
+          success: true,
+          message: 'Game started successfully',
+        };
       }),
 
     updateGame: trpc.procedure

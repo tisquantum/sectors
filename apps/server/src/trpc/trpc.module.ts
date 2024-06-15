@@ -10,6 +10,9 @@ import { GameManagementService } from '@server/game-management/game-management.s
 import { PlayersService } from '@server/players/players.service';
 import { GamePlayerService } from '@server/game-player/game-player.service';
 import { GamesService } from '@server/games/games.service';
+import { CompanyService } from '@server/company/company.service';
+import { GameCompanyService } from '@server/game-company/game-company.service';
+import { SectorService } from '@server/sector/sector.service';
 
 @Module({
   imports: [PrismaModule],
@@ -25,6 +28,9 @@ import { GamesService } from '@server/games/games.service';
     PlayersService,
     GamePlayerService,
     GamesService,
+    CompanyService,
+    GameCompanyService,
+    SectorService,
   ],
 })
 export class TrpcModule {}

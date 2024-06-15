@@ -1,5 +1,6 @@
-// components/Sidebar.tsx
-import React from "react";
+"use client";
+
+import React, { useState } from "react";
 import { Room, User } from "@server/prisma/prisma.client";
 import { Avatar, Button } from "@nextui-org/react";
 import { trpc } from "@sectors/app/trpc";
@@ -10,8 +11,23 @@ interface SidebarProps {
   room: Room;
 }
 
+interface GameOptionsState {
+  bankPoolNumber: number;
+  consumerPoolNumber: number;
+  startingCashOnHand: number;
+}
+
 const Sidebar: React.FC<SidebarProps> = ({ users, room }) => {
   const { user } = useAuthUser();
+  const [gameOptions, setGameOptions] = useState<GameOptionsState>({
+    bankPoolNumber: 0,
+    consumerPoolNumber: 0,
+    startingCashOnHand: 0,
+  });
+
+  const handleOptionsChange = (options: GameOptionsState) => {
+    setGameOptions(options);
+  };
 
   if (!user) return null;
 
@@ -29,8 +45,18 @@ const Sidebar: React.FC<SidebarProps> = ({ users, room }) => {
     });
   };
 
-  const handleStartGame = (roomId: number) => {
-    //TODO: Start the game.
+  const handleStartGame = (
+    roomId: number,
+    startingCashOnHand: number,
+    consumerPoolNumber: number,
+    bankPoolNumber: number
+  ) => {
+    trpc.game.startGame.mutate({
+      roomId,
+      startingCashOnHand,
+      consumerPoolNumber,
+      bankPoolNumber,
+    });
   };
   return (
     <div className="w-1/4 bg-gray-800 text-white p-6 flex flex-col">
@@ -45,7 +71,14 @@ const Sidebar: React.FC<SidebarProps> = ({ users, room }) => {
         <GameOptions />
         <Button
           color="primary"
-          onClick={() => handleStartGame(room.id)}
+          onClick={() =>
+            handleStartGame(
+              room.id,
+              gameOptions.startingCashOnHand,
+              gameOptions.consumerPoolNumber,
+              gameOptions.bankPoolNumber
+            )
+          }
           radius="none"
           className="w-full rounded-b-md"
         >

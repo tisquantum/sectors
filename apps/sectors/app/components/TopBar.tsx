@@ -1,21 +1,28 @@
 "use client";
 
-import { Navbar, Button, Link, NavbarBrand, NavbarContent, NavbarItem } from '@nextui-org/react';
-import { useAuthUser } from './AuthUser.context';
-import ThemeSwitcher from './ThemeSwitcher';
+import {
+  Navbar,
+  Button,
+  Link,
+  NavbarBrand,
+  NavbarContent,
+  NavbarItem,
+} from "@nextui-org/react";
+import { useAuthUser } from "./AuthUser.context";
+import ThemeSwitcher from "./ThemeSwitcher";
 
 const TopBar = () => {
   const { user, loading } = useAuthUser();
- 
+
   return (
     <Navbar isBordered>
       <NavbarBrand>
-        <Link href="#">
-          Sectors
-        </Link>
+        <Link href="#">Sectors</Link>
       </NavbarBrand>
       <NavbarContent>
-        <NavbarItem><Link href="/rooms">Rooms</Link></NavbarItem>
+        <NavbarItem>
+          <Link href="/rooms">Rooms</Link>
+        </NavbarItem>
       </NavbarContent>
       <NavbarContent>
         {loading ? (
@@ -28,9 +35,9 @@ const TopBar = () => {
           </NavbarItem>
         ) : (
           <NavbarItem>
-            <Button href="/login">
-              Log in
-            </Button>
+            <Link href="/login">
+              <Button>Log in</Button>
+            </Link>
           </NavbarItem>
         )}
         <ThemeSwitcher />

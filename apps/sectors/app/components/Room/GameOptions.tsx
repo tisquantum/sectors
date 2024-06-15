@@ -1,5 +1,5 @@
+import React, { useState, useEffect } from "react";
 import { Select, SelectItem } from "@nextui-org/react";
-import { useState } from "react";
 
 interface GameOptionsProps {
   initialBankPoolNumber?: number;
@@ -26,13 +26,18 @@ const GameOptions: React.FC<GameOptionsProps> = ({
     startingCashOnHand: initialStartingCashOnHand,
   });
 
+  useEffect(() => {
+    onOptionsChange && onOptionsChange(options);
+  }, [options]);
+
   const handleSelectChange = (name: string, value: number) => {
-    const newOptions = {
-      ...options,
-      [name]: value,
-    };
-    setOptions(newOptions);
-    onOptionsChange && onOptionsChange(newOptions as GameOptionsState);
+    setOptions((prevOptions) => {
+      const newOptions = {
+        ...prevOptions,
+        [name]: value,
+      };
+      return newOptions;
+    });
   };
 
   return (
@@ -43,7 +48,7 @@ const GameOptions: React.FC<GameOptionsProps> = ({
           label="Bank Pool"
           size="lg"
           className="max-w-xs"
-          onChange={(e) =>
+          onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
             handleSelectChange("bankPoolNumber", Number(e.target.value))
           }
         >
@@ -69,7 +74,7 @@ const GameOptions: React.FC<GameOptionsProps> = ({
           label="Starting Cash On Hand"
           size="lg"
           className="max-w-xs"
-          onChange={(e) =>
+          onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
             handleSelectChange("startingCashOnHand", Number(e.target.value))
           }
         >
@@ -86,7 +91,7 @@ const GameOptions: React.FC<GameOptionsProps> = ({
           label="Consumer Pool Number"
           size="lg"
           className="max-w-xs"
-          onChange={(e) =>
+          onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
             handleSelectChange("consumerPoolNumber", Number(e.target.value))
           }
         >

@@ -90,15 +90,15 @@ model Stock {
 model Company {
   id                 String         @id @default(uuid())
   name               String
-  currentStockPrice  Float?
-  cashOnHand         Float?
   unitPrice          Float
   throughput         Int
   sectorId           String
   gameId             String
   insolvent          Boolean
+  currentStockPrice  Float?
+  cashOnHand         Float?
   mergedWithParent   String?
-  mergedWithChildren Json
+  mergedWithChildren Json?
   Sector             Sector         @relation(fields: [sectorId], references: [id])
   Game               Game           @relation(fields: [gameId], references: [id])
   CompanyStock       CompanyStock[]
@@ -148,11 +148,11 @@ model ResearchDeck {
 }
 
 model Card {
-  id          Int    @id @default(autoincrement())
-  name        String
-  description String
-  effect      Json
-  deckId      Int
+  id           Int          @id @default(autoincrement())
+  name         String
+  description  String
+  effect       Json
+  deckId       Int
   ResearchDeck ResearchDeck @relation(fields: [deckId], references: [id])
 }
 
@@ -166,6 +166,8 @@ model Sector {
   floatNumberMin Int
   floatNumberMax Int
   Company        Company[]
+  Game           Game?     @relation(fields: [gameId], references: [id])
+  gameId         String?
 }
 
 model Game {
@@ -178,6 +180,7 @@ model Game {
   bankPoolNumber      Int
   consumerPoolNumber  Int
   gameStatus          String
+  sectors             Sector[]
   players             GamePlayer[]
   companies           GameCompany[]
   Player              Player[]

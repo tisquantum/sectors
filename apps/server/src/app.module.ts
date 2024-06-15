@@ -14,6 +14,10 @@ import { GamesModule } from './games/games.module';
 import { GamePlayerModule } from './game-player/game-player.module';
 import { GameManagementModule } from './game-management/game-management.module';
 import { GameCompanyModule } from './game-company/game-company.module';
+import { CompanyModule } from './company/company.module';
+import { SectorModule } from './sector/sector.module';
+import { ResearchDeckModule } from './research-deck/research-deck.module';
+import { CardModule } from './card/card.module';
 
 const yourPusherOptions = {
   cluster: process.env.PUSHER_CLUSTER ?? 'CLUSTER',
@@ -42,6 +46,10 @@ const chunkingOptions = {
     GamePlayerModule,
     GameManagementModule,
     GameCompanyModule,
+    CompanyModule,
+    SectorModule,
+    ResearchDeckModule,
+    CardModule,
   ],
   controllers: [AppController],
   providers: [AppService],

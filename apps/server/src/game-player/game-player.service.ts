@@ -43,6 +43,15 @@ export class GamePlayerService {
     });
   }
 
+  async createManyGamePlayers(
+    data: Prisma.GamePlayerCreateManyInput[],
+  ): Promise<GamePlayer[]> {
+    return this.prisma.gamePlayer.createManyAndReturn({
+      data,
+      skipDuplicates: true
+    });
+  }
+
   async updateGamePlayer(params: {
     where: Prisma.GamePlayerWhereUniqueInput;
     data: Prisma.GamePlayerUpdateInput;
