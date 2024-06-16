@@ -1,69 +1,68 @@
 "use client";
 
-import { PlayerWithStock } from "@server/prisma/prisma.types";
 import PlayersOverview from "../Player/PlayersOverview";
 import { Accordion, Card, CardBody, Tab, Tabs } from "@nextui-org/react";
 import SectorComponent from "../Sector/Sector";
 
-const players: PlayerWithStock[] = [
-  {
-    gameId: "G1",
-    id: "1",
-    nickname: "Player 1",
-    cashOnHand: 1000,
-    companyStockAndStocks: [
-      {
-        companyStock: { companyId: "C1", stockId: "S1" },
-        stock: {
-          id: "S1",
-          currentPrice: 150,
-          companyId: "C1",
-          location: "NYSE",
-          gameId: "G1",
-        },
-      },
-      {
-        companyStock: { companyId: "C1", stockId: "S2" },
-        stock: {
-          id: "S2",
-          currentPrice: 200,
-          companyId: "C1",
-          location: "NASDAQ",
-          gameId: "G1",
-        },
-      },
-      {
-        companyStock: { companyId: "C2", stockId: "S3" },
-        stock: {
-          id: "S3",
-          currentPrice: 100,
-          companyId: "C2",
-          location: "NYSE",
-          gameId: "G1",
-        },
-      },
-    ],
-  },
-  {
-    gameId: "G2",
-    id: "2",
-    nickname: "Player 2",
-    cashOnHand: 1200,
-    companyStockAndStocks: [
-      {
-        companyStock: { companyId: "C3", stockId: "S4" },
-        stock: {
-          id: "S4",
-          currentPrice: 100,
-          companyId: "C3",
-          location: "NYSE",
-          gameId: "G2",
-        },
-      },
-    ],
-  },
-  // Add more players as needed
-];
+// const players: PlayerWithStock[] = [
+//   {
+//     gameId: "G1",
+//     id: "1",
+//     nickname: "Player 1",
+//     cashOnHand: 1000,
+//     companyStockAndStocks: [
+//       {
+//         companyStock: { companyId: "C1", stockId: "S1" },
+//         stock: {
+//           id: "S1",
+//           currentPrice: 150,
+//           companyId: "C1",
+//           location: "NYSE",
+//           gameId: "G1",
+//         },
+//       },
+//       {
+//         companyStock: { companyId: "C1", stockId: "S2" },
+//         stock: {
+//           id: "S2",
+//           currentPrice: 200,
+//           companyId: "C1",
+//           location: "NASDAQ",
+//           gameId: "G1",
+//         },
+//       },
+//       {
+//         companyStock: { companyId: "C2", stockId: "S3" },
+//         stock: {
+//           id: "S3",
+//           currentPrice: 100,
+//           companyId: "C2",
+//           location: "NYSE",
+//           gameId: "G1",
+//         },
+//       },
+//     ],
+//   },
+//   {
+//     gameId: "G2",
+//     id: "2",
+//     nickname: "Player 2",
+//     cashOnHand: 1200,
+//     companyStockAndStocks: [
+//       {
+//         companyStock: { companyId: "C3", stockId: "S4" },
+//         stock: {
+//           id: "S4",
+//           currentPrice: 100,
+//           companyId: "C3",
+//           location: "NYSE",
+//           gameId: "G2",
+//         },
+//       },
+//     ],
+//   },
+//   // Add more players as needed
+// ];
 
 const sectors = [
   {

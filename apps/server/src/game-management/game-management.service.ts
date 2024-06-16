@@ -1,33 +1,29 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
-import { GamePlayerService } from '../game-player/game-player.service';
 import { PlayersService } from '@server/players/players.service';
-import { Game, GamePlayer, Prisma, Sector } from '@prisma/client';
+import { Game, Player, Prisma, Sector } from '@prisma/client';
 import { GamesService } from '@server/games/games.service';
 import { CompanyService } from '@server/company/company.service';
 import { SectorService } from '@server/sector/sector.service';
 import { gameDataJson } from '@server/data/gameData';
 import { StartGameInput } from './game-management.interface';
-import { GameCompanyService } from '@server/game-company/game-company.service';
-import { GamePlayerWithStock } from '@server/prisma/prisma.types';
+import { PlayerWithStocks } from '@server/prisma/prisma.types';
 
 @Injectable()
 export class GameManagementService {
   constructor(
     private prisma: PrismaService,
-    private gamePlayerService: GamePlayerService,
     private playersService: PlayersService,
     private gamesService: GamesService,
     private companyService: CompanyService,
     private sectorService: SectorService,
-    private gameCompanyService: GameCompanyService,
   ) {}
 
   async addPlayersToGame(
     gameId: string,
     roomId: number,
     startingCashOnHand: number,
-  ): Promise<GamePlayer[]> {
+  ): Promise<Player[]> {
     const users = await this.prisma.roomUser.findMany({
       where: {
         roomId,
@@ -37,29 +33,18 @@ export class GameManagementService {
       },
     });
 
-    const players = await this.playersService.createManyPlayers(
+    return await this.playersService.createManyPlayers(
       users.map((user) => ({
         nickname: user.user.name,
         cashOnHand: startingCashOnHand,
         gameId,
       })),
     );
-
-    return await this.gamePlayerService.createManyGamePlayers(
-      players.map((player) => ({
-        gameId,
-        playerId: player.id,
-      })),
-    );
   }
 
   async startGame(input: StartGameInput): Promise<Game> {
-    const {
-      roomId,
-      startingCashOnHand,
-      consumerPoolNumber,
-      bankPoolNumber,
-    } = input;
+    const { roomId, startingCashOnHand, consumerPoolNumber, bankPoolNumber } =
+      input;
 
     const gameData: Prisma.GameCreateInput = {
       name: `Game_Fantastic`,
@@ -130,22 +115,16 @@ export class GameManagementService {
           }
           return {
             ...company,
+            gameId: game.id,
             sectorId: sector.id,
           };
         });
-        const companies =
-          await this.companyService.createManyCompanies(newCompanyData);
-        await this.gameCompanyService.createManyGameCompanies(
-          companies.map((company) => ({
-            gameId: game.id,
-            companyId: company.id,
-          })),
-        );
+        await this.companyService.createManyCompanies(newCompanyData);
       } catch (error) {
         console.error('Error starting game:', error);
         throw new Error('Failed to start the game');
       }
-      
+
       return game;
     } catch (error) {
       console.error('Error starting game:', error);
@@ -169,11 +148,11 @@ export class GameManagementService {
     return result;
   }
 
-  public getPlayersWithStocks(gameId: string): Promise<GamePlayerWithStock[]> {
-    return this.gamePlayerService.gamePlayersWithStocks({
-      where: {
-        gameId,
-      }
+  public getPlayersWithStocks(
+    gameId: string,
+  ): Promise<PlayerWithStocks[] | null> {
+    return this.playersService.playersWithStocks({
+      gameId,
     });
   }
 }

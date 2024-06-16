@@ -62,26 +62,14 @@ model RoomUser {
 }
 
 model Player {
-  id          String        @id @default(uuid())
-  nickname    String
-  cashOnHand  Float
-  gameId      String
-  Game        Game          @relation(fields: [gameId], references: [id])
-  PlayerStock PlayerStock[]
-  GamePlayer  GamePlayer[]
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-}
-
-model PlayerStock {
-  playerId            String
-  stockId             String
-  ownershipPercentage Float
-
-  Player Player @relation(fields: [playerId], references: [id])
-  Stock  Stock  @relation(fields: [stockId], references: [id])
-
-  @@id([playerId, stockId])
+  id         String   @id @default(uuid())
+  nickname   String
+  cashOnHand Float
+  gameId     String
+  Game       Game     @relation(fields: [gameId], references: [id])
+  Stock      Stock[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 model Stock {
@@ -90,16 +78,16 @@ model Stock {
   companyId    String
   location     String
   gameId       String
+  playerId     String?
   Company      Company        @relation(fields: [companyId], references: [id])
+  Player       Player?        @relation(fields: [playerId], references: [id])
   StockHistory StockHistory[]
-  PlayerStock  PlayerStock[]
-  CompanyStock CompanyStock[]
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 }
 
 model Company {
-  id                 String         @id @default(uuid())
+  id                 String   @id @default(uuid())
   name               String
   unitPrice          Float
   throughput         Int
@@ -109,24 +97,12 @@ model Company {
   currentStockPrice  Float?
   cashOnHand         Float?
   mergedWithParent   String?
-  mergedWithChildren Json?
-  Sector             Sector         @relation(fields: [sectorId], references: [id])
-  Game               Game           @relation(fields: [gameId], references: [id])
-  CompanyStock       CompanyStock[]
+  mergedWithChildren String?
+  Sector             Sector   @relation(fields: [sectorId], references: [id])
   Stock              Stock[]
-  GameCompany        GameCompany[]
-  createdAt          DateTime       @default(now())
-  updatedAt          DateTime       @updatedAt
-}
-
-model CompanyStock {
-  companyId String
-  stockId   String
-
-  Company Company @relation(fields: [companyId], references: [id])
-  Stock   Stock   @relation(fields: [stockId], references: [id])
-
-  @@id([companyId, stockId])
+  Game               Game     @relation(fields: [gameId], references: [id])
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 }
 
 model StockHistory {
@@ -206,8 +182,6 @@ model Game {
   consumerPoolNumber  Int
   gameStatus          String
   sectors             Sector[]
-  players             GamePlayer[]
-  companies           GameCompany[]
   Player              Player[]
   Company             Company[]
   StockRound          StockRound[]
@@ -216,24 +190,4 @@ model Game {
   Room                Room[]
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
-}
-
-model GamePlayer {
-  gameId   String
-  playerId String
-
-  Game   Game   @relation(fields: [gameId], references: [id])
-  Player Player @relation(fields: [playerId], references: [id])
-
-  @@id([gameId, playerId])
-}
-
-model GameCompany {
-  gameId    String
-  companyId String
-
-  Game    Game    @relation(fields: [gameId], references: [id])
-  Company Company @relation(fields: [companyId], references: [id])
-
-  @@id([gameId, companyId])
 }

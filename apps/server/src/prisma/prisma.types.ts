@@ -1,9 +1,6 @@
 import {
   Company,
-  CompanyStock,
-  GamePlayer,
   Player,
-  PlayerStock,
   Room,
   RoomMessage,
   RoomUser,
@@ -19,14 +16,6 @@ export type RoomUserWithUser = RoomUser & {
 
 export type RoomWithUsers = Room & { users: { user: User }[] };
 
-export type PlayerWithStock = Player & {
-  companyStockAndStocks: { companyStock: CompanyStock; stock: Stock }[];
-};
-
-export type GamePlayerWithStock = GamePlayer & {
-  Player: Player & {
-    PlayerStock: (PlayerStock & {
-      Stock: Stock;
-    })[];
-  };
+export type PlayerWithStocks = Player & {
+  Stock: Stock[];
 };

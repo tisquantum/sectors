@@ -14,10 +14,12 @@ import roomUserRouter from './routers/room-user.router';
 import { PusherService } from 'nestjs-pusher';
 import { GamesService } from '@server/games/games.service';
 import gameRouter from './routers/game.router';
-import gamePlayerRouter from './routers/game-player.router';
-import { GamePlayerService } from '@server/game-player/game-player.service';
 import { GameManagementService } from '@server/game-management/game-management.service';
 import playerRouter from './routers/player.router';
+import { CompanyService } from '@server/company/company.service';
+import { SectorService } from '@server/sector/sector.service';
+import companyRouter from './routers/company.router';
+import sectorRouter from './routers/sector.router';
 @Injectable()
 export class TrpcRouter {
   constructor(
@@ -27,9 +29,10 @@ export class TrpcRouter {
     private readonly roomMessageService: RoomMessageService,
     private readonly roomUserService: RoomUserService,
     private readonly gamesService: GamesService,
-    private readonly gamePlayerService: GamePlayerService,
     private readonly pusherService: PusherService,
     private readonly playersService: PlayersService,
+    private readonly companyService: CompanyService,
+    private readonly sectorService: SectorService,
     private readonly gameManagementService: GameManagementService,
   ) {}
   
@@ -61,12 +64,14 @@ export class TrpcRouter {
       gameManagementService: this.gameManagementService,
       pusherService: this.pusherService,
     }),
-    gamePlayer: gamePlayerRouter(this.trpc, {
-      gamePlayersService: this.gamePlayerService,
-      pusherService: this.pusherService,
-    }),
     player: playerRouter(this.trpc, {
       playersService: this.playersService,
+    }),
+    company: companyRouter(this.trpc, {
+      companyService: this.companyService,
+    }),
+    sector: sectorRouter(this.trpc, {
+      sectorService: this.sectorService,
     }),
   });
 
