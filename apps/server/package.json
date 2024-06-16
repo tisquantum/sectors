@@ -31,6 +31,7 @@
     "@prisma/client": "5.14.0",
     "@trpc/server": "11.0.0-rc.403",
     "devalue": "^5.0.0",
+    "fix-esm": "^1.0.1",
     "nestjs-pusher": "^2.1.0",
     "nestjs-supabase-auth-v2": "^0.0.1",
     "passport": "^0.7.0",
