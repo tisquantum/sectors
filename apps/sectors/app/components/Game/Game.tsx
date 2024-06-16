@@ -14,6 +14,7 @@ import CompanyActionSlider from "@sectors/app/components/Company/CompanyActionSe
 import Timer from "./Timer";
 import CompanyActionVote from "../Company/CompanyActionVote";
 import { Game as PrismaGame } from "@server/prisma/prisma.client";
+import Meeting from "../Meeting/Meeting";
 
 const Game = ({ gameId }: { gameId: string }) => {
   const [currentOrder, setCurrentOrder] = useState<any>(null);
@@ -43,7 +44,9 @@ const Game = ({ gameId }: { gameId: string }) => {
       </motion.div>
       <div className="flex flex-col w-full">
         <GameTopBar gameId={gameId} handleCurrentView={handleCurrentView} />
-        <div className="active-panel flex flex-col overflow-hidden h-full"></div>
+        <div className="active-panel flex flex-col overflow-hidden h-full">
+          <Meeting />
+        </div>
       </div>
     </div>
   );

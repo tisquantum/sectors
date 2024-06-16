@@ -1,18 +1,23 @@
 import { Injectable } from '@nestjs/common';
 import { initTRPC } from '@trpc/server';
-let superjson: typeof import('superjson');
+import SuperJSON from 'superjson';
 
-eval(`import('superjson')`).then((module: typeof import('superjson')) => {
-  superjson = module;
-});
+export const transformer = {
+  input: {
+    serialize: (object: unknown) => SuperJSON.stringify(object),
+    deserialize: (object: string) => SuperJSON.parse(object),
+  },
+  output: {
+    serialize: (object: unknown) => SuperJSON.stringify(object),
+    deserialize: (object: string) => SuperJSON.parse(object),
+  },
+};
 
 @Injectable()
 export class TrpcService {
-  trpc = initTRPC.create(
-  //   {
-  //   transformer: superjson,
-  // }
-);
+  trpc = initTRPC.create({
+    transformer: transformer,
+  });
   procedure = this.trpc.procedure;
   router = this.trpc.router;
   mergeRouters = this.trpc.mergeRouters;

@@ -5,6 +5,7 @@ import {
 } from "@trpc/react-query";
 import type { AppRouter } from "@server/trpc/trpc.router";
 import superjson from 'superjson';
+// import { customTransformer } from "@server/trpc/trpc.service";
 // export const trpc = createTRPCClientProxy<AppRouter>({
 //   links: [
 //     httpBatchLink({
@@ -19,7 +20,7 @@ export const trpcClient = trpc.createClient({
   links: [
     httpBatchLinkReact({
       url: `${process.env.NEXT_PUBLIC_NESTJS_SERVER}/trpc`,
-      //transformer: superjson
+      transformer: superjson
     }),
   ],
 });

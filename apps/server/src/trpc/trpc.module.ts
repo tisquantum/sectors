@@ -8,10 +8,8 @@ import { RoomUserService } from '@server/room-user/room-user.service';
 import { PrismaModule } from '@server/prisma/prisma.module';
 import { GameManagementService } from '@server/game-management/game-management.service';
 import { PlayersService } from '@server/players/players.service';
-import { GamePlayerService } from '@server/game-player/game-player.service';
 import { GamesService } from '@server/games/games.service';
 import { CompanyService } from '@server/company/company.service';
-import { GameCompanyService } from '@server/game-company/game-company.service';
 import { SectorService } from '@server/sector/sector.service';
 
 @Module({
@@ -26,10 +24,8 @@ import { SectorService } from '@server/sector/sector.service';
     RoomUserService,
     GameManagementService,
     PlayersService,
-    GamePlayerService,
     GamesService,
     CompanyService,
-    GameCompanyService,
     SectorService,
   ],
 })
