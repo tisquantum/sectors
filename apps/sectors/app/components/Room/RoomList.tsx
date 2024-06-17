@@ -13,10 +13,11 @@ interface RoomListProps {
 const RoomList: React.FC<RoomListProps> = ({ room }) => {
   const { user } = useAuthUser();
   const router = useRouter();
+  const joinRoomMutation = trpc.roomUser.joinRoom.useMutation();
   if(!user) return null;
 
   const handleJoin = (roomId: number) => {
-    trpc.roomUser.joinRoom.mutate({
+    joinRoomMutation.mutate({
       roomId,
       userId: user.id,
     });

@@ -54,6 +54,8 @@ export class GameManagementService {
       bankPoolNumber,
       consumerPoolNumber,
       gameStatus: 'started',
+      gameStep: 0,
+      currentPhase: 'initial',
     };
 
     const jsonData = gameDataJson;

@@ -2,18 +2,21 @@ import { Avatar, Chip, Select, SelectItem } from "@nextui-org/react";
 import { trpc } from "@sectors/app/trpc";
 import { useGame } from "./GameContext";
 import { notFound } from "next/navigation";
+import { ChangeEventHandler } from "react";
 
-const PlayerSelect = () => {
+const PlayerSelect = ({ onChange }: { onChange: ChangeEventHandler<HTMLSelectElement> }) => {
   const { gameId } = useGame();
-  const { data: players, isLoading } = trpc.player.listPlayers.useQuery({ where: { gameId } });
-  
-  if(isLoading) return null;
-  if(players == undefined) return notFound();
+  const { data: players, isLoading } = trpc.player.listPlayers.useQuery({
+    where: { gameId },
+  });
+
+  if (isLoading) return null;
+  if (players == undefined) return notFound();
 
   return (
     <Select
       items={players}
-      label="Assigned to"
+      label="Users"
       variant="bordered"
       isMultiline={true}
       selectionMode="multiple"
@@ -32,15 +35,12 @@ const PlayerSelect = () => {
           </div>
         );
       }}
+      onChange={onChange}
     >
       {(player) => (
         <SelectItem key={player.id} textValue={player.nickname}>
           <div className="flex gap-2 items-center">
-            <Avatar
-              alt={player.nickname}
-              className="flex-shrink-0"
-              size="sm"
-            />
+            <Avatar alt={player.nickname} className="flex-shrink-0" size="sm" />
             <div className="flex flex-col">
               <span className="text-small">{player.nickname}</span>
             </div>

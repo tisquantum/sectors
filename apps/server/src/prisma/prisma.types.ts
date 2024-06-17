@@ -4,6 +4,7 @@ import {
   Room,
   RoomMessage,
   RoomUser,
+  Sector,
   Stock,
   User,
 } from '@prisma/client';
@@ -19,3 +20,5 @@ export type RoomWithUsers = Room & { users: { user: User }[] };
 export type PlayerWithStocks = Player & {
   Stock: Stock[];
 };
+
+export type CompanyWithSector = Company & { Sector: Sector };

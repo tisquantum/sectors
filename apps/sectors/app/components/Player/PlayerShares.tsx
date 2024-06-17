@@ -1,5 +1,7 @@
 import React from "react";
 import { Avatar, AvatarGroup, Badge } from "@nextui-org/react";
+import { PlayerWithStocks } from "@server/prisma/prisma.types";
+import { StockAggregation } from "./PlayersOverview";
 
 const playerCompanies = [
   {
@@ -29,24 +31,42 @@ const playerCompanies = [
   },
 ];
 
-const PlayerShares = () => {
+const PlayerShares = ({ playerWithStocks }: { playerWithStocks: PlayerWithStocks }) => {
+  // Aggregate total value and total shares owned for each company
+  const stockAggregation = playerWithStocks.Stock.reduce(
+    (acc: Record<string, StockAggregation>, playerStock) => {
+      const { companyId, currentPrice } = playerStock;
+      if (!acc[companyId]) {
+        acc[companyId] = { totalShares: 0, totalValue: 0 };
+      }
+      acc[companyId].totalShares += 1;
+      acc[companyId].totalValue += currentPrice;
+      return acc;
+    },
+    {}
+  );
+
+  // Extract and map the companies from the aggregation
+  const playerCompanies = Object.entries(stockAggregation).map(([companyId, aggregation]) => ({
+    companyId,
+    shareTotal: aggregation.totalShares,
+    pricePerShare: aggregation.totalValue / aggregation.totalShares,
+    totalValue: aggregation.totalValue
+  }));
+
   return (
     <div className="grid grid-cols-4 gap-4">
-      {playerCompanies.map((company) => {
-        const totalValue = company.shareTotal * company.pricePerShare;
-
-        return (
-          <div
-            key={company.companyName}
-            className="flex flex-col justify-center items-center"
-          >
-            <Badge content={company.shareTotal} color="default">
-              <Avatar name={company.companyName} />
-            </Badge>
-            <div className="text-sm mt-1">${totalValue.toFixed(2)}</div>
-          </div>
-        );
-      })}
+      {playerCompanies.length > 0 ? playerCompanies.map((company) => (
+        <div
+          key={company.companyId}
+          className="flex flex-col justify-center items-center"
+        >
+          <Badge content={company.shareTotal} color="default">
+            <Avatar name={company.companyId} />
+          </Badge>
+          <div className="text-sm mt-1">${company.totalValue.toFixed(2)}</div>
+        </div>
+      )) : <div>No shares owned.</div>}
     </div>
   );
 };

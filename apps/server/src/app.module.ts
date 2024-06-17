@@ -16,6 +16,7 @@ import { CompanyModule } from './company/company.module';
 import { SectorModule } from './sector/sector.module';
 import { ResearchDeckModule } from './research-deck/research-deck.module';
 import { CardModule } from './card/card.module';
+import { MeetingMessageModule } from './meeting-message/meeting-message.module';
 
 const yourPusherOptions = {
   cluster: process.env.PUSHER_CLUSTER ?? 'CLUSTER',
@@ -46,6 +47,7 @@ const chunkingOptions = {
     SectorModule,
     ResearchDeckModule,
     CardModule,
+    MeetingMessageModule,
   ],
   controllers: [AppController],
   providers: [AppService],

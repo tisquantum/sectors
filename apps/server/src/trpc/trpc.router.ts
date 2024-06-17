@@ -20,6 +20,8 @@ import { CompanyService } from '@server/company/company.service';
 import { SectorService } from '@server/sector/sector.service';
 import companyRouter from './routers/company.router';
 import sectorRouter from './routers/sector.router';
+import meetingMessageRouter from './routers/meeting-message.router';
+import { MeetingMessageService } from '@server/meeting-message/meeting-message.service';
 @Injectable()
 export class TrpcRouter {
   constructor(
@@ -34,6 +36,7 @@ export class TrpcRouter {
     private readonly companyService: CompanyService,
     private readonly sectorService: SectorService,
     private readonly gameManagementService: GameManagementService,
+    private readonly meetingMessageService: MeetingMessageService,
   ) {}
   
   appRouter = this.trpc.router({
@@ -72,6 +75,10 @@ export class TrpcRouter {
     }),
     sector: sectorRouter(this.trpc, {
       sectorService: this.sectorService,
+    }),
+    meetingMessage: meetingMessageRouter(this.trpc, {
+      meetingMessageService: this.meetingMessageService,
+      pusherService: this.pusherService,
     }),
   });
 

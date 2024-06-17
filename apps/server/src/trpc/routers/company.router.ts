@@ -41,6 +41,27 @@ export default (trpc: TrpcService, ctx: Context) =>
         });
       }),
 
+    listCompaniesWithSector: trpc.procedure
+      .input(
+        z.object({
+          skip: z.number().optional(),
+          take: z.number().optional(),
+          cursor: z.string().optional(),
+          where: z.any().optional(),
+          orderBy: z.any().optional(),
+        }),
+      )
+      .query(async ({ input }) => {
+        const { skip, take, cursor, where, orderBy } = input;
+        return ctx.companyService.companiesWithSector({
+          skip,
+          take,
+          cursor: cursor ? { id: cursor } : undefined,
+          where,
+          orderBy,
+        });
+      }),
+
     createCompany: trpc.procedure
       .input(
         z.object({
@@ -82,6 +103,8 @@ export default (trpc: TrpcService, ctx: Context) =>
                 bankPoolNumber: z.number(),
                 consumerPoolNumber: z.number(),
                 gameStatus: z.string(),
+                gameStep: z.number(),
+                currentPhase: z.string(),
                 players: z.any().optional(),
                 companies: z.any().optional(),
                 Player: z.any().optional(),
@@ -155,6 +178,8 @@ export default (trpc: TrpcService, ctx: Context) =>
                     bankPoolNumber: z.number(),
                     consumerPoolNumber: z.number(),
                     gameStatus: z.string(),
+                    gameStep: z.number(),
+                    currentPhase: z.string(),
                     players: z.any().optional(),
                     companies: z.any().optional(),
                     Player: z.any().optional(),

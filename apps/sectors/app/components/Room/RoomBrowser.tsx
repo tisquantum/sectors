@@ -4,32 +4,18 @@ import { trpc } from "@sectors/app/trpc";
 import { useEffect, useState } from "react";
 import RoomList from "./RoomList";
 import { RoomWithUsers } from "@server/prisma/prisma.types";
+import { notFound } from "next/navigation";
+import { Button } from "@nextui-org/react";
+import CreateRoom from "./CreateRoom";
 
 export default function RoomBrowser() {
-  const [rooms, setRooms] = useState<RoomWithUsers[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchRooms = async () => {
-      try {
-        const rooms = await trpc.room.listRooms.query({});
-        setRooms(rooms);
-      } catch (error) {
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRooms();
-  }, []);
-
-  if (loading) {
+  const { data: rooms, isLoading } = trpc.room.listRooms.useQuery({});
+  if (isLoading) {
     return <div>Loading...</div>;
   }
 
-  if (error) {
-    return <div>Error: {error}</div>;
+  if (rooms == undefined) {
+    return notFound();
   }
 
   return (
@@ -40,6 +26,7 @@ export default function RoomBrowser() {
         <RoomList room={room} key={room.id} />
       ))}
     </div>
+    <CreateRoom />
   </div>
   );
 }

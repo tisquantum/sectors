@@ -4,7 +4,7 @@ import { GamesService } from '@server/games/games.service';
 import { TrpcService } from '../trpc.service';
 import { Game, Prisma } from '@prisma/client';
 import { GameManagementService } from '@server/game-management/game-management.service';
-import { EVENT_GAME_STARTED } from '@server/pusher/pusher.types';
+import { EVENT_GAME_STARTED, getRoomChannelId } from '@server/pusher/pusher.types';
 
 type Context = {
   gamesService: GamesService;
@@ -82,7 +82,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         }
 
         // Notify all users in the room that the game has started
-        ctx.pusherService.trigger(`room-${input.roomId}`, EVENT_GAME_STARTED, {
+        ctx.pusherService.trigger(getRoomChannelId(input.roomId), EVENT_GAME_STARTED, {
           gameId: game.id,
         });
 
