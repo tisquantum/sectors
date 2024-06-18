@@ -8,10 +8,10 @@ export class PlayersService {
   constructor(private prisma: PrismaService) {}
 
   async player(
-    playerWhereUniqueInput: Prisma.PlayerWhereUniqueInput,
+    playerWhereInput: Prisma.PlayerWhereInput,
   ): Promise<Player | null> {
-    return this.prisma.player.findUnique({
-      where: playerWhereUniqueInput,
+    return this.prisma.player.findFirst({
+      where: playerWhereInput,
       include: {
         Game: true,
       },

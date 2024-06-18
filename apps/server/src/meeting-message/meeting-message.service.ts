@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { Prisma, MeetingMessage } from '@prisma/client';
+import { MeetingMessageWithPlayer } from '@server/prisma/prisma.types';
 
 @Injectable()
 export class MeetingMessageService {
@@ -20,7 +21,7 @@ export class MeetingMessageService {
     cursor?: Prisma.MeetingMessageWhereUniqueInput;
     where?: Prisma.MeetingMessageWhereInput;
     orderBy?: Prisma.MeetingMessageOrderByWithRelationInput;
-  }): Promise<MeetingMessage[]> {
+  }): Promise<MeetingMessageWithPlayer[]> {
     const { skip, take, cursor, where, orderBy } = params;
     return this.prisma.meetingMessage.findMany({
       skip,
@@ -28,12 +29,18 @@ export class MeetingMessageService {
       cursor,
       where,
       orderBy,
+      include: {
+        player: true,
+      },
     });
   }
 
-  async createMessage(data: Prisma.MeetingMessageCreateInput): Promise<MeetingMessage> {
+  async createMessage(data: Prisma.MeetingMessageCreateInput): Promise<MeetingMessageWithPlayer> {
     return this.prisma.meetingMessage.create({
       data,
+      include: {
+        player: true,
+      },
     });
   }
 

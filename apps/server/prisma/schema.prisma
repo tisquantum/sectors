@@ -19,6 +19,7 @@ model User {
   name        String        @default("anon")
   RoomMessage RoomMessage[]
   RoomUser    RoomUser[]
+  player      Player[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 }
@@ -66,7 +67,9 @@ model Player {
   nickname       String
   cashOnHand     Float
   gameId         String
+  userId         String
   Game           Game             @relation(fields: [gameId], references: [id])
+  User           User             @relation(fields: [userId], references: [id])
   Stock          Stock[]
   MeetingMessage MeetingMessage[]
   createdAt      DateTime         @default(now())
@@ -184,6 +187,7 @@ model Game {
   consumerPoolNumber  Int
   gameStatus          String
   gameStep            Int
+  gameLogs            GameLog[]
   sectors             Sector[]
   Player              Player[]
   Company             Company[]
@@ -194,6 +198,17 @@ model Game {
   MeetingMessage      MeetingMessage[]
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
+}
+
+model GameLog {
+  id        Int      @id @default(autoincrement())
+  gameId    String
+  content   String
+  gameStep  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  game Game @relation(fields: [gameId], references: [id])
 }
 
 model MeetingMessage {

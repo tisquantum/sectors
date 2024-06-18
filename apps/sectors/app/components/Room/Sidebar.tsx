@@ -8,6 +8,7 @@ import { useAuthUser } from "@sectors/app/components/AuthUser.context";
 import GameOptions from "./GameOptions";
 import { RoomUserWithUser } from "@server/prisma/prisma.types";
 import { BeakerIcon, SunIcon } from "@heroicons/react/24/solid";
+import { useRouter } from "next/navigation";
 interface SidebarProps {
   roomUsers: RoomUserWithUser[];
   room: Room;
@@ -21,6 +22,7 @@ interface GameOptionsState {
 
 const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
   const { user } = useAuthUser();
+  const router = useRouter();
   const [gameOptions, setGameOptions] = useState<GameOptionsState>({
     bankPoolNumber: 0,
     consumerPoolNumber: 0,
@@ -56,11 +58,12 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
     });
   };
 
-  const handleLeave = (roomId: number) => {
-    leaveRoomMutation.mutate({
+  const handleLeave = async (roomId: number) => {
+    await leaveRoomMutation.mutate({
       roomId,
       userId: user.id,
     });
+    router.push("/rooms");
   };
 
   const handleStartGame = (

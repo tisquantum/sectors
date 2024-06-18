@@ -4,10 +4,16 @@ import { Topic, TopicKey, topics } from "./data";
 import PlayerSelect from "../Game/PlayerSelect";
 import { trpc } from "@sectors/app/trpc";
 import { useGame } from "../Game/GameContext";
+import { organizeCompaniesBySector } from "@sectors/app/helpers";
+import { Sector } from "@server/prisma/prisma.client";
 
 type SelectChangeEvent = ChangeEvent<HTMLSelectElement>;
 
-const Complement = ({ onChange }: { onChange: (e: SelectChangeEvent) => void }) => {
+const Complement = ({
+  onChange,
+}: {
+  onChange: (e: SelectChangeEvent) => void;
+}) => {
   return (
     <Select
       label="Complement"
@@ -24,7 +30,11 @@ const Complement = ({ onChange }: { onChange: (e: SelectChangeEvent) => void }) 
   );
 };
 
-const PlayerSubject = ({ onChange }: { onChange: (e: SelectChangeEvent) => void }) => {
+const PlayerSubject = ({
+  onChange,
+}: {
+  onChange: (e: SelectChangeEvent) => void;
+}) => {
   return (
     <Select
       label="Subject"
@@ -43,7 +53,11 @@ const PlayerSubject = ({ onChange }: { onChange: (e: SelectChangeEvent) => void 
   );
 };
 
-const PlayerTopic = ({ onChange }: { onChange: (e: SelectChangeEvent) => void }) => {
+const PlayerTopic = ({
+  onChange,
+}: {
+  onChange: (e: SelectChangeEvent) => void;
+}) => {
   const { gameId } = useGame();
   const { data: companies, isLoading } = trpc.company.listCompanies.useQuery({
     where: { gameId },
@@ -75,7 +89,11 @@ const PlayerTopic = ({ onChange }: { onChange: (e: SelectChangeEvent) => void })
   );
 };
 
-const CompanyTopic = ({ onChange }: { onChange: (e: SelectChangeEvent) => void }) => {
+const CompanyTopic = ({
+  onChange,
+}: {
+  onChange: (e: SelectChangeEvent) => void;
+}) => {
   const { gameId } = useGame();
   const { data: companies, isLoading } =
     trpc.company.listCompaniesWithSector.useQuery({
@@ -84,16 +102,7 @@ const CompanyTopic = ({ onChange }: { onChange: (e: SelectChangeEvent) => void }
   if (isLoading) return null;
   if (companies == undefined) return null;
   //organize companies by sector
-  const companiesBySector = companies.reduce((acc, company) => {
-    if (!acc[company.sectorId]) {
-      acc[company.sectorId] = {
-        sector: company.Sector,
-        companies: [],
-      };
-    }
-    acc[company.sectorId].companies.push(company);
-    return acc;
-  }, {} as Record<string, { sector: (typeof companies)[0]["Sector"]; companies: typeof companies }>);
+  const companiesBySector = organizeCompaniesBySector(companies);
   return (
     <Select
       label="Company Topic"
@@ -105,7 +114,9 @@ const CompanyTopic = ({ onChange }: { onChange: (e: SelectChangeEvent) => void }
         ([sectorId, { sector, companies }]) => (
           <SelectSection key={sectorId} title={sector.name}>
             {companies.map((company) => (
-              <SelectItem key={company.id}>{company.name}</SelectItem>
+              <SelectItem key={company.id} value={company.name}>
+                {company.name}
+              </SelectItem>
             ))}
           </SelectSection>
         )
@@ -114,7 +125,11 @@ const CompanyTopic = ({ onChange }: { onChange: (e: SelectChangeEvent) => void }
   );
 };
 
-const CompanySubject = ({ onChange }: { onChange: (e: SelectChangeEvent) => void }) => {
+const CompanySubject = ({
+  onChange,
+}: {
+  onChange: (e: SelectChangeEvent) => void;
+}) => {
   return (
     <Select
       label="Subject"
@@ -123,36 +138,57 @@ const CompanySubject = ({ onChange }: { onChange: (e: SelectChangeEvent) => void
       description="The subject of discussion"
       onChange={onChange}
     >
-      <SelectItem key="ready_to_run">ready to run.</SelectItem>
-      <SelectItem key="trash">trash.</SelectItem>
-      <SelectItem key="looking_stale">looking stale.</SelectItem>
-      <SelectItem key="needs_better_leadership">needs better leadership.</SelectItem>
+      <SelectItem key="ready_to_run" value="ready_to_run">
+        ready to run.
+      </SelectItem>
+      <SelectItem key="trash" value="trash">
+        trash.
+      </SelectItem>
+      <SelectItem key="looking_stale" value="looking_stale">
+        looking stale.
+      </SelectItem>
+      <SelectItem key="needs_better_leadership" value="needs_better_leadership">
+        needs better leadership.
+      </SelectItem>
     </Select>
   );
-}
+};
 
-const SectorTopic = ({ onChange }: { onChange: (e: SelectChangeEvent) => void }) => {
+const SectorTopic = ({ onChange }: { onChange: (e: string) => void }) => {
   const { gameId } = useGame();
   const { data: sectors, isLoading } = trpc.sector.listSectors.useQuery({
     where: { gameId },
   });
   if (isLoading) return null;
   if (sectors == undefined) return null;
+
+  const handleChange = (e: SelectChangeEvent) => {
+    const sectorName = sectors.find(
+      (sector) => sector.id === e.target.value
+    )?.name;
+    onChange(sectorName || "");
+  };
   return (
     <Select
       label="Sector Topic"
       placeholder="Select a topic"
       className="max-w-xs"
-      onChange={onChange}
+      onChange={handleChange}
     >
       {sectors.map((sector) => (
-        <SelectItem key={sector.id}>{sector.name}</SelectItem>
+        <SelectItem key={sector.id} value={sector.name}>
+          {sector.name}
+        </SelectItem>
       ))}
     </Select>
   );
-}
+};
 
-const SectorSubject = ({ onChange }: { onChange: (e: SelectChangeEvent) => void }) => {
+const SectorSubject = ({
+  onChange,
+}: {
+  onChange: (e: SelectChangeEvent) => void;
+}) => {
   return (
     <Select
       label="Subject"
@@ -167,11 +203,12 @@ const SectorSubject = ({ onChange }: { onChange: (e: SelectChangeEvent) => void 
       <SelectItem key="unstable">unstable.</SelectItem>
     </Select>
   );
-}
+};
 
 const MeetingInput = () => {
-  const { gameId } = useGame();
-  const meetingMessageMutation = trpc.meetingMessage.createMessage.useMutation();
+  const { gameId, authPlayer } = useGame();
+  const meetingMessageMutation =
+    trpc.meetingMessage.createMessage.useMutation();
   const [isSubmit, setIsSubmit] = useState(false);
   const [selectedTopic, setSelectedTopic] = useState<Topic | undefined>(
     undefined
@@ -186,6 +223,7 @@ const MeetingInput = () => {
   const [selectedSectorSubject, setSelectedSectorSubject] = useState("");
 
   const handleTopicChange: ChangeEventHandler<HTMLSelectElement> = (e) => {
+    console.log("e.target.value", e.target.value);
     const topic = topics.find(
       (topic) => topic.key === (e.target.value as TopicKey)
     ) as Topic | undefined;
@@ -204,12 +242,12 @@ const MeetingInput = () => {
     } else if (selectedTopic?.key === "sector") {
       content = `${selectedSectorTopic} ${selectedComplement} ${selectedSectorSubject}`;
     }
-
+    console.log("meeting message content", content);
     meetingMessageMutation.mutate(
       {
         content,
         gameId,
-        playerId: "1",
+        playerId: authPlayer.id,
         gameStep: 1,
         timestamp: new Date().toISOString(),
       },
@@ -241,25 +279,41 @@ const MeetingInput = () => {
         <div className="grid grid-cols-4 gap-4 mt-4 w-full">
           <PlayerSelect onChange={(e) => setSelectedPlayer(e.target.value)} />
           <Complement onChange={(e) => setSelectedComplement(e.target.value)} />
-          <PlayerSubject onChange={(e) => setSelectedPlayerSubject(e.target.value)} />
-          <PlayerTopic onChange={(e) => setSelectedPlayerTopic(e.target.value)} />
+          <PlayerSubject
+            onChange={(e) => setSelectedPlayerSubject(e.target.value)}
+          />
+          <PlayerTopic
+            onChange={(e) => setSelectedPlayerTopic(e.target.value)}
+          />
         </div>
       )}
       {selectedTopic?.key == "company" && (
         <div className="grid grid-cols-4 gap-4 mt-4 w-full">
-          <CompanyTopic onChange={(e) => setSelectedCompanyTopic(e.target.value)} />
+          <CompanyTopic
+            onChange={(e) => setSelectedCompanyTopic(e.target.value)}
+          />
           <Complement onChange={(e) => setSelectedComplement(e.target.value)} />
-          <CompanySubject onChange={(e) => setSelectedCompanySubject(e.target.value)} />
+          <CompanySubject
+            onChange={(e) => setSelectedCompanySubject(e.target.value)}
+          />
         </div>
       )}
       {selectedTopic?.key == "sector" && (
         <div className="grid grid-cols-4 gap-4 mt-4 w-full">
-          <SectorTopic onChange={(e) => setSelectedSectorTopic(e.target.value)} />
+          <SectorTopic
+            onChange={(sectorName) => setSelectedSectorTopic(sectorName)}
+          />
           <Complement onChange={(e) => setSelectedComplement(e.target.value)} />
-          <SectorSubject onChange={(e) => setSelectedSectorSubject(e.target.value)} />
+          <SectorSubject
+            onChange={(e) => setSelectedSectorSubject(e.target.value)}
+          />
         </div>
       )}
-      <Button className="mt-4" disabled={!selectedTopic && !isSubmit} onClick={handleSubmitMessage}>
+      <Button
+        className="mt-4"
+        disabled={!selectedTopic && !isSubmit}
+        onClick={handleSubmitMessage}
+      >
         Submit
       </Button>
     </div>

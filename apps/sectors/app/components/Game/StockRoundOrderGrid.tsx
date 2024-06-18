@@ -9,6 +9,10 @@ import {
 import React from "react";
 import PlayerOrder from "../Player/PlayerOrder";
 import PlayerOrderInput from "../Player/PlayerOrderInput";
+import { organizeCompaniesBySector } from "@sectors/app/helpers";
+import { trpc } from "@sectors/app/trpc";
+import { useGame } from "./GameContext";
+import { notFound } from "next/navigation";
 
 const orders = [
   { orderType: "MO", orderAmount: 2, isSell: false, playerName: "Alice" },
@@ -27,20 +31,14 @@ const sectorColors: { [key: string]: string } = {
   // Add more sectors and their corresponding colors as needed
 };
 
-// Group companies by sector
-const groupCompaniesBySector = (companies: any[]) => {
-  return companies.reduce((acc: { [key: string]: any[] }, company) => {
-    const { sectorId } = company;
-    if (!acc[sectorId]) {
-      acc[sectorId] = [];
-    }
-    acc[sectorId].push(company);
-    return acc;
-  }, {});
-};
-
-const StockRoundOrderGrid = ({ companies, handleOrder }: any) => {
-  const companiesBySector = groupCompaniesBySector(companies);
+const StockRoundOrderGrid = ({ handleOrder }: any) => {
+  const { gameId } = useGame();
+  const { data: companies, isLoading } = trpc.company.listCompanies.useQuery({
+    where: { gameId },
+  });
+  if (isLoading) return null;
+  if (companies == undefined) return notFound();
+  const companiesBySector = organizeCompaniesBySector(companies);
   const [showOrderInput, setShowOrderInput] = React.useState<
     string | undefined
   >(undefined);

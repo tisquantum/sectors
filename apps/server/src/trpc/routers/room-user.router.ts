@@ -55,15 +55,17 @@ export default (trpc: TrpcService, ctx: Context) =>
         z.object({
           userId: z.string(),
           roomId: z.number(),
+          roomHost: z.boolean().optional(),
         }),
       )
       .mutation(async ({ input }) => {
-        const { userId, roomId } = input;
+        const { userId, roomId, roomHost } = input;
 
         try {
           const roomUser = await ctx.roomUserService.createRoomUser({
             user: { connect: { id: userId } },
             room: { connect: { id: roomId } },
+            roomHost
           });
 
           //pusher logic

@@ -63,7 +63,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           player: { connect: { id: playerId } },
           ...rest,
         };
-        const message = ctx.meetingMessageService.createMessage(data);
+        const message = await ctx.meetingMessageService.createMessage(data);
         ctx.pusherService.trigger(getGameChannelId(gameId), EVENT_MEETING_MESSAGE_CREATED, message);
         return message;
       }),

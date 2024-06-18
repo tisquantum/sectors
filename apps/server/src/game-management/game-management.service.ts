@@ -38,6 +38,7 @@ export class GameManagementService {
         nickname: user.user.name,
         cashOnHand: startingCashOnHand,
         gameId,
+        userId: user.userId,
       })),
     );
   }

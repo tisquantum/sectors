@@ -54,7 +54,7 @@ const RoomComponent = ({ room }: { room: Room }) => {
     channel.bind(EVENT_ROOM_JOINED, (data: RoomUserWithUser) => {
       console.log("User joined:", data);
       utils.roomUser.listRoomUsers.setData(
-        {},
+        { where: { roomId: id } },
         (oldData: RoomUserWithUser[] | undefined) => [...(oldData || []), data]
       );
     });
@@ -62,7 +62,7 @@ const RoomComponent = ({ room }: { room: Room }) => {
     channel.bind(EVENT_ROOM_LEFT, (data: RoomUser) => {
       console.log("User left:", data);
       utils.roomUser.listRoomUsers.setData(
-        {},
+        { where: { roomId: id } },
         (oldData: RoomUserWithUser[] | undefined) =>
           oldData?.filter((user) => user.user.id !== data.userId)
       );

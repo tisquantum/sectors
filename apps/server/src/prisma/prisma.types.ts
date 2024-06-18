@@ -1,5 +1,6 @@
 import {
   Company,
+  MeetingMessage,
   Player,
   Room,
   RoomMessage,
@@ -22,3 +23,5 @@ export type PlayerWithStocks = Player & {
 };
 
 export type CompanyWithSector = Company & { Sector: Sector };
+
+export type MeetingMessageWithPlayer = MeetingMessage & { player: Player };

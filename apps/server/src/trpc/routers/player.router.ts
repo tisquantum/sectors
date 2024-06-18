@@ -13,10 +13,10 @@ const gamePlayerReadyStatus = new Map<string, Map<string, boolean>>();
 export default (trpc: TrpcService, ctx: Context) =>
   trpc.router({
     getPlayer: trpc.procedure
-      .input(z.object({ id: z.string() }))
+      .input(z.object({ where: z.any().optional(), }))
       .query(async ({ input }) => {
-        const { id } = input;
-        const player = await ctx.playersService.player({ id });
+        const { where } = input;
+        const player = await ctx.playersService.player(where);
         if (!player) {
           throw new Error('Player not found');
         }
@@ -49,6 +49,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         z.object({
           nickname: z.string(),
           cashOnHand: z.number(),
+          userId: z.string(),
           Game: z.object({
             connect: z.object({ id: z.string() }).optional(),
             create: z
@@ -67,6 +68,7 @@ export default (trpc: TrpcService, ctx: Context) =>
                 companies: z.any().optional(),
                 Player: z.any().optional(),
                 Company: z.any().optional(),
+                User: z.any().optional(),
                 StockRound: z.any().optional(),
                 OperatingRound: z.any().optional(),
                 ResearchDeck: z.any().optional(),
@@ -79,7 +81,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         }),
       )
       .mutation(async ({ input }) => {
-        const data: Prisma.PlayerCreateInput = input;
+        const data: Prisma.PlayerCreateInput = { ...input, User: { connect: { id: input.userId } } };
         const player = await ctx.playersService.createPlayer(data);
         // Initialize the player as not ready for the game
         // Initialize the player's ready status to false in the game
