@@ -17,6 +17,10 @@ import { SectorModule } from './sector/sector.module';
 import { ResearchDeckModule } from './research-deck/research-deck.module';
 import { CardModule } from './card/card.module';
 import { MeetingMessageModule } from './meeting-message/meeting-message.module';
+import { PhaseModule } from './phase/phase.module';
+import { OperatingRoundModule } from './operating-round/operating-round.module';
+import { StockRoundModule } from './stock-round/stock-round.module';
+import { GameLogModule } from './game-log/game-log.module';
 
 const yourPusherOptions = {
   cluster: process.env.PUSHER_CLUSTER ?? 'CLUSTER',
@@ -48,6 +52,10 @@ const chunkingOptions = {
     ResearchDeckModule,
     CardModule,
     MeetingMessageModule,
+    PhaseModule,
+    OperatingRoundModule,
+    StockRoundModule,
+    GameLogModule,
   ],
   controllers: [AppController],
   providers: [AppService],

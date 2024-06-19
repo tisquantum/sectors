@@ -56,7 +56,7 @@ export class GameManagementService {
       consumerPoolNumber,
       gameStatus: 'started',
       gameStep: 0,
-      currentPhase: 'initial',
+      currentPhaseId: 'initial',
     };
 
     const jsonData = gameDataJson;

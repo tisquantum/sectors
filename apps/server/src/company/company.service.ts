@@ -2,17 +2,19 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { Prisma, Company, Sector } from '@prisma/client';
 import { CompanyWithSector } from '@server/prisma/prisma.types';
+import { GameLogService } from '@server/game-log/game-log.service';
 
 @Injectable()
 export class CompanyService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private gamelogService: GameLogService) {}
 
   async company(
     companyWhereUniqueInput: Prisma.CompanyWhereUniqueInput,
   ): Promise<Company | null> {
-    return this.prisma.company.findUnique({
+    const company =  this.prisma.company.findUnique({
       where: companyWhereUniqueInput,
     });
+    return company;
   }
 
   async companies(params: {

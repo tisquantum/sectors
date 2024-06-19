@@ -63,17 +63,19 @@ model RoomUser {
 }
 
 model Player {
-  id             String           @id @default(uuid())
-  nickname       String
-  cashOnHand     Float
-  gameId         String
-  userId         String
-  Game           Game             @relation(fields: [gameId], references: [id])
-  User           User             @relation(fields: [userId], references: [id])
-  Stock          Stock[]
-  MeetingMessage MeetingMessage[]
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  id                 String               @id @default(uuid())
+  nickname           String
+  cashOnHand         Float
+  gameId             String
+  userId             String
+  Game               Game                 @relation(fields: [gameId], references: [id])
+  User               User                 @relation(fields: [userId], references: [id])
+  Stock              Stock[]
+  MeetingMessage     MeetingMessage[]
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  OperatingRoundVote OperatingRoundVote[]
+  PlayerOrder        PlayerOrder[]
 }
 
 model Stock {
@@ -91,7 +93,7 @@ model Stock {
 }
 
 model Company {
-  id                 String   @id @default(uuid())
+  id                 String        @id @default(uuid())
   name               String
   unitPrice          Float
   throughput         Int
@@ -102,11 +104,12 @@ model Company {
   cashOnHand         Float?
   mergedWithParent   String?
   mergedWithChildren String?
-  Sector             Sector   @relation(fields: [sectorId], references: [id])
+  Sector             Sector        @relation(fields: [sectorId], references: [id])
   Stock              Stock[]
-  Game               Game     @relation(fields: [gameId], references: [id])
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  Game               Game          @relation(fields: [gameId], references: [id])
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  PlayerOrder        PlayerOrder[]
 }
 
 model StockHistory {
@@ -122,21 +125,64 @@ model StockHistory {
 }
 
 model StockRound {
-  id        Int      @id @default(autoincrement())
-  phase     String
-  gameId    String
-  Game      Game     @relation(fields: [gameId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           Int           @id @default(autoincrement())
+  phase        String
+  gameId       String
+  playerOrders PlayerOrder[]
+  Game         Game          @relation(fields: [gameId], references: [id])
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model PlayerOrder {
+  id           Int        @id @default(autoincrement())
+  stockRoundId Int
+  playerId     String
+  companyId    String //We can't reference stockId here because it's not known which stocks which actually be purchased yet, this is more of an "ask"
+  quantity     Int?
+  term         Int?
+  isSell       Boolean?
+  orderType    OrderType
+  StockRound   StockRound @relation(fields: [stockRoundId], references: [id])
+  Player       Player     @relation(fields: [playerId], references: [id])
+  Company      Company    @relation(fields: [companyId], references: [id])
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+enum OrderType {
+  MARKET
+  SHORT
+  LIMIT
 }
 
 model OperatingRound {
-  id        Int      @id @default(autoincrement())
-  actions   Json
-  gameId    String
-  Game      Game     @relation(fields: [gameId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                 Int                  @id @default(autoincrement())
+  operatingRoundVote OperatingRoundVote[]
+  gameId             String
+  Game               Game                 @relation(fields: [gameId], references: [id])
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+}
+
+model OperatingRoundVote {
+  id               Int                  @id @default(autoincrement())
+  operatingRoundId Int
+  playerId         String
+  actionVoted      OperatingRoundAction
+  OperatingRound   OperatingRound       @relation(fields: [operatingRoundId], references: [id])
+  Player           Player               @relation(fields: [playerId], references: [id])
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+}
+
+enum OperatingRoundAction {
+  MARKETING
+  RESEARCH
+  MERGE
+  DOWNSIZE
+  PRODUCTION
+  EXPANSION
 }
 
 model ResearchDeck {
@@ -176,35 +222,62 @@ model Sector {
 }
 
 model Game {
-  id                  String           @id @default(uuid())
-  name                String
-  currentTurn         Int
-  currentOrSubRound   Int
-  currentRound        String
-  currentPhase        String
-  currentActivePlayer String?
-  bankPoolNumber      Int
-  consumerPoolNumber  Int
-  gameStatus          String
-  gameStep            Int
-  gameLogs            GameLog[]
-  sectors             Sector[]
-  Player              Player[]
-  Company             Company[]
-  StockRound          StockRound[]
-  OperatingRound      OperatingRound[]
-  ResearchDeck        ResearchDeck[]
-  Room                Room[]
-  MeetingMessage      MeetingMessage[]
-  createdAt           DateTime         @default(now())
-  updatedAt           DateTime         @updatedAt
+  id                      String           @id @default(uuid())
+  name                    String
+  currentTurn             Int
+  currentOrSubRound       Int
+  currentRound            String
+  currentActivePlayer     String?
+  bankPoolNumber          Int
+  consumerPoolNumber      Int
+  gameStatus              String
+  gameStep                Int
+  gameLogs                GameLog[]
+  sectors                 Sector[]
+  Player                  Player[]
+  Company                 Company[]
+  Phase                   Phase[]
+  StockRound              StockRound[]
+  OperatingRound          OperatingRound[]
+  ResearchDeck            ResearchDeck[]
+  Room                    Room[]
+  MeetingMessage          MeetingMessage[]
+  currentPhaseId          String?
+  currentStockRoundId     Int?
+  currentOperatingRoundId Int?
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
+}
+
+model Phase {
+  id        String    @id @default(uuid())
+  name      PhaseName
+  gameId    String
+  phaseTime Int
+  Game      Game      @relation(fields: [gameId], references: [id])
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+enum PhaseName {
+  STOCK_MEET
+  STOCK_1
+  STOCK_2
+  STOCK_3
+  STOCK_4
+  STOCK_5
+  OR_MEET_1
+  OR_MEET_2
+  OR_MEET_3
+  OR_1
+  OR_2
+  OR_3
 }
 
 model GameLog {
   id        Int      @id @default(autoincrement())
   gameId    String
   content   String
-  gameStep  Int
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
