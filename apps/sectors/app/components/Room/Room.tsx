@@ -14,6 +14,7 @@ import {
 import {
   RoomMessageWithUser,
   RoomUserWithUser,
+  RoomWithUsersAndGames,
 } from "@server/prisma/prisma.types";
 import Sidebar from "./Sidebar";
 import MessagePane from "./MessagePane";
@@ -22,7 +23,7 @@ import { useAuthUser } from "@sectors/app/components/AuthUser.context";
 import CountdownModal from "../Modal/CountdownModal";
 import { useRouter } from "next/navigation";
 
-const RoomComponent = ({ room }: { room: Room }) => {
+const RoomComponent = ({ room }: { room: RoomWithUsersAndGames }) => {
   const { user } = useAuthUser();
   const { pusher } = usePusher();
   const router = useRouter();

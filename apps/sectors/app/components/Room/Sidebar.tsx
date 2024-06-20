@@ -6,12 +6,15 @@ import { Avatar, Button } from "@nextui-org/react";
 import { trpc } from "@sectors/app/trpc";
 import { useAuthUser } from "@sectors/app/components/AuthUser.context";
 import GameOptions from "./GameOptions";
-import { RoomUserWithUser } from "@server/prisma/prisma.types";
+import {
+  RoomUserWithUser,
+  RoomWithUsersAndGames,
+} from "@server/prisma/prisma.types";
 import { BeakerIcon, SunIcon } from "@heroicons/react/24/solid";
 import { useRouter } from "next/navigation";
 interface SidebarProps {
   roomUsers: RoomUserWithUser[];
-  room: Room;
+  room: RoomWithUsersAndGames;
 }
 
 interface GameOptionsState {
@@ -98,23 +101,33 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
         {roomHostAuthUser?.roomHost && (
           <>
             <GameOptions onOptionsChange={handleGameOptionsChange} />
-
-            <Button
-              color="primary"
-              onClick={() =>
-                handleStartGame(
-                  room.id,
-                  gameOptions.startingCashOnHand,
-                  gameOptions.consumerPoolNumber,
-                  gameOptions.bankPoolNumber
-                )
-              }
-              radius="none"
-              className="w-full rounded-b-md"
-            >
-              Start Game
-            </Button>
+            {room.game.length == 0 && (
+              <Button
+                color="primary"
+                onClick={() =>
+                  handleStartGame(
+                    room.id,
+                    gameOptions.startingCashOnHand,
+                    gameOptions.consumerPoolNumber,
+                    gameOptions.bankPoolNumber
+                  )
+                }
+                radius="none"
+                className="w-full rounded-b-md"
+              >
+                Start Game
+              </Button>
+            )}
           </>
+        )}
+        {room.game.length > 0 && (
+          <Button
+            color="primary"
+            className="w-full"
+            onClick={() => router.push(`/games/${room.game[0].id}`)}
+          >
+            Join Game In Progress
+          </Button>
         )}
       </div>
       <ul className="flex-1 overflow-y-auto">

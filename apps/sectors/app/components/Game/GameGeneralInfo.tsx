@@ -7,7 +7,7 @@ const GameGeneralInfo = ({ gameId }: { gameId: string }) => {
   const { data: gameData, isLoading } = trpc.game.getGame.useQuery({ id: gameId });
   const { data: phaseData, isLoading: phaseIsLoading } = trpc.phase.getPhase.useQuery({ where: { id: gameData?.currentPhaseId ?? '' } });
   if(isLoading) return <div>Loading...</div>;
-  if(gameData === undefined) return notFound();;
+  if(gameData === undefined) return notFound();
   return (
     <div className="flex space-x-4">
       <div>

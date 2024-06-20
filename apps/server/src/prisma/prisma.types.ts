@@ -40,3 +40,5 @@ export type GameState = Game & {
   StockRound: StockRound[];
   Phase: Phase[];
 }
+
+export type RoomWithUsersAndGames = Room & { users: { user: User }[], game: Game[] };

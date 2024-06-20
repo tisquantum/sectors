@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
-import { Room, Prisma, User } from '@prisma/client';
+import { Room, Prisma, User, Game } from '@prisma/client';
 import { PusherChannel, PusherEvent } from 'nestjs-pusher';
 import {
   CHANNEL_ROOM_GLOBAL,
   EVENT_ROOM_CREATED,
 } from '@server/pusher/pusher.types';
+import { RoomWithUsersAndGames } from '@server/prisma/prisma.types';
 
 @Injectable()
 export class RoomService {
@@ -13,10 +14,11 @@ export class RoomService {
 
   async room(
     roomWhereUniqueInput: Prisma.RoomWhereUniqueInput,
-  ): Promise<(Room & { users: { user: User }[] }) | null> {
+  ): Promise<RoomWithUsersAndGames | null> {
     return this.prisma.room.findUnique({
       where: roomWhereUniqueInput,
       include: {
+        game: true,
         users: {
           include: {
             user: true, // Assuming RoomUser has a relation to User
