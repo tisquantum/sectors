@@ -6,10 +6,21 @@ interface TimerProps {
   size?: number;
   textSize?: number;
   onEnd?: () => void;
+  startDate?: Date;
 }
 
-const Timer: React.FC<TimerProps> = ({ countdownTime = 10, size = 36, textSize = 3, onEnd }) => {
+const Timer: React.FC<TimerProps> = ({ countdownTime = 10, size = 36, textSize = 3, onEnd, startDate }) => {
   const [value, setValue] = useState(countdownTime);
+
+  useEffect(() => {
+    if (startDate) {
+      const now = new Date();
+      const elapsedSeconds = Math.floor((now.getTime() - startDate.getTime()) / 1000);
+      setValue(Math.max(countdownTime - elapsedSeconds, 0));
+    } else {
+      setValue(countdownTime);
+    }
+  }, [startDate, countdownTime]);
 
   useEffect(() => {
     if (value <= 0) {
