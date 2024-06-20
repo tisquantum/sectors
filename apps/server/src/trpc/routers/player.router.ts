@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { PlayersService } from '@server/players/players.service';
 import { TrpcService } from '../trpc.service';
-import { Prisma } from '@prisma/client';
+import { Prisma, RoundType } from '@prisma/client';
 
 type Context = {
   playersService: PlayersService;
@@ -13,7 +13,7 @@ const gamePlayerReadyStatus = new Map<string, Map<string, boolean>>();
 export default (trpc: TrpcService, ctx: Context) =>
   trpc.router({
     getPlayer: trpc.procedure
-      .input(z.object({ where: z.any().optional(), }))
+      .input(z.object({ where: z.any().optional() }))
       .query(async ({ input }) => {
         const { where } = input;
         const player = await ctx.playersService.player(where);
@@ -50,38 +50,16 @@ export default (trpc: TrpcService, ctx: Context) =>
           nickname: z.string(),
           cashOnHand: z.number(),
           userId: z.string(),
-          Game: z.object({
-            connect: z.object({ id: z.string() }).optional(),
-            create: z
-              .object({
-                name: z.string(),
-                currentTurn: z.number(),
-                currentOrSubRound: z.number(),
-                currentRound: z.string(),
-                currentActivePlayer: z.string().nullable().optional(),
-                bankPoolNumber: z.number(),
-                consumerPoolNumber: z.number(),
-                gameStatus: z.string(),
-                gameStep: z.number(),
-                currentPhase: z.string(),
-                players: z.any().optional(),
-                companies: z.any().optional(),
-                Player: z.any().optional(),
-                Company: z.any().optional(),
-                User: z.any().optional(),
-                StockRound: z.any().optional(),
-                OperatingRound: z.any().optional(),
-                ResearchDeck: z.any().optional(),
-                Room: z.any().optional(),
-              })
-              .optional(),
-          }),
+          gameId: z.string(),
           PlayerStock: z.any().optional(),
-          GamePlayer: z.any().optional(),
         }),
       )
       .mutation(async ({ input }) => {
-        const data: Prisma.PlayerCreateInput = { ...input, User: { connect: { id: input.userId } } };
+        const data: Prisma.PlayerCreateInput = {
+          ...input,
+          User: { connect: { id: input.userId } },
+          Game: { connect: { id: input.gameId } },
+        };
         const player = await ctx.playersService.createPlayer(data);
         // Initialize the player as not ready for the game
         // Initialize the player's ready status to false in the game
@@ -104,35 +82,8 @@ export default (trpc: TrpcService, ctx: Context) =>
           data: z.object({
             nickname: z.string().optional(),
             cashOnHand: z.number().optional(),
-            Game: z
-              .object({
-                connect: z.object({ id: z.string() }).optional(),
-                create: z
-                  .object({
-                    name: z.string(),
-                    currentTurn: z.number(),
-                    currentOrSubRound: z.number(),
-                    currentRound: z.string(),
-                    currentActivePlayer: z.string().nullable().optional(),
-                    bankPoolNumber: z.number(),
-                    consumerPoolNumber: z.number(),
-                    gameStatus: z.string(),
-                    gameStep: z.number(),
-                    currentPhase: z.string(),
-                    players: z.any().optional(),
-                    companies: z.any().optional(),
-                    Player: z.any().optional(),
-                    Company: z.any().optional(),
-                    StockRound: z.any().optional(),
-                    OperatingRound: z.any().optional(),
-                    ResearchDeck: z.any().optional(),
-                    Room: z.any().optional(),
-                  })
-                  .optional(),
-              })
-              .optional(),
+            gameId: z.string(),
             PlayerStock: z.any().optional(),
-            GamePlayer: z.any().optional(),
           }),
         }),
       )

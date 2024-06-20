@@ -15,7 +15,6 @@ import { GameManagementModule } from './game-management/game-management.module';
 import { CompanyModule } from './company/company.module';
 import { SectorModule } from './sector/sector.module';
 import { ResearchDeckModule } from './research-deck/research-deck.module';
-import { CardModule } from './card/card.module';
 import { MeetingMessageModule } from './meeting-message/meeting-message.module';
 import { PhaseModule } from './phase/phase.module';
 import { OperatingRoundModule } from './operating-round/operating-round.module';
@@ -50,7 +49,6 @@ const chunkingOptions = {
     CompanyModule,
     SectorModule,
     ResearchDeckModule,
-    CardModule,
     MeetingMessageModule,
     PhaseModule,
     OperatingRoundModule,

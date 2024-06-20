@@ -1,12 +1,17 @@
 import {
   Company,
+  Game,
+  GameLog,
   MeetingMessage,
+  OperatingRound,
+  Phase,
   Player,
   Room,
   RoomMessage,
   RoomUser,
   Sector,
   Stock,
+  StockRound,
   User,
 } from '@prisma/client';
 
@@ -25,3 +30,13 @@ export type PlayerWithStocks = Player & {
 export type CompanyWithSector = Company & { Sector: Sector };
 
 export type MeetingMessageWithPlayer = MeetingMessage & { player: Player };
+
+export type GameState = Game & {
+  Player: Player[];
+  Company: Company[];
+  sectors: Sector[];
+  gameLogs: GameLog[];
+  OperatingRound: OperatingRound[];
+  StockRound: StockRound[];
+  Phase: Phase[];
+}

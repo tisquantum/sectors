@@ -12,6 +12,8 @@ import { GamesService } from '@server/games/games.service';
 import { CompanyService } from '@server/company/company.service';
 import { SectorService } from '@server/sector/sector.service';
 import { MeetingMessageService } from '@server/meeting-message/meeting-message.service';
+import { StockRoundService } from '@server/stock-round/stock-round.service';
+import { PhaseService } from '@server/phase/phase.service';
 
 @Module({
   imports: [PrismaModule],
@@ -28,7 +30,9 @@ import { MeetingMessageService } from '@server/meeting-message/meeting-message.s
     GamesService,
     CompanyService,
     SectorService,
+    StockRoundService,
     MeetingMessageService,
+    PhaseService,
   ],
 })
 export class TrpcModule {}

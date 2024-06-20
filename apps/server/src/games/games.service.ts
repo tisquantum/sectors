@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { Game, Prisma } from '@prisma/client';
+import { GameState } from '@server/prisma/prisma.types';
 
 @Injectable()
 export class GamesService {
@@ -51,6 +52,23 @@ export class GamesService {
   async deleteGame(where: Prisma.GameWhereUniqueInput): Promise<Game> {
     return this.prisma.game.delete({
       where,
+    });
+  }
+
+  async getGameState(gameId: string): Promise<GameState | null> {
+    return this.prisma.game.findUnique({
+      where: {
+        id: gameId,
+      },
+      include: {
+        Player: true,
+        Company: true,
+        gameLogs: true,
+        sectors: true,
+        OperatingRound: true,
+        StockRound: true,
+        Phase: true,
+      },
     });
   }
 }

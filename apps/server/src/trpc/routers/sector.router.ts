@@ -54,28 +54,6 @@ export default (trpc: TrpcService, ctx: Context) =>
           Company: z.any().optional(),
           Game: z.object({
             connect: z.object({ id: z.string() }).optional(),
-            create: z
-              .object({
-                name: z.string(),
-                currentTurn: z.number(),
-                currentOrSubRound: z.number(),
-                currentRound: z.string(),
-                currentActivePlayer: z.string().nullable().optional(),
-                bankPoolNumber: z.number(),
-                consumerPoolNumber: z.number(),
-                gameStatus: z.string(),
-                gameStep: z.number(),
-                currentPhase: z.string(),
-                players: z.any().optional(),
-                companies: z.any().optional(),
-                Player: z.any().optional(),
-                Company: z.any().optional(),
-                StockRound: z.any().optional(),
-                OperatingRound: z.any().optional(),
-                ResearchDeck: z.any().optional(),
-                Room: z.any().optional(),
-              })
-              .optional(),
           }),
         }),
       )
@@ -109,28 +87,6 @@ export default (trpc: TrpcService, ctx: Context) =>
             Game: z
               .object({
                 connect: z.object({ id: z.string() }).optional(),
-                create: z
-                  .object({
-                    name: z.string(),
-                    currentTurn: z.number(),
-                    currentOrSubRound: z.number(),
-                    currentRound: z.string(),
-                    currentActivePlayer: z.string().nullable().optional(),
-                    bankPoolNumber: z.number(),
-                    consumerPoolNumber: z.number(),
-                    gameStatus: z.string(),
-                    gameStep: z.number(),
-                    currentPhase: z.string(),
-                    players: z.any().optional(),
-                    companies: z.any().optional(),
-                    Player: z.any().optional(),
-                    Company: z.any().optional(),
-                    StockRound: z.any().optional(),
-                    OperatingRound: z.any().optional(),
-                    ResearchDeck: z.any().optional(),
-                    Room: z.any().optional(),
-                  })
-                  .optional(),
               })
               .optional(),
           }),

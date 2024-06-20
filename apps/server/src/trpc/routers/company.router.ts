@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { CompanyService } from '@server/company/company.service';
 import { TrpcService } from '../trpc.service';
-import { Prisma } from '@prisma/client';
+import { Prisma, RoundType } from '@prisma/client';
 
 type Context = {
   companyService: CompanyService;
@@ -98,7 +98,7 @@ export default (trpc: TrpcService, ctx: Context) =>
                 name: z.string(),
                 currentTurn: z.number(),
                 currentOrSubRound: z.number(),
-                currentRound: z.string(),
+                currentRound: z.nativeEnum(RoundType),
                 currentActivePlayer: z.string().nullable().optional(),
                 bankPoolNumber: z.number(),
                 consumerPoolNumber: z.number(),
@@ -112,14 +112,17 @@ export default (trpc: TrpcService, ctx: Context) =>
                 StockRound: z.any().optional(),
                 OperatingRound: z.any().optional(),
                 ResearchDeck: z.any().optional(),
-                Room: z.any().optional(),
               })
               .optional(),
           }),
         }),
       )
       .mutation(async ({ input }) => {
-        const data: Prisma.CompanyCreateInput = input;
+        const data: Prisma.CompanyCreateInput = {
+          ...input,
+          Game: { connect: { id: input.gameId } },
+          Sector: { connect: { id: input.sectorId } },
+        };
         delete data.id;
         return ctx.companyService.createCompany(data);
       }),
@@ -197,7 +200,12 @@ export default (trpc: TrpcService, ctx: Context) =>
       )
       .mutation(async ({ input }) => {
         const { id, data } = input;
-        return ctx.companyService.updateCompany({ where: { id }, data });
+        const newData: Prisma.CompanyUpdateInput = {
+          ...data,
+          Game: { connect: { id: data.gameId } },
+          Sector: { connect: { id: data.sectorId } },
+        };
+        return ctx.companyService.updateCompany({ where: { id }, data: newData });
       }),
 
     deleteCompany: trpc.procedure

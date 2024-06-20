@@ -29,8 +29,7 @@ model Room {
   name      String
   users     RoomUser[]
   messages  RoomMessage[]
-  gameId    String?
-  game      Game?         @relation(fields: [gameId], references: [id])
+  game      Game[]
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
 }
@@ -126,7 +125,7 @@ model StockHistory {
 
 model StockRound {
   id           Int           @id @default(autoincrement())
-  phase        String
+  phase        Phase[]
   gameId       String
   playerOrders PlayerOrder[]
   Game         Game          @relation(fields: [gameId], references: [id])
@@ -158,6 +157,7 @@ enum OrderType {
 
 model OperatingRound {
   id                 Int                  @id @default(autoincrement())
+  phase              Phase[]
   operatingRoundVote OperatingRoundVote[]
   gameId             String
   Game               Game                 @relation(fields: [gameId], references: [id])
@@ -226,12 +226,13 @@ model Game {
   name                    String
   currentTurn             Int
   currentOrSubRound       Int
-  currentRound            String
+  currentRound            RoundType
   currentActivePlayer     String?
   bankPoolNumber          Int
   consumerPoolNumber      Int
   gameStatus              String
   gameStep                Int
+  roomId                  Int
   gameLogs                GameLog[]
   sectors                 Sector[]
   Player                  Player[]
@@ -240,8 +241,8 @@ model Game {
   StockRound              StockRound[]
   OperatingRound          OperatingRound[]
   ResearchDeck            ResearchDeck[]
-  Room                    Room[]
   MeetingMessage          MeetingMessage[]
+  Room                    Room             @relation(fields: [roomId], references: [id])
   currentPhaseId          String?
   currentStockRoundId     Int?
   currentOperatingRoundId Int?
@@ -249,14 +250,23 @@ model Game {
   updatedAt               DateTime         @updatedAt
 }
 
+enum RoundType {
+  STOCK
+  OPERATING
+}
+
 model Phase {
-  id        String    @id @default(uuid())
-  name      PhaseName
-  gameId    String
-  phaseTime Int
-  Game      Game      @relation(fields: [gameId], references: [id])
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id               String          @id @default(uuid())
+  name             PhaseName
+  gameId           String
+  phaseTime        Int
+  stockRoundId     Int?
+  operatingRoundId Int?
+  OperatingRound   OperatingRound? @relation(fields: [operatingRoundId], references: [id])
+  StockRound       StockRound?     @relation(fields: [stockRoundId], references: [id])
+  Game             Game            @relation(fields: [gameId], references: [id])
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
 }
 
 enum PhaseName {

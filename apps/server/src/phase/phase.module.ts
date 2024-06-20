@@ -3,5 +3,6 @@ import { PhaseService } from './phase.service';
 
 @Module({
   providers: [PhaseService],
+  exports: [PhaseService],
 })
 export class PhaseModule {}

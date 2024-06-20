@@ -1,13 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { PlayersService } from '@server/players/players.service';
-import { Game, Player, Prisma, Sector } from '@prisma/client';
+import { Game, PhaseName, Player, Prisma, Sector, StockRound } from '@prisma/client';
 import { GamesService } from '@server/games/games.service';
 import { CompanyService } from '@server/company/company.service';
 import { SectorService } from '@server/sector/sector.service';
 import { gameDataJson } from '@server/data/gameData';
 import { StartGameInput } from './game-management.interface';
-import { PlayerWithStocks } from '@server/prisma/prisma.types';
+import { GameState, PlayerWithStocks } from '@server/prisma/prisma.types';
+import { StockRoundService } from '@server/stock-round/stock-round.service';
+import { PhaseService } from '@server/phase/phase.service';
+import { phaseTimes } from '@server/data/constants';
 
 @Injectable()
 export class GameManagementService {
@@ -17,6 +20,8 @@ export class GameManagementService {
     private gamesService: GamesService,
     private companyService: CompanyService,
     private sectorService: SectorService,
+    private stockRoundService: StockRoundService,
+    private phaseService: PhaseService,
   ) {}
 
   async addPlayersToGame(
@@ -51,12 +56,13 @@ export class GameManagementService {
       name: `Game_Fantastic`,
       currentTurn: 0,
       currentOrSubRound: 0,
-      currentRound: 'initial',
+      currentRound: 'STOCK',
       bankPoolNumber,
       consumerPoolNumber,
       gameStatus: 'started',
       gameStep: 0,
       currentPhaseId: 'initial',
+      Room: { connect: { id: roomId } },
     };
 
     const jsonData = gameDataJson;
@@ -127,7 +133,12 @@ export class GameManagementService {
         console.error('Error starting game:', error);
         throw new Error('Failed to start the game');
       }
-
+      try{
+        await this.startStockRound(game.id);
+      } catch (error) {
+        console.error('Error starting game:', error);
+        throw new Error('Failed to start the stock round.');
+      }
       return game;
     } catch (error) {
       console.error('Error starting game:', error);
@@ -157,5 +168,29 @@ export class GameManagementService {
     return this.playersService.playersWithStocks({
       gameId,
     });
+  }
+
+  public getCurrentGameState(gameId: string): Promise<GameState | null> {
+    return this.gamesService.getGameState(gameId);
+  }
+
+  public async startStockRound(gameId: string): Promise<StockRound | null> {
+    const stockRound = await this.stockRoundService.createStockRound({
+      Game: { connect: { id: gameId } },
+    });
+    const phase = await this.phaseService.createPhase({
+      name: PhaseName.STOCK_MEET,
+      phaseTime: phaseTimes[PhaseName.STOCK_MEET],
+      Game: { connect: { id: gameId } },
+      StockRound: { connect: { id: stockRound.id } },
+    });
+    await this.gamesService.updateGame({
+      where: { id: gameId },
+      data: {
+        currentPhaseId: phase.id,
+        currentStockRoundId: stockRound.id,
+      },
+    });
+    return stockRound;
   }
 }

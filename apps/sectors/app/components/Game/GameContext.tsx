@@ -4,10 +4,12 @@ import React, { createContext, useContext, ReactNode } from "react";
 import { useAuthUser } from "../AuthUser.context";
 import { trpc } from "@sectors/app/trpc";
 import { Player } from "@server/prisma/prisma.client";
+import { GameState } from "@server/prisma/prisma.types";
 
 interface GameContextProps {
   gameId: string;
   authPlayer: Player;
+  gameState: GameState;
 }
 
 const GameContext = createContext<GameContextProps | undefined>(undefined);
@@ -25,6 +27,9 @@ export const GameProvider: React.FC<{
   children: ReactNode;
 }> = ({ gameId, children }) => {
   const { user } = useAuthUser();
+  const { data: gameState, isLoading: gameStateIsLoading, isError: gameStateIsError } = trpc.game.getGameState.useQuery(
+    { gameId }
+  );
   //get auth player based on user id and game id
   const {
     data: player,
@@ -39,7 +44,11 @@ export const GameProvider: React.FC<{
   if (isLoading) return <div>Loading...</div>;
   if (isError) return <div>Error...</div>;
   if (player == undefined) return null; //TODO: handle this case for possible spectators.
+
+  if(gameStateIsLoading) return <div>Loading...</div>;
+  if(gameStateIsError) return <div>Error...</div>;
+  if (gameState == undefined) return null; //TODO: handle this case for possible spectators.
   return (
-    <GameContext.Provider value={{ gameId, authPlayer: player }}>{children}</GameContext.Provider>
+    <GameContext.Provider value={{ gameId, authPlayer: player, gameState }}>{children}</GameContext.Provider>
   );
 };

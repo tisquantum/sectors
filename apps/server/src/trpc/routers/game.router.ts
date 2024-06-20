@@ -2,7 +2,7 @@ import { PusherService } from 'nestjs-pusher';
 import { z } from 'zod';
 import { GamesService } from '@server/games/games.service';
 import { TrpcService } from '../trpc.service';
-import { Game, Prisma } from '@prisma/client';
+import { Game, Prisma, RoundType } from '@prisma/client';
 import { GameManagementService } from '@server/game-management/game-management.service';
 import { EVENT_GAME_STARTED, getRoomChannelId } from '@server/pusher/pusher.types';
 
@@ -100,7 +100,7 @@ export default (trpc: TrpcService, ctx: Context) =>
             name: z.string().optional(),
             currentTurn: z.number().optional(),
             currentOrSubRound: z.number().optional(),
-            currentRound: z.string().optional(),
+            currentRound: z.nativeEnum(RoundType),
             currentActivePlayer: z.string().nullable().optional(),
             bankPoolNumber: z.number().optional(),
             consumerPoolNumber: z.number().optional(),
@@ -133,5 +133,12 @@ export default (trpc: TrpcService, ctx: Context) =>
       .query(async ({ input }) => {
         const { gameId } = input;
         return ctx.gameManagementService.getPlayersWithStocks(gameId);
+      }),
+
+    getGameState: trpc.procedure
+      .input(z.object({ gameId: z.string() }))
+      .query(async ({ input }) => {
+        const { gameId } = input;
+        return ctx.gamesService.getGameState(gameId);
       }),
   });
