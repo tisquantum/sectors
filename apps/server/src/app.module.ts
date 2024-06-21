@@ -20,6 +20,7 @@ import { PhaseModule } from './phase/phase.module';
 import { OperatingRoundModule } from './operating-round/operating-round.module';
 import { StockRoundModule } from './stock-round/stock-round.module';
 import { GameLogModule } from './game-log/game-log.module';
+import { TimerModule } from './timer/timer.module';
 
 const yourPusherOptions = {
   cluster: process.env.PUSHER_CLUSTER ?? 'CLUSTER',
@@ -54,6 +55,7 @@ const chunkingOptions = {
     OperatingRoundModule,
     StockRoundModule,
     GameLogModule,
+    TimerModule,
   ],
   controllers: [AppController],
   providers: [AppService],

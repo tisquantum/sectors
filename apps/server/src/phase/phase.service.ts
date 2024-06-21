@@ -1,10 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { Prisma, Phase } from '@prisma/client';
+import { TimerService } from '@server/timer/timer.service';
 
 @Injectable()
 export class PhaseService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService
+  ) {}
 
   async phase(
     phaseWhereUniqueInput: Prisma.PhaseWhereUniqueInput,
@@ -37,7 +40,9 @@ export class PhaseService {
     });
   }
 
-  async createManyPhases(data: Prisma.PhaseCreateManyInput[]): Promise<Prisma.BatchPayload> {
+  async createManyPhases(
+    data: Prisma.PhaseCreateManyInput[],
+  ): Promise<Prisma.BatchPayload> {
     return this.prisma.phase.createMany({
       data,
       skipDuplicates: true,

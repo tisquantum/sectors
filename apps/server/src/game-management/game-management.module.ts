@@ -7,6 +7,8 @@ import { CompanyModule } from '@server/company/company.module';
 import { SectorModule } from '@server/sector/sector.module';
 import { StockRoundModule } from '@server/stock-round/stock-round.module';
 import { PhaseModule } from '@server/phase/phase.module';
+import { TimerModule } from '@server/timer/timer.module';
+import { PusherModule } from 'nestjs-pusher';
 
 @Module({
   imports: [
@@ -17,6 +19,8 @@ import { PhaseModule } from '@server/phase/phase.module';
     SectorModule,
     StockRoundModule,
     PhaseModule,
+    TimerModule,
+    PusherModule,
   ],
   providers: [GameManagementService],
   exports: [GameManagementService],

@@ -11,6 +11,10 @@ import { GameState, PlayerWithStocks } from '@server/prisma/prisma.types';
 import { StockRoundService } from '@server/stock-round/stock-round.service';
 import { PhaseService } from '@server/phase/phase.service';
 import { phaseTimes } from '@server/data/constants';
+import { TimerService } from '@server/timer/timer.service';
+import { determineNextGamePhase } from '@server/data/helpers';
+import { PusherService } from 'nestjs-pusher';
+import { getGameChannelId } from '@server/pusher/pusher.types';
 
 @Injectable()
 export class GameManagementService {
@@ -22,6 +26,8 @@ export class GameManagementService {
     private sectorService: SectorService,
     private stockRoundService: StockRoundService,
     private phaseService: PhaseService,
+    private timerService: TimerService,
+    private pusherService: PusherService,
   ) {}
 
   async addPlayersToGame(
@@ -178,19 +184,52 @@ export class GameManagementService {
     const stockRound = await this.stockRoundService.createStockRound({
       Game: { connect: { id: gameId } },
     });
-    const phase = await this.phaseService.createPhase({
-      name: PhaseName.STOCK_MEET,
-      phaseTime: phaseTimes[PhaseName.STOCK_MEET],
-      Game: { connect: { id: gameId } },
-      StockRound: { connect: { id: stockRound.id } },
+    await this.startPhase(gameId, stockRound.id, PhaseName.STOCK_MEET);
+    return stockRound;
+  }
+
+  /**
+   * This is the main recurring game-loop.  
+   * The entire game operates on timers so 
+   * we can assume a recursive loop to invoke 
+   * each game phase.
+   * 
+   * @param gameId 
+   * @param stockRoundId 
+   * @param phaseName 
+   */
+  private async startPhase(gameId: string, stockRoundId: number, phaseName: PhaseName) {
+    console.log('Starting phase:', phaseName);
+    this.pusherService.trigger(getGameChannelId(gameId), 'phase-started', {
+      phaseName,
     });
+    const phase = await this.phaseService.createPhase({
+      name: phaseName,
+      phaseTime: phaseTimes[phaseName],
+      Game: { connect: { id: gameId } },
+      StockRound: { connect: { id: stockRoundId } },
+    });
+  
     await this.gamesService.updateGame({
       where: { id: gameId },
       data: {
         currentPhaseId: phase.id,
-        currentStockRoundId: stockRound.id,
+        currentStockRoundId: stockRoundId,
       },
     });
-    return stockRound;
+  
+    await this.timerService.setTimer(
+      phase.id,
+      phase.phaseTime,
+      async () => {
+        try {
+          const nextPhase = determineNextGamePhase(phase.name);
+          await this.startPhase(gameId, stockRoundId, nextPhase.phaseName);
+        } catch (error) {
+          console.error('Error during phase transition:', error);
+          // Optionally handle retries or fallback logic here
+        }
+      },
+    );
   }
 }
