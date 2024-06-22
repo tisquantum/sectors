@@ -9,6 +9,7 @@ import { StockRoundModule } from '@server/stock-round/stock-round.module';
 import { PhaseModule } from '@server/phase/phase.module';
 import { TimerModule } from '@server/timer/timer.module';
 import { PusherModule } from 'nestjs-pusher';
+import { OperatingRoundModule } from '@server/operating-round/operating-round.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { PusherModule } from 'nestjs-pusher';
     PhaseModule,
     TimerModule,
     PusherModule,
+    OperatingRoundModule,
   ],
   providers: [GameManagementService],
   exports: [GameManagementService],

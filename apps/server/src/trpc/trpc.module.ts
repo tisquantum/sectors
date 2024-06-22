@@ -14,6 +14,8 @@ import { SectorService } from '@server/sector/sector.service';
 import { MeetingMessageService } from '@server/meeting-message/meeting-message.service';
 import { StockRoundService } from '@server/stock-round/stock-round.service';
 import { PhaseService } from '@server/phase/phase.service';
+import { OperatingRoundService } from '@server/operating-round/operating-round.service';
+import { TimerService } from '@server/timer/timer.service';
 
 @Module({
   imports: [PrismaModule],
@@ -33,6 +35,8 @@ import { PhaseService } from '@server/phase/phase.service';
     StockRoundService,
     MeetingMessageService,
     PhaseService,
+    OperatingRoundService,
+    TimerService,
   ],
 })
 export class TrpcModule {}

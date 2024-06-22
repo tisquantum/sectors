@@ -71,4 +71,24 @@ export class GamesService {
       },
     });
   }
+
+  async updateGameState(params: {
+    where: Prisma.GameWhereUniqueInput;
+    data: Prisma.GameUpdateInput;
+  }): Promise<GameState> {
+    const { where, data } = params;
+    return this.prisma.game.update({
+      data,
+      where,
+      include: {
+        Player: true,
+        Company: true,
+        gameLogs: true,
+        sectors: true,
+        OperatingRound: true,
+        StockRound: true,
+        Phase: true,
+      },
+    });
+  }
 }
