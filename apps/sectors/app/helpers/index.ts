@@ -9,7 +9,9 @@ type CompaniesBySector = Record<
   }
 >;
 
-export function organizeCompaniesBySector(companies: CompanyWithSector[]): CompaniesBySector {
+export function organizeCompaniesBySector(
+  companies: CompanyWithSector[]
+): CompaniesBySector {
   return companies.reduce((acc, company) => {
     if (!acc[company.sectorId]) {
       acc[company.sectorId] = {
@@ -23,7 +25,7 @@ export function organizeCompaniesBySector(companies: CompanyWithSector[]): Compa
 }
 
 export function friendlyPhaseName(name: PhaseName | undefined): string {
-  if(name == undefined) {
+  if (name == undefined) {
     return "Unknown Phase";
   }
   switch (name) {
@@ -51,7 +53,33 @@ export function friendlyPhaseName(name: PhaseName | undefined): string {
       return "Operating Round Meeting 3";
     case PhaseName.STOCK_MEET:
       return "Stock Round Meeting";
+    case PhaseName.STOCK_1_RESULT:
+      return "Stock Round 1 Result";
+    case PhaseName.STOCK_2_RESULT:
+      return "Stock Round 2 Result";
+    case PhaseName.STOCK_3_RESULT:
+      return "Stock Round 3 Result";
+    case PhaseName.STOCK_4_RESULT:
+      return "Stock Round 4 Result";
+    case PhaseName.STOCK_5_RESULT:
+      return "Stock Round 5 Result";
     default:
       return "Unknown Phase";
   }
 }
+
+export const isCurrentPhaseInteractive = (
+  phaseName: PhaseName | undefined
+): boolean => {
+  if (phaseName == undefined) {
+    return false;
+  }
+  return (
+    phaseName === PhaseName.STOCK_MEET ||
+    phaseName === PhaseName.STOCK_1 ||
+    phaseName === PhaseName.STOCK_2 ||
+    phaseName === PhaseName.STOCK_3 ||
+    phaseName === PhaseName.STOCK_4 ||
+    phaseName === PhaseName.STOCK_5
+  );
+};

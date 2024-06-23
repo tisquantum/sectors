@@ -88,21 +88,33 @@ export default (trpc: TrpcService, ctx: Context) =>
         }),
       )
       .mutation(async ({ input }) => {
+        //remove game id from input
+        const {
+          gameId,
+          stockRoundId,
+          companyId,
+          playerId,
+          phaseId,
+          ...playerOrderInput
+        } = input;
         const data: Prisma.PlayerOrderCreateInput = {
-          ...input,
-          StockRound: { connect: { id: input.stockRoundId } },
-          Company: { connect: { id: input.companyId } },
-          Player: { connect: { id: input.playerId } },
-          Phase: { connect: { id: input.phaseId } },
+          ...playerOrderInput,
+          StockRound: { connect: { id: stockRoundId } },
+          Company: { connect: { id: companyId } },
+          Player: { connect: { id: playerId } },
+          Phase: { connect: { id: phaseId } },
         };
         let playerOrder;
         try {
           playerOrder = await ctx.playerOrdersService.createPlayerOrder(data);
           //subtract one from related player action counter
-          await ctx.playerService.subtractActionCounter(playerOrder.playerId, playerOrder.orderType);
+          await ctx.playerService.subtractActionCounter(
+            playerOrder.playerId,
+            playerOrder.orderType,
+          );
           //Use for "ready up" and updating the authPlayerState
           ctx.pusherService.trigger(
-            getGameChannelId(input.gameId),
+            getGameChannelId(gameId),
             EVENT_NEW_PLAYER_ORDER_PLAYER_ID,
             {
               playerId: playerOrder.playerId,

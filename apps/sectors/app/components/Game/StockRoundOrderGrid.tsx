@@ -7,10 +7,13 @@ import {
   CardFooter,
   CardHeader,
 } from "@nextui-org/react";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import PlayerOrder from "../Player/PlayerOrder";
 import PlayerOrderInput from "../Player/PlayerOrderInput";
-import { organizeCompaniesBySector } from "@sectors/app/helpers";
+import {
+  isCurrentPhaseInteractive,
+  organizeCompaniesBySector,
+} from "@sectors/app/helpers";
 import { trpc } from "@sectors/app/trpc";
 import { useGame } from "./GameContext";
 import { notFound } from "next/navigation";
@@ -43,6 +46,18 @@ const StockRoundOrderGrid = ({
     undefined
   );
   const [focusedOrder, setFocusedOrder] = useState<any>(null);
+  const [isInteractive, setIsInteractive] = useState<boolean>(
+    isCurrentPhaseInteractive(currentPhase?.name)
+  );
+  useEffect(() => {
+    //Make sure the glowing effect from placing an order gets removed when we are viewing phase results
+    if (isInteractive) {
+      setFocusedOrder(null);
+    }
+  }, [isInteractive]);
+  useEffect(() => {
+    setIsInteractive(isCurrentPhaseInteractive(currentPhase?.name));
+  }, [currentPhase]);
   if (isLoading) return null;
   if (companies == undefined) return notFound();
   const isRevealRound = currentPhase?.name === PhaseName.STOCK_REVEAL;
@@ -81,30 +96,34 @@ const StockRoundOrderGrid = ({
                 <div className="flex flex-col">
                   <div className="mb-3">IPO (3)</div>
                   {!isRevealRound && <PlayerOrderConcealed orders={orders} />}
-                  <Button
-                    className={
-                      focusedOrder?.id == company.id
-                        ? "bg-gradient-to-tr from-pink-500 to-yellow-500 text-white shadow-lg"
-                        : ""
-                    }
-                    onClick={() => handleDisplayOrderInput(company, true)}
-                  >
-                    Place Order IPO
-                  </Button>
+                  {isInteractive && (
+                    <Button
+                      className={
+                        focusedOrder?.id == company.id
+                          ? "bg-gradient-to-tr from-pink-500 to-yellow-500 text-white shadow-lg"
+                          : ""
+                      }
+                      onClick={() => handleDisplayOrderInput(company, true)}
+                    >
+                      Place Order IPO
+                    </Button>
+                  )}
                 </div>
                 <div>
                   <div className="my-3">OPEN MARKET (4)</div>
                   {!isRevealRound && <PlayerOrderConcealed orders={orders} />}
-                  <Button
-                    className={
-                      focusedOrder?.id == company.id
-                        ? "bg-gradient-to-tr from-pink-500 to-yellow-500 text-white shadow-lg"
-                        : ""
-                    }
-                    onClick={() => handleDisplayOrderInput(company)}
-                  >
-                    Place Order OPEN MARKET
-                  </Button>
+                  {isInteractive && (
+                    <Button
+                      className={
+                        focusedOrder?.id == company.id
+                          ? "bg-gradient-to-tr from-pink-500 to-yellow-500 text-white shadow-lg"
+                          : ""
+                      }
+                      onClick={() => handleDisplayOrderInput(company)}
+                    >
+                      Place Order OPEN MARKET
+                    </Button>
+                  )}
                 </div>
               </CardBody>
             </Card>
