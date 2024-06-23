@@ -7,8 +7,8 @@ export const gameDataJson = {
         "demand": 100,
         "marketingPrice": 50.0,
         "basePrice": 75.0,
-        "floatNumberMin": 1,
-        "floatNumberMax": 10
+        "floatNumberMin": 20,
+        "floatNumberMax": 70
       },
       {
         "id": "2",
@@ -17,8 +17,8 @@ export const gameDataJson = {
         "demand": 100,
         "marketingPrice": 50.0,
         "basePrice": 75.0,
-        "floatNumberMin": 1,
-        "floatNumberMax": 10
+        "floatNumberMin": 40,
+        "floatNumberMax": 60
       },
       {
         "id": "3",
@@ -27,8 +27,8 @@ export const gameDataJson = {
         "demand": 100,
         "marketingPrice": 50.0,
         "basePrice": 75.0,
-        "floatNumberMin": 1,
-        "floatNumberMax": 10
+        "floatNumberMin": 55,
+        "floatNumberMax": 70
       },
       {
         "id": "4",
@@ -37,8 +37,8 @@ export const gameDataJson = {
         "demand": 100,
         "marketingPrice": 50.0,
         "basePrice": 75.0,
-        "floatNumberMin": 1,
-        "floatNumberMax": 10
+        "floatNumberMin": 5,
+        "floatNumberMax": 80
       },
       {
         "id": "5",
@@ -47,8 +47,8 @@ export const gameDataJson = {
         "demand": 100,
         "marketingPrice": 50.0,
         "basePrice": 75.0,
-        "floatNumberMin": 1,
-        "floatNumberMax": 10
+        "floatNumberMin": 50,
+        "floatNumberMax": 60
       },
       {
         "id": "6",
@@ -57,8 +57,8 @@ export const gameDataJson = {
         "demand": 100,
         "marketingPrice": 50.0,
         "basePrice": 75.0,
-        "floatNumberMin": 1,
-        "floatNumberMax": 10
+        "floatNumberMin": 30,
+        "floatNumberMax": 40
       },
       {
         "id": "7",
@@ -67,8 +67,8 @@ export const gameDataJson = {
         "demand": 100,
         "marketingPrice": 50.0,
         "basePrice": 75.0,
-        "floatNumberMin": 1,
-        "floatNumberMax": 10
+        "floatNumberMin": 40,
+        "floatNumberMax": 50
       }
     ],
     "companies": [

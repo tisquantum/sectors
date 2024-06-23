@@ -4,7 +4,9 @@ import { Prisma, PlayerOrder, OrderType, Player } from '@prisma/client';
 import {
   PlayerOrderConcealed,
   PlayerOrderConcealedWithPlayer,
+  PlayerOrderWithCompany,
 } from '@server/prisma/prisma.types';
+import { getPseudoSpend } from '@server/data/helpers';
 
 @Injectable()
 export class PlayerOrderService {
@@ -32,6 +34,26 @@ export class PlayerOrderService {
       cursor,
       where,
       orderBy,
+    });
+  }
+
+  async playerOrdersWithCompany(params: {
+    skip?: number;
+    take?: number;
+    cursor?: Prisma.PlayerOrderWhereUniqueInput;
+    where?: Prisma.PlayerOrderWhereInput;
+    orderBy?: Prisma.PlayerOrderOrderByWithRelationInput;
+  }): Promise<PlayerOrderWithCompany[]> {
+    const { skip, take, cursor, where, orderBy } = params;
+    return this.prisma.playerOrder.findMany({
+      skip,
+      take,
+      cursor,
+      where,
+      orderBy,
+      include: {
+        Company: true,
+      },
     });
   }
 
@@ -73,11 +95,55 @@ export class PlayerOrderService {
   async createPlayerOrder(
     data: Prisma.PlayerOrderCreateInput,
   ): Promise<PlayerOrder> {
-    //given the order type, filter out the fields that are not needed
+    // Filter out fields based on order type
     if (data.orderType === OrderType.MARKET) {
       delete data.term;
-      delete data.value;
+      const playerId = data.Player.connect?.id;
+      const companyId = data.Company.connect?.id;
+      const stockRoundId = data.StockRound.connect?.id;
+  
+      if (!playerId || !companyId || !stockRoundId) {
+        throw new Error('Invalid data input');
+      }
+  
+      const [player, company, playerOrders] = await this.prisma.$transaction([
+        this.prisma.player.findUnique({
+          where: { id: playerId },
+          include: { Stock: true },
+        }),
+        this.prisma.company.findUnique({
+          where: { id: companyId },
+        }),
+        this.prisma.playerOrder.findMany({
+          where: {
+            playerId,
+            stockRoundId,
+          },
+          include: { Company: true },
+        }),
+      ]);
+  
+      if (!player || !company) {
+        throw new Error('Player or Company not found');
+      }
+  
+      const spend = getPseudoSpend(playerOrders);
+      const orderValue = data.quantity! * company.currentStockPrice!;
+  
+      if (data.isSell) {
+        const playerShares = player.Stock.filter(
+          (stock) => stock.companyId === companyId,
+        );
+        if (!playerShares || playerShares.length < data.quantity!) {
+          throw new Error('Player does not have enough shares to sell');
+        }
+      } else {
+        if (spend + orderValue > player.cashOnHand!) {
+          throw new Error('Player does not have enough cash to place order');
+        }
+      }
     }
+  
     if (data.orderType === OrderType.LIMIT) {
       delete data.quantity;
       delete data.term;
@@ -86,9 +152,8 @@ export class PlayerOrderService {
       delete data.value;
       delete data.isSell;
     }
-    return this.prisma.playerOrder.create({
-      data,
-    });
+  
+    return this.prisma.playerOrder.create({ data });
   }
 
   async updatePlayerOrder(params: {

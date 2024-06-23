@@ -58,3 +58,4 @@ export type PlayerOrderConcealed = Omit<PlayerOrder, PlayerOrderHiddenFields>;
 export type PlayerOrderConcealedWithPlayer = PlayerOrderConcealed & {
   Player: Player;
 };
+export type PlayerOrderWithCompany = PlayerOrder & { Company: Company };

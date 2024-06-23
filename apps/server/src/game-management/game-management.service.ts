@@ -20,7 +20,7 @@ import { StockRoundService } from '@server/stock-round/stock-round.service';
 import { PhaseService } from '@server/phase/phase.service';
 import { MAX_LIMIT_ORDER, MAX_MARKET_ORDER, MAX_SHORT_ORDER, phaseTimes } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
-import { determineNextGamePhase } from '@server/data/helpers';
+import { determineFloatPrice, determineNextGamePhase } from '@server/data/helpers';
 import { PusherService } from 'nestjs-pusher';
 import { EVENT_NEW_PHASE, getGameChannelId } from '@server/pusher/pusher.types';
 import { OperatingRoundService } from '@server/operating-round/operating-round.service';
@@ -143,6 +143,7 @@ export class GameManagementService {
           }
           return {
             ...company,
+            ipoAndFloatPrice: determineFloatPrice(sector),
             gameId: game.id,
             sectorId: sector.id,
           };

@@ -34,6 +34,8 @@ import {
   MAX_MARKET_ORDER,
   MAX_SHORT_ORDER,
 } from "@server/data/constants";
+import { PlayerOrderWithCompany } from "@server/prisma/prisma.types";
+import { getPseudoSpend } from "@server/data/helpers";
 
 const RiskAssessment = ({ termValue }: { termValue: number }) => {
   const getRiskMetrics = (term: number) => {
@@ -354,6 +356,48 @@ let tabs = [
   },
 ];
 
+/**
+ * We need a way to track spending before orders are placed.
+ * Because orders are placed successively before being resolved,
+ * we need to track the total spend and make this visible to the user.
+ *
+ * @param stockRoundId
+ * @param currentOrderValue
+ * @returns
+ */
+const PseudoBalance = ({
+  stockRoundId,
+  currentOrderValue,
+}: {
+  stockRoundId: number;
+  currentOrderValue?: number;
+}) => {
+  const { authPlayer } = useGame();
+  const { data: playerOrders, isLoading } =
+    trpc.playerOrder.listPlayerOrdersWithCompany.useQuery({
+      where: { playerId: authPlayer.id, stockRoundId },
+    });
+  if (isLoading) return null;
+
+  const pseudoSpend = playerOrders ? getPseudoSpend(playerOrders) : 0;
+
+  const netSpend = currentOrderValue ?? 0 + pseudoSpend;
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-1">
+        <CurrencyDollarIcon className="w-6 h-6 size-3" />
+        <span>{authPlayer.cashOnHand}</span>
+      </div>
+      <div className="flex items-center gap-1">
+        After Orders Placed:
+        <CurrencyDollarIcon className="w-6 h-6" />
+        <span>{authPlayer.cashOnHand - netSpend}</span>
+      </div>
+    </div>
+  );
+};
+
 const PlayerOrderInput = ({
   currentOrder,
   handleCancel,
@@ -363,15 +407,18 @@ const PlayerOrderInput = ({
   handleCancel: () => void;
   isIpo: boolean;
 }) => {
-  const { gameId, gameState, authPlayer } = useGame();
+  const { gameId, gameState, authPlayer, currentPhase } = useGame();
   const createPlayerOrder = trpc.playerOrder.createPlayerOrder.useMutation();
   const [term, setTerm] = useState(2);
   const [share, setShare] = useState(1);
   const [limitOrderValue, setLimitOrderValue] = useState(0);
   const [isBuy, setIsBuy] = useState(true);
-
+  const [isSubmit, setIsSubmit] = useState(false);
+  useEffect(() => {
+    setIsSubmit(false);
+  }, [currentPhase?.name]);
   if (!gameId || !gameState) return null;
-
+  const currentOrderValue = share * (currentOrder.currentStockPrice ?? 0);
   const handleConfirm = () => {
     createPlayerOrder.mutate({
       gameId,
@@ -386,11 +433,16 @@ const PlayerOrderInput = ({
       orderType: OrderType.LIMIT,
       location: StockLocation.OPEN_MARKET,
     });
+    setIsSubmit(true);
   };
   return (
     <div className="flex flex-col justify-center items-center gap-1 min-w-80 max-w-96">
       {currentOrder && <h2>{currentOrder.name}</h2>}
       <span>{isIpo ? "IPO" : "OPEN MARKET"}</span>
+      <PseudoBalance
+        stockRoundId={currentPhase?.stockRoundId ?? 0}
+        currentOrderValue={currentOrderValue}
+      />
       <Tabs aria-label="Dynamic tabs" items={tabs}>
         <Tab key="mo" title={"MARKET ORDER"} className="w-full">
           <Card>
@@ -426,10 +478,16 @@ const PlayerOrderInput = ({
           </Card>
         </Tab>
       </Tabs>
-      <div className="flex justify-center gap-2">
-        <Button onClick={handleConfirm}>Confirm</Button>
-        <Button onClick={handleCancel}>Cancel</Button>
-      </div>
+      {isSubmit ? (
+        <div className="flex justify-center gap-2">
+          <span>Order Submitted.</span>
+        </div>
+      ) : (
+        <div className="flex justify-center gap-2">
+          <Button onClick={handleConfirm}>Confirm</Button>
+          <Button onClick={handleCancel}>Cancel</Button>
+        </div>
+      )}
     </div>
   );
 };

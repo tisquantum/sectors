@@ -37,7 +37,7 @@ const StockRoundOrderGrid = ({
 }: {
   handleOrder: (company: Company, isIpo?: boolean) => void;
 }) => {
-  const { gameId, currentPhase } = useGame();
+  const { gameId, currentPhase, gameState } = useGame();
   const { data: companies, isLoading } =
     trpc.company.listCompaniesWithSector.useQuery({
       where: { gameId },
@@ -47,8 +47,9 @@ const StockRoundOrderGrid = ({
     isLoading: isLoadingOrders,
     refetch: refetchPlayerOrdersConcealed,
   } = trpc.playerOrder.listPlayerOrdersConcealed.useQuery({
-    where: { phaseId: currentPhase?.id },
+    where: { stockRoundId: gameState?.currentStockRoundId },
   });
+  console.log('playerOrdersConcealed', playerOrdersConcealed);
   const [showOrderInput, setShowOrderInput] = useState<string | undefined>(
     undefined
   );
@@ -65,7 +66,7 @@ const StockRoundOrderGrid = ({
   useEffect(() => {
     setIsInteractive(isCurrentPhaseInteractive(currentPhase?.name));
     refetchPlayerOrdersConcealed();
-  }, [currentPhase]);
+  }, [currentPhase?.name]);
   if (isLoading) return null;
   if (companies == undefined) return notFound();
   const isRevealRound = currentPhase?.name === PhaseName.STOCK_REVEAL;
@@ -117,8 +118,8 @@ const StockRoundOrderGrid = ({
                     <Button
                       className={
                         focusedOrder?.id == company.id
-                          ? "bg-gradient-to-tr from-pink-500 to-yellow-500 text-white shadow-lg"
-                          : ""
+                          ? "my-3 bg-gradient-to-tr from-pink-500 to-yellow-500 text-white shadow-lg"
+                          : "my-3"
                       }
                       onClick={() => handleDisplayOrderInput(company, true)}
                     >
@@ -127,7 +128,7 @@ const StockRoundOrderGrid = ({
                   )}
                 </div>
                 <div>
-                  <div className="my-3">OPEN MARKET (4)</div>
+                  <div className="my-2">OPEN MARKET (4)</div>
                   {!isRevealRound && (
                     <PlayerOrderConcealed
                       orders={orders.filter(
@@ -142,8 +143,8 @@ const StockRoundOrderGrid = ({
                     <Button
                       className={
                         focusedOrder?.id == company.id
-                          ? "bg-gradient-to-tr from-pink-500 to-yellow-500 text-white shadow-lg"
-                          : ""
+                          ? "my-3 bg-gradient-to-tr from-pink-500 to-yellow-500 text-white shadow-lg"
+                          : "my-3"
                       }
                       onClick={() => handleDisplayOrderInput(company)}
                     >

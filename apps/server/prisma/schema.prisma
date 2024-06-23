@@ -81,17 +81,16 @@ model Player {
 }
 
 model Stock {
-  id           String         @id @default(uuid())
-  currentPrice Float
-  companyId    String
-  location     StockLocation
-  gameId       String
-  playerId     String?
-  Company      Company        @relation(fields: [companyId], references: [id])
-  Player       Player?        @relation(fields: [playerId], references: [id])
-  StockHistory StockHistory[]
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  id        String        @id @default(uuid())
+  price     Float
+  companyId String
+  location  StockLocation
+  gameId    String
+  playerId  String?
+  Company   Company       @relation(fields: [companyId], references: [id])
+  Player    Player?       @relation(fields: [playerId], references: [id])
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
 }
 
 enum StockLocation {
@@ -101,33 +100,36 @@ enum StockLocation {
 }
 
 model Company {
-  id                 String        @id @default(uuid())
-  name               String
-  unitPrice          Float
-  throughput         Int
-  sectorId           String
-  gameId             String
-  insolvent          Boolean
-  currentStockPrice  Float?
-  cashOnHand         Float?
-  mergedWithParent   String?
-  mergedWithChildren String?
-  Sector             Sector        @relation(fields: [sectorId], references: [id])
-  Stock              Stock[]
-  Game               Game          @relation(fields: [gameId], references: [id])
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
-  PlayerOrder        PlayerOrder[]
+  id                   String         @id @default(uuid())
+  name                 String
+  unitPrice            Float
+  throughput           Int
+  sectorId             String
+  gameId               String
+  insolvent            Boolean
+  currentStockPrice    Float?
+  currentIPOStockPrice Float?
+  cashOnHand           Float?
+  mergedWithParent     String?
+  mergedWithChildren   String?
+  ipoAndFloatPrice     Int
+  Sector               Sector         @relation(fields: [sectorId], references: [id])
+  Stock                Stock[]
+  StockHistory         StockHistory[]
+  Game                 Game           @relation(fields: [gameId], references: [id])
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  PlayerOrder          PlayerOrder[]
 }
 
 model StockHistory {
   id                Int      @id @default(autoincrement())
-  stockId           String
   price             Float
   productionRevenue Float
   gameId            String
+  companyId         String
   timestamp         Int
-  Stock             Stock    @relation(fields: [stockId], references: [id])
+  Company           Company  @relation(fields: [companyId], references: [id])
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }
