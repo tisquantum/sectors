@@ -17,7 +17,11 @@ import {
 import { trpc } from "@sectors/app/trpc";
 import { useGame } from "./GameContext";
 import { notFound } from "next/navigation";
-import { Company, PhaseName } from "@server/prisma/prisma.client";
+import {
+  Company,
+  PhaseName,
+  StockLocation,
+} from "@server/prisma/prisma.client";
 import PlayerOrderConcealed from "../Player/PlayerOrderConcealed";
 
 // Define colors for each sector
@@ -38,10 +42,13 @@ const StockRoundOrderGrid = ({
     trpc.company.listCompaniesWithSector.useQuery({
       where: { gameId },
     });
-  const { data: playerOrdersConcealed, isLoading: isLoadingOrders } =
-    trpc.playerOrder.listPlayerOrdersConcealed.useQuery({
-      where: { phaseId: currentPhase?.id },
-    });
+  const {
+    data: playerOrdersConcealed,
+    isLoading: isLoadingOrders,
+    refetch: refetchPlayerOrdersConcealed,
+  } = trpc.playerOrder.listPlayerOrdersConcealed.useQuery({
+    where: { phaseId: currentPhase?.id },
+  });
   const [showOrderInput, setShowOrderInput] = useState<string | undefined>(
     undefined
   );
@@ -51,12 +58,13 @@ const StockRoundOrderGrid = ({
   );
   useEffect(() => {
     //Make sure the glowing effect from placing an order gets removed when we are viewing phase results
-    if (isInteractive) {
+    if (!isInteractive) {
       setFocusedOrder(null);
     }
   }, [isInteractive]);
   useEffect(() => {
     setIsInteractive(isCurrentPhaseInteractive(currentPhase?.name));
+    refetchPlayerOrdersConcealed();
   }, [currentPhase]);
   if (isLoading) return null;
   if (companies == undefined) return notFound();
@@ -95,7 +103,16 @@ const StockRoundOrderGrid = ({
               <CardBody>
                 <div className="flex flex-col">
                   <div className="mb-3">IPO (3)</div>
-                  {!isRevealRound && <PlayerOrderConcealed orders={orders} />}
+                  {!isRevealRound && (
+                    <PlayerOrderConcealed
+                      orders={orders.filter(
+                        (order) =>
+                          order.companyId == company.id &&
+                          order.location == StockLocation.IPO &&
+                          order.phaseId !== currentPhase?.id // Don't show orders from the current phase, only to be revealed in the "reveal step"
+                      )}
+                    />
+                  )}
                   {isInteractive && (
                     <Button
                       className={
@@ -111,7 +128,16 @@ const StockRoundOrderGrid = ({
                 </div>
                 <div>
                   <div className="my-3">OPEN MARKET (4)</div>
-                  {!isRevealRound && <PlayerOrderConcealed orders={orders} />}
+                  {!isRevealRound && (
+                    <PlayerOrderConcealed
+                      orders={orders.filter(
+                        (order) =>
+                          order.companyId == company.id &&
+                          order.location == StockLocation.OPEN_MARKET &&
+                          order.phaseId !== currentPhase?.id
+                      )}
+                    />
+                  )}
                   {isInteractive && (
                     <Button
                       className={
