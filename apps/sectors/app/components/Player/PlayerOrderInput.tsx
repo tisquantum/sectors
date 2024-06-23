@@ -14,6 +14,14 @@ import {
   Tab,
   Tabs,
 } from "@nextui-org/react";
+import { trpc } from "@sectors/app/trpc";
+import {
+  Company,
+  OrderType,
+  PlayerOrder,
+  Prisma,
+  StockLocation,
+} from "@server/prisma/prisma.client";
 import React, {
   ChangeEvent,
   ChangeEventHandler,
@@ -21,8 +29,8 @@ import React, {
   useState,
 } from "react";
 
-const RiskAssessment = ({ termValue }) => {
-  const getRiskMetrics = (term) => {
+const RiskAssessment = ({ termValue }: { termValue: number }) => {
+  const getRiskMetrics = (term: number) => {
     switch (term) {
       case 2:
         return { interestRate: "40%", maxStockValue: 4 };
@@ -45,12 +53,30 @@ const RiskAssessment = ({ termValue }) => {
     </div>
   );
 };
+interface SliderProps {
+  size: string;
+  step: number;
+  color: string;
+  label: string;
+  showSteps: boolean;
+  maxValue: number;
+  minValue: number;
+  value: number;
+  onChange: (value: number) => void;
+  defaultValue: number;
+  className: string;
+  marks?: { value: number; label: string }[];
+}
 
-const ShortOrderInput = () => {
-  const [termValue, setTermValue] = useState(2);
-  const [maxStockValue, setMaxStockValue] = useState(4);
-  const [minStockValue, setMinStockValue] = useState(1);
-  const [shareValue, setShareValue] = useState(1);
+const ShortOrderInput: React.FC<{
+  onTermChange: (value: number) => void;
+  onShareChange: (value: number) => void;
+}> = ({ onTermChange, onShareChange }) => {
+  const [termValue, setTermValue] = useState<number>(2);
+  const [maxStockValue, setMaxStockValue] = useState<number>(4);
+  const [minStockValue, setMinStockValue] = useState<number>(1);
+  const [shareValue, setShareValue] = useState<number>(1);
+
   useEffect(() => {
     setMaxStockValue(getMaxStockValue(termValue));
     setMinStockValue(getMinStockValue(termValue));
@@ -60,19 +86,23 @@ const ShortOrderInput = () => {
     setShareValue(minStockValue);
   }, [minStockValue]);
 
-  const handleTermChange = (value) => {
-    if (typeof value === "number") {
-      setTermValue(value);
+  const handleTermChange = (value: number | number[]) => {
+    //if array, use zero
+    if (Array.isArray(value)) {
+      value = value[0];
     }
+    setTermValue(value);
   };
 
-  const handleShareChange = (value) => {
-    if (typeof value === "number") {
-      setShareValue(value);
+  const handleShareChange = (value: number | number[]) => {
+    //if array, use zero
+    if (Array.isArray(value)) {
+      value = value[0];
     }
+    setShareValue(value);
   };
 
-  function getMaxStockValue(term) {
+  const getMaxStockValue = (term: number | number[]): number => {
     switch (term) {
       case 2:
         return 4;
@@ -85,9 +115,9 @@ const ShortOrderInput = () => {
       default:
         return 1;
     }
-  }
+  };
 
-  function getMinStockValue(term) {
+  const getMinStockValue = (term: number): number => {
     switch (term) {
       case 2:
         return 1;
@@ -100,13 +130,13 @@ const ShortOrderInput = () => {
       default:
         return 1;
     }
-  }
+  };
 
   return (
     <>
       <RiskAssessment termValue={termValue} />
       <Slider
-        key={`term-slider-${termValue}`} // Add key prop
+        key={`term-slider-${termValue}`}
         size="md"
         step={1}
         color="foreground"
@@ -115,99 +145,24 @@ const ShortOrderInput = () => {
         maxValue={5}
         minValue={2}
         defaultValue={2}
-        value={termValue}
-        onChange={handleTermChange}
+        onChangeEnd={handleTermChange}
         className="max-w-md"
       />
-      {termValue === 2 && (
+      {termValue >= 2 && termValue <= 5 && (
         <Slider
           size="md"
           step={1}
           color="foreground"
           label="Shares"
           showSteps={true}
-          maxValue={4}
-          minValue={1}
-          defaultValue={1}
+          maxValue={maxStockValue}
+          minValue={minStockValue}
+          defaultValue={minStockValue}
+          onChangeEnd={handleShareChange}
           className="max-w-md"
           marks={[
-            {
-              value: 1,
-              label: "1",
-            },
-            {
-              value: 4,
-              label: "4",
-            },
-          ]}
-        />
-      )}
-      {termValue === 3 && (
-        <Slider
-          size="md"
-          step={1}
-          color="foreground"
-          label="Shares"
-          showSteps={true}
-          maxValue={6}
-          minValue={3}
-          defaultValue={3}
-          className="max-w-md"
-          marks={[
-            {
-              value: 3,
-              label: "3",
-            },
-            {
-              value: 6,
-              label: "6",
-            },
-          ]}
-        />
-      )}
-      {termValue === 4 && (
-        <Slider
-          size="md"
-          step={1}
-          color="foreground"
-          label="Shares"
-          showSteps={true}
-          maxValue={8}
-          minValue={5}
-          defaultValue={5}
-          className="max-w-md"
-          marks={[
-            {
-              value: 5,
-              label: "5",
-            },
-            {
-              value: 8,
-              label: "8",
-            },
-          ]}
-        />
-      )}
-      {termValue === 5 && (
-        <Slider
-          size="md"
-          step={1}
-          color="foreground"
-          label="Shares"
-          showSteps={true}
-          maxValue={10}
-          minValue={7}
-          defaultValue={7}
-          className="max-w-md"
-          marks={[
-            {
-              value: 7,
-              label: "7",
-            },
-            {
-              value: 10,
-              label: "10",
-            },
+            { value: minStockValue, label: `${minStockValue}` },
+            { value: maxStockValue, label: `${maxStockValue}` },
           ]}
         />
       )}
@@ -232,18 +187,21 @@ const OrderCounter: React.FC<{ maxOrders: number }> = ({ maxOrders }) => {
   );
 };
 
-const LimitOrderInput = () => {
+const LimitOrderInput = ({
+  handleLimitOrder,
+  handleSelectionIsBuy,
+}: {
+  handleLimitOrder: (limitOrderValue: number) => void;
+  handleSelectionIsBuy: (selection: boolean) => void;
+}) => {
   const [isBuy, setIsBuy] = useState(true);
-  const handleSelection: ChangeEventHandler<HTMLInputElement> = (event) => {
-    if (event.target.value === "cancel") {
-      setIsBuy(false);
-    } else {
-      setIsBuy(true);
-    }
-  };
+  const [limitOrderValue, setLimitOrderValue] = useState<number>(0);
+  useEffect(() => {
+    handleLimitOrder(limitOrderValue);
+  }, [limitOrderValue]);
   return (
     <>
-      <BuyOrSell handleSelection={handleSelection} alsoCancel />
+      <BuyOrSell handleSelectionIsBuy={handleSelectionIsBuy} alsoCancel />
       {isBuy ? (
         <Input
           id="loAmount"
@@ -251,6 +209,7 @@ const LimitOrderInput = () => {
           label="Limit Order Amount"
           placeholder="0.00"
           labelPlacement="inside"
+          onValueChange={(value: string) => setLimitOrderValue(Number(value))}
           startContent={
             <div className="pointer-events-none flex items-center">
               <span className="text-default-400 text-small">$</span>
@@ -272,82 +231,184 @@ const LimitOrderInput = () => {
     </>
   );
 };
-const BuyOrSell = ({
-  alsoCancel,
-  handleSelection,
-}: {
+interface BuyOrSellProps {
   alsoCancel?: boolean;
-  handleSelection?: (selection: ChangeEvent<HTMLInputElement>) => void;
-}) => (
-  <RadioGroup
-    onChange={(event) => (handleSelection ? handleSelection(event) : undefined)}
-    orientation="horizontal"
-  >
-    <Radio defaultChecked value="buy">Buy</Radio>
-    <Radio value="sell">Sell</Radio>
-    {alsoCancel && <Radio value="cancel">Cancel Order</Radio>}
-  </RadioGroup>
-);
+  handleSelectionIsBuy?: (selection: boolean) => void;
+}
+
+const BuyOrSell: React.FC<BuyOrSellProps> = ({
+  alsoCancel,
+  handleSelectionIsBuy,
+}) => {
+  const handleSelection = (event: ChangeEvent<HTMLInputElement>) => {
+    if (handleSelectionIsBuy) {
+      handleSelectionIsBuy(event.target.value === "buy");
+    }
+  };
+
+  return (
+    <RadioGroup onChange={handleSelection} orientation="horizontal">
+      <Radio defaultChecked value="buy">
+        Buy
+      </Radio>
+      <Radio value="sell">Sell</Radio>
+      {alsoCancel && <Radio value="cancel">Cancel Order</Radio>}
+    </RadioGroup>
+  );
+};
+
+interface TabContentProps {
+  handleSelectionIsBuy: (event: boolean) => void;
+  handleShares: (event: number) => void;
+}
+
+const TabContentMO: React.FC<TabContentProps> = ({
+  handleSelectionIsBuy,
+  handleShares,
+}) => {
+  return (
+    <div className="flex flex-col text-center items-center center-content justify-center gap-2">
+      <OrderCounter maxOrders={4} />
+      <BuyOrSell handleSelectionIsBuy={handleSelectionIsBuy} />
+      <Slider
+        size="md"
+        step={1}
+        color="foreground"
+        label="Shares"
+        showSteps={true}
+        maxValue={10}
+        minValue={1}
+        onChange={(value) => {
+          if (Array.isArray(value)) {
+            value = value[0];
+          }
+          handleShares(value);
+        }}
+        defaultValue={1}
+        className="max-w-md"
+      />
+    </div>
+  );
+};
+
+interface TabContentPropsSO {
+  onTermChange: (value: number) => void;
+  onShareChange: (value: number) => void;
+}
+
+const TabContentSO: React.FC<TabContentPropsSO> = ({
+  onTermChange,
+  onShareChange,
+}) => {
+  return (
+    <div className="flex flex-col text-center items-center center-content justify-center gap-2">
+      <OrderCounter maxOrders={3} />
+      <ShortOrderInput
+        onTermChange={onTermChange}
+        onShareChange={onShareChange}
+      />
+    </div>
+  );
+};
+
+interface TabContentPropsLO {
+  handleLimitOrderChange: (limitOrderValue: number) => void;
+  handleSelectionIsBuy: (selection: boolean) => void;
+}
+
+const TabContentLO: React.FC<TabContentPropsLO> = ({
+  handleLimitOrderChange,
+  handleSelectionIsBuy,
+}) => {
+  return (
+    <div className="flex flex-col text-center items-center center-content justify-center gap-2">
+      <OrderCounter maxOrders={4} />
+      <LimitOrderInput
+        handleLimitOrder={handleLimitOrderChange}
+        handleSelectionIsBuy={handleSelectionIsBuy}
+      />
+    </div>
+  );
+};
+
 let tabs = [
   {
     id: "mo",
     label: "MO",
-    content: (
-      <div className="flex flex-col text-center items-center center-content justify-center gap-2">
-        <OrderCounter maxOrders={4} />
-        <BuyOrSell />
-        <Slider
-          size="md"
-          step={1}
-          color="foreground"
-          label="Shares"
-          showSteps={true}
-          maxValue={10}
-          minValue={1}
-          defaultValue={1}
-          className="max-w-md"
-        />
-      </div>
-    ),
   },
   {
     id: "lo",
     label: "LO",
-    content: (
-      <div className="flex flex-col text-center items-center center-content justify-center gap-2">
-        <OrderCounter maxOrders={7} />
-        <LimitOrderInput />
-      </div>
-    ),
   },
   {
     id: "so",
     label: "SO",
-    content: (
-      <div className="flex flex-col text-center items-center center-content justify-center gap-2">
-        <OrderCounter maxOrders={3} />
-        <ShortOrderInput />
-      </div>
-    ),
   },
 ];
 
-const PlayerOrderInput = ({ currentOrder, handleCancel }: any) => {
+const PlayerOrderInput = ({
+  currentOrder,
+  handleCancel,
+  isIpo,
+}: {
+  currentOrder: Company;
+  handleCancel: () => void;
+  isIpo: boolean;
+}) => {
+  const createPlayerOrder = trpc.playerOrder.createPlayerOrder.useMutation();
+  const [term, setTerm] = useState(2);
+  const [share, setShare] = useState(1);
+  const [limitOrderValue, setLimitOrderValue] = useState(0);
+  const [isBuy, setIsBuy] = useState(true);
+
+  const handleConfirm = () => {
+    createPlayerOrder.mutate({
+        stockRoundId: 1,
+        playerId: "1",
+        companyId: currentOrder.id,
+        quantity: share,
+        term,
+        value: limitOrderValue,
+        isSell: !!!isBuy,
+        orderType: OrderType.LIMIT,
+        location: StockLocation.OPEN_MARKET,
+      });
+  };
   return (
-    <div className="flex flex-col justify-center items-center gap-1 min-w-80">
+    <div className="flex flex-col justify-center items-center gap-1 min-w-80 max-w-96">
       {currentOrder && <h2>{currentOrder.name}</h2>}
+      <span>{isIpo ? "IPO" : "OPEN MARKET"}</span>
       <Tabs aria-label="Dynamic tabs" items={tabs}>
-        {(item) => (
-          <Tab key={item.id} title={item.label} className="w-full">
-            <Card>
-              <CardBody>{item.content}</CardBody>
-            </Card>
-          </Tab>
-        )}
+        <Tab key="mo" title={"MARKET ORDER"} className="w-full">
+          <Card>
+            <CardBody>
+              <TabContentMO
+                handleSelectionIsBuy={setIsBuy}
+                handleShares={setShare}
+              />
+            </CardBody>
+          </Card>
+        </Tab>
+        <Tab key="lo" title={"LIMIT ORDER"} className="w-full">
+          <Card>
+            <CardBody>
+              <TabContentLO
+                handleLimitOrderChange={setLimitOrderValue}
+                handleSelectionIsBuy={setIsBuy}
+              />
+            </CardBody>
+          </Card>
+        </Tab>
+        <Tab key="so" title={"SHORT ORDER"} className="w-full">
+          <Card>
+            <CardBody>
+              <TabContentSO onTermChange={setTerm} onShareChange={setShare} />
+            </CardBody>
+          </Card>
+        </Tab>
       </Tabs>
       <div className="flex justify-center gap-2">
-        <Button>Confirm</Button>
-        <Button>Pass</Button>
+        <Button onClick={handleConfirm}>Confirm</Button>
         <Button onClick={handleCancel}>Cancel</Button>
       </div>
     </div>

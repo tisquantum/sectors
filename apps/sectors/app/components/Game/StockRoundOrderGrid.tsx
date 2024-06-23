@@ -1,4 +1,5 @@
 "use client";
+
 import {
   Button,
   Card,
@@ -6,13 +7,14 @@ import {
   CardFooter,
   CardHeader,
 } from "@nextui-org/react";
-import React from "react";
+import React, { useState } from "react";
 import PlayerOrder from "../Player/PlayerOrder";
 import PlayerOrderInput from "../Player/PlayerOrderInput";
 import { organizeCompaniesBySector } from "@sectors/app/helpers";
 import { trpc } from "@sectors/app/trpc";
 import { useGame } from "./GameContext";
 import { notFound } from "next/navigation";
+import { Company } from "@server/prisma/prisma.client";
 
 const orders = [
   { orderType: "MO", orderAmount: 2, isSell: false, playerName: "Alice" },
@@ -31,22 +33,27 @@ const sectorColors: { [key: string]: string } = {
   // Add more sectors and their corresponding colors as needed
 };
 
-const StockRoundOrderGrid = ({ handleOrder }: any) => {
+const StockRoundOrderGrid = ({
+  handleOrder,
+}: {
+  handleOrder: (company: Company, isIpo?: boolean) => void;
+}) => {
   const { gameId } = useGame();
-  const { data: companies, isLoading } = trpc.company.listCompanies.useQuery({
-    where: { gameId },
-  });
+  const { data: companies, isLoading } =
+    trpc.company.listCompaniesWithSector.useQuery({
+      where: { gameId },
+    });
+  const [showOrderInput, setShowOrderInput] = useState<string | undefined>(
+    undefined
+  );
+  const [focusedOrder, setFocusedOrder] = useState<any>(null);
   if (isLoading) return null;
   if (companies == undefined) return notFound();
   const companiesBySector = organizeCompaniesBySector(companies);
-  const [showOrderInput, setShowOrderInput] = React.useState<
-    string | undefined
-  >(undefined);
-  const [focusedOrder, setFocusedOrder] = React.useState<any>(null);
-  const handleDisplayOrderInput = (company: any) => {
+  const handleDisplayOrderInput = (company: Company, isIpo?: boolean) => {
     //   setShowOrderInput(companyId);
     //   console.log("Order input displayed for company with ID:", companyId);
-    handleOrder(company);
+    handleOrder(company, isIpo);
     setFocusedOrder(company);
   };
 
@@ -57,7 +64,7 @@ const StockRoundOrderGrid = ({ handleOrder }: any) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4">
       {Object.keys(companiesBySector).flatMap((sectorId) =>
-        companiesBySector[sectorId].map((company: any) => (
+        companiesBySector[sectorId].companies.map((company: any) => (
           <div key={company.id} className={`z-0 p-4 ${sectorColors[sectorId]}`}>
             <Card
               className={
@@ -76,24 +83,32 @@ const StockRoundOrderGrid = ({ handleOrder }: any) => {
                 <div className="flex flex-col">
                   <div className="mb-3">IPO (3)</div>
                   <PlayerOrder orders={orders} />
+                  <Button
+                    className={
+                      focusedOrder?.id == company.id
+                        ? "bg-gradient-to-tr from-pink-500 to-yellow-500 text-white shadow-lg"
+                        : ""
+                    }
+                    onClick={() => handleDisplayOrderInput(company, true)}
+                  >
+                    Place Order IPO
+                  </Button>
                 </div>
                 <div>
                   <div className="my-3">OPEN MARKET (4)</div>
                   <PlayerOrder orders={orders} isHidden />
+                  <Button
+                    className={
+                      focusedOrder?.id == company.id
+                        ? "bg-gradient-to-tr from-pink-500 to-yellow-500 text-white shadow-lg"
+                        : ""
+                    }
+                    onClick={() => handleDisplayOrderInput(company)}
+                  >
+                    Place Order OPEN MARKET
+                  </Button>
                 </div>
               </CardBody>
-              <CardFooter>
-                <Button
-                  className={
-                    focusedOrder?.id == company.id
-                      ? "bg-gradient-to-tr from-pink-500 to-yellow-500 text-white shadow-lg"
-                      : ""
-                  }
-                  onClick={() => handleDisplayOrderInput(company)}
-                >
-                  Place Order
-                </Button>
-              </CardFooter>
             </Card>
           </div>
         ))

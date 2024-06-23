@@ -23,6 +23,8 @@ import {
 import Meeting from "../Meeting/Meeting";
 import { GameState } from "@server/prisma/prisma.types";
 import { useGame } from "./GameContext";
+import { isStockRoundAction, isStockRoundResult } from "@server/data/helpers";
+import StockRoundAction from "./StockRoundAction";
 
 const determineGameRound = (
   game: GameState
@@ -54,20 +56,21 @@ const determineGameRound = (
 };
 const Game = ({ gameId }: { gameId: string }) => {
   const { gameState } = useGame();
-  const [currentOrder, setCurrentOrder] = useState<any>(null);
+  
   const [currentView, setCurrentView] = useState<string>("action");
   const constraintsRef = useRef(null);
-
-  const handleOrder = (order: any) => {
-    setCurrentOrder(order);
-  };
   const handleCurrentView = (view: string) => {
     setCurrentView(view);
   };
   const currentRoundData = determineGameRound(gameState);
   const renderCurrentPhase = currentRoundData?.phase.name === PhaseName.STOCK_MEET ? (
     <Meeting />
-  ) : null;
+  ) : 
+  isStockRoundAction(currentRoundData?.phase.name) ? 
+    <StockRoundAction /> : 
+  isStockRoundResult(currentRoundData?.phase.name) ?
+     <StockRoundAction /> :
+  null;
 
   return (
     <div className="relative flex flex-grow overflow-hidden">

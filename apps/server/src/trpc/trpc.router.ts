@@ -24,6 +24,8 @@ import meetingMessageRouter from './routers/meeting-message.router';
 import { MeetingMessageService } from '@server/meeting-message/meeting-message.service';
 import phaseRouter from './routers/phase.router';
 import { PhaseService } from '@server/phase/phase.service';
+import { PlayerOrderService } from '@server/player-order/player-order.service';
+import playerOrderRouter from './routers/player-order.router';
 @Injectable()
 export class TrpcRouter {
   constructor(
@@ -40,6 +42,7 @@ export class TrpcRouter {
     private readonly gameManagementService: GameManagementService,
     private readonly meetingMessageService: MeetingMessageService,
     private readonly phaseService: PhaseService,
+    private readonly playerOrderService: PlayerOrderService,
   ) {}
   
   appRouter = this.trpc.router({
@@ -85,6 +88,9 @@ export class TrpcRouter {
     }),
     phase: phaseRouter(this.trpc, {
       phaseService: this.phaseService,
+    }),
+    playerOrder: playerOrderRouter(this.trpc, {
+      playerOrdersService: this.playerOrderService,
     }),
   });
 

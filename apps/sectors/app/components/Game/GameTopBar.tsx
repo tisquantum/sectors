@@ -11,6 +11,7 @@ const GameTopBar = ({
   handleCurrentView: (view: string) => void;
 }) => {
   const { currentPhase } = useGame();
+  console.log('currentPhase', currentPhase);
   return (
     <div className="flex justify-between py-2">
       <ButtonGroup>

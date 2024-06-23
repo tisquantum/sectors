@@ -12,8 +12,7 @@ import { MeetingMessageWithPlayer } from "@server/prisma/prisma.types";
 import { motion } from "framer-motion";
 
 const MeetingMessages = () => {
-  const { gameId } = useGame();
-  const { pusher } = usePusher();
+  const { gameId, socketChannel: channel } = useGame();
   const utils = trpc.useUtils();
   const {
     data: meetingMessages,
@@ -21,10 +20,7 @@ const MeetingMessages = () => {
     isError,
   } = trpc.meetingMessage.listMessages.useQuery({ where: { gameId } });
   useEffect(() => {
-    if (!pusher) return;
-
-    console.log("Subscribing to channel");
-    const channel = pusher.subscribe(getGameChannelId(gameId));
+    if (!channel) return;
 
     channel.bind(
       EVENT_MEETING_MESSAGE_CREATED,
@@ -42,7 +38,6 @@ const MeetingMessages = () => {
     return () => {
       console.log("Unsubscribing from channel");
       channel.unbind(EVENT_MEETING_MESSAGE_CREATED);
-      channel.unsubscribe();
     };
   }, [pusher, isLoading]);
 

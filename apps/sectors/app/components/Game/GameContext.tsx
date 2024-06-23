@@ -11,14 +11,14 @@ import { useAuthUser } from "../AuthUser.context";
 import { trpc } from "@sectors/app/trpc";
 import { Game, Phase, Player } from "@server/prisma/prisma.client";
 import { GameState } from "@server/prisma/prisma.types";
-import { usePusher } from "../Pusher.context";
-import { EVENT_NEW_PHASE, getGameChannelId } from "@server/pusher/pusher.types";
-
+import { usePusherSubscription } from "@sectors/app/hooks/pusher";
+import * as PusherTypes from "pusher-js";
 interface GameContextProps {
   gameId: string;
   authPlayer: Player;
   gameState: GameState;
   currentPhase?: Phase;
+  socketChannel: PusherTypes.Channel | null;
 }
 
 const GameContext = createContext<GameContextProps | undefined>(undefined);
@@ -35,7 +35,6 @@ export const GameProvider: React.FC<{
   gameId: string;
   children: ReactNode;
 }> = ({ gameId, children }) => {
-  const utils = trpc.useUtils();
   const { user } = useAuthUser();
   const {
     data: gameState,
@@ -53,44 +52,22 @@ export const GameProvider: React.FC<{
     },
     { enabled: !!user }
   );
-  const { pusher } = usePusher();
   const [currentPhase, setCurrentPhase] = useState<Phase | undefined>(
-    gameState?.Phase.find((phase) => phase.id === gameState.currentPhaseId)
+    gameState?.Phase.find((phase) => phase.id === gameState?.currentPhaseId)
   );
 
+  const channel = usePusherSubscription(gameId); // Use the custom hook
+
   useEffect(() => {
-    if (!pusher || !gameId) return;
-
-    console.log("Subscribing to game channel");
-    const channel = pusher.subscribe(getGameChannelId(gameId));
-
-    const handleNewPhase = (data: { game: GameState; phase: Phase }) => {
-      console.log("New Phase:", data);
-      // utils.phase.getPhase.setData(
-      //   { where: { id: data.phase.id } },
-      //   data.phase
-      // );
-      //I don't believe we need this because the state update below should trigger a new query.
-      utils.game.getGameState.setData(
-        { gameId },
-        (oldData: GameState | undefined | null) =>
-          oldData
-            ? { ...oldData, currentPhaseId: data.phase.id }
-            : { ...data.game, currentPhaseId: data.phase.id }
-      );
-      setCurrentPhase(
-        data.game.Phase.find((phase) => phase.id === data.game.currentPhaseId)
-      );
-    };
-
-    channel.bind(EVENT_NEW_PHASE, handleNewPhase);
-
-    return () => {
-      console.log("Unsubscribing from game channel");
-      channel.unbind(EVENT_NEW_PHASE, handleNewPhase);
-      channel.unsubscribe();
-    };
-  }, [pusher, gameId, utils]);
+    console.log(
+      "updating current phase",
+      gameState?.currentPhaseId,
+      gameState?.Phase
+    );
+    setCurrentPhase(
+      gameState?.Phase.find((phase) => phase.id === gameState?.currentPhaseId)
+    );
+  }, [gameState?.Phase, gameState?.currentPhaseId]);
 
   if (isLoading || gameStateIsLoading) return <div>Loading...</div>;
   if (isError || gameStateIsError) return <div>Error...</div>;
@@ -98,7 +75,7 @@ export const GameProvider: React.FC<{
 
   return (
     <GameContext.Provider
-      value={{ gameId, authPlayer: player, gameState, currentPhase }}
+      value={{ gameId, authPlayer: player, gameState, currentPhase, socketChannel: channel }}
     >
       {children}
     </GameContext.Provider>

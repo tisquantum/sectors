@@ -73,6 +73,9 @@ model Player {
   MeetingMessage     MeetingMessage[]
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
+  marketOrderActions Int
+  limitOrderActions  Int
+  shortOrderActions  Int
   OperatingRoundVote OperatingRoundVote[]
   PlayerOrder        PlayerOrder[]
 }
@@ -81,7 +84,7 @@ model Stock {
   id           String         @id @default(uuid())
   currentPrice Float
   companyId    String
-  location     String
+  location     StockLocation
   gameId       String
   playerId     String?
   Company      Company        @relation(fields: [companyId], references: [id])
@@ -89,6 +92,12 @@ model Stock {
   StockHistory StockHistory[]
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
+}
+
+enum StockLocation {
+  OPEN_MARKET
+  IPO
+  PLAYER
 }
 
 model Company {
@@ -133,20 +142,24 @@ model StockRound {
   updatedAt    DateTime      @updatedAt
 }
 
+//The order of operations here is action -> order -> stock
+// Action being the player's choice, order being the player's request, and stock being the fulfilled order.
 model PlayerOrder {
-  id           Int        @id @default(autoincrement())
+  id           Int           @id @default(autoincrement())
   stockRoundId Int
   playerId     String
   companyId    String //We can't reference stockId here because it's not known which stocks which actually be purchased yet, this is more of an "ask"
   quantity     Int?
   term         Int?
+  value        Float?
   isSell       Boolean?
+  location     StockLocation
   orderType    OrderType
-  StockRound   StockRound @relation(fields: [stockRoundId], references: [id])
-  Player       Player     @relation(fields: [playerId], references: [id])
-  Company      Company    @relation(fields: [companyId], references: [id])
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  StockRound   StockRound    @relation(fields: [stockRoundId], references: [id])
+  Player       Player        @relation(fields: [playerId], references: [id])
+  Company      Company       @relation(fields: [companyId], references: [id])
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 }
 
 enum OrderType {

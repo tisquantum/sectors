@@ -16,6 +16,7 @@ import { StockRoundService } from '@server/stock-round/stock-round.service';
 import { PhaseService } from '@server/phase/phase.service';
 import { OperatingRoundService } from '@server/operating-round/operating-round.service';
 import { TimerService } from '@server/timer/timer.service';
+import { PlayerOrderService } from '@server/player-order/player-order.service';
 
 @Module({
   imports: [PrismaModule],
@@ -37,6 +38,7 @@ import { TimerService } from '@server/timer/timer.service';
     PhaseService,
     OperatingRoundService,
     TimerService,
+    PlayerOrderService,
   ],
 })
 export class TrpcModule {}

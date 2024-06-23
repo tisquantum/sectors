@@ -57,6 +57,9 @@ export default (trpc: TrpcService, ctx: Context) =>
       .mutation(async ({ input }) => {
         const data: Prisma.PlayerCreateInput = {
           ...input,
+          marketOrderActions: 0,
+          limitOrderActions: 0,
+          shortOrderActions: 0,
           User: { connect: { id: input.userId } },
           Game: { connect: { id: input.gameId } },
         };
