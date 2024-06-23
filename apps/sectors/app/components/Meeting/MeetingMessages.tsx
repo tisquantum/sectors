@@ -39,7 +39,7 @@ const MeetingMessages = () => {
       console.log("Unsubscribing from channel");
       channel.unbind(EVENT_MEETING_MESSAGE_CREATED);
     };
-  }, [pusher, isLoading]);
+  }, [channel, isLoading]);
 
   if (isLoading) return <div>Loading...</div>;
   if (isError) return <div>Error...</div>;

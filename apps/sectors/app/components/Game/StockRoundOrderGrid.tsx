@@ -14,16 +14,8 @@ import { organizeCompaniesBySector } from "@sectors/app/helpers";
 import { trpc } from "@sectors/app/trpc";
 import { useGame } from "./GameContext";
 import { notFound } from "next/navigation";
-import { Company } from "@server/prisma/prisma.client";
-
-const orders = [
-  { orderType: "MO", orderAmount: 2, isSell: false, playerName: "Alice" },
-  { orderType: "LO", orderAmount: 5, isSell: true, playerName: "Bob" },
-  { orderType: "SO", term: 3, playerName: "Charlie" },
-  { orderType: "SO", term: 1, playerName: "Dave" },
-  { orderType: "LO", orderAmount: 10, isSell: false, playerName: "Eve" },
-  { orderType: "MO", orderAmount: 4, isSell: true, playerName: "Frank" },
-];
+import { Company, PhaseName } from "@server/prisma/prisma.client";
+import PlayerOrderConcealed from "../Player/PlayerOrderConcealed";
 
 // Define colors for each sector
 const sectorColors: { [key: string]: string } = {
@@ -38,10 +30,14 @@ const StockRoundOrderGrid = ({
 }: {
   handleOrder: (company: Company, isIpo?: boolean) => void;
 }) => {
-  const { gameId } = useGame();
+  const { gameId, currentPhase } = useGame();
   const { data: companies, isLoading } =
     trpc.company.listCompaniesWithSector.useQuery({
       where: { gameId },
+    });
+  const { data: playerOrdersConcealed, isLoading: isLoadingOrders } =
+    trpc.playerOrder.listPlayerOrdersConcealed.useQuery({
+      where: { phaseId: currentPhase?.id },
     });
   const [showOrderInput, setShowOrderInput] = useState<string | undefined>(
     undefined
@@ -49,6 +45,8 @@ const StockRoundOrderGrid = ({
   const [focusedOrder, setFocusedOrder] = useState<any>(null);
   if (isLoading) return null;
   if (companies == undefined) return notFound();
+  const isRevealRound = currentPhase?.name === PhaseName.STOCK_REVEAL;
+  const orders = playerOrdersConcealed ?? [];
   const companiesBySector = organizeCompaniesBySector(companies);
   const handleDisplayOrderInput = (company: Company, isIpo?: boolean) => {
     //   setShowOrderInput(companyId);
@@ -82,7 +80,7 @@ const StockRoundOrderGrid = ({
               <CardBody>
                 <div className="flex flex-col">
                   <div className="mb-3">IPO (3)</div>
-                  <PlayerOrder orders={orders} />
+                  {!isRevealRound && <PlayerOrderConcealed orders={orders} />}
                   <Button
                     className={
                       focusedOrder?.id == company.id
@@ -96,7 +94,7 @@ const StockRoundOrderGrid = ({
                 </div>
                 <div>
                   <div className="my-3">OPEN MARKET (4)</div>
-                  <PlayerOrder orders={orders} isHidden />
+                  {!isRevealRound && <PlayerOrderConcealed orders={orders} />}
                   <Button
                     className={
                       focusedOrder?.id == company.id

@@ -10,14 +10,22 @@ const StockRoundAction = () => {
   const [currentOrder, setCurrentOrder] = useState<any>(null);
   const [isIpo, setIsIpo] = useState<boolean>(false);
   const handleOrder = (order: Company, isIpo?: boolean) => {
-    console.log('handleOrder', order);
+    console.log("handleOrder", order);
     setCurrentOrder(order);
     setIsIpo(isIpo || false);
   };
   return (
     <div className="flex flex-col justify-center items-center">
       <StockRoundOrderGrid handleOrder={handleOrder} />
-      <PlayerOrderInput currentOrder={currentOrder} handleCancel={() => {}} isIpo={isIpo} />
+      {currentOrder ? (
+        <PlayerOrderInput
+          currentOrder={currentOrder}
+          handleCancel={() => {}}
+          isIpo={isIpo}
+        />
+      ) : (
+        <div>Place an Order With A Company to Start.</div>
+      )}
     </div>
   );
 };

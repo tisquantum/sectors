@@ -91,6 +91,8 @@ export class TrpcRouter {
     }),
     playerOrder: playerOrderRouter(this.trpc, {
       playerOrdersService: this.playerOrderService,
+      playerService: this.playersService,
+      pusherService: this.pusherService,
     }),
   });
 

@@ -147,6 +147,7 @@ model StockRound {
 model PlayerOrder {
   id           Int           @id @default(autoincrement())
   stockRoundId Int
+  phaseId      String
   playerId     String
   companyId    String //We can't reference stockId here because it's not known which stocks which actually be purchased yet, this is more of an "ask"
   quantity     Int?
@@ -158,6 +159,7 @@ model PlayerOrder {
   StockRound   StockRound    @relation(fields: [stockRoundId], references: [id])
   Player       Player        @relation(fields: [playerId], references: [id])
   Company      Company       @relation(fields: [companyId], references: [id])
+  Phase        Phase         @relation(fields: [phaseId], references: [id])
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 }
@@ -278,6 +280,7 @@ model Phase {
   OperatingRound   OperatingRound? @relation(fields: [operatingRoundId], references: [id])
   StockRound       StockRound?     @relation(fields: [stockRoundId], references: [id])
   Game             Game            @relation(fields: [gameId], references: [id])
+  PlayerOrder      PlayerOrder[]
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 }

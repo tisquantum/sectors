@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
-import { EVENT_NEW_PHASE, getGameChannelId } from "@server/pusher/pusher.types";
+import {
+  EVENT_NEW_PHASE,
+  EVENT_NEW_PLAYER_ORDER_PLAYER_ID,
+  getGameChannelId,
+} from "@server/pusher/pusher.types";
 import { Phase } from "@server/prisma/prisma.client";
 import { trpc } from "@sectors/app/trpc";
 import { usePusher } from "../components/Pusher.context";
@@ -33,7 +37,7 @@ export const usePusherSubscription = (gameId: string) => {
       newChannel.unbind(EVENT_NEW_PHASE, handleNewPhase);
       newChannel.unsubscribe();
     };
-  }, [gameId]);
+  }, [gameId, pusher, utils]);
 
   return channel;
 };

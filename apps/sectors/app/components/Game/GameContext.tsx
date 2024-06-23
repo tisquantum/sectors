@@ -13,6 +13,7 @@ import { Game, Phase, Player } from "@server/prisma/prisma.client";
 import { GameState } from "@server/prisma/prisma.types";
 import { usePusherSubscription } from "@sectors/app/hooks/pusher";
 import * as PusherTypes from "pusher-js";
+import { EVENT_NEW_PLAYER_ORDER_PLAYER_ID } from "@server/pusher/pusher.types";
 interface GameContextProps {
   gameId: string;
   authPlayer: Player;
@@ -46,6 +47,7 @@ export const GameProvider: React.FC<{
     data: player,
     isLoading,
     isError,
+    refetch: refetchAuthPlayer,
   } = trpc.player.getPlayer.useQuery(
     {
       where: { userId: user?.id, gameId: gameId },
@@ -68,6 +70,17 @@ export const GameProvider: React.FC<{
       gameState?.Phase.find((phase) => phase.id === gameState?.currentPhaseId)
     );
   }, [gameState?.Phase, gameState?.currentPhaseId]);
+
+  useEffect(() => {
+    channel?.bind(EVENT_NEW_PLAYER_ORDER_PLAYER_ID, handleNewPlayerOrderPlayerId)
+  }, [channel]);
+
+  const handleNewPlayerOrderPlayerId = (data: { playerId: string }) => {
+    if (data.playerId === player?.id) {
+      //update action counters
+      refetchAuthPlayer();
+    }
+  };
 
   if (isLoading || gameStateIsLoading) return <div>Loading...</div>;
   if (isError || gameStateIsError) return <div>Error...</div>;

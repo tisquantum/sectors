@@ -28,6 +28,12 @@ import React, {
   useEffect,
   useState,
 } from "react";
+import { useGame } from "../Game/GameContext";
+import {
+  MAX_LIMIT_ORDER,
+  MAX_MARKET_ORDER,
+  MAX_SHORT_ORDER,
+} from "@server/data/constants";
 
 const RiskAssessment = ({ termValue }: { termValue: number }) => {
   const getRiskMetrics = (term: number) => {
@@ -53,20 +59,6 @@ const RiskAssessment = ({ termValue }: { termValue: number }) => {
     </div>
   );
 };
-interface SliderProps {
-  size: string;
-  step: number;
-  color: string;
-  label: string;
-  showSteps: boolean;
-  maxValue: number;
-  minValue: number;
-  value: number;
-  onChange: (value: number) => void;
-  defaultValue: number;
-  className: string;
-  marks?: { value: number; label: string }[];
-}
 
 const ShortOrderInput: React.FC<{
   onTermChange: (value: number) => void;
@@ -169,9 +161,10 @@ const ShortOrderInput: React.FC<{
     </>
   );
 };
-const OrderCounter: React.FC<{ maxOrders: number }> = ({ maxOrders }) => {
-  const ordersRemaining = maxOrders / 2;
-  //Shows orders remaining
+const OrderCounter: React.FC<{
+  ordersRemaining: number;
+  maxOrders: number;
+}> = ({ ordersRemaining, maxOrders }) => {
   return (
     <div className="flex noWrap gap-1">
       {Array.from({ length: maxOrders }, (_, i) => (
@@ -260,15 +253,20 @@ const BuyOrSell: React.FC<BuyOrSellProps> = ({
 interface TabContentProps {
   handleSelectionIsBuy: (event: boolean) => void;
   handleShares: (event: number) => void;
+  ordersRemaining: number;
 }
 
 const TabContentMO: React.FC<TabContentProps> = ({
   handleSelectionIsBuy,
   handleShares,
+  ordersRemaining,
 }) => {
   return (
     <div className="flex flex-col text-center items-center center-content justify-center gap-2">
-      <OrderCounter maxOrders={4} />
+      <OrderCounter
+        ordersRemaining={ordersRemaining}
+        maxOrders={MAX_MARKET_ORDER}
+      />
       <BuyOrSell handleSelectionIsBuy={handleSelectionIsBuy} />
       <Slider
         size="md"
@@ -294,15 +292,20 @@ const TabContentMO: React.FC<TabContentProps> = ({
 interface TabContentPropsSO {
   onTermChange: (value: number) => void;
   onShareChange: (value: number) => void;
+  ordersRemaining: number;
 }
 
 const TabContentSO: React.FC<TabContentPropsSO> = ({
   onTermChange,
   onShareChange,
+  ordersRemaining,
 }) => {
   return (
     <div className="flex flex-col text-center items-center center-content justify-center gap-2">
-      <OrderCounter maxOrders={3} />
+      <OrderCounter
+        ordersRemaining={ordersRemaining}
+        maxOrders={MAX_SHORT_ORDER}
+      />
       <ShortOrderInput
         onTermChange={onTermChange}
         onShareChange={onShareChange}
@@ -314,15 +317,20 @@ const TabContentSO: React.FC<TabContentPropsSO> = ({
 interface TabContentPropsLO {
   handleLimitOrderChange: (limitOrderValue: number) => void;
   handleSelectionIsBuy: (selection: boolean) => void;
+  ordersRemaining: number;
 }
 
 const TabContentLO: React.FC<TabContentPropsLO> = ({
   handleLimitOrderChange,
   handleSelectionIsBuy,
+  ordersRemaining,
 }) => {
   return (
     <div className="flex flex-col text-center items-center center-content justify-center gap-2">
-      <OrderCounter maxOrders={4} />
+      <OrderCounter
+        ordersRemaining={ordersRemaining}
+        maxOrders={MAX_LIMIT_ORDER}
+      />
       <LimitOrderInput
         handleLimitOrder={handleLimitOrderChange}
         handleSelectionIsBuy={handleSelectionIsBuy}
@@ -355,24 +363,29 @@ const PlayerOrderInput = ({
   handleCancel: () => void;
   isIpo: boolean;
 }) => {
+  const { gameId, gameState, authPlayer } = useGame();
   const createPlayerOrder = trpc.playerOrder.createPlayerOrder.useMutation();
   const [term, setTerm] = useState(2);
   const [share, setShare] = useState(1);
   const [limitOrderValue, setLimitOrderValue] = useState(0);
   const [isBuy, setIsBuy] = useState(true);
 
+  if (!gameId || !gameState) return null;
+
   const handleConfirm = () => {
     createPlayerOrder.mutate({
-        stockRoundId: 1,
-        playerId: "1",
-        companyId: currentOrder.id,
-        quantity: share,
-        term,
-        value: limitOrderValue,
-        isSell: !!!isBuy,
-        orderType: OrderType.LIMIT,
-        location: StockLocation.OPEN_MARKET,
-      });
+      gameId,
+      stockRoundId: gameState.currentStockRoundId ?? 0,
+      playerId: authPlayer.id,
+      companyId: currentOrder.id,
+      phaseId: gameState.currentPhaseId ?? "",
+      quantity: share,
+      term,
+      value: limitOrderValue,
+      isSell: !!!isBuy,
+      orderType: OrderType.LIMIT,
+      location: StockLocation.OPEN_MARKET,
+    });
   };
   return (
     <div className="flex flex-col justify-center items-center gap-1 min-w-80 max-w-96">
@@ -385,6 +398,7 @@ const PlayerOrderInput = ({
               <TabContentMO
                 handleSelectionIsBuy={setIsBuy}
                 handleShares={setShare}
+                ordersRemaining={authPlayer.marketOrderActions}
               />
             </CardBody>
           </Card>
@@ -395,6 +409,7 @@ const PlayerOrderInput = ({
               <TabContentLO
                 handleLimitOrderChange={setLimitOrderValue}
                 handleSelectionIsBuy={setIsBuy}
+                ordersRemaining={authPlayer.limitOrderActions}
               />
             </CardBody>
           </Card>
@@ -402,7 +417,11 @@ const PlayerOrderInput = ({
         <Tab key="so" title={"SHORT ORDER"} className="w-full">
           <Card>
             <CardBody>
-              <TabContentSO onTermChange={setTerm} onShareChange={setShare} />
+              <TabContentSO
+                onTermChange={setTerm}
+                onShareChange={setShare}
+                ordersRemaining={authPlayer.shortOrderActions}
+              />
             </CardBody>
           </Card>
         </Tab>

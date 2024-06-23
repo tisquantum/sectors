@@ -18,7 +18,7 @@ import { StartGameInput } from './game-management.interface';
 import { GameState, PlayerWithStocks } from '@server/prisma/prisma.types';
 import { StockRoundService } from '@server/stock-round/stock-round.service';
 import { PhaseService } from '@server/phase/phase.service';
-import { phaseTimes } from '@server/data/constants';
+import { MAX_LIMIT_ORDER, MAX_MARKET_ORDER, MAX_SHORT_ORDER, phaseTimes } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import { determineNextGamePhase } from '@server/data/helpers';
 import { PusherService } from 'nestjs-pusher';
@@ -60,6 +60,9 @@ export class GameManagementService {
         cashOnHand: startingCashOnHand,
         gameId,
         userId: user.userId,
+        marketOrderActions: MAX_MARKET_ORDER,
+        limitOrderActions: MAX_LIMIT_ORDER,
+        shortOrderActions: MAX_SHORT_ORDER,
       })),
     );
   }

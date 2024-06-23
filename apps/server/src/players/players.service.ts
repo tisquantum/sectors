@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
-import { Player, Prisma } from '@prisma/client';
+import { OrderType, Player, Prisma } from '@prisma/client';
 import { PlayerWithStocks } from '@server/prisma/prisma.types';
 
 @Injectable()
@@ -86,6 +86,28 @@ export class PlayersService {
       include: {
         Stock: true,
       },
+    });
+  }
+
+  async subtractActionCounter(playerId: string, orderType: OrderType): Promise<Player> {
+    const player = await this.prisma.player.findUnique({
+      where: { id: playerId },
+    });
+    if (!player) {
+      throw new Error('Player not found');
+    }
+    if (orderType === OrderType.MARKET) {
+      player.marketOrderActions -= 1;
+    }
+    if (orderType === OrderType.LIMIT) {
+      player.limitOrderActions -= 1;
+    }
+    if (orderType === OrderType.SHORT) {
+      player.shortOrderActions -= 1;
+    }
+    return this.prisma.player.update({
+      where: { id: playerId },
+      data: player,
     });
   }
 }

@@ -6,6 +6,7 @@ import {
   OperatingRound,
   Phase,
   Player,
+  PlayerOrder,
   Room,
   RoomMessage,
   RoomUser,
@@ -39,6 +40,21 @@ export type GameState = Game & {
   OperatingRound: OperatingRound[];
   StockRound: StockRound[];
   Phase: Phase[];
-}
+};
 
-export type RoomWithUsersAndGames = Room & { users: { user: User }[], game: Game[] };
+export type RoomWithUsersAndGames = Room & {
+  users: { user: User }[];
+  game: Game[];
+};
+
+export type PlayerOrderHiddenFields =
+  | 'term'
+  | 'value'
+  | 'quantity'
+  | 'isSell'
+  | 'orderType';
+
+export type PlayerOrderConcealed = Omit<PlayerOrder, PlayerOrderHiddenFields>;
+export type PlayerOrderConcealedWithPlayer = PlayerOrderConcealed & {
+  Player: Player;
+};

@@ -1,6 +1,13 @@
 //make a map between PhaseName and phase times
 import { PhaseName } from '@prisma/client';
 
+
+export const MAX_MARKET_ORDER = 3;
+
+export const MAX_LIMIT_ORDER = 5;
+
+export const MAX_SHORT_ORDER = 2;
+
 /**
  * Phase times in milliseconds
  */
