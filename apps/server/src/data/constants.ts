@@ -7,6 +7,10 @@ export const MAX_LIMIT_ORDER = 5;
 
 export const MAX_SHORT_ORDER = 2;
 
+export const DEFAULT_SHARE_LIMIT = 10;
+
+export const DEFAULT_SHARE_DISTRIBUTION = 15;
+
 /**
  * Phase times in milliseconds
  */

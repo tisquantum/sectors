@@ -1,4 +1,4 @@
-import { OrderType, PhaseName, RoundType, Sector, StockLocation } from '@prisma/client';
+import { OrderType, PhaseName, RoundType, Sector, ShareLocation } from '@prisma/client';
 import { PlayerOrderWithCompany } from '@server/prisma/prisma.types';
 import { stockGridPrices } from './constants';
 
@@ -77,19 +77,19 @@ export const getPseudoSpend = (orders: PlayerOrderWithCompany[]) => {
 
   //filter sell orders by ipo
   const sellOrdersIpo = sellOrders.filter(
-    (order) => order.location == StockLocation.IPO
+    (order) => order.location == ShareLocation.IPO
   );
   //filter buy orders by ipo
   const buyOrdersIpo = buyOrders.filter(
-    (order) => order.location == StockLocation.IPO
+    (order) => order.location == ShareLocation.IPO
   );
   //filter sell orders by open market
   const sellOrdersOpenMarket = sellOrders.filter(
-    (order) => order.location == StockLocation.OPEN_MARKET
+    (order) => order.location == ShareLocation.OPEN_MARKET
   );
   //filter buy orders by open market
   const buyOrdersOpenMarket = buyOrders.filter(
-    (order) => order.location == StockLocation.OPEN_MARKET
+    (order) => order.location == ShareLocation.OPEN_MARKET
   );
 
   //calculate total spend

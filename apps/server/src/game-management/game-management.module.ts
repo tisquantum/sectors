@@ -10,6 +10,7 @@ import { PhaseModule } from '@server/phase/phase.module';
 import { TimerModule } from '@server/timer/timer.module';
 import { PusherModule } from 'nestjs-pusher';
 import { OperatingRoundModule } from '@server/operating-round/operating-round.module';
+import { ShareModule } from '@server/share/share.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { OperatingRoundModule } from '@server/operating-round/operating-round.mo
     TimerModule,
     PusherModule,
     OperatingRoundModule,
+    ShareModule,
   ],
   providers: [GameManagementService],
   exports: [GameManagementService],

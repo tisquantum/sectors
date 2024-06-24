@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { TrpcService } from '../trpc.service';
-import { Prisma, StockLocation, OrderType } from '@prisma/client';
+import { Prisma, ShareLocation, OrderType } from '@prisma/client';
 import { PlayerOrderService } from '@server/player-order/player-order.service';
 import { PusherService } from 'nestjs-pusher';
 import {
@@ -104,7 +104,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           term: z.number().optional(),
           value: z.number().optional(),
           isSell: z.boolean().optional(),
-          location: z.nativeEnum(StockLocation),
+          location: z.nativeEnum(ShareLocation),
           orderType: z.nativeEnum(OrderType),
         }),
       )
@@ -159,7 +159,7 @@ export default (trpc: TrpcService, ctx: Context) =>
             term: z.number().optional(),
             value: z.number().optional(),
             isSell: z.boolean().optional(),
-            location: z.nativeEnum(StockLocation).optional(),
+            location: z.nativeEnum(ShareLocation).optional(),
             orderType: z.nativeEnum(OrderType).optional(),
           }),
         }),

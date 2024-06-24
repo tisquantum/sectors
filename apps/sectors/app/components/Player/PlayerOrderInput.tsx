@@ -20,7 +20,7 @@ import {
   OrderType,
   PlayerOrder,
   Prisma,
-  StockLocation,
+  ShareLocation,
 } from "@server/prisma/prisma.client";
 import React, {
   ChangeEvent,
@@ -242,7 +242,11 @@ const BuyOrSell: React.FC<BuyOrSellProps> = ({
   };
 
   return (
-    <RadioGroup onChange={handleSelection} orientation="horizontal">
+    <RadioGroup
+      onChange={handleSelection}
+      orientation="horizontal"
+      defaultValue="buy"
+    >
       <Radio defaultChecked value="buy">
         Buy
       </Radio>
@@ -279,6 +283,7 @@ const TabContentMO: React.FC<TabContentProps> = ({
         maxValue={10}
         minValue={1}
         onChange={(value) => {
+          console.log("slider value mo", value);
           if (Array.isArray(value)) {
             value = value[0];
           }
@@ -372,15 +377,21 @@ const PseudoBalance = ({
   stockRoundId: number;
   currentOrderValue?: number;
 }) => {
-  const { authPlayer } = useGame();
-  const { data: playerOrders, isLoading } =
-    trpc.playerOrder.listPlayerOrdersWithCompany.useQuery({
-      where: { playerId: authPlayer.id, stockRoundId },
-    });
+  const { authPlayer, currentPhase } = useGame();
+  const {
+    data: playerOrders,
+    isLoading,
+    refetch,
+  } = trpc.playerOrder.listPlayerOrdersWithCompany.useQuery({
+    where: { playerId: authPlayer.id, stockRoundId },
+  });
+  useEffect(() => {
+    refetch();
+  }, [currentPhase?.name]);
   if (isLoading) return null;
 
   const pseudoSpend = playerOrders ? getPseudoSpend(playerOrders) : 0;
-
+  console.log('pseudoSpend', pseudoSpend, currentOrderValue);
   const netSpend = currentOrderValue ?? 0 + pseudoSpend;
 
   return (
@@ -407,13 +418,16 @@ const PlayerOrderInput = ({
   handleCancel: () => void;
   isIpo: boolean;
 }) => {
-  const { gameId, gameState, authPlayer, currentPhase } = useGame();
+  const { gameId, gameState, authPlayer, currentPhase, refetchAuthPlayer } =
+    useGame();
   const createPlayerOrder = trpc.playerOrder.createPlayerOrder.useMutation();
   const [term, setTerm] = useState(2);
   const [share, setShare] = useState(1);
   const [limitOrderValue, setLimitOrderValue] = useState(0);
   const [isBuy, setIsBuy] = useState(true);
   const [isSubmit, setIsSubmit] = useState(false);
+  const [orderType, setOrderType] = useState<OrderType>(OrderType.MARKET);
+
   useEffect(() => {
     setIsSubmit(false);
   }, [currentPhase?.name]);
@@ -430,63 +444,83 @@ const PlayerOrderInput = ({
       term,
       value: limitOrderValue,
       isSell: !!!isBuy,
-      orderType: OrderType.LIMIT,
-      location: StockLocation.OPEN_MARKET,
+      orderType,
+      location: isIpo ? ShareLocation.IPO : ShareLocation.OPEN_MARKET,
     });
     setIsSubmit(true);
+    refetchAuthPlayer();
+  };
+  const handleSelectionChange = (key: React.Key) => {
+    switch (key) {
+      case "mo":
+        setOrderType(OrderType.MARKET);
+        break;
+      case "lo":
+        setOrderType(OrderType.LIMIT);
+        break;
+      case "so":
+        setOrderType(OrderType.SHORT);
+        break;
+    }
   };
   return (
     <div className="flex flex-col justify-center items-center gap-1 min-w-80 max-w-96">
-      {currentOrder && <h2>{currentOrder.name}</h2>}
-      <span>{isIpo ? "IPO" : "OPEN MARKET"}</span>
       <PseudoBalance
         stockRoundId={currentPhase?.stockRoundId ?? 0}
         currentOrderValue={currentOrderValue}
       />
-      <Tabs aria-label="Dynamic tabs" items={tabs}>
-        <Tab key="mo" title={"MARKET ORDER"} className="w-full">
-          <Card>
-            <CardBody>
-              <TabContentMO
-                handleSelectionIsBuy={setIsBuy}
-                handleShares={setShare}
-                ordersRemaining={authPlayer.marketOrderActions}
-              />
-            </CardBody>
-          </Card>
-        </Tab>
-        <Tab key="lo" title={"LIMIT ORDER"} className="w-full">
-          <Card>
-            <CardBody>
-              <TabContentLO
-                handleLimitOrderChange={setLimitOrderValue}
-                handleSelectionIsBuy={setIsBuy}
-                ordersRemaining={authPlayer.limitOrderActions}
-              />
-            </CardBody>
-          </Card>
-        </Tab>
-        <Tab key="so" title={"SHORT ORDER"} className="w-full">
-          <Card>
-            <CardBody>
-              <TabContentSO
-                onTermChange={setTerm}
-                onShareChange={setShare}
-                ordersRemaining={authPlayer.shortOrderActions}
-              />
-            </CardBody>
-          </Card>
-        </Tab>
-      </Tabs>
       {isSubmit ? (
         <div className="flex justify-center gap-2">
           <span>Order Submitted.</span>
         </div>
       ) : (
-        <div className="flex justify-center gap-2">
-          <Button onClick={handleConfirm}>Confirm</Button>
-          <Button onClick={handleCancel}>Cancel</Button>
-        </div>
+        <>
+          {currentOrder && <h2>{currentOrder.name}</h2>}
+          <span>{isIpo ? "IPO" : "OPEN MARKET"}</span>
+          <Tabs
+            aria-label="Dynamic tabs"
+            items={tabs}
+            onSelectionChange={handleSelectionChange}
+          >
+            <Tab key="mo" title={"MARKET ORDER"} className="w-full">
+              <Card>
+                <CardBody>
+                  <TabContentMO
+                    handleSelectionIsBuy={setIsBuy}
+                    handleShares={setShare}
+                    ordersRemaining={authPlayer.marketOrderActions}
+                  />
+                </CardBody>
+              </Card>
+            </Tab>
+            <Tab key="lo" title={"LIMIT ORDER"} className="w-full">
+              <Card>
+                <CardBody>
+                  <TabContentLO
+                    handleLimitOrderChange={setLimitOrderValue}
+                    handleSelectionIsBuy={setIsBuy}
+                    ordersRemaining={authPlayer.limitOrderActions}
+                  />
+                </CardBody>
+              </Card>
+            </Tab>
+            <Tab key="so" title={"SHORT ORDER"} className="w-full">
+              <Card>
+                <CardBody>
+                  <TabContentSO
+                    onTermChange={setTerm}
+                    onShareChange={setShare}
+                    ordersRemaining={authPlayer.shortOrderActions}
+                  />
+                </CardBody>
+              </Card>
+            </Tab>
+          </Tabs>
+          <div className="flex justify-center gap-2">
+            <Button onClick={handleConfirm}>Confirm</Button>
+            <Button onClick={handleCancel}>Cancel</Button>
+          </div>
+        </>
       )}
     </div>
   );

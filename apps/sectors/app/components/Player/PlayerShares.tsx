@@ -1,6 +1,6 @@
 import React from "react";
 import { Avatar, AvatarGroup, Badge } from "@nextui-org/react";
-import { PlayerWithStocks } from "@server/prisma/prisma.types";
+import { PlayerWithShares } from "@server/prisma/prisma.types";
 import { StockAggregation } from "./PlayersOverview";
 
 const playerCompanies = [
@@ -31,16 +31,16 @@ const playerCompanies = [
   },
 ];
 
-const PlayerShares = ({ playerWithStocks }: { playerWithStocks: PlayerWithStocks }) => {
+const PlayerShares = ({ playerWithShares }: { playerWithShares: PlayerWithShares }) => {
   // Aggregate total value and total shares owned for each company
-  const stockAggregation = playerWithStocks.Stock.reduce(
-    (acc: Record<string, StockAggregation>, playerStock) => {
-      const { companyId, currentPrice } = playerStock;
+  const stockAggregation = playerWithShares.Share.reduce(
+    (acc: Record<string, StockAggregation>, playeShare) => {
+      const { companyId, price } = playeShare;
       if (!acc[companyId]) {
         acc[companyId] = { totalShares: 0, totalValue: 0 };
       }
       acc[companyId].totalShares += 1;
-      acc[companyId].totalValue += currentPrice;
+      acc[companyId].totalValue += price;
       return acc;
     },
     {}

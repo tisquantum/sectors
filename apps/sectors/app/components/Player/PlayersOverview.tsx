@@ -13,7 +13,7 @@ export interface StockAggregation {
 }
 
 const PlayersOverview = ({ gameId }: { gameId: string }) => {
-  const { data: playersWithStocks, isLoading } = trpc.game.getPlayersWithStocks.useQuery(
+  const { data: playersWithShares, isLoading } = trpc.game.getPlayersWithShares.useQuery(
     { gameId },
     {
       refetchOnMount: false,
@@ -21,15 +21,15 @@ const PlayersOverview = ({ gameId }: { gameId: string }) => {
   );
 
   if (isLoading) return <div>Loading...</div>;
-  if (playersWithStocks == undefined) return notFound();
+  if (playersWithShares == undefined) return notFound();
 
   return (
     <Accordion>
-      {playersWithStocks.map((playerWithStocks) => {
+      {playersWithShares.map((playerWithShares) => {
         // Aggregate total value and total shares owned
-        const stockAggregation = playerWithStocks.Stock.reduce(
-          (acc: Record<string, StockAggregation>, playerWithStocks) => {
-            const { companyId, currentPrice } = playerWithStocks;
+        const stockAggregation = playerWithShares.Stock.reduce(
+          (acc: Record<string, StockAggregation>, playerWithShares) => {
+            const { companyId, currentPrice } = playerWithShares;
             if (!acc[companyId]) {
               acc[companyId] = { totalShares: 0, totalValue: 0 };
             }
@@ -52,15 +52,15 @@ const PlayersOverview = ({ gameId }: { gameId: string }) => {
 
         return (
           <AccordionItem
-            key={playerWithStocks.id}
+            key={playerWithShares.id}
             startContent={
               <Avatar
-                name={playerWithStocks.nickname}
+                name={playerWithShares.nickname}
                 size="sm"
                 className="mr-2"
               />
             }
-            title={playerWithStocks.nickname}
+            title={playerWithShares.nickname}
             subtitle={
               <span>
                 <CurrencyDollarIcon className="size-4" /> 300
@@ -68,11 +68,11 @@ const PlayersOverview = ({ gameId }: { gameId: string }) => {
             }
           >
             <div>
-              <div>Cash on Hand: ${playerWithStocks.cashOnHand.toFixed(2)}</div>
+              <div>Cash on Hand: ${playerWithShares.cashOnHand.toFixed(2)}</div>
               <div>Total Asset Value: ${totalValue.toFixed(2)}</div>
               <div>Total Shares Owned: {totalShares}</div>
               <Divider className="my-5" />
-              <PlayerShares playerWithStocks={playerWithStocks} />
+              <PlayerShares playerWithShares={playerWithShares} />
             </div>
           </AccordionItem>
         );

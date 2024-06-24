@@ -8,6 +8,8 @@ import {
   Prisma,
   RoundType,
   Sector,
+  Share,
+  ShareLocation,
   StockRound,
 } from '@prisma/client';
 import { GamesService } from '@server/games/games.service';
@@ -15,15 +17,16 @@ import { CompanyService } from '@server/company/company.service';
 import { SectorService } from '@server/sector/sector.service';
 import { gameDataJson } from '@server/data/gameData';
 import { StartGameInput } from './game-management.interface';
-import { GameState, PlayerWithStocks } from '@server/prisma/prisma.types';
+import { GameState, PlayerWithShares } from '@server/prisma/prisma.types';
 import { StockRoundService } from '@server/stock-round/stock-round.service';
 import { PhaseService } from '@server/phase/phase.service';
-import { MAX_LIMIT_ORDER, MAX_MARKET_ORDER, MAX_SHORT_ORDER, phaseTimes } from '@server/data/constants';
+import { DEFAULT_SHARE_DISTRIBUTION, MAX_LIMIT_ORDER, MAX_MARKET_ORDER, MAX_SHORT_ORDER, phaseTimes } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import { determineFloatPrice, determineNextGamePhase } from '@server/data/helpers';
 import { PusherService } from 'nestjs-pusher';
 import { EVENT_NEW_PHASE, getGameChannelId } from '@server/pusher/pusher.types';
 import { OperatingRoundService } from '@server/operating-round/operating-round.service';
+import { ShareService } from '@server/share/share.service';
 
 @Injectable()
 export class GameManagementService {
@@ -38,6 +41,7 @@ export class GameManagementService {
     private phaseService: PhaseService,
     private timerService: TimerService,
     private pusherService: PusherService,
+    private shareService: ShareService
   ) {}
 
   async addPlayersToGame(
@@ -141,14 +145,35 @@ export class GameManagementService {
           if (!sector) {
             throw new Error('Sector not found');
           }
+          const ipoPrice = determineFloatPrice(sector);
           return {
             ...company,
-            ipoAndFloatPrice: determineFloatPrice(sector),
+            ipoAndFloatPrice: ipoPrice,
+            currentStockPrice: ipoPrice,
             gameId: game.id,
             sectorId: sector.id,
           };
         });
-        await this.companyService.createManyCompanies(newCompanyData);
+        const companies = await this.companyService.createManyCompanies(newCompanyData);
+        
+        //iterate through companies and create ipo shares
+        const shares: {
+          companyId: string;
+          price: number;
+          location: ShareLocation;
+          gameId: string;
+        }[] = [];
+        companies.forEach((company) => {
+          for (let i = 0; i < DEFAULT_SHARE_DISTRIBUTION; i++) {
+            shares.push({
+              companyId: company.id,
+              price: company.ipoAndFloatPrice,
+              location: ShareLocation.IPO,
+              gameId: game.id,
+            });
+          };
+        });
+        await this.shareService.createManyShares(shares);
       } catch (error) {
         console.error('Error starting game:', error);
         throw new Error('Failed to start the game');
@@ -182,10 +207,10 @@ export class GameManagementService {
     return result;
   }
 
-  public getPlayersWithStocks(
+  public getPlayersWithShares(
     gameId: string,
-  ): Promise<PlayerWithStocks[] | null> {
-    return this.playersService.playersWithStocks({
+  ): Promise<PlayerWithShares[] | null> {
+    return this.playersService.playersWithShares({
       gameId,
     });
   }

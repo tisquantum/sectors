@@ -20,7 +20,7 @@ import { notFound } from "next/navigation";
 import {
   Company,
   PhaseName,
-  StockLocation,
+  ShareLocation,
 } from "@server/prisma/prisma.client";
 import PlayerOrderConcealed from "../Player/PlayerOrderConcealed";
 
@@ -109,7 +109,7 @@ const StockRoundOrderGrid = ({
                       orders={orders.filter(
                         (order) =>
                           order.companyId == company.id &&
-                          order.location == StockLocation.IPO &&
+                          order.location == ShareLocation.IPO &&
                           order.phaseId !== currentPhase?.id // Don't show orders from the current phase, only to be revealed in the "reveal step"
                       )}
                     />
@@ -134,7 +134,7 @@ const StockRoundOrderGrid = ({
                       orders={orders.filter(
                         (order) =>
                           order.companyId == company.id &&
-                          order.location == StockLocation.OPEN_MARKET &&
+                          order.location == ShareLocation.OPEN_MARKET &&
                           order.phaseId !== currentPhase?.id
                       )}
                     />

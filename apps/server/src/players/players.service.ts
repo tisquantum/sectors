@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { OrderType, Player, Prisma } from '@prisma/client';
-import { PlayerWithStocks } from '@server/prisma/prisma.types';
+import { PlayerWithShares } from '@server/prisma/prisma.types';
 
 @Injectable()
 export class PlayersService {
@@ -67,24 +67,24 @@ export class PlayersService {
     });
   }
 
-  async playerWithStocks(
+  async playerWithShares(
     playerWhereUniqueInput: Prisma.PlayerWhereUniqueInput,
-  ): Promise<PlayerWithStocks | null> {
+  ): Promise<PlayerWithShares | null> {
     return this.prisma.player.findUnique({
       where: playerWhereUniqueInput,
       include: {
-        Stock: true,
+        Share: true,
       },
     });
   }
 
-  async playersWithStocks(
+  async playersWithShares(
     playerWhereInput: Prisma.PlayerWhereInput,
-  ): Promise<PlayerWithStocks[]> {
+  ): Promise<PlayerWithShares[]> {
     return this.prisma.player.findMany({
       where: playerWhereInput,
       include: {
-        Stock: true,
+        Share: true,
       },
     });
   }

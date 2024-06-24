@@ -109,7 +109,7 @@ export class PlayerOrderService {
       const [player, company, playerOrders] = await this.prisma.$transaction([
         this.prisma.player.findUnique({
           where: { id: playerId },
-          include: { Stock: true },
+          include: { Share: true },
         }),
         this.prisma.company.findUnique({
           where: { id: companyId },
@@ -126,13 +126,17 @@ export class PlayerOrderService {
       if (!player || !company) {
         throw new Error('Player or Company not found');
       }
+
+      if(player.marketOrderActions === 0) {
+        throw new Error('Player has no more market order actions');
+      }
   
       const spend = getPseudoSpend(playerOrders);
       const orderValue = data.quantity! * company.currentStockPrice!;
   
       if (data.isSell) {
-        const playerShares = player.Stock.filter(
-          (stock) => stock.companyId === companyId,
+        const playerShares = player.Share.filter(
+          (share) => share.companyId === companyId,
         );
         if (!playerShares || playerShares.length < data.quantity!) {
           throw new Error('Player does not have enough shares to sell');
@@ -147,10 +151,40 @@ export class PlayerOrderService {
     if (data.orderType === OrderType.LIMIT) {
       delete data.quantity;
       delete data.term;
+      //get player
+      const playerId = data.Player.connect?.id;
+      if (!playerId) {
+        throw new Error('Invalid data input');
+      }
+      const player = await this.prisma.player.findUnique({
+        where: { id: playerId },
+      });
+      if (!player) {
+        throw new Error('Player not found');
+      }
+      //check if player has limit order actions
+      if (player.limitOrderActions === 0) {
+        throw new Error('Player has no more limit order actions');
+      }
     }
     if (data.orderType === OrderType.SHORT) {
       delete data.value;
       delete data.isSell;
+      //get player
+      const playerId = data.Player.connect?.id;
+      if (!playerId) {
+        throw new Error('Invalid data input');
+      }
+      const player = await this.prisma.player.findUnique({
+        where: { id: playerId },
+      });
+      if (!player) {
+        throw new Error('Player not found');
+      }
+      //check if player has short order actions
+      if (player.shortOrderActions === 0) {
+        throw new Error('Player has no more short order actions');
+      }
     }
   
     return this.prisma.playerOrder.create({ data });

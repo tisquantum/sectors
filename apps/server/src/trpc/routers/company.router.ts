@@ -2,9 +2,12 @@ import { z } from 'zod';
 import { CompanyService } from '@server/company/company.service';
 import { TrpcService } from '../trpc.service';
 import { Prisma, RoundType } from '@prisma/client';
+import { SectorService } from '@server/sector/sector.service';
+import { determineFloatPrice } from '@server/data/helpers';
 
 type Context = {
   companyService: CompanyService;
+  sectorService: SectorService;
 };
 
 export default (trpc: TrpcService, ctx: Context) =>
@@ -118,8 +121,11 @@ export default (trpc: TrpcService, ctx: Context) =>
         }),
       )
       .mutation(async ({ input }) => {
+        const sector = await ctx.sectorService.sector({ id: input.sectorId });
+        if(!sector) throw new Error('Sector not found');
         const data: Prisma.CompanyCreateInput = {
           ...input,
+          ipoAndFloatPrice: determineFloatPrice(sector),
           Game: { connect: { id: input.gameId } },
           Sector: { connect: { id: input.sectorId } },
         };

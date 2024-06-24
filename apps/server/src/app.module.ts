@@ -22,6 +22,7 @@ import { StockRoundModule } from './stock-round/stock-round.module';
 import { GameLogModule } from './game-log/game-log.module';
 import { TimerModule } from './timer/timer.module';
 import { PlayerOrderModule } from './player-order/player-order.module';
+import { ShareModule } from './share/share.module';
 
 const yourPusherOptions = {
   cluster: process.env.PUSHER_CLUSTER ?? 'CLUSTER',
@@ -58,6 +59,7 @@ const chunkingOptions = {
     GameLogModule,
     TimerModule,
     PlayerOrderModule,
+    ShareModule,
   ],
   controllers: [AppController],
   providers: [AppService],

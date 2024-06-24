@@ -20,6 +20,7 @@ interface GameContextProps {
   gameState: GameState;
   currentPhase?: Phase;
   socketChannel: PusherTypes.Channel | null;
+  refetchAuthPlayer: () => void;
 }
 
 const GameContext = createContext<GameContextProps | undefined>(undefined);
@@ -71,24 +72,20 @@ export const GameProvider: React.FC<{
     );
   }, [gameState?.Phase, gameState?.currentPhaseId]);
 
-  useEffect(() => {
-    channel?.bind(EVENT_NEW_PLAYER_ORDER_PLAYER_ID, handleNewPlayerOrderPlayerId)
-  }, [channel]);
-
-  const handleNewPlayerOrderPlayerId = (data: { playerId: string }) => {
-    if (data.playerId === player?.id) {
-      //update action counters
-      refetchAuthPlayer();
-    }
-  };
-
   if (isLoading || gameStateIsLoading) return <div>Loading...</div>;
   if (isError || gameStateIsError) return <div>Error...</div>;
   if (!player || !gameState) return null; // Handle undefined player, game state, or phase data
 
   return (
     <GameContext.Provider
-      value={{ gameId, authPlayer: player, gameState, currentPhase, socketChannel: channel }}
+      value={{
+        gameId,
+        authPlayer: player,
+        gameState,
+        currentPhase,
+        socketChannel: channel,
+        refetchAuthPlayer,
+      }}
     >
       {children}
     </GameContext.Provider>

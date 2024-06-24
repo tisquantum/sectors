@@ -128,11 +128,11 @@ export default (trpc: TrpcService, ctx: Context) =>
         return ctx.gamesService.deleteGame({ id });
       }),
 
-    getPlayersWithStocks: trpc.procedure
+    getPlayersWithShares: trpc.procedure
       .input(z.object({ gameId: z.string() }))
       .query(async ({ input }) => {
         const { gameId } = input;
-        return ctx.gameManagementService.getPlayersWithStocks(gameId);
+        return ctx.gameManagementService.getPlayersWithShares(gameId);
       }),
 
     getGameState: trpc.procedure

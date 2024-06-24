@@ -78,6 +78,7 @@ export class TrpcRouter {
     }),
     company: companyRouter(this.trpc, {
       companyService: this.companyService,
+      sectorService: this.sectorService,
     }),
     sector: sectorRouter(this.trpc, {
       sectorService: this.sectorService,

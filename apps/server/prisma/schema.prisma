@@ -69,7 +69,7 @@ model Player {
   userId             String
   Game               Game                 @relation(fields: [gameId], references: [id])
   User               User                 @relation(fields: [userId], references: [id])
-  Stock              Stock[]
+  Share              Share[]
   MeetingMessage     MeetingMessage[]
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
@@ -80,11 +80,11 @@ model Player {
   PlayerOrder        PlayerOrder[]
 }
 
-model Stock {
+model Share {
   id        String        @id @default(uuid())
   price     Float
   companyId String
-  location  StockLocation
+  location  ShareLocation
   gameId    String
   playerId  String?
   Company   Company       @relation(fields: [companyId], references: [id])
@@ -93,33 +93,32 @@ model Stock {
   updatedAt DateTime      @updatedAt
 }
 
-enum StockLocation {
+enum ShareLocation {
   OPEN_MARKET
   IPO
   PLAYER
 }
 
 model Company {
-  id                   String         @id @default(uuid())
-  name                 String
-  unitPrice            Float
-  throughput           Int
-  sectorId             String
-  gameId               String
-  insolvent            Boolean
-  currentStockPrice    Float?
-  currentIPOStockPrice Float?
-  cashOnHand           Float?
-  mergedWithParent     String?
-  mergedWithChildren   String?
-  ipoAndFloatPrice     Int
-  Sector               Sector         @relation(fields: [sectorId], references: [id])
-  Stock                Stock[]
-  StockHistory         StockHistory[]
-  Game                 Game           @relation(fields: [gameId], references: [id])
-  createdAt            DateTime       @default(now())
-  updatedAt            DateTime       @updatedAt
-  PlayerOrder          PlayerOrder[]
+  id                 String         @id @default(uuid())
+  name               String
+  unitPrice          Float
+  throughput         Int
+  sectorId           String
+  gameId             String
+  insolvent          Boolean
+  currentStockPrice  Float?
+  cashOnHand         Float?
+  mergedWithParent   String?
+  mergedWithChildren String?
+  ipoAndFloatPrice   Int
+  Sector             Sector         @relation(fields: [sectorId], references: [id])
+  Share              Share[]
+  StockHistory       StockHistory[]
+  Game               Game           @relation(fields: [gameId], references: [id])
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  PlayerOrder        PlayerOrder[]
 }
 
 model StockHistory {
@@ -156,7 +155,7 @@ model PlayerOrder {
   term         Int?
   value        Float?
   isSell       Boolean?
-  location     StockLocation
+  location     ShareLocation
   orderType    OrderType
   StockRound   StockRound    @relation(fields: [stockRoundId], references: [id])
   Player       Player        @relation(fields: [playerId], references: [id])
