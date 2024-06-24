@@ -1,6 +1,12 @@
 import React from "react";
 import { Chip, Avatar, Badge } from "@nextui-org/react";
 import { MinusIcon, PlusIcon } from "@heroicons/react/24/solid";
+import { determineColorByOrderType } from "@sectors/app/helpers";
+import { trpc } from "@sectors/app/trpc";
+import { useGame } from "../Game/GameContext";
+import { OrderType } from "@server/prisma/prisma.client";
+import OrderChipWithPlayer from "../Game/OrderChipWithPlayer";
+import { PlayerOrderWithPlayerCompany } from "@server/prisma/prisma.types";
 
 type OrderType = "LO" | "MO" | "SO";
 
@@ -12,64 +18,16 @@ interface PlayerOrderProps {
   playerName: string;
 }
 
-const PlayerOrder: React.FC<{
-  isHidden?: Boolean;
-  orders?: PlayerOrderProps[];
-}> = ({ orders, isHidden }) => {
-  const determineColorByOrderType = (orderType: string, isSell?: boolean) => {
-    switch (orderType) {
-      case "LO":
-        return isSell ? "danger" : "secondary";
-      case "MO":
-        return isSell ? "danger" : "primary";
-      case "SO":
-        return "warning";
-      default:
-        return "default";
-    }
-  };
-  return (
-    <div className="grid grid-cols-3 gap-4 w-full">
-      {isHidden
-        ? orders?.map((order, index) => (
-            <div className="flex items-center justify-center" key={index}>
-              <Badge color="secondary" content={3}>
-                <Avatar
-                  name={order.playerName}
-                  size="sm"
-                  getInitials={(name) => name.charAt(0)}
-                />
-              </Badge>
-            </div>
-          ))
-        : orders &&
-          orders.map((order, index) => (
-            <Chip
-              key={index}
-              variant="flat"
-              avatar={
-                <Avatar
-                  name={order.playerName}
-                  size="sm"
-                  getInitials={(name) => name.charAt(0)}
-                />
-              }
-              color={determineColorByOrderType(order.orderType, order?.isSell)}
-            >
-              <div className="flex items-center">
-                <span>{order.orderType}</span>
-                {(order.orderType === "LO" || order.orderType === "MO") && (
-                  <>
-                    <span>{order.isSell ? "-" : "+"}</span>
-                    <span>{order.orderAmount}</span>
-                  </>
-                )}
-                {order.orderType === "SO" && <span>{order.term}</span>}
-              </div>
-            </Chip>
-          ))}
-    </div>
-  );
-};
+const PlayerOrder = ({
+  orders,
+}: {
+  orders: PlayerOrderWithPlayerCompany[];
+}) => (
+  <div className="grid grid-cols-3 gap-4 w-full">
+    {orders.map((order, index) => (
+      <OrderChipWithPlayer order={order} key={index} />
+    ))}
+  </div>
+);
 
 export default PlayerOrder;

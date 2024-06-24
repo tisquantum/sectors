@@ -5,6 +5,7 @@ import {
   PlayerOrderConcealed,
   PlayerOrderConcealedWithPlayer,
   PlayerOrderWithCompany,
+  PlayerOrderWithPlayerCompany,
 } from '@server/prisma/prisma.types';
 import { getPseudoSpend } from '@server/data/helpers';
 
@@ -53,6 +54,27 @@ export class PlayerOrderService {
       orderBy,
       include: {
         Company: true,
+      },
+    });
+  }
+
+  async playerOrdersWithPlayerCompany(params: {
+    skip?: number;
+    take?: number;
+    cursor?: Prisma.PlayerOrderWhereUniqueInput;
+    where?: Prisma.PlayerOrderWhereInput;
+    orderBy?: Prisma.PlayerOrderOrderByWithRelationInput;
+  }): Promise<PlayerOrderWithPlayerCompany[]> {
+    const { skip, take, cursor, where, orderBy } = params;
+    return this.prisma.playerOrder.findMany({
+      skip,
+      take,
+      cursor,
+      where,
+      orderBy,
+      include: {
+        Company: true,
+        Player: true,
       },
     });
   }

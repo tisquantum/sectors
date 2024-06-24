@@ -70,7 +70,26 @@ export default (trpc: TrpcService, ctx: Context) =>
           orderBy,
         });
       }),
-
+    listPlayerOrdersWithPlayerCompany: trpc.procedure
+      .input(
+        z.object({
+          skip: z.number().optional(),
+          take: z.number().optional(),
+          cursor: z.number().optional(),
+          where: z.any().optional(),
+          orderBy: z.any().optional(),
+        }),
+      )
+      .query(async ({ input }) => {
+        const { skip, take, cursor, where, orderBy } = input;
+        return ctx.playerOrdersService.playerOrdersWithPlayerCompany({
+          skip,
+          take,
+          cursor: cursor ? { id: cursor } : undefined,
+          where,
+          orderBy,
+        });
+      }),
     listPlayerOrdersConcealed: trpc.procedure
       .input(
         z.object({

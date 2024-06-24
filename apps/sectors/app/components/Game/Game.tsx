@@ -33,7 +33,7 @@ const determineGameRound = (
   | { stockRound: StockRound; phase: Phase }
   | undefined => {
   const phase = game.Phase.find((phase) => phase.id === game.currentPhaseId);
-  if(!phase) return undefined;
+  if (!phase) return undefined;
   if (game.currentRound === "OPERATING") {
     //find the current operating round
     const operatingRound = game.OperatingRound.find(
@@ -56,21 +56,23 @@ const determineGameRound = (
 };
 const Game = ({ gameId }: { gameId: string }) => {
   const { gameState } = useGame();
-  
+
   const [currentView, setCurrentView] = useState<string>("action");
   const constraintsRef = useRef(null);
   const handleCurrentView = (view: string) => {
     setCurrentView(view);
   };
   const currentRoundData = determineGameRound(gameState);
-  const renderCurrentPhase = currentRoundData?.phase.name === PhaseName.STOCK_MEET ? (
-    <Meeting />
-  ) : 
-  isStockRoundAction(currentRoundData?.phase.name) ? 
-    <StockRoundAction /> : 
-  isStockRoundResult(currentRoundData?.phase.name) ?
-     <StockRoundAction /> :
-  null;
+  const renderCurrentPhase =
+    currentRoundData?.phase.name === PhaseName.STOCK_MEET ? (
+      <Meeting />
+    ) : isStockRoundAction(currentRoundData?.phase.name) ? (
+      <StockRoundAction />
+    ) : isStockRoundResult(currentRoundData?.phase.name) ? (
+      <StockRoundAction />
+    ) : currentRoundData?.phase.name === PhaseName.STOCK_REVEAL ? (
+      <StockRoundOrderGrid />
+    ) : null;
 
   return (
     <div className="relative flex flex-grow overflow-hidden">
@@ -90,7 +92,9 @@ const Game = ({ gameId }: { gameId: string }) => {
       <div className="flex flex-col w-full">
         <GameTopBar gameId={gameId} handleCurrentView={handleCurrentView} />
         <div className="active-panel flex flex-col overflow-hidden h-full">
-          {renderCurrentPhase}
+          {currentView === "action" && renderCurrentPhase}
+          {currentView === "chart" && <StockChart />}
+          {currentView === "pending" && <PendingOrders />}
         </div>
       </div>
     </div>

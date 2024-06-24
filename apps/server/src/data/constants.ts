@@ -15,7 +15,7 @@ export const DEFAULT_SHARE_DISTRIBUTION = 15;
  * Phase times in milliseconds
  */
 export const phaseTimes = {
-  [PhaseName.STOCK_MEET]: 60 * 1000,
+  [PhaseName.STOCK_MEET]: 30 * 1000,
   [PhaseName.STOCK_1]: 20 * 1000,
   [PhaseName.STOCK_2]: 20 * 1000,
   [PhaseName.STOCK_3]: 20 * 1000,
@@ -28,6 +28,7 @@ export const phaseTimes = {
   [PhaseName.STOCK_5_RESULT]: 10 * 1000,
   [PhaseName.STOCK_RESULT]: 20 * 1000,
   [PhaseName.STOCK_REVEAL]: 20 * 1000,
+  [PhaseName.STOCK_RESOLVE]: 30 * 1000,
   [PhaseName.OR_1]: 15 * 1000,
   [PhaseName.OR_2]: 15 * 1000,
   [PhaseName.OR_3]: 15 * 1000,
@@ -40,5 +41,7 @@ export const phaseTimes = {
 export const stockGridPrices = [
   3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 18, 20, 23, 26, 29, 32, 35, 39, 43, 47,
   51, 55, 60, 65, 70, 75, 80, 86, 92, 98, 104, 110, 117, 124, 131, 138, 145,
-  153, 161, 169, 177,
+  153, 161, 169, 177, 185, 194, 203, 212, 221, 230, 240, 250, 260, 270, 280,
+  291, 302, 313, 324, 335, 346, 358, 370, 382, 394, 406, 418, 431, 444, 457,
+  470, 484, 498, 512, 526, 540, 555, 570, 585, 600
 ];

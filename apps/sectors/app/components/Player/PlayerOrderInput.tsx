@@ -392,7 +392,7 @@ const PseudoBalance = ({
 
   const pseudoSpend = playerOrders ? getPseudoSpend(playerOrders) : 0;
   console.log('pseudoSpend', pseudoSpend, currentOrderValue);
-  const netSpend = currentOrderValue ?? 0 + pseudoSpend;
+  const netSpend = Number(currentOrderValue || 0) + Number(pseudoSpend);
   console.log('cashOnHand', authPlayer.cashOnHand, 'netSpend', netSpend);
   return (
     <div className="flex flex-col gap-1">

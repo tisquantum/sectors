@@ -10,13 +10,13 @@ import {
   ArrowDownIcon,
   BoltIcon,
 } from "@heroicons/react/24/solid";
+import { Company } from "@server/prisma/prisma.client";
 
-const CompaniesAccordion = ({ companies }: any) => {
+const CompaniesAccordion = ({ companies }: { companies: Company[] }) => {
   return (
     <Accordion selectionMode="multiple">
-      {companies.map((company: any) => {
-        const isPriceUp =
-          company.currentStockPrice > company.previousStockPrice;
+      {companies.map((company: Company) => {
+        const isPriceUp = (company.currentStockPrice || 0) > 0; //company.previousStockPrice;
         const trendIcon = isPriceUp ? (
           <ArrowUpIcon className="size-4 text-green-500" />
         ) : (
@@ -38,9 +38,7 @@ const CompaniesAccordion = ({ companies }: any) => {
             subtitle={
               <div className="flex items-center">
                 {trendIcon}
-                <span className="ml-1">
-                  ${company.currentStockPrice.toFixed(2)}
-                </span>
+                <span className="ml-1">${company.currentStockPrice || 0}</span>
                 <BoltIcon className="ml-2 size-4 text-yellow-500" />
                 <span className="ml-1">5</span>
                 <AvatarGroup isGrid className="ml-4" max={3}>
@@ -70,7 +68,7 @@ const CompaniesAccordion = ({ companies }: any) => {
           >
             <div className="p-4">
               <p>
-                <strong>Cash on Hand:</strong> ${company.cashOnHand.toFixed(2)}
+                <strong>Cash on Hand:</strong> ${company.cashOnHand || 0}
               </p>
               <p>
                 <strong>Throughput:</strong> {company.throughput}
@@ -79,7 +77,8 @@ const CompaniesAccordion = ({ companies }: any) => {
                 <strong>Insolvent:</strong> {company.insolvent ? "Yes" : "No"}
               </p>
               <p>
-                <strong>IPO Price (Float Price):</strong> $100
+                <strong>IPO Price (Float Price):</strong> $
+                {company.ipoAndFloatPrice}
               </p>
             </div>
           </AccordionItem>

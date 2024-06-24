@@ -9,32 +9,35 @@ import {
   RocketLaunchIcon,
   StarIcon,
 } from "@heroicons/react/24/solid";
-const sectorColors: { [key: string]: string } = {
-    sector1: "bg-red-400",
-    sector2: "bg-green-400",
-    sector3: "bg-blue-400",
-    // Add more sectors and their corresponding colors as needed
-  };
+import { useGame } from "../Game/GameContext";
+import { trpc } from "@sectors/app/trpc";
+import { sectorColors } from "@server/data/gameData";
+import { SectorWithCompanies } from "@server/prisma/prisma.types";
 
-const SectorComponent = ({ sectors, companies }: any) => {
-  const sectorsWithCompanies = sectors.map((sector: any) => {
-    const sectorCompanies = companies.filter(
-      (company: any) => company.sectorId === sector.id
-    );
-    return {
-      ...sector,
-      companies: sectorCompanies,
-    };
-  });
-  const getSectorColor = (sectorId: string) => {
-    return sectorColors[sectorId];
-  }
+const SectorComponent = () => {
+  const { gameId } = useGame();
+  const { data: sectorsWithCompanies, isLoading } =
+    trpc.sector.listSectorsWithCompanies.useQuery({
+      where: { gameId },
+    });
+  if (isLoading) return <div>Loading...</div>;
+  if (sectorsWithCompanies == undefined) return null;
+  const getSectorColor = (sectorName: string) => {
+    return sectorColors[sectorName];
+  };
   return (
     <Accordion selectionMode="multiple">
-      {sectorsWithCompanies.map((sector: any) => (
+      {sectorsWithCompanies.map((sector: SectorWithCompanies) => (
         <AccordionItem
           key={sector.id}
-          startContent={<Avatar className={`text-stone-800 ${getSectorColor(sector.id)}`} name={String(sector.name).toUpperCase()} size="md" />}
+          startContent={
+            <Avatar
+              className={`text-stone-200 font-extrabold`}
+              style={{ backgroundColor: getSectorColor(sector.name) }}
+              name={String(sector.name).toUpperCase()}
+              size="lg"
+            />
+          }
           title={sector.name}
           subtitle={
             <div className="flex items-center">
@@ -53,7 +56,7 @@ const SectorComponent = ({ sectors, companies }: any) => {
             </div>
           }
         >
-          <Companies companies={sector.companies} />
+          <Companies companies={sector.Company} />
         </AccordionItem>
       ))}
     </Accordion>

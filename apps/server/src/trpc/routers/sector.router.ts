@@ -41,6 +41,27 @@ export default (trpc: TrpcService, ctx: Context) =>
         });
       }),
 
+    listSectorsWithCompanies: trpc.procedure
+      .input(
+        z.object({
+          skip: z.number().optional(),
+          take: z.number().optional(),
+          cursor: z.string().optional(),
+          where: z.any().optional(),
+          orderBy: z.any().optional(),
+        }),
+      )
+      .query(async ({ input }) => {
+        const { skip, take, cursor, where, orderBy } = input;
+        return ctx.sectorService.sectorsWithCompanies({
+          skip,
+          take,
+          cursor: cursor ? { id: cursor } : undefined,
+          where,
+          orderBy,
+        });
+      }),
+
     createSector: trpc.procedure
       .input(
         z.object({

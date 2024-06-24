@@ -59,3 +59,8 @@ export type PlayerOrderConcealedWithPlayer = PlayerOrderConcealed & {
   Player: Player;
 };
 export type PlayerOrderWithCompany = PlayerOrder & { Company: Company };
+export type PlayerOrderWithPlayerCompany = PlayerOrder & {
+  Company: Company;
+  Player: Player;
+};
+export type SectorWithCompanies = Sector & { Company: Company[] };

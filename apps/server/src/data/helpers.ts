@@ -2,6 +2,11 @@ import { OrderType, PhaseName, RoundType, Sector, ShareLocation } from '@prisma/
 import { PlayerOrderWithCompany } from '@server/prisma/prisma.types';
 import { stockGridPrices } from './constants';
 
+/**
+ * Controls the flow of the game by determining the next phase.
+ * @param phaseName 
+ * @returns 
+ */
 export function determineNextGamePhase(phaseName: PhaseName): {
   phaseName: PhaseName;
   roundType: RoundType;
@@ -34,6 +39,8 @@ export function determineNextGamePhase(phaseName: PhaseName): {
         roundType: RoundType.OPERATING,
       };
     case PhaseName.STOCK_REVEAL:
+      return { phaseName: PhaseName.STOCK_RESOLVE, roundType: RoundType.STOCK };
+    case PhaseName.STOCK_RESOLVE:
       return { phaseName: PhaseName.OR_MEET_1, roundType: RoundType.OPERATING };
     case PhaseName.OR_MEET_1:
       return { phaseName: PhaseName.OR_1, roundType: RoundType.OPERATING };

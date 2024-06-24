@@ -1,4 +1,4 @@
-import { Company, PhaseName, Sector } from "@server/prisma/prisma.client";
+import { Company, OrderType, PhaseName, Sector } from "@server/prisma/prisma.client";
 import { CompanyWithSector } from "@server/prisma/prisma.types";
 
 type CompaniesBySector = Record<
@@ -45,6 +45,10 @@ export function friendlyPhaseName(name: PhaseName | undefined): string {
       return "Stock Round 4";
     case PhaseName.STOCK_5:
       return "Stock Round 5";
+    case PhaseName.STOCK_REVEAL: 
+      return "Stock Round Reveal";
+    case PhaseName.STOCK_RESOLVE:
+      return "Stock Round Resolve";
     case PhaseName.OR_MEET_1:
       return "Operating Round Meeting 1";
     case PhaseName.OR_MEET_2:
@@ -53,6 +57,8 @@ export function friendlyPhaseName(name: PhaseName | undefined): string {
       return "Operating Round Meeting 3";
     case PhaseName.STOCK_MEET:
       return "Stock Round Meeting";
+    case PhaseName.STOCK_1_RESULT:
+      return "Stock Round 1 Overview Result";
     case PhaseName.STOCK_1_RESULT:
       return "Stock Round 1 Result";
     case PhaseName.STOCK_2_RESULT:
@@ -82,4 +88,17 @@ export const isCurrentPhaseInteractive = (
     phaseName === PhaseName.STOCK_4 ||
     phaseName === PhaseName.STOCK_5
   );
+};
+
+export const determineColorByOrderType = (orderType: OrderType, isSell: boolean | null) => {
+  switch (orderType) {
+    case OrderType.LIMIT:
+      return isSell ? "danger" : "secondary";
+    case OrderType.MARKET:
+      return isSell ? "danger" : "primary";
+    case OrderType.SHORT:
+      return "warning";
+    default:
+      return "default";
+  }
 };

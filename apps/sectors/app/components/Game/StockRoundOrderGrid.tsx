@@ -25,19 +25,12 @@ import {
 } from "@server/prisma/prisma.client";
 import PlayerOrderConcealed from "../Player/PlayerOrderConcealed";
 import { CompanyWithSector } from "@server/prisma/prisma.types";
-
-// Define colors for each sector
-const sectorColors: { [key: string]: string } = {
-  sector1: "bg-red-400",
-  sector2: "bg-green-400",
-  sector3: "bg-blue-400",
-  // Add more sectors and their corresponding colors as needed
-};
+import { sectorColors } from "@server/data/gameData";
 
 const StockRoundOrderGrid = ({
   handleOrder,
 }: {
-  handleOrder: (company: Company, isIpo?: boolean) => void;
+  handleOrder?: (company: Company, isIpo?: boolean) => void;
 }) => {
   const { gameId, currentPhase, gameState } = useGame();
   const { data: companies, isLoading } =
@@ -48,8 +41,21 @@ const StockRoundOrderGrid = ({
     data: playerOrdersConcealed,
     isLoading: isLoadingOrders,
     refetch: refetchPlayerOrdersConcealed,
-  } = trpc.playerOrder.listPlayerOrdersConcealed.useQuery({
-    where: { stockRoundId: gameState?.currentStockRoundId },
+  } = trpc.playerOrder.listPlayerOrdersConcealed.useQuery(
+    {
+      where: { stockRoundId: gameState?.currentStockRoundId },
+    },
+    {
+      enabled: currentPhase?.name == PhaseName.STOCK_REVEAL,
+    }
+  );
+  const {
+    data: playerOrdersRevealed,
+    isLoading: isLoadingPlayerOrdersRevealed,
+  } = trpc.playerOrder.listPlayerOrdersWithPlayerCompany.useQuery({
+    where: {
+      stockRoundId: currentPhase?.stockRoundId,
+    },
   });
   console.log("playerOrdersConcealed", playerOrdersConcealed);
   const [showOrderInput, setShowOrderInput] = useState<string | undefined>(
@@ -69,6 +75,8 @@ const StockRoundOrderGrid = ({
     setIsInteractive(isCurrentPhaseInteractive(currentPhase?.name));
     refetchPlayerOrdersConcealed();
   }, [currentPhase?.name]);
+  if (isLoadingPlayerOrdersRevealed) return <div>Loading...</div>;
+  if (playerOrdersRevealed == undefined) return null;
   if (isLoading) return null;
   if (companies == undefined) return notFound();
   const isRevealRound = currentPhase?.name === PhaseName.STOCK_REVEAL;
@@ -77,6 +85,7 @@ const StockRoundOrderGrid = ({
   const handleDisplayOrderInput = (company: Company, isIpo?: boolean) => {
     //   setShowOrderInput(companyId);
     //   console.log("Order input displayed for company with ID:", companyId);
+    if (!handleOrder) return;
     handleOrder(company, isIpo);
     setFocusedOrder(company);
   };
@@ -92,7 +101,10 @@ const StockRoundOrderGrid = ({
           (company: CompanyWithSector) => (
             <div
               key={company.id}
-              className={`z-0 p-4 ${sectorColors[sectorId]}`}
+              className={`z-0 p-4`}
+              style={{
+                backgroundColor: sectorColors[company.Sector.name],
+              }}
             >
               <Card
                 className={
@@ -104,7 +116,7 @@ const StockRoundOrderGrid = ({
                 <CardHeader>
                   <div className="flex flex-col">
                     <div className="text-lg font-bold">{company.name}</div>
-                    <div>Price: $55</div>
+                    <div>{company.Sector.name}</div>
                   </div>
                 </CardHeader>
                 <CardBody>
@@ -116,11 +128,24 @@ const StockRoundOrderGrid = ({
                           (share: Share) => share.location == ShareLocation.IPO
                         ).length
                       }
-                      )
+                      ){" "}
+                      <span className="font-bold">
+                        @ ${company.ipoAndFloatPrice}
+                      </span>
                     </div>
                     {!isRevealRound && (
                       <PlayerOrderConcealed
                         orders={orders.filter(
+                          (order) =>
+                            order.companyId == company.id &&
+                            order.location == ShareLocation.IPO &&
+                            order.phaseId !== currentPhase?.id // Don't show orders from the current phase, only to be revealed in the "reveal step"
+                        )}
+                      />
+                    )}
+                    {isRevealRound && (
+                      <PlayerOrder
+                        orders={playerOrdersRevealed.filter(
                           (order) =>
                             order.companyId == company.id &&
                             order.location == ShareLocation.IPO &&
@@ -146,14 +171,17 @@ const StockRoundOrderGrid = ({
                   </div>
                   <div>
                     <div className="my-2">
-                      OPEN MARKET (
+                      MARKET (
                       {
                         company.Share.filter(
                           (share: Share) =>
                             share.location == ShareLocation.OPEN_MARKET
                         ).length
                       }
-                      )
+                      ){" "}
+                      <span className="font-bold">
+                        @ ${company.currentStockPrice}
+                      </span>
                     </div>
                     {!isRevealRound && (
                       <PlayerOrderConcealed
@@ -162,6 +190,16 @@ const StockRoundOrderGrid = ({
                             order.companyId == company.id &&
                             order.location == ShareLocation.OPEN_MARKET &&
                             order.phaseId !== currentPhase?.id
+                        )}
+                      />
+                    )}
+                    {isRevealRound && (
+                      <PlayerOrder
+                        orders={playerOrdersRevealed.filter(
+                          (order) =>
+                            order.companyId == company.id &&
+                            order.location == ShareLocation.OPEN_MARKET &&
+                            order.phaseId !== currentPhase?.id // Don't show orders from the current phase, only to be revealed in the "reveal step"
                         )}
                       />
                     )}

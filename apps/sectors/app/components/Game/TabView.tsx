@@ -237,7 +237,7 @@ const TabView = ({ gameId }: { gameId: string }) => {
       </Tab>
       <Tab key="sectors" title="Sectors">
         <Card>
-          {/* <SectorComponent sectors={sectors} companies={companies} /> */}
+          <SectorComponent />
         </Card>
       </Tab>
       <Tab key="history" title="History">

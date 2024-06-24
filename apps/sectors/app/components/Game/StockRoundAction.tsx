@@ -22,23 +22,25 @@ const StockRoundAction = () => {
     setCurrentOrder(null);
   }, [currentPhase?.name]);
   return (
-    <div className="flex flex-col justify-center items-center">
-      <StockRoundOrderGrid handleOrder={handleOrder} />
-      <div className="flex justify-center items-center">
-      {isCurrentPhaseInteractive(currentPhase?.name) ? (
-        currentOrder ? (
-          <PlayerOrderInput
-            currentOrder={currentOrder}
-            handleCancel={() => {}}
-            isIpo={isIpo}
-          />
+    <div className="flex flex-col items-center h-full">
+      <div className="basis-3/4 justify-center items-center content-center">
+        <StockRoundOrderGrid handleOrder={handleOrder} />
+      </div>
+      <div className="flex justify-center items-center gap-10 basis-1/4">
+        {isCurrentPhaseInteractive(currentPhase?.name) ? (
+          currentOrder ? (
+            <PlayerOrderInput
+              currentOrder={currentOrder}
+              handleCancel={() => {}}
+              isIpo={isIpo}
+            />
+          ) : (
+            <div>Place an Order With A Company to Start.</div>
+          )
         ) : (
-          <div>Place an Order With A Company to Start.</div>
-        )
-      ) : (
-        <div>Viewing results.</div>
-      )}
-      <PlayerCurrentQueuedOrders />
+          <div>Viewing results.</div>
+        )}
+        <PlayerCurrentQueuedOrders />
       </div>
     </div>
   );

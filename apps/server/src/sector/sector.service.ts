@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { Prisma, Sector } from '@prisma/client';
+import { SectorWithCompanies } from '@server/prisma/prisma.types';
 
 @Injectable()
 export class SectorService {
@@ -31,6 +32,26 @@ export class SectorService {
     });
   }
 
+  async sectorsWithCompanies(params: {
+    skip?: number;
+    take?: number;
+    cursor?: Prisma.SectorWhereUniqueInput;
+    where?: Prisma.SectorWhereInput;
+    orderBy?: Prisma.SectorOrderByWithRelationInput;
+  }): Promise<SectorWithCompanies[]> {
+    const { skip, take, cursor, where, orderBy } = params;
+    return this.prisma.sector.findMany({
+      skip,
+      take,
+      cursor,
+      where,
+      orderBy,
+      include: {
+        Company: true,
+      },
+    });
+  }
+
   async createSector(data: Prisma.SectorCreateInput): Promise<Sector> {
     //remove id
     delete data.id;
@@ -39,7 +60,9 @@ export class SectorService {
     });
   }
 
-  async createManySectors(data: Prisma.SectorCreateManyInput[]): Promise<Sector[]> {
+  async createManySectors(
+    data: Prisma.SectorCreateManyInput[],
+  ): Promise<Sector[]> {
     //remove id
     data.forEach((d) => delete d.id);
     return this.prisma.sector.createManyAndReturn({
@@ -47,7 +70,7 @@ export class SectorService {
       skipDuplicates: true,
     });
   }
-  
+
   async updateSector(params: {
     where: Prisma.SectorWhereUniqueInput;
     data: Prisma.SectorUpdateInput;
