@@ -75,6 +75,7 @@ export class PlayerOrderService {
       include: {
         Company: true,
         Player: true,
+        Sector: true,
       },
     });
   }

@@ -9,9 +9,11 @@ import { Avatar, Card, CardBody, CardHeader, Chip } from "@nextui-org/react";
 import "./PendingOrders.css";
 import { trpc } from "@sectors/app/trpc";
 import { useGame } from "./GameContext";
-import { OrderType } from "@server/prisma/prisma.client";
+import { OrderType, Prisma } from "@server/prisma/prisma.client";
 import { PlayerOrderWithPlayerCompany } from "@server/prisma/prisma.types";
 import { interestRatesByTerm } from "@server/data/constants";
+import { create } from "domain";
+import { sectorColors } from "@server/data/gameData";
 
 interface GroupedOrders {
   [key: string]: PlayerOrderWithPlayerCompany[];
@@ -47,7 +49,8 @@ const PendingMarketOrders = ({
         return (
           <div
             key={company}
-            className="flex flex-col bg-green-600 p-2 rounded gap-2"
+            className="flex flex-col p-2 rounded gap-2"
+            style={{ backgroundColor: sectorColors[orders[0].Sector.name] }}
           >
             <div className="bg-green-900 p-2 font-bold">
               {company} {netDifference}
@@ -177,9 +180,10 @@ const PendingOrders = () => {
   const { gameId } = useGame();
   const { data: pendingOrders, isLoading } =
     trpc.playerOrder.listPlayerOrdersWithPlayerCompany.useQuery({
-      orderBy: "createdAt",
+      orderBy: {
+        createdAt: Prisma.SortOrder.asc,
+      },
       where: {
-        filled: false,
         Game: {
           id: gameId,
         },

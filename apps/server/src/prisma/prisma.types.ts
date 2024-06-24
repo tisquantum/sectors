@@ -62,5 +62,6 @@ export type PlayerOrderWithCompany = PlayerOrder & { Company: Company };
 export type PlayerOrderWithPlayerCompany = PlayerOrder & {
   Company: Company;
   Player: Player;
+  Sector: Sector;
 };
 export type SectorWithCompanies = Sector & { Company: Company[] };

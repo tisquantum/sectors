@@ -25,13 +25,16 @@ const renderBasedOnOrderType = (playerOrder: PlayerOrderWithCompany) => {
 };
 
 const PlayerCurrentQueuedOrders = () => {
-  const { currentPhase } = useGame();
+  const { currentPhase, authPlayer } = useGame();
   const {
     data: playerOrders,
     isLoading,
     refetch,
   } = trpc.playerOrder.listPlayerOrdersWithCompany.useQuery({
-    where: { stockRoundId: currentPhase?.stockRoundId },
+    where: {
+      stockRoundId: currentPhase?.stockRoundId,
+      playerId: authPlayer.id,
+    },
   });
   useEffect(() => {
     refetch();
@@ -46,8 +49,8 @@ const PlayerCurrentQueuedOrders = () => {
         {playerOrders.map((playerOrder) => (
           <Card className="flex flex-col justify-center p-2 gap-1">
             <span>{playerOrder.Company.name}</span>
-            {renderBasedOnOrderType(playerOrder)}    
-        </Card>
+            {renderBasedOnOrderType(playerOrder)}
+          </Card>
         ))}
       </div>
     </div>

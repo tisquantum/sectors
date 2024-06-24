@@ -139,6 +139,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         } = input;
         const data: Prisma.PlayerOrderCreateInput = {
           ...playerOrderInput,
+          Game: { connect: { id: gameId } },
           StockRound: { connect: { id: stockRoundId } },
           Company: { connect: { id: companyId } },
           Player: { connect: { id: playerId } },

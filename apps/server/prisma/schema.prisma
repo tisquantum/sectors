@@ -152,6 +152,7 @@ model PlayerOrder {
   playerId     String
   companyId    String //We can't reference stockId here because it's not known which stocks which actually be purchased yet, this is more of an "ask"
   gameId       String
+  sectorId     String
   filled       Boolean?
   quantity     Int?
   term         Int?
@@ -164,6 +165,7 @@ model PlayerOrder {
   Player       Player        @relation(fields: [playerId], references: [id])
   Company      Company       @relation(fields: [companyId], references: [id])
   Phase        Phase         @relation(fields: [phaseId], references: [id])
+  Sector       Sector        @relation(fields: [sectorId], references: [id])
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 }
@@ -225,7 +227,7 @@ model Card {
 }
 
 model Sector {
-  id             String    @id @default(uuid())
+  id             String        @id @default(uuid())
   name           String
   supply         Int
   demand         Int
@@ -234,10 +236,11 @@ model Sector {
   floatNumberMin Int
   floatNumberMax Int
   Company        Company[]
-  Game           Game?     @relation(fields: [gameId], references: [id])
+  PlayerOrder    PlayerOrder[]
+  Game           Game?         @relation(fields: [gameId], references: [id])
   gameId         String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 }
 
 model Game {
