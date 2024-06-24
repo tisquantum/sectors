@@ -17,6 +17,7 @@ import { PhaseService } from '@server/phase/phase.service';
 import { OperatingRoundService } from '@server/operating-round/operating-round.service';
 import { TimerService } from '@server/timer/timer.service';
 import { PlayerOrderService } from '@server/player-order/player-order.service';
+import { ShareService } from '@server/share/share.service';
 
 @Module({
   imports: [PrismaModule],
@@ -39,6 +40,7 @@ import { PlayerOrderService } from '@server/player-order/player-order.service';
     OperatingRoundService,
     TimerService,
     PlayerOrderService,
+    ShareService,
   ],
 })
 export class TrpcModule {}

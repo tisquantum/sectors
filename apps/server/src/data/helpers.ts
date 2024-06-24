@@ -116,7 +116,10 @@ export const getPseudoSpend = (orders: PlayerOrderWithCompany[]) => {
       acc + (order.quantity ?? 0) * (order.Company.currentStockPrice ?? 0),
     0
   );
-
+  console.log('totalBuyIpo', totalBuyIpo);
+  console.log('totalSellIpo', totalSellIpo);
+  console.log('totalBuyOpenMarket', totalBuyOpenMarket);
+  console.log('totalSellOpenMarket', totalSellOpenMarket);
   return (
     totalBuyIpo - totalSellIpo + totalBuyOpenMarket - totalSellOpenMarket
   );

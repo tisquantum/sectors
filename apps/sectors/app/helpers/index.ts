@@ -5,7 +5,7 @@ type CompaniesBySector = Record<
   string,
   {
     sector: Sector;
-    companies: Company[];
+    companies: CompanyWithSector[];
   }
 >;
 

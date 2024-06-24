@@ -50,6 +50,7 @@ export class CompanyService {
       orderBy,
       include: {
         Sector: true,
+        Share: true,
       },
     });
   }

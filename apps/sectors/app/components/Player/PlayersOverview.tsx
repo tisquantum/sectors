@@ -27,14 +27,14 @@ const PlayersOverview = ({ gameId }: { gameId: string }) => {
     <Accordion>
       {playersWithShares.map((playerWithShares) => {
         // Aggregate total value and total shares owned
-        const stockAggregation = playerWithShares.Stock.reduce(
+        const stockAggregation = playerWithShares.Share.reduce(
           (acc: Record<string, StockAggregation>, playerWithShares) => {
-            const { companyId, currentPrice } = playerWithShares;
+            const { companyId, price } = playerWithShares;
             if (!acc[companyId]) {
               acc[companyId] = { totalShares: 0, totalValue: 0 };
             }
             acc[companyId].totalShares += 1;
-            acc[companyId].totalValue += currentPrice;
+            acc[companyId].totalValue += price;
             return acc;
           },
           {}

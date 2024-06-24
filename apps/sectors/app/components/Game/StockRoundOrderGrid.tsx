@@ -20,9 +20,11 @@ import { notFound } from "next/navigation";
 import {
   Company,
   PhaseName,
+  Share,
   ShareLocation,
 } from "@server/prisma/prisma.client";
 import PlayerOrderConcealed from "../Player/PlayerOrderConcealed";
+import { CompanyWithSector } from "@server/prisma/prisma.types";
 
 // Define colors for each sector
 const sectorColors: { [key: string]: string } = {
@@ -49,7 +51,7 @@ const StockRoundOrderGrid = ({
   } = trpc.playerOrder.listPlayerOrdersConcealed.useQuery({
     where: { stockRoundId: gameState?.currentStockRoundId },
   });
-  console.log('playerOrdersConcealed', playerOrdersConcealed);
+  console.log("playerOrdersConcealed", playerOrdersConcealed);
   const [showOrderInput, setShowOrderInput] = useState<string | undefined>(
     undefined
   );
@@ -86,76 +88,105 @@ const StockRoundOrderGrid = ({
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4">
       {Object.keys(companiesBySector).flatMap((sectorId) =>
-        companiesBySector[sectorId].companies.map((company: any) => (
-          <div key={company.id} className={`z-0 p-4 ${sectorColors[sectorId]}`}>
-            <Card
-              className={
-                focusedOrder?.id == company.id
-                  ? "border border-pink-500 animate-glow"
-                  : ""
-              }
+        companiesBySector[sectorId].companies.map(
+          (company: CompanyWithSector) => (
+            <div
+              key={company.id}
+              className={`z-0 p-4 ${sectorColors[sectorId]}`}
             >
-              <CardHeader>
-                <div className="flex flex-col">
-                  <div className="text-lg font-bold">{company.name}</div>
-                  <div>Price: $55</div>
-                </div>
-              </CardHeader>
-              <CardBody>
-                <div className="flex flex-col">
-                  <div className="mb-3">IPO (3)</div>
-                  {!isRevealRound && (
-                    <PlayerOrderConcealed
-                      orders={orders.filter(
-                        (order) =>
-                          order.companyId == company.id &&
-                          order.location == ShareLocation.IPO &&
-                          order.phaseId !== currentPhase?.id // Don't show orders from the current phase, only to be revealed in the "reveal step"
-                      )}
-                    />
-                  )}
-                  {isInteractive && (
-                    <Button
-                      className={
-                        focusedOrder?.id == company.id
-                          ? "my-3 bg-gradient-to-tr from-pink-500 to-yellow-500 text-white shadow-lg"
-                          : "my-3"
+              <Card
+                className={
+                  focusedOrder?.id == company.id
+                    ? "border border-pink-500 animate-glow"
+                    : ""
+                }
+              >
+                <CardHeader>
+                  <div className="flex flex-col">
+                    <div className="text-lg font-bold">{company.name}</div>
+                    <div>Price: $55</div>
+                  </div>
+                </CardHeader>
+                <CardBody>
+                  <div className="flex flex-col">
+                    <div className="mb-3">
+                      IPO (
+                      {
+                        company.Share.filter(
+                          (share: Share) => share.location == ShareLocation.IPO
+                        ).length
                       }
-                      onClick={() => handleDisplayOrderInput(company, true)}
-                    >
-                      Place Order IPO
-                    </Button>
-                  )}
-                </div>
-                <div>
-                  <div className="my-2">OPEN MARKET (4)</div>
-                  {!isRevealRound && (
-                    <PlayerOrderConcealed
-                      orders={orders.filter(
-                        (order) =>
-                          order.companyId == company.id &&
-                          order.location == ShareLocation.OPEN_MARKET &&
-                          order.phaseId !== currentPhase?.id
+                      )
+                    </div>
+                    {!isRevealRound && (
+                      <PlayerOrderConcealed
+                        orders={orders.filter(
+                          (order) =>
+                            order.companyId == company.id &&
+                            order.location == ShareLocation.IPO &&
+                            order.phaseId !== currentPhase?.id // Don't show orders from the current phase, only to be revealed in the "reveal step"
+                        )}
+                      />
+                    )}
+                    {isInteractive &&
+                      company.Share.filter(
+                        (share: Share) => share.location == ShareLocation.IPO
+                      ).length > 0 && (
+                        <Button
+                          className={
+                            focusedOrder?.id == company.id
+                              ? "my-3 bg-gradient-to-tr from-pink-500 to-yellow-500 text-white shadow-lg"
+                              : "my-3"
+                          }
+                          onClick={() => handleDisplayOrderInput(company, true)}
+                        >
+                          Place Order IPO
+                        </Button>
                       )}
-                    />
-                  )}
-                  {isInteractive && (
-                    <Button
-                      className={
-                        focusedOrder?.id == company.id
-                          ? "my-3 bg-gradient-to-tr from-pink-500 to-yellow-500 text-white shadow-lg"
-                          : "my-3"
+                  </div>
+                  <div>
+                    <div className="my-2">
+                      OPEN MARKET (
+                      {
+                        company.Share.filter(
+                          (share: Share) =>
+                            share.location == ShareLocation.OPEN_MARKET
+                        ).length
                       }
-                      onClick={() => handleDisplayOrderInput(company)}
-                    >
-                      Place Order OPEN MARKET
-                    </Button>
-                  )}
-                </div>
-              </CardBody>
-            </Card>
-          </div>
-        ))
+                      )
+                    </div>
+                    {!isRevealRound && (
+                      <PlayerOrderConcealed
+                        orders={orders.filter(
+                          (order) =>
+                            order.companyId == company.id &&
+                            order.location == ShareLocation.OPEN_MARKET &&
+                            order.phaseId !== currentPhase?.id
+                        )}
+                      />
+                    )}
+                    {isInteractive &&
+                      company.Share.filter(
+                        (share: Share) =>
+                          share.location == ShareLocation.OPEN_MARKET
+                      ).length > 0 && (
+                        <Button
+                          className={
+                            focusedOrder?.id == company.id
+                              ? "my-3 bg-gradient-to-tr from-pink-500 to-yellow-500 text-white shadow-lg"
+                              : "my-3"
+                          }
+                          onClick={() => handleDisplayOrderInput(company)}
+                        >
+                          Place Order OPEN MARKET
+                        </Button>
+                      )}
+                  </div>
+                </CardBody>
+              </Card>
+            </div>
+          )
+        )
       )}
     </div>
   );

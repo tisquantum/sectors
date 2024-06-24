@@ -28,7 +28,7 @@ export type PlayerWithShares = Player & {
   Share: Share[];
 };
 
-export type CompanyWithSector = Company & { Sector: Sector };
+export type CompanyWithSector = Company & { Sector: Sector; Share: Share[] };
 
 export type MeetingMessageWithPlayer = MeetingMessage & { player: Player };
 

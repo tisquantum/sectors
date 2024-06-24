@@ -7,6 +7,7 @@ import StockRoundOrderGrid from "./StockRoundOrderGrid";
 import { Company } from "@server/prisma/prisma.client";
 import { useGame } from "./GameContext";
 import { isCurrentPhaseInteractive } from "@sectors/app/helpers";
+import PlayerCurrentQueuedOrders from "../Player/PlayerCurrentQueuedOrders";
 
 const StockRoundAction = () => {
   const { currentPhase } = useGame();
@@ -23,6 +24,7 @@ const StockRoundAction = () => {
   return (
     <div className="flex flex-col justify-center items-center">
       <StockRoundOrderGrid handleOrder={handleOrder} />
+      <div className="flex justify-center items-center">
       {isCurrentPhaseInteractive(currentPhase?.name) ? (
         currentOrder ? (
           <PlayerOrderInput
@@ -36,6 +38,8 @@ const StockRoundAction = () => {
       ) : (
         <div>Viewing results.</div>
       )}
+      <PlayerCurrentQueuedOrders />
+      </div>
     </div>
   );
 };
