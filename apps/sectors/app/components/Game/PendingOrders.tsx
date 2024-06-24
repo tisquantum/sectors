@@ -7,148 +7,40 @@ import {
 } from "@heroicons/react/24/solid";
 import { Avatar, Card, CardBody, CardHeader, Chip } from "@nextui-org/react";
 import "./PendingOrders.css";
-const marketOrders = [
-  {
-    avatar: "/path/to/avatar1.jpg",
-    name: "John Doe",
-    companyName: "TechCorp",
-    orderType: "buy",
-    shares: 10,
-  },
-  {
-    avatar: "/path/to/avatar2.jpg",
-    name: "Jane Smith",
-    companyName: "HealthInc",
-    orderType: "sell",
-    shares: 5,
-  },
-  {
-    avatar: "/path/to/avatar1.jpg",
-    name: "Alice Johnson",
-    companyName: "TechCorp",
-    orderType: "sell",
-    shares: 3,
-  },
-  {
-    avatar: "/path/to/avatar3.jpg",
-    name: "Bob Brown",
-    companyName: "Retailers",
-    orderType: "buy",
-    shares: 7,
-  },
-];
+import { trpc } from "@sectors/app/trpc";
+import { useGame } from "./GameContext";
+import { OrderType } from "@server/prisma/prisma.client";
+import { PlayerOrderWithPlayerCompany } from "@server/prisma/prisma.types";
+import { interestRatesByTerm } from "@server/data/constants";
 
-const limitOrders = [
-  {
-    avatar: "/path/to/avatar2.jpg",
-    name: "Jane Smith",
-    companyName: "HealthInc",
-    orderType: "buy",
-    amount: 200,
-    filled: false,
-  },
-  {
-    avatar: "/path/to/avatar1.jpg",
-    name: "John Doe",
-    companyName: "TechCorp",
-    orderType: "sell",
-    amount: 150,
-    filled: false,
-  },
-  {
-    avatar: "/path/to/avatar3.jpg",
-    name: "Alice Johnson",
-    companyName: "Retailers",
-    orderType: "buy",
-    amount: 300,
-    filled: true,
-  },
-  {
-    avatar: "/path/to/avatar1.jpg",
-    name: "John Doe",
-    companyName: "Retailers",
-    orderType: "sell",
-    amount: 100,
-    filled: false,
-  },
-  {
-    avatar: "/path/to/avatar2.jpg",
-    name: "Jane Smith",
-    companyName: "HealthInc",
-    orderType: "buy",
-    amount: 250,
-    filled: true,
-  },
-];
+interface GroupedOrders {
+  [key: string]: PlayerOrderWithPlayerCompany[];
+}
 
-const shortOrders = [
-  {
-    term: 5,
-    avatar: "/path/to/avatar1.jpg",
-    name: "John Doe",
-    companyName: "TechCorp",
-    shares: 50,
-    interestRate: 5,
-  },
-  {
-    term: 4,
-    avatar: "/path/to/avatar2.jpg",
-    name: "Jane Smith",
-    companyName: "HealthInc",
-    shares: 30,
-    interestRate: 3.5,
-  },
-  {
-    term: 5,
-    avatar: "/path/to/avatar1.jpg",
-    name: "Alice Johnson",
-    companyName: "TechCorp",
-    shares: 40,
-    interestRate: 5,
-  },
-  {
-    term: 3,
-    avatar: "/path/to/avatar3.jpg",
-    name: "Bob Brown",
-    companyName: "Retailers",
-    shares: 20,
-    interestRate: 4,
-  },
-  {
-    term: 2,
-    avatar: "/path/to/avatar1.jpg",
-    name: "Alice Johnson",
-    companyName: "TechCorp",
-    shares: 40,
-    interestRate: 4.5,
-  },
-  {
-    term: 1,
-    avatar: "/path/to/avatar2.jpg",
-    name: "Jane Smith",
-    companyName: "Retailers",
-    shares: 10,
-    interestRate: 2.5,
-  },
-];
-
-const PendingMarketOrders = ({ marketOrders }: any) => {
+const PendingMarketOrders = ({
+  marketOrders,
+}: {
+  marketOrders: PlayerOrderWithPlayerCompany[];
+}) => {
   // Assuming marketOrders is an array of objects with name, companyName, orderType (buy/sell), and shares
-  const groupedOrders = marketOrders.reduce((acc, order) => {
-    const key = order.companyName;
-    if (!acc[key]) {
-      acc[key] = [];
-    }
-    acc[key].push(order);
-    return acc;
-  }, {});
+  const groupedOrders = marketOrders.reduce(
+    (acc: GroupedOrders, order: PlayerOrderWithPlayerCompany) => {
+      const key = order.Company.name;
+      if (!acc[key]) {
+        acc[key] = [];
+      }
+      acc[key].push(order);
+      return acc;
+    },
+    {} as GroupedOrders
+  );
 
   return (
     <div className="space-y-2">
       {Object.entries(groupedOrders).map(([company, orders]) => {
-        let netDifference = orders.reduce((acc, order) => {
+        let netDifference: string | number = orders.reduce((acc, order) => {
           return (
-            acc + (order.orderType === "buy" ? order.shares : -order.shares)
+            acc + (!order.isSell ? order.quantity || 0 : -(order.quantity || 0))
           );
         }, 0);
         netDifference = netDifference > 0 ? `+${netDifference}` : netDifference;
@@ -164,11 +56,11 @@ const PendingMarketOrders = ({ marketOrders }: any) => {
               {orders.map((order, index) => (
                 <Chip
                   key={index}
-                  avatar={<Avatar name={order.name} />}
+                  avatar={<Avatar name={order.Player.nickname} />}
                   variant="flat"
                 >
                   <div>
-                    {String(order.orderType).toUpperCase()} {order.shares}
+                    {String(order.orderType).toUpperCase()} {order.quantity}
                   </div>
                 </Chip>
               ))}
@@ -180,27 +72,38 @@ const PendingMarketOrders = ({ marketOrders }: any) => {
   );
 };
 
-const PendingLimitOrders = ({ limitOrders }: any) => {
+const PendingLimitOrders = ({
+  limitOrders,
+}: {
+  limitOrders: PlayerOrderWithPlayerCompany[];
+}) => {
   // Group orders by company
-  const groupedOrders = limitOrders.reduce((acc, order) => {
-    const key = order.companyName;
-    if (!acc[key]) {
-      acc[key] = [];
-    }
-    acc[key].push(order);
-    return acc;
-  }, {});
+  const groupedOrders = limitOrders.reduce(
+    (acc: GroupedOrders, order: PlayerOrderWithPlayerCompany) => {
+      const key = order.Company.name;
+      if (!acc[key]) {
+        acc[key] = [];
+      }
+      acc[key].push(order);
+      return acc;
+    },
+    {} as GroupedOrders
+  );
 
   // Sort each group's orders by amount in descending order
   const sortedGroupedOrders = Object.entries(groupedOrders).map(
     ([company, orders]) => {
-      const sortedOrders = [...orders].sort((a, b) => b.amount - a.amount);
+      const sortedOrders = [...orders].sort(
+        (a, b) => (b.value || 0) - (a.value || 0)
+      );
       return { company, orders: sortedOrders };
     }
   );
 
   // Sort groups by the highest order amount within each group in descending order
-  sortedGroupedOrders.sort((a, b) => b.orders[0].amount - a.orders[0].amount);
+  sortedGroupedOrders.sort(
+    (a, b) => (b.orders[0].value || 0) - (a.orders[0].value || 0)
+  );
 
   return (
     <div className="space-y-4">
@@ -213,10 +116,10 @@ const PendingLimitOrders = ({ limitOrders }: any) => {
                 key={index}
                 className="bg-purple-600 p-2 rounded flex items-center gap-2"
               >
-                <Avatar name={order.name} />
-                <div>{order.companyName}</div>
+                <Avatar name={order.Player.nickname} />
+                <div>{order.Company.name}</div>
                 <div>
-                  {String(order.orderType).toUpperCase()} @ {order.amount}
+                  {String(order.orderType).toUpperCase()} @ {order.value}
                 </div>
                 {order.filled ? (
                   <CheckCircleIcon className="size-5 text-green-500" />
@@ -232,7 +135,11 @@ const PendingLimitOrders = ({ limitOrders }: any) => {
   );
 };
 
-const PendingShortOrders = ({ shortOrders }: any) => {
+const PendingShortOrders = ({
+  shortOrders,
+}: {
+  shortOrders: PlayerOrderWithPlayerCompany[];
+}) => {
   // Assuming shortOrders is an array of objects with term, avatar, name, companyName, shares, and interestRate
   const terms = [1, 2, 3, 4, 5];
 
@@ -248,10 +155,10 @@ const PendingShortOrders = ({ shortOrders }: any) => {
                 key={index}
                 className="bg-gray-500 p-2 rounded flex items-center gap-2"
               >
-                <Avatar name={order.name} />
-                <div>{order.companyName}</div>
+                <Avatar name={order.Player.nickname} />
+                <div>{order.Company.name}</div>
                 <div>
-                  {order.shares} @ {order.interestRate}%
+                  {order.quantity} @ {interestRatesByTerm[order?.term || 5]}%
                 </div>
               </div>
             ))}
@@ -267,6 +174,29 @@ const PendingShortOrders = ({ shortOrders }: any) => {
 };
 
 const PendingOrders = () => {
+  const { gameId } = useGame();
+  const { data: pendingOrders, isLoading } =
+    trpc.playerOrder.listPlayerOrdersWithPlayerCompany.useQuery({
+      orderBy: "createdAt",
+      where: {
+        filled: false,
+        Game: {
+          id: gameId,
+        },
+      },
+    });
+  if (isLoading) return <div>Loading...</div>;
+  if (!pendingOrders) return <div>No pending orders.</div>;
+
+  const limitOrders = pendingOrders.filter(
+    (order) => order.orderType === OrderType.LIMIT
+  );
+  const marketOrders = pendingOrders.filter(
+    (order) => order.orderType === OrderType.MARKET
+  );
+  const shortOrders = pendingOrders.filter(
+    (order) => order.orderType === OrderType.SHORT
+  );
   return (
     <div className="flex space-x-4 z-0">
       <Card className="flex-1">

@@ -45,3 +45,21 @@ export const stockGridPrices = [
   291, 302, 313, 324, 335, 346, 358, 370, 382, 394, 406, 418, 431, 444, 457,
   470, 484, 498, 512, 526, 540, 555, 570, 585, 600
 ];
+
+export const interestRatesByTerm: { [key: number]: number } = {
+  1: 2.5,
+  2: 4.5,
+  3: 4,
+  4: 3.5,
+  5: 5,
+};
+
+export const getInterestRateByTerm = (term: number): number => {
+  if (term in interestRatesByTerm) {
+    return interestRatesByTerm[term];
+  } else {
+    // Handle cases where the term is not in the interestRatesByTerm object
+    // For example, return a default value or throw an error
+    return 0; // Default value if term not found
+  }
+};

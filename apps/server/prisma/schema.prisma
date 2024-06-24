@@ -151,12 +151,15 @@ model PlayerOrder {
   phaseId      String
   playerId     String
   companyId    String //We can't reference stockId here because it's not known which stocks which actually be purchased yet, this is more of an "ask"
+  gameId       String
+  filled       Boolean?
   quantity     Int?
   term         Int?
   value        Float?
   isSell       Boolean?
   location     ShareLocation
   orderType    OrderType
+  Game         Game          @relation(fields: [gameId], references: [id])
   StockRound   StockRound    @relation(fields: [stockRoundId], references: [id])
   Player       Player        @relation(fields: [playerId], references: [id])
   Company      Company       @relation(fields: [companyId], references: [id])
@@ -258,6 +261,7 @@ model Game {
   OperatingRound          OperatingRound[]
   ResearchDeck            ResearchDeck[]
   MeetingMessage          MeetingMessage[]
+  PlayerOrder             PlayerOrder[]
   Room                    Room             @relation(fields: [roomId], references: [id])
   currentPhaseId          String?
   currentStockRoundId     Int?
