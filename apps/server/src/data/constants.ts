@@ -1,5 +1,5 @@
 //make a map between PhaseName and phase times
-import { PhaseName } from '@prisma/client';
+import { PhaseName, StockTier } from '@prisma/client';
 
 export const MAX_MARKET_ORDER = 3;
 
@@ -63,3 +63,43 @@ export const getInterestRateByTerm = (term: number): number => {
     return 0; // Default value if term not found
   }
 };
+
+export interface StockTierChartRange {
+  tier: StockTier;
+  chartMinValue: number;
+  chartMaxValue: number;
+  fillSize: number;
+}
+
+export const stockTierChartRanges: StockTierChartRange[] = [
+  {
+    tier: StockTier.TIER_1,
+    chartMinValue: 0,
+    chartMaxValue: 20,
+    fillSize: 2,
+  },
+  {
+    tier: StockTier.TIER_2,
+    chartMinValue: 21,
+    chartMaxValue: 50,
+    fillSize: 3,
+  },
+  {
+    tier: StockTier.TIER_3,
+    chartMinValue: 51,
+    chartMaxValue: 100,
+    fillSize: 4,
+  },
+  {
+    tier: StockTier.TIER_4,
+    chartMinValue: 101,
+    chartMaxValue: 300,
+    fillSize: 5,
+  },
+  {
+    tier: StockTier.TIER_5,
+    chartMinValue: 301,
+    chartMaxValue: 1000,
+    fillSize: 7,
+  },
+];

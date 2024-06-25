@@ -3,8 +3,11 @@ import { PrismaService } from '@server/prisma/prisma.service';
 import { PlayersService } from '@server/players/players.service';
 import {
   Game,
+  OrderType,
+  Phase,
   PhaseName,
   Player,
+  PlayerOrder,
   Prisma,
   RoundType,
   Sector,
@@ -17,12 +20,29 @@ import { CompanyService } from '@server/company/company.service';
 import { SectorService } from '@server/sector/sector.service';
 import { gameDataJson } from '@server/data/gameData';
 import { StartGameInput } from './game-management.interface';
-import { GameState, PlayerWithShares } from '@server/prisma/prisma.types';
+import {
+  GameState,
+  PlayerOrderWithCompany,
+  PlayerWithShares,
+} from '@server/prisma/prisma.types';
 import { StockRoundService } from '@server/stock-round/stock-round.service';
 import { PhaseService } from '@server/phase/phase.service';
-import { DEFAULT_SHARE_DISTRIBUTION, MAX_LIMIT_ORDER, MAX_MARKET_ORDER, MAX_SHORT_ORDER, phaseTimes } from '@server/data/constants';
+import {
+  DEFAULT_SHARE_DISTRIBUTION,
+  MAX_LIMIT_ORDER,
+  MAX_MARKET_ORDER,
+  MAX_SHORT_ORDER,
+  stockTierChartRanges,
+  phaseTimes,
+  StockTierChartRange,
+} from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
-import { determineFloatPrice, determineNextGamePhase } from '@server/data/helpers';
+import {
+  calculateStepsAndRemainder,
+  determineFloatPrice,
+  determineNextGamePhase,
+  getNextTier,
+} from '@server/data/helpers';
 import { PusherService } from 'nestjs-pusher';
 import { EVENT_NEW_PHASE, getGameChannelId } from '@server/pusher/pusher.types';
 import { OperatingRoundService } from '@server/operating-round/operating-round.service';
@@ -41,7 +61,7 @@ export class GameManagementService {
     private phaseService: PhaseService,
     private timerService: TimerService,
     private pusherService: PusherService,
-    private shareService: ShareService
+    private shareService: ShareService,
   ) {}
 
   async addPlayersToGame(
@@ -154,8 +174,9 @@ export class GameManagementService {
             sectorId: sector.id,
           };
         });
-        const companies = await this.companyService.createManyCompanies(newCompanyData);
-        
+        const companies =
+          await this.companyService.createManyCompanies(newCompanyData);
+
         //iterate through companies and create ipo shares
         const shares: {
           companyId: string;
@@ -171,7 +192,7 @@ export class GameManagementService {
               location: ShareLocation.IPO,
               gameId: game.id,
             });
-          };
+          }
         });
         await this.shareService.createManyShares(shares);
       } catch (error) {
@@ -237,7 +258,7 @@ export class GameManagementService {
    * The entire game operates on timers so
    * we can assume a recursive loop to invoke
    * each game phase.
-   * 
+   *
    * TODO: Considerations for retrying failed phase transitions and the ability
    * for the game to start from any point should the server restart.
    *
@@ -284,6 +305,9 @@ export class GameManagementService {
         });
     }
 
+    //handle phase
+    this.handlePhase(phase);
+
     const game = await this.gamesService.updateGameState({
       where: { id: gameId },
       data: {
@@ -295,12 +319,13 @@ export class GameManagementService {
 
     this.pusherService.trigger(getGameChannelId(gameId), EVENT_NEW_PHASE, {
       game,
-      phase
+      phase,
     });
 
     await this.timerService.setTimer(phase.id, phase.phaseTime, async () => {
       try {
         const nextPhase = determineNextGamePhase(phase.name);
+
         await this.startPhase({
           gameId,
           phaseName: nextPhase.phaseName,
@@ -313,5 +338,92 @@ export class GameManagementService {
         // Optionally handle retries or fallback logic here
       }
     });
+  }
+
+  async handlePhase(phase: Phase) {
+    switch (phase.name) {
+      case PhaseName.STOCK_RESOLVE:
+        //resolve stock round
+        this.resolveStockRound(phase);
+        break;
+      default:
+        return;
+    }
+  }
+
+  async resolveStockRound(phase: Phase) {
+    if (phase.stockRoundId) {
+      const playerOrders: PlayerOrderWithCompany[] =
+        await this.prisma.playerOrder.findMany({
+          where: { stockRoundId: phase.stockRoundId },
+          include: {
+            Company: true,
+          },
+        });
+      if (!playerOrders) {
+        throw new Error('Stock round not found');
+      }
+      //filter all market orders
+      const marketOrders = playerOrders.filter(
+        (order) => order.orderType === OrderType.MARKET,
+      );
+      //group market orders by company
+      const groupedMarketOrders = marketOrders.reduce<{
+        [key: string]: PlayerOrderWithCompany[];
+      }>((acc, order) => {
+        if (!acc[order.companyId]) {
+          acc[order.companyId] = [];
+        }
+        acc[order.companyId].push(order);
+        return acc;
+      }, {});
+      //find the net difference of buys and sells between market orders of a company
+      const netDifferences = Object.entries(groupedMarketOrders).map(
+        ([companyId, orders]) => {
+          const buys = orders.filter((order) => !order.isSell);
+          const sells = orders.filter((order) => order.isSell);
+          const buyQuantity = buys.reduce(
+            (acc, order) => acc + (order.quantity || 0),
+            0,
+          );
+          const sellQuantity = sells.reduce(
+            (acc, order) => acc + (order.quantity || 0),
+            0,
+          );
+          return {
+            companyId,
+            netDifference: buyQuantity - sellQuantity,
+            orders,
+          };
+        },
+      );
+      netDifferences.forEach(({ companyId, netDifference, orders }) => {
+        let currentTier = orders[0].Company.stockTier;
+        let currentTierSize = stockTierChartRanges.find(
+          (stockTierChartRange) => stockTierChartRange.tier === currentTier
+        );
+        
+        const {
+          steps,
+          newTierSharesFulfilled,
+          newTier,
+          newSharePrice
+        } = calculateStepsAndRemainder(
+          netDifference,
+          orders[0].Company.tierSharesFulfilled,
+          currentTierSize?.fillSize ?? 0,
+          orders[0].Company.currentStockPrice ?? 0
+        );
+        //update company shares
+        this.companyService.updateCompany({
+          where: { id: companyId },
+          data: {
+            tierSharesFulfilled: newTierSharesFulfilled,
+            stockTier: newTier,
+            currentStockPrice: newSharePrice,
+          },
+        });
+      });
+    }
   }
 }

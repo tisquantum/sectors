@@ -99,26 +99,36 @@ enum ShareLocation {
   PLAYER
 }
 
+enum StockTier {
+  TIER_1
+  TIER_2
+  TIER_3
+  TIER_4
+  TIER_5
+}
+
 model Company {
-  id                 String         @id @default(uuid())
-  name               String
-  unitPrice          Float
-  throughput         Int
-  sectorId           String
-  gameId             String
-  insolvent          Boolean
-  currentStockPrice  Float?
-  cashOnHand         Float?
-  mergedWithParent   String?
-  mergedWithChildren String?
-  ipoAndFloatPrice   Int
-  Sector             Sector         @relation(fields: [sectorId], references: [id])
-  Share              Share[]
-  StockHistory       StockHistory[]
-  Game               Game           @relation(fields: [gameId], references: [id])
-  createdAt          DateTime       @default(now())
-  updatedAt          DateTime       @updatedAt
-  PlayerOrder        PlayerOrder[]
+  id                  String         @id @default(uuid())
+  name                String
+  unitPrice           Float
+  throughput          Int
+  sectorId            String
+  gameId              String
+  insolvent           Boolean
+  stockTier           StockTier      @default(TIER_1)
+  tierSharesFulfilled Int            @default(0)
+  currentStockPrice   Float?
+  cashOnHand          Float?
+  mergedWithParent    String?
+  mergedWithChildren  String?
+  ipoAndFloatPrice    Int
+  Sector              Sector         @relation(fields: [sectorId], references: [id])
+  Share               Share[]
+  StockHistory        StockHistory[]
+  Game                Game           @relation(fields: [gameId], references: [id])
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  PlayerOrder         PlayerOrder[]
 }
 
 model StockHistory {

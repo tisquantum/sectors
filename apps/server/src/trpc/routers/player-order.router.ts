@@ -119,6 +119,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           phaseId: z.string(),
           playerId: z.string(),
           companyId: z.string(),
+          sectorId: z.string(),
           quantity: z.number().optional(),
           term: z.number().optional(),
           value: z.number().optional(),
@@ -135,6 +136,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           companyId,
           playerId,
           phaseId,
+          sectorId,
           ...playerOrderInput
         } = input;
         const data: Prisma.PlayerOrderCreateInput = {
@@ -144,6 +146,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           Company: { connect: { id: companyId } },
           Player: { connect: { id: playerId } },
           Phase: { connect: { id: phaseId } },
+          Sector: { connect: { id: sectorId } },
         };
         let playerOrder;
         try {

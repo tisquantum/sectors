@@ -1,6 +1,6 @@
-import { OrderType, PhaseName, RoundType, Sector, ShareLocation } from '@prisma/client';
+import { OrderType, PhaseName, RoundType, Sector, ShareLocation, StockTier } from '@prisma/client';
 import { PlayerOrderWithCompany } from '@server/prisma/prisma.types';
-import { stockGridPrices } from './constants';
+import { StockTierChartRange, stockGridPrices, stockTierChartRanges } from './constants';
 
 /**
  * Controls the flow of the game by determining the next phase.
@@ -140,4 +140,66 @@ export function determineFloatPrice(sector: Sector) {
     return Math.abs(b - floatValue) < Math.abs(a - floatValue) ? b : a;
   });
   return closest;
+}
+
+function getTierMaxValue(tier: StockTier): number {
+  return stockTierChartRanges.find(range => range.tier === tier)!.chartMaxValue;
+}
+
+function getCurrentTierBySharePrice(currentSharePrice: number): StockTier {
+  return stockTierChartRanges.find(range => currentSharePrice <= range.chartMaxValue)!.tier;
+}
+
+export function calculateStepsAndRemainder(
+  netDifference: number,
+  tierSharesFulfilled: number,
+  currentTierFillSize: number,
+  currentSharePrice: number
+): { steps: number; newTierSharesFulfilled: number; newTier: StockTier; newSharePrice: number } {
+  let steps = 0;
+  let newTierSharesFulfilled = tierSharesFulfilled;
+  let remainingShares = netDifference;
+  let currentPriceIndex = stockGridPrices.indexOf(currentSharePrice);
+  let currentTier = getCurrentTierBySharePrice(currentSharePrice);
+
+  while (remainingShares > 0) {
+    const sharesNeededForCurrentStep = currentTierFillSize - newTierSharesFulfilled;
+
+    if (remainingShares >= sharesNeededForCurrentStep) {
+      remainingShares -= sharesNeededForCurrentStep;
+      steps++;
+      newTierSharesFulfilled = 0;
+      currentPriceIndex++;
+
+      // Check if the new share price exceeds the current tier's max value
+      if (currentPriceIndex < stockGridPrices.length && stockGridPrices[currentPriceIndex] > getTierMaxValue(currentTier)) {
+        const nextTier = getNextTier(currentTier);
+        if (nextTier) {
+          currentTier = nextTier;
+          currentTierFillSize = stockTierChartRanges.find(
+            (range) => range.tier === currentTier
+          )!.fillSize;
+        }
+      }
+    } else {
+      newTierSharesFulfilled += remainingShares;
+      remainingShares = 0;
+    }
+  }
+  return {
+    steps,
+    newTierSharesFulfilled,
+    newTier: currentTier,
+    newSharePrice: stockGridPrices[currentPriceIndex]
+  };
+}
+
+export function getNextTier(currentTier: StockTier): StockTier | undefined {
+  const currentIndex = stockTierChartRanges.findIndex(
+    range => range.tier === currentTier
+  );
+  if (currentIndex !== -1 && currentIndex < stockTierChartRanges.length - 1) {
+    return stockTierChartRanges[currentIndex + 1].tier;
+  }
+  return undefined;
 }

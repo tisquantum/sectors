@@ -440,6 +440,7 @@ const PlayerOrderInput = ({
       playerId: authPlayer.id,
       companyId: currentOrder.id,
       phaseId: gameState.currentPhaseId ?? "",
+      sectorId: currentOrder.sectorId,
       quantity: share,
       term,
       value: limitOrderValue,

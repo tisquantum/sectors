@@ -1,5 +1,6 @@
 import {
   ArrowRightIcon,
+  ArrowTrendingUpIcon,
   ArrowUpIcon,
   CheckCircleIcon,
   CheckIcon,
@@ -14,15 +15,18 @@ import { PlayerOrderWithPlayerCompany } from "@server/prisma/prisma.types";
 import { interestRatesByTerm } from "@server/data/constants";
 import { create } from "domain";
 import { sectorColors } from "@server/data/gameData";
-
+import { motion, AnimatePresence } from "framer-motion";
+import OrderChipWithPlayer from "./OrderChipWithPlayer";
 interface GroupedOrders {
   [key: string]: PlayerOrderWithPlayerCompany[];
 }
 
 const PendingMarketOrders = ({
   marketOrders,
+  isResolving,
 }: {
   marketOrders: PlayerOrderWithPlayerCompany[];
+  isResolving?: boolean;
 }) => {
   // Assuming marketOrders is an array of objects with name, companyName, orderType (buy/sell), and shares
   const groupedOrders = marketOrders.reduce(
@@ -36,7 +40,15 @@ const PendingMarketOrders = ({
     },
     {} as GroupedOrders
   );
+  const checkmarkVariants = {
+    hidden: { scale: 0 },
+    visible: { scale: 1, transition: { duration: 0.5 } },
+  };
 
+  const containerVariants = {
+    hidden: { opacity: 1, y: 0 },
+    visible: { opacity: 0, y: 20, transition: { delay: 0.5, duration: 0.5 } },
+  };
   return (
     <div className="space-y-2">
       {Object.entries(groupedOrders).map(([company, orders]) => {
@@ -52,21 +64,37 @@ const PendingMarketOrders = ({
             className="flex flex-col p-2 rounded gap-2"
             style={{ backgroundColor: sectorColors[orders[0].Sector.name] }}
           >
+            <div className="text-lg font-bold flex gap-2">
+              {/* We need to animate the change in stock price or at least show the previous price and the current price.*/}
+              <ArrowTrendingUpIcon className="size-4" /> $
+              {orders[0].Company.currentStockPrice}  
+            </div>
             <div className="bg-green-900 p-2 font-bold">
               {company} {netDifference}
             </div>
             <div className="flex flex-wrap gap-2">
-              {orders.map((order, index) => (
-                <Chip
-                  key={index}
-                  avatar={<Avatar name={order.Player.nickname} />}
-                  variant="flat"
-                >
-                  <div>
-                    {String(order.orderType).toUpperCase()} {order.quantity}
-                  </div>
-                </Chip>
-              ))}
+              {orders.map((order, index) =>
+                isResolving ? (
+                  <>
+                    <motion.div
+                      initial="hidden"
+                      animate="visible"
+                      variants={containerVariants}
+                    >
+                      <motion.div
+                        initial="hidden"
+                        animate="visible"
+                        variants={checkmarkVariants}
+                      >
+                        <CheckCircleIcon className="size-5 text-green-500" />
+                      </motion.div>
+                      <OrderChipWithPlayer order={order} />
+                    </motion.div>
+                  </>
+                ) : (
+                  <OrderChipWithPlayer order={order} />
+                )
+              )}
             </div>
           </div>
         );
@@ -117,7 +145,8 @@ const PendingLimitOrders = ({
             {orders.map((order, index) => (
               <div
                 key={index}
-                className="bg-purple-600 p-2 rounded flex items-center gap-2"
+                className="p-2 rounded flex items-center gap-2"
+                style={{ backgroundColor: sectorColors[order.Sector.name] }}
               >
                 <Avatar name={order.Player.nickname} />
                 <div>{order.Company.name}</div>
@@ -176,7 +205,7 @@ const PendingShortOrders = ({
   );
 };
 
-const PendingOrders = () => {
+const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
   const { gameId } = useGame();
   const { data: pendingOrders, isLoading } =
     trpc.playerOrder.listPlayerOrdersWithPlayerCompany.useQuery({
@@ -233,7 +262,10 @@ const PendingOrders = () => {
       <Card className="flex-1">
         <CardHeader>Market Orders</CardHeader>
         <CardBody>
-          <PendingMarketOrders marketOrders={marketOrders} />
+          <PendingMarketOrders
+            marketOrders={marketOrders}
+            isResolving={isResolving}
+          />
         </CardBody>
       </Card>
       <div className="flex items-center">

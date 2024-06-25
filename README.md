@@ -12,3 +12,4 @@ TODO: -Assetions for any client mutations.  Always assume we're getting "impossi
 - Ability to pause game from client, and continue timers from backend if a game that is currently not running any timers was not finished and is accessed from the client (so a "resume" functionality).
 - Do we need a vote to determine company IPO?  This would be the first step of the game should it occur.  For now, we're just going to randomly assign IPO on company creation based on min and max values.
 - For now we are going to use a linear "1D" stock market, we can explore a possible 2D "axised" stock market in the future.
+- Possibly have the idea of "divest" or "over-extended" to force players down to a "certificate limit" or occur some penalty if they buy too many stocks

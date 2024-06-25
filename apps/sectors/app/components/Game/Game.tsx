@@ -72,6 +72,8 @@ const Game = ({ gameId }: { gameId: string }) => {
       <StockRoundAction />
     ) : currentRoundData?.phase.name === PhaseName.STOCK_REVEAL ? (
       <StockRoundOrderGrid />
+    ) : currentRoundData?.phase.name === PhaseName.STOCK_RESOLVE ? (
+      <PendingOrders />
     ) : null;
 
   return (
