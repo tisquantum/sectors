@@ -29,46 +29,30 @@ export function friendlyPhaseName(name: PhaseName | undefined): string {
     return "Unknown Phase";
   }
   switch (name) {
-    case PhaseName.OR_1:
-      return "Operating Round 1";
-    case PhaseName.OR_2:
-      return "Operating Round 2";
-    case PhaseName.OR_3:
-      return "Operating Round 3";
-    case PhaseName.STOCK_1:
-      return "Stock Round 1";
-    case PhaseName.STOCK_2:
-      return "Stock Round 2";
-    case PhaseName.STOCK_3:
-      return "Stock Round 3";
-    case PhaseName.STOCK_4:
-      return "Stock Round 4";
-    case PhaseName.STOCK_5:
-      return "Stock Round 5";
-    case PhaseName.STOCK_REVEAL: 
-      return "Stock Round Reveal";
-    case PhaseName.STOCK_RESOLVE:
-      return "Stock Round Resolve";
-    case PhaseName.OR_MEET_1:
-      return "Operating Round Meeting 1";
-    case PhaseName.OR_MEET_2:
-      return "Operating Round Meeting 2";
-    case PhaseName.OR_MEET_3:
-      return "Operating Round Meeting 3";
+    case PhaseName.OPERATING_ACTION_COMPANY_VOTE:
+      return "Company Vote";
+    case PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT:
+      return "Company Vote Result";
+    case PhaseName.OPERATING_MEET:
+      return "Operating Round Meeting";
+    case PhaseName.STOCK_ACTION_ORDER:
+      return "Place Stock Orders";
+    case PhaseName.STOCK_ACTION_RESULT:
+      return "Review Concealed Orders";
+    case PhaseName.STOCK_ACTION_REVEAL:
+      return "Reveal Orders";
+    case PhaseName.STOCK_RESOLVE_LIMIT_ORDER:
+      return "Resolve Limit Orders";
+    case PhaseName.STOCK_RESOLVE_MARKET_ORDER:
+      return "Resolve Market Orders";
+    case PhaseName.STOCK_RESOLVE_SHORT_ORDER:
+      return "Resolve Short Orders";
     case PhaseName.STOCK_MEET:
       return "Stock Round Meeting";
-    case PhaseName.STOCK_1_RESULT:
-      return "Stock Round 1 Overview Result";
-    case PhaseName.STOCK_1_RESULT:
-      return "Stock Round 1 Result";
-    case PhaseName.STOCK_2_RESULT:
-      return "Stock Round 2 Result";
-    case PhaseName.STOCK_3_RESULT:
-      return "Stock Round 3 Result";
-    case PhaseName.STOCK_4_RESULT:
-      return "Stock Round 4 Result";
-    case PhaseName.STOCK_5_RESULT:
-      return "Stock Round 5 Result";
+    case PhaseName.CAPITAL_GAINS:
+      return "Capital Gains";
+    case PhaseName.DIVESTMENT:
+      return "Divestment";
     default:
       return "Unknown Phase";
   }
@@ -82,11 +66,7 @@ export const isCurrentPhaseInteractive = (
   }
   return (
     phaseName === PhaseName.STOCK_MEET ||
-    phaseName === PhaseName.STOCK_1 ||
-    phaseName === PhaseName.STOCK_2 ||
-    phaseName === PhaseName.STOCK_3 ||
-    phaseName === PhaseName.STOCK_4 ||
-    phaseName === PhaseName.STOCK_5
+    phaseName === PhaseName.STOCK_ACTION_ORDER
   );
 };
 

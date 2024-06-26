@@ -13,64 +13,26 @@ export function determineNextGamePhase(phaseName: PhaseName): {
 } {
   switch (phaseName) {
     case PhaseName.STOCK_MEET:
-      return { phaseName: PhaseName.STOCK_1, roundType: RoundType.STOCK };
-    case PhaseName.STOCK_1:
+      return { phaseName: PhaseName.STOCK_ACTION_ORDER, roundType: RoundType.STOCK };
+    case PhaseName.STOCK_ACTION_ORDER:
+      return { phaseName: PhaseName.STOCK_ACTION_RESULT, roundType: RoundType.STOCK };
+    case PhaseName.STOCK_ACTION_RESULT:
       return {
-        phaseName: PhaseName.STOCK_1_RESULT,
+        phaseName: PhaseName.STOCK_ACTION_REVEAL,
         roundType: RoundType.STOCK,
       };
-    case PhaseName.STOCK_1_RESULT:
-      return { phaseName: PhaseName.STOCK_2, roundType: RoundType.STOCK };
-    case PhaseName.STOCK_2:
-      return {
-        phaseName: PhaseName.STOCK_2_RESULT,
-        roundType: RoundType.STOCK,
-      };
-    case PhaseName.STOCK_2_RESULT:
-      return { phaseName: PhaseName.STOCK_3, roundType: RoundType.STOCK };
-    case PhaseName.STOCK_3:
-      return {
-        phaseName: PhaseName.STOCK_3_RESULT,
-        roundType: RoundType.STOCK,
-      };
-    case PhaseName.STOCK_3_RESULT:
-      return {
-        phaseName: PhaseName.STOCK_REVEAL,
-        roundType: RoundType.OPERATING,
-      };
-    case PhaseName.STOCK_REVEAL:
-      return { phaseName: PhaseName.STOCK_RESOLVE, roundType: RoundType.STOCK };
-    case PhaseName.STOCK_RESOLVE:
-      return { phaseName: PhaseName.OR_MEET_1, roundType: RoundType.OPERATING };
-    case PhaseName.OR_MEET_1:
-      return { phaseName: PhaseName.OR_1, roundType: RoundType.OPERATING };
+    case PhaseName.STOCK_ACTION_REVEAL:
+      return { phaseName: PhaseName.STOCK_RESOLVE_MARKET_ORDER, roundType: RoundType.STOCK };
+    case PhaseName.STOCK_RESOLVE_MARKET_ORDER:
+      return { phaseName: PhaseName.STOCK_RESOLVE_SHORT_ORDER, roundType: RoundType.STOCK };
+    case PhaseName.STOCK_RESOLVE_SHORT_ORDER:
+      return { phaseName: PhaseName.STOCK_RESULTS_OVERVIEW, roundType: RoundType.STOCK };
+    case PhaseName.STOCK_RESULTS_OVERVIEW:
+      return { phaseName: PhaseName.OPERATING_MEET, roundType: RoundType.STOCK };
     default:
       return { phaseName: PhaseName.STOCK_MEET, roundType: RoundType.STOCK };
   }
 }
-
-export function isStockRoundAction(phaseName: PhaseName | undefined): boolean {
-  if (!phaseName) return false;
-  return (
-    phaseName === PhaseName.STOCK_1 ||
-    phaseName === PhaseName.STOCK_2 ||
-    phaseName === PhaseName.STOCK_3 ||
-    phaseName === PhaseName.STOCK_4 ||
-    phaseName === PhaseName.STOCK_5
-  );
-}
-
-export function isStockRoundResult(phaseName: PhaseName | undefined): boolean {
-  if (!phaseName) return false;
-  return (
-    phaseName === PhaseName.STOCK_1_RESULT ||
-    phaseName === PhaseName.STOCK_2_RESULT ||
-    phaseName === PhaseName.STOCK_3_RESULT ||
-    phaseName === PhaseName.STOCK_4_RESULT ||
-    phaseName === PhaseName.STOCK_5_RESULT
-  );
-}
-
 
 export const getPseudoSpend = (orders: PlayerOrderWithCompany[]) => {
   //filter orders by MARKET ORDER

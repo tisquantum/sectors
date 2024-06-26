@@ -89,6 +89,7 @@ model Share {
   playerId  String?
   Company   Company       @relation(fields: [companyId], references: [id])
   Player    Player?       @relation(fields: [playerId], references: [id])
+  Game      Game          @relation(fields: [gameId], references: [id])
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
 }
@@ -214,6 +215,8 @@ enum OperatingRoundAction {
   DOWNSIZE
   PRODUCTION
   EXPANSION
+  SHARE_BUYBACK
+  SHARE_ISSUE
 }
 
 model ResearchDeck {
@@ -275,6 +278,7 @@ model Game {
   ResearchDeck            ResearchDeck[]
   MeetingMessage          MeetingMessage[]
   PlayerOrder             PlayerOrder[]
+  Share                   Share[]
   Room                    Room             @relation(fields: [roomId], references: [id])
   currentPhaseId          String?
   currentStockRoundId     Int?
@@ -304,26 +308,23 @@ model Phase {
 }
 
 enum PhaseName {
+  STOCK_RESOLVE_LIMIT_ORDER
   STOCK_MEET
-  STOCK_1
-  STOCK_1_RESULT
-  STOCK_2
-  STOCK_2_RESULT
-  STOCK_3
-  STOCK_3_RESULT
-  STOCK_4
-  STOCK_4_RESULT
-  STOCK_5
-  STOCK_5_RESULT
-  STOCK_REVEAL
-  STOCK_RESULT
-  STOCK_RESOLVE
-  OR_1
-  OR_MEET_1
-  OR_2
-  OR_MEET_2
-  OR_3
-  OR_MEET_3
+  STOCK_ACTION_ORDER
+  STOCK_ACTION_RESULT
+  STOCK_ACTION_REVEAL
+  STOCK_RESOLVE_MARKET_ORDER
+  STOCK_RESOLVE_SHORT_ORDER
+  STOCK_RESULTS_OVERVIEW
+  OPERATING_PRODUCTION
+  OPERATING_STOCK_PRICE_ADJUSTMENT
+  OPERATING_MEET
+  OPERATING_ACTION_COMPANY_VOTE
+  OPERATING_ACTION_COMPANY_VOTE_RESULT
+  OPERATING_COMPANY_VOTE_RESOLVE
+  CAPITAL_GAINS
+  DIVESTMENT
+  SECTOR_NEW_COMPANY
 }
 
 model GameLog {

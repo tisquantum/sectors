@@ -23,7 +23,6 @@ import {
 import Meeting from "../Meeting/Meeting";
 import { GameState } from "@server/prisma/prisma.types";
 import { useGame } from "./GameContext";
-import { isStockRoundAction, isStockRoundResult } from "@server/data/helpers";
 import StockRoundAction from "./StockRoundAction";
 
 const determineGameRound = (
@@ -66,13 +65,13 @@ const Game = ({ gameId }: { gameId: string }) => {
   const renderCurrentPhase =
     currentRoundData?.phase.name === PhaseName.STOCK_MEET ? (
       <Meeting />
-    ) : isStockRoundAction(currentRoundData?.phase.name) ? (
+    ) : currentRoundData?.phase.name === PhaseName.STOCK_ACTION_ORDER ? (
       <StockRoundAction />
-    ) : isStockRoundResult(currentRoundData?.phase.name) ? (
+    ) : currentRoundData?.phase.name === PhaseName.STOCK_ACTION_RESULT ? (
       <StockRoundAction />
-    ) : currentRoundData?.phase.name === PhaseName.STOCK_REVEAL ? (
+    ) : currentRoundData?.phase.name === PhaseName.STOCK_ACTION_REVEAL ? (
       <StockRoundOrderGrid />
-    ) : currentRoundData?.phase.name === PhaseName.STOCK_RESOLVE ? (
+    ) : currentRoundData?.phase.name === PhaseName.STOCK_RESOLVE_MARKET_ORDER ? (
       <PendingOrders />
     ) : null;
 

@@ -23,6 +23,7 @@ import { StartGameInput } from './game-management.interface';
 import {
   GameState,
   PlayerOrderWithCompany,
+  PlayerOrderWithPlayerCompany,
   PlayerWithShares,
 } from '@server/prisma/prisma.types';
 import { StockRoundService } from '@server/stock-round/stock-round.service';
@@ -187,9 +188,9 @@ export class GameManagementService {
         companies.forEach((company) => {
           for (let i = 0; i < DEFAULT_SHARE_DISTRIBUTION; i++) {
             shares.push({
-              companyId: company.id,
               price: company.ipoAndFloatPrice,
               location: ShareLocation.IPO,
+              companyId: company.id,
               gameId: game.id,
             });
           }
@@ -353,11 +354,13 @@ export class GameManagementService {
 
   async resolveStockRound(phase: Phase) {
     if (phase.stockRoundId) {
-      const playerOrders: PlayerOrderWithCompany[] =
+      const playerOrders: PlayerOrderWithPlayerCompany[] =
         await this.prisma.playerOrder.findMany({
           where: { stockRoundId: phase.stockRoundId },
           include: {
             Company: true,
+            Player: true,
+            Sector: true,
           },
         });
       if (!playerOrders) {
@@ -369,7 +372,7 @@ export class GameManagementService {
       );
       //group market orders by company
       const groupedMarketOrders = marketOrders.reduce<{
-        [key: string]: PlayerOrderWithCompany[];
+        [key: string]: PlayerOrderWithPlayerCompany[];
       }>((acc, order) => {
         if (!acc[order.companyId]) {
           acc[order.companyId] = [];
@@ -400,20 +403,16 @@ export class GameManagementService {
       netDifferences.forEach(({ companyId, netDifference, orders }) => {
         let currentTier = orders[0].Company.stockTier;
         let currentTierSize = stockTierChartRanges.find(
-          (stockTierChartRange) => stockTierChartRange.tier === currentTier
+          (stockTierChartRange) => stockTierChartRange.tier === currentTier,
         );
-        
-        const {
-          steps,
-          newTierSharesFulfilled,
-          newTier,
-          newSharePrice
-        } = calculateStepsAndRemainder(
-          netDifference,
-          orders[0].Company.tierSharesFulfilled,
-          currentTierSize?.fillSize ?? 0,
-          orders[0].Company.currentStockPrice ?? 0
-        );
+
+        const { steps, newTierSharesFulfilled, newTier, newSharePrice } =
+          calculateStepsAndRemainder(
+            netDifference,
+            orders[0].Company.tierSharesFulfilled,
+            currentTierSize?.fillSize ?? 0,
+            orders[0].Company.currentStockPrice ?? 0,
+          );
         //update company shares
         this.companyService.updateCompany({
           where: { id: companyId },
@@ -422,6 +421,58 @@ export class GameManagementService {
             stockTier: newTier,
             currentStockPrice: newSharePrice,
           },
+        });
+        //resolve all sell orders by updating player cash and share count
+        orders.forEach(async (order) => {
+          if (order.isSell) {
+            //sell the maxium amount of shares the player has to fulfill the request
+            const sellAmount = order.quantity || 0;
+            const sharePrice = order.Company.currentStockPrice || 0;
+            const playerActualSharesOwned = await this.shareService.shares({
+              where: {
+                playerId: order.playerId,
+                companyId,
+                location: ShareLocation.PLAYER,
+              },
+            });
+            //get the min of the player's shares and the sell amount
+            const sharesToSell = Math.min(
+              playerActualSharesOwned.length,
+              sellAmount,
+            );
+
+            this.prisma.player.update({
+              where: { id: order.playerId },
+              data: {
+                cashOnHand: {
+                  increment: sharesToSell * sharePrice,
+                },
+              },
+            });
+
+            // Select the shares to update
+            const sharesToUpdate = await this.prisma.share.findMany({
+              where: {
+                playerId: order.playerId,
+                companyId,
+                location: ShareLocation.PLAYER,
+              },
+              take: sellAmount,
+            });
+
+            // Get the IDs of the shares to update
+            const shareIds = sharesToUpdate.map((share) => share.id);
+
+            // Update the selected shares
+            await this.shareService.updateManyShares({
+              where: {
+                id: { in: shareIds },
+              },
+              data: {
+                location: ShareLocation.OPEN_MARKET,
+              },
+            });
+          }
         });
       });
     }
