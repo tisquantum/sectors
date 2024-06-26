@@ -18,6 +18,7 @@ export const phaseTimes = {
   [PhaseName.STOCK_RESOLVE_LIMIT_ORDER]: 15 * 1000,
   [PhaseName.STOCK_MEET]: 30 * 1000,
   [PhaseName.STOCK_ACTION_ORDER]: 15 * 1000,
+  [PhaseName.STOCK_ACTION_RESULT]: 10 * 1000,
   [PhaseName.STOCK_ACTION_REVEAL]: 20 * 1000,
   [PhaseName.STOCK_RESOLVE_MARKET_ORDER]: 15 * 1000,
   [PhaseName.STOCK_RESOLVE_SHORT_ORDER]: 15 * 1000,
