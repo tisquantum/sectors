@@ -480,7 +480,7 @@ export class GameManagementService {
           };
         },
       );
-      netDifferences.forEach(({ companyId, netDifference, orders }) => {
+      netDifferences.forEach(async ({ companyId, netDifference, orders }) => {
         let currentTier = orders[0].Company.stockTier;
         let currentTierSize = stockTierChartRanges.find(
           (stockTierChartRange) => stockTierChartRange.tier === currentTier,
