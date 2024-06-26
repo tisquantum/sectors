@@ -167,6 +167,7 @@ model PlayerOrder {
   filled       Boolean?
   quantity     Int?
   term         Int?
+  principal    Int?
   value        Float?
   isSell       Boolean?
   location     ShareLocation

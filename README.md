@@ -28,7 +28,11 @@ New Shares Issued:
 New Shares Issued: 100
 Total Shares After Issuance: 100 (original) + 100 (new) = 200
 
--We also need to calculate market capitalization for a company at any given time. (TOTAL shares * Price per share)
+- Short Orders need a "principal" value, which is the share value at the time the share was issued.
+
+- Short Orders might cause a players cash on hand to go into the negative.  If this is the case, we can resolve it by having a system where the player needs to select stock to get rid of to make up this difference or we automate the process if they don't do it in the given time for the round.  For example, if the player is at -200 after failing to pay short order interest loans, perhaps in the stock "results" round players need to perform that upkeep or the game will trash stocks automatically to do this for them.  Alternatively, the players cash on hand can simply be negative and the player will need to sell stocks themselves the next stock round to get back into the positive.
+
+- We also need to calculate market capitalization for a company at any given time. (TOTAL shares * Price per share)
 
 Consider that issuing shares is probably static number in the game, like "10".
 

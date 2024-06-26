@@ -36,6 +36,7 @@ import {
   stockTierChartRanges,
   phaseTimes,
   StockTierChartRange,
+  interestRatesByTerm,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -343,16 +344,95 @@ export class GameManagementService {
 
   async handlePhase(phase: Phase) {
     switch (phase.name) {
-      case PhaseName.STOCK_RESOLVE:
+      case PhaseName.STOCK_RESOLVE_MARKET_ORDER:
         //resolve stock round
-        this.resolveStockRound(phase);
+        this.resolveMarketOrders(phase);
+        break;
+      case PhaseName.STOCK_RESOLVE_SHORT_ORDER:
+        this.resolveShortOrders(phase);
         break;
       default:
         return;
     }
   }
+  async resolveShortOrders(phase: Phase) {
+    //get the term and quantity of short orders
+    if (phase.stockRoundId) {
+      const playerOrders: PlayerOrderWithPlayerCompany[] =
+        await this.prisma.playerOrder.findMany({
+          where: { stockRoundId: phase.stockRoundId },
+          include: {
+            Company: true,
+            Player: true,
+            Sector: true,
+          },
+        });
+      if (!playerOrders) {
+        throw new Error('Stock round not found');
+      }
+      //filter all short orders
+      const shortOrders = playerOrders.filter(
+        (order) => order.orderType === OrderType.SHORT,
+      );
+      //collect interest from the players who have short orders by multiplying the interest rate by the "principal", which is the price of the share at the time it was issued.
 
-  async resolveStockRound(phase: Phase) {
+      shortOrders.forEach(async (order) => {
+        //find the interest rate by term
+        const interestRate = interestRatesByTerm[order.term || 0];
+        //calculate the interest rate by multiplying by the principal
+        const interestAmount = interestRate * (order.principal || 0);
+        //subtract this from the players cash on hand
+        this.prisma.player.update({
+          where: { id: order.playerId },
+          data: {
+            cashOnHand: {
+              decrement: interestAmount,
+            },
+          },
+        });
+      });
+      //increment all terms on the shortOrders by 1
+      shortOrders.forEach(async (order) => {
+        this.prisma.playerOrder.update({
+          where: { id: order.id },
+          data: {
+            term: {
+              increment: 1,
+            },
+          },
+        });
+      });
+      //filter all terms that are now "0"
+      const expiredShortOrders = shortOrders.filter(
+        (order) => order.term === 0,
+      );
+      //pay the player the difference between the principal and the current stock price
+      expiredShortOrders.forEach(async (order) => {
+        const company = order.Company;
+        const sharePrice = company.currentStockPrice || 0;
+        const principal = order.principal || 0;
+        const difference = principal - sharePrice;
+        this.prisma.player.update({
+          where: { id: order.playerId },
+          data: {
+            cashOnHand: {
+              increment: difference,
+            },
+          },
+        });
+      });
+      //update the order to filled
+      expiredShortOrders.forEach(async (order) => {
+        this.prisma.playerOrder.update({
+          where: { id: order.id },
+          data: {
+            filled: true,
+          },
+        });
+      });
+    }
+  }
+  async resolveMarketOrders(phase: Phase) {
     if (phase.stockRoundId) {
       const playerOrders: PlayerOrderWithPlayerCompany[] =
         await this.prisma.playerOrder.findMany({
@@ -423,57 +503,116 @@ export class GameManagementService {
           },
         });
         //resolve all sell orders by updating player cash and share count
-        orders.forEach(async (order) => {
-          if (order.isSell) {
-            //sell the maxium amount of shares the player has to fulfill the request
-            const sellAmount = order.quantity || 0;
-            const sharePrice = order.Company.currentStockPrice || 0;
-            const playerActualSharesOwned = await this.shareService.shares({
-              where: {
-                playerId: order.playerId,
-                companyId,
-                location: ShareLocation.PLAYER,
-              },
-            });
-            //get the min of the player's shares and the sell amount
-            const sharesToSell = Math.min(
-              playerActualSharesOwned.length,
-              sellAmount,
-            );
-
-            this.prisma.player.update({
-              where: { id: order.playerId },
-              data: {
-                cashOnHand: {
-                  increment: sharesToSell * sharePrice,
+        await Promise.all(
+          orders.map(async (order) => {
+            if (order.isSell) {
+              const sellAmount = order.quantity || 0;
+              const sharePrice = order.Company.currentStockPrice || 0;
+              const playerActualSharesOwned = await this.shareService.shares({
+                where: {
+                  playerId: order.playerId,
+                  companyId,
+                  location: ShareLocation.PLAYER,
                 },
-              },
-            });
+              });
+              const sharesToSell = Math.min(
+                playerActualSharesOwned.length,
+                sellAmount,
+              );
 
-            // Select the shares to update
-            const sharesToUpdate = await this.prisma.share.findMany({
-              where: {
-                playerId: order.playerId,
-                companyId,
-                location: ShareLocation.PLAYER,
-              },
-              take: sellAmount,
-            });
+              await this.prisma.player.update({
+                where: { id: order.playerId },
+                data: {
+                  cashOnHand: {
+                    increment: sharesToSell * sharePrice,
+                  },
+                },
+              });
 
-            // Get the IDs of the shares to update
-            const shareIds = sharesToUpdate.map((share) => share.id);
+              const sharesToUpdate = await this.prisma.share.findMany({
+                where: {
+                  playerId: order.playerId,
+                  companyId,
+                  location: ShareLocation.PLAYER,
+                },
+                take: sellAmount,
+              });
 
-            // Update the selected shares
+              const shareIds = sharesToUpdate.map((share) => share.id);
+
+              await this.shareService.updateManyShares({
+                where: {
+                  id: { in: shareIds },
+                },
+                data: {
+                  location: ShareLocation.OPEN_MARKET,
+                },
+              });
+            }
+          }),
+        );
+        //iterate over grouped by market orders to distribute shares for potential buyers
+        // distribute shares for buy orders
+        const buyOrders = orders.filter((order) => !order.isSell);
+        const totalSharesToDistribute = netDifference;
+        let remainingShares = totalSharesToDistribute;
+
+        // First pass: Distribute shares based on earliest orders
+        for (const order of buyOrders) {
+          if (remainingShares <= 0) break;
+          const sharesToGive = Math.min(order.quantity || 0, remainingShares);
+          await this.shareService.updateManyShares({
+            where: {
+              playerId: order.playerId,
+              companyId,
+              location: ShareLocation.OPEN_MARKET,
+            },
+            data: {
+              location: ShareLocation.PLAYER,
+            },
+          });
+          remainingShares -= sharesToGive;
+        }
+
+        // Second pass: Evenly distribute remaining shares
+        if (remainingShares > 0) {
+          const numBuyers = buyOrders.length;
+          const sharesPerBuyer = Math.floor(remainingShares / numBuyers);
+          for (const order of buyOrders) {
+            if (sharesPerBuyer <= 0) break;
             await this.shareService.updateManyShares({
               where: {
-                id: { in: shareIds },
-              },
-              data: {
+                playerId: order.playerId,
+                companyId,
                 location: ShareLocation.OPEN_MARKET,
               },
+              data: {
+                location: ShareLocation.PLAYER,
+              },
             });
+            remainingShares -= sharesPerBuyer;
           }
-        });
+        }
+
+        // Third pass: Lottery system for remaining shares
+        if (remainingShares > 0) {
+          while (remainingShares > 0 && buyOrders.length > 0) {
+            const randomIndex = Math.floor(Math.random() * buyOrders.length);
+            const order = buyOrders[randomIndex];
+            await this.shareService.updateManyShares({
+              where: {
+                playerId: order.playerId,
+                companyId,
+                location: ShareLocation.OPEN_MARKET,
+              },
+              data: {
+                location: ShareLocation.PLAYER,
+              },
+            });
+            remainingShares -= 1;
+            buyOrders.splice(randomIndex, 1); // Remove the order from the list
+          }
+        }
       });
     }
   }
