@@ -3,6 +3,7 @@ import { PrismaService } from '@server/prisma/prisma.service';
 import { PlayersService } from '@server/players/players.service';
 import {
   Game,
+  OrderStatus,
   OrderType,
   Phase,
   PhaseName,
@@ -24,7 +25,9 @@ import {
   GameState,
   PlayerOrderWithCompany,
   PlayerOrderWithPlayerCompany,
+  PlayerOrderWithPlayerCompanySectorShortOrder,
   PlayerWithShares,
+  ShortOrderWithShares,
 } from '@server/prisma/prisma.types';
 import { StockRoundService } from '@server/stock-round/stock-round.service';
 import { PhaseService } from '@server/phase/phase.service';
@@ -37,9 +40,11 @@ import {
   phaseTimes,
   StockTierChartRange,
   interestRatesByTerm,
+  BORROW_RATE,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
+  calculateMarginAccountMinimum,
   calculateStepsAndRemainder,
   determineFloatPrice,
   determineNextGamePhase,
@@ -89,6 +94,7 @@ export class GameManagementService {
         marketOrderActions: MAX_MARKET_ORDER,
         limitOrderActions: MAX_LIMIT_ORDER,
         shortOrderActions: MAX_SHORT_ORDER,
+        marginAccount: 0,
       })),
     );
   }
@@ -356,15 +362,19 @@ export class GameManagementService {
     }
   }
   async resolveShortOrders(phase: Phase) {
-    //get the term and quantity of short orders
     if (phase.stockRoundId) {
-      const playerOrders: PlayerOrderWithPlayerCompany[] =
+      const playerOrders: PlayerOrderWithPlayerCompanySectorShortOrder[] =
         await this.prisma.playerOrder.findMany({
           where: { stockRoundId: phase.stockRoundId },
           include: {
             Company: true,
             Player: true,
             Sector: true,
+            ShortOrder: {
+              include: {
+                Share: true,
+              }
+            },
           },
         });
       if (!playerOrders) {
@@ -375,60 +385,77 @@ export class GameManagementService {
         (order) => order.orderType === OrderType.SHORT,
       );
       //collect interest from the players who have short orders by multiplying the interest rate by the "principal", which is the price of the share at the time it was issued.
-
       shortOrders.forEach(async (order) => {
-        //find the interest rate by term
-        const interestRate = interestRatesByTerm[order.term || 0];
-        //calculate the interest rate by multiplying by the principal
-        const interestAmount = interestRate * (order.principal || 0);
-        //subtract this from the players cash on hand
-        this.prisma.player.update({
-          where: { id: order.playerId },
-          data: {
-            cashOnHand: {
-              decrement: interestAmount,
+        //check if the short order has already been created
+        if (!order.ShortOrder) {
+          const shortInitialTotalValue = ( order.quantity || 0)  * (order.Company.currentStockPrice || 0 );
+          //see if the player has enough capital to create a margin account
+          if (shortInitialTotalValue > order.Player.cashOnHand) {
+            //reject order
+            await this.prisma.playerOrder.update({
+              where: { id: order.id },
+              data: {
+                orderStatus: OrderStatus.REJECTED,
+              },
+            });
+            throw new Error('Player does not have enough cash in margin account to place order');
+          } else {
+            //check player margin account balance
+            const player = order.Player;  
+            //get all player short orders and calculate margin account required total
+            const playerShortOrders = await this.prisma.playerOrder.findMany({
+              where: {
+                playerId: player.id,
+                orderType: OrderType.SHORT,
+              },
+              include: {
+                ShortOrder: true,
+              },
+            });
+            //add marginAccountMinimum together
+            const marginAccountMinimumTotal = playerShortOrders.reduce(
+              (acc, order) => acc + (order.ShortOrder?.marginAccountMinimum || 0),
+              0,
+            );
+            const newShortOrderMarginAccountMinimum = calculateMarginAccountMinimum(shortInitialTotalValue);
+            //if the player does not have enough currently, take money from cashOnHand and fill the marginAccount
+            if (marginAccountMinimumTotal + newShortOrderMarginAccountMinimum > player.cashOnHand) {
+              const difference = (marginAccountMinimumTotal + newShortOrderMarginAccountMinimum) - player.cashOnHand;
+              await this.prisma.player.update({
+                where: { id: player.id },
+                data: {
+                  cashOnHand: {
+                    decrement: difference,
+                  },
+                  marginAccount: {
+                    increment: difference,
+                  },
+                },
+              });
+            }
+          }
+          //create the short order
+          await this.prisma.shortOrder.create({
+            data: {
+              shortSalePrice: (order.Company.currentStockPrice || 0),
+              marginAccountMinimum: calculateMarginAccountMinimum(shortInitialTotalValue),
+              borrowRate: BORROW_RATE,
+              PlayerOrder: { connect: { id: order.id } },
             },
-          },
-        });
-      });
-      //increment all terms on the shortOrders by 1
-      shortOrders.forEach(async (order) => {
-        this.prisma.playerOrder.update({
-          where: { id: order.id },
-          data: {
-            term: {
-              increment: 1,
+          });
+        } else if(order.ShortOrder) {
+          //after the first turn, short orders begin to accrue interest
+          const shortOrder: ShortOrderWithShares = order.ShortOrder;
+          //subtract this from the players cash on hand
+          this.prisma.player.update({
+            where: { id: order.playerId },
+            data: {
+              cashOnHand: {
+                decrement: shortOrder.borrowRate * (shortOrder.shortSalePrice * shortOrder.Share.length),
+              },
             },
-          },
-        });
-      });
-      //filter all terms that are now "0"
-      const expiredShortOrders = shortOrders.filter(
-        (order) => order.term === 0,
-      );
-      //pay the player the difference between the principal and the current stock price
-      expiredShortOrders.forEach(async (order) => {
-        const company = order.Company;
-        const sharePrice = company.currentStockPrice || 0;
-        const principal = order.principal || 0;
-        const difference = principal - sharePrice;
-        this.prisma.player.update({
-          where: { id: order.playerId },
-          data: {
-            cashOnHand: {
-              increment: difference,
-            },
-          },
-        });
-      });
-      //update the order to filled
-      expiredShortOrders.forEach(async (order) => {
-        this.prisma.playerOrder.update({
-          where: { id: order.id },
-          data: {
-            filled: true,
-          },
-        });
+          });
+        }
       });
     }
   }

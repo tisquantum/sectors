@@ -64,9 +64,10 @@ model RoomUser {
 model Player {
   id                 String               @id @default(uuid())
   nickname           String
-  cashOnHand         Float
+  cashOnHand         Int
   gameId             String
   userId             String
+  marginAccount      Int
   Game               Game                 @relation(fields: [gameId], references: [id])
   User               User                 @relation(fields: [userId], references: [id])
   Share              Share[]
@@ -81,23 +82,28 @@ model Player {
 }
 
 model Share {
-  id        String        @id @default(uuid())
-  price     Float
-  companyId String
-  location  ShareLocation
-  gameId    String
-  playerId  String?
-  Company   Company       @relation(fields: [companyId], references: [id])
-  Player    Player?       @relation(fields: [playerId], references: [id])
-  Game      Game          @relation(fields: [gameId], references: [id])
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  id               String          @id @default(uuid())
+  price            Float
+  companyId        String
+  location         ShareLocation
+  gameId           String
+  playerId         String?
+  shortOrderId     Int?
+  optionContractId Int?
+  ShortOrder       ShortOrder?     @relation(fields: [shortOrderId], references: [id])
+  OptionContract   OptionContract? @relation(fields: [optionContractId], references: [id])
+  Company          Company         @relation(fields: [companyId], references: [id])
+  Player           Player?         @relation(fields: [playerId], references: [id])
+  Game             Game            @relation(fields: [gameId], references: [id])
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
 }
 
 enum ShareLocation {
   OPEN_MARKET
   IPO
   PLAYER
+  DERIVATIVE_MARKET
 }
 
 enum StockTier {
@@ -156,36 +162,73 @@ model StockRound {
 
 //The order of operations here is action -> order -> stock
 // Action being the player's choice, order being the player's request, and stock being the fulfilled order.
+//option order = premium, strike price, and term (expiration date)
 model PlayerOrder {
-  id           Int           @id @default(autoincrement())
-  stockRoundId Int
-  phaseId      String
-  playerId     String
-  companyId    String //We can't reference stockId here because it's not known which stocks which actually be purchased yet, this is more of an "ask"
-  gameId       String
-  sectorId     String
-  filled       Boolean?
-  quantity     Int?
-  term         Int?
-  principal    Int?
-  value        Float?
-  isSell       Boolean?
-  location     ShareLocation
-  orderType    OrderType
-  Game         Game          @relation(fields: [gameId], references: [id])
-  StockRound   StockRound    @relation(fields: [stockRoundId], references: [id])
-  Player       Player        @relation(fields: [playerId], references: [id])
-  Company      Company       @relation(fields: [companyId], references: [id])
-  Phase        Phase         @relation(fields: [phaseId], references: [id])
-  Sector       Sector        @relation(fields: [sectorId], references: [id])
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  id             Int             @id @default(autoincrement())
+  stockRoundId   Int
+  phaseId        String
+  playerId       String
+  companyId      String //We can't reference stockId here because it's not known which stocks which actually be purchased yet, this is more of an "ask"
+  gameId         String
+  sectorId       String
+  orderStatus    OrderStatus
+  quantity       Int?
+  value          Float?
+  isSell         Boolean?
+  location       ShareLocation
+  orderType      OrderType
+  ShortOrder     ShortOrder?
+  OptionContract OptionContract?
+  Game           Game            @relation(fields: [gameId], references: [id])
+  StockRound     StockRound      @relation(fields: [stockRoundId], references: [id])
+  Player         Player          @relation(fields: [playerId], references: [id])
+  Company        Company         @relation(fields: [companyId], references: [id])
+  Phase          Phase           @relation(fields: [phaseId], references: [id])
+  Sector         Sector          @relation(fields: [sectorId], references: [id])
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+enum OrderStatus {
+  PENDING
+  OPEN //only pertains to LIMIT, SHORT, OPTION
+  FILLED
+  CANCELLED
+  REJECTED
+}
+
+model ShortOrder {
+  id                   Int          @id @default(autoincrement())
+  Share                Share[]
+  shortSalePrice       Int
+  marginAccountMinimum Int
+  borrowRate           Int
+  coverPrice           Int?
+  playerOrderId        Int?         @unique
+  PlayerOrder          PlayerOrder? @relation(fields: [playerOrderId], references: [id])
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+}
+
+//premium should be calculated as strike price - current price * term or something like this
+model OptionContract {
+  id             Int          @id @default(autoincrement())
+  premium        Int
+  currentPremium Int?
+  strikePrice    Int
+  term           Int
+  shares         Share[]
+  playerOrderId  Int?         @unique
+  PlayerOrder    PlayerOrder? @relation(fields: [playerOrderId], references: [id])
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 }
 
 enum OrderType {
   MARKET
   SHORT
   LIMIT
+  OPTION
 }
 
 model OperatingRound {
@@ -315,7 +358,10 @@ enum PhaseName {
   STOCK_ACTION_RESULT
   STOCK_ACTION_REVEAL
   STOCK_RESOLVE_MARKET_ORDER
-  STOCK_RESOLVE_SHORT_ORDER
+  STOCK_SHORT_ORDER_INTEREST
+  STOCK_ACTION_SHORT_ORDER //let players cover their open shorts if they choose to
+  STOCK_RESOLVE_OPEN_SHORT_ORDER
+  STOCK_RESOLVE_OPTION_ORDER //players either succeed or fail after expiration (?)
   STOCK_RESULTS_OVERVIEW
   OPERATING_PRODUCTION
   OPERATING_STOCK_PRICE_ADJUSTMENT

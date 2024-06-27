@@ -1,4 +1,4 @@
-import { OrderType, PhaseName, RoundType, Sector, ShareLocation, StockTier } from '@prisma/client';
+import { Company, OrderType, PhaseName, RoundType, Sector, ShareLocation, StockTier } from '@prisma/client';
 import { PlayerOrderWithCompany } from '@server/prisma/prisma.types';
 import { StockTierChartRange, stockGridPrices, stockTierChartRanges } from './constants';
 
@@ -24,8 +24,14 @@ export function determineNextGamePhase(phaseName: PhaseName): {
     case PhaseName.STOCK_ACTION_REVEAL:
       return { phaseName: PhaseName.STOCK_RESOLVE_MARKET_ORDER, roundType: RoundType.STOCK };
     case PhaseName.STOCK_RESOLVE_MARKET_ORDER:
-      return { phaseName: PhaseName.STOCK_RESOLVE_SHORT_ORDER, roundType: RoundType.STOCK };
-    case PhaseName.STOCK_RESOLVE_SHORT_ORDER:
+      return { phaseName: PhaseName.STOCK_SHORT_ORDER_INTEREST, roundType: RoundType.STOCK };
+    case PhaseName.STOCK_SHORT_ORDER_INTEREST:
+      return { phaseName: PhaseName.STOCK_ACTION_SHORT_ORDER, roundType: RoundType.STOCK };
+    case PhaseName.STOCK_ACTION_SHORT_ORDER:
+      return { phaseName: PhaseName.STOCK_RESOLVE_OPEN_SHORT_ORDER, roundType: RoundType.STOCK };
+    case PhaseName.STOCK_RESOLVE_OPEN_SHORT_ORDER:
+      return { phaseName: PhaseName.STOCK_RESOLVE_OPTION_ORDER, roundType: RoundType.STOCK };
+    case PhaseName.STOCK_RESOLVE_OPTION_ORDER:
       return { phaseName: PhaseName.STOCK_RESULTS_OVERVIEW, roundType: RoundType.STOCK };
     case PhaseName.STOCK_RESULTS_OVERVIEW:
       return { phaseName: PhaseName.OPERATING_MEET, roundType: RoundType.STOCK };
@@ -164,4 +170,9 @@ export function getNextTier(currentTier: StockTier): StockTier | undefined {
     return stockTierChartRanges[currentIndex + 1].tier;
   }
   return undefined;
+}
+
+//TODO: We might need to adjust this.
+export function calculateMarginAccountMinimum(shortOrderValue: number): number {
+  return Math.ceil(shortOrderValue / 2);
 }

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { TrpcService } from '../trpc.service';
-import { Prisma, ShareLocation, OrderType } from '@prisma/client';
+import { Prisma, ShareLocation, OrderType, OrderStatus } from '@prisma/client';
 import { PlayerOrderService } from '@server/player-order/player-order.service';
 import { PusherService } from 'nestjs-pusher';
 import {
@@ -141,6 +141,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         } = input;
         const data: Prisma.PlayerOrderCreateInput = {
           ...playerOrderInput,
+          orderStatus: OrderStatus.PENDING,
           Game: { connect: { id: gameId } },
           StockRound: { connect: { id: stockRoundId } },
           Company: { connect: { id: companyId } },

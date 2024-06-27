@@ -10,7 +10,7 @@ import { Avatar, Card, CardBody, CardHeader, Chip } from "@nextui-org/react";
 import "./PendingOrders.css";
 import { trpc } from "@sectors/app/trpc";
 import { useGame } from "./GameContext";
-import { OrderType, Prisma } from "@server/prisma/prisma.client";
+import { OrderStatus, OrderType, Prisma } from "@server/prisma/prisma.client";
 import { PlayerOrderWithPlayerCompany } from "@server/prisma/prisma.types";
 import { interestRatesByTerm } from "@server/data/constants";
 import { create } from "domain";
@@ -153,7 +153,7 @@ const PendingLimitOrders = ({
                 <div>
                   {String(order.orderType).toUpperCase()} @ {order.value}
                 </div>
-                {order.filled ? (
+                {order.orderStatus == OrderStatus.FILLED ? (
                   <CheckCircleIcon className="size-5 text-green-500" />
                 ) : (
                   <ClockIcon className="size-5" />

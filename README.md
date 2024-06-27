@@ -83,3 +83,39 @@ So a complete turn flow would be
 -- New company opens?
 -- Cohesion bonuses? 
 -- Review supply and demand?
+
+- Rethinking Shorts and Adding Options, Short Orders are now gonna behave like real life short orders.  That means no fixed term anymore, you simply hold onto shorts waiting for opportunistic time to sell, however, you must set aside a minimum amount of funds/shares in margin account which are LOCKED and cannot be used and they must stay there as long as the short order is opened.  You also accrue interest in "borrowRate" every turn the short is opened.  Also, any dividends that are paid out actually need to be paid out BY THE PLAYER.  This is because shorted stocks are "borrowed", so when you open a short position, you sell those stocks hoping to collect a positive difference in the end.  However, because they are borrowed, you still owe the lender any dividends. So you must pay the broker the dividends collected.  Proper short orders also opens up the potential for a cascade of "short squeeze" as players will rush to cover options pushing the price further up.  Short orders should positively effect the price when they are opened and covered.
+
+- Call Option orders will work simarily as they do in real life as well.  Options contracts will be randomly generated each turn.  If players purchase a contract, they will have the "right" to buy the shares should the price move equal to or beyond the strike price listed on the contract.  Call options are purchased by paying the premium (which is a rate per share).  The profit (or loss) is calculated as Current Market Price minus Strike Price minus the premium paid. Options contracts can be "exercised" or sold.  Execising a call option means buying shares at the strike price, then selling it at the current market price.  
+
+Call Option Example:
+
+Strike Price: $50
+Current Market Price: $60
+Premium Paid: $3 per share
+Intrinsic Value: $60 - $50 = $10 per share
+Profit (if exercised): $10 (intrinsic value) - $3 (premium) = $7 per share
+
+Selling an option contract means selling the contract itself at a new premium.
+
+Call Option Example:
+
+Initial Premium Paid: $3 per share
+Current Option Premium (market value): $12 per share
+Profit (if sold): $12 (current premium) - $3 (initial premium) = $9 per share
+
+For the "selling" option, we might consider player to player exchanges.  Otherwise this option probably won't happen at least in the first version of the game.
+
+- Call Options will be available in the initial version of the game, we can consider put options (selling) later.
+
+I'm thinking that options/short "pool" of shares should only become available after the IPO has completely sold out.
+
+- Use "Derivative Market" for options.  For shorts, perhaps they should share the same pool with the IPO initial offering.
+
+I'm thinking short orders can only be performed on a company you have no ownership of, otherwise it's probably too easy to manipulate the situation in your favor.
+
+- "Insider Trading Rule": You cannot open a short position on a company you already own shares in.
+
+- Should we have a max limit on short shares you can take?  Probably start at 3 and have research deck cards that allow certain companies to be shorted at higher amounts.
+
+- Company tiers should be related to throughput and market cap (???), defined outside db possibly in constants.  Company tier could also be correlated to how much you can short.  The "stronger" and more "stable" the company, the higher you can short because it has greater risk.

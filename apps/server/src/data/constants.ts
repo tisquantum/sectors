@@ -21,7 +21,9 @@ export const phaseTimes = {
   [PhaseName.STOCK_ACTION_RESULT]: 10 * 1000,
   [PhaseName.STOCK_ACTION_REVEAL]: 20 * 1000,
   [PhaseName.STOCK_RESOLVE_MARKET_ORDER]: 15 * 1000,
-  [PhaseName.STOCK_RESOLVE_SHORT_ORDER]: 15 * 1000,
+  [PhaseName.STOCK_SHORT_ORDER_INTEREST]: 12 * 1000,
+  [PhaseName.STOCK_ACTION_SHORT_ORDER]: 12 * 1000,
+  [PhaseName.STOCK_RESOLVE_OPEN_SHORT_ORDER]: 15 * 1000,
   [PhaseName.STOCK_RESULTS_OVERVIEW]: 15 * 1000,
   [PhaseName.OPERATING_PRODUCTION]: 20 * 1000,
   [PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT]: 15 * 1000,
@@ -43,6 +45,7 @@ export const stockGridPrices = [
   470, 484, 498, 512, 526, 540, 555, 570, 585, 600
 ];
 
+/** DEPRECATED */
 export const interestRatesByTerm: { [key: number]: number } = {
   1: 2.5,
   2: 4.5,
@@ -50,6 +53,8 @@ export const interestRatesByTerm: { [key: number]: number } = {
   4: 3.5,
   5: 5,
 };
+
+export const BORROW_RATE = 5; // 5%
 
 export const getInterestRateByTerm = (term: number): number => {
   if (term in interestRatesByTerm) {

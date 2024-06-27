@@ -81,7 +81,7 @@ export class PlayerOrderService {
   }
 
   private concealOrder(order: PlayerOrder): PlayerOrderConcealed {
-    const { term, value, quantity, isSell, orderType, ...concealedOrder } =
+    const { value, quantity, isSell, orderType, ...concealedOrder } =
       order;
     return concealedOrder;
   }
@@ -120,7 +120,6 @@ export class PlayerOrderService {
   ): Promise<PlayerOrder> {
     // Filter out fields based on order type
     if (data.orderType === OrderType.MARKET) {
-      delete data.term;
       const playerId = data.Player.connect?.id;
       const companyId = data.Company.connect?.id;
       const stockRoundId = data.StockRound.connect?.id;
@@ -173,7 +172,6 @@ export class PlayerOrderService {
   
     if (data.orderType === OrderType.LIMIT) {
       delete data.quantity;
-      delete data.term;
       //get player
       const playerId = data.Player.connect?.id;
       if (!playerId) {

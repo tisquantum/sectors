@@ -12,6 +12,7 @@ import {
   RoomUser,
   Sector,
   Share,
+  ShortOrder,
   StockRound,
   User,
 } from '@prisma/client';
@@ -65,3 +66,10 @@ export type PlayerOrderWithPlayerCompany = PlayerOrder & {
   Sector: Sector;
 };
 export type SectorWithCompanies = Sector & { Company: Company[] };
+export type PlayerOrderWithPlayerCompanySectorShortOrder = PlayerOrder & {
+  Company: Company;
+  Player: Player;
+  Sector: Sector;
+  ShortOrder: ShortOrderWithShares | null;
+};
+export type ShortOrderWithShares = ShortOrder & { Share: Share[] };
