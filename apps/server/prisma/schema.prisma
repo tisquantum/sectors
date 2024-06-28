@@ -173,7 +173,7 @@ model PlayerOrder {
   sectorId       String
   orderStatus    OrderStatus
   quantity       Int?
-  value          Float?
+  value          Int?   //value to be used for limit orders
   isSell         Boolean?
   location       ShareLocation
   orderType      OrderType
@@ -193,6 +193,7 @@ enum OrderStatus {
   PENDING
   OPEN //only pertains to LIMIT, SHORT, OPTION
   FILLED
+  FILLED_PENDING_SETTLEMENT //only pertains to LIMIT
   CANCELLED
   REJECTED
 }

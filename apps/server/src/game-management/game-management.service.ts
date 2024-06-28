@@ -350,18 +350,119 @@ export class GameManagementService {
 
   async handlePhase(phase: Phase) {
     switch (phase.name) {
+      case PhaseName.STOCK_RESOLVE_LIMIT_ORDER:
+        this.resolveLimitOrders(phase);
+        break;
       case PhaseName.STOCK_RESOLVE_MARKET_ORDER:
         //resolve stock round
         this.resolveMarketOrders(phase);
         break;
-      case PhaseName.STOCK_RESOLVE_SHORT_ORDER:
-        this.resolveShortOrders(phase);
+      case PhaseName.STOCK_SHORT_ORDER_INTEREST:
+        this.resolveShortOrdersInterest(phase);
+        break;
+      case PhaseName.STOCK_RESOLVE_OPEN_SHORT_ORDER:
+        this.resolveOpenShortOrders(phase);
         break;
       default:
         return;
     }
   }
-  async resolveShortOrders(phase: Phase) {
+
+  /**
+   * Limit orders are filled on the fly as the game progresses during operations and other stock round actions,
+   * when limit orders are resolved, we fulfill any orders pending settlement by collecting money and distributing shares for buys 
+   * or paying out money and removing shares for sells. 
+   * @param phase 
+   */
+  async resolveLimitOrders(phase: Phase) {
+    if (phase.stockRoundId) {
+      const playerOrders: PlayerOrderWithPlayerCompany[] =
+        await this.prisma.playerOrder.findMany({
+          where: { stockRoundId: phase.stockRoundId },
+          include: {
+            Company: true,
+            Player: true,
+            Sector: true,
+          },
+        });
+      if (!playerOrders) {
+        throw new Error('Stock round not found');
+      }
+      //filter all limit orders that are pending settlement
+      const limitOrders = playerOrders.filter(
+        (order) =>
+          order.orderType === OrderType.LIMIT &&
+          order.orderStatus == OrderStatus.FILLED_PENDING_SETTLEMENT,
+      );
+      //pay out all limit orders that are buys by increasing cash on hand by the current stock price and adding share to portfolio
+      limitOrders.forEach(async (order) => {
+        if (!order.Company) {
+          throw new Error('Company not found');
+        }
+        if (order.isSell) {
+          //sell order ( a limit order represents 1 share only )
+          await this.prisma.player.update({
+            where: { id: order.playerId },
+            data: {
+              cashOnHand: {
+                increment: order.value || 0,
+              },
+            },
+          });
+
+          //remove one share from the player's portfolio
+          const share = await this.prisma.share.findFirst({
+            where: {
+              playerId: order.playerId,
+              companyId: order.companyId,
+              location: ShareLocation.PLAYER,
+            },
+          });
+
+          if (!share) {
+            throw new Error('Share not found');
+          }
+          //update share location to open market
+          await this.shareService.updateShare({
+            where: { id: share.id },
+            data: { location: ShareLocation.OPEN_MARKET },
+          });
+        } else {
+          //buy order
+          await this.prisma.player.update({
+            where: { id: order.playerId },
+            data: {
+              cashOnHand: {
+                decrement: order.value || 0,
+              },
+            },
+          });
+
+          //move share from open market to player portfolio
+          const share = await this.prisma.share.findFirst({
+            where: {
+              playerId: null,
+              companyId: order.companyId,
+              location: ShareLocation.OPEN_MARKET,
+            },
+          });
+          if (!share) {
+            throw new Error('Share not found');
+          }
+          //update share location to player
+          await this.shareService.updateShare({
+            where: { id: share.id },
+            data: {
+              location: ShareLocation.PLAYER,
+              Player: { connect: { id: order.playerId } },
+            },
+          });
+        }
+      });
+    }
+  }
+
+  async resolveShortOrdersInterest(phase: Phase) {
     if (phase.stockRoundId) {
       const playerOrders: PlayerOrderWithPlayerCompanySectorShortOrder[] =
         await this.prisma.playerOrder.findMany({
@@ -373,7 +474,7 @@ export class GameManagementService {
             ShortOrder: {
               include: {
                 Share: true,
-              }
+              },
             },
           },
         });
@@ -386,9 +487,53 @@ export class GameManagementService {
       );
       //collect interest from the players who have short orders by multiplying the interest rate by the "principal", which is the price of the share at the time it was issued.
       shortOrders.forEach(async (order) => {
+        if (order.ShortOrder) {
+          //after the first turn, short orders begin to accrue interest
+          const shortOrder: ShortOrderWithShares = order.ShortOrder;
+          //subtract this from the players cash on hand
+          this.prisma.player.update({
+            where: { id: order.playerId },
+            data: {
+              cashOnHand: {
+                decrement:
+                  shortOrder.borrowRate *
+                  (shortOrder.shortSalePrice * shortOrder.Share.length),
+              },
+            },
+          });
+        }
+      });
+    }
+  }
+
+  async resolveOpenShortOrders(phase: Phase) {
+    if (phase.stockRoundId) {
+      const playerOrders: PlayerOrderWithPlayerCompanySectorShortOrder[] =
+        await this.prisma.playerOrder.findMany({
+          where: { stockRoundId: phase.stockRoundId },
+          include: {
+            Company: true,
+            Player: true,
+            Sector: true,
+            ShortOrder: {
+              include: {
+                Share: true,
+              },
+            },
+          },
+        });
+      if (!playerOrders) {
+        throw new Error('Stock round not found');
+      }
+      //filter all short orders
+      const shortOrders = playerOrders.filter(
+        (order) => order.orderType === OrderType.SHORT,
+      );
+      shortOrders.forEach(async (order) => {
         //check if the short order has already been created
         if (!order.ShortOrder) {
-          const shortInitialTotalValue = ( order.quantity || 0)  * (order.Company.currentStockPrice || 0 );
+          const shortInitialTotalValue =
+            (order.quantity || 0) * (order.Company.currentStockPrice || 0);
           //see if the player has enough capital to create a margin account
           if (shortInitialTotalValue > order.Player.cashOnHand) {
             //reject order
@@ -398,10 +543,12 @@ export class GameManagementService {
                 orderStatus: OrderStatus.REJECTED,
               },
             });
-            throw new Error('Player does not have enough cash in margin account to place order');
+            throw new Error(
+              'Player does not have enough cash in margin account to place order',
+            );
           } else {
             //check player margin account balance
-            const player = order.Player;  
+            const player = order.Player;
             //get all player short orders and calculate margin account required total
             const playerShortOrders = await this.prisma.playerOrder.findMany({
               where: {
@@ -414,13 +561,21 @@ export class GameManagementService {
             });
             //add marginAccountMinimum together
             const marginAccountMinimumTotal = playerShortOrders.reduce(
-              (acc, order) => acc + (order.ShortOrder?.marginAccountMinimum || 0),
+              (acc, order) =>
+                acc + (order.ShortOrder?.marginAccountMinimum || 0),
               0,
             );
-            const newShortOrderMarginAccountMinimum = calculateMarginAccountMinimum(shortInitialTotalValue);
+            const newShortOrderMarginAccountMinimum =
+              calculateMarginAccountMinimum(shortInitialTotalValue);
             //if the player does not have enough currently, take money from cashOnHand and fill the marginAccount
-            if (marginAccountMinimumTotal + newShortOrderMarginAccountMinimum > player.cashOnHand) {
-              const difference = (marginAccountMinimumTotal + newShortOrderMarginAccountMinimum) - player.cashOnHand;
+            if (
+              marginAccountMinimumTotal + newShortOrderMarginAccountMinimum >
+              player.cashOnHand
+            ) {
+              const difference =
+                marginAccountMinimumTotal +
+                newShortOrderMarginAccountMinimum -
+                player.cashOnHand;
               await this.prisma.player.update({
                 where: { id: player.id },
                 data: {
@@ -437,22 +592,12 @@ export class GameManagementService {
           //create the short order
           await this.prisma.shortOrder.create({
             data: {
-              shortSalePrice: (order.Company.currentStockPrice || 0),
-              marginAccountMinimum: calculateMarginAccountMinimum(shortInitialTotalValue),
+              shortSalePrice: order.Company.currentStockPrice || 0,
+              marginAccountMinimum: calculateMarginAccountMinimum(
+                shortInitialTotalValue,
+              ),
               borrowRate: BORROW_RATE,
               PlayerOrder: { connect: { id: order.id } },
-            },
-          });
-        } else if(order.ShortOrder) {
-          //after the first turn, short orders begin to accrue interest
-          const shortOrder: ShortOrderWithShares = order.ShortOrder;
-          //subtract this from the players cash on hand
-          this.prisma.player.update({
-            where: { id: order.playerId },
-            data: {
-              cashOnHand: {
-                decrement: shortOrder.borrowRate * (shortOrder.shortSalePrice * shortOrder.Share.length),
-              },
             },
           });
         }
