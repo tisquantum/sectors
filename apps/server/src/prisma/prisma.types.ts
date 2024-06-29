@@ -4,6 +4,7 @@ import {
   GameLog,
   MeetingMessage,
   OperatingRound,
+  OptionContract,
   Phase,
   Player,
   PlayerOrder,
@@ -73,3 +74,12 @@ export type PlayerOrderWithPlayerCompanySectorShortOrder = PlayerOrder & {
   ShortOrder: ShortOrderWithShares | null;
 };
 export type ShortOrderWithShares = ShortOrder & { Share: Share[] };
+export type PlayerOrdersPendingOrder = PlayerOrder & {
+  Company: Company;
+  Player: Player;
+  Sector: Sector;
+  ShortOrder: ShortOrder | null;
+  OptionContract: OptionContract | null;
+};
+
+export type GameWithPhase = Game & { Phase: Phase[] };

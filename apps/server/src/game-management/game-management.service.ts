@@ -252,12 +252,18 @@ export class GameManagementService {
     const stockRound = await this.stockRoundService.createStockRound({
       Game: { connect: { id: gameId } },
     });
-    await this.startPhase({
+
+    // Start the stock round phase
+    const newPhase = await this.startPhase({
       gameId,
       stockRoundId: stockRound.id,
       phaseName: PhaseName.STOCK_MEET,
       roundType: RoundType.STOCK,
     });
+
+    // Start the timer for advancing to the next phase
+    await this.startPhaseTimer(newPhase, gameId, stockRound.id);
+
     return stockRound;
   }
 
@@ -276,7 +282,7 @@ export class GameManagementService {
    * @param stockRoundId
    * @param operatingRoundId
    */
-  private async startPhase({
+  async startPhase({
     gameId,
     phaseName,
     roundType,
@@ -290,9 +296,15 @@ export class GameManagementService {
     operatingRoundId?: number;
   }) {
     console.log('Starting phase:', phaseName);
-    this.pusherService.trigger(getGameChannelId(gameId), 'phase-started', {
-      phaseName,
-    });
+
+    try {
+      this.pusherService.trigger(getGameChannelId(gameId), 'phase-started', {
+        phaseName,
+      });
+    } catch (error) {
+      console.error('Pusher error during phase transition:', error);
+    }
+
     const phase = await this.phaseService.createPhase({
       name: phaseName,
       phaseTime: phaseTimes[phaseName],
@@ -302,20 +314,18 @@ export class GameManagementService {
         ? { connect: { id: operatingRoundId } }
         : undefined,
     });
+
     if (roundType === RoundType.STOCK) {
-      const stockRound = await this.stockRoundService.createStockRound({
+      await this.stockRoundService.createStockRound({
         Game: { connect: { id: gameId } },
       });
     } else {
-      const operatingRound =
-        await this.operatingRoundService.createOperatingRound({
-          Game: { connect: { id: gameId } },
-        });
+      await this.operatingRoundService.createOperatingRound({
+        Game: { connect: { id: gameId } },
+      });
     }
 
-    //handle phase
-    this.handlePhase(phase);
-
+    // Update game state
     const game = await this.gamesService.updateGameState({
       where: { id: gameId },
       data: {
@@ -330,6 +340,24 @@ export class GameManagementService {
       phase,
     });
 
+    // Return the created phase for further processing if needed
+    return phase;
+  }
+
+  /**
+   * This function starts the timer for the current phase and advances to the next phase.
+   *
+   * @param phase - The current phase object.
+   * @param gameId - ID of the game.
+   * @param stockRoundId - Optional ID of the stock round.
+   * @param operatingRoundId - Optional ID of the operating round.
+   */
+  private async startPhaseTimer(
+    phase: Phase,
+    gameId: string,
+    stockRoundId?: number,
+    operatingRoundId?: number,
+  ) {
     await this.timerService.setTimer(phase.id, phase.phaseTime, async () => {
       try {
         const nextPhase = determineNextGamePhase(phase.name);
@@ -348,10 +376,18 @@ export class GameManagementService {
     });
   }
 
+  /**
+   * Main function to handle phase resolution.
+   * @param phase
+   * @returns
+   */
   async handlePhase(phase: Phase) {
     switch (phase.name) {
       case PhaseName.STOCK_RESOLVE_LIMIT_ORDER:
         this.resolveLimitOrders(phase);
+        break;
+      case PhaseName.STOCK_OPEN_LIMIT_ORDERS:
+        this.openLimitOrders(phase);
         break;
       case PhaseName.STOCK_RESOLVE_MARKET_ORDER:
         //resolve stock round
@@ -370,9 +406,9 @@ export class GameManagementService {
 
   /**
    * Limit orders are filled on the fly as the game progresses during operations and other stock round actions,
-   * when limit orders are resolved, we fulfill any orders pending settlement by collecting money and distributing shares for buys 
-   * or paying out money and removing shares for sells. 
-   * @param phase 
+   * when limit orders are resolved, we fulfill any orders pending settlement by collecting money and distributing shares for buys
+   * or paying out money and removing shares for sells.
+   * @param phase
    */
   async resolveLimitOrders(phase: Phase) {
     if (phase.stockRoundId) {
@@ -459,6 +495,40 @@ export class GameManagementService {
           });
         }
       });
+    }
+  }
+
+  async openLimitOrders(phase: Phase) {
+    if (phase.stockRoundId) {
+      const playerOrders: PlayerOrderWithPlayerCompany[] =
+        await this.prisma.playerOrder.findMany({
+          where: { stockRoundId: phase.stockRoundId },
+          include: {
+            Company: true,
+            Player: true,
+            Sector: true,
+          },
+        });
+      if (!playerOrders) {
+        throw new Error('Stock round not found');
+      }
+      //filter all limit orders that are pending settlement
+      const limitOrders = playerOrders.filter(
+        (order) =>
+          order.orderType === OrderType.LIMIT &&
+          order.orderStatus == OrderStatus.PENDING,
+      );
+      //update all orders to be pending settlement
+      await Promise.all(
+        limitOrders.map(async (order) => {
+          await this.prisma.playerOrder.update({
+            where: { id: order.id },
+            data: {
+              orderStatus: OrderStatus.OPEN,
+            },
+          });
+        }),
+      );
     }
   }
 

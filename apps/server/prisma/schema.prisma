@@ -173,7 +173,7 @@ model PlayerOrder {
   sectorId       String
   orderStatus    OrderStatus
   quantity       Int?
-  value          Int?   //value to be used for limit orders
+  value          Int? //value to be used for limit orders
   isSell         Boolean?
   location       ShareLocation
   orderType      OrderType
@@ -363,6 +363,7 @@ enum PhaseName {
   STOCK_ACTION_SHORT_ORDER //let players cover their open shorts if they choose to
   STOCK_RESOLVE_OPEN_SHORT_ORDER
   STOCK_RESOLVE_OPTION_ORDER //players either succeed or fail after expiration (?)
+  STOCK_OPEN_LIMIT_ORDERS
   STOCK_RESULTS_OVERVIEW
   OPERATING_PRODUCTION
   OPERATING_STOCK_PRICE_ADJUSTMENT

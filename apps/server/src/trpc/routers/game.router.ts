@@ -2,9 +2,12 @@ import { PusherService } from 'nestjs-pusher';
 import { z } from 'zod';
 import { GamesService } from '@server/games/games.service';
 import { TrpcService } from '../trpc.service';
-import { Game, Prisma, RoundType } from '@prisma/client';
+import { Game, PhaseName, Prisma, RoundType } from '@prisma/client';
 import { GameManagementService } from '@server/game-management/game-management.service';
-import { EVENT_GAME_STARTED, getRoomChannelId } from '@server/pusher/pusher.types';
+import {
+  EVENT_GAME_STARTED,
+  getRoomChannelId,
+} from '@server/pusher/pusher.types';
 
 type Context = {
   gamesService: GamesService;
@@ -82,9 +85,13 @@ export default (trpc: TrpcService, ctx: Context) =>
         }
 
         // Notify all users in the room that the game has started
-        ctx.pusherService.trigger(getRoomChannelId(input.roomId), EVENT_GAME_STARTED, {
-          gameId: game.id,
-        });
+        ctx.pusherService.trigger(
+          getRoomChannelId(input.roomId),
+          EVENT_GAME_STARTED,
+          {
+            gameId: game.id,
+          },
+        );
 
         return {
           success: true,
@@ -140,5 +147,24 @@ export default (trpc: TrpcService, ctx: Context) =>
       .query(async ({ input }) => {
         const { gameId } = input;
         return ctx.gamesService.getGameState(gameId);
+      }),
+
+    forceNextPhase: trpc.procedure
+      .input(
+        z.object({
+          gameId: z.string(),
+          phaseName: z.nativeEnum(PhaseName),
+          roundType: z.nativeEnum(RoundType),
+          stockRoundId: z.number().optional(),
+        }),
+      )
+      .mutation(async ({ input }) => {
+        const { gameId, phaseName, roundType, stockRoundId } = input;
+        return ctx.gameManagementService.startPhase({
+          gameId,
+          phaseName,
+          roundType,
+          stockRoundId,
+        });
       }),
   });

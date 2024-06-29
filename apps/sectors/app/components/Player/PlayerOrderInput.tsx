@@ -30,6 +30,7 @@ import React, {
 } from "react";
 import { useGame } from "../Game/GameContext";
 import {
+  BORROW_RATE,
   MAX_LIMIT_ORDER,
   MAX_MARKET_ORDER,
   MAX_SHORT_ORDER,
@@ -37,56 +38,30 @@ import {
 import { PlayerOrderWithCompany } from "@server/prisma/prisma.types";
 import { getPseudoSpend } from "@server/data/helpers";
 
-const RiskAssessment = ({ termValue }: { termValue: number }) => {
-  const getRiskMetrics = (term: number) => {
-    switch (term) {
-      case 2:
-        return { interestRate: "40%", maxStockValue: 4 };
-      case 3:
-        return { interestRate: "30%", maxStockValue: 6 };
-      case 4:
-        return { interestRate: "20%", maxStockValue: 8 };
-      case 5:
-        return { interestRate: "15%", maxStockValue: 10 };
-      default:
-        return { interestRate: "N/A", maxStockValue: 1 };
-    }
-  };
-
-  const { interestRate, maxStockValue } = getRiskMetrics(termValue);
-
+const RiskAssessment = () => {
   return (
     <div>
-      <div>Loan Interest Rate {interestRate}</div>
+      <div>Loan Interest Rate {BORROW_RATE}%</div>
     </div>
   );
 };
 
 const ShortOrderInput: React.FC<{
-  onTermChange: (value: number) => void;
+  company: Company;
   onShareChange: (value: number) => void;
-}> = ({ onTermChange, onShareChange }) => {
-  const [termValue, setTermValue] = useState<number>(2);
-  const [maxStockValue, setMaxStockValue] = useState<number>(4);
+}> = ({ company, onShareChange }) => {
+  const [maxStockValue, setMaxStockValue] = useState<number>(3);
   const [minStockValue, setMinStockValue] = useState<number>(1);
   const [shareValue, setShareValue] = useState<number>(1);
-
-  useEffect(() => {
-    setMaxStockValue(getMaxStockValue(termValue));
-    setMinStockValue(getMinStockValue(termValue));
-  }, [termValue]);
+  const [minimumMarginAccount, setMinimumMarginAccount] = useState<number>(0);
 
   useEffect(() => {
     setShareValue(minStockValue);
   }, [minStockValue]);
 
-  const handleTermChange = (value: number | number[]) => {
-    //if array, use zero
-    if (Array.isArray(value)) {
-      value = value[0];
-    }
-    setTermValue(value);
-  };
+  useEffect(() => {
+    setMinimumMarginAccount((company.currentStockPrice || 0) * shareValue);
+  }, [shareValue]);
 
   const handleShareChange = (value: number | number[]) => {
     //if array, use zero
@@ -96,70 +71,33 @@ const ShortOrderInput: React.FC<{
     setShareValue(value);
   };
 
-  const getMaxStockValue = (term: number | number[]): number => {
-    switch (term) {
-      case 2:
-        return 4;
-      case 3:
-        return 6;
-      case 4:
-        return 8;
-      case 5:
-        return 10;
-      default:
-        return 1;
-    }
-  };
-
-  const getMinStockValue = (term: number): number => {
-    switch (term) {
-      case 2:
-        return 1;
-      case 3:
-        return 3;
-      case 4:
-        return 5;
-      case 5:
-        return 7;
-      default:
-        return 1;
-    }
-  };
-
   return (
     <>
-      <RiskAssessment termValue={termValue} />
+      <RiskAssessment />
+      <div className="flex gap-2">
+        <span>Minimum Margin Account</span>
+        <span>${minimumMarginAccount}</span>
+      </div>
+      <div>
+        <span>All collected dividends must be paid back to lender</span>
+      </div>
       <Slider
-        key={`term-slider-${termValue}`}
         size="md"
         step={1}
         color="foreground"
-        label="Term"
+        label="Shares"
         showSteps={true}
-        maxValue={5}
-        minValue={2}
-        defaultValue={2}
-        onChangeEnd={handleTermChange}
+        maxValue={maxStockValue}
+        minValue={minStockValue}
+        defaultValue={minStockValue}
+        value={shareValue}
+        onChange={handleShareChange}
         className="max-w-md"
+        marks={[
+          { value: minStockValue, label: `${minStockValue}` },
+          { value: maxStockValue, label: `${maxStockValue}` },
+        ]}
       />
-      {termValue >= 2 && termValue <= 5 && (
-        <Slider
-          size="md"
-          step={1}
-          color="foreground"
-          label="Shares"
-          showSteps={true}
-          maxValue={maxStockValue}
-          minValue={minStockValue}
-          defaultValue={minStockValue}
-          onChangeEnd={handleShareChange}
-          className="max-w-md"
-          marks={[
-            { value: minStockValue, label: `${minStockValue}` },
-            { value: maxStockValue, label: `${maxStockValue}` },
-          ]}
-        />
-      )}
     </>
   );
 };
@@ -185,44 +123,41 @@ const OrderCounter: React.FC<{
 const LimitOrderInput = ({
   handleLimitOrder,
   handleSelectionIsBuy,
+  isBuy,
 }: {
   handleLimitOrder: (limitOrderValue: number) => void;
   handleSelectionIsBuy: (selection: boolean) => void;
+  isBuy?: boolean;
 }) => {
-  const [isBuy, setIsBuy] = useState(true);
+  const { authPlayer } = useGame();
+  const { data: shares, isLoading } = trpc.share.listShares.useQuery({
+    where: { playerId: authPlayer.id },
+  });
   const [limitOrderValue, setLimitOrderValue] = useState<number>(0);
   useEffect(() => {
     handleLimitOrder(limitOrderValue);
   }, [limitOrderValue]);
   return (
     <>
-      <BuyOrSell handleSelectionIsBuy={handleSelectionIsBuy} alsoCancel />
-      {isBuy ? (
-        <Input
-          id="loAmount"
-          type="number"
-          label="Limit Order Amount"
-          placeholder="0.00"
-          labelPlacement="inside"
-          onValueChange={(value: string) => setLimitOrderValue(Number(value))}
-          startContent={
-            <div className="pointer-events-none flex items-center">
-              <span className="text-default-400 text-small">$</span>
-            </div>
-          }
-        />
-      ) : (
-        <CheckboxGroup
-          label="Select Pending Limit Orders to Cancel"
-          defaultValue={["company-a", "company-b"]}
-          orientation="horizontal"
-          className="max-w-md"
-        >
-          <Checkbox value="company-a">CAP-LO+@35</Checkbox>
-          <Checkbox value="company-b">CAP-LO+@35</Checkbox>
-          <Checkbox value="company-c">AWS-LO-@20</Checkbox>
-        </CheckboxGroup>
+      <BuyOrSell handleSelectionIsBuy={handleSelectionIsBuy} />
+      {!!!isBuy && (
+        <div>
+          <span>Shares Owned x {shares?.length}</span>
+        </div>
       )}
+      <Input
+        id="loAmount"
+        type="number"
+        label="Limit Order Amount"
+        placeholder="0.00"
+        labelPlacement="inside"
+        onValueChange={(value: string) => setLimitOrderValue(Number(value))}
+        startContent={
+          <div className="pointer-events-none flex items-center">
+            <span className="text-default-400 text-small">$</span>
+          </div>
+        }
+      />
     </>
   );
 };
@@ -297,13 +232,13 @@ const TabContentMO: React.FC<TabContentProps> = ({
 };
 
 interface TabContentPropsSO {
-  onTermChange: (value: number) => void;
+  company: Company;
   onShareChange: (value: number) => void;
   ordersRemaining: number;
 }
 
 const TabContentSO: React.FC<TabContentPropsSO> = ({
-  onTermChange,
+  company,
   onShareChange,
   ordersRemaining,
 }) => {
@@ -313,10 +248,7 @@ const TabContentSO: React.FC<TabContentPropsSO> = ({
         ordersRemaining={ordersRemaining}
         maxOrders={MAX_SHORT_ORDER}
       />
-      <ShortOrderInput
-        onTermChange={onTermChange}
-        onShareChange={onShareChange}
-      />
+      <ShortOrderInput company={company} onShareChange={onShareChange} />
     </div>
   );
 };
@@ -325,12 +257,14 @@ interface TabContentPropsLO {
   handleLimitOrderChange: (limitOrderValue: number) => void;
   handleSelectionIsBuy: (selection: boolean) => void;
   ordersRemaining: number;
+  isBuy?: boolean;
 }
 
 const TabContentLO: React.FC<TabContentPropsLO> = ({
   handleLimitOrderChange,
   handleSelectionIsBuy,
   ordersRemaining,
+  isBuy,
 }) => {
   return (
     <div className="flex flex-col text-center items-center center-content justify-center gap-2">
@@ -341,6 +275,7 @@ const TabContentLO: React.FC<TabContentPropsLO> = ({
       <LimitOrderInput
         handleLimitOrder={handleLimitOrderChange}
         handleSelectionIsBuy={handleSelectionIsBuy}
+        isBuy={isBuy}
       />
     </div>
   );
@@ -391,9 +326,9 @@ const PseudoBalance = ({
   if (isLoading) return null;
 
   const pseudoSpend = playerOrders ? getPseudoSpend(playerOrders) : 0;
-  console.log('pseudoSpend', pseudoSpend, currentOrderValue);
+  console.log("pseudoSpend", pseudoSpend, currentOrderValue);
   const netSpend = Number(currentOrderValue || 0) + Number(pseudoSpend);
-  console.log('cashOnHand', authPlayer.cashOnHand, 'netSpend', netSpend);
+  console.log("cashOnHand", authPlayer.cashOnHand, "netSpend", netSpend);
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-1">
@@ -413,10 +348,12 @@ const PlayerOrderInput = ({
   currentOrder,
   handleCancel,
   isIpo,
+  handlePlayerInputConfirmed
 }: {
   currentOrder: Company;
   handleCancel: () => void;
   isIpo: boolean;
+  handlePlayerInputConfirmed: () => void;
 }) => {
   const { gameId, gameState, authPlayer, currentPhase, refetchAuthPlayer } =
     useGame();
@@ -442,7 +379,6 @@ const PlayerOrderInput = ({
       phaseId: gameState.currentPhaseId ?? "",
       sectorId: currentOrder.sectorId,
       quantity: share,
-      term,
       value: limitOrderValue,
       isSell: !!!isBuy,
       orderType,
@@ -450,6 +386,7 @@ const PlayerOrderInput = ({
     });
     setIsSubmit(true);
     refetchAuthPlayer();
+    handlePlayerInputConfirmed();
   };
   const handleSelectionChange = (key: React.Key) => {
     switch (key) {
@@ -498,6 +435,7 @@ const PlayerOrderInput = ({
               <Card>
                 <CardBody>
                   <TabContentLO
+                    isBuy={isBuy}
                     handleLimitOrderChange={setLimitOrderValue}
                     handleSelectionIsBuy={setIsBuy}
                     ordersRemaining={authPlayer.limitOrderActions}
@@ -509,7 +447,7 @@ const PlayerOrderInput = ({
               <Card>
                 <CardBody>
                   <TabContentSO
-                    onTermChange={setTerm}
+                    company={currentOrder}
                     onShareChange={setShare}
                     ordersRemaining={authPlayer.shortOrderActions}
                   />

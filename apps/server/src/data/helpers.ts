@@ -1,11 +1,23 @@
-import { Company, OrderType, PhaseName, RoundType, Sector, ShareLocation, StockTier } from '@prisma/client';
+import {
+  Company,
+  OrderType,
+  PhaseName,
+  RoundType,
+  Sector,
+  ShareLocation,
+  StockTier,
+} from '@prisma/client';
 import { PlayerOrderWithCompany } from '@server/prisma/prisma.types';
-import { StockTierChartRange, stockGridPrices, stockTierChartRanges } from './constants';
-
+import {
+  StockTierChartRange,
+  stockGridPrices,
+  stockTierChartRanges,
+} from './constants';
+let stockActionCounter = 0;
 /**
  * Controls the flow of the game by determining the next phase.
- * @param phaseName 
- * @returns 
+ * @param phaseName
+ * @returns
  */
 export function determineNextGamePhase(phaseName: PhaseName): {
   phaseName: PhaseName;
@@ -13,28 +25,77 @@ export function determineNextGamePhase(phaseName: PhaseName): {
 } {
   switch (phaseName) {
     case PhaseName.STOCK_MEET:
-      return { phaseName: PhaseName.STOCK_ACTION_ORDER, roundType: RoundType.STOCK };
+      stockActionCounter = 0;
+      return {
+        phaseName: PhaseName.STOCK_ACTION_ORDER,
+        roundType: RoundType.STOCK,
+      };
     case PhaseName.STOCK_ACTION_ORDER:
-      return { phaseName: PhaseName.STOCK_ACTION_RESULT, roundType: RoundType.STOCK };
+      if (stockActionCounter < 3) {
+        stockActionCounter++;
+        return {
+          phaseName: PhaseName.STOCK_ACTION_ORDER,
+          roundType: RoundType.STOCK,
+        };
+      } else {
+        stockActionCounter = 0; // Reset counter after 3 repetitions
+        return {
+          phaseName: PhaseName.STOCK_ACTION_RESULT,
+          roundType: RoundType.STOCK,
+        };
+      }
     case PhaseName.STOCK_ACTION_RESULT:
       return {
         phaseName: PhaseName.STOCK_ACTION_REVEAL,
         roundType: RoundType.STOCK,
       };
     case PhaseName.STOCK_ACTION_REVEAL:
-      return { phaseName: PhaseName.STOCK_RESOLVE_MARKET_ORDER, roundType: RoundType.STOCK };
+      return {
+        phaseName: PhaseName.STOCK_RESOLVE_MARKET_ORDER,
+        roundType: RoundType.STOCK,
+      };
     case PhaseName.STOCK_RESOLVE_MARKET_ORDER:
-      return { phaseName: PhaseName.STOCK_SHORT_ORDER_INTEREST, roundType: RoundType.STOCK };
+      return {
+        phaseName: PhaseName.STOCK_SHORT_ORDER_INTEREST,
+        roundType: RoundType.STOCK,
+      };
     case PhaseName.STOCK_SHORT_ORDER_INTEREST:
-      return { phaseName: PhaseName.STOCK_ACTION_SHORT_ORDER, roundType: RoundType.STOCK };
+      return {
+        phaseName: PhaseName.STOCK_ACTION_SHORT_ORDER,
+        roundType: RoundType.STOCK,
+      };
     case PhaseName.STOCK_ACTION_SHORT_ORDER:
-      return { phaseName: PhaseName.STOCK_RESOLVE_OPEN_SHORT_ORDER, roundType: RoundType.STOCK };
+      return {
+        phaseName: PhaseName.STOCK_RESOLVE_OPEN_SHORT_ORDER,
+        roundType: RoundType.STOCK,
+      };
     case PhaseName.STOCK_RESOLVE_OPEN_SHORT_ORDER:
-      return { phaseName: PhaseName.STOCK_RESOLVE_OPTION_ORDER, roundType: RoundType.STOCK };
+      return {
+        phaseName: PhaseName.STOCK_RESOLVE_OPTION_ORDER,
+        roundType: RoundType.STOCK,
+      };
     case PhaseName.STOCK_RESOLVE_OPTION_ORDER:
-      return { phaseName: PhaseName.STOCK_RESULTS_OVERVIEW, roundType: RoundType.STOCK };
+      return {
+        phaseName: PhaseName.STOCK_OPEN_LIMIT_ORDERS,
+        roundType: RoundType.STOCK,
+      };
+    //we do this here so that limit orders that are opened can't be closed on the first turn.
+    //they effectively are the "slowest" order to place.
+    case PhaseName.STOCK_OPEN_LIMIT_ORDERS:
+      return {
+        phaseName: PhaseName.STOCK_RESULTS_OVERVIEW,
+        roundType: RoundType.STOCK,
+      };
     case PhaseName.STOCK_RESULTS_OVERVIEW:
-      return { phaseName: PhaseName.OPERATING_MEET, roundType: RoundType.STOCK };
+      return {
+        phaseName: PhaseName.STOCK_MEET,
+        roundType: RoundType.STOCK,
+      };
+    case PhaseName.OPERATING_MEET:
+      return {
+        phaseName: PhaseName.OPERATING_ACTION_COMPANY_VOTE,
+        roundType: RoundType.OPERATING,
+      };
     default:
       return { phaseName: PhaseName.STOCK_MEET, roundType: RoundType.STOCK };
   }
@@ -43,7 +104,7 @@ export function determineNextGamePhase(phaseName: PhaseName): {
 export const getPseudoSpend = (orders: PlayerOrderWithCompany[]) => {
   //filter orders by MARKET ORDER
   const marketOrders = orders.filter(
-    (order) => order.orderType === OrderType.MARKET
+    (order) => order.orderType === OrderType.MARKET,
   );
   //get sell orders
   const sellOrders = marketOrders.filter((order) => order.isSell);
@@ -52,57 +113,57 @@ export const getPseudoSpend = (orders: PlayerOrderWithCompany[]) => {
 
   //filter sell orders by ipo
   const sellOrdersIpo = sellOrders.filter(
-    (order) => order.location == ShareLocation.IPO
+    (order) => order.location == ShareLocation.IPO,
   );
   //filter buy orders by ipo
   const buyOrdersIpo = buyOrders.filter(
-    (order) => order.location == ShareLocation.IPO
+    (order) => order.location == ShareLocation.IPO,
   );
   //filter sell orders by open market
   const sellOrdersOpenMarket = sellOrders.filter(
-    (order) => order.location == ShareLocation.OPEN_MARKET
+    (order) => order.location == ShareLocation.OPEN_MARKET,
   );
   //filter buy orders by open market
   const buyOrdersOpenMarket = buyOrders.filter(
-    (order) => order.location == ShareLocation.OPEN_MARKET
+    (order) => order.location == ShareLocation.OPEN_MARKET,
   );
 
   //calculate total spend
   const totalBuyIpo = buyOrdersIpo.reduce(
     (acc, order) =>
       acc + (order.quantity ?? 0) * (order.Company.currentStockPrice ?? 0),
-    0
+    0,
   );
 
   const totalSellIpo = sellOrdersIpo.reduce(
     (acc, order) =>
       acc + (order.quantity ?? 0) * (order.Company.currentStockPrice ?? 0),
-    0
+    0,
   );
 
   const totalBuyOpenMarket = buyOrdersOpenMarket.reduce(
     (acc, order) =>
       acc + (order.quantity ?? 0) * (order.Company.currentStockPrice ?? 0),
-    0
+    0,
   );
 
   const totalSellOpenMarket = sellOrdersOpenMarket.reduce(
     (acc, order) =>
       acc + (order.quantity ?? 0) * (order.Company.currentStockPrice ?? 0),
-    0
+    0,
   );
   console.log('totalBuyIpo', totalBuyIpo);
   console.log('totalSellIpo', totalSellIpo);
   console.log('totalBuyOpenMarket', totalBuyOpenMarket);
   console.log('totalSellOpenMarket', totalSellOpenMarket);
-  return (
-    totalBuyIpo - totalSellIpo + totalBuyOpenMarket - totalSellOpenMarket
-  );
+  return totalBuyIpo - totalSellIpo + totalBuyOpenMarket - totalSellOpenMarket;
 };
 
 export function determineFloatPrice(sector: Sector) {
-  const { floatNumberMin, floatNumberMax} = sector;
-  const floatValue = Math.floor(Math.random() * (floatNumberMax - floatNumberMin + 1) + floatNumberMin);
+  const { floatNumberMin, floatNumberMax } = sector;
+  const floatValue = Math.floor(
+    Math.random() * (floatNumberMax - floatNumberMin + 1) + floatNumberMin,
+  );
   // pick the number closest in the stockGridPrices array
   const closest = stockGridPrices.reduce((a, b) => {
     return Math.abs(b - floatValue) < Math.abs(a - floatValue) ? b : a;
@@ -111,19 +172,27 @@ export function determineFloatPrice(sector: Sector) {
 }
 
 function getTierMaxValue(tier: StockTier): number {
-  return stockTierChartRanges.find(range => range.tier === tier)!.chartMaxValue;
+  return stockTierChartRanges.find((range) => range.tier === tier)!
+    .chartMaxValue;
 }
 
 function getCurrentTierBySharePrice(currentSharePrice: number): StockTier {
-  return stockTierChartRanges.find(range => currentSharePrice <= range.chartMaxValue)!.tier;
+  return stockTierChartRanges.find(
+    (range) => currentSharePrice <= range.chartMaxValue,
+  )!.tier;
 }
 
 export function calculateStepsAndRemainder(
   netDifference: number,
   tierSharesFulfilled: number,
   currentTierFillSize: number,
-  currentSharePrice: number
-): { steps: number; newTierSharesFulfilled: number; newTier: StockTier; newSharePrice: number } {
+  currentSharePrice: number,
+): {
+  steps: number;
+  newTierSharesFulfilled: number;
+  newTier: StockTier;
+  newSharePrice: number;
+} {
   let steps = 0;
   let newTierSharesFulfilled = tierSharesFulfilled;
   let remainingShares = netDifference;
@@ -131,7 +200,8 @@ export function calculateStepsAndRemainder(
   let currentTier = getCurrentTierBySharePrice(currentSharePrice);
 
   while (remainingShares > 0) {
-    const sharesNeededForCurrentStep = currentTierFillSize - newTierSharesFulfilled;
+    const sharesNeededForCurrentStep =
+      currentTierFillSize - newTierSharesFulfilled;
 
     if (remainingShares >= sharesNeededForCurrentStep) {
       remainingShares -= sharesNeededForCurrentStep;
@@ -140,12 +210,15 @@ export function calculateStepsAndRemainder(
       currentPriceIndex++;
 
       // Check if the new share price exceeds the current tier's max value
-      if (currentPriceIndex < stockGridPrices.length && stockGridPrices[currentPriceIndex] > getTierMaxValue(currentTier)) {
+      if (
+        currentPriceIndex < stockGridPrices.length &&
+        stockGridPrices[currentPriceIndex] > getTierMaxValue(currentTier)
+      ) {
         const nextTier = getNextTier(currentTier);
         if (nextTier) {
           currentTier = nextTier;
           currentTierFillSize = stockTierChartRanges.find(
-            (range) => range.tier === currentTier
+            (range) => range.tier === currentTier,
           )!.fillSize;
         }
       }
@@ -158,13 +231,13 @@ export function calculateStepsAndRemainder(
     steps,
     newTierSharesFulfilled,
     newTier: currentTier,
-    newSharePrice: stockGridPrices[currentPriceIndex]
+    newSharePrice: stockGridPrices[currentPriceIndex],
   };
 }
 
 export function getNextTier(currentTier: StockTier): StockTier | undefined {
   const currentIndex = stockTierChartRanges.findIndex(
-    range => range.tier === currentTier
+    (range) => range.tier === currentTier,
   );
   if (currentIndex !== -1 && currentIndex < stockTierChartRanges.length - 1) {
     return stockTierChartRanges[currentIndex + 1].tier;

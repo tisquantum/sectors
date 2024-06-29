@@ -24,7 +24,11 @@ const renderBasedOnOrderType = (playerOrder: PlayerOrderWithCompany) => {
   );
 };
 
-const PlayerCurrentQueuedOrders = () => {
+const PlayerCurrentQueuedOrders = ({
+  newOrderCount,
+}: {
+  newOrderCount: number;
+}) => {
   const { currentPhase, authPlayer } = useGame();
   const {
     data: playerOrders,
@@ -39,6 +43,11 @@ const PlayerCurrentQueuedOrders = () => {
   useEffect(() => {
     refetch();
   }, [currentPhase?.name]);
+  useEffect(() => {
+    if (newOrderCount > 0) {
+      refetch();
+    }
+  }, [newOrderCount]);
   if (isLoading) return <div>Loading...</div>;
   if (playerOrders == undefined) return null;
 

@@ -21,6 +21,11 @@ const StockRoundAction = () => {
   useEffect(() => {
     setCurrentOrder(null);
   }, [currentPhase?.name]);
+  const [newOrderCount, setNewOrderCount] = useState<number>(0);
+  const doSomethingPostOrderConfirmed = () => {
+    console.log("doSomethingPostOrderConfirmed");
+    setNewOrderCount((prev) => prev + 1);
+  };
   return (
     <div className="flex flex-col items-center h-full">
       <div className="basis-3/4 justify-center items-center content-center">
@@ -33,6 +38,7 @@ const StockRoundAction = () => {
               currentOrder={currentOrder}
               handleCancel={() => {}}
               isIpo={isIpo}
+              handlePlayerInputConfirmed={doSomethingPostOrderConfirmed}
             />
           ) : (
             <div>Place an Order With A Company to Start.</div>
@@ -40,7 +46,7 @@ const StockRoundAction = () => {
         ) : (
           <div>Viewing results.</div>
         )}
-        <PlayerCurrentQueuedOrders />
+        <PlayerCurrentQueuedOrders newOrderCount={newOrderCount} />
       </div>
     </div>
   );

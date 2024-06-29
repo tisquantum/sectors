@@ -6,6 +6,7 @@ import {
   PlayerOrderConcealedWithPlayer,
   PlayerOrderWithCompany,
   PlayerOrderWithPlayerCompany,
+  PlayerOrdersPendingOrder,
 } from '@server/prisma/prisma.types';
 import { getPseudoSpend } from '@server/data/helpers';
 
@@ -81,8 +82,7 @@ export class PlayerOrderService {
   }
 
   private concealOrder(order: PlayerOrder): PlayerOrderConcealed {
-    const { value, quantity, isSell, orderType, ...concealedOrder } =
-      order;
+    const { value, quantity, isSell, orderType, ...concealedOrder } = order;
     return concealedOrder;
   }
 
@@ -115,6 +115,30 @@ export class PlayerOrderService {
     });
   }
 
+  async playerOrdersPendingOrders(params: {
+    skip?: number;
+    take?: number;
+    cursor?: Prisma.PlayerOrderWhereUniqueInput;
+    where?: Prisma.PlayerOrderWhereInput;
+    orderBy?: Prisma.PlayerOrderOrderByWithRelationInput;
+  }): Promise<PlayerOrdersPendingOrder[]> {
+    const { skip, take, cursor, where, orderBy } = params;
+    return this.prisma.playerOrder.findMany({
+      skip,
+      take,
+      cursor,
+      where,
+      orderBy,
+      include: {
+        Company: true,
+        Player: true,
+        Sector: true,
+        ShortOrder: true,
+        OptionContract: true,
+      },
+    });
+  }
+
   async createPlayerOrder(
     data: Prisma.PlayerOrderCreateInput,
   ): Promise<PlayerOrder> {
@@ -123,11 +147,11 @@ export class PlayerOrderService {
       const playerId = data.Player.connect?.id;
       const companyId = data.Company.connect?.id;
       const stockRoundId = data.StockRound.connect?.id;
-  
+
       if (!playerId || !companyId || !stockRoundId) {
         throw new Error('Invalid data input');
       }
-  
+
       const [player, company, playerOrders] = await this.prisma.$transaction([
         this.prisma.player.findUnique({
           where: { id: playerId },
@@ -144,18 +168,18 @@ export class PlayerOrderService {
           include: { Company: true },
         }),
       ]);
-  
+
       if (!player || !company) {
         throw new Error('Player or Company not found');
       }
 
-      if(player.marketOrderActions === 0) {
+      if (player.marketOrderActions === 0) {
         throw new Error('Player has no more market order actions');
       }
-  
+
       const spend = getPseudoSpend(playerOrders);
       const orderValue = data.quantity! * company.currentStockPrice!;
-  
+
       if (data.isSell) {
         const playerShares = player.Share.filter(
           (share) => share.companyId === companyId,
@@ -169,7 +193,7 @@ export class PlayerOrderService {
         }
       }
     }
-  
+
     if (data.orderType === OrderType.LIMIT) {
       delete data.quantity;
       //get player
@@ -207,7 +231,7 @@ export class PlayerOrderService {
         throw new Error('Player has no more short order actions');
       }
     }
-  
+
     return this.prisma.playerOrder.create({ data });
   }
 

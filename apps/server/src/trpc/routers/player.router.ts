@@ -60,6 +60,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           marketOrderActions: 0,
           limitOrderActions: 0,
           shortOrderActions: 0,
+          marginAccount: 0,
           User: { connect: { id: input.userId } },
           Game: { connect: { id: input.gameId } },
         };

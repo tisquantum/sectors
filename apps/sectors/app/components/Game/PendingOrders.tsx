@@ -11,7 +11,11 @@ import "./PendingOrders.css";
 import { trpc } from "@sectors/app/trpc";
 import { useGame } from "./GameContext";
 import { OrderStatus, OrderType, Prisma } from "@server/prisma/prisma.client";
-import { PlayerOrderWithPlayerCompany } from "@server/prisma/prisma.types";
+import {
+  PlayerOrderWithPlayerCompany,
+  PlayerOrderWithPlayerCompanySectorShortOrder,
+  PlayerOrdersPendingOrder,
+} from "@server/prisma/prisma.types";
 import { interestRatesByTerm } from "@server/data/constants";
 import { create } from "domain";
 import { sectorColors } from "@server/data/gameData";
@@ -67,7 +71,7 @@ const PendingMarketOrders = ({
             <div className="text-lg font-bold flex gap-2">
               {/* We need to animate the change in stock price or at least show the previous price and the current price.*/}
               <ArrowTrendingUpIcon className="size-4" /> $
-              {orders[0].Company.currentStockPrice}  
+              {orders[0].Company.currentStockPrice}
             </div>
             <div className="bg-green-900 p-2 font-bold">
               {company} {netDifference}
@@ -170,35 +174,26 @@ const PendingLimitOrders = ({
 const PendingShortOrders = ({
   shortOrders,
 }: {
-  shortOrders: PlayerOrderWithPlayerCompany[];
+  shortOrders: PlayerOrdersPendingOrder[];
 }) => {
-  // Assuming shortOrders is an array of objects with term, avatar, name, companyName, shares, and interestRate
-  const terms = [1, 2, 3, 4, 5];
-
   return (
     <div className="space-y-2">
-      {terms.map((term) => (
-        <div key={term} className="space-y-1">
-          Term {term}
-          {shortOrders
-            .filter((order) => order.term === term)
-            .map((order, index) => (
-              <div
-                key={index}
-                className="bg-gray-500 p-2 rounded flex items-center gap-2"
-              >
-                <Avatar name={order.Player.nickname} />
-                <div>{order.Company.name}</div>
-                <div>
-                  {order.quantity} @ {interestRatesByTerm[order?.term || 5]}%
-                </div>
-              </div>
-            ))}
-          {term < 5 && (
-            <div className="flex justify-center">
-              <ArrowUpIcon className="size-5" />
-            </div>
-          )}
+      {shortOrders.map((order, index) => (
+        <div
+          key={index}
+          className="bg-gray-500 p-2 rounded flex items-center gap-2"
+        >
+          <Avatar name={order.Player.nickname} />
+          <div>{order.Company.name}</div>
+          <div>
+            <span>${order.ShortOrder?.shortSalePrice}</span>
+            <span>
+              {order.quantity} SHARES @ {order.ShortOrder?.borrowRate}%
+            </span>
+            <span>
+              Margin Account Minimum ${order.ShortOrder?.marginAccountMinimum}
+            </span>
+          </div>
         </div>
       ))}
     </div>
@@ -208,7 +203,7 @@ const PendingShortOrders = ({
 const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
   const { gameId } = useGame();
   const { data: pendingOrders, isLoading } =
-    trpc.playerOrder.listPlayerOrdersWithPlayerCompany.useQuery({
+    trpc.playerOrder.listPlayerOrdersPendingOrders.useQuery({
       orderBy: {
         createdAt: Prisma.SortOrder.asc,
       },
@@ -221,9 +216,14 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
   if (isLoading) return <div>Loading...</div>;
   if (!pendingOrders) return <div>No pending orders.</div>;
 
-  const limitOrders = pendingOrders.filter(
-    (order) => order.orderType === OrderType.LIMIT
+  const limitOrdersPendingSettlement = pendingOrders.filter(
+    (order) => order.orderType === OrderType.LIMIT && order.orderStatus === OrderStatus.FILLED_PENDING_SETTLEMENT
   );
+
+  const limitOrdersPendingToOpen = pendingOrders.filter(
+    (order) => order.orderType === OrderType.LIMIT && order.orderStatus === OrderStatus.PENDING
+  );
+
   const marketOrders = pendingOrders.filter(
     (order) => order.orderType === OrderType.MARKET
   );
@@ -233,9 +233,9 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
   return (
     <div className="flex space-x-4 z-0">
       <Card className="flex-1">
-        <CardHeader className="z-0">Limit Orders</CardHeader>
+        <CardHeader className="z-0">Limit Orders Pending Settlement</CardHeader>
         <CardBody>
-          <PendingLimitOrders limitOrders={limitOrders} />
+          <PendingLimitOrders limitOrders={limitOrdersPendingSettlement} />
         </CardBody>
       </Card>
       <div className="flex items-center">
@@ -275,6 +275,12 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
         <CardHeader>Short Orders</CardHeader>
         <CardBody>
           <PendingShortOrders shortOrders={shortOrders} />
+        </CardBody>
+      </Card>
+      <Card className="flex-1">
+        <CardHeader className="z-0">Limit Orders</CardHeader>
+        <CardBody>
+          <PendingLimitOrders limitOrders={limitOrdersPendingToOpen} />
         </CardBody>
       </Card>
     </div>

@@ -111,6 +111,26 @@ export default (trpc: TrpcService, ctx: Context) =>
         });
       }),
 
+    listPlayerOrdersPendingOrders: trpc.procedure
+      .input(
+        z.object({
+          skip: z.number().optional(),
+          take: z.number().optional(),
+          cursor: z.number().optional(),
+          where: z.any().optional(),
+          orderBy: z.any().optional(),
+        }),
+      )
+      .query(async ({ input }) => {
+        const { skip, take, cursor, where, orderBy } = input;
+        return ctx.playerOrdersService.playerOrdersPendingOrders({
+          skip,
+          take,
+          cursor: cursor ? { id: cursor } : undefined,
+          where,
+          orderBy,
+        });
+      }),
     createPlayerOrder: trpc.procedure
       .input(
         z.object({
@@ -121,7 +141,6 @@ export default (trpc: TrpcService, ctx: Context) =>
           companyId: z.string(),
           sectorId: z.string(),
           quantity: z.number().optional(),
-          term: z.number().optional(),
           value: z.number().optional(),
           isSell: z.boolean().optional(),
           location: z.nativeEnum(ShareLocation),
