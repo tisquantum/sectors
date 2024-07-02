@@ -34,13 +34,14 @@ const playerCompanies = [
 const PlayerShares = ({ playerWithShares }: { playerWithShares: PlayerWithShares }) => {
   // Aggregate total value and total shares owned for each company
   const stockAggregation = playerWithShares.Share.reduce(
-    (acc: Record<string, StockAggregation>, playeShare) => {
-      const { companyId, price } = playeShare;
+    (acc: Record<string, StockAggregation>, playerShare) => {
+      const { companyId, price } = playerShare;
       if (!acc[companyId]) {
         acc[companyId] = { totalShares: 0, totalValue: 0 };
       }
       acc[companyId].totalShares += 1;
       acc[companyId].totalValue += price;
+      acc[companyId].company = playerShare.Company;
       return acc;
     },
     {}
@@ -51,7 +52,8 @@ const PlayerShares = ({ playerWithShares }: { playerWithShares: PlayerWithShares
     companyId,
     shareTotal: aggregation.totalShares,
     pricePerShare: aggregation.totalValue / aggregation.totalShares,
-    totalValue: aggregation.totalValue
+    totalValue: aggregation.totalValue,
+    company: aggregation.company
   }));
 
   return (
@@ -62,7 +64,7 @@ const PlayerShares = ({ playerWithShares }: { playerWithShares: PlayerWithShares
           className="flex flex-col justify-center items-center"
         >
           <Badge content={company.shareTotal} color="default">
-            <Avatar name={company.companyId} />
+            <Avatar name={company.company?.name} />
           </Badge>
           <div className="text-sm mt-1">${company.totalValue.toFixed(2)}</div>
         </div>

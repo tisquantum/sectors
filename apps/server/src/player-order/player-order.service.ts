@@ -74,9 +74,14 @@ export class PlayerOrderService {
       where,
       orderBy,
       include: {
-        Company: true,
+        Company: {
+          include: {
+            Share: true,
+          },
+        },
         Player: true,
         Sector: true,
+        Phase: true,
       },
     });
   }

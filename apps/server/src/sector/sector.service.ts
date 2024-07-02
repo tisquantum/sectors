@@ -47,7 +47,16 @@ export class SectorService {
       where,
       orderBy,
       include: {
-        Company: true,
+        Company: {
+          include: {
+            Share: {
+              include: {
+                Player: true,
+              }
+            },
+            Sector: true,
+          }
+        },
       },
     });
   }

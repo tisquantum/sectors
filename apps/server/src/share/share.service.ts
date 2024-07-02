@@ -66,6 +66,17 @@ export class ShareService {
     });
   }
 
+  async updateManySharesUnchecked(params: {
+    where: Prisma.ShareWhereInput;
+    data: Prisma.ShareUncheckedUpdateManyInput;
+  }): Promise<Prisma.BatchPayload> {
+    const { where, data } = params;
+    return this.prisma.share.updateMany({
+      data,
+      where,
+    });
+  }
+
   async deleteShare(where: Prisma.ShareWhereUniqueInput): Promise<Share> {
     return this.prisma.share.delete({
       where,

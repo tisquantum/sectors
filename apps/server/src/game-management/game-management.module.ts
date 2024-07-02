@@ -11,6 +11,7 @@ import { TimerModule } from '@server/timer/timer.module';
 import { PusherModule } from 'nestjs-pusher';
 import { OperatingRoundModule } from '@server/operating-round/operating-round.module';
 import { ShareModule } from '@server/share/share.module';
+import { PlayerOrderModule } from '@server/player-order/player-order.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { ShareModule } from '@server/share/share.module';
     PusherModule,
     OperatingRoundModule,
     ShareModule,
+    PlayerOrderModule,
   ],
   providers: [GameManagementService],
   exports: [GameManagementService],

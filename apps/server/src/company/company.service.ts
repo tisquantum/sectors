@@ -6,12 +6,15 @@ import { GameLogService } from '@server/game-log/game-log.service';
 
 @Injectable()
 export class CompanyService {
-  constructor(private prisma: PrismaService, private gamelogService: GameLogService) {}
+  constructor(
+    private prisma: PrismaService,
+    private gamelogService: GameLogService,
+  ) {}
 
   async company(
     companyWhereUniqueInput: Prisma.CompanyWhereUniqueInput,
   ): Promise<Company | null> {
-    const company =  this.prisma.company.findUnique({
+    const company = this.prisma.company.findUnique({
       where: companyWhereUniqueInput,
     });
     return company;
@@ -50,7 +53,11 @@ export class CompanyService {
       orderBy,
       include: {
         Sector: true,
-        Share: true,
+        Share: {
+          include: {
+            Player: true,
+          },
+        },
       },
     });
   }
@@ -63,7 +70,9 @@ export class CompanyService {
     });
   }
 
-  async createManyCompanies(data: Prisma.CompanyCreateManyInput[]): Promise<Company[]> {
+  async createManyCompanies(
+    data: Prisma.CompanyCreateManyInput[],
+  ): Promise<Company[]> {
     //remove id
     data.forEach((d) => delete d.id);
     return this.prisma.company.createManyAndReturn({

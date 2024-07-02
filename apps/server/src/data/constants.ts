@@ -23,7 +23,7 @@ export const phaseTimes = {
   [PhaseName.STOCK_RESOLVE_MARKET_ORDER]: 15 * 1000,
   [PhaseName.STOCK_SHORT_ORDER_INTEREST]: 12 * 1000,
   [PhaseName.STOCK_ACTION_SHORT_ORDER]: 12 * 1000,
-  [PhaseName.STOCK_RESOLVE_OPEN_SHORT_ORDER]: 15 * 1000,
+  [PhaseName.STOCK_RESOLVE_PENDING_SHORT_ORDER]: 15 * 1000,
   [PhaseName.STOCK_RESOLVE_OPTION_ORDER]: 15 * 1000,
   [PhaseName.STOCK_OPEN_LIMIT_ORDERS]: 10 * 1000,
   [PhaseName.STOCK_RESULTS_OVERVIEW]: 15 * 1000,
@@ -36,6 +36,8 @@ export const phaseTimes = {
   [PhaseName.CAPITAL_GAINS]: 20 * 1000,
   [PhaseName.DIVESTMENT]: 20 * 1000,
   [PhaseName.SECTOR_NEW_COMPANY]: 10 * 1000,
+  [PhaseName.START_TURN]: 10 * 1000,
+  [PhaseName.END_TURN]: 10 * 1000,
 };
 
 //Stock Grid Prices

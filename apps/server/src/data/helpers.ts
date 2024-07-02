@@ -31,6 +31,11 @@ export function determineNextGamePhase(phaseName: PhaseName): {
         roundType: RoundType.STOCK,
       };
     case PhaseName.STOCK_ACTION_ORDER:
+      return {
+        phaseName: PhaseName.STOCK_ACTION_RESULT,
+        roundType: RoundType.STOCK,
+      };
+    case PhaseName.STOCK_ACTION_RESULT:
       if (stockActionCounter < 3) {
         stockActionCounter++;
         return {
@@ -40,15 +45,10 @@ export function determineNextGamePhase(phaseName: PhaseName): {
       } else {
         stockActionCounter = 0; // Reset counter after 3 repetitions
         return {
-          phaseName: PhaseName.STOCK_ACTION_RESULT,
+          phaseName: PhaseName.STOCK_ACTION_REVEAL,
           roundType: RoundType.STOCK,
         };
       }
-    case PhaseName.STOCK_ACTION_RESULT:
-      return {
-        phaseName: PhaseName.STOCK_ACTION_REVEAL,
-        roundType: RoundType.STOCK,
-      };
     case PhaseName.STOCK_ACTION_REVEAL:
       return {
         phaseName: PhaseName.STOCK_RESOLVE_MARKET_ORDER,
@@ -66,10 +66,10 @@ export function determineNextGamePhase(phaseName: PhaseName): {
       };
     case PhaseName.STOCK_ACTION_SHORT_ORDER:
       return {
-        phaseName: PhaseName.STOCK_RESOLVE_OPEN_SHORT_ORDER,
+        phaseName: PhaseName.STOCK_RESOLVE_PENDING_SHORT_ORDER,
         roundType: RoundType.STOCK,
       };
-    case PhaseName.STOCK_RESOLVE_OPEN_SHORT_ORDER:
+    case PhaseName.STOCK_RESOLVE_PENDING_SHORT_ORDER:
       return {
         phaseName: PhaseName.STOCK_RESOLVE_OPTION_ORDER,
         roundType: RoundType.STOCK,
@@ -95,6 +95,16 @@ export function determineNextGamePhase(phaseName: PhaseName): {
       return {
         phaseName: PhaseName.OPERATING_ACTION_COMPANY_VOTE,
         roundType: RoundType.OPERATING,
+      };
+    case PhaseName.OPERATING_ACTION_COMPANY_VOTE:
+      return {
+        phaseName: PhaseName.END_TURN,
+        roundType: RoundType.GAME_UPKEEP,
+      };
+    case PhaseName.END_TURN:
+      return {
+        phaseName: PhaseName.STOCK_MEET,
+        roundType: RoundType.STOCK,
       };
     default:
       return { phaseName: PhaseName.STOCK_MEET, roundType: RoundType.STOCK };

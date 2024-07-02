@@ -73,7 +73,11 @@ export class PlayersService {
     return this.prisma.player.findUnique({
       where: playerWhereUniqueInput,
       include: {
-        Share: true,
+        Share: {
+          include: {
+            Company: true,
+          },
+        },
       },
     });
   }
@@ -84,12 +88,17 @@ export class PlayersService {
     return this.prisma.player.findMany({
       where: playerWhereInput,
       include: {
-        Share: true,
+        Share: {
+          include: { Company: true },
+        },
       },
     });
   }
 
-  async subtractActionCounter(playerId: string, orderType: OrderType): Promise<Player> {
+  async subtractActionCounter(
+    playerId: string,
+    orderType: OrderType,
+  ): Promise<Player> {
     const player = await this.prisma.player.findUnique({
       where: { id: playerId },
     });

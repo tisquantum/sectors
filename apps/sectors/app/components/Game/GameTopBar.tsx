@@ -16,6 +16,7 @@ const GameTopBar = ({
 }) => {
   const [currentView, setCurrentView] = useState<string>("action");
   const useNextPhaseMutation = trpc.game.forceNextPhase.useMutation();
+  const useRetryPhaseMutation = trpc.game.retryPhase.useMutation();
   const { currentPhase } = useGame();
   const handleViewChange = (view: string) => {
     setCurrentView(view);
@@ -35,6 +36,11 @@ const GameTopBar = ({
       phaseName: nextPhase.phaseName,
       roundType: nextPhase.roundType,
       stockRoundId: currentPhase?.stockRoundId ?? 0,
+    });
+  };
+  const handleRetryPhase = () => {
+    useRetryPhaseMutation.mutate({
+      gameId,
     });
   };
   return (
@@ -66,6 +72,7 @@ const GameTopBar = ({
         </Button>
       </ButtonGroup>
       <Button onClick={handleNextPhase}>Next Phase</Button>
+      <Button onClick={handleRetryPhase}>Retry Phase</Button>
       {currentPhase && (
         <Timer
           countdownTime={currentPhase.phaseTime / 1000} //convert from seconds to milliseconds

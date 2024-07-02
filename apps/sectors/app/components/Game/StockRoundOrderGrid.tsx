@@ -46,7 +46,7 @@ const StockRoundOrderGrid = ({
       where: { stockRoundId: gameState?.currentStockRoundId },
     },
     {
-      enabled: currentPhase?.name == PhaseName.STOCK_REVEAL,
+      enabled: currentPhase?.name == PhaseName.STOCK_ACTION_REVEAL,
     }
   );
   const {
@@ -79,7 +79,7 @@ const StockRoundOrderGrid = ({
   if (playerOrdersRevealed == undefined) return null;
   if (isLoading) return null;
   if (companies == undefined) return notFound();
-  const isRevealRound = currentPhase?.name === PhaseName.STOCK_REVEAL;
+  const isRevealRound = currentPhase?.name === PhaseName.STOCK_ACTION_REVEAL;
   const orders = playerOrdersConcealed ?? [];
   const companiesBySector = organizeCompaniesBySector(companies);
   const handleDisplayOrderInput = (company: Company, isIpo?: boolean) => {

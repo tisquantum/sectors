@@ -11,7 +11,9 @@ export const EVENT_MEETING_MESSAGE_CREATED = 'meeting-message-created';
 export const EVENT_NEW_PHASE = 'new-phase';
 export const EVENT_NEW_PLAYER_ORDER = 'new-player-order';
 export const EVENT_NEW_PLAYER_ORDER_PLAYER_ID = 'new-player-order-player-id';
-
+export interface EVENT_NEW_PLAYER_ORDER_PLAYER_ID__PAYLOAD {
+    playerId: string;
+}
 export const CHANNEL_ROOM_GLOBAL = 'room-global';
 export const getRoomChannelId = (roomId: number) => `room-${roomId}`;
 export const getGameChannelId = (gameId: string) => `game-${gameId}`;

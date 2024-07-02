@@ -167,4 +167,10 @@ export default (trpc: TrpcService, ctx: Context) =>
           stockRoundId,
         });
       }),
+    retryPhase: trpc.procedure
+      .input(z.object({ gameId: z.string() }))
+      .mutation(async ({ input }) => {
+        const { gameId } = input;
+        return ctx.gameManagementService.retryPhase(gameId);
+      }),
   });

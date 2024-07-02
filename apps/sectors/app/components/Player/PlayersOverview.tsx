@@ -6,10 +6,13 @@ import { CurrencyDollarIcon } from "@heroicons/react/24/solid";
 import PlayerShares from "./PlayerShares";
 import { trpc } from '@sectors/app/trpc';
 import { notFound } from 'next/navigation';
+import { PlayerWithShares } from '@server/prisma/prisma.types';
+import { Company } from '@server/prisma/prisma.client';
 
 export interface StockAggregation {
   totalShares: number;
   totalValue: number;
+  company?: Company;
 }
 
 const PlayersOverview = ({ gameId }: { gameId: string }) => {
@@ -62,14 +65,13 @@ const PlayersOverview = ({ gameId }: { gameId: string }) => {
             }
             title={playerWithShares.nickname}
             subtitle={
-              <span>
-                <CurrencyDollarIcon className="size-4" /> 300
+              <span className="flex items-center content-center">
+                <CurrencyDollarIcon className="size-4" /> {playerWithShares.cashOnHand}
               </span>
             }
           >
             <div>
-              <div>Cash on Hand: ${playerWithShares.cashOnHand.toFixed(2)}</div>
-              <div>Total Asset Value: ${totalValue.toFixed(2)}</div>
+              <div>Total Asset Value: ${totalValue}</div>
               <div>Total Shares Owned: {totalShares}</div>
               <Divider className="my-5" />
               <PlayerShares playerWithShares={playerWithShares} />

@@ -26,11 +26,14 @@ export type RoomUserWithUser = RoomUser & {
 
 export type RoomWithUsers = Room & { users: { user: User }[] };
 
+export type ShareWithCompany = Share & { Company: Company };
+
 export type PlayerWithShares = Player & {
-  Share: Share[];
+  Share: ShareWithCompany[];
 };
 
-export type CompanyWithSector = Company & { Sector: Sector; Share: Share[] };
+export type ShareWithPlayer = Share & { Player: Player | null };
+export type CompanyWithSector = Company & { Sector: Sector; Share: ShareWithPlayer[] };
 
 export type MeetingMessageWithPlayer = MeetingMessage & { player: Player };
 
@@ -61,12 +64,14 @@ export type PlayerOrderConcealedWithPlayer = PlayerOrderConcealed & {
   Player: Player;
 };
 export type PlayerOrderWithCompany = PlayerOrder & { Company: Company };
+export type CompanyWithShare = Company & { Share: Share[] };
 export type PlayerOrderWithPlayerCompany = PlayerOrder & {
-  Company: Company;
+  Company: CompanyWithShare;
   Player: Player;
   Sector: Sector;
+  Phase: Phase;
 };
-export type SectorWithCompanies = Sector & { Company: Company[] };
+export type SectorWithCompanies = Sector & { Company: CompanyWithSector[] };
 export type PlayerOrderWithPlayerCompanySectorShortOrder = PlayerOrder & {
   Company: Company;
   Player: Player;

@@ -193,7 +193,7 @@ enum OrderStatus {
   PENDING
   OPEN //only pertains to LIMIT, SHORT, OPTION
   FILLED
-  FILLED_PENDING_SETTLEMENT //only pertains to LIMIT
+  FILLED_PENDING_SETTLEMENT //only pertains to LIMIT post limit being filled during the game but before the limit phase has occured to collect/pay the money
   CANCELLED
   REJECTED
 }
@@ -333,6 +333,7 @@ model Game {
 }
 
 enum RoundType {
+  GAME_UPKEEP
   STOCK
   OPERATING
 }
@@ -353,6 +354,8 @@ model Phase {
 }
 
 enum PhaseName {
+  START_TURN
+  END_TURN
   STOCK_RESOLVE_LIMIT_ORDER
   STOCK_MEET
   STOCK_ACTION_ORDER
@@ -361,9 +364,9 @@ enum PhaseName {
   STOCK_RESOLVE_MARKET_ORDER
   STOCK_SHORT_ORDER_INTEREST
   STOCK_ACTION_SHORT_ORDER //let players cover their open shorts if they choose to
-  STOCK_RESOLVE_OPEN_SHORT_ORDER
+  STOCK_RESOLVE_PENDING_SHORT_ORDER //open all pending short orders
   STOCK_RESOLVE_OPTION_ORDER //players either succeed or fail after expiration (?)
-  STOCK_OPEN_LIMIT_ORDERS
+  STOCK_OPEN_LIMIT_ORDERS //open all pending limit orders
   STOCK_RESULTS_OVERVIEW
   OPERATING_PRODUCTION
   OPERATING_STOCK_PRICE_ADJUSTMENT

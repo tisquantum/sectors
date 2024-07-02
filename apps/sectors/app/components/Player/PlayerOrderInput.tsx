@@ -308,9 +308,11 @@ let tabs = [
 const PseudoBalance = ({
   stockRoundId,
   currentOrderValue,
+  runningOrderValue,
 }: {
   stockRoundId: number;
   currentOrderValue?: number;
+  runningOrderValue?: number;
 }) => {
   const { authPlayer, currentPhase } = useGame();
   const {
@@ -326,29 +328,83 @@ const PseudoBalance = ({
   if (isLoading) return null;
 
   const pseudoSpend = playerOrders ? getPseudoSpend(playerOrders) : 0;
-  console.log("pseudoSpend", pseudoSpend, currentOrderValue);
-  const netSpend = Number(currentOrderValue || 0) + Number(pseudoSpend);
-  console.log("cashOnHand", authPlayer.cashOnHand, "netSpend", netSpend);
+  const netSpend = pseudoSpend - (runningOrderValue || 0);
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-1">
+        <span>Cash On Hand</span>
         <CurrencyDollarIcon className="w-6 h-6 size-3" />
         <span>{authPlayer.cashOnHand}</span>
       </div>
       <div className="flex items-center gap-1">
-        After Orders Placed:
+        <span>Previous Placed Order Cost This Round</span>
+        <CurrencyDollarIcon className="w-6 h-6 size-3" />
+        <span>{netSpend}</span>
+      </div>
+      <div className="flex items-center gap-1">
+        <span>Current Order Cost</span>
         <CurrencyDollarIcon className="w-6 h-6" />
-        <span>{authPlayer.cashOnHand - netSpend}</span>
+        <span>{currentOrderValue}</span>
+      </div>
+      <div className="flex items-center gap-1">
+        <span>Remaining Cash</span>
+        <CurrencyDollarIcon className="w-6 h-6" />
+        <span>{authPlayer.cashOnHand - netSpend + (currentOrderValue || 0)}</span>
       </div>
     </div>
   );
+};
+
+const calculatePseudoOrderValue = ({
+  orderType,
+  quantity,
+  currentStockPrice,
+  premium,
+  isBuy,
+}: {
+  orderType: OrderType;
+  quantity: number | null;
+  currentStockPrice: number | null;
+  premium: number | null;
+  isBuy?: boolean;
+}) => {
+  switch (orderType) {
+    case OrderType.MARKET:
+      return isBuy
+        ? -(quantity || 0) * (currentStockPrice || 0)
+        : (quantity || 0) * (currentStockPrice || 0);
+    case OrderType.LIMIT:
+      return 0;
+    case OrderType.SHORT:
+      return (quantity || 0) * (currentStockPrice || 0);
+    case OrderType.OPTION:
+      return -(premium || 0);
+    default:
+      return 0;
+  }
+};
+
+const calculateRunningOrderValue = (playerOrders: PlayerOrderWithCompany[]) => {
+  let runningOrderValue = 0;
+  //filter all orders that aren't market orders
+  playerOrders.filter(
+    (order) => order.orderType !== OrderType.MARKET,
+  ).forEach((order) => {
+    runningOrderValue += calculatePseudoOrderValue({
+      orderType: order.orderType,
+      quantity: order.quantity,
+      currentStockPrice: order.Company.currentStockPrice,
+      premium: order.value,
+    });
+  });
+  return runningOrderValue;
 };
 
 const PlayerOrderInput = ({
   currentOrder,
   handleCancel,
   isIpo,
-  handlePlayerInputConfirmed
+  handlePlayerInputConfirmed,
 }: {
   currentOrder: Company;
   handleCancel: () => void;
@@ -357,19 +413,34 @@ const PlayerOrderInput = ({
 }) => {
   const { gameId, gameState, authPlayer, currentPhase, refetchAuthPlayer } =
     useGame();
+  const { data: playerOrders } =
+    trpc.playerOrder.listPlayerOrdersWithCompany.useQuery({
+      where: {
+        stockRoundId: currentPhase?.stockRoundId,
+        playerId: authPlayer?.id,
+      },
+    });
   const createPlayerOrder = trpc.playerOrder.createPlayerOrder.useMutation();
-  const [term, setTerm] = useState(2);
   const [share, setShare] = useState(1);
   const [limitOrderValue, setLimitOrderValue] = useState(0);
   const [isBuy, setIsBuy] = useState(true);
   const [isSubmit, setIsSubmit] = useState(false);
   const [orderType, setOrderType] = useState<OrderType>(OrderType.MARKET);
-
+  let runningOrderValue = 0;
+  if (playerOrders) {
+    runningOrderValue = calculateRunningOrderValue(playerOrders);
+  }
   useEffect(() => {
     setIsSubmit(false);
   }, [currentPhase?.name]);
   if (!gameId || !gameState) return null;
-  const currentOrderValue = share * (currentOrder.currentStockPrice ?? 0);
+  const currentOrderValue = calculatePseudoOrderValue({
+    orderType,
+    quantity: share,
+    currentStockPrice: currentOrder.currentStockPrice,
+    premium: 0, // TODO: Fill for option orders
+    isBuy,
+  });
   const handleConfirm = () => {
     createPlayerOrder.mutate({
       gameId,
@@ -406,6 +477,7 @@ const PlayerOrderInput = ({
       <PseudoBalance
         stockRoundId={currentPhase?.stockRoundId ?? 0}
         currentOrderValue={currentOrderValue}
+        runningOrderValue={runningOrderValue}
       />
       {isSubmit ? (
         <div className="flex justify-center gap-2">

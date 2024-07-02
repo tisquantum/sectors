@@ -45,14 +45,18 @@ export function friendlyPhaseName(name: PhaseName | undefined): string {
       return "Resolve Limit Orders";
     case PhaseName.STOCK_RESOLVE_MARKET_ORDER:
       return "Resolve Market Orders";
-    case PhaseName.STOCK_RESOLVE_SHORT_ORDER:
-      return "Resolve Short Orders";
+    case PhaseName.STOCK_SHORT_ORDER_INTEREST:
+      return "Charge Interest Short Orders";
     case PhaseName.STOCK_MEET:
       return "Stock Round Meeting";
     case PhaseName.CAPITAL_GAINS:
       return "Capital Gains";
     case PhaseName.DIVESTMENT:
       return "Divestment";
+    case PhaseName.START_TURN:
+      return "Start Turn";
+    case PhaseName.END_TURN:
+      return "End Turn";
     default:
       return "Unknown Phase";
   }

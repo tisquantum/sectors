@@ -10,19 +10,63 @@ import {
   ArrowDownIcon,
   BoltIcon,
 } from "@heroicons/react/24/solid";
-import { Company } from "@server/prisma/prisma.client";
+import { Company, Share, ShareLocation } from "@server/prisma/prisma.client";
+import {
+  CompanyWithSector,
+  ShareWithPlayer,
+} from "@server/prisma/prisma.types";
+import { share } from "@trpc/server/observable";
 
-const CompaniesAccordion = ({ companies }: { companies: Company[] }) => {
+type ShareGroupedByPlayer = {
+  [key: string]: ShareWithPlayer[];
+};
+
+const CompaniesAccordion = ({
+  companies,
+}: {
+  companies: CompanyWithSector[];
+}) => {
   return (
     <Accordion selectionMode="multiple">
-      {companies.map((company: Company) => {
+      {companies.map((company: CompanyWithSector) => {
         const isPriceUp = (company.currentStockPrice || 0) > 0; //company.previousStockPrice;
         const trendIcon = isPriceUp ? (
           <ArrowUpIcon className="size-4 text-green-500" />
         ) : (
           <ArrowDownIcon className="size-4 text-red-500" />
         );
+        const IPOShares =
+          company.Share?.filter(
+            (share: Share) => share.location == ShareLocation.IPO
+          ).length || 0;
+        const OMShares =
+          company.Share?.filter(
+            (share: Share) => share.location == ShareLocation.OPEN_MARKET
+          ).length || 0;
 
+        const renderPlayerShares = (shares: ShareWithPlayer[]) => {
+          //group shares by player
+          const sharesGroupedByPlayer: ShareGroupedByPlayer = shares.reduce(
+            (acc, share) => {
+              if (share.playerId) {
+                if (acc[share.playerId]) {
+                  acc[share.playerId].push(share);
+                } else {
+                  acc[share.playerId] = [share];
+                }
+              }
+              return acc;
+            },
+            {} as ShareGroupedByPlayer
+          );
+          return Object.entries(sharesGroupedByPlayer).map(
+            ([playerId, shares]) => (
+              <Badge key={playerId} content={shares.length} color="default">
+                <Avatar name={shares[0].Player?.nickname || ""} />
+              </Badge>
+            )
+          );
+        };
         return (
           <AccordionItem
             key={company.id}
@@ -36,34 +80,37 @@ const CompaniesAccordion = ({ companies }: { companies: Company[] }) => {
               />
             }
             subtitle={
-              <div className="flex items-center">
-                {trendIcon}
-                <span className="ml-1">${company.currentStockPrice || 0}</span>
-                <BoltIcon className="ml-2 size-4 text-yellow-500" />
-                <span className="ml-1">5</span>
+              <div className="flex items-center mt-3">
                 <AvatarGroup isGrid className="ml-4" max={3}>
-                  <Badge content="5" color="default">
-                    <Avatar name="OM" />
-                  </Badge>
-                  <Badge content="2" color="default">
-                    <Avatar name="IPO" />
-                  </Badge>
-                  <Badge content="1" color="default">
-                    <Avatar
-                      src={`https://i.pravatar.cc/150?u=Player3`}
-                      name="Player 3"
-                    />
-                  </Badge>
-                  <Badge content="1" color="default">
-                    <Avatar
-                      src={`https://i.pravatar.cc/150?u=Player2`}
-                      name="Player 4"
-                    />
-                  </Badge>
+                  {OMShares > 0 && (
+                    <Badge content={OMShares} color="default">
+                      <Avatar name="OM" />
+                    </Badge>
+                  )}
+                  {IPOShares > 0 && (
+                    <Badge content={IPOShares} color="default">
+                      <Avatar name="IPO" />
+                    </Badge>
+                  )}
+                  {renderPlayerShares(company.Share || [])}
                 </AvatarGroup>
               </div>
             }
-            title={company.name}
+            title={
+              <div className="flex gap-2">
+                <span>{company.name}</span>
+                <div className="flex items-center">
+                  {trendIcon}
+                  <span className="ml-1">
+                    ${company.currentStockPrice || 0}
+                  </span>
+                </div>
+                <div className="flex items-center">
+                  <BoltIcon className="ml-2 size-4 text-yellow-500" />
+                  <span className="ml-1">5</span>
+                </div>
+              </div>
+            }
             isCompact
           >
             <div className="p-4">
