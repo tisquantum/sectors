@@ -22,19 +22,19 @@ import { sectorColors } from "@server/data/gameData";
 import { motion, AnimatePresence } from "framer-motion";
 import OrderChipWithPlayer from "./OrderChipWithPlayer";
 interface GroupedOrders {
-  [key: string]: PlayerOrderWithPlayerCompany[];
+  [key: string]: PlayerOrdersPendingOrder[];
 }
 
 const PendingMarketOrders = ({
   marketOrders,
   isResolving,
 }: {
-  marketOrders: PlayerOrderWithPlayerCompany[];
+  marketOrders: PlayerOrdersPendingOrder[];
   isResolving?: boolean;
 }) => {
   // Assuming marketOrders is an array of objects with name, companyName, orderType (buy/sell), and shares
   const groupedOrders = marketOrders.reduce(
-    (acc: GroupedOrders, order: PlayerOrderWithPlayerCompany) => {
+    (acc: GroupedOrders, order: PlayerOrdersPendingOrder) => {
       const key = order.Company.name;
       if (!acc[key]) {
         acc[key] = [];
@@ -68,13 +68,13 @@ const PendingMarketOrders = ({
             className="flex flex-col p-2 rounded gap-2"
             style={{ backgroundColor: sectorColors[orders[0].Sector.name] }}
           >
-            <div className="text-lg font-bold flex gap-2">
+            <div className="text-lg font-bold flex gap-2 bg-stone-600 p-2 content-center items-center">
               {/* We need to animate the change in stock price or at least show the previous price and the current price.*/}
               <ArrowTrendingUpIcon className="size-4" /> $
               {orders[0].Company.currentStockPrice}
-            </div>
-            <div className="bg-green-900 p-2 font-bold">
+              <span>
               {company} {netDifference}
+              </span>
             </div>
             <div className="flex flex-wrap gap-2">
               {orders.map((order, index) =>

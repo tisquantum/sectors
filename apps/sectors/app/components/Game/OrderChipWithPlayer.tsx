@@ -1,12 +1,12 @@
 import { Avatar, Chip } from "@nextui-org/react";
 import { determineColorByOrderType } from "@sectors/app/helpers";
 import { OrderType, PlayerOrder } from "@server/prisma/prisma.client";
-import { PlayerOrderWithPlayerCompany } from "@server/prisma/prisma.types";
+import { PlayerOrderWithPlayerCompany, PlayerOrdersPendingOrder } from "@server/prisma/prisma.types";
 
 const OrderChipWithPlayer = ({
   order,
 }: {
-  order: PlayerOrderWithPlayerCompany;
+  order: PlayerOrdersPendingOrder;
 }) => {
   return (
     <Chip
@@ -27,7 +27,7 @@ const OrderChipWithPlayer = ({
         {order.orderType === OrderType.LIMIT && <span>@${order.value}</span>}
         {(order.orderType === OrderType.MARKET ||
           order.orderType === OrderType.SHORT) && <span>{order.quantity}</span>}
-        {order.orderType === OrderType.SHORT && <span>@T{order.term}</span>}
+        {order.orderType === OrderType.SHORT && <span>@T{order.value}</span>}
       </div>
     </Chip>
   );

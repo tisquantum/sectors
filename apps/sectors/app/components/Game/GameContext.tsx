@@ -73,7 +73,7 @@ export const GameProvider: React.FC<{
       return;
     }
     const handleNewPhase = (phaseName: PhaseName) => {
-      console.log('refetching game state')
+      console.log('handleNewPhase', phaseName);
       refetchGameState();
       if(phaseName == PhaseName.STOCK_RESOLVE_MARKET_ORDER) {
         refetchPlayersWithShares();
