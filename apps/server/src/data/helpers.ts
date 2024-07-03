@@ -88,8 +88,8 @@ export function determineNextGamePhase(phaseName: PhaseName): {
       };
     case PhaseName.STOCK_RESULTS_OVERVIEW:
       return {
-        phaseName: PhaseName.STOCK_MEET,
-        roundType: RoundType.STOCK,
+        phaseName: PhaseName.OPERATING_MEET,
+        roundType: RoundType.OPERATING,
       };
     case PhaseName.OPERATING_MEET:
       return {

@@ -147,6 +147,16 @@ export class PlayerOrderService {
   async createPlayerOrder(
     data: Prisma.PlayerOrderCreateInput,
   ): Promise<PlayerOrder> {
+    //if the player has already placed a player order this phase, throw an error
+    const playerOrder = await this.prisma.playerOrder.findFirst({
+      where: {
+        playerId: data.Player.connect?.id,
+        phaseId: data.Phase.connect?.id,
+      },
+    });
+    if (playerOrder) {
+      throw new Error('Player has already placed an order this phase');
+    }
     // Filter out fields based on order type
     if (data.orderType === OrderType.MARKET) {
       const playerId = data.Player.connect?.id;

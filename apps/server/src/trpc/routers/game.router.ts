@@ -160,7 +160,7 @@ export default (trpc: TrpcService, ctx: Context) =>
       )
       .mutation(async ({ input }) => {
         const { gameId, phaseName, roundType, stockRoundId } = input;
-        return ctx.gameManagementService.startPhase({
+        return ctx.gameManagementService.determineIfNewRoundAndStartPhase({
           gameId,
           phaseName,
           roundType,

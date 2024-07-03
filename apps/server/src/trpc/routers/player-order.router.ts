@@ -9,6 +9,7 @@ import {
   getGameChannelId,
 } from '@server/pusher/pusher.types';
 import { PlayersService } from '@server/players/players.service';
+import { TRPCError } from '@trpc/server';
 
 type Context = {
   playerOrdersService: PlayerOrderService;
@@ -186,6 +187,10 @@ export default (trpc: TrpcService, ctx: Context) =>
           );
         } catch (error) {
           console.error(error);
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: error.message || 'An error occurred while creating the player order',
+          });
         }
         return playerOrder;
       }),

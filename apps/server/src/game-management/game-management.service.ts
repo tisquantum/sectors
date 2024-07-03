@@ -3,6 +3,7 @@ import { PrismaService } from '@server/prisma/prisma.service';
 import { PlayersService } from '@server/players/players.service';
 import {
   Game,
+  OperatingRound,
   OrderStatus,
   OrderType,
   Phase,
@@ -269,11 +270,25 @@ export class GameManagementService {
         console.error('Error starting game:', error);
         throw new Error('Failed to start the game');
       }
+      let stockRound: StockRound | null;
       try {
-        await this.startStockRound(game.id);
+        stockRound = await this.startStockRound(game.id);
       } catch (error) {
         console.error('Error starting game:', error);
         throw new Error('Failed to start the stock round.');
+      }
+      if (!stockRound) {
+        throw new Error('Stock round not found');
+      } else {
+        // Start the stock round phase
+        const newPhase = await this.startPhase({
+          gameId: game.id,
+          stockRoundId: stockRound.id,
+          phaseName: PhaseName.STOCK_MEET,
+          roundType: RoundType.STOCK,
+        });
+        // Start the timer for advancing to the next phase
+        await this.startPhaseTimer(newPhase, game.id, stockRound.id);
       }
       return game;
     } catch (error) {
@@ -310,23 +325,81 @@ export class GameManagementService {
     return this.gamesService.getGameState(gameId);
   }
 
+  public async determineIfNewRoundAndStartPhase({
+    gameId,
+    phaseName,
+    roundType,
+    stockRoundId,
+  }: {
+    gameId: string;
+    phaseName: PhaseName;
+    roundType: RoundType;
+    stockRoundId?: number;
+  }) {
+    const game = await this.gamesService.getGameState(gameId);
+
+    if (!game) {
+      throw new Error('Game not found');
+    }
+
+    const currentPhase = await this.phaseService.phase({
+      id: game.currentPhaseId || '',
+    });
+
+    if (!currentPhase) {
+      throw new Error('Phase not found');
+    }
+
+    // If the current phase roundtype is different to the new one, initiate the new round
+    if (game.currentRound !== roundType) {
+      //start new round
+      if (roundType === RoundType.STOCK) {
+        await this.startStockRound(gameId);
+      } else if(roundType === RoundType.OPERATING) {
+        await this.startOperatingRound(gameId);
+      } else if (roundType === RoundType.GAME_UPKEEP) {
+        //do nothing
+      }
+    }
+
+    return this.startPhase({
+      gameId,
+      phaseName,
+      roundType,
+      stockRoundId,
+    });
+  }
+
   public async startStockRound(gameId: string): Promise<StockRound | null> {
     const stockRound = await this.stockRoundService.createStockRound({
       Game: { connect: { id: gameId } },
     });
-
-    // Start the stock round phase
-    const newPhase = await this.startPhase({
-      gameId,
-      stockRoundId: stockRound.id,
-      phaseName: PhaseName.STOCK_MEET,
-      roundType: RoundType.STOCK,
+    //update game
+    await this.gamesService.updateGameState({
+      where: { id: gameId },
+      data: {
+        currentRound: RoundType.STOCK,
+        currentStockRoundId: stockRound.id,
+      },
     });
-
-    // Start the timer for advancing to the next phase
-    await this.startPhaseTimer(newPhase, gameId, stockRound.id);
-
     return stockRound;
+  }
+
+  public async startOperatingRound(
+    gameId: string,
+  ): Promise<OperatingRound | null> {
+    const operatingRound = await this.operatingRoundService.createOperatingRound({
+      Game: { connect: { id: gameId } },
+    });
+    //update game
+    await this.gamesService.updateGameState({
+      where: { id: gameId },
+      data: {
+        currentRound: RoundType.OPERATING,
+        currentOperatingRoundId: operatingRound.id,
+      },
+    });
+    return operatingRound;
   }
 
   /**
@@ -944,7 +1017,9 @@ export class GameManagementService {
         // Third pass: Lottery system for remaining shares
         if (remainingShares > 0) {
           while (remainingShares > 0 && groupedOrders.orders.length > 0) {
-            const randomIndex = Math.floor(Math.random() * groupedOrders.orders.length);
+            const randomIndex = Math.floor(
+              Math.random() * groupedOrders.orders.length,
+            );
             const order = groupedOrders.orders[randomIndex];
             const shares = await shareService.shares({
               where: {
