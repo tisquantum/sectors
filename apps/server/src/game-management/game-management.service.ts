@@ -96,23 +96,23 @@ export class GameManagementService {
   async handlePhase(phase: Phase) {
     switch (phase.name) {
       case PhaseName.STOCK_RESOLVE_LIMIT_ORDER:
-        this.resolveLimitOrders(phase);
+        await this.resolveLimitOrders(phase);
         break;
       case PhaseName.STOCK_OPEN_LIMIT_ORDERS:
-        this.openLimitOrders(phase);
+        await this.openLimitOrders(phase);
         break;
       case PhaseName.STOCK_RESOLVE_MARKET_ORDER:
         //resolve stock round
-        this.resolveMarketOrders(phase);
+        await this.resolveMarketOrders(phase);
         break;
       case PhaseName.STOCK_SHORT_ORDER_INTEREST:
-        this.resolveShortOrdersInterest(phase);
+        await this.resolveShortOrdersInterest(phase);
         break;
       case PhaseName.STOCK_RESOLVE_PENDING_SHORT_ORDER:
-        this.resolvePendingShortOrders(phase);
+        await this.resolvePendingShortOrders(phase);
         break;
       case PhaseName.END_TURN:
-        this.resolveEndTurn(phase);
+        await this.resolveEndTurn(phase);
         break;
       default:
         return;
@@ -846,7 +846,7 @@ export class GameManagementService {
             orders[0].Company.currentStockPrice ?? 0,
           );
         //update company shares
-        this.companyService.updateCompany({
+        await this.companyService.updateCompany({
           where: { id: companyId },
           data: {
             tierSharesFulfilled: newTierSharesFulfilled,
@@ -906,7 +906,7 @@ export class GameManagementService {
           (order) => !order.isSell && order.location == ShareLocation.IPO,
         );
         if (buyOrdersIPO.length > 0) {
-          this.distributeShares(
+          await this.distributeShares(
             buyOrdersIPO,
             ShareLocation.IPO,
             companyId,
@@ -918,7 +918,7 @@ export class GameManagementService {
             !order.isSell && order.location == ShareLocation.OPEN_MARKET,
         );
         if (buyOrdersOM.length > 0) {
-          this.distributeShares(
+          await this.distributeShares(
             buyOrdersOM,
             ShareLocation.OPEN_MARKET,
             companyId,
