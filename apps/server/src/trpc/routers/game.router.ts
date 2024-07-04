@@ -156,15 +156,26 @@ export default (trpc: TrpcService, ctx: Context) =>
           phaseName: z.nativeEnum(PhaseName),
           roundType: z.nativeEnum(RoundType),
           stockRoundId: z.number().optional(),
+          operatingRoundId: z.number().optional(),
+          companyId: z.string().optional(),
         }),
       )
       .mutation(async ({ input }) => {
-        const { gameId, phaseName, roundType, stockRoundId } = input;
+        const {
+          gameId,
+          phaseName,
+          roundType,
+          stockRoundId,
+          operatingRoundId,
+          companyId,
+        } = input;
         return ctx.gameManagementService.determineIfNewRoundAndStartPhase({
           gameId,
           phaseName,
           roundType,
           stockRoundId,
+          operatingRoundId,
+          companyId,
         });
       }),
     retryPhase: trpc.procedure

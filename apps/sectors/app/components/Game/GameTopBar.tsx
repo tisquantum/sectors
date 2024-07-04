@@ -6,6 +6,8 @@ import { useState } from "react";
 import { trpc } from "@sectors/app/trpc";
 import { PhaseName, RoundType } from "@server/prisma/prisma.client";
 import { determineNextGamePhase } from "@server/data/helpers";
+import next from "next";
+import { getNextCompanyOperatingRoundTurn } from "@server/data/constants";
 
 const GameTopBar = ({
   gameId,
@@ -17,7 +19,7 @@ const GameTopBar = ({
   const [currentView, setCurrentView] = useState<string>("action");
   const useNextPhaseMutation = trpc.game.forceNextPhase.useMutation();
   const useRetryPhaseMutation = trpc.game.retryPhase.useMutation();
-  const { currentPhase } = useGame();
+  const { currentPhase, gameState } = useGame();
   const handleViewChange = (view: string) => {
     setCurrentView(view);
     handleCurrentView(view);
@@ -31,11 +33,26 @@ const GameTopBar = ({
     const nextPhase = determineNextGamePhase(
       currentPhase?.name ?? PhaseName.STOCK_MEET
     );
+    let companyId;
+    if (
+      nextPhase.phaseName === PhaseName.OPERATING_ACTION_COMPANY_VOTE ||
+      nextPhase.phaseName === PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT
+    ) {
+      if (currentPhase?.companyId) {
+        companyId = getNextCompanyOperatingRoundTurn(
+          gameState.Company,
+          currentPhase?.companyId
+        ).id;
+      } else {
+        companyId = getNextCompanyOperatingRoundTurn(gameState.Company).id;
+      }
+    }
     useNextPhaseMutation.mutate({
       gameId,
       phaseName: nextPhase.phaseName,
       roundType: nextPhase.roundType,
       stockRoundId: currentPhase?.stockRoundId ?? 0,
+      companyId,
     });
   };
   const handleRetryPhase = () => {

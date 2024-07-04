@@ -1,5 +1,10 @@
 //make a map between PhaseName and phase times
-import { PhaseName, StockTier } from '@prisma/client';
+import {
+  Company,
+  OperatingRoundAction,
+  PhaseName,
+  StockTier,
+} from '@prisma/client';
 
 export const MAX_MARKET_ORDER = 3;
 
@@ -46,7 +51,7 @@ export const stockGridPrices = [
   51, 55, 60, 65, 70, 75, 80, 86, 92, 98, 104, 110, 117, 124, 131, 138, 145,
   153, 161, 169, 177, 185, 194, 203, 212, 221, 230, 240, 250, 260, 270, 280,
   291, 302, 313, 324, 335, 346, 358, 370, 382, 394, 406, 418, 431, 444, 457,
-  470, 484, 498, 512, 526, 540, 555, 570, 585, 600
+  470, 484, 498, 512, 526, 540, 555, 570, 585, 600,
 ];
 
 /** DEPRECATED */
@@ -109,3 +114,74 @@ export const stockTierChartRanges: StockTierChartRange[] = [
     fillSize: 7,
   },
 ];
+
+const overdraftTiers = [
+  {
+    tier: StockTier.TIER_1,
+    maxOverdraft: 100,
+    portfolioThreshold: 500,
+  },
+  {
+    tier: StockTier.TIER_2,
+    maxOverdraft: 200,
+    portfolioThreshold: 1000,
+  },
+  {
+    tier: StockTier.TIER_3,
+    maxOverdraft: 400,
+    portfolioThreshold: 2000,
+  },
+  {
+    tier: StockTier.TIER_4,
+    maxOverdraft: 700,
+    portfolioThreshold: 5000,
+  },
+  {
+    tier: StockTier.TIER_5,
+    maxOverdraft: 1000,
+    portfolioThreshold: 10000,
+  },
+];
+
+//For resolving company voting ties
+export const companyVoteActionPriority = (
+  actions: OperatingRoundAction[],
+): OperatingRoundAction => {
+  const actionPriority = [
+    OperatingRoundAction.DOWNSIZE,
+    OperatingRoundAction.EXPANSION,
+    OperatingRoundAction.MARKETING,
+    OperatingRoundAction.MERGE,
+    OperatingRoundAction.RESEARCH,
+    OperatingRoundAction.SHARE_BUYBACK,
+    OperatingRoundAction.SHARE_ISSUE,
+    OperatingRoundAction.PRODUCTION,
+  ];
+  return actions.sort(
+    (a, b) => actionPriority.indexOf(a) - actionPriority.indexOf(b),
+  )[0];
+};
+
+export const getCompanyOperatingRoundTurnOrder = (
+  companies: Company[],
+): Company[] => {
+  return companies.sort(
+    (a: Company, b: Company) =>
+      (a.currentStockPrice || 0) - (b.currentStockPrice || 0),
+  );
+};
+
+export const getNextCompanyOperatingRoundTurn = (
+  companies: Company[],
+  currentCompanyId?: string,
+): Company => {
+  const sortedCompanies = getCompanyOperatingRoundTurnOrder(companies);
+  if (!currentCompanyId) {
+    return sortedCompanies[0];
+  } else {
+    const currentIndex = sortedCompanies.findIndex(
+      (company) => company.id === currentCompanyId,
+    );
+    return sortedCompanies[(currentIndex + 1) % sortedCompanies.length];
+  }
+};

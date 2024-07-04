@@ -67,7 +67,9 @@ model Player {
   cashOnHand         Int
   gameId             String
   userId             String
-  marginAccount      Int
+  accountStatus      AccountStatus        @default(ACTIVE)
+  marginAccount      Int                  @default(0)
+  overdraftTier      OverdraftTier?
   Game               Game                 @relation(fields: [gameId], references: [id])
   User               User                 @relation(fields: [userId], references: [id])
   Share              Share[]
@@ -79,6 +81,20 @@ model Player {
   shortOrderActions  Int
   OperatingRoundVote OperatingRoundVote[]
   PlayerOrder        PlayerOrder[]
+}
+
+enum AccountStatus {
+  ACTIVE
+  FROZEN
+  BANKRUPT
+}
+
+enum OverdraftTier {
+  TIER_1
+  TIER_2
+  TIER_3
+  TIER_4
+  TIER_5
 }
 
 model Share {
@@ -115,27 +131,30 @@ enum StockTier {
 }
 
 model Company {
-  id                  String         @id @default(uuid())
-  name                String
-  unitPrice           Float
-  throughput          Int
-  sectorId            String
-  gameId              String
-  insolvent           Boolean
-  stockTier           StockTier      @default(TIER_1)
-  tierSharesFulfilled Int            @default(0)
-  currentStockPrice   Float?
-  cashOnHand          Float?
-  mergedWithParent    String?
-  mergedWithChildren  String?
-  ipoAndFloatPrice    Int
-  Sector              Sector         @relation(fields: [sectorId], references: [id])
-  Share               Share[]
-  StockHistory        StockHistory[]
-  Game                Game           @relation(fields: [gameId], references: [id])
-  createdAt           DateTime       @default(now())
-  updatedAt           DateTime       @updatedAt
-  PlayerOrder         PlayerOrder[]
+  id                     String               @id @default(uuid())
+  name                   String
+  unitPrice              Float
+  throughput             Int
+  sectorId               String
+  gameId                 String
+  insolvent              Boolean
+  stockTier              StockTier            @default(TIER_1)
+  tierSharesFulfilled    Int                  @default(0)
+  currentStockPrice      Float?
+  cashOnHand             Float?
+  mergedWithParent       String?
+  mergedWithChildren     String?
+  ipoAndFloatPrice       Int
+  Sector                 Sector               @relation(fields: [sectorId], references: [id])
+  Share                  Share[]
+  StockHistory           StockHistory[]
+  Game                   Game                 @relation(fields: [gameId], references: [id])
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+  PlayerOrder            PlayerOrder[]
+  CompanyOperationPhases Phase[]
+  CompanyVotes           OperatingRoundVote[]
+  CompanyActions         CompanyAction[]
 }
 
 model StockHistory {
@@ -236,17 +255,32 @@ model OperatingRound {
   id                 Int                  @id @default(autoincrement())
   phase              Phase[]
   operatingRoundVote OperatingRoundVote[]
+  companyActions     CompanyAction[]
   gameId             String
   Game               Game                 @relation(fields: [gameId], references: [id])
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
 }
 
+model CompanyAction {
+  id               Int                  @id @default(autoincrement())
+  companyId        String
+  action           OperatingRoundAction
+  operatingRoundId Int
+  resolved         Boolean              @default(false)
+  Company          Company              @relation(fields: [companyId], references: [id])
+  OperatingRound   OperatingRound       @relation(fields: [operatingRoundId], references: [id])
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+}
+
 model OperatingRoundVote {
   id               Int                  @id @default(autoincrement())
   operatingRoundId Int
   playerId         String
+  companyId        String
   actionVoted      OperatingRoundAction
+  Company          Company              @relation(fields: [companyId], references: [id])
   OperatingRound   OperatingRound       @relation(fields: [operatingRoundId], references: [id])
   Player           Player               @relation(fields: [playerId], references: [id])
   createdAt        DateTime             @default(now())
@@ -313,6 +347,7 @@ model Game {
   gameStatus              String
   gameStep                Int
   roomId                  Int
+  overdraft               Boolean          @default(true)
   gameLogs                GameLog[]
   sectors                 Sector[]
   Player                  Player[]
@@ -345,6 +380,8 @@ model Phase {
   phaseTime        Int
   stockRoundId     Int?
   operatingRoundId Int?
+  companyId        String?
+  Company          Company?        @relation(fields: [companyId], references: [id])
   OperatingRound   OperatingRound? @relation(fields: [operatingRoundId], references: [id])
   StockRound       StockRound?     @relation(fields: [stockRoundId], references: [id])
   Game             Game            @relation(fields: [gameId], references: [id])

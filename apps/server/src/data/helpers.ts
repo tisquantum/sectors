@@ -36,7 +36,7 @@ export function determineNextGamePhase(phaseName: PhaseName): {
         roundType: RoundType.STOCK,
       };
     case PhaseName.STOCK_ACTION_RESULT:
-      if (stockActionCounter < 3) {
+      if (stockActionCounter < 2) {
         stockActionCounter++;
         return {
           phaseName: PhaseName.STOCK_ACTION_ORDER,

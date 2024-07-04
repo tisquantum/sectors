@@ -10,6 +10,10 @@ import {
 } from "@nextui-org/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
+import CompanyActionVote from "./CompanyActionVote";
+import { trpc } from "@sectors/app/trpc";
+import { useGame } from "../Game/GameContext";
+import { getCompanyOperatingRoundTurnOrder } from "@server/data/constants";
 const companyActions = [
   {
     id: 1,
@@ -74,7 +78,9 @@ const CompanyActionSelectionVote = ({
           {companyActions.map((action) => (
             <Card
               key={action.id}
-              className={`${action.id == 2 ? "ring ring-blue-500" : ""} ${action.id == 4 ? "ring ring-pink-500" : ""}`}
+              className={`${action.id == 2 ? "ring ring-blue-500" : ""} ${
+                action.id == 4 ? "ring ring-pink-500" : ""
+              }`}
             >
               <CardHeader>
                 <span className="font-bold mr-3">{action.title}</span>
@@ -87,7 +93,8 @@ const CompanyActionSelectionVote = ({
                 <div className="flex flex-col">
                   <span>Vote Total: 7</span>
                   {action.id == 2 && (
-                    <span className="text-sky-500">WINNER</span>)}
+                    <span className="text-sky-500">WINNER</span>
+                  )}
                   <div className="flex gap-2 my-5">
                     <Badge content="+4" shape="rectangle">
                       <Avatar name={"ANI"} />
@@ -109,14 +116,17 @@ const CompanyActionSelectionVote = ({
   );
 };
 
-const companies = [
-  { id: 1, name: "Tech Corp" },
-  { id: 2, name: "Health Inc" },
-  { id: 3, name: "Finance LLC" },
-];
-
 const CompanyActionSlider = () => {
+  const { gameId } = useGame();
+  const { data: companies, isLoading: isLoadingCompanies } =
+    trpc.company.listCompaniesWithSector.useQuery({
+      where: { gameId },
+    });
   const [currentCompany, setCurrentCompany] = useState(0);
+  if (isLoadingCompanies) return <div>Loading...</div>;
+  if (!companies) return <div>No companies found</div>;
+  //I thought originally I'd get rid of this, but now I'm thinking 
+  //of preserving this behavior so players can flip through orders to review votes of other companies if they want.
   const handleNext = () => {
     if (currentCompany < companies.length - 1) {
       setCurrentCompany(currentCompany + 1);
@@ -127,14 +137,13 @@ const CompanyActionSlider = () => {
       setCurrentCompany(currentCompany - 1);
     }
   };
-
+  const companiesSortedForTurnOrder = getCompanyOperatingRoundTurnOrder(companies);
   return (
     <div className="flex flex-col flex-grow relative">
       <div className="flex flex-col gap-2 justify-center items-center">
         <h2>Turn Order</h2>
         <div className="flex gap-2">
-          <Avatar name="MEET" />
-          {companies.map((company, index) => (
+          {companiesSortedForTurnOrder.map((company, index) => (
             <Avatar key={company.id} name={company.name} />
           ))}
         </div>
@@ -149,9 +158,12 @@ const CompanyActionSlider = () => {
           exit={{ opacity: 0, x: -200 }}
           className={`flex justify-center items-center`}
         >
-          <CompanyActionSelectionVote
-            companyName={companies[currentCompany].name}
-          />
+          <div className="flex flex-col justify-center items-center">
+            <CompanyActionSelectionVote
+              companyName={companies[currentCompany].name}
+            />
+            <CompanyActionVote company={companies[currentCompany]} />
+          </div>
         </motion.div>
       </AnimatePresence>
     </div>

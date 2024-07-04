@@ -18,6 +18,7 @@ import { OperatingRoundService } from '@server/operating-round/operating-round.s
 import { TimerService } from '@server/timer/timer.service';
 import { PlayerOrderService } from '@server/player-order/player-order.service';
 import { ShareService } from '@server/share/share.service';
+import { OperatingRoundVoteService } from '@server/operating-round-vote/operating-round-vote.service';
 
 @Module({
   imports: [PrismaModule],
@@ -41,6 +42,8 @@ import { ShareService } from '@server/share/share.service';
     TimerService,
     PlayerOrderService,
     ShareService,
+    OperatingRoundVoteService,
+    OperatingRoundService,
   ],
 })
 export class TrpcModule {}

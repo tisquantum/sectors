@@ -47,8 +47,28 @@ export function friendlyPhaseName(name: PhaseName | undefined): string {
       return "Resolve Market Orders";
     case PhaseName.STOCK_SHORT_ORDER_INTEREST:
       return "Charge Interest Short Orders";
+    case PhaseName.STOCK_ACTION_SHORT_ORDER:
+      return "Cover Short Orders";
+    case PhaseName.STOCK_RESOLVE_PENDING_SHORT_ORDER:
+      return "Resolve Pending Short Orders";
+    case PhaseName.STOCK_RESOLVE_OPTION_ORDER:
+      return "Purchase Option Contracts";
+    case PhaseName.STOCK_OPEN_LIMIT_ORDERS:
+      return "Open Pending Limit Orders";
+    case PhaseName.STOCK_RESULTS_OVERVIEW:
+      return "Stock Round Results";
     case PhaseName.STOCK_MEET:
       return "Stock Round Meeting";
+    case PhaseName.OPERATING_PRODUCTION:
+      return "Operating Round Production";
+    case PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT:
+      return "Stock Price Adjustment";
+    case PhaseName.OPERATING_ACTION_COMPANY_VOTE:
+      return "Company Vote";
+    case PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT:
+      return "Company Vote Result";
+    case PhaseName.OPERATING_COMPANY_VOTE_RESOLVE:
+      return "Resolve Company Action";
     case PhaseName.CAPITAL_GAINS:
       return "Capital Gains";
     case PhaseName.DIVESTMENT:

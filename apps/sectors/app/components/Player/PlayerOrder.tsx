@@ -23,7 +23,7 @@ const PlayerOrder = ({
 }: {
   orders: PlayerOrderWithPlayerCompany[];
 }) => (
-  <div className="grid grid-cols-3 gap-4 w-full">
+  <div className="flex flex-wrap gap-2">
     {orders.map((order, index) => (
       <OrderChipWithPlayer order={order} key={index} />
     ))}

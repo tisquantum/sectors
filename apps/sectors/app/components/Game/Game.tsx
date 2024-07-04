@@ -73,7 +73,11 @@ const Game = ({ gameId }: { gameId: string }) => {
       <StockRoundOrderGrid />
     ) : currentRoundData?.phase.name === PhaseName.STOCK_RESOLVE_MARKET_ORDER ? (
       <PendingOrders />
-    ) : null;
+    ) : 
+    currentRoundData?.phase.name === PhaseName.OPERATING_ACTION_COMPANY_VOTE ? (
+      <CompanyActionSlider />
+    ) :
+    null;
 
   return (
     <div className="relative flex flex-grow overflow-hidden">

@@ -1,28 +1,45 @@
 import { Button, RadioGroup, Radio } from "@nextui-org/react";
+import { trpc } from "@sectors/app/trpc";
+import { useGame } from "../Game/GameContext";
+import { Company, OperatingRoundAction } from "@server/prisma/prisma.client";
+import { useState } from "react";
 
-const CompanyActionVote = () => {
+const CompanyActionVote = ({ company }: { company: Company }) => {
+  const { currentPhase, authPlayer } = useGame();
+  const [selected, setSelected] = useState<OperatingRoundAction>(
+    OperatingRoundAction.MARKETING
+  );
+  const createOperatingRoundVote =
+    trpc.operatingRoundVote.createOperatingRoundVote.useMutation();
+  const handleSubmit = async () => {
+    createOperatingRoundVote.mutate({
+      operatingRoundId: currentPhase?.operatingRoundId || 0,
+      playerId: authPlayer.id,
+      companyId: company.id,
+      actionVoted: OperatingRoundAction.DOWNSIZE,
+    });
+  };
   return (
     <div className="flex flex-col items-center justify-center max-w-2xl">
       <h1 className="text-2xl font-bold">Vote on the company action</h1>
-      <RadioGroup color="warning" orientation="horizontal">
-        <Radio value="marketing">
-          Marketing
-        </Radio>
-        <Radio value="research">
-          Research
-        </Radio>
-        <Radio value="expansion">
-          Expansion
-        </Radio>
-        <Radio value="downsize">
-          Downsize
-        </Radio>
-        <Radio value="veto">
-          Veto
-        </Radio>
+      <RadioGroup
+        color="warning"
+        orientation="horizontal"
+        value={selected}
+        onValueChange={(value) => setSelected(value as OperatingRoundAction)}
+      >
+        <Radio value={OperatingRoundAction.MARKETING}>Marketing</Radio>
+        <Radio value={OperatingRoundAction.RESEARCH}>Research</Radio>
+        <Radio value={OperatingRoundAction.EXPANSION}>Expansion</Radio>
+        <Radio value={OperatingRoundAction.DOWNSIZE}>Downsize</Radio>
+        <Radio value={OperatingRoundAction.MERGE}>Merge</Radio>
+        <Radio value={OperatingRoundAction.SHARE_BUYBACK}>Buyback Shares</Radio>
+        <Radio value={OperatingRoundAction.SHARE_ISSUE}>Issue Shares</Radio>
       </RadioGroup>
       <div className="flex flex-col items-center justify-center">
-        <Button className="btn btn-primary">Submit Vote</Button>
+        <Button className="btn btn-primary" onClick={handleSubmit}>
+          Submit Vote
+        </Button>
       </div>
     </div>
   );

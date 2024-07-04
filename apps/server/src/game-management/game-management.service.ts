@@ -4,6 +4,7 @@ import { PlayersService } from '@server/players/players.service';
 import {
   Game,
   OperatingRound,
+  OperatingRoundAction,
   OrderStatus,
   OrderType,
   Phase,
@@ -42,6 +43,7 @@ import {
   StockTierChartRange,
   interestRatesByTerm,
   BORROW_RATE,
+  companyVoteActionPriority,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -111,12 +113,85 @@ export class GameManagementService {
       case PhaseName.STOCK_RESOLVE_PENDING_SHORT_ORDER:
         await this.resolvePendingShortOrders(phase);
         break;
+      case PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT:
+        await this.resolveCompanyVotes(phase);
+        break;
       case PhaseName.END_TURN:
         await this.resolveEndTurn(phase);
         break;
       default:
         return;
     }
+  }
+
+  /**
+   * Resolve the company votes, if there is a tie, we take priority in the vote priority order.
+   *
+   * @param phase
+   */
+  async resolveCompanyVotes(phase: Phase) {
+    //get company from phase
+    const company = await this.companyService.company({
+      id: phase.companyId || '',
+    });
+    if (!company) {
+      throw new Error('Company not found');
+    }
+    //Collect votes
+    const votes = await this.prisma.operatingRoundVote.findMany({
+      where: {
+        companyId: company.id,
+      },
+      include: {
+        Player: {
+          include: {
+            Share: true,
+          },
+        },
+      },
+    });
+    //get most voted action weighted by shares
+    type ActionVotesAccumulator = {
+      [key in OperatingRoundAction]?: number;
+    };
+
+    // Assuming votes is properly typed
+    const actionVotes = votes.reduce<ActionVotesAccumulator>((acc, vote) => {
+      if (vote.actionVoted in acc) {
+        acc[vote.actionVoted] =
+          (acc[vote.actionVoted] || 0) + vote.Player.Share.length;
+      } else {
+        acc[vote.actionVoted] = vote.Player.Share.length;
+      }
+      return acc;
+    }, {} as ActionVotesAccumulator);
+
+    // Find the maximum number of votes
+    const maxVotes = Math.max(...Object.values(actionVotes));
+
+    // Get all actions with the maximum votes
+    const actionsWithMaxVotes = Object.keys(actionVotes).filter(
+      (key) => actionVotes[key as OperatingRoundAction] === maxVotes,
+    ) as OperatingRoundAction[];
+
+    const resolvedAction = companyVoteActionPriority(actionsWithMaxVotes);
+
+    //create new operating round action
+    await this.prisma.companyAction.create({
+      data: {
+        action: resolvedAction,
+        Company: {
+          connect: {
+            id: company.id,
+          },
+        },
+        OperatingRound: {
+          connect: {
+            id: phase.operatingRoundId || 0,
+          },
+        },
+      },
+    });
   }
 
   async resolveEndTurn(phase: Phase) {
@@ -330,11 +405,15 @@ export class GameManagementService {
     phaseName,
     roundType,
     stockRoundId,
+    operatingRoundId,
+    companyId
   }: {
     gameId: string;
     phaseName: PhaseName;
     roundType: RoundType;
     stockRoundId?: number;
+    operatingRoundId?: number;
+    companyId?: string;
   }) {
     const game = await this.gamesService.getGameState(gameId);
 
@@ -355,7 +434,7 @@ export class GameManagementService {
       //start new round
       if (roundType === RoundType.STOCK) {
         await this.startStockRound(gameId);
-      } else if(roundType === RoundType.OPERATING) {
+      } else if (roundType === RoundType.OPERATING) {
         await this.startOperatingRound(gameId);
       } else if (roundType === RoundType.GAME_UPKEEP) {
         //do nothing
@@ -367,6 +446,8 @@ export class GameManagementService {
       phaseName,
       roundType,
       stockRoundId,
+      operatingRoundId,
+      companyId
     });
   }
 
@@ -388,9 +469,10 @@ export class GameManagementService {
   public async startOperatingRound(
     gameId: string,
   ): Promise<OperatingRound | null> {
-    const operatingRound = await this.operatingRoundService.createOperatingRound({
-      Game: { connect: { id: gameId } },
-    });
+    const operatingRound =
+      await this.operatingRoundService.createOperatingRound({
+        Game: { connect: { id: gameId } },
+      });
     //update game
     await this.gamesService.updateGameState({
       where: { id: gameId },
@@ -423,12 +505,14 @@ export class GameManagementService {
     roundType,
     stockRoundId,
     operatingRoundId,
+    companyId
   }: {
     gameId: string;
     phaseName: PhaseName;
     roundType: RoundType;
     stockRoundId?: number;
     operatingRoundId?: number;
+    companyId?: string;
   }) {
     const gameChannelId = getGameChannelId(gameId);
 
@@ -440,6 +524,7 @@ export class GameManagementService {
       OperatingRound: operatingRoundId
         ? { connect: { id: operatingRoundId } }
         : undefined,
+      Company: companyId ? { connect: { id: companyId } } : undefined,
     });
 
     // Update game state

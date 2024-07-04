@@ -27,7 +27,7 @@ const PlayersOverview = ({ gameId }: { gameId: string }) => {
   if (playersWithShares == undefined) return notFound();
 
   return (
-    <Accordion>
+    <Accordion selectionMode="multiple">
       {playersWithShares.map((playerWithShares) => {
         // Aggregate total value and total shares owned
         const stockAggregation = playerWithShares.Share.reduce(
