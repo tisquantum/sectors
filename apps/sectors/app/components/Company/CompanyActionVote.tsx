@@ -4,13 +4,14 @@ import { useGame } from "../Game/GameContext";
 import { Company, OperatingRoundAction } from "@server/prisma/prisma.client";
 import { useState } from "react";
 
-const CompanyActionVote = ({ company }: { company: Company }) => {
+const CompanyActionVote = ({ company }: { company?: Company }) => {
   const { currentPhase, authPlayer } = useGame();
   const [selected, setSelected] = useState<OperatingRoundAction>(
     OperatingRoundAction.MARKETING
   );
   const createOperatingRoundVote =
     trpc.operatingRoundVote.createOperatingRoundVote.useMutation();
+  if(!company) return null;
   const handleSubmit = async () => {
     createOperatingRoundVote.mutate({
       operatingRoundId: currentPhase?.operatingRoundId || 0,
@@ -37,9 +38,15 @@ const CompanyActionVote = ({ company }: { company: Company }) => {
         <Radio value={OperatingRoundAction.SHARE_ISSUE}>Issue Shares</Radio>
       </RadioGroup>
       <div className="flex flex-col items-center justify-center">
-        <Button className="btn btn-primary" onClick={handleSubmit}>
-          Submit Vote
-        </Button>
+        {currentPhase?.companyId === company.id ? (
+          <Button className="btn btn-primary" onClick={handleSubmit}>
+            Submit Vote
+          </Button>
+        ) : (
+          <Button disabled className="btn btn-primary">
+            Return to the phasing company to vote.
+          </Button>
+        )}
       </div>
     </div>
   );

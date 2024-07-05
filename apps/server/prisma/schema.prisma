@@ -133,8 +133,12 @@ enum StockTier {
 model Company {
   id                     String               @id @default(uuid())
   name                   String
-  unitPrice              Float
-  throughput             Int
+  unitPrice              Int
+  throughput             Int //TODO: Deprecated
+  supplyMax              Int                  @default(0)
+  supplyCurrent          Int                  @default(0)
+  demandScore            Int                  @default(0)
+  prestigeTokens         Int                  @default(0)
   sectorId               String
   gameId                 String
   insolvent              Boolean
@@ -159,11 +163,12 @@ model Company {
 
 model StockHistory {
   id                Int      @id @default(autoincrement())
-  price             Float
-  productionRevenue Float
+  price             Int
+  productionRevenue Int?
   gameId            String
   companyId         String
-  timestamp         Int
+  phaseId           String
+  Phase             Phase    @relation(fields: [phaseId], references: [id])
   Company           Company  @relation(fields: [companyId], references: [id])
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
@@ -386,6 +391,7 @@ model Phase {
   StockRound       StockRound?     @relation(fields: [stockRoundId], references: [id])
   Game             Game            @relation(fields: [gameId], references: [id])
   PlayerOrder      PlayerOrder[]
+  StockHistory     StockHistory[]
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 }

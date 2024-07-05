@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { PlayersService } from '@server/players/players.service';
 import {
+  Company,
   Game,
   OperatingRound,
   OperatingRoundAction,
@@ -44,6 +45,9 @@ import {
   interestRatesByTerm,
   BORROW_RATE,
   companyVoteActionPriority,
+  throughputRewardOrPenalty,
+  ThroughputRewardType,
+  getStockPriceWithStepsDown,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -113,6 +117,9 @@ export class GameManagementService {
       case PhaseName.STOCK_RESOLVE_PENDING_SHORT_ORDER:
         await this.resolvePendingShortOrders(phase);
         break;
+      case PhaseName.OPERATING_PRODUCTION:
+        await this.resolveOperatingProduction(phase);
+        break;
       case PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT:
         await this.resolveCompanyVotes(phase);
         break;
@@ -122,6 +129,82 @@ export class GameManagementService {
       default:
         return;
     }
+  }
+
+  /**
+   * Determine supply and demand difference, award bonuses and penalties.
+   * Determine company operations revenue.
+   * Calculate the "throughput" by finding the diff between the supply and demand.
+   * If a company has a throughput of 0, it is considered to have met optimal efficieny
+   * and gets a prestige token and also benefits the entire sector.
+   * @param phase
+   * @returns
+   */
+  async resolveOperatingProduction(phase: Phase) {
+    const companies = await this.companyService.companies({
+      where: { gameId: phase.gameId },
+    });
+    if (!companies) {
+      throw new Error('Companies not found');
+    }
+    //group companies by sector
+    const groupedCompanies = companies.reduce<{
+      [key: string]: Company[];
+    }>((acc, company) => {
+      if (!acc[company.sectorId]) {
+        acc[company.sectorId] = [];
+      }
+      acc[company.sectorId].push(company);
+      return acc;
+    }, {});
+    //iterate through each sector and the companies inside them
+    await Promise.all(
+      Object.entries(groupedCompanies).map(
+        async ([sectorId, sectorCompanies]) => {
+          //get sector
+          const sector = await this.sectorService.sector({
+            id: sectorId,
+          });
+          if (!sector) {
+            console.error('Sector not found');
+          }
+          //iterate over companies in sector
+          await Promise.all(
+            sectorCompanies.map(async (company) => {
+              //calculate throughput
+              const throughput = company.demandScore - company.supplyCurrent;
+              //consult throughput score to see reward or penalty.
+              const throughputOutcome = throughputRewardOrPenalty(throughput);
+              //award or penalize the company
+              if (
+                throughputOutcome.type === ThroughputRewardType.SECTOR_REWARD
+              ) {
+                //award prestige token
+                await this.prisma.company.update({
+                  where: { id: company.id },
+                  data: {
+                    prestigeTokens: company.prestigeTokens + 1,
+                  },
+                });
+              } else if (
+                throughputOutcome.type === ThroughputRewardType.STOCK_PENALTY
+              ) {
+                //penalize the company
+                await this.prisma.company.update({
+                  where: { id: company.id },
+                  data: {
+                    currentStockPrice: getStockPriceWithStepsDown(
+                      company.currentStockPrice || 0,
+                      throughputOutcome.share_price_steps_down || 0,
+                    ),
+                  },
+                });
+              }
+            }),
+          );
+        },
+      ),
+    );
   }
 
   /**
@@ -406,7 +489,7 @@ export class GameManagementService {
     roundType,
     stockRoundId,
     operatingRoundId,
-    companyId
+    companyId,
   }: {
     gameId: string;
     phaseName: PhaseName;
@@ -447,7 +530,7 @@ export class GameManagementService {
       roundType,
       stockRoundId,
       operatingRoundId,
-      companyId
+      companyId,
     });
   }
 
@@ -505,7 +588,7 @@ export class GameManagementService {
     roundType,
     stockRoundId,
     operatingRoundId,
-    companyId
+    companyId,
   }: {
     gameId: string;
     phaseName: PhaseName;

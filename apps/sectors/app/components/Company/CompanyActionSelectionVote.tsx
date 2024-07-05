@@ -117,27 +117,35 @@ const CompanyActionSelectionVote = ({
 };
 
 const CompanyActionSlider = () => {
-  const { gameId } = useGame();
+  const { gameId, currentPhase } = useGame();
   const { data: companies, isLoading: isLoadingCompanies } =
     trpc.company.listCompaniesWithSector.useQuery({
       where: { gameId },
     });
-  const [currentCompany, setCurrentCompany] = useState(0);
+  const [currentCompany, setCurrentCompany] = useState<string | undefined>(undefined);
   if (isLoadingCompanies) return <div>Loading...</div>;
   if (!companies) return <div>No companies found</div>;
+  if(!currentPhase) return <div>No current phase found</div>;
+  setCurrentCompany(companies.find((company) => company.id === (currentPhase.companyId || ''))?.id);
+  const companiesSortedForTurnOrder = getCompanyOperatingRoundTurnOrder(companies);
   //I thought originally I'd get rid of this, but now I'm thinking 
   //of preserving this behavior so players can flip through orders to review votes of other companies if they want.
   const handleNext = () => {
-    if (currentCompany < companies.length - 1) {
-      setCurrentCompany(currentCompany + 1);
-    }
+    setCurrentCompany((prev) => {
+      if (!prev) return companiesSortedForTurnOrder[0].id;
+      const currentIndex = companies.findIndex((company) => company.id === prev);
+      if (currentIndex === companies.length - 1) return companiesSortedForTurnOrder[0].id;
+      return companies[currentIndex + 1].id;
+    });
   };
   const handlePrevious = () => {
-    if (currentCompany > 0) {
-      setCurrentCompany(currentCompany - 1);
-    }
+    setCurrentCompany((prev) => {
+      if (!prev) return companiesSortedForTurnOrder[0].id;
+      const currentIndex = companies.findIndex((company) => company.id === prev);
+      if (currentIndex === 0) return companiesSortedForTurnOrder[companies.length - 1].id;
+      return companies[currentIndex - 1].id;
+    });
   };
-  const companiesSortedForTurnOrder = getCompanyOperatingRoundTurnOrder(companies);
   return (
     <div className="flex flex-col flex-grow relative">
       <div className="flex flex-col gap-2 justify-center items-center">
@@ -152,7 +160,7 @@ const CompanyActionSlider = () => {
       </div>
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
-          key={companies[currentCompany].id}
+          key={currentCompany}
           initial={{ opacity: 0, x: 200 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -200 }}
@@ -160,9 +168,9 @@ const CompanyActionSlider = () => {
         >
           <div className="flex flex-col justify-center items-center">
             <CompanyActionSelectionVote
-              companyName={companies[currentCompany].name}
+              companyName={companies.find(company => company.id === currentCompany)?.name || ''}
             />
-            <CompanyActionVote company={companies[currentCompany]} />
+            <CompanyActionVote company={companies.find(company => company.id === currentCompany)} />
           </div>
         </motion.div>
       </AnimatePresence>

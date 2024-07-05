@@ -54,6 +54,35 @@ export const stockGridPrices = [
   470, 484, 498, 512, 526, 540, 555, 570, 585, 600,
 ];
 
+
+/**
+ * Move the stock price up by a given number of steps.
+ * @param currentPrice The current stock price.
+ * @param steps The number of steps to move up.
+ * @returns The new stock price after moving up.
+ */
+export function getStockPriceStepsUp(currentPrice: number, steps: number): number {
+  const currentIndex = stockGridPrices.indexOf(currentPrice);
+  if (currentIndex === -1) throw new Error('Invalid current stock price');
+  
+  const newIndex = Math.min(currentIndex + steps, stockGridPrices.length - 1);
+  return stockGridPrices[newIndex];
+}
+
+/**
+ * Move the stock price down by a given number of steps.
+ * @param currentPrice The current stock price.
+ * @param steps The number of steps to move down.
+ * @returns The new stock price after moving down.
+ */
+export function getStockPriceWithStepsDown(currentPrice: number, steps: number): number {
+  const currentIndex = stockGridPrices.indexOf(currentPrice);
+  if (currentIndex === -1) throw new Error('Invalid current stock price');
+  
+  const newIndex = Math.max(currentIndex - steps, 0);
+  return stockGridPrices[newIndex];
+}
+
 /** DEPRECATED */
 export const interestRatesByTerm: { [key: number]: number } = {
   1: 2.5,
@@ -183,5 +212,42 @@ export const getNextCompanyOperatingRoundTurn = (
       (company) => company.id === currentCompanyId,
     );
     return sortedCompanies[(currentIndex + 1) % sortedCompanies.length];
+  }
+};
+
+export enum ThroughputRewardType {
+  SECTOR_REWARD = 'SECTOR_REWARD',
+  STOCK_PENALTY = 'STOCK_PENALTY',
+}
+export interface ThroughputReward {
+  type: ThroughputRewardType;
+  share_price_steps_down?: number;
+}
+
+export const throughputRewardOrPenalty = (
+  throughput: number,
+): ThroughputReward => {
+  //make the negative or number absolute
+  throughput = Math.abs(throughput);
+  switch (throughput) {
+    //optimal efficiency
+    case 0:
+      return { type: ThroughputRewardType.SECTOR_REWARD };
+    case 1:
+      return { type: ThroughputRewardType.STOCK_PENALTY, share_price_steps_down: 1 };
+    case 2:
+      return { type: ThroughputRewardType.STOCK_PENALTY, share_price_steps_down: 1 };
+    case 3:
+      return { type: ThroughputRewardType.STOCK_PENALTY, share_price_steps_down: 2 };
+    case 4:
+      return { type: ThroughputRewardType.STOCK_PENALTY, share_price_steps_down: 2 };
+    case 5:
+      return { type: ThroughputRewardType.STOCK_PENALTY, share_price_steps_down: 3 };
+    case 6:
+      return { type: ThroughputRewardType.STOCK_PENALTY, share_price_steps_down: 3 };
+    case 7:
+      return { type: ThroughputRewardType.STOCK_PENALTY, share_price: -4 };
+    default:
+      return { type: ThroughputRewardType.SECTOR_REWARD, share_price: -1 };
   }
 };
