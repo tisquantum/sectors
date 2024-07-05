@@ -55,6 +55,17 @@ export class ProductionResultService {
     });
   }
 
+  async updateManyProductionResults(params: {
+    where: Prisma.ProductionResultWhereInput;
+    data: Prisma.ProductionResultUpdateManyMutationInput;
+  }): Promise<Prisma.BatchPayload> {
+    const { where, data } = params;
+    return this.prisma.productionResult.updateMany({
+      data,
+      where,
+    });
+  }
+
   async deleteProductionResult(where: Prisma.ProductionResultWhereUniqueInput): Promise<ProductionResult> {
     return this.prisma.productionResult.delete({
       where,

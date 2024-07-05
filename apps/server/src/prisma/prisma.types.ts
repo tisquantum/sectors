@@ -8,6 +8,7 @@ import {
   Phase,
   Player,
   PlayerOrder,
+  RevenueDistributionVotes,
   Room,
   RoomMessage,
   RoomUser,
@@ -88,3 +89,11 @@ export type PlayerOrdersPendingOrder = PlayerOrder & {
 };
 
 export type GameWithPhase = Game & { Phase: Phase[] };
+
+export type RevenueDistributionVotesWithPlayer = RevenueDistributionVotes & {
+  Player: Player;
+};
+
+export type OperatingRoundWithRevenueDistributionVotes = OperatingRound & {
+  revenueDistributionVotes: RevenueDistributionVotesWithPlayer[];
+};

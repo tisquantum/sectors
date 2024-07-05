@@ -11,11 +11,11 @@ import {
   Phase,
   PhaseName,
   Player,
-  PlayerOrder,
   Prisma,
+  RevenueDistribution,
+  RevenueDistributionVote,
   RoundType,
   Sector,
-  Share,
   ShareLocation,
   StockRound,
 } from '@prisma/client';
@@ -124,6 +124,9 @@ export class GameManagementService {
       case PhaseName.OPERATING_PRODUCTION:
         await this.resolveOperatingProduction(phase);
         break;
+      case PhaseName.OPERATING_PRODUCTION_VOTE_RESOLVE:
+        await this.resolveOperatingProductionVotes(phase);
+        break;
       case PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT:
         await this.resolveCompanyVotes(phase);
         break;
@@ -135,112 +138,213 @@ export class GameManagementService {
     }
   }
 
- /**
- * Determine supply and demand difference, award bonuses and penalties.
- * Determine company operations revenue.
- * Calculate the "throughput" by finding the diff between the supply and demand.
- * If a company has a throughput of 0, it is considered to have met optimal efficieny
- * and gets a prestige token and also benefits the entire sector.
- * @param phase
- * @returns
- */
-async resolveOperatingProduction(phase: Phase) {
-  const companies = await this.companyService.companies({
-    where: { gameId: phase.gameId },
-  });
-  if (!companies) {
-    throw new Error('Companies not found');
-  }
+  /**
+   * In this phase we must resolve votes for how revenue will be distributed
+   * @param phase
+   * @returns
+   */
+  async resolveOperatingProductionVotes(phase: Phase) {
+    const operatingRound =
+      await this.operatingRoundService.operatingRoundWithRevenueDistributionVotes(
+        {
+          id: phase.operatingRoundId || 0,
+        },
+      );
 
-  // Group companies by sector
-  const groupedCompanies = companies.reduce<{ [key: string]: Company[] }>((acc, company) => {
-    if (!acc[company.sectorId]) {
-      acc[company.sectorId] = [];
-    }
-    acc[company.sectorId].push(company);
-    return acc;
-  }, {});
-
-  const sectorRewards: { [sectorId: string]: number } = {};
-  const companyUpdates: { id: string, prestigeTokens: number }[] = [];
-  const productionResults: Prisma.ProductionResultCreateManyInput[] = [];
-  const stockPenalties: { gameId: string, companyId: string, phaseId: string, currentStockPrice: number, steps: number }[] = [];
-
-  // Iterate through each sector and the companies inside them
-  for (const [sectorId, sectorCompanies] of Object.entries(groupedCompanies)) {
-    // Get sector
-    const sector = await this.sectorService.sector({ id: sectorId });
-    if (!sector) {
-      console.error('Sector not found');
-      continue;
+    if (!operatingRound) {
+      console.error('Operating round not found');
+      return;
     }
 
-    // Iterate over companies in sector
-    for (const company of sectorCompanies) {
-      // Calculate throughput
-      const throughput = company.demandScore - company.supplyCurrent;
-      // Consult throughput score to see reward or penalty.
-      const throughputOutcome = throughputRewardOrPenalty(throughput);
+    type GroupedByCompany = {
+      [key: string]: RevenueDistributionVote[];
+    };
 
-      // Award or penalize the company
-      if (throughputOutcome.type === ThroughputRewardType.SECTOR_REWARD) {
-        // Award prestige token
-        companyUpdates.push({
-          id: company.id,
-          prestigeTokens: company.prestigeTokens + 1,
-        });
-        sectorRewards[sectorId] = (sectorRewards[sectorId] || 0) + 1; // TODO: Implement sector-wide rewards if needed.
-      } else if (throughputOutcome.type === ThroughputRewardType.STOCK_PENALTY) {
-        // Penalize the company
-        stockPenalties.push({
-          gameId: phase.gameId,
-          companyId: company.id,
-          phaseId: String(phase.id),
-          currentStockPrice: company.currentStockPrice || 0,
-          steps: throughputOutcome.share_price_steps_down || 0,
+    // Group votes by company
+    const groupedVotes =
+      operatingRound?.revenueDistributionVotes.reduce<GroupedByCompany>(
+        (acc, vote) => {
+          if (!acc[vote.companyId]) {
+            acc[vote.companyId] = [vote];
+          } else {
+            acc[vote.companyId].push(vote);
+          }
+          return acc;
+        },
+        {},
+      );
+
+    if (!groupedVotes) {
+      console.error('Grouped votes not found');
+      return;
+    }
+
+    const productionResultsUpdates: {
+      where: Prisma.ProductionResultWhereInput;
+      data: Prisma.ProductionResultUpdateManyMutationInput;
+    }[] = [];
+
+    // Iterate over companies
+    for (const [companyId, votes] of Object.entries(groupedVotes)) {
+      // Iterate over votes and calculate the total votes for each option
+      const voteCount: { [key: string]: number } = {};
+      votes.forEach((vote) => {
+        if (!voteCount[vote.revenueDistribution]) {
+          voteCount[vote.revenueDistribution] = 0;
+        }
+        voteCount[vote.revenueDistribution] += 1;
+      });
+
+      // Get the option with the most votes
+      const maxVotes = Math.max(...Object.values(voteCount));
+      const maxVote = Object.keys(voteCount).find(
+        (key) => voteCount[key] === maxVotes,
+      );
+
+      if (maxVote) {
+        productionResultsUpdates.push({
+          where: {
+            id: votes[0].productionResultId,
+            operatingRoundId: phase.operatingRoundId || 0,
+          },
+          data: {
+            revenueDistribution: maxVote as RevenueDistribution,
+          },
         });
       }
-
-      // Calculate the revenue for the company units sold
-      const unitsSold = Math.min(company.supplyCurrent, company.demandScore);
-      const revenue = company.unitPrice * unitsSold;
-
-      // Create a production result
-      productionResults.push({
-        revenue,
-        companyId: company.id,
-        operatingRoundId: phase.operatingRoundId || 0,
-      });
     }
+
+    // Perform bulk update
+    await Promise.all(
+      productionResultsUpdates.map((update) =>
+        this.productionResultService.updateManyProductionResults(update),
+      ),
+    );
   }
 
-  // Perform bulk updates
-  await Promise.all([
-    ...companyUpdates.map(update =>
-      this.prisma.company.update({
-        where: { id: update.id },
-        data: { prestigeTokens: update.prestigeTokens },
-      }),
-    ),
-    this.productionResultService.createManyProductionResults(productionResults),
-    ...stockPenalties.map(penalty =>
-      this.stockHistoryService.moveStockPriceDown(
-        penalty.gameId,
-        penalty.companyId,
-        penalty.phaseId,
-        penalty.currentStockPrice,
-        penalty.steps,
-      ),
-    ),
-  ]);
-}
+  /**
+   * Determine supply and demand difference, award bonuses and penalties.
+   * Determine company operations revenue.
+   * Calculate the "throughput" by finding the diff between the supply and demand.
+   * If a company has a throughput of 0, it is considered to have met optimal efficieny
+   * and gets a prestige token and also benefits the entire sector.
+   * @param phase
+   * @returns
+   */
+  async resolveOperatingProduction(phase: Phase) {
+    const companies = await this.companyService.companies({
+      where: { gameId: phase.gameId },
+    });
+    if (!companies) {
+      throw new Error('Companies not found');
+    }
 
-async createManyProductionResults(results: Prisma.ProductionResultCreateManyInput[]): Promise<Prisma.BatchPayload> {
-  return this.prisma.productionResult.createMany({
-    data: results,
-    skipDuplicates: true,
-  });
-}
+    // Group companies by sector
+    const groupedCompanies = companies.reduce<{ [key: string]: Company[] }>(
+      (acc, company) => {
+        if (!acc[company.sectorId]) {
+          acc[company.sectorId] = [];
+        }
+        acc[company.sectorId].push(company);
+        return acc;
+      },
+      {},
+    );
+
+    const sectorRewards: { [sectorId: string]: number } = {};
+    const companyUpdates: { id: string; prestigeTokens: number }[] = [];
+    const productionResults: Prisma.ProductionResultCreateManyInput[] = [];
+    const stockPenalties: {
+      gameId: string;
+      companyId: string;
+      phaseId: string;
+      currentStockPrice: number;
+      steps: number;
+    }[] = [];
+
+    // Iterate through each sector and the companies inside them
+    for (const [sectorId, sectorCompanies] of Object.entries(
+      groupedCompanies,
+    )) {
+      // Get sector
+      const sector = await this.sectorService.sector({ id: sectorId });
+      if (!sector) {
+        console.error('Sector not found');
+        continue;
+      }
+
+      // Iterate over companies in sector
+      for (const company of sectorCompanies) {
+        // Calculate throughput
+        const throughput = company.demandScore - company.supplyCurrent;
+        // Consult throughput score to see reward or penalty.
+        const throughputOutcome = throughputRewardOrPenalty(throughput);
+
+        // Award or penalize the company
+        if (throughputOutcome.type === ThroughputRewardType.SECTOR_REWARD) {
+          // Award prestige token
+          companyUpdates.push({
+            id: company.id,
+            prestigeTokens: company.prestigeTokens + 1,
+          });
+          sectorRewards[sectorId] = (sectorRewards[sectorId] || 0) + 1; // TODO: Implement sector-wide rewards if needed.
+        } else if (
+          throughputOutcome.type === ThroughputRewardType.STOCK_PENALTY
+        ) {
+          // Penalize the company
+          stockPenalties.push({
+            gameId: phase.gameId,
+            companyId: company.id,
+            phaseId: String(phase.id),
+            currentStockPrice: company.currentStockPrice || 0,
+            steps: throughputOutcome.share_price_steps_down || 0,
+          });
+        }
+
+        // Calculate the revenue for the company units sold
+        const unitsSold = Math.min(company.supplyCurrent, company.demandScore);
+        const revenue = company.unitPrice * unitsSold;
+
+        // Create a production result
+        productionResults.push({
+          revenue,
+          companyId: company.id,
+          operatingRoundId: phase.operatingRoundId || 0,
+        });
+      }
+    }
+
+    // Perform bulk updates
+    await Promise.all([
+      ...companyUpdates.map((update) =>
+        this.prisma.company.update({
+          where: { id: update.id },
+          data: { prestigeTokens: update.prestigeTokens },
+        }),
+      ),
+      this.productionResultService.createManyProductionResults(
+        productionResults,
+      ),
+      ...stockPenalties.map((penalty) =>
+        this.stockHistoryService.moveStockPriceDown(
+          penalty.gameId,
+          penalty.companyId,
+          penalty.phaseId,
+          penalty.currentStockPrice,
+          penalty.steps,
+        ),
+      ),
+    ]);
+  }
+
+  async createManyProductionResults(
+    results: Prisma.ProductionResultCreateManyInput[],
+  ): Promise<Prisma.BatchPayload> {
+    return this.prisma.productionResult.createMany({
+      data: results,
+      skipDuplicates: true,
+    });
+  }
 
   /**
    * Resolve the company votes, if there is a tie, we take priority in the vote priority order.
