@@ -95,8 +95,8 @@ export default (trpc: TrpcService, ctx: Context) =>
           sectorId: z.string(),
           gameId: z.string(),
           insolvent: z.boolean(),
-          currentStockPrice: z.number().nullable().optional(),
-          cashOnHand: z.number().nullable().optional(),
+          currentStockPrice: z.number(),
+          cashOnHand: z.number(),
           mergedWithParent: z.string().nullable().optional(),
           mergedWithChildren: z.any().optional(),
           Sector: z.object({
@@ -173,8 +173,8 @@ export default (trpc: TrpcService, ctx: Context) =>
             sectorId: z.string().optional(),
             gameId: z.string().optional(),
             insolvent: z.boolean().optional(),
-            currentStockPrice: z.number().nullable().optional(),
-            cashOnHand: z.number().nullable().optional(),
+            currentStockPrice: z.number(),
+            cashOnHand: z.number(),
             mergedWithParent: z.string().nullable().optional(),
             mergedWithChildren: z.any().optional(),
             Sector: z

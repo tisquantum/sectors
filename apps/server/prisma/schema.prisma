@@ -145,8 +145,8 @@ model Company {
   insolvent                Boolean
   stockTier                StockTier                 @default(TIER_1)
   tierSharesFulfilled      Int                       @default(0)
-  currentStockPrice        Float?
-  cashOnHand               Float?
+  currentStockPrice        Int                       @default(0)
+  cashOnHand               Int                       @default(0)
   mergedWithParent         String?
   mergedWithChildren       String?
   ipoAndFloatPrice         Int

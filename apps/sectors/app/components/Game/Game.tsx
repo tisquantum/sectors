@@ -26,6 +26,7 @@ import { useGame } from "./GameContext";
 import StockRoundAction from "./StockRoundAction";
 import OperatingRoundProduction from "./OperatingRoundProduction";
 import StockRoundResults from "./StockRoundResults";
+import OperatingRoundRevenueVote from "./OperatingRoundRevenueVote";
 
 const determineGameRound = (
   game: GameState
@@ -81,6 +82,9 @@ const Game = ({ gameId }: { gameId: string }) => {
     ) :
     currentRoundData?.phase.name === PhaseName.OPERATING_PRODUCTION ? (
       <OperatingRoundProduction />
+    ) :
+    currentRoundData?.phase.name === PhaseName.OPERATING_PRODUCTION_VOTE ? (
+      <OperatingRoundRevenueVote />
     ) :
     currentRoundData?.phase.name === PhaseName.OPERATING_ACTION_COMPANY_VOTE ? (
       <CompanyActionSlider />
