@@ -25,6 +25,7 @@ import { PlayerOrderModule } from './player-order/player-order.module';
 import { ShareModule } from './share/share.module';
 import { OperatingRoundVoteModule } from './operating-round-vote/operating-round-vote.module';
 import { StockHistoryModule } from './stock-history/stock-history.module';
+import { ProductionResultModule } from './production-result/production-result.module';
 
 const yourPusherOptions = {
   cluster: process.env.PUSHER_CLUSTER ?? 'CLUSTER',
@@ -64,6 +65,7 @@ const chunkingOptions = {
     ShareModule,
     OperatingRoundVoteModule,
     StockHistoryModule,
+    ProductionResultModule,
   ],
   controllers: [AppController],
   providers: [AppService],

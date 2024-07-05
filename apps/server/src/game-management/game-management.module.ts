@@ -12,6 +12,8 @@ import { PusherModule } from 'nestjs-pusher';
 import { OperatingRoundModule } from '@server/operating-round/operating-round.module';
 import { ShareModule } from '@server/share/share.module';
 import { PlayerOrderModule } from '@server/player-order/player-order.module';
+import { ProductionResultModule } from '@server/production-result/production-result.module';
+import { StockHistoryModule } from '@server/stock-history/stock-history.module';
 
 @Module({
   imports: [
@@ -27,6 +29,8 @@ import { PlayerOrderModule } from '@server/player-order/player-order.module';
     OperatingRoundModule,
     ShareModule,
     PlayerOrderModule,
+    StockHistoryModule,
+    ProductionResultModule,
   ],
   providers: [GameManagementService],
   exports: [GameManagementService],

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { Prisma, StockHistory } from '@prisma/client';
-import { getStockPriceStepsUp } from '@server/data/constants';
+import { getStockPriceStepsUp, getStockPriceWithStepsDown } from '@server/data/constants';
 
 @Injectable()
 export class StockHistoryService {
@@ -84,7 +84,7 @@ export class StockHistoryService {
 
   async moveStockPriceDown(gameId: string, companyId: string, phaseId: string, currentStockPrice: number, steps: number): Promise<StockHistory> {
     //get new stock price
-    const newPrice = getStockPriceStepsUp(currentStockPrice, -steps);
+    const newPrice = getStockPriceWithStepsDown(currentStockPrice, steps);
     //create new stock history
     return this.createStockHistory({
       gameId: gameId,

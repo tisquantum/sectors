@@ -63,6 +63,8 @@ import { OperatingRoundService } from '@server/operating-round/operating-round.s
 import { ShareService } from '@server/share/share.service';
 import { PlayerOrderService } from '@server/player-order/player-order.service';
 import e from 'express';
+import { StockHistoryService } from '@server/stock-history/stock-history.service';
+import { ProductionResultService } from '@server/production-result/production-result.service';
 
 type GroupedByPhase = {
   [key: string]: {
@@ -86,6 +88,8 @@ export class GameManagementService {
     private pusherService: PusherService,
     private shareService: ShareService,
     private playerOrderService: PlayerOrderService,
+    private stockHistoryService: StockHistoryService,
+    private productionResultService: ProductionResultService,
   ) {}
 
   /**
@@ -131,81 +135,112 @@ export class GameManagementService {
     }
   }
 
-  /**
-   * Determine supply and demand difference, award bonuses and penalties.
-   * Determine company operations revenue.
-   * Calculate the "throughput" by finding the diff between the supply and demand.
-   * If a company has a throughput of 0, it is considered to have met optimal efficieny
-   * and gets a prestige token and also benefits the entire sector.
-   * @param phase
-   * @returns
-   */
-  async resolveOperatingProduction(phase: Phase) {
-    const companies = await this.companyService.companies({
-      where: { gameId: phase.gameId },
-    });
-    if (!companies) {
-      throw new Error('Companies not found');
-    }
-    //group companies by sector
-    const groupedCompanies = companies.reduce<{
-      [key: string]: Company[];
-    }>((acc, company) => {
-      if (!acc[company.sectorId]) {
-        acc[company.sectorId] = [];
-      }
-      acc[company.sectorId].push(company);
-      return acc;
-    }, {});
-    //iterate through each sector and the companies inside them
-    await Promise.all(
-      Object.entries(groupedCompanies).map(
-        async ([sectorId, sectorCompanies]) => {
-          //get sector
-          const sector = await this.sectorService.sector({
-            id: sectorId,
-          });
-          if (!sector) {
-            console.error('Sector not found');
-          }
-          //iterate over companies in sector
-          await Promise.all(
-            sectorCompanies.map(async (company) => {
-              //calculate throughput
-              const throughput = company.demandScore - company.supplyCurrent;
-              //consult throughput score to see reward or penalty.
-              const throughputOutcome = throughputRewardOrPenalty(throughput);
-              //award or penalize the company
-              if (
-                throughputOutcome.type === ThroughputRewardType.SECTOR_REWARD
-              ) {
-                //award prestige token
-                await this.prisma.company.update({
-                  where: { id: company.id },
-                  data: {
-                    prestigeTokens: company.prestigeTokens + 1,
-                  },
-                });
-              } else if (
-                throughputOutcome.type === ThroughputRewardType.STOCK_PENALTY
-              ) {
-                //penalize the company
-                await this.prisma.company.update({
-                  where: { id: company.id },
-                  data: {
-                    currentStockPrice: getStockPriceWithStepsDown(
-                      company.currentStockPrice || 0,
-                      throughputOutcome.share_price_steps_down || 0,
-                    ),
-                  },
-                });
-              }
-            }),
-          );
-        },
-      ),
-    );
+ /**
+ * Determine supply and demand difference, award bonuses and penalties.
+ * Determine company operations revenue.
+ * Calculate the "throughput" by finding the diff between the supply and demand.
+ * If a company has a throughput of 0, it is considered to have met optimal efficieny
+ * and gets a prestige token and also benefits the entire sector.
+ * @param phase
+ * @returns
+ */
+async resolveOperatingProduction(phase: Phase) {
+  const companies = await this.companyService.companies({
+    where: { gameId: phase.gameId },
+  });
+  if (!companies) {
+    throw new Error('Companies not found');
   }
+
+  // Group companies by sector
+  const groupedCompanies = companies.reduce<{ [key: string]: Company[] }>((acc, company) => {
+    if (!acc[company.sectorId]) {
+      acc[company.sectorId] = [];
+    }
+    acc[company.sectorId].push(company);
+    return acc;
+  }, {});
+
+  const sectorRewards: { [sectorId: string]: number } = {};
+  const companyUpdates: { id: string, prestigeTokens: number }[] = [];
+  const productionResults: Prisma.ProductionResultCreateManyInput[] = [];
+  const stockPenalties: { gameId: string, companyId: string, phaseId: string, currentStockPrice: number, steps: number }[] = [];
+
+  // Iterate through each sector and the companies inside them
+  for (const [sectorId, sectorCompanies] of Object.entries(groupedCompanies)) {
+    // Get sector
+    const sector = await this.sectorService.sector({ id: sectorId });
+    if (!sector) {
+      console.error('Sector not found');
+      continue;
+    }
+
+    // Iterate over companies in sector
+    for (const company of sectorCompanies) {
+      // Calculate throughput
+      const throughput = company.demandScore - company.supplyCurrent;
+      // Consult throughput score to see reward or penalty.
+      const throughputOutcome = throughputRewardOrPenalty(throughput);
+
+      // Award or penalize the company
+      if (throughputOutcome.type === ThroughputRewardType.SECTOR_REWARD) {
+        // Award prestige token
+        companyUpdates.push({
+          id: company.id,
+          prestigeTokens: company.prestigeTokens + 1,
+        });
+        sectorRewards[sectorId] = (sectorRewards[sectorId] || 0) + 1; // TODO: Implement sector-wide rewards if needed.
+      } else if (throughputOutcome.type === ThroughputRewardType.STOCK_PENALTY) {
+        // Penalize the company
+        stockPenalties.push({
+          gameId: phase.gameId,
+          companyId: company.id,
+          phaseId: String(phase.id),
+          currentStockPrice: company.currentStockPrice || 0,
+          steps: throughputOutcome.share_price_steps_down || 0,
+        });
+      }
+
+      // Calculate the revenue for the company units sold
+      const unitsSold = Math.min(company.supplyCurrent, company.demandScore);
+      const revenue = company.unitPrice * unitsSold;
+
+      // Create a production result
+      productionResults.push({
+        revenue,
+        companyId: company.id,
+        operatingRoundId: phase.operatingRoundId || 0,
+      });
+    }
+  }
+
+  // Perform bulk updates
+  await Promise.all([
+    ...companyUpdates.map(update =>
+      this.prisma.company.update({
+        where: { id: update.id },
+        data: { prestigeTokens: update.prestigeTokens },
+      }),
+    ),
+    this.productionResultService.createManyProductionResults(productionResults),
+    ...stockPenalties.map(penalty =>
+      this.stockHistoryService.moveStockPriceDown(
+        penalty.gameId,
+        penalty.companyId,
+        penalty.phaseId,
+        penalty.currentStockPrice,
+        penalty.steps,
+      ),
+    ),
+  ]);
+}
+
+async createManyProductionResults(results: Prisma.ProductionResultCreateManyInput[]): Promise<Prisma.BatchPayload> {
+  return this.prisma.productionResult.createMany({
+    data: results,
+    skipDuplicates: true,
+  });
+}
 
   /**
    * Resolve the company votes, if there is a tie, we take priority in the vote priority order.

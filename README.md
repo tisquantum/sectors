@@ -119,3 +119,5 @@ I'm thinking short orders can only be performed on a company you have no ownersh
 - Should we have a max limit on short shares you can take?  Probably start at 3 and have research deck cards that allow certain companies to be shorted at higher amounts.
 
 - Company tiers should be related to throughput and market cap (???), defined outside db possibly in constants.  Company tier could also be correlated to how much you can short.  The "stronger" and more "stable" the company, the higher you can short because it has greater risk.
+
+- What are prestige tokens for?  They can be traded in for an upgrade to unit price, an upgrade to research deck slots or hold to break ties.
