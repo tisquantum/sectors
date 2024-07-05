@@ -134,6 +134,7 @@ enum StockTier {
 model Company {
   id                       String                    @id @default(uuid())
   name                     String
+  stockSymbol              String
   unitPrice                Int
   throughput               Int //TODO: Deprecated
   supplyMax                Int                       @default(0)

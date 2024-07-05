@@ -46,6 +46,7 @@ export class OperatingRoundService {
             Company: {
               include: {
                 Sector: true,
+                Share: true,
               },
             },
           },

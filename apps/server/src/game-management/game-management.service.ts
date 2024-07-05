@@ -49,6 +49,7 @@ import {
   throughputRewardOrPenalty,
   ThroughputRewardType,
   getStockPriceWithStepsDown,
+  getStockPriceStepsUp,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -128,6 +129,9 @@ export class GameManagementService {
       case PhaseName.OPERATING_PRODUCTION_VOTE_RESOLVE:
         await this.resolveOperatingProductionVotes(phase);
         break;
+      case PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT:
+        await this.resolveOperatingStockPriceAdjustment(phase);
+        break;
       case PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT:
         await this.resolveCompanyVotes(phase);
         break;
@@ -137,6 +141,147 @@ export class GameManagementService {
       default:
         return;
     }
+  }
+
+  /**
+   * Adjust stock prices and pay out dividends to players and companies
+   * based on the results of the company operation revenue vote.
+   * @param phase
+   * @returns
+   */
+  async resolveOperatingStockPriceAdjustment(phase: Phase) {
+    const operatingRound =
+      await this.operatingRoundService.operatingRoundWithProductionResults({
+        id: phase.operatingRoundId || 0,
+      });
+
+    if (!operatingRound) {
+      console.error('Operating round not found');
+      return;
+    }
+
+    const productionResults = operatingRound.productionResults;
+    const stockPriceUpdates = [];
+    const stockHistories = [];
+
+    for (const result of productionResults) {
+      const company = result.Company;
+      const revenueDistribution = result.revenueDistribution;
+
+      if (!revenueDistribution) {
+        console.error('Revenue distribution not found');
+        continue;
+      }
+
+      const revenue = result.revenue;
+      if (revenue == 0) {
+        console.error('No revenue to distribute');
+        continue;
+      }
+
+      let newStockPrice;
+      let moneyFromBank;
+      let dividend = 0;
+      let steps;
+
+      switch (revenueDistribution) {
+        case RevenueDistribution.DIVIDEND_FULL:
+          dividend = revenue / company.Share.length;
+          steps = Math.floor(revenue / company.currentStockPrice);
+          newStockPrice = getStockPriceStepsUp(
+            company.currentStockPrice,
+            steps,
+          );
+          break;
+        case RevenueDistribution.DIVIDEND_FIFTY_FIFTY:
+          dividend = Math.floor(revenue / 2) / company.Share.length;
+          steps = Math.floor(
+            Math.floor(revenue / 2) / company.currentStockPrice,
+          );
+          newStockPrice = getStockPriceStepsUp(
+            company.currentStockPrice,
+            steps,
+          );
+          break;
+        case RevenueDistribution.RETAINED:
+          newStockPrice = getStockPriceWithStepsDown(
+            company.currentStockPrice,
+            1,
+          );
+          break;
+        default:
+          continue;
+      }
+
+      moneyFromBank = revenue;
+
+      if (!newStockPrice) {
+        console.error('New stock price not found');
+        continue;
+      }
+
+      if (dividend > 0) {
+        const sharePromises = company.Share.map(async (share) => {
+          if (share.location == ShareLocation.PLAYER) {
+            const player = await this.playersService.player({
+              id: share.playerId || '',
+            });
+            if (!player) {
+              console.error('Player not found');
+              return;
+            }
+            await this.playersService.updatePlayer({
+              where: { id: player.id },
+              data: { cashOnHand: player.cashOnHand + dividend },
+            });
+          } else if (share.location == ShareLocation.IPO) {
+            await this.companyService.updateCompany({
+              where: { id: company.id },
+              data: { cashOnHand: company.cashOnHand + dividend },
+            });
+          }
+        });
+        await Promise.all(sharePromises);
+      } else {
+        await this.companyService.updateCompany({
+          where: { id: company.id },
+          data: { cashOnHand: company.cashOnHand + moneyFromBank },
+        });
+      }
+
+      const game = await this.gamesService.game({ id: phase.gameId });
+      if (!game) {
+        console.error('Game not found');
+        continue;
+      }
+
+      await this.gamesService.updateGameState({
+        where: { id: phase.gameId },
+        data: { bankPoolNumber: game.bankPoolNumber - moneyFromBank },
+      });
+
+      stockPriceUpdates.push({
+        where: { id: company.id },
+        data: { currentStockPrice: newStockPrice },
+      });
+
+      stockHistories.push({
+        companyId: company.id,
+        price: newStockPrice,
+        gameId: phase.gameId,
+        phaseId: phase.id,
+      });
+    }
+
+    // Update all stock prices in parallel
+    await Promise.all(
+      stockPriceUpdates.map((update) =>
+        this.companyService.updateCompany(update),
+      ),
+    );
+
+    // Log stock history (or perform any other necessary actions)
+    await this.stockHistoryService.createManyStockHistories(stockHistories);
   }
 
   /**
@@ -176,7 +321,7 @@ export class GameManagementService {
       );
 
     if (!groupedVotes) {
-      console.error('Grouped votes not found');
+      console.error('No grouped votes not found');
       return;
     }
 

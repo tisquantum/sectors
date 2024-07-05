@@ -108,7 +108,7 @@ export type OperatingRoundWithRevenueDistributionVotes = OperatingRound & {
 };
 
 export type ProductionResultWithCompany = ProductionResult & {
-  Company: Company & { Sector: Sector };
+  Company: Company & { Sector: Sector, Share: Share[] };
 };
 
 export type OperatingRoundWithProductionResults = OperatingRound & {

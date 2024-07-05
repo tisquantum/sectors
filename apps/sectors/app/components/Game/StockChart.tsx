@@ -88,14 +88,18 @@ const StockChart = () => {
         })}
       </div>
       {selectedCompany && chartData && (
-        <LineChart
-          data={chartData}
-          index="phase"
-          categories={["stockPrice"]}
-          yAxisLabel="Stock Price"
-          xAxisLabel="Stock Price Updated"
-          valueFormatter={valueFormatter}
-        />
+        <div className="flex flex-col justify-center items-center">
+          <h3>{selectedCompany.name}</h3>
+          <LineChart
+            data={chartData}
+            index="phase"
+            categories={["stockPrice"]}
+            yAxisLabel="Stock Price"
+            xAxisLabel="Stock Price Updated"
+            colors={[sectorColors[selectedCompany.Sector.name]]}
+            valueFormatter={valueFormatter}
+          />
+        </div>
       )}
     </div>
   );

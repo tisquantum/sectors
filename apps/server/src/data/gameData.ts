@@ -131,6 +131,7 @@ export const gameDataJson: GameDataJson = {
     {
       id: '1',
       name: 'Cyco Corp',
+      stockSymbol: 'CYCO',
       unitPrice: 10.0,
       throughput: 10,
       sectorId: '1',
@@ -141,6 +142,7 @@ export const gameDataJson: GameDataJson = {
     {
       id: '2',
       name: 'FunTimes Inc.',
+      stockSymbol: 'FUN',
       unitPrice: 12.0,
       throughput: 12,
       sectorId: '1',
@@ -151,6 +153,7 @@ export const gameDataJson: GameDataJson = {
     {
       id: '3',
       name: 'Happy Goods Ltd.',
+      stockSymbol: 'HAPPY',
       unitPrice: 11.0,
       throughput: 11,
       sectorId: '1',
@@ -161,6 +164,7 @@ export const gameDataJson: GameDataJson = {
     {
       id: '4',
       name: 'Leisure Co.',
+      stockSymbol: 'LEIS',
       unitPrice: 9.0,
       throughput: 9,
       sectorId: '1',
@@ -171,6 +175,7 @@ export const gameDataJson: GameDataJson = {
     {
       id: '5',
       name: 'Joyful Enterprises',
+      stockSymbol: 'JOY',
       unitPrice: 13.0,
       throughput: 13,
       sectorId: '1',
@@ -181,6 +186,7 @@ export const gameDataJson: GameDataJson = {
     {
       id: '6',
       name: 'Steady Supply Co.',
+      stockSymbol: 'STEADY',
       unitPrice: 14.0,
       throughput: 14,
       sectorId: '2',
@@ -191,6 +197,7 @@ export const gameDataJson: GameDataJson = {
     {
       id: '7',
       name: 'Defendable Goods',
+      stockSymbol: 'DEFEND',
       unitPrice: 15.0,
       throughput: 15,
       sectorId: '2',
@@ -201,6 +208,7 @@ export const gameDataJson: GameDataJson = {
     {
       id: '8',
       name: 'SafeBuy Ltd.',
+      stockSymbol: 'SAFE',
       unitPrice: 16.0,
       throughput: 16,
       sectorId: '2',
@@ -211,6 +219,7 @@ export const gameDataJson: GameDataJson = {
     {
       id: '9',
       name: 'HomeGoods Co.',
+      stockSymbol: 'HOME',
       unitPrice: 17.0,
       throughput: 17,
       sectorId: '2',
@@ -221,6 +230,7 @@ export const gameDataJson: GameDataJson = {
     {
       id: '10',
       name: 'Essential Supplies Inc.',
+      stockSymbol: 'ESSENT',
       unitPrice: 18.0,
       throughput: 18,
       sectorId: '2',
@@ -231,6 +241,7 @@ export const gameDataJson: GameDataJson = {
     {
       id: '11',
       name: 'Heavy Industries Ltd.',
+      stockSymbol: 'HEAVY',
       unitPrice: 19.0,
       throughput: 19,
       sectorId: '3',
@@ -241,6 +252,7 @@ export const gameDataJson: GameDataJson = {
     {
       id: '12',
       name: 'Machinery Inc.',
+      stockSymbol: 'MACH',
       unitPrice: 20.0,
       throughput: 20,
       sectorId: '3',
@@ -251,6 +263,7 @@ export const gameDataJson: GameDataJson = {
     {
       id: '13',
       name: 'Industrial Solutions Co.',
+      stockSymbol: 'INDSOL',
       unitPrice: 21.0,
       throughput: 21,
       sectorId: '3',
@@ -261,6 +274,7 @@ export const gameDataJson: GameDataJson = {
     {
       id: '14',
       name: 'SteelWorks Ltd.',
+      stockSymbol: 'STEEL',
       unitPrice: 22.0,
       throughput: 22,
       sectorId: '3',
@@ -271,6 +285,7 @@ export const gameDataJson: GameDataJson = {
     {
       id: '15',
       name: 'Industrial Giants Inc.',
+      stockSymbol: 'GIANT',
       unitPrice: 23.0,
       throughput: 23,
       sectorId: '3',
@@ -281,6 +296,7 @@ export const gameDataJson: GameDataJson = {
     {
       id: '16',
       name: 'Tech Innovations Ltd.',
+      stockSymbol: 'TECH',
       unitPrice: 24.0,
       throughput: 24,
       sectorId: '4',
@@ -291,6 +307,7 @@ export const gameDataJson: GameDataJson = {
     {
       id: '17',
       name: 'FutureTech Inc.',
+      stockSymbol: 'FUTURE',
       unitPrice: 25.0,
       throughput: 25,
       sectorId: '4',
@@ -301,6 +318,7 @@ export const gameDataJson: GameDataJson = {
     {
       id: '18',
       name: 'Digital Solutions Co.',
+      stockSymbol: 'DIGITAL',
       unitPrice: 26.0,
       throughput: 26,
       sectorId: '4',
@@ -311,6 +329,7 @@ export const gameDataJson: GameDataJson = {
     {
       id: '19',
       name: 'HighTech Ltd.',
+      stockSymbol: 'HITECH',
       unitPrice: 27.0,
       throughput: 27,
       sectorId: '4',
@@ -321,6 +340,7 @@ export const gameDataJson: GameDataJson = {
     {
       id: '20',
       name: 'Tech Titans Inc.',
+      stockSymbol: 'TITAN',
       unitPrice: 28.0,
       throughput: 28,
       sectorId: '4',
@@ -331,6 +351,7 @@ export const gameDataJson: GameDataJson = {
     {
       id: '21',
       name: 'HealthFirst Co.',
+      stockSymbol: 'HEALTH',
       unitPrice: 29.0,
       throughput: 29,
       sectorId: '5',
@@ -341,6 +362,7 @@ export const gameDataJson: GameDataJson = {
     {
       id: '22',
       name: 'MediCare Ltd.',
+      stockSymbol: 'MED',
       unitPrice: 30.0,
       throughput: 30,
       sectorId: '5',
@@ -351,6 +373,7 @@ export const gameDataJson: GameDataJson = {
     {
       id: '23',
       name: 'Wellness Inc.',
+      stockSymbol: 'WELL',
       unitPrice: 31.0,
       throughput: 31,
       sectorId: '5',
@@ -361,6 +384,7 @@ export const gameDataJson: GameDataJson = {
     {
       id: '24',
       name: 'PharmaTech Co.',
+      stockSymbol: 'PHARMA',
       unitPrice: 32.0,
       throughput: 32,
       sectorId: '5',
@@ -371,6 +395,7 @@ export const gameDataJson: GameDataJson = {
     {
       id: '25',
       name: 'BioHealth Inc.',
+      stockSymbol: 'BIO',
       unitPrice: 33.0,
       throughput: 33,
       sectorId: '5',
@@ -381,6 +406,7 @@ export const gameDataJson: GameDataJson = {
     {
       id: '26',
       name: 'Green Energy Ltd.',
+      stockSymbol: 'GREEN',
       unitPrice: 34.0,
       throughput: 34,
       sectorId: '6',
@@ -391,6 +417,7 @@ export const gameDataJson: GameDataJson = {
     {
       id: '27',
       name: 'PowerPlus Inc.',
+      stockSymbol: 'POWER',
       unitPrice: 35.0,
       throughput: 35,
       sectorId: '6',
@@ -401,6 +428,7 @@ export const gameDataJson: GameDataJson = {
     {
       id: '28',
       name: 'EcoEnergy Co.',
+      stockSymbol: 'ECO',
       unitPrice: 36.0,
       throughput: 36,
       sectorId: '6',
@@ -411,6 +439,7 @@ export const gameDataJson: GameDataJson = {
     {
       id: '29',
       name: 'SolarWave Ltd.',
+      stockSymbol: 'SOLAR',
       unitPrice: 37.0,
       throughput: 37,
       sectorId: '6',
@@ -421,6 +450,7 @@ export const gameDataJson: GameDataJson = {
     {
       id: '30',
       name: 'Energy Innovations Inc.',
+      stockSymbol: 'ENERGY',
       unitPrice: 38.0,
       throughput: 38,
       sectorId: '6',
@@ -431,6 +461,7 @@ export const gameDataJson: GameDataJson = {
     {
       id: '31',
       name: 'Material Pros Ltd.',
+      stockSymbol: 'MATER',
       unitPrice: 39.0,
       throughput: 39,
       sectorId: '7',
@@ -441,6 +472,7 @@ export const gameDataJson: GameDataJson = {
     {
       id: '32',
       name: 'RawGoods Inc.',
+      stockSymbol: 'RAW',
       unitPrice: 40.0,
       throughput: 40,
       sectorId: '7',
@@ -451,6 +483,7 @@ export const gameDataJson: GameDataJson = {
     {
       id: '33',
       name: 'Resourceful Co.',
+      stockSymbol: 'RESFUL',
       unitPrice: 41.0,
       throughput: 41,
       sectorId: '7',
@@ -461,6 +494,7 @@ export const gameDataJson: GameDataJson = {
     {
       id: '34',
       name: 'Building Blocks Ltd.',
+      stockSymbol: 'BLOCKS',
       unitPrice: 42.0,
       throughput: 42,
       sectorId: '7',
@@ -471,6 +505,7 @@ export const gameDataJson: GameDataJson = {
     {
       id: '35',
       name: 'Material Masters Inc.',
+      stockSymbol: 'MASTER',
       unitPrice: 43.0,
       throughput: 43,
       sectorId: '7',
