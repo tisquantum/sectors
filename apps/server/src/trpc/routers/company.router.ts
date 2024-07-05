@@ -65,6 +65,27 @@ export default (trpc: TrpcService, ctx: Context) =>
         });
       }),
 
+    listCompaniesWithSectorAndStockHistory: trpc.procedure
+      .input(
+        z.object({
+          skip: z.number().optional(),
+          take: z.number().optional(),
+          cursor: z.string().optional(),
+          where: z.any().optional(),
+          orderBy: z.any().optional(),
+        }),
+      )
+      .query(async ({ input }) => {
+        const { skip, take, cursor, where, orderBy } = input;
+        return ctx.companyService.companiesWithSectorAndStockHistory({
+          skip,
+          take,
+          cursor: cursor ? { id: cursor } : undefined,
+          where,
+          orderBy,
+        });
+      }),
+
     createCompany: trpc.procedure
       .input(
         z.object({
@@ -122,7 +143,7 @@ export default (trpc: TrpcService, ctx: Context) =>
       )
       .mutation(async ({ input }) => {
         const sector = await ctx.sectorService.sector({ id: input.sectorId });
-        if(!sector) throw new Error('Sector not found');
+        if (!sector) throw new Error('Sector not found');
         const data: Prisma.CompanyCreateInput = {
           ...input,
           ipoAndFloatPrice: determineFloatPrice(sector),
@@ -211,7 +232,10 @@ export default (trpc: TrpcService, ctx: Context) =>
           Game: { connect: { id: data.gameId } },
           Sector: { connect: { id: data.sectorId } },
         };
-        return ctx.companyService.updateCompany({ where: { id }, data: newData });
+        return ctx.companyService.updateCompany({
+          where: { id },
+          data: newData,
+        });
       }),
 
     deleteCompany: trpc.procedure

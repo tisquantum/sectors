@@ -277,6 +277,8 @@ model ProductionResult {
   companyId                String
   operatingRoundId         Int
   revenue                  Int
+  steps                    Int                       @default(0)
+  throughputResult         Int                       @default(0) //0 is better
   revenueDistribution      RevenueDistribution?
   revenueDistributionVotes RevenueDistributionVote[]
   Company                  Company                   @relation(fields: [companyId], references: [id])
@@ -365,12 +367,20 @@ model Card {
 model Sector {
   id             String        @id @default(uuid())
   name           String
+  consumers      Int           @default(0)
   supply         Int
   demand         Int
   marketingPrice Float
   basePrice      Float
   floatNumberMin Int
   floatNumberMax Int
+  unitPriceMin   Int           @default(0)
+  unitPriceMax   Int           @default(0)
+  supplyDefault  Int           @default(0)
+  demandMin      Int           @default(0)
+  demandMax      Int           @default(1)
+  supplyMin      Int           @default(0)
+  supplyMax      Int           @default(1)
   Company        Company[]
   PlayerOrder    PlayerOrder[]
   Game           Game?         @relation(fields: [gameId], references: [id])

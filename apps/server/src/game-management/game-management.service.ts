@@ -25,6 +25,7 @@ import { SectorService } from '@server/sector/sector.service';
 import { gameDataJson } from '@server/data/gameData';
 import { StartGameInput } from './game-management.interface';
 import {
+  CompanyWithSector,
   GameState,
   PlayerOrderWithCompany,
   PlayerOrderWithPlayerCompany,
@@ -232,7 +233,7 @@ export class GameManagementService {
    * @returns
    */
   async resolveOperatingProduction(phase: Phase) {
-    const companies = await this.companyService.companies({
+    const companies = await this.companyService.companiesWithSector({
       where: { gameId: phase.gameId },
     });
     if (!companies) {
@@ -240,16 +241,15 @@ export class GameManagementService {
     }
 
     // Group companies by sector
-    const groupedCompanies = companies.reduce<{ [key: string]: Company[] }>(
-      (acc, company) => {
-        if (!acc[company.sectorId]) {
-          acc[company.sectorId] = [];
-        }
-        acc[company.sectorId].push(company);
-        return acc;
-      },
-      {},
-    );
+    const groupedCompanies = companies.reduce<{
+      [key: string]: CompanyWithSector[];
+    }>((acc, company) => {
+      if (!acc[company.sectorId]) {
+        acc[company.sectorId] = [];
+      }
+      acc[company.sectorId].push(company);
+      return acc;
+    }, {});
 
     const sectorRewards: { [sectorId: string]: number } = {};
     const companyUpdates: { id: string; prestigeTokens: number }[] = [];
@@ -261,6 +261,11 @@ export class GameManagementService {
       currentStockPrice: number;
       steps: number;
     }[] = [];
+    const sectorConsumersUpdates: { id: string; consumers: number }[] = [];
+    let gameConsumersUpdate: {
+      where: { id: string };
+      data: { consumerPoolNumber: number };
+    } | null = null;
 
     // Iterate through each sector and the companies inside them
     for (const [sectorId, sectorCompanies] of Object.entries(
@@ -273,10 +278,15 @@ export class GameManagementService {
         continue;
       }
 
+      let consumers = sector.consumers;
+      //sort sectorCompanies by demandScore
+      sectorCompanies.sort((a, b) => b.demandScore - a.demandScore);
       // Iterate over companies in sector
       for (const company of sectorCompanies) {
         // Calculate throughput
-        const throughput = company.demandScore - company.supplyCurrent;
+        const throughput =
+          company.demandScore + company.Sector.demand - company.supplyMax;
+        console.log('Throughput:', throughput, company.name, company);
         // Consult throughput score to see reward or penalty.
         const throughputOutcome = throughputRewardOrPenalty(throughput);
 
@@ -302,39 +312,74 @@ export class GameManagementService {
         }
 
         // Calculate the revenue for the company units sold
-        const unitsSold = Math.min(company.supplyCurrent, company.demandScore);
+        let unitsSold = Math.min(
+          company.supplyMax,
+          company.demandScore + company.Sector.demand,
+        );
+        //is there enough consumers to buy all the supply?
+        // consumers are 1:1 with units sold, TODO: We may want to allow
+        // this ratio to be different at some point, perhaps even by sector
+        if (unitsSold > consumers) {
+          unitsSold = consumers;
+        }
         const revenue = company.unitPrice * unitsSold;
-
+        //update consumers
+        consumers -= unitsSold;
+        //update sector consumers
+        sectorConsumersUpdates.push({
+          id: sectorId,
+          consumers,
+        });
+        // update game consumer pool
+        gameConsumersUpdate = {
+          where: { id: phase.gameId },
+          data: {
+            consumerPoolNumber: consumers,
+          },
+        };
         // Create a production result
         productionResults.push({
           revenue,
           companyId: company.id,
           operatingRoundId: phase.operatingRoundId || 0,
+          throughputResult: throughput,
+          steps: throughputOutcome.share_price_steps_down || 0,
         });
       }
     }
 
     // Perform bulk updates
-    await Promise.all([
-      ...companyUpdates.map((update) =>
-        this.prisma.company.update({
-          where: { id: update.id },
-          data: { prestigeTokens: update.prestigeTokens },
-        }),
-      ),
-      this.productionResultService.createManyProductionResults(
-        productionResults,
-      ),
-      ...stockPenalties.map((penalty) =>
-        this.stockHistoryService.moveStockPriceDown(
-          penalty.gameId,
-          penalty.companyId,
-          penalty.phaseId,
-          penalty.currentStockPrice,
-          penalty.steps,
+    await Promise.all(
+      [
+        ...companyUpdates.map((update) =>
+          this.prisma.company.update({
+            where: { id: update.id },
+            data: { prestigeTokens: update.prestigeTokens },
+          }),
         ),
-      ),
-    ]);
+        this.productionResultService.createManyProductionResults(
+          productionResults,
+        ),
+        ...stockPenalties.map((penalty) =>
+          this.stockHistoryService.moveStockPriceDown(
+            penalty.gameId,
+            penalty.companyId,
+            penalty.phaseId,
+            penalty.currentStockPrice,
+            penalty.steps,
+          ),
+        ),
+        ...sectorConsumersUpdates.map((update) =>
+          this.prisma.sector.update({
+            where: { id: update.id },
+            data: { consumers: update.consumers },
+          }),
+        ),
+        gameConsumersUpdate
+          ? this.gamesService.updateGameState(gameConsumersUpdate)
+          : null,
+      ].filter(Boolean),
+    );
   }
 
   async createManyProductionResults(
@@ -500,6 +545,12 @@ export class GameManagementService {
         name: sector.name,
         supply: sector.supply,
         demand: sector.demand,
+        consumers: 0,
+        demandMin: 0,
+        demandMax: 0,
+        unitPriceMin: sector.unitPriceMin,
+        unitPriceMax: sector.unitPriceMax,
+        supplyDefault: sector.supplyDefault,
         marketingPrice: sector.marketingPrice,
         basePrice: sector.basePrice,
         floatNumberMin: sector.floatNumberMin,
@@ -516,14 +567,24 @@ export class GameManagementService {
         return selectedCompanies.map((company) => ({
           id: company.id,
           name: company.name,
-          unitPrice: company.unitPrice,
+          //find int between sector min and max
+          unitPrice: Math.floor(
+            Math.random() * (sector.unitPriceMax - sector.unitPriceMin + 1) +
+              sector.unitPriceMin,
+          ),
           throughput: company.throughput,
+          demandScore: 0,
+          supplyCurrent: 0,
+          supplyMax: Math.floor(
+            Math.random() * (sector.supplyMax - sector.supplyMin + 1) +
+              sector.supplyMin,
+          ),
           sectorId: sector.name, //map to name at first then match to supabase for id
           gameId: game.id,
           insolvent: company.insolvent,
         }));
       });
-
+      let companies;
       try {
         // Create sectors and companies
         const sectors = await this.sectorService.createManySectors(sectorData);
@@ -542,9 +603,8 @@ export class GameManagementService {
             sectorId: sector.id,
           };
         });
-        const companies =
+        companies =
           await this.companyService.createManyCompanies(newCompanyData);
-
         //iterate through companies and create ipo shares
         const shares: {
           companyId: string;
@@ -584,6 +644,23 @@ export class GameManagementService {
           phaseName: PhaseName.STOCK_MEET,
           roundType: RoundType.STOCK,
         });
+        //iterate through companies and create initial stock history
+        const stockHistories: {
+          companyId: string;
+          price: number;
+          gameId: string;
+          phaseId: string;
+        }[] = [];
+        //create initial stock history for starting stock price
+        companies.forEach((company) => {
+          stockHistories.push({
+            companyId: company.id,
+            price: company.currentStockPrice || 0,
+            gameId: game.id,
+            phaseId: newPhase.id || '',
+          });
+        });
+        await this.stockHistoryService.createManyStockHistories(stockHistories);
         // Start the timer for advancing to the next phase
         await this.startPhaseTimer(newPhase, game.id, stockRound.id);
       }
@@ -651,24 +728,37 @@ export class GameManagementService {
       throw new Error('Phase not found');
     }
 
+    let newStockRound: StockRound | null = null;
+    let newOperatingRound: OperatingRound | null = null;
     // If the current phase roundtype is different to the new one, initiate the new round
     if (game.currentRound !== roundType) {
       //start new round
       if (roundType === RoundType.STOCK) {
-        await this.startStockRound(gameId);
+        newStockRound = await this.startStockRound(gameId);
       } else if (roundType === RoundType.OPERATING) {
-        await this.startOperatingRound(gameId);
+        newOperatingRound = await this.startOperatingRound(gameId);
       } else if (roundType === RoundType.GAME_UPKEEP) {
         //do nothing
       }
     }
-
+    const _stockRoundId =
+      roundType === RoundType.STOCK
+        ? newStockRound
+          ? newStockRound.id
+          : stockRoundId
+        : undefined;
+    const _operatingRoundId =
+      roundType === RoundType.OPERATING
+        ? newOperatingRound
+          ? newOperatingRound.id
+          : operatingRoundId
+        : undefined;
     return this.startPhase({
       gameId,
       phaseName,
       roundType,
-      stockRoundId,
-      operatingRoundId,
+      stockRoundId: _stockRoundId,
+      operatingRoundId: _operatingRoundId,
       companyId,
     });
   }
@@ -1120,6 +1210,8 @@ export class GameManagementService {
         return acc;
       }, {});
       //find the net difference of buys and sells between market orders of a company
+      //NOTE: We combine the IPO and OPEN MARKET collectively here to determine the "net",
+      //there is no distinction at this point for finding the steps gained or lost.
       const netDifferences = Object.entries(groupedMarketOrders).map(
         ([companyId, orders]) => {
           const buys = orders.filter((order) => !order.isSell);
@@ -1158,9 +1250,26 @@ export class GameManagementService {
           data: {
             tierSharesFulfilled: newTierSharesFulfilled,
             stockTier: newTier,
-            currentStockPrice: newSharePrice,
           },
         });
+        //if the company share price is positive, move the stock price up
+        if (steps > 0) {
+          await this.stockHistoryService.moveStockPriceUp(
+            orders[0].gameId,
+            companyId,
+            phase.id,
+            orders[0].Company.currentStockPrice || 0,
+            steps,
+          );
+        } else if (steps < 0) {
+          await this.stockHistoryService.moveStockPriceDown(
+            orders[0].gameId,
+            companyId,
+            phase.id,
+            orders[0].Company.currentStockPrice || 0,
+            steps,
+          );
+        }
         //resolve all sell orders by updating player cash and share count
         await Promise.all(
           orders.map(async (order) => {
@@ -1209,6 +1318,8 @@ export class GameManagementService {
         );
         //iterate over grouped by market orders to distribute shares for potential buyers
         // distribute shares for buy orders
+        // NOTE: At this point we do filter by IPO and OPEN MARKET as we are determining how shares can be distributed
+        // from the remaining pool of shares in those markets.
         const buyOrdersIPO = orders.filter(
           (order) => !order.isSell && order.location == ShareLocation.IPO,
         );

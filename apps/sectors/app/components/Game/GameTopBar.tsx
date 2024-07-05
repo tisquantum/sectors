@@ -52,6 +52,7 @@ const GameTopBar = ({
       phaseName: nextPhase.phaseName,
       roundType: nextPhase.roundType,
       stockRoundId: currentPhase?.stockRoundId ?? 0,
+      operatingRoundId: currentPhase?.operatingRoundId ?? 0,
       companyId,
     });
   };

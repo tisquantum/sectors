@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { Prisma, OperatingRound } from '@prisma/client';
-import { OperatingRoundWithRevenueDistributionVotes } from '@server/prisma/prisma.types';
+import {
+  OperatingRoundWithProductionResults,
+  OperatingRoundWithRevenueDistributionVotes,
+} from '@server/prisma/prisma.types';
 
 @Injectable()
 export class OperatingRoundService {
@@ -32,13 +35,36 @@ export class OperatingRoundService {
     });
   }
 
-  async createOperatingRound(data: Prisma.OperatingRoundCreateInput): Promise<OperatingRound> {
+  async operatingRoundWithProductionResults(
+    operatingRoundWhereUniqueInput: Prisma.OperatingRoundWhereUniqueInput,
+  ): Promise<OperatingRoundWithProductionResults | null> {
+    return this.prisma.operatingRound.findUnique({
+      where: operatingRoundWhereUniqueInput,
+      include: {
+        productionResults: {
+          include: {
+            Company: {
+              include: {
+                Sector: true,
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  async createOperatingRound(
+    data: Prisma.OperatingRoundCreateInput,
+  ): Promise<OperatingRound> {
     return this.prisma.operatingRound.create({
       data,
     });
   }
 
-  async createManyOperatingRounds(data: Prisma.OperatingRoundCreateManyInput[]): Promise<Prisma.BatchPayload> {
+  async createManyOperatingRounds(
+    data: Prisma.OperatingRoundCreateManyInput[],
+  ): Promise<Prisma.BatchPayload> {
     return this.prisma.operatingRound.createMany({
       data,
       skipDuplicates: true,
@@ -56,7 +82,9 @@ export class OperatingRoundService {
     });
   }
 
-  async deleteOperatingRound(where: Prisma.OperatingRoundWhereUniqueInput): Promise<OperatingRound> {
+  async deleteOperatingRound(
+    where: Prisma.OperatingRoundWhereUniqueInput,
+  ): Promise<OperatingRound> {
     return this.prisma.operatingRound.delete({
       where,
     });
@@ -71,8 +99,8 @@ export class OperatingRoundService {
         revenueDistributionVotes: {
           include: {
             Player: true,
-          }
-        }
+          },
+        },
       },
     });
   }

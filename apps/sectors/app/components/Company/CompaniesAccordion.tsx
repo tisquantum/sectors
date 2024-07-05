@@ -113,12 +113,24 @@ const CompaniesAccordion = ({
             }
             isCompact
           >
-            <div className="p-4">
+            <div className="p-2 grid grid-cols-2 gap-1">
               <p>
                 <strong>Cash on Hand:</strong> ${company.cashOnHand || 0}
               </p>
               <p>
-                <strong>Throughput:</strong> {company.throughput}
+                <strong>Supply:</strong> {company.supplyMax || 0}
+              </p>
+              <p>
+                <strong>Company Demand:</strong> {company.demandScore || 0}
+              </p>
+              <p>
+                <strong>Sector Demand:</strong> {company.Sector.demand || 0}
+              </p>
+              <p>
+                <strong>Demand Score:</strong> {company.demandScore || 0 + company.Sector.demand || 0}
+              </p>
+              <p>
+                <strong>Throughput:</strong> {company.demandScore || 0 + company.Sector.demand || 0 - company.supplyMax || 0}
               </p>
               <p>
                 <strong>Insolvent:</strong> {company.insolvent ? "Yes" : "No"}

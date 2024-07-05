@@ -32,6 +32,8 @@ import operatingRoundRouter from './routers/operating-round.router';
 import operatingRoundVoteRouter from './routers/operating-round-vote.router';
 import { OperatingRoundVoteService } from '@server/operating-round-vote/operating-round-vote.service';
 import { OperatingRoundService } from '@server/operating-round/operating-round.service';
+import stockRoundRouter from './routers/stock-round.router';
+import { StockRoundService } from '@server/stock-round/stock-round.service';
 
 @Injectable()
 export class TrpcRouter {
@@ -53,6 +55,7 @@ export class TrpcRouter {
     private readonly shareService: ShareService,
     private readonly operatingRoundService: OperatingRoundService,
     private readonly operatingRoundVoteService: OperatingRoundVoteService,
+    private readonly stockRoundService: StockRoundService,
   ) {}
   
   appRouter = this.trpc.router({
@@ -114,6 +117,9 @@ export class TrpcRouter {
     }),
     operatingRoundVote: operatingRoundVoteRouter(this.trpc, {
       operatingRoundVoteService: this.operatingRoundVoteService
+    }),
+    stockRound: stockRoundRouter(this.trpc, {
+      stockRoundService: this.stockRoundService,
     }),
   });
 

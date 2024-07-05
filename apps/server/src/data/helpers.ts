@@ -93,6 +93,26 @@ export function determineNextGamePhase(phaseName: PhaseName): {
       };
     case PhaseName.OPERATING_MEET:
       return {
+        phaseName: PhaseName.OPERATING_PRODUCTION,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.OPERATING_PRODUCTION:
+      return {
+        phaseName: PhaseName.OPERATING_PRODUCTION_VOTE,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.OPERATING_PRODUCTION_VOTE:
+      return {
+        phaseName: PhaseName.OPERATING_PRODUCTION_VOTE_RESOLVE,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.OPERATING_PRODUCTION_VOTE_RESOLVE:
+      return {
+        phaseName: PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT:
+      return {
         phaseName: PhaseName.OPERATING_ACTION_COMPANY_VOTE,
         roundType: RoundType.OPERATING,
       };

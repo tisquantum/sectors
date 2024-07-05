@@ -65,6 +65,13 @@ export class StockHistoryService {
   async moveStockPriceUp(gameId: string, companyId: string, phaseId: string, currentStockPrice: number, steps: number): Promise<StockHistory> {
     //get new stock price
     const newPrice = getStockPriceStepsUp(currentStockPrice, steps);
+    //update company stock price
+    await this.prisma.company.update({
+      where: { id: companyId },
+      data: {
+        currentStockPrice: newPrice,
+      },
+    });
     //create new stock history
     return this.createStockHistory({
       gameId: gameId,

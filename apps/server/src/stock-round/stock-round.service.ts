@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { Prisma, StockRound } from '@prisma/client';
+import { StockRoundWithPlayerOrders } from '@server/prisma/prisma.types';
 
 @Injectable()
 export class StockRoundService {
@@ -31,13 +32,39 @@ export class StockRoundService {
     });
   }
 
-  async createStockRound(data: Prisma.StockRoundCreateInput): Promise<StockRound> {
+  async stockRoundWithPlayerOrders(
+    stockRoundWhereUniqueInput: Prisma.StockRoundWhereUniqueInput,
+  ): Promise<StockRoundWithPlayerOrders | null> {
+    return this.prisma.stockRound.findUnique({
+      where: stockRoundWhereUniqueInput,
+      include: {
+        playerOrders: {
+          include: {
+            Player: true,
+            Company: {
+              include: {
+                Share: true,
+              },
+            },
+            Sector: true,
+            Phase: true,
+          },
+        },
+      },
+    });
+  }
+
+  async createStockRound(
+    data: Prisma.StockRoundCreateInput,
+  ): Promise<StockRound> {
     return this.prisma.stockRound.create({
       data,
     });
   }
 
-  async createManyStockRounds(data: Prisma.StockRoundCreateManyInput[]): Promise<Prisma.BatchPayload> {
+  async createManyStockRounds(
+    data: Prisma.StockRoundCreateManyInput[],
+  ): Promise<Prisma.BatchPayload> {
     return this.prisma.stockRound.createMany({
       data,
       skipDuplicates: true,
@@ -55,7 +82,9 @@ export class StockRoundService {
     });
   }
 
-  async deleteStockRound(where: Prisma.StockRoundWhereUniqueInput): Promise<StockRound> {
+  async deleteStockRound(
+    where: Prisma.StockRoundWhereUniqueInput,
+  ): Promise<StockRound> {
     return this.prisma.stockRound.delete({
       where,
     });

@@ -21,6 +21,20 @@ export default (trpc: TrpcService, ctx: Context) =>
         return operatingRound;
       }),
 
+    getOperatingRoundWithProductionResults: trpc.procedure
+      .input(z.object({ where: z.any() }))
+      .query(async ({ input }) => {
+        const { where } = input;
+        const operatingRound =
+          await ctx.operatingRoundService.operatingRoundWithProductionResults(
+            where,
+          );
+        if (!operatingRound) {
+          throw new Error('Operating round not found');
+        }
+        return operatingRound;
+      }),
+
     listOperatingRounds: trpc.procedure
       .input(
         z.object({

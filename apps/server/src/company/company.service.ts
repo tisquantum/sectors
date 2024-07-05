@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { Prisma, Company, Sector } from '@prisma/client';
-import { CompanyWithSector } from '@server/prisma/prisma.types';
+import { CompanyWithSector, CompanyWithSectorAndStockHistory } from '@server/prisma/prisma.types';
 import { GameLogService } from '@server/game-log/game-log.service';
 
 @Injectable()
@@ -58,6 +58,31 @@ export class CompanyService {
             Player: true,
           },
         },
+      },
+    });
+  }
+
+  async companiesWithSectorAndStockHistory(params: {
+    skip?: number;
+    take?: number;
+    cursor?: Prisma.CompanyWhereUniqueInput;
+    where?: Prisma.CompanyWhereInput;
+    orderBy?: Prisma.CompanyOrderByWithRelationInput;
+  }): Promise<CompanyWithSectorAndStockHistory[]> {
+    const { skip, take, cursor, where, orderBy } = params;
+    return this.prisma.company.findMany({
+      skip,
+      take,
+      cursor,
+      where,
+      orderBy,
+      include: {
+        Sector: true,
+        StockHistory: {
+          orderBy: {
+            createdAt: 'asc',
+          },
+        }
       },
     });
   }

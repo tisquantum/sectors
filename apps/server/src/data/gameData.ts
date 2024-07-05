@@ -1,74 +1,130 @@
-export const gameDataJson = {
+import { Company, ResearchDeck, Sector } from "@prisma/client";
+
+interface GameDataJson {
+  sectors: any[],
+  companies: any[],
+  researchDeck: Partial<any>[],
+}
+export const gameDataJson: GameDataJson = {
   sectors: [
     {
       id: '1',
       name: 'Consumer Cyclical',
       supply: 100,
-      demand: 100,
+      demand: 3,
       marketingPrice: 50.0,
       basePrice: 75.0,
       floatNumberMin: 20,
       floatNumberMax: 70,
+      supplyDefault: 2,
+      demandMax: 0,
+      demandMin: 0,
+      unitPriceMin: 20,
+      unitPriceMax: 40,
+      supplyMin: 2,
+      supplyMax: 2,
     },
     {
       id: '2',
       name: 'Consumer Defensive',
       supply: 100,
-      demand: 100,
+      demand: 2,
       marketingPrice: 50.0,
       basePrice: 75.0,
       floatNumberMin: 40,
       floatNumberMax: 60,
+      supplyDefault: 3,
+      demandMax: 0,
+      demandMin: 0,
+      unitPriceMin: 20,
+      unitPriceMax: 30,
+      supplyMin: 0,
+      supplyMax: 3,
     },
     {
       id: '3',
       name: 'Industrial',
       supply: 100,
-      demand: 100,
+      demand: 1,
       marketingPrice: 50.0,
       basePrice: 75.0,
       floatNumberMin: 55,
       floatNumberMax: 70,
+      supplyDefault: 2,
+      demandMax: 0,
+      demandMin: 0,
+      unitPriceMin: 50,
+      unitPriceMax: 60,
+      supplyMin: 1,
+      supplyMax: 2,
     },
     {
       id: '4',
       name: 'Technology',
       supply: 100,
-      demand: 100,
+      demand: 0,
       marketingPrice: 50.0,
       basePrice: 75.0,
       floatNumberMin: 5,
       floatNumberMax: 80,
+      supplyDefault: 3,
+      demandMax: 0,
+      demandMin: 0,
+      unitPriceMin: 10,
+      unitPriceMax: 80,
+      supplyMin: 0,
+      supplyMax: 4,
     },
     {
       id: '5',
       name: 'Healthcare',
       supply: 100,
-      demand: 100,
+      demand: 2,
       marketingPrice: 50.0,
       basePrice: 75.0,
       floatNumberMin: 50,
       floatNumberMax: 60,
+      supplyDefault: 2,
+      demandMax: 1,
+      demandMin: 1,
+      unitPriceMin: 40,
+      unitPriceMax: 60,
+      supplyMin: 1,
+      supplyMax: 3,
     },
     {
       id: '6',
       name: 'Energy',
       supply: 100,
-      demand: 100,
+      demand: 1,
       marketingPrice: 50.0,
       basePrice: 75.0,
       floatNumberMin: 30,
       floatNumberMax: 40,
+      supplyDefault: 2,
+      demandMax: 1,
+      demandMin: 1,
+      unitPriceMin: 30,
+      unitPriceMax: 50,
+      supplyMin: 1,
+      supplyMax: 2,
     },
     {
       id: '7',
       name: 'Materials',
       supply: 100,
-      demand: 100,
+      demand: 2,
       marketingPrice: 50.0,
       basePrice: 75.0,
       floatNumberMin: 40,
       floatNumberMax: 50,
+      supplyDefault: 2,
+      demandMax: 1,
+      demandMin: 1,
+      unitPriceMin: 30,
+      unitPriceMax: 40,
+      supplyMin: 3,
+      supplyMax: 5,
     },
   ],
   companies: [
@@ -81,7 +137,6 @@ export const gameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
-      mergedWithChildren: [],
     },
     {
       id: '2',
@@ -92,7 +147,6 @@ export const gameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
-      mergedWithChildren: [],
     },
     {
       id: '3',
@@ -103,7 +157,6 @@ export const gameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
-      mergedWithChildren: [],
     },
     {
       id: '4',
@@ -114,7 +167,6 @@ export const gameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
-      mergedWithChildren: [],
     },
     {
       id: '5',
@@ -125,7 +177,6 @@ export const gameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
-      mergedWithChildren: [],
     },
     {
       id: '6',
@@ -136,7 +187,6 @@ export const gameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
-      mergedWithChildren: [],
     },
     {
       id: '7',
@@ -147,7 +197,6 @@ export const gameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
-      mergedWithChildren: [],
     },
     {
       id: '8',
@@ -158,7 +207,6 @@ export const gameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
-      mergedWithChildren: [],
     },
     {
       id: '9',
@@ -169,7 +217,6 @@ export const gameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
-      mergedWithChildren: [],
     },
     {
       id: '10',
@@ -180,7 +227,6 @@ export const gameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
-      mergedWithChildren: [],
     },
     {
       id: '11',
@@ -191,7 +237,6 @@ export const gameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
-      mergedWithChildren: [],
     },
     {
       id: '12',
@@ -202,7 +247,6 @@ export const gameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
-      mergedWithChildren: [],
     },
     {
       id: '13',
@@ -213,7 +257,6 @@ export const gameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
-      mergedWithChildren: [],
     },
     {
       id: '14',
@@ -224,7 +267,6 @@ export const gameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
-      mergedWithChildren: [],
     },
     {
       id: '15',
@@ -235,7 +277,6 @@ export const gameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
-      mergedWithChildren: [],
     },
     {
       id: '16',
@@ -246,7 +287,6 @@ export const gameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
-      mergedWithChildren: [],
     },
     {
       id: '17',
@@ -257,7 +297,6 @@ export const gameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
-      mergedWithChildren: [],
     },
     {
       id: '18',
@@ -268,7 +307,6 @@ export const gameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
-      mergedWithChildren: [],
     },
     {
       id: '19',
@@ -279,7 +317,6 @@ export const gameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
-      mergedWithChildren: [],
     },
     {
       id: '20',
@@ -290,7 +327,6 @@ export const gameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
-      mergedWithChildren: [],
     },
     {
       id: '21',
@@ -301,7 +337,6 @@ export const gameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
-      mergedWithChildren: [],
     },
     {
       id: '22',
@@ -312,7 +347,6 @@ export const gameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
-      mergedWithChildren: [],
     },
     {
       id: '23',
@@ -323,7 +357,6 @@ export const gameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
-      mergedWithChildren: [],
     },
     {
       id: '24',
@@ -334,7 +367,6 @@ export const gameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
-      mergedWithChildren: [],
     },
     {
       id: '25',
@@ -345,7 +377,6 @@ export const gameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
-      mergedWithChildren: [],
     },
     {
       id: '26',
@@ -356,7 +387,6 @@ export const gameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
-      mergedWithChildren: [],
     },
     {
       id: '27',
@@ -367,7 +397,6 @@ export const gameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
-      mergedWithChildren: [],
     },
     {
       id: '28',
@@ -378,7 +407,6 @@ export const gameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
-      mergedWithChildren: [],
     },
     {
       id: '29',
@@ -389,7 +417,6 @@ export const gameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
-      mergedWithChildren: [],
     },
     {
       id: '30',
@@ -400,7 +427,6 @@ export const gameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
-      mergedWithChildren: [],
     },
     {
       id: '31',
@@ -411,7 +437,6 @@ export const gameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
-      mergedWithChildren: [],
     },
     {
       id: '32',
@@ -422,7 +447,6 @@ export const gameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
-      mergedWithChildren: [],
     },
     {
       id: '33',
@@ -433,7 +457,6 @@ export const gameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
-      mergedWithChildren: [],
     },
     {
       id: '34',
@@ -444,7 +467,6 @@ export const gameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
-      mergedWithChildren: [],
     },
     {
       id: '35',
@@ -455,7 +477,6 @@ export const gameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
-      mergedWithChildren: [],
     },
   ],
   researchDeck: [

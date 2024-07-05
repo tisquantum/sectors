@@ -8,13 +8,15 @@ import {
   Phase,
   Player,
   PlayerOrder,
-  RevenueDistributionVotes,
+  ProductionResult,
+  RevenueDistributionVote,
   Room,
   RoomMessage,
   RoomUser,
   Sector,
   Share,
   ShortOrder,
+  StockHistory,
   StockRound,
   User,
 } from '@prisma/client';
@@ -34,7 +36,14 @@ export type PlayerWithShares = Player & {
 };
 
 export type ShareWithPlayer = Share & { Player: Player | null };
-export type CompanyWithSector = Company & { Sector: Sector; Share: ShareWithPlayer[] };
+export type CompanyWithSector = Company & {
+  Sector: Sector;
+  Share: ShareWithPlayer[];
+};
+export type CompanyWithSectorAndStockHistory = Company & {
+  Sector: Sector;
+  StockHistory: StockHistory[];
+};
 
 export type MeetingMessageWithPlayer = MeetingMessage & { player: Player };
 
@@ -90,10 +99,22 @@ export type PlayerOrdersPendingOrder = PlayerOrder & {
 
 export type GameWithPhase = Game & { Phase: Phase[] };
 
-export type RevenueDistributionVotesWithPlayer = RevenueDistributionVotes & {
+export type RevenueDistributionVotesWithPlayer = RevenueDistributionVote & {
   Player: Player;
 };
 
 export type OperatingRoundWithRevenueDistributionVotes = OperatingRound & {
   revenueDistributionVotes: RevenueDistributionVotesWithPlayer[];
+};
+
+export type ProductionResultWithCompany = ProductionResult & {
+  Company: Company & { Sector: Sector };
+};
+
+export type OperatingRoundWithProductionResults = OperatingRound & {
+  productionResults: ProductionResultWithCompany[];
+};
+
+export type StockRoundWithPlayerOrders = StockRound & {
+  playerOrders: PlayerOrderWithPlayerCompany[];
 };

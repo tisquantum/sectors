@@ -248,8 +248,8 @@ export const throughputRewardOrPenalty = (
     case 6:
       return { type: ThroughputRewardType.STOCK_PENALTY, share_price_steps_down: 3 };
     case 7:
-      return { type: ThroughputRewardType.STOCK_PENALTY, share_price: -4 };
+      return { type: ThroughputRewardType.STOCK_PENALTY, share_price_steps_down: 4 };
     default:
-      return { type: ThroughputRewardType.SECTOR_REWARD, share_price: -1 };
+      return { type: ThroughputRewardType.SECTOR_REWARD, share_price_steps_down: 1 };
   }
 };
