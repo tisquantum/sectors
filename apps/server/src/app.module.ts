@@ -26,6 +26,7 @@ import { ShareModule } from './share/share.module';
 import { OperatingRoundVoteModule } from './operating-round-vote/operating-round-vote.module';
 import { StockHistoryModule } from './stock-history/stock-history.module';
 import { ProductionResultModule } from './production-result/production-result.module';
+import { RevenueDistributionVoteModule } from './revenue-distribution-vote/revenue-distribution-vote.module';
 
 const yourPusherOptions = {
   cluster: process.env.PUSHER_CLUSTER ?? 'CLUSTER',
@@ -66,6 +67,7 @@ const chunkingOptions = {
     OperatingRoundVoteModule,
     StockHistoryModule,
     ProductionResultModule,
+    RevenueDistributionVoteModule,
   ],
   controllers: [AppController],
   providers: [AppService],

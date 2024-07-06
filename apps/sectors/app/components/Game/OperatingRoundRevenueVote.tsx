@@ -44,17 +44,13 @@ const OperatingRoundRevenueVote = () => {
   if (!productionResults) {
     return <div>No operating round found</div>;
   }
-  //filter all companies with revenue greater than 0
-  const companiesWithRevenue = productionResults.productionResults.filter(
-    (productionResult) => productionResult.revenue > 0
-  );
   return (
     <div>
       <h1>Operating Round Revenue Vote</h1>
       <div className="grid grid-cols-3 gap-4">
         {
           //display all companies with revenue greater than 0
-          companiesWithRevenue.map((productionResult) => (
+          productionResults.productionResults.map((productionResult) => (
             <div className="flex flex-col bg-slate-800 p-4" key={productionResult.id}>
               <h2>{productionResult.Company.name}</h2>
               <div className="flex flex-col">

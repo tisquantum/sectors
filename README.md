@@ -121,3 +121,5 @@ I'm thinking short orders can only be performed on a company you have no ownersh
 - Company tiers should be related to throughput and market cap (???), defined outside db possibly in constants.  Company tier could also be correlated to how much you can short.  The "stronger" and more "stable" the company, the higher you can short because it has greater risk.
 
 - What are prestige tokens for?  They can be traded in for an upgrade to unit price, an upgrade to research deck slots or hold to break ties.
+
+- Market Orders are the only type of order that can be placed on the IPO

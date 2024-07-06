@@ -1,5 +1,16 @@
 import React, { useEffect, useState } from "react";
-import { Avatar, AvatarGroup, Divider } from "@nextui-org/react";
+import {
+  Avatar,
+  AvatarGroup,
+  Divider,
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalHeader,
+  Tab,
+  Tabs,
+  useDisclosure,
+} from "@nextui-org/react";
 import {
   stockGridPrices,
   StockTierChartRange,
@@ -10,14 +21,25 @@ import { useGame } from "./GameContext";
 import { sectorColors } from "@server/data/gameData";
 import { CompanyWithSectorAndStockHistory } from "@server/prisma/prisma.types";
 import { LineChart } from "@tremor/react";
-import { Company, PhaseName, StockTier } from "@server/prisma/prisma.client";
+import {
+  Company,
+  CompanyStatus,
+  PhaseName,
+  StockTier,
+} from "@server/prisma/prisma.client";
 import {
   RiCheckboxBlankCircleFill,
   RiCheckboxCircleFill,
+  RiSailboatFill,
 } from "@remixicon/react";
+import "./StockChart.css";
 interface ChartData {
   phaseId: string;
   stockPrice: number;
+}
+
+interface AllChartData {
+  [companyName: string]: number | string | undefined;
 }
 
 const tierColors: { [key in StockTier]: string } = {
@@ -55,7 +77,7 @@ const Legend = () => {
         ))}
       </div>
       <p>
-        Stocks must sell this amount of shares before they can advance one step
+        Shareholders must buy these amount of shares from the OPEN MARKET before they can advance one step
         on the stock chart. A sell always moves the stock one step down.
       </p>
     </div>
@@ -97,12 +119,14 @@ const StockChart = () => {
     CompanyWithSectorAndStockHistory | undefined
   >(undefined);
   const [chartData, setChartData] = useState<ChartData[] | null>(null);
-
+  const { isOpen, onOpen, onOpenChange } = useDisclosure();
   useEffect(() => {
     if (selectedCompany) {
       const data = selectedCompany.StockHistory.map((stockHistory) => ({
         phaseId: stockHistory.phaseId,
         stockPrice: stockHistory.price,
+        stockAction: stockHistory.action,
+        steps: stockHistory.stepsMoved,
       }));
       setChartData(data);
     }
@@ -111,15 +135,9 @@ const StockChart = () => {
   if (isLoading) return <div>Loading...</div>;
   if (companies == undefined) return null;
 
-  const handleCompanySelect: React.MouseEventHandler<HTMLDivElement> = (
-    event
-  ) => {
-    console.log("Company selected", event.currentTarget.textContent);
-    setSelectedCompany(
-      companies.find(
-        (company) => company.name === event.currentTarget.textContent
-      )
-    );
+  const handleCompanySelect = (companyId: string) => {
+    setSelectedCompany(companies.find((company) => company.id === companyId));
+    onOpen();
   };
 
   console.log("selectedCompany", selectedCompany);
@@ -128,66 +146,148 @@ const StockChart = () => {
   const valueFormatter = function (number: number) {
     return "$ " + new Intl.NumberFormat("us").format(number).toString();
   };
+  const companyColorsMap = companies.reduce(
+    (acc, company) => ({
+      ...acc,
+      [company.id]: sectorColors[company.Sector.name],
+    }),
+    {}
+  );
+  const colorsArray: string[] = Object.values(companyColorsMap) || [];
+  const groupedData =
+    companies?.flatMap((company) =>
+      company.StockHistory.map((stockHistory) => ({
+        phaseId: stockHistory.phaseId,
+        companyName: company.name,
+        stockPrice: stockHistory.price,
+      }))
+    ) ?? [];
 
+  const allChartData: AllChartData[] = [];
+
+  groupedData.forEach(({ phaseId, companyName, stockPrice }) => {
+    let phaseEntry = allChartData.find((entry) => entry.phaseId === phaseId);
+    if (!phaseEntry) {
+      phaseEntry = { phaseId };
+      allChartData.push(phaseEntry);
+    }
+    phaseEntry[companyName] = stockPrice;
+  });
+
+  // Ensure every company name is included in each phase
+  const companyNames = companies?.map((company) => company.name) ?? [];
+
+  allChartData.forEach((entry) => {
+    companyNames.forEach((name) => {
+      if (!(name in entry)) {
+        entry[name] = undefined;
+      }
+    });
+  });
+  console.log("allChartData", allChartData);
   return (
     <div className="flex flex-col">
       <Legend />
-      <div className="grid grid-cols-10 gap-3 p-4">
-        {stockGridPrices.map((value, index) => {
-          const companiesOnCell = companies.filter(
-            (company) => company.currentStockPrice === value
-          );
-          const tier = getTierForStockPrice(value)?.tier;
-          const backgroundColor = tier ? tierColors[tier] : "";
+      <Tabs>
+        <Tab key="stock-grid" title="Stock Grid">
+          <div className="grid grid-cols-10 gap-3 p-4">
+            {stockGridPrices.map((value, index) => {
+              const companiesOnCell = companies.filter(
+                (company) => company.currentStockPrice === value
+              );
+              const tier = getTierForStockPrice(value)?.tier;
+              const backgroundColor = tier ? tierColors[tier] : "";
 
-          return (
-            <div
-              key={index}
-              className={`relative ring-1 p-2 text-center min-h-[81px] ${backgroundColor} ${
-                value === 0 ? "text-red-500 font-bold" : ""
-              }`}
-            >
-              {value === 0 ? "INSOLVENT" : value}
-              <Divider />
-              {companiesOnCell.length > 0 && (
-                <div className="flex flex-col mt-2 gap-2">
-                  {companiesOnCell.map((company) => (
-                    <div
-                      key={company.id}
-                      className="flex flex-col items-center shadow-md rounded-md p-1 cursor-pointer border-2 border-slate-700"
-                      style={{
-                        backgroundColor: sectorColors[company.Sector.name],
-                      }}
-                      onClick={handleCompanySelect}
-                    >
-                      <span className="subpixel-antialiased text-slate-100">
-                        {company.name}
-                      </span>
-                      <TierSharesFulfilled
-                        tierSharesFulfilled={company.tierSharesFulfilled}
-                        tier={tier}
-                      />
+              return (
+                <div
+                  key={index}
+                  className={`relative ring-1 p-2 text-center min-h-[81px] ${backgroundColor} ${
+                    value === 0 ? "text-red-500 font-bold" : ""
+                  }`}
+                >
+                  {value === 0 ? "INSOLVENT" : value}
+                  <Divider />
+                  {companiesOnCell.length > 0 && (
+                    <div className="flex flex-col mt-2 gap-2">
+                      {companiesOnCell.map((company) => (
+                        <div
+                          key={company.id}
+                          className={`flex flex-col items-center shadow-md rounded-md p-1 cursor-pointer border-2 border-slate-700 ${
+                            company.status === CompanyStatus.INACTIVE
+                              ? "red-stripes"
+                              : ""
+                          }`}
+                          style={{
+                            backgroundColor: sectorColors[company.Sector.name],
+                          }}
+                          onClick={() => handleCompanySelect(company.id)}
+                        >
+                          {company.status === CompanyStatus.INACTIVE && (
+                            <div className="ml-2 p-1 rounded-md text-small text-slate-800 flex bg-yellow-500">
+                              <RiSailboatFill
+                                size={18}
+                                className="ml-2 text-slate-800"
+                              />
+                              <span className="ml-1">
+                                %{company.Sector.sharePercentageToFloat}
+                              </span>
+                            </div>
+                          )}
+                          <span className="subpixel-antialiased text-slate-100">
+                            {company.name}
+                          </span>
+                          <TierSharesFulfilled
+                            tierSharesFulfilled={company.tierSharesFulfilled}
+                            tier={tier}
+                          />
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
                 </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+              );
+            })}
+          </div>
+        </Tab>
+        <Tab key="stock-chart" title="Stock Chart">
+          <div className="flex flex-col justify-center items-center">
+            <LineChart
+              data={allChartData}
+              index="phaseId"
+              categories={companies.map((company) => company.name)}
+              yAxisLabel="Stock Price"
+              xAxisLabel="Stock Price Updated"
+              colors={colorsArray}
+              valueFormatter={valueFormatter}
+            />
+          </div>
+        </Tab>
+      </Tabs>
       {selectedCompany && chartData && (
-        <div className="flex flex-col justify-center items-center">
-          <h3>{selectedCompany.name}</h3>
-          <LineChart
-            data={chartData}
-            index="phase"
-            categories={["stockPrice"]}
-            yAxisLabel="Stock Price"
-            xAxisLabel="Stock Price Updated"
-            colors={[sectorColors[selectedCompany.Sector.name]]}
-            valueFormatter={valueFormatter}
-          />
-        </div>
+        <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
+          <ModalContent>
+            {(onClose) => (
+              <>
+                <ModalHeader>
+                  <h3>{selectedCompany.name}</h3>
+                </ModalHeader>
+                <ModalBody>
+                  <div className="flex flex-col justify-center items-center">
+                    <LineChart
+                      data={chartData}
+                      index="phaseId"
+                      categories={["stockPrice"]}
+                      yAxisLabel="Stock Price"
+                      xAxisLabel="Stock Price Updated"
+                      colors={[sectorColors[selectedCompany.Sector.name]]}
+                      valueFormatter={valueFormatter}
+                    />
+                  </div>
+                </ModalBody>
+              </>
+            )}
+          </ModalContent>
+        </Modal>
       )}
     </div>
   );

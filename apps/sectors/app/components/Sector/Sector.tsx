@@ -11,8 +11,9 @@ import {
 } from "@heroicons/react/24/solid";
 import {
   RiHandCoinFill,
-  RiAdvertisementFill
-} from '@remixicon/react'
+  RiAdvertisementFill,
+  RiSailboatFill,
+} from "@remixicon/react";
 import { useGame } from "../Game/GameContext";
 import { trpc } from "@sectors/app/trpc";
 import { sectorColors } from "@server/data/gameData";
@@ -49,11 +50,15 @@ const SectorComponent = () => {
                 <RiHandCoinFill size={18} className="mr-1" /> {sector.demand}
               </p>
               <p className="ml-2 text-small text-default-500 flex">
+                <RiSailboatFill size={18} className="ml-2" />
+                <span className="ml-1">{sector.sharePercentageToFloat}%</span>
+              </p>
+              <p className="ml-2 text-small text-default-500 flex">
                 <RiAdvertisementFill size={18} className="mr-1" /> $50
               </p>
               <p className="ml-2 text-small text-default-500 flex">
                 {/** prestige total from all companies? */}
-                <StarIcon className="size-4 mr-1" /> +3 
+                <StarIcon className="size-4 mr-1" /> +3
               </p>
             </div>
           }

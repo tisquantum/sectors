@@ -1,0 +1,9 @@
+.red-stripes {
+    background: repeating-linear-gradient(
+      45deg,
+      rgb(29, 26, 26),
+      rgb(29, 26, 26) 10px,
+      transparent 10px,
+      transparent 20px
+    );
+  }

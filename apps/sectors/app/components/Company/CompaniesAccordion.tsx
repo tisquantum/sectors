@@ -11,7 +11,12 @@ import {
   ArrowDownIcon,
   BoltIcon,
 } from "@heroicons/react/24/solid";
-import { Company, Share, ShareLocation } from "@server/prisma/prisma.client";
+import {
+  Company,
+  CompanyStatus,
+  Share,
+  ShareLocation,
+} from "@server/prisma/prisma.client";
 import {
   CompanyWithSector,
   ShareWithPlayer,
@@ -24,6 +29,8 @@ import {
   RiSparkling2Fill,
   RiSwap3Fill,
   RiPriceTag3Fill,
+  RiSailboatFill,
+  RiUserFill,
 } from "@remixicon/react";
 
 type ShareGroupedByPlayer = {
@@ -95,6 +102,21 @@ const CompaniesAccordion = ({
             )
           );
         };
+
+        const renderPlayerSharesTotal = (shares: ShareWithPlayer[]) => {
+          //subtract shares from open market and ipo
+          const playerSharesTotal = shares.filter(
+            (share) => share.location == ShareLocation.PLAYER
+          ).length;
+          return (
+            <ShareComponent
+              name="Player"
+              icon={<RiUserFill className={"text-slate-800"} size={18} />}
+              quantity={playerSharesTotal}
+            />
+          );
+        };
+
         return (
           <AccordionItem
             key={company.id}
@@ -112,14 +134,10 @@ const CompaniesAccordion = ({
             }
             subtitle={
               <div className="flex items-center mt-3">
-                <div className="grid grid-cols-2 gap-2">
-                  {OMShares > 0 && (
-                    <ShareComponent name={"OM"} quantity={OMShares} />
-                  )}
-                  {IPOShares > 0 && (
-                    <ShareComponent name={"IPO"} quantity={IPOShares} />
-                  )}
-                  {renderPlayerShares(company.Share || [], 1)}
+                <div className="grid grid-cols-3 gap-2">
+                  <ShareComponent name={"OM"} quantity={OMShares} />
+                  <ShareComponent name={"IPO"} quantity={IPOShares} />
+                  {renderPlayerSharesTotal(company.Share || [])}
                 </div>
               </div>
             }
@@ -127,9 +145,12 @@ const CompaniesAccordion = ({
               <div className="flex gap-2">
                 <div className="flex flex-col flex-start">
                   <span>{company.name}</span>
-                  <span className="flex gap-1 items-center content-center">
-                    <RiPriceTag3Fill size={18} /> ${company.unitPrice}
-                  </span>
+                  <div className="flex items-center gap-1">
+                    <span className="flex gap-1 items-center content-center">
+                      <RiPriceTag3Fill size={18} /> ${company.unitPrice}
+                    </span>
+                    <span>{company.status}</span>
+                  </div>
                 </div>
                 <div className="grid grid-cols-3 items-center">
                   <div className="flex items-center">
