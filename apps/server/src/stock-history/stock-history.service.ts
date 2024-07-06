@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
-import { Prisma, StockHistory } from '@prisma/client';
+import { Prisma, StockAction, StockHistory } from '@prisma/client';
 import { getStockPriceStepsUp, getStockPriceWithStepsDown } from '@server/data/constants';
+import { Action } from 'rxjs/internal/scheduler/Action';
 
 @Injectable()
 export class StockHistoryService {
@@ -62,7 +63,7 @@ export class StockHistoryService {
     });
   }
 
-  async moveStockPriceUp(gameId: string, companyId: string, phaseId: string, currentStockPrice: number, steps: number): Promise<StockHistory> {
+  async moveStockPriceUp(gameId: string, companyId: string, phaseId: string, currentStockPrice: number, steps: number, action: StockAction): Promise<StockHistory> {
     //get new stock price
     const newPrice = getStockPriceStepsUp(currentStockPrice, steps);
     //update company stock price
@@ -76,6 +77,8 @@ export class StockHistoryService {
     return this.createStockHistory({
       gameId: gameId,
       price: newPrice,
+      stepsMoved: steps,
+      action: action,
       Phase: {
         connect: {
           id: phaseId,
@@ -89,13 +92,15 @@ export class StockHistoryService {
     });
   }
 
-  async moveStockPriceDown(gameId: string, companyId: string, phaseId: string, currentStockPrice: number, steps: number): Promise<StockHistory> {
+  async moveStockPriceDown(gameId: string, companyId: string, phaseId: string, currentStockPrice: number, steps: number, action: StockAction): Promise<StockHistory> {
     //get new stock price
     const newPrice = getStockPriceWithStepsDown(currentStockPrice, steps);
     //create new stock history
     return this.createStockHistory({
       gameId: gameId,
       price: newPrice,
+      stepsMoved: steps,
+      action: action,
       Phase: {
         connect: {
           id: phaseId,

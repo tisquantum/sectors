@@ -18,6 +18,8 @@ import {
   Sector,
   ShareLocation,
   StockRound,
+  CompanyStatus,
+  StockAction,
 } from '@prisma/client';
 import { GamesService } from '@server/games/games.service';
 import { CompanyService } from '@server/company/company.service';
@@ -57,6 +59,7 @@ import {
   calculateStepsAndRemainder,
   determineFloatPrice,
   determineNextGamePhase,
+  determineStockTier,
   getNextTier,
 } from '@server/data/helpers';
 import { PusherService } from 'nestjs-pusher';
@@ -270,6 +273,8 @@ export class GameManagementService {
         price: newStockPrice,
         gameId: phase.gameId,
         phaseId: phase.id,
+        stepsMoved: steps || 0,
+        action: StockAction.PRODUCTION,
       });
     }
 
@@ -379,7 +384,7 @@ export class GameManagementService {
    */
   async resolveOperatingProduction(phase: Phase) {
     const companies = await this.companyService.companiesWithSector({
-      where: { gameId: phase.gameId },
+      where: { gameId: phase.gameId, status: CompanyStatus.ACTIVE },
     });
     if (!companies) {
       throw new Error('Companies not found');
@@ -512,6 +517,7 @@ export class GameManagementService {
             penalty.phaseId,
             penalty.currentStockPrice,
             penalty.steps,
+            StockAction.PRODUCTION,
           ),
         ),
         ...sectorConsumersUpdates.map((update) =>
@@ -548,6 +554,9 @@ export class GameManagementService {
     });
     if (!company) {
       throw new Error('Company not found');
+    }
+    if (company.status !== CompanyStatus.ACTIVE) {
+      throw new Error('Company is not active');
     }
     //Collect votes
     const votes = await this.prisma.operatingRoundVote.findMany({
@@ -698,8 +707,9 @@ export class GameManagementService {
         supplyDefault: sector.supplyDefault,
         marketingPrice: sector.marketingPrice,
         basePrice: sector.basePrice,
-        floatNumberMin: sector.floatNumberMin,
-        floatNumberMax: sector.floatNumberMax,
+        ipoMin: sector.ipoMin,
+        ipoMax: sector.ipoMax,
+        sharePercentageToFloat: sector.sharePercentageToFloat,
         gameId: game.id,
       }));
 
@@ -741,8 +751,10 @@ export class GameManagementService {
             throw new Error('Sector not found');
           }
           const ipoPrice = determineFloatPrice(sector);
+          const stockTier = determineStockTier(ipoPrice);
           return {
             ...company,
+            stockTier: stockTier,
             ipoAndFloatPrice: ipoPrice,
             currentStockPrice: ipoPrice,
             gameId: game.id,
@@ -796,6 +808,8 @@ export class GameManagementService {
           price: number;
           gameId: string;
           phaseId: string;
+          stepsMoved: number;
+          action: StockAction;
         }[] = [];
         //create initial stock history for starting stock price
         companies.forEach((company) => {
@@ -804,6 +818,8 @@ export class GameManagementService {
             price: company.currentStockPrice || 0,
             gameId: game.id,
             phaseId: newPhase.id || '',
+            stepsMoved: 0,
+            action: StockAction.INITIAL,
           });
         });
         await this.stockHistoryService.createManyStockHistories(stockHistories);
@@ -1332,6 +1348,32 @@ export class GameManagementService {
       });
     }
   }
+
+  async checkIfCompanyIsFloated(companyId: string) {
+    //get company
+    const company = await this.companyService.companyWithSharesAndSector({ id: companyId });
+    if (!company) {
+      throw new Error('Company not found');
+    }
+    if (company.status !== CompanyStatus.ACTIVE) {
+      //company is floated, do nothing
+    } else {
+      //check if company has sold enough shares to float
+      const totalShares = company.Share.length;
+      const totalSharesInIpo = company.Share.filter(
+        (share) => share.location === ShareLocation.IPO,
+      ).length;
+      //has the company got more than float of shares sold outside IPO?
+      if ((totalShares - totalSharesInIpo) / totalShares >= (company.Sector.sharePercentageToFloat / 100)) {
+        //company is floated
+        await this.companyService.updateCompany({
+          where: { id: companyId },
+          data: { status: CompanyStatus.ACTIVE },
+        });
+      }
+    }
+  }
+
   async resolveMarketOrders(phase: Phase) {
     if (phase.stockRoundId) {
       const playerOrders: PlayerOrderWithPlayerCompany[] =
@@ -1406,6 +1448,7 @@ export class GameManagementService {
             phase.id,
             orders[0].Company.currentStockPrice || 0,
             steps,
+            StockAction.MARKET_BUY,
           );
         } else if (steps < 0) {
           await this.stockHistoryService.moveStockPriceDown(
@@ -1414,6 +1457,7 @@ export class GameManagementService {
             phase.id,
             orders[0].Company.currentStockPrice || 0,
             steps,
+            StockAction.MARKET_SELL,
           );
         }
         //resolve all sell orders by updating player cash and share count
@@ -1476,6 +1520,8 @@ export class GameManagementService {
             companyId,
             this.shareService,
           );
+          //check if company is floated.
+          this.checkIfCompanyIsFloated(companyId);
         }
         const buyOrdersOM = orders.filter(
           (order) =>
@@ -1716,11 +1762,24 @@ export class GameManagementService {
     if (!game) {
       throw new Error('Game not found');
     }
-    const currentOperatingRound = await this.operatingRoundService.operatingRoundWithCompanyActions({
-      id: game.currentOperatingRoundId || 0,
-    });
+    const currentOperatingRound =
+      await this.operatingRoundService.operatingRoundWithCompanyActions({
+        id: game.currentOperatingRoundId || 0,
+      });
     if (!currentOperatingRound) {
       throw new Error('Operating round not found');
+    }
+    //if there are no company actions, return true
+    if (currentOperatingRound.companyActions.length === 0) {
+      return true;
+    }
+    //filter company actions by company status active
+    currentOperatingRound.companyActions = currentOperatingRound.companyActions.filter(
+      (action) => action.Company.status === CompanyStatus.ACTIVE,
+    );
+    //if there are no company actions, return true
+    if (currentOperatingRound.companyActions.length === 0) {
+      return true;
     }
     //check if all CompanyAction.resolved
     return currentOperatingRound.companyActions.every(

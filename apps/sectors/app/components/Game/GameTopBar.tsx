@@ -4,7 +4,7 @@ import Timer from "./Timer";
 import { useGame } from "./GameContext";
 import { useState } from "react";
 import { trpc } from "@sectors/app/trpc";
-import { PhaseName, RoundType } from "@server/prisma/prisma.client";
+import { CompanyStatus, PhaseName, RoundType } from "@server/prisma/prisma.client";
 import { determineNextGamePhase } from "@server/data/helpers";
 import next from "next";
 import { getNextCompanyOperatingRoundTurn } from "@server/data/constants";
@@ -40,7 +40,14 @@ const GameTopBar = ({
       : "bg-slate-700 text-stone-100";
   console.log("currentPhase", currentPhase);
   const handleNextPhase = () => {
-    const nextPhase = determineNextGamePhase(
+    if(!currentPhase) return;
+    let nextPhase;
+    if(currentPhase.name === PhaseName.OPERATING_MEET) {
+      if(gameState.Company.every(company => company.status !== CompanyStatus.ACTIVE)) {
+        nextPhase = PhaseName.CAPITAL_GAINS;
+      }
+    }
+    nextPhase = determineNextGamePhase(
       currentPhase?.name ?? PhaseName.STOCK_MEET,
       allCompaniesVoted
     );

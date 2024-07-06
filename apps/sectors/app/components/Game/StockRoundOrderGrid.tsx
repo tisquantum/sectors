@@ -26,6 +26,7 @@ import {
 import PlayerOrderConcealed from "../Player/PlayerOrderConcealed";
 import { CompanyWithSector } from "@server/prisma/prisma.types";
 import { sectorColors } from "@server/data/gameData";
+import { RiPriceTag3Fill } from "@remixicon/react";
 
 const StockRoundOrderGrid = ({
   handleOrder,
@@ -114,9 +115,16 @@ const StockRoundOrderGrid = ({
                 }
               >
                 <CardHeader>
-                  <div className="flex flex-col">
-                    <div className="text-lg font-bold">{company.name}</div>
-                    <div>{company.Sector.name}</div>
+                  <div className="flex flex-col w-full">
+                    <div className="flex justify-between">
+                      <div className="text-lg font-bold">{company.name}</div>
+                      <span className="flex items-center">
+                        <RiPriceTag3Fill size={20} /> ${company.unitPrice}
+                      </span>
+                    </div>
+                    <div className="flex gap-3">
+                      <span>{company.Sector.name}</span>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardBody>

@@ -5,6 +5,7 @@ import {
   GameLog,
   MeetingMessage,
   OperatingRound,
+  OperatingRoundVote,
   OptionContract,
   Phase,
   Player,
@@ -77,6 +78,7 @@ export type PlayerOrderConcealedWithPlayer = PlayerOrderConcealed & {
 };
 export type PlayerOrderWithCompany = PlayerOrder & { Company: Company };
 export type CompanyWithShare = Company & { Share: Share[] };
+export type CompanyWithShareAndSector = Company & { Share: Share[], Sector: Sector };
 export type PlayerOrderWithPlayerCompany = PlayerOrder & {
   Company: CompanyWithShare;
   Player: Player;
@@ -110,15 +112,25 @@ export type OperatingRoundWithRevenueDistributionVotes = OperatingRound & {
 };
 
 export type ProductionResultWithCompany = ProductionResult & {
-  Company: Company & { Sector: Sector, Share: Share[] };
+  Company: Company & { Sector: Sector; Share: Share[] };
 };
 
 export type OperatingRoundWithProductionResults = OperatingRound & {
   productionResults: ProductionResultWithCompany[];
 };
 
+export type CompanyActionWithCompany = CompanyAction & { Company: Company };
+
 export type OperatingRoundWithCompanyActions = OperatingRound & {
-  companyActions: CompanyAction[];
+  companyActions: CompanyActionWithCompany[];
+};
+
+export type OperatingRoundVoteWithPlayer = OperatingRoundVote & {
+  Player: Player & { Share: Share[] };
+};
+
+export type OperatingRoundWithOperatingRoundVotes = OperatingRound & {
+  operatingRoundVote: OperatingRoundVoteWithPlayer[];
 };
 
 export type StockRoundWithPlayerOrders = StockRound & {

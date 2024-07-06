@@ -64,36 +64,6 @@ import SectorComponent from "../Sector/Sector";
 //   // Add more players as needed
 // ];
 
-const sectors = [
-  {
-    id: "sector1",
-    name: "Technology",
-    supply: 500,
-    demand: 600,
-    marketingPrice: 150.75,
-    floatNumberMin: 10,
-    floatNumberMax: 100,
-  },
-  {
-    id: "sector2",
-    name: "Healthcare",
-    supply: 300,
-    demand: 400,
-    marketingPrice: 75.25,
-    floatNumberMin: 5,
-    floatNumberMax: 50,
-  },
-  {
-    id: "sector3",
-    name: "Finance",
-    supply: 400,
-    demand: 500,
-    marketingPrice: 120.75,
-    floatNumberMin: 8,
-    floatNumberMax: 80,
-  },
-];
-
 export const companies = [
   {
     id: "1",

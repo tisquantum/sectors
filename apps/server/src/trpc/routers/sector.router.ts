@@ -70,8 +70,8 @@ export default (trpc: TrpcService, ctx: Context) =>
           demand: z.number(),
           marketingPrice: z.number(),
           basePrice: z.number(),
-          floatNumberMin: z.number(),
-          floatNumberMax: z.number(),
+          ipoMin: z.number(),
+          ipoMax: z.number(),
           Company: z.any().optional(),
           Game: z.object({
             connect: z.object({ id: z.string() }).optional(),
@@ -102,8 +102,8 @@ export default (trpc: TrpcService, ctx: Context) =>
             demand: z.number().optional(),
             marketingPrice: z.number().optional(),
             basePrice: z.number().optional(),
-            floatNumberMin: z.number().optional(),
-            floatNumberMax: z.number().optional(),
+            ipoMin: z.number().optional(),
+            ipoMax: z.number().optional(),
             Company: z.any().optional(),
             Game: z
               .object({

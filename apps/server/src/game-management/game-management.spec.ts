@@ -111,8 +111,8 @@ describe('GameManagementService', () => {
         demand: sector.demand,
         marketingPrice: sector.marketingPrice,
         basePrice: sector.basePrice,
-        floatNumberMin: sector.floatNumberMin,
-        floatNumberMax: sector.floatNumberMax,
+        ipoMin: sector.ipoMin,
+        ipoMax: sector.ipoMax,
         gameId: createdGame.id,
       }));
 

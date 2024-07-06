@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
-import { Prisma, PlayerOrder, OrderType, Player } from '@prisma/client';
+import { Prisma, PlayerOrder, OrderType, Player, ShareLocation } from '@prisma/client';
 import {
   PlayerOrderConcealed,
   PlayerOrderConcealedWithPlayer,
@@ -157,6 +157,16 @@ export class PlayerOrderService {
     if (playerOrder) {
       throw new Error('Player has already placed an order this phase');
     }
+    // OrderType Market and BUY is the only type of order that can be placed on location IPO
+    if (data.location === ShareLocation.IPO && (data.orderType !== OrderType.MARKET)) {
+      throw new Error('Only market orders are allowed on IPO');
+    }
+
+    // OrderType Market and BUY is the only type of order that can be placed on location IPO
+    if (data.location === ShareLocation.IPO && (data.orderType === OrderType.MARKET && data.isSell)) {
+      throw new Error('Cannot sell into IPO');
+    }
+    
     // Filter out fields based on order type
     if (data.orderType === OrderType.MARKET) {
       const playerId = data.Player.connect?.id;

@@ -28,6 +28,7 @@ import OperatingRoundProduction from "./OperatingRoundProduction";
 import StockRoundResults from "./StockRoundResults";
 import OperatingRoundRevenueVote from "./OperatingRoundRevenueVote";
 import OperatingRoundStockPriceAdjustment from "./OperatingRoundStockPriceAdjustment";
+import CompanyVoteResolve from "../Company/CompanyVoteResolve";
 
 const determineGameRound = (
   game: GameState
@@ -92,6 +93,12 @@ const Game = ({ gameId }: { gameId: string }) => {
     ) :
     currentRoundData?.phase.name === PhaseName.OPERATING_ACTION_COMPANY_VOTE ? (
       <CompanyActionSlider />
+    ) :
+    currentRoundData?.phase.name === PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT ? (
+      <CompanyActionSlider withResult />
+    ) :
+    currentRoundData?.phase.name === PhaseName.OPERATING_COMPANY_VOTE_RESOLVE ? (
+      <CompanyVoteResolve />
     ) :
     null;
 

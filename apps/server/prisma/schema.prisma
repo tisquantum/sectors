@@ -151,6 +151,7 @@ model Company {
   mergedWithParent         String?
   mergedWithChildren       String?
   ipoAndFloatPrice         Int
+  status                   CompanyStatus             @default(INACTIVE)
   Sector                   Sector                    @relation(fields: [sectorId], references: [id])
   Share                    Share[]
   StockHistory             StockHistory[]
@@ -165,17 +166,36 @@ model Company {
   RevenueDistributionVotes RevenueDistributionVote[]
 }
 
+enum CompanyStatus {
+  ACTIVE
+  INACTIVE
+  BANKRUPT
+}
+
 model StockHistory {
-  id                Int      @id @default(autoincrement())
+  id                Int         @id @default(autoincrement())
   price             Int
   productionRevenue Int?
   gameId            String
   companyId         String
   phaseId           String
-  Phase             Phase    @relation(fields: [phaseId], references: [id])
-  Company           Company  @relation(fields: [companyId], references: [id])
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  stepsMoved        Int
+  action            StockAction
+  Phase             Phase       @relation(fields: [phaseId], references: [id])
+  Company           Company     @relation(fields: [companyId], references: [id])
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+}
+
+enum StockAction {
+  INITIAL
+  MARKET_BUY
+  MARKET_SELL
+  SHORT
+  LIMIT_BUY
+  LIMIT_SELL
+  CALL_OPTION
+  PRODUCTION
 }
 
 model StockRound {
@@ -367,28 +387,29 @@ model Card {
 }
 
 model Sector {
-  id             String        @id @default(uuid())
-  name           String
-  consumers      Int           @default(0)
-  supply         Int
-  demand         Int
-  marketingPrice Float
-  basePrice      Float
-  floatNumberMin Int
-  floatNumberMax Int
-  unitPriceMin   Int           @default(0)
-  unitPriceMax   Int           @default(0)
-  supplyDefault  Int           @default(0)
-  demandMin      Int           @default(0)
-  demandMax      Int           @default(1)
-  supplyMin      Int           @default(0)
-  supplyMax      Int           @default(1)
-  Company        Company[]
-  PlayerOrder    PlayerOrder[]
-  Game           Game?         @relation(fields: [gameId], references: [id])
-  gameId         String?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  id                     String        @id @default(uuid())
+  name                   String
+  consumers              Int           @default(0)
+  supply                 Int
+  demand                 Int
+  marketingPrice         Float
+  basePrice              Float
+  ipoMin                 Int           @default(10)
+  ipoMax                 Int           @default(20)
+  sharePercentageToFloat Int           @default(50)
+  unitPriceMin           Int           @default(0)
+  unitPriceMax           Int           @default(0)
+  supplyDefault          Int           @default(0)
+  demandMin              Int           @default(0)
+  demandMax              Int           @default(1)
+  supplyMin              Int           @default(0)
+  supplyMax              Int           @default(1)
+  Company                Company[]
+  PlayerOrder            PlayerOrder[]
+  Game                   Game?         @relation(fields: [gameId], references: [id])
+  gameId                 String?
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
 }
 
 model Game {

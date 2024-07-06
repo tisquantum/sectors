@@ -223,15 +223,21 @@ export const getPseudoSpend = (orders: PlayerOrderWithCompany[]) => {
 };
 
 export function determineFloatPrice(sector: Sector) {
-  const { floatNumberMin, floatNumberMax } = sector;
+  const { ipoMin, ipoMax } = sector;
   const floatValue = Math.floor(
-    Math.random() * (floatNumberMax - floatNumberMin + 1) + floatNumberMin,
+    Math.random() * (ipoMax - ipoMin + 1) + ipoMin,
   );
   // pick the number closest in the stockGridPrices array
   const closest = stockGridPrices.reduce((a, b) => {
     return Math.abs(b - floatValue) < Math.abs(a - floatValue) ? b : a;
   });
   return closest;
+}
+
+export function determineStockTier(stockPrice: number): StockTier {
+  return stockTierChartRanges.find(
+    (range) => stockPrice <= range.chartMaxValue,
+  )!.tier;
 }
 
 function getTierMaxValue(tier: StockTier): number {
@@ -245,6 +251,20 @@ function getCurrentTierBySharePrice(currentSharePrice: number): StockTier {
   )!.tier;
 }
 
+/**
+ * Calculates the number of steps required to fulfill a given net difference in shares,
+ * updating the tier shares fulfilled, the current tier, and the new share price accordingly.
+ * 
+ * @param netDifference - The net number of shares to be processed.
+ * @param tierSharesFulfilled - The number of shares already fulfilled in the current tier.
+ * @param currentTierFillSize - The total number of shares required to fill the current tier.
+ * @param currentSharePrice - The current price of the share.
+ * @returns An object containing:
+ *          - steps: The number of steps taken to fulfill the net difference.
+ *          - newTierSharesFulfilled: The updated number of shares fulfilled in the current tier.
+ *          - newTier: The updated tier after processing the net difference.
+ *          - newSharePrice: The new share price after processing the net difference.
+ */
 export function calculateStepsAndRemainder(
   netDifference: number,
   tierSharesFulfilled: number,

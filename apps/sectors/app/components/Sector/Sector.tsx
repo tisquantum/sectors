@@ -9,6 +9,10 @@ import {
   RocketLaunchIcon,
   StarIcon,
 } from "@heroicons/react/24/solid";
+import {
+  RiHandCoinFill,
+  RiAdvertisementFill
+} from '@remixicon/react'
 import { useGame } from "../Game/GameContext";
 import { trpc } from "@sectors/app/trpc";
 import { sectorColors } from "@server/data/gameData";
@@ -41,17 +45,15 @@ const SectorComponent = () => {
           title={sector.name}
           subtitle={
             <div className="flex items-center">
-              <p className="text-small text-default-500 flex">
-                <ArrowUturnUpIcon className="size-4 mr-1" /> {sector.supply}
+              <p className="ml-2 text-small text-default-500 flex">
+                <RiHandCoinFill size={18} className="mr-1" /> {sector.demand}
               </p>
               <p className="ml-2 text-small text-default-500 flex">
-                <ArrowsRightLeftIcon className="size-4 mr-1" /> {sector.demand}
+                <RiAdvertisementFill size={18} className="mr-1" /> $50
               </p>
               <p className="ml-2 text-small text-default-500 flex">
-                <RocketLaunchIcon className="size-4 mr-1" /> $50
-              </p>
-              <p className="ml-2 text-small text-default-500 flex">
-                <StarIcon className="size-4 mr-1" /> +3
+                {/** prestige total from all companies? */}
+                <StarIcon className="size-4 mr-1" /> +3 
               </p>
             </div>
           }

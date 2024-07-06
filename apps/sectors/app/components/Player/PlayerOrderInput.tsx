@@ -164,11 +164,13 @@ const LimitOrderInput = ({
 interface BuyOrSellProps {
   alsoCancel?: boolean;
   handleSelectionIsBuy?: (selection: boolean) => void;
+  isIpo?: boolean;
 }
 
 const BuyOrSell: React.FC<BuyOrSellProps> = ({
   alsoCancel,
   handleSelectionIsBuy,
+  isIpo,
 }) => {
   const handleSelection = (event: ChangeEvent<HTMLInputElement>) => {
     if (handleSelectionIsBuy) {
@@ -185,7 +187,7 @@ const BuyOrSell: React.FC<BuyOrSellProps> = ({
       <Radio defaultChecked value="buy">
         Buy
       </Radio>
-      <Radio value="sell">Sell</Radio>
+      {!isIpo && <Radio value="sell">Sell</Radio>}
       {alsoCancel && <Radio value="cancel">Cancel Order</Radio>}
     </RadioGroup>
   );
@@ -195,12 +197,14 @@ interface TabContentProps {
   handleSelectionIsBuy: (event: boolean) => void;
   handleShares: (event: number) => void;
   ordersRemaining: number;
+  isIpo?: boolean;
 }
 
 const TabContentMO: React.FC<TabContentProps> = ({
   handleSelectionIsBuy,
   handleShares,
   ordersRemaining,
+  isIpo,
 }) => {
   return (
     <div className="flex flex-col text-center items-center center-content justify-center gap-2">
@@ -208,7 +212,7 @@ const TabContentMO: React.FC<TabContentProps> = ({
         ordersRemaining={ordersRemaining}
         maxOrders={MAX_MARKET_ORDER}
       />
-      <BuyOrSell handleSelectionIsBuy={handleSelectionIsBuy} />
+      <BuyOrSell handleSelectionIsBuy={handleSelectionIsBuy} isIpo={isIpo} />
       <Slider
         size="md"
         step={1}
@@ -349,7 +353,9 @@ const PseudoBalance = ({
       <div className="flex items-center gap-1">
         <span>Remaining Cash</span>
         <CurrencyDollarIcon className="w-6 h-6" />
-        <span>{authPlayer.cashOnHand - netSpend + (currentOrderValue || 0)}</span>
+        <span>
+          {authPlayer.cashOnHand - netSpend + (currentOrderValue || 0)}
+        </span>
       </div>
     </div>
   );
@@ -387,16 +393,16 @@ const calculatePseudoOrderValue = ({
 const calculateRunningOrderValue = (playerOrders: PlayerOrderWithCompany[]) => {
   let runningOrderValue = 0;
   //filter all orders that aren't market orders
-  playerOrders.filter(
-    (order) => order.orderType !== OrderType.MARKET,
-  ).forEach((order) => {
-    runningOrderValue += calculatePseudoOrderValue({
-      orderType: order.orderType,
-      quantity: order.quantity,
-      currentStockPrice: order.Company.currentStockPrice,
-      premium: order.value,
+  playerOrders
+    .filter((order) => order.orderType !== OrderType.MARKET)
+    .forEach((order) => {
+      runningOrderValue += calculatePseudoOrderValue({
+        orderType: order.orderType,
+        quantity: order.quantity,
+        currentStockPrice: order.Company.currentStockPrice,
+        premium: order.value,
+      });
     });
-  });
   return runningOrderValue;
 };
 
@@ -499,33 +505,38 @@ const PlayerOrderInput = ({
                     handleSelectionIsBuy={setIsBuy}
                     handleShares={setShare}
                     ordersRemaining={authPlayer.marketOrderActions}
+                    isIpo={isIpo}
                   />
                 </CardBody>
               </Card>
             </Tab>
-            <Tab key="lo" title={"LIMIT ORDER"} className="w-full">
-              <Card>
-                <CardBody>
-                  <TabContentLO
-                    isBuy={isBuy}
-                    handleLimitOrderChange={setLimitOrderValue}
-                    handleSelectionIsBuy={setIsBuy}
-                    ordersRemaining={authPlayer.limitOrderActions}
-                  />
-                </CardBody>
-              </Card>
-            </Tab>
-            <Tab key="so" title={"SHORT ORDER"} className="w-full">
-              <Card>
-                <CardBody>
-                  <TabContentSO
-                    company={currentOrder}
-                    onShareChange={setShare}
-                    ordersRemaining={authPlayer.shortOrderActions}
-                  />
-                </CardBody>
-              </Card>
-            </Tab>
+            {!isIpo && (
+              <Tab key="lo" title={"LIMIT ORDER"} className="w-full">
+                <Card>
+                  <CardBody>
+                    <TabContentLO
+                      isBuy={isBuy}
+                      handleLimitOrderChange={setLimitOrderValue}
+                      handleSelectionIsBuy={setIsBuy}
+                      ordersRemaining={authPlayer.limitOrderActions}
+                    />
+                  </CardBody>
+                </Card>
+              </Tab>
+            )}
+            {!isIpo && (
+              <Tab key="so" title={"SHORT ORDER"} className="w-full">
+                <Card>
+                  <CardBody>
+                    <TabContentSO
+                      company={currentOrder}
+                      onShareChange={setShare}
+                      ordersRemaining={authPlayer.shortOrderActions}
+                    />
+                  </CardBody>
+                </Card>
+              </Tab>
+            )}
           </Tabs>
           <div className="flex justify-center gap-2">
             <Button onClick={handleConfirm}>Confirm</Button>
