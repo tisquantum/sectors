@@ -65,7 +65,8 @@ export const GameProvider: React.FC<{
   );
   const { refetch: refetchPlayerOrder } = trpc.playerOrder.listPlayerOrdersWithCompany.useQuery({
     where: { stockRoundId: currentPhase?.stockRoundId, playerId: player?.id },
-  });
+  },
+  { enabled: !!currentPhase?.stockRoundId });
 
   useEffect(() => {
     if (!channel || !gameId) {

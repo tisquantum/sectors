@@ -20,6 +20,16 @@ const GameTopBar = ({
   const useNextPhaseMutation = trpc.game.forceNextPhase.useMutation();
   const useRetryPhaseMutation = trpc.game.retryPhase.useMutation();
   const { currentPhase, gameState } = useGame();
+  const { data: allCompaniesVoted } =
+    trpc.game.allCompanyActionsOperatingRoundResolved.useQuery(
+      {
+        gameId,
+      },
+      {
+        enabled:
+          currentPhase?.name === PhaseName.OPERATING_COMPANY_VOTE_RESOLVE,
+      }
+    );
   const handleViewChange = (view: string) => {
     setCurrentView(view);
     handleCurrentView(view);
@@ -31,7 +41,8 @@ const GameTopBar = ({
   console.log("currentPhase", currentPhase);
   const handleNextPhase = () => {
     const nextPhase = determineNextGamePhase(
-      currentPhase?.name ?? PhaseName.STOCK_MEET
+      currentPhase?.name ?? PhaseName.STOCK_MEET,
+      allCompaniesVoted
     );
     let companyId;
     if (

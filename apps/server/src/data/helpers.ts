@@ -1,7 +1,9 @@
 import {
   Company,
   OrderType,
+  Phase,
   PhaseName,
+  Prisma,
   RoundType,
   Sector,
   ShareLocation,
@@ -19,7 +21,10 @@ let stockActionCounter = 0;
  * @param phaseName
  * @returns
  */
-export function determineNextGamePhase(phaseName: PhaseName): {
+export function determineNextGamePhase(
+  phaseName: PhaseName,
+  allCompaniesHaveVoted?: boolean,
+): {
   phaseName: PhaseName;
   roundType: RoundType;
 } {
@@ -117,6 +122,34 @@ export function determineNextGamePhase(phaseName: PhaseName): {
         roundType: RoundType.OPERATING,
       };
     case PhaseName.OPERATING_ACTION_COMPANY_VOTE:
+      return {
+        phaseName: PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT:
+      return {
+        phaseName: PhaseName.OPERATING_COMPANY_VOTE_RESOLVE,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.OPERATING_COMPANY_VOTE_RESOLVE:
+      if (allCompaniesHaveVoted) {
+        return {
+          phaseName: PhaseName.CAPITAL_GAINS,
+          roundType: RoundType.OPERATING,
+        };
+      }
+      return {
+        phaseName: PhaseName.OPERATING_ACTION_COMPANY_VOTE,
+        roundType: RoundType.OPERATING,
+      };
+    //if you are over some threshold on stocks, you must pay a tax.
+    case PhaseName.CAPITAL_GAINS:
+      return {
+        phaseName: PhaseName.DIVESTMENT,
+        roundType: RoundType.OPERATING,
+      };
+    //if you are over %60 in a company you must divest some of your shares.
+    case PhaseName.DIVESTMENT:
       return {
         phaseName: PhaseName.END_TURN,
         roundType: RoundType.GAME_UPKEEP,

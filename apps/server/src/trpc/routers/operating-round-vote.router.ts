@@ -51,11 +51,12 @@ export default (trpc: TrpcService, ctx: Context) =>
         }),
       )
       .mutation(async ({ input }) => {
+        const { operatingRoundId, playerId, companyId, ...rest } = input;
         const data: Prisma.OperatingRoundVoteCreateInput = {
-          ...input,
-          OperatingRound: { connect: { id: input.operatingRoundId } },
-          Player: { connect: { id: input.playerId } },
-          Company: { connect: { id: input.companyId } },
+          ...rest,
+          OperatingRound: { connect: { id: operatingRoundId } },
+          Player: { connect: { id: playerId } },
+          Company: { connect: { id: companyId } },
         };
         const vote = await ctx.operatingRoundVoteService.createOperatingRoundVote(data);
         return vote;

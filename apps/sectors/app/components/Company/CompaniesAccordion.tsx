@@ -16,6 +16,7 @@ import {
   ShareWithPlayer,
 } from "@server/prisma/prisma.types";
 import { share } from "@trpc/server/observable";
+import ShareComponent from "./Share";
 
 type ShareGroupedByPlayer = {
   [key: string]: ShareWithPlayer[];
@@ -61,9 +62,7 @@ const CompaniesAccordion = ({
           );
           return Object.entries(sharesGroupedByPlayer).map(
             ([playerId, shares]) => (
-              <Badge key={playerId} content={shares.length} color="default">
-                <Avatar name={shares[0].Player?.nickname || ""} />
-              </Badge>
+              <ShareComponent key={playerId} name={shares[0].Player?.nickname || ""} quantity={shares.length}/>
             )
           );
         };
@@ -72,39 +71,32 @@ const CompaniesAccordion = ({
             key={company.id}
             aria-label={company.name}
             startContent={
-              <Avatar
-                isBordered
-                color="primary"
-                radius="lg"
-                name={company.name}
-              />
-            }
-            subtitle={
-              <div className="flex items-center mt-3">
-                <AvatarGroup isGrid className="ml-4" max={3}>
-                  {OMShares > 0 && (
-                    <Badge content={OMShares} color="default">
-                      <Avatar name="OM" />
-                    </Badge>
-                  )}
-                  {IPOShares > 0 && (
-                    <Badge content={IPOShares} color="default">
-                      <Avatar name="IPO" />
-                    </Badge>
-                  )}
-                  {renderPlayerShares(company.Share || [])}
-                </AvatarGroup>
-              </div>
-            }
-            title={
-              <div className="flex gap-2">
-                <span>{company.name}</span>
+              <div className="rounded-md">
+                <span>{company.stockSymbol}</span>
                 <div className="flex items-center">
                   {trendIcon}
                   <span className="ml-1">
                     ${company.currentStockPrice || 0}
                   </span>
                 </div>
+              </div>
+            }
+            subtitle={
+              <div className="flex items-center mt-3">
+                <div className="grid grid-cols-2 gap-2">
+                  {OMShares > 0 && (
+                    <ShareComponent name={"OM"} quantity={OMShares}/>
+                  )}
+                  {IPOShares > 0 && (
+                    <ShareComponent name={"IPO"} quantity={IPOShares}/>
+                  )}
+                  {renderPlayerShares(company.Share || [])}
+                </div>
+              </div>
+            }
+            title={
+              <div className="flex gap-2">
+                <span>{company.name}</span>
                 <div className="flex items-center">
                   <BoltIcon className="ml-2 size-4 text-yellow-500" />
                   <span className="ml-1">5</span>

@@ -79,6 +79,9 @@ export class CompanyService {
       include: {
         Sector: true,
         StockHistory: {
+          include: {
+            Phase: true,
+          },
           orderBy: {
             createdAt: 'asc',
           },

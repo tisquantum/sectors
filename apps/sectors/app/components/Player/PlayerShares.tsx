@@ -2,6 +2,7 @@ import React from "react";
 import { Avatar, AvatarGroup, Badge } from "@nextui-org/react";
 import { PlayerWithShares } from "@server/prisma/prisma.types";
 import { StockAggregation } from "./PlayersOverview";
+import ShareComponent from "../Company/Share";
 
 const playerCompanies = [
   {
@@ -63,9 +64,7 @@ const PlayerShares = ({ playerWithShares }: { playerWithShares: PlayerWithShares
           key={company.companyId}
           className="flex flex-col justify-center items-center"
         >
-          <Badge content={company.shareTotal} color="default">
-            <Avatar name={company.company?.name} />
-          </Badge>
+          <ShareComponent name={company.company?.stockSymbol || ""} quantity={company.shareTotal} />
           <div className="text-sm mt-1">${company.totalValue.toFixed(2)}</div>
         </div>
       )) : <div>No shares owned.</div>}

@@ -1,5 +1,6 @@
 import {
   Company,
+  CompanyAction,
   Game,
   GameLog,
   MeetingMessage,
@@ -40,9 +41,10 @@ export type CompanyWithSector = Company & {
   Sector: Sector;
   Share: ShareWithPlayer[];
 };
+export type StockHistoryWithPhase = StockHistory & { Phase: Phase };
 export type CompanyWithSectorAndStockHistory = Company & {
   Sector: Sector;
-  StockHistory: StockHistory[];
+  StockHistory: StockHistoryWithPhase[];
 };
 
 export type MeetingMessageWithPlayer = MeetingMessage & { player: Player };
@@ -113,6 +115,10 @@ export type ProductionResultWithCompany = ProductionResult & {
 
 export type OperatingRoundWithProductionResults = OperatingRound & {
   productionResults: ProductionResultWithCompany[];
+};
+
+export type OperatingRoundWithCompanyActions = OperatingRound & {
+  companyActions: CompanyAction[];
 };
 
 export type StockRoundWithPlayerOrders = StockRound & {

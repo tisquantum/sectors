@@ -9,7 +9,7 @@ import {
   CardHeader,
 } from "@nextui-org/react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import CompanyActionVote from "./CompanyActionVote";
 import { trpc } from "@sectors/app/trpc";
 import { useGame } from "../Game/GameContext";
@@ -41,10 +41,19 @@ const companyActions = [
   },
   {
     id: 5,
-    title:
-      "Veto (Only if the company has more than five (we need maybe change this rule) unique share-holders)",
+    title: "Share Buyback",
     message:
-      "Ignore the top share holders vote (only passes if minority-majority pick veto) and run a second vote with all other stake-holders.",
+      "Buy back a share from the open market. This share is taken out of rotation from the game.",
+  },
+  {
+    id: 6,
+    title: "Share Issue",
+    message: "Issue a share to the open market.",
+  },
+  {
+    id: 7,
+    title: "Spend Prestige",
+    message: "Spend 3 prestige to increase the unit price for the company.",
   },
 ];
 const CompanyActionSelectionVote = ({
@@ -54,18 +63,8 @@ const CompanyActionSelectionVote = ({
 }) => {
   return (
     <div className="flex flex-col gap-3 p-5">
-      <h1>{companyName} Vote</h1>
+      <h1 className="text-2xl">{companyName} Shareholder Meeting</h1>
       <div className="flex flex-col gap-3">
-        <Card>
-          <CardHeader>Operations</CardHeader>
-          <CardBody>
-            <p>
-              The company meets customer demand via it&apos;s throughput and
-              makes money based off of it&apos;s unit sales.
-            </p>
-          </CardBody>
-        </Card>
-        <ArrowDownIcon className="size-5" />
         <div>
           <h3>Company Action Selection Vote</h3>
 
@@ -76,38 +75,11 @@ const CompanyActionSelectionVote = ({
         </div>
         <div className="grid grid-cols-3 gap-2">
           {companyActions.map((action) => (
-            <Card
-              key={action.id}
-              className={`${action.id == 2 ? "ring ring-blue-500" : ""} ${
-                action.id == 4 ? "ring ring-pink-500" : ""
-              }`}
-            >
+            <Card key={action.id}>
               <CardHeader>
                 <span className="font-bold mr-3">{action.title}</span>
-                {action.id == 4 && (
-                  <span className="text-pink-500">MAJORITY SHAREHOLDER</span>
-                )}
               </CardHeader>
               <CardBody>{action.message}</CardBody>
-              <CardFooter>
-                <div className="flex flex-col">
-                  <span>Vote Total: 7</span>
-                  {action.id == 2 && (
-                    <span className="text-sky-500">WINNER</span>
-                  )}
-                  <div className="flex gap-2 my-5">
-                    <Badge content="+4" shape="rectangle">
-                      <Avatar name={"ANI"} />
-                    </Badge>
-                    <Badge content="+2" shape="rectangle">
-                      <Avatar name={"DOT"} />
-                    </Badge>
-                    <Badge content="+1" shape="rectangle">
-                      <Avatar name={"FUN"} />
-                    </Badge>
-                  </div>
-                </div>
-              </CardFooter>
             </Card>
           ))}
         </div>
@@ -118,31 +90,52 @@ const CompanyActionSelectionVote = ({
 
 const CompanyActionSlider = () => {
   const { gameId, currentPhase } = useGame();
-  const { data: companies, isLoading: isLoadingCompanies } =
-    trpc.company.listCompaniesWithSector.useQuery({
-      where: { gameId },
-    });
-  const [currentCompany, setCurrentCompany] = useState<string | undefined>(undefined);
+  const {
+    data: companies,
+    isLoading: isLoadingCompanies,
+    error,
+  } = trpc.company.listCompaniesWithSector.useQuery({
+    where: { gameId },
+  });
+  const [currentCompany, setCurrentCompany] = useState<string | undefined>(
+    undefined
+  );
+  useEffect(() => {
+    if (companies && currentPhase) {
+      setCurrentCompany(
+        companies.find(
+          (company) => company.id === (currentPhase.companyId || "")
+        )?.id
+      );
+    }
+  }, [companies, currentPhase]);
   if (isLoadingCompanies) return <div>Loading...</div>;
   if (!companies) return <div>No companies found</div>;
-  if(!currentPhase) return <div>No current phase found</div>;
-  setCurrentCompany(companies.find((company) => company.id === (currentPhase.companyId || ''))?.id);
-  const companiesSortedForTurnOrder = getCompanyOperatingRoundTurnOrder(companies);
-  //I thought originally I'd get rid of this, but now I'm thinking 
+  if (!currentPhase) return <div>No current phase found</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  const companiesSortedForTurnOrder =
+    getCompanyOperatingRoundTurnOrder(companies);
+  //I thought originally I'd get rid of this, but now I'm thinking
   //of preserving this behavior so players can flip through orders to review votes of other companies if they want.
   const handleNext = () => {
     setCurrentCompany((prev) => {
       if (!prev) return companiesSortedForTurnOrder[0].id;
-      const currentIndex = companies.findIndex((company) => company.id === prev);
-      if (currentIndex === companies.length - 1) return companiesSortedForTurnOrder[0].id;
+      const currentIndex = companies.findIndex(
+        (company) => company.id === prev
+      );
+      if (currentIndex === companies.length - 1)
+        return companiesSortedForTurnOrder[0].id;
       return companies[currentIndex + 1].id;
     });
   };
   const handlePrevious = () => {
     setCurrentCompany((prev) => {
       if (!prev) return companiesSortedForTurnOrder[0].id;
-      const currentIndex = companies.findIndex((company) => company.id === prev);
-      if (currentIndex === 0) return companiesSortedForTurnOrder[companies.length - 1].id;
+      const currentIndex = companies.findIndex(
+        (company) => company.id === prev
+      );
+      if (currentIndex === 0)
+        return companiesSortedForTurnOrder[companies.length - 1].id;
       return companies[currentIndex - 1].id;
     });
   };
@@ -152,7 +145,13 @@ const CompanyActionSlider = () => {
         <h2>Turn Order</h2>
         <div className="flex gap-2">
           {companiesSortedForTurnOrder.map((company, index) => (
-            <Avatar key={company.id} name={company.name} />
+            <Avatar
+              key={company.id}
+              name={company.name}
+              className={
+                currentCompany === company.id ? "ring-2 ring-blue-500" : ""
+              }
+            />
           ))}
         </div>
         <button onClick={handlePrevious}>Previous</button>
@@ -168,9 +167,16 @@ const CompanyActionSlider = () => {
         >
           <div className="flex flex-col justify-center items-center">
             <CompanyActionSelectionVote
-              companyName={companies.find(company => company.id === currentCompany)?.name || ''}
+              companyName={
+                companies.find((company) => company.id === currentCompany)
+                  ?.name || ""
+              }
             />
-            <CompanyActionVote company={companies.find(company => company.id === currentCompany)} />
+            <CompanyActionVote
+              company={companies.find(
+                (company) => company.id === currentCompany
+              )}
+            />
           </div>
         </motion.div>
       </AnimatePresence>

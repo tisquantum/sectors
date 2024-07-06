@@ -184,4 +184,12 @@ export default (trpc: TrpcService, ctx: Context) =>
         const { gameId } = input;
         return ctx.gameManagementService.retryPhase(gameId);
       }),
+    allCompanyActionsOperatingRoundResolved: trpc.procedure
+      .input(z.object({ gameId: z.string() }))
+      .query(async ({ input }) => {
+        const { gameId } = input;
+        return ctx.gameManagementService.haveAllCompaniesActionsResolved(
+          gameId,
+        );
+      }),
   });

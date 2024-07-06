@@ -343,6 +343,7 @@ enum OperatingRoundAction {
   EXPANSION
   SHARE_BUYBACK
   SHARE_ISSUE
+  SPEND_PRESTIGE
 }
 
 model ResearchDeck {

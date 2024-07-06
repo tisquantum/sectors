@@ -90,6 +90,7 @@ export default (trpc: TrpcService, ctx: Context) =>
       .input(
         z.object({
           name: z.string(),
+          stockSymbol: z.string(),
           unitPrice: z.number(),
           throughput: z.number(),
           sectorId: z.string(),

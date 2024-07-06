@@ -712,6 +712,7 @@ export class GameManagementService {
         return selectedCompanies.map((company) => ({
           id: company.id,
           name: company.name,
+          stockSymbol: company.stockSymbol,
           //find int between sector min and max
           unitPrice: Math.floor(
             Math.random() * (sector.unitPriceMax - sector.unitPriceMin + 1) +
@@ -1707,5 +1708,23 @@ export class GameManagementService {
         },
       },
     });
+  }
+
+  async haveAllCompaniesActionsResolved(gameId: string) {
+    //get current operating round
+    const game = await this.gamesService.getGameState(gameId);
+    if (!game) {
+      throw new Error('Game not found');
+    }
+    const currentOperatingRound = await this.operatingRoundService.operatingRoundWithCompanyActions({
+      id: game.currentOperatingRoundId || 0,
+    });
+    if (!currentOperatingRound) {
+      throw new Error('Operating round not found');
+    }
+    //check if all CompanyAction.resolved
+    return currentOperatingRound.companyActions.every(
+      (action) => action.resolved,
+    );
   }
 }

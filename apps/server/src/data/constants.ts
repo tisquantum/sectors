@@ -187,6 +187,7 @@ export const companyVoteActionPriority = (
     OperatingRoundAction.SHARE_BUYBACK,
     OperatingRoundAction.SHARE_ISSUE,
     OperatingRoundAction.PRODUCTION,
+    OperatingRoundAction.SPEND_PRESTIGE,
   ];
   return actions.sort(
     (a, b) => actionPriority.indexOf(a) - actionPriority.indexOf(b),

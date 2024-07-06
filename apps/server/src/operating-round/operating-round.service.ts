@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { Prisma, OperatingRound } from '@prisma/client';
 import {
+  OperatingRoundWithCompanyActions,
   OperatingRoundWithProductionResults,
   OperatingRoundWithRevenueDistributionVotes,
 } from '@server/prisma/prisma.types';
@@ -15,6 +16,17 @@ export class OperatingRoundService {
   ): Promise<OperatingRound | null> {
     return this.prisma.operatingRound.findUnique({
       where: operatingRoundWhereUniqueInput,
+    });
+  }
+
+  async operatingRoundWithCompanyActions(
+    operatingRoundWhereUniqueInput: Prisma.OperatingRoundWhereUniqueInput,
+  ): Promise<OperatingRoundWithCompanyActions | null> {
+    return this.prisma.operatingRound.findUnique({
+      where: operatingRoundWhereUniqueInput,
+      include: {
+        companyActions: true,
+      },
     });
   }
 

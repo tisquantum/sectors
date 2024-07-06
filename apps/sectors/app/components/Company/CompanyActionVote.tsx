@@ -9,20 +9,28 @@ const CompanyActionVote = ({ company }: { company?: Company }) => {
   const [selected, setSelected] = useState<OperatingRoundAction>(
     OperatingRoundAction.MARKETING
   );
+  const [submitComplete, setSubmitComplete] = useState(false);
   const createOperatingRoundVote =
     trpc.operatingRoundVote.createOperatingRoundVote.useMutation();
-  if(!company) return null;
+  if (!company) return null;
   const handleSubmit = async () => {
-    createOperatingRoundVote.mutate({
-      operatingRoundId: currentPhase?.operatingRoundId || 0,
-      playerId: authPlayer.id,
-      companyId: company.id,
-      actionVoted: OperatingRoundAction.DOWNSIZE,
-    });
+    try {
+      await createOperatingRoundVote.mutate({
+        operatingRoundId: currentPhase?.operatingRoundId || 0,
+        playerId: authPlayer.id,
+        companyId: company.id,
+        actionVoted: selected,
+      });
+      setSubmitComplete(true);
+    } catch (error) {
+      console.error(error);
+    }
   };
   return (
     <div className="flex flex-col items-center justify-center max-w-2xl">
-      <h1 className="text-2xl font-bold">Vote on the company action</h1>
+      <h1 className="text-2xl font-bold">
+        Vote on {company.name} company action
+      </h1>
       <RadioGroup
         color="warning"
         orientation="horizontal"
@@ -39,9 +47,13 @@ const CompanyActionVote = ({ company }: { company?: Company }) => {
       </RadioGroup>
       <div className="flex flex-col items-center justify-center">
         {currentPhase?.companyId === company.id ? (
-          <Button className="btn btn-primary" onClick={handleSubmit}>
-            Submit Vote
-          </Button>
+          submitComplete ? (
+            <div>Vote Submitted</div>
+          ) : (
+            <Button className="btn btn-primary" onClick={handleSubmit}>
+              Submit Vote
+            </Button>
+          )
         ) : (
           <Button disabled className="btn btn-primary">
             Return to the phasing company to vote.

@@ -9,6 +9,7 @@ import {
   SquaresPlusIcon,
   UserIcon,
 } from "@heroicons/react/24/solid";
+import { RiWalletFill, RiFunctionAddFill } from "@remixicon/react";
 import { Avatar } from "@nextui-org/react";
 
 const GameGeneralInfo = () => {
@@ -20,10 +21,10 @@ const GameGeneralInfo = () => {
         <Avatar name={authPlayer.nickname} size="md" className="mr-2" />
         <div className="flex flex-col">
           <div className="flex items-center text-md font-bold">
-            <CircleStackIcon className="size-4" /> {authPlayer.cashOnHand}
+            <RiWalletFill size={18} /> {authPlayer.cashOnHand}
           </div>
           <div className="flex items-center text-md">
-            <SquaresPlusIcon className="size-4" /> LO{" "}
+            <RiFunctionAddFill size={24} /> LO{" "}
             {authPlayer.limitOrderActions} MO {authPlayer.marketOrderActions} SO{" "}
             {authPlayer.shortOrderActions}
           </div>
