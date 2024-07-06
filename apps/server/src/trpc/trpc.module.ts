@@ -21,6 +21,7 @@ import { ShareService } from '@server/share/share.service';
 import { OperatingRoundVoteService } from '@server/operating-round-vote/operating-round-vote.service';
 import { StockHistoryService } from '@server/stock-history/stock-history.service';
 import { ProductionResultService } from '@server/production-result/production-result.service';
+import { RevenueDistributionVoteService } from '@server/revenue-distribution-vote/revenue-distribution-vote.service';
 
 @Module({
   imports: [PrismaModule],
@@ -48,6 +49,7 @@ import { ProductionResultService } from '@server/production-result/production-re
     OperatingRoundService,
     StockHistoryService,
     ProductionResultService,
+    RevenueDistributionVoteService,
   ],
 })
 export class TrpcModule {}

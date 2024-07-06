@@ -91,6 +91,9 @@ const Game = ({ gameId }: { gameId: string }) => {
     currentRoundData?.phase.name === PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT ? (
       <OperatingRoundStockPriceAdjustment />
     ) :
+    currentRoundData?.phase.name === PhaseName.OPERATING_PRODUCTION_VOTE_RESOLVE ? (
+      <OperatingRoundRevenueVoteResult />
+    ) :
     currentRoundData?.phase.name === PhaseName.OPERATING_ACTION_COMPANY_VOTE ? (
       <CompanyActionSlider />
     ) :

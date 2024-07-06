@@ -1488,85 +1488,83 @@ export class GameManagementService {
         return acc;
       }, {});
       //Distribute shares
-      Object.entries(groupedMarketOrders).map(
-        async ([companyId, orders]) => {
-          //resolve all sell orders by updating player cash and share count
-          await Promise.all(
-            orders.map(async (order) => {
-              if (order.isSell) {
-                const sellAmount = order.quantity || 0;
-                const sharePrice = order.Company.currentStockPrice || 0;
-                const playerActualSharesOwned = await this.shareService.shares({
-                  where: {
-                    playerId: order.playerId,
-                    companyId,
-                    location: ShareLocation.PLAYER,
-                  },
-                });
-                const sharesToSell = Math.min(
-                  playerActualSharesOwned.length,
-                  sellAmount,
-                );
+      Object.entries(groupedMarketOrders).map(async ([companyId, orders]) => {
+        //resolve all sell orders by updating player cash and share count
+        await Promise.all(
+          orders.map(async (order) => {
+            if (order.isSell) {
+              const sellAmount = order.quantity || 0;
+              const sharePrice = order.Company.currentStockPrice || 0;
+              const playerActualSharesOwned = await this.shareService.shares({
+                where: {
+                  playerId: order.playerId,
+                  companyId,
+                  location: ShareLocation.PLAYER,
+                },
+              });
+              const sharesToSell = Math.min(
+                playerActualSharesOwned.length,
+                sellAmount,
+              );
 
-                await this.playerAddMoney(
-                  order.gameId,
-                  order.playerId,
-                  sharesToSell * sharePrice,
-                );
+              await this.playerAddMoney(
+                order.gameId,
+                order.playerId,
+                sharesToSell * sharePrice,
+              );
 
-                const sharesToUpdate = await this.prisma.share.findMany({
-                  where: {
-                    playerId: order.playerId,
-                    companyId,
-                    location: ShareLocation.PLAYER,
-                  },
-                  take: sellAmount,
-                });
+              const sharesToUpdate = await this.prisma.share.findMany({
+                where: {
+                  playerId: order.playerId,
+                  companyId,
+                  location: ShareLocation.PLAYER,
+                },
+                take: sellAmount,
+              });
 
-                const shareIds = sharesToUpdate.map((share) => share.id);
+              const shareIds = sharesToUpdate.map((share) => share.id);
 
-                await this.shareService.updateManyShares({
-                  where: {
-                    id: { in: shareIds },
-                  },
-                  data: {
-                    location: ShareLocation.OPEN_MARKET,
-                  },
-                });
-              }
-            }),
+              await this.shareService.updateManyShares({
+                where: {
+                  id: { in: shareIds },
+                },
+                data: {
+                  location: ShareLocation.OPEN_MARKET,
+                },
+              });
+            }
+          }),
+        );
+        //iterate over grouped by market orders to distribute shares for potential buyers
+        // distribute shares for buy orders
+        // NOTE: At this point we do filter by IPO and OPEN MARKET as we are determining how shares can be distributed
+        // from the remaining pool of shares in those markets.
+        const buyOrdersIPO = orders.filter(
+          (order) => !order.isSell && order.location == ShareLocation.IPO,
+        );
+        if (buyOrdersIPO.length > 0) {
+          await this.distributeShares(
+            buyOrdersIPO,
+            ShareLocation.IPO,
+            companyId,
+            this.shareService,
           );
-          //iterate over grouped by market orders to distribute shares for potential buyers
-          // distribute shares for buy orders
-          // NOTE: At this point we do filter by IPO and OPEN MARKET as we are determining how shares can be distributed
-          // from the remaining pool of shares in those markets.
-          const buyOrdersIPO = orders.filter(
-            (order) => !order.isSell && order.location == ShareLocation.IPO,
+          //check if company is floated.
+          this.checkIfCompanyIsFloated(companyId);
+        }
+        const buyOrdersOM = orders.filter(
+          (order) =>
+            !order.isSell && order.location == ShareLocation.OPEN_MARKET,
+        );
+        if (buyOrdersOM.length > 0) {
+          await this.distributeShares(
+            buyOrdersOM,
+            ShareLocation.OPEN_MARKET,
+            companyId,
+            this.shareService,
           );
-          if (buyOrdersIPO.length > 0) {
-            await this.distributeShares(
-              buyOrdersIPO,
-              ShareLocation.IPO,
-              companyId,
-              this.shareService,
-            );
-            //check if company is floated.
-            this.checkIfCompanyIsFloated(companyId);
-          }
-          const buyOrdersOM = orders.filter(
-            (order) =>
-              !order.isSell && order.location == ShareLocation.OPEN_MARKET,
-          );
-          if (buyOrdersOM.length > 0) {
-            await this.distributeShares(
-              buyOrdersOM,
-              ShareLocation.OPEN_MARKET,
-              companyId,
-              this.shareService,
-            );
-          }
-        },
-      );
+        }
+      });
     }
   }
 
@@ -1574,19 +1572,19 @@ export class GameManagementService {
     buyOrders: PlayerOrderWithPlayerCompany[],
     location: ShareLocation,
     companyId: string,
-    shareService: ShareService
+    shareService: ShareService,
   ) {
     const totalBuyOrderShares = buyOrders.reduce(
       (acc, order) => acc + (order.quantity || 0),
-      0
+      0,
     );
-  
+
     let remainingShares = Math.min(
       buyOrders[0].Company.Share.filter((share) => share.location == location)
         .length,
-      totalBuyOrderShares
+      totalBuyOrderShares,
     );
-  
+
     const groupedByPhase = buyOrders.reduce<GroupedByPhase>((acc, order) => {
       const phaseId = order.Phase.id;
       if (!acc[phaseId]) {
@@ -1598,70 +1596,73 @@ export class GameManagementService {
       acc[phaseId].orders.push(order);
       return acc;
     }, {});
-  
+
     const sortedByPhaseCreatedAt = Object.values(groupedByPhase).sort(
       (a, b) =>
         a.phase.createdAt.getUTCMilliseconds() -
-        b.phase.createdAt.getUTCMilliseconds()
+        b.phase.createdAt.getUTCMilliseconds(),
     );
-  
+
     for (const groupedOrders of sortedByPhaseCreatedAt) {
       if (remainingShares <= 0) break;
-  
+
       const totalShares = groupedOrders.orders.reduce(
         (acc, order) => acc + (order.quantity || 0),
-        0
+        0,
       );
-  
+
       if (totalShares > remainingShares) {
         const numBuyers = groupedOrders.orders.length;
         const sharesPerBuyer = Math.floor(remainingShares / numBuyers);
-  
+
         const distributePromises = groupedOrders.orders.map(async (order) => {
           if (sharesPerBuyer <= 0) return;
-  
+
           const shares = await shareService.shares({
             where: { companyId, location },
             take: sharesPerBuyer,
           });
-  
+
           await Promise.all([
             shareService.updateManySharesUnchecked({
               where: { id: { in: shares.map((share) => share.id) } },
-              data: { location: ShareLocation.PLAYER, playerId: order.playerId },
+              data: {
+                location: ShareLocation.PLAYER,
+                playerId: order.playerId,
+              },
             }),
             this.playerRemoveMoney(
               order.gameId,
               order.playerId,
-              sharesPerBuyer * order.Company.currentStockPrice!
+              sharesPerBuyer * order.Company.currentStockPrice!,
             ),
             this.prisma.playerOrder.update({
               where: { id: order.id },
               data: { orderStatus: OrderStatus.FILLED },
             }),
           ]);
-  
+
           remainingShares -= sharesPerBuyer;
         });
-  
+
         await Promise.all(distributePromises);
-  
+
         if (remainingShares > 0) {
           const lotteryPromises = [];
-  
+
           while (remainingShares > 0 && groupedOrders.orders.length > 0) {
             const randomIndex = Math.floor(
-              Math.random() * groupedOrders.orders.length
+              Math.random() * groupedOrders.orders.length,
             );
             const order = groupedOrders.orders[randomIndex];
-  
+
             lotteryPromises.push(
               (async () => {
                 const shares = await shareService.shares({
                   where: { companyId, location },
                   take: 1,
                 });
-  
+
                 await Promise.all([
                   shareService.updateManySharesUnchecked({
                     where: { id: shares[0].id },
@@ -1673,7 +1674,9 @@ export class GameManagementService {
                   this.playersService.updatePlayer({
                     where: { id: order.playerId },
                     data: {
-                      cashOnHand: { decrement: order.Company.currentStockPrice! },
+                      cashOnHand: {
+                        decrement: order.Company.currentStockPrice!,
+                      },
                     },
                   }),
                   this.prisma.playerOrder.update({
@@ -1681,57 +1684,59 @@ export class GameManagementService {
                     data: { orderStatus: OrderStatus.FILLED },
                   }),
                 ]);
-  
+
                 remainingShares -= 1;
                 groupedOrders.orders.splice(randomIndex, 1);
-              })()
+              })(),
             );
           }
-  
+
           await Promise.all(lotteryPromises);
         }
-  
+
         await Promise.all(
           groupedOrders.orders.map((order) =>
             this.prisma.playerOrder.update({
               where: { id: order.id },
               data: { orderStatus: OrderStatus.REJECTED },
-            })
-          )
+            }),
+          ),
         );
       } else {
         const distributePromises = groupedOrders.orders.map(async (order) => {
           const sharesToGive = Math.min(order.quantity || 0, remainingShares);
-  
+
           const shares = await shareService.shares({
             where: { companyId, location },
             take: sharesToGive,
           });
-  
+
           await Promise.all([
             shareService.updateManySharesUnchecked({
               where: { id: { in: shares.map((share) => share.id) } },
-              data: { location: ShareLocation.PLAYER, playerId: order.playerId },
+              data: {
+                location: ShareLocation.PLAYER,
+                playerId: order.playerId,
+              },
             }),
             this.playerRemoveMoney(
               order.gameId,
               order.playerId,
-              sharesToGive * order.Company.currentStockPrice!
+              sharesToGive * order.Company.currentStockPrice!,
             ),
             this.prisma.playerOrder.update({
               where: { id: order.id },
               data: { orderStatus: OrderStatus.FILLED },
             }),
           ]);
-  
+
           remainingShares -= sharesToGive;
         });
-  
+
         await Promise.all(distributePromises);
       }
     }
   }
-  
 
   async playerAddMoney(gameId: string, playerId: string, amount: number) {
     //update bank pool for game

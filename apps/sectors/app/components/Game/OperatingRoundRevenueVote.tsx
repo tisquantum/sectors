@@ -2,30 +2,60 @@ import { trpc } from "@sectors/app/trpc";
 import { useGame } from "./GameContext";
 import {
   Company,
+  ProductionResult,
   RevenueDistribution,
   Sector,
 } from "@server/prisma/prisma.client";
 import { Button, Radio, RadioGroup } from "@nextui-org/react";
+import { useState } from "react";
 
 const DistributeSelection = ({
   company,
+  productionResult,
+  operatingRoundId,
 }: {
   company: Company & { Sector: Sector };
+  productionResult: ProductionResult;
+  operatingRoundId: number;
 }) => {
+  const { authPlayer } = useGame();
+  const [isSubmit, setIsSubmit] = useState(false);
+  const [selected, setSelected] = useState<RevenueDistribution>(
+    RevenueDistribution.DIVIDEND_FULL
+  );
+
+  const useVoteRevenueDistributionMutation =
+    trpc.revenueDistributionVote.createRevenueDistributionVote.useMutation();
   const handleSubmit = async () => {
     //submit vote
+    useVoteRevenueDistributionMutation.mutate({
+      operatingRoundId: operatingRoundId,
+      productionResultId: productionResult.id,
+      playerId: authPlayer.id || "",
+      companyId: company.id,
+      revenueDistribution: selected,
+    });
+    setIsSubmit(true);
   };
 
   return (
     <div className="flex flex-col gap-1">
-      <RadioGroup orientation="horizontal">
+      <RadioGroup
+        orientation="horizontal"
+        value={selected}
+        onValueChange={(value) => setSelected(value as RevenueDistribution)}
+      >
         <Radio value={RevenueDistribution.DIVIDEND_FULL}>Dividend Full</Radio>
         <Radio value={RevenueDistribution.DIVIDEND_FIFTY_FIFTY}>
           Dividend Half
         </Radio>
         <Radio value={RevenueDistribution.RETAINED}>Company Retains</Radio>
       </RadioGroup>
-      <Button onClick={handleSubmit}>Submit Vote</Button>
+      {isSubmit ? (
+        <div>Vote Submitted</div>
+      ) : (
+        <Button onClick={handleSubmit}>Submit Vote</Button>
+      )}
     </div>
   );
 };
@@ -51,21 +81,33 @@ const OperatingRoundRevenueVote = () => {
         {
           //display all companies with revenue greater than 0
           productionResults.productionResults.map((productionResult) => (
-            <div className="flex flex-col bg-slate-800 p-4" key={productionResult.id}>
+            <div
+              className="flex flex-col bg-slate-800 p-4"
+              key={productionResult.id}
+            >
               <h2>{productionResult.Company.name}</h2>
               <div className="flex flex-col">
                 <div className="flex gap-3">
-                  <span>Cash on Hand: ${productionResult.Company.cashOnHand}</span>
-                  <span>Stock Price: ${productionResult.Company.currentStockPrice}</span>
+                  <span>
+                    Cash on Hand: ${productionResult.Company.cashOnHand}
+                  </span>
+                  <span>
+                    Stock Price: ${productionResult.Company.currentStockPrice}
+                  </span>
                   <span>Supply: {productionResult.Company.supplyMax}</span>
                   <span>
-                    Demand: {productionResult.Company.demandScore +
+                    Demand:{" "}
+                    {productionResult.Company.demandScore +
                       productionResult.Company.Sector.demand}
                   </span>
                   <span>Revenue: {productionResult.revenue}</span>
                 </div>
                 {productionResult.Company && (
-                  <DistributeSelection company={productionResult.Company} />
+                  <DistributeSelection
+                    company={productionResult.Company}
+                    productionResult={productionResult}
+                    operatingRoundId={productionResult.operatingRoundId}
+                  />
                 )}
               </div>
             </div>
