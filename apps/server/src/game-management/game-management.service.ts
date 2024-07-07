@@ -1415,9 +1415,7 @@ export class GameManagementService {
     if (!company) {
       throw new Error('Company not found');
     }
-    if (company.status !== CompanyStatus.ACTIVE) {
-      //company is floated, do nothing
-    } else {
+    if (company.status == CompanyStatus.INACTIVE) {
       //check if company has sold enough shares to float
       const totalShares = company.Share.length;
       const totalSharesInIpo = company.Share.filter(

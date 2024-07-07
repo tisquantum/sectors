@@ -120,6 +120,8 @@ I'm thinking short orders can only be performed on a company you have no ownersh
 
 - Company tiers should be related to throughput and market cap (???), defined outside db possibly in constants.  Company tier could also be correlated to how much you can short.  The "stronger" and more "stable" the company, the higher you can short because it has greater risk.
 
-- What are prestige tokens for?  They can be traded in for an upgrade to unit price, an upgrade to research deck slots or hold to break ties.
+- What are prestige tokens for?  They can be traded in for an upgrade to unit price, an upgrade to research deck slots or hold to break ties.  They can be used to upgrade the base demand for the sector.
 
 - Market Orders are the only type of order that can be placed on the IPO
+
+- For determining the consumer pool distribution, what if the global game economy determined how much demand could be "spooled" out after a turn for the following turn/operation round?  The global economy being how much money is spent or stocks are doing?
