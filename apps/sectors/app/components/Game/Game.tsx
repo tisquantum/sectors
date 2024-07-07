@@ -27,6 +27,7 @@ import StockRoundAction from "./StockRoundAction";
 import OperatingRoundProduction from "./OperatingRoundProduction";
 import StockRoundResults from "./StockRoundResults";
 import OperatingRoundRevenueVote from "./OperatingRoundRevenueVote";
+import OperatingRoundRevenueVoteResolve from "./OperatingRoundRevenueVoteResolve";
 import OperatingRoundStockPriceAdjustment from "./OperatingRoundStockPriceAdjustment";
 import CompanyVoteResolve from "../Company/CompanyVoteResolve";
 
@@ -92,7 +93,7 @@ const Game = ({ gameId }: { gameId: string }) => {
       <OperatingRoundStockPriceAdjustment />
     ) :
     currentRoundData?.phase.name === PhaseName.OPERATING_PRODUCTION_VOTE_RESOLVE ? (
-      <OperatingRoundRevenueVoteResult />
+      <OperatingRoundRevenueVoteResolve />
     ) :
     currentRoundData?.phase.name === PhaseName.OPERATING_ACTION_COMPANY_VOTE ? (
       <CompanyActionSlider />

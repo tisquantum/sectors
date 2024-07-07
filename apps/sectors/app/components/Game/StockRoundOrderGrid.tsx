@@ -185,7 +185,7 @@ const StockRoundOrderGrid = ({
                   </div>
                   <div>
                     <div className="my-2">
-                      MARKET (
+                      OPEN MARKET (
                       {
                         company.Share.filter(
                           (share: Share) =>
@@ -218,10 +218,14 @@ const StockRoundOrderGrid = ({
                       />
                     )}
                     {isInteractive &&
-                      company.Share.filter(
+                      (company.Share.filter(
                         (share: Share) =>
                           share.location == ShareLocation.OPEN_MARKET
-                      ).length > 0 && (
+                      ).length > 0 ||
+                        company.Share.filter(
+                          (share: Share) =>
+                            share.location == ShareLocation.PLAYER
+                        ).length > 0) && (
                         <Button
                           className={
                             focusedOrder?.id == company.id

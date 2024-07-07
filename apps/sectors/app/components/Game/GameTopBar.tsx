@@ -54,15 +54,16 @@ const GameTopBar = ({
     let companyId;
     if (
       nextPhase.phaseName === PhaseName.OPERATING_ACTION_COMPANY_VOTE ||
-      nextPhase.phaseName === PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT
+      nextPhase.phaseName === PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT ||
+      nextPhase.phaseName === PhaseName.OPERATING_COMPANY_VOTE_RESOLVE
     ) {
       if (currentPhase?.companyId) {
         companyId = getNextCompanyOperatingRoundTurn(
-          gameState.Company,
+          gameState.Company.filter(company => company.status == CompanyStatus.ACTIVE),
           currentPhase?.companyId
         ).id;
       } else {
-        companyId = getNextCompanyOperatingRoundTurn(gameState.Company).id;
+        companyId = getNextCompanyOperatingRoundTurn(gameState.Company.filter(company => company.status == CompanyStatus.ACTIVE)).id;
       }
     }
     useNextPhaseMutation.mutate({

@@ -1,13 +1,5 @@
 import { trpc } from "@sectors/app/trpc";
 import { useGame } from "./GameContext";
-import {
-  Company,
-  ProductionResult,
-  RevenueDistribution,
-  Sector,
-} from "@server/prisma/prisma.client";
-import { Button, Radio, RadioGroup } from "@nextui-org/react";
-import { useState } from "react";
 
 const OperatingRoundRevenueVoteResolve = () => {
   const { currentPhase } = useGame();

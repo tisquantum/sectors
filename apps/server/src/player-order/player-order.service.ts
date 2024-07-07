@@ -6,7 +6,7 @@ import {
   PlayerOrderConcealedWithPlayer,
   PlayerOrderWithCompany,
   PlayerOrderWithPlayerCompany,
-  PlayerOrdersPendingOrder,
+  PlayerOrdersAllRelations,
 } from '@server/prisma/prisma.types';
 import { getPseudoSpend } from '@server/data/helpers';
 
@@ -120,13 +120,13 @@ export class PlayerOrderService {
     });
   }
 
-  async playerOrdersPendingOrders(params: {
+  async playerOrdersAllRelations(params: {
     skip?: number;
     take?: number;
     cursor?: Prisma.PlayerOrderWhereUniqueInput;
     where?: Prisma.PlayerOrderWhereInput;
     orderBy?: Prisma.PlayerOrderOrderByWithRelationInput;
-  }): Promise<PlayerOrdersPendingOrder[]> {
+  }): Promise<PlayerOrdersAllRelations[]> {
     const { skip, take, cursor, where, orderBy } = params;
     return this.prisma.playerOrder.findMany({
       skip,
@@ -166,7 +166,7 @@ export class PlayerOrderService {
     if (data.location === ShareLocation.IPO && (data.orderType === OrderType.MARKET && data.isSell)) {
       throw new Error('Cannot sell into IPO');
     }
-    
+
     // Filter out fields based on order type
     if (data.orderType === OrderType.MARKET) {
       const playerId = data.Player.connect?.id;
@@ -198,7 +198,7 @@ export class PlayerOrderService {
         throw new Error('Player or Company not found');
       }
 
-      if (player.marketOrderActions === 0) {
+      if (player.marketOrderActions <= 0) {
         throw new Error('Player has no more market order actions');
       }
 
@@ -233,7 +233,7 @@ export class PlayerOrderService {
         throw new Error('Player not found');
       }
       //check if player has limit order actions
-      if (player.limitOrderActions === 0) {
+      if (player.limitOrderActions <= 0) {
         throw new Error('Player has no more limit order actions');
       }
     }
@@ -252,7 +252,7 @@ export class PlayerOrderService {
         throw new Error('Player not found');
       }
       //check if player has short order actions
-      if (player.shortOrderActions === 0) {
+      if (player.shortOrderActions <= 0) {
         throw new Error('Player has no more short order actions');
       }
     }

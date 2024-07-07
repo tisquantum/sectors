@@ -245,7 +245,7 @@ function getTierMaxValue(tier: StockTier): number {
     .chartMaxValue;
 }
 
-function getCurrentTierBySharePrice(currentSharePrice: number): StockTier {
+export function getCurrentTierBySharePrice(currentSharePrice: number): StockTier {
   return stockTierChartRanges.find(
     (range) => currentSharePrice <= range.chartMaxValue,
   )!.tier;
@@ -276,6 +276,7 @@ export function calculateStepsAndRemainder(
   newTier: StockTier;
   newSharePrice: number;
 } {
+  Math.abs(netDifference);
   let steps = 0;
   let newTierSharesFulfilled = tierSharesFulfilled;
   let remainingShares = netDifference;

@@ -93,7 +93,7 @@ export type PlayerOrderWithPlayerCompanySectorShortOrder = PlayerOrder & {
   ShortOrder: ShortOrderWithShares | null;
 };
 export type ShortOrderWithShares = ShortOrder & { Share: Share[] };
-export type PlayerOrdersPendingOrder = PlayerOrder & {
+export type PlayerOrdersAllRelations = PlayerOrder & {
   Company: Company;
   Player: Player;
   Sector: Sector;

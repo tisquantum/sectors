@@ -112,7 +112,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         });
       }),
 
-    listPlayerOrdersPendingOrders: trpc.procedure
+    listPlayerOrdersAllRelations: trpc.procedure
       .input(
         z.object({
           skip: z.number().optional(),
@@ -124,7 +124,7 @@ export default (trpc: TrpcService, ctx: Context) =>
       )
       .query(async ({ input }) => {
         const { skip, take, cursor, where, orderBy } = input;
-        return ctx.playerOrdersService.playerOrdersPendingOrders({
+        return ctx.playerOrdersService.playerOrdersAllRelations({
           skip,
           take,
           cursor: cursor ? { id: cursor } : undefined,

@@ -32,6 +32,7 @@ const PendingMarketOrders = ({
   marketOrders: PlayerOrdersPendingOrder[];
   isResolving?: boolean;
 }) => {
+  const { currentPhase } = useGame();
   // Assuming marketOrders is an array of objects with name, companyName, orderType (buy/sell), and shares
   const groupedOrders = marketOrders.reduce(
     (acc: GroupedOrders, order: PlayerOrdersPendingOrder) => {
@@ -92,7 +93,10 @@ const PendingMarketOrders = ({
                       >
                         <CheckCircleIcon className="size-5 text-green-500" />
                       </motion.div>
+                      <div>
                       <OrderChipWithPlayer order={order} />
+                      {order.orderStatus}
+                      </div>
                     </motion.div>
                   </>
                 ) : (
@@ -201,9 +205,9 @@ const PendingShortOrders = ({
 };
 
 const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
-  const { gameId } = useGame();
-  const { data: pendingOrders, isLoading } =
-    trpc.playerOrder.listPlayerOrdersPendingOrders.useQuery({
+  const { gameId, currentPhase } = useGame();
+  const { data: playerOrders, isLoading } =
+    trpc.playerOrder.listPlayerOrdersAllRelations.useQuery({
       orderBy: {
         createdAt: Prisma.SortOrder.asc,
       },
@@ -214,20 +218,29 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
       },
     });
   if (isLoading) return <div>Loading...</div>;
-  if (!pendingOrders) return <div>No pending orders.</div>;
+  if (!playerOrders) return <div>No pending orders.</div>;
 
-  const limitOrdersPendingSettlement = pendingOrders.filter(
+  const limitOrdersPendingSettlement = playerOrders.filter(
     (order) => order.orderType === OrderType.LIMIT && order.orderStatus === OrderStatus.FILLED_PENDING_SETTLEMENT
   );
 
-  const limitOrdersPendingToOpen = pendingOrders.filter(
+  const limitOrdersPendingToOpen = playerOrders.filter(
     (order) => order.orderType === OrderType.LIMIT && order.orderStatus === OrderStatus.PENDING
   );
 
-  const marketOrders = pendingOrders.filter(
+  let marketOrders = playerOrders.filter(
     (order) => order.orderType === OrderType.MARKET
   );
-  const shortOrders = pendingOrders.filter(
+  //filter out any market orders that are not from the current stock round and are filled
+  const marketOrdersToFilterOut = marketOrders.filter(
+    (order) =>
+      order.orderStatus === OrderStatus.FILLED &&
+      order.stockRoundId !== currentPhase?.stockRoundId
+  );
+  marketOrders = marketOrders.filter(
+    (order) => !marketOrdersToFilterOut.includes(order)
+  );
+  const shortOrders = playerOrders.filter(
     (order) => order.orderType === OrderType.SHORT
   );
   return (

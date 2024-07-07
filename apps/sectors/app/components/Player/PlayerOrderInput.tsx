@@ -198,6 +198,8 @@ interface TabContentProps {
   handleShares: (event: number) => void;
   ordersRemaining: number;
   isIpo?: boolean;
+  maxValue: number;
+  minValue: number;
 }
 
 const TabContentMO: React.FC<TabContentProps> = ({
@@ -205,6 +207,8 @@ const TabContentMO: React.FC<TabContentProps> = ({
   handleShares,
   ordersRemaining,
   isIpo,
+  maxValue,
+  minValue,
 }) => {
   return (
     <div className="flex flex-col text-center items-center center-content justify-center gap-2">
@@ -219,8 +223,8 @@ const TabContentMO: React.FC<TabContentProps> = ({
         color="foreground"
         label="Shares"
         showSteps={true}
-        maxValue={10}
-        minValue={1}
+        maxValue={maxValue}
+        minValue={minValue}
         onChange={(value) => {
           console.log("slider value mo", value);
           if (Array.isArray(value)) {
@@ -426,12 +430,18 @@ const PlayerOrderInput = ({
         playerId: authPlayer?.id,
       },
     });
+  const { data: company, isLoading: companyLoading } =
+    trpc.company.getCompanyWithShares.useQuery({
+      id: currentOrder.id,
+    });
   const createPlayerOrder = trpc.playerOrder.createPlayerOrder.useMutation();
   const [share, setShare] = useState(1);
   const [limitOrderValue, setLimitOrderValue] = useState(0);
   const [isBuy, setIsBuy] = useState(true);
   const [isSubmit, setIsSubmit] = useState(false);
   const [orderType, setOrderType] = useState<OrderType>(OrderType.MARKET);
+  const [maxValue, setMaxValue] = useState(10);
+  const [minValue, setMinValue] = useState(1);
   let runningOrderValue = 0;
   if (playerOrders) {
     runningOrderValue = calculateRunningOrderValue(playerOrders);
@@ -439,6 +449,34 @@ const PlayerOrderInput = ({
   useEffect(() => {
     setIsSubmit(false);
   }, [currentPhase?.name]);
+  useEffect(() => {
+    if (isBuy) {
+      if (isIpo) {
+        setMaxValue(
+          company?.Share.filter((share) => share.location === ShareLocation.IPO)
+            .length || 0
+        );
+        setMinValue(1);
+      } else {
+        setMaxValue(
+          company?.Share.filter(
+            (share) => share.location === ShareLocation.OPEN_MARKET
+          ).length || 0
+        );
+        setMinValue(1);
+      }
+    } else {
+      const playerShares = company?.Share.filter(
+        (share) => share.location === ShareLocation.PLAYER
+      );
+      const authPlayerShares = playerShares?.filter(
+        (share) => share.playerId === authPlayer.id
+      ).length;
+      setMaxValue(authPlayerShares || 0);
+      setMinValue(1);
+    }
+  }, [isBuy, isIpo, company?.Share]);
+
   if (!gameId || !gameState) return null;
   const currentOrderValue = calculatePseudoOrderValue({
     orderType,
@@ -506,6 +544,8 @@ const PlayerOrderInput = ({
                     handleShares={setShare}
                     ordersRemaining={authPlayer.marketOrderActions}
                     isIpo={isIpo}
+                    maxValue={maxValue}
+                    minValue={minValue}
                   />
                 </CardBody>
               </Card>

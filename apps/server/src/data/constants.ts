@@ -80,8 +80,7 @@ export function getStockPriceStepsUp(currentPrice: number, steps: number): numbe
 export function getStockPriceWithStepsDown(currentPrice: number, steps: number): number {
   const currentIndex = stockGridPrices.indexOf(currentPrice);
   if (currentIndex === -1) throw new Error('Invalid current stock price');
-  
-  const newIndex = Math.max(currentIndex - steps, 0);
+  const newIndex = Math.max(currentIndex - Math.abs(steps), 0);
   return stockGridPrices[newIndex];
 }
 

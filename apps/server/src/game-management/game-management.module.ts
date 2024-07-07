@@ -14,6 +14,7 @@ import { ShareModule } from '@server/share/share.module';
 import { PlayerOrderModule } from '@server/player-order/player-order.module';
 import { ProductionResultModule } from '@server/production-result/production-result.module';
 import { StockHistoryModule } from '@server/stock-history/stock-history.module';
+import { CompanyActionModule } from '@server/company-action/company-action.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { StockHistoryModule } from '@server/stock-history/stock-history.module';
     PlayerOrderModule,
     StockHistoryModule,
     ProductionResultModule,
+    CompanyActionModule,
   ],
   providers: [GameManagementService],
   exports: [GameManagementService],

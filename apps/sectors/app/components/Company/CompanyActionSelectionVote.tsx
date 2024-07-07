@@ -76,6 +76,7 @@ const CompanyActionSelectionVote = ({
 }: {
   companyName: string;
   actionVoteResults?: OperatingRoundVoteWithPlayer[];
+
 }) => {
   return (
     <div className="flex flex-col gap-3 p-5">
@@ -135,7 +136,7 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
   } = trpc.company.listCompaniesWithSector.useQuery({
     where: { gameId, status: CompanyStatus.ACTIVE },
   });
-  const { data: companyVoteResults, isLoading: isLoadingCompanyVoteResults } =
+  const { data: companyVoteResults, isLoading: isLoadingCompanyVoteResults, refetch: refetchCompanyVoteResults } =
     trpc.operatingRound.getOperatingRoundWithActionVotes.useQuery(
       {
         where: {
@@ -157,7 +158,10 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
         )?.id
       );
     }
-  }, [companies, currentPhase]);
+  }, [companies, currentPhase, isLoadingCompanies]);
+  useEffect(() => {
+    refetchCompanyVoteResults();
+  }, [currentPhase?.id]);
   if (isLoadingCompanies) return <div>Loading...</div>;
   if (!companies) return <div>No companies found</div>;
   if (!currentPhase) return <div>No current phase found</div>;
