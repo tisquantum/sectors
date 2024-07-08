@@ -42,6 +42,11 @@ export type CompanyWithSector = Company & {
   Sector: Sector;
   Share: ShareWithPlayer[];
 };
+export type CompanyWithRelations = Company & {
+  Sector: Sector;
+  Share: ShareWithPlayer[];
+  StockHistory: StockHistory[];
+};
 export type StockHistoryWithPhase = StockHistory & { Phase: Phase };
 export type CompanyWithSectorAndStockHistory = Company & {
   Sector: Sector;
@@ -84,6 +89,9 @@ export type PlayerOrderWithPlayerCompany = PlayerOrder & {
   Player: Player;
   Sector: Sector;
   Phase: Phase;
+};
+export type SectorWithCompanyRelations = Sector & {
+  Company: CompanyWithRelations[];
 };
 export type SectorWithCompanies = Sector & { Company: CompanyWithSector[] };
 export type PlayerOrderWithPlayerCompanySectorShortOrder = PlayerOrder & {
@@ -135,4 +143,9 @@ export type OperatingRoundWithOperatingRoundVotes = OperatingRound & {
 
 export type StockRoundWithPlayerOrders = StockRound & {
   playerOrders: PlayerOrderWithPlayerCompany[];
+};
+
+export type RevenueDistributionVoteWithRelations = RevenueDistributionVote & {
+  Player: Player;
+  Company: Company;
 };

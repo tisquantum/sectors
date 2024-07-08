@@ -1,0 +1,45 @@
+.circle {
+    position: relative;
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    overflow: hidden;
+    margin: 20px auto;
+  }
+  
+  .section {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    clip-path: polygon(50% 50%, 100% 0%, 100% 100%);
+  }
+  
+  .section1 {
+    background-color: #ff9999; /* Color for section 1 */
+    transform: rotate(0deg);
+  }
+  
+  .section2 {
+    background-color: #99ccff; /* Color for section 2 */
+    transform: rotate(120deg);
+  }
+  
+  .section3 {
+    background-color: #99ff99; /* Color for section 3 */
+    transform: rotate(240deg);
+  }
+  
+  .text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    width: 60%;
+    line-height: 1.2;
+    font-size: 14px;
+    font-weight: bold;
+    color: #000;
+    pointer-events: none; /* To prevent text from affecting hover/click events */
+  }
+  

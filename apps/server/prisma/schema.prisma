@@ -364,6 +364,10 @@ enum OperatingRoundAction {
   SHARE_BUYBACK
   SHARE_ISSUE
   SPEND_PRESTIGE
+  VETO
+  INCREASE_PRICE
+  DECREASE_PRICE
+  LOBBY
 }
 
 model ResearchDeck {

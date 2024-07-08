@@ -16,6 +16,8 @@ export const DEFAULT_SHARE_LIMIT = 10;
 
 export const DEFAULT_SHARE_DISTRIBUTION = 10;
 
+export const STABLE_ECONOMY_SCORE = 15;
+
 /**
  * Phase times in milliseconds
  */
@@ -187,6 +189,10 @@ export const companyVoteActionPriority = (
     OperatingRoundAction.SHARE_ISSUE,
     OperatingRoundAction.PRODUCTION,
     OperatingRoundAction.SPEND_PRESTIGE,
+    OperatingRoundAction.VETO,
+    OperatingRoundAction.LOBBY,
+    OperatingRoundAction.INCREASE_PRICE,
+    OperatingRoundAction.DECREASE_PRICE
   ];
   return actions.sort(
     (a, b) => actionPriority.indexOf(a) - actionPriority.indexOf(b),
@@ -253,3 +259,19 @@ export const throughputRewardOrPenalty = (
       return { type: ThroughputRewardType.SECTOR_REWARD, share_price_steps_down: 1 };
   }
 };
+
+export const CompanyActionCosts = {
+  [OperatingRoundAction.DOWNSIZE]: 500,
+  [OperatingRoundAction.EXPANSION]: 500,
+  [OperatingRoundAction.MARKETING]: 300,
+  [OperatingRoundAction.MERGE]: 1000,
+  [OperatingRoundAction.RESEARCH]: 200,
+  [OperatingRoundAction.SHARE_BUYBACK]: 50,
+  [OperatingRoundAction.SHARE_ISSUE]: 50,
+  [OperatingRoundAction.PRODUCTION]: 100,
+  [OperatingRoundAction.SPEND_PRESTIGE]: 0,
+  [OperatingRoundAction.VETO]: 0,
+  [OperatingRoundAction.LOBBY]: 0,
+  [OperatingRoundAction.INCREASE_PRICE]: 0,
+  [OperatingRoundAction.DECREASE_PRICE]: 0,
+}

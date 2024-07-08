@@ -18,6 +18,7 @@ import {
   ShareLocation,
 } from "@server/prisma/prisma.client";
 import {
+  CompanyWithRelations,
   CompanyWithSector,
   ShareWithPlayer,
 } from "@server/prisma/prisma.types";
@@ -31,6 +32,7 @@ import {
   RiPriceTag3Fill,
   RiSailboatFill,
   RiUserFill,
+  RiWallet3Fill,
 } from "@remixicon/react";
 
 type ShareGroupedByPlayer = {
@@ -40,12 +42,21 @@ type ShareGroupedByPlayer = {
 const CompaniesAccordion = ({
   companies,
 }: {
-  companies: CompanyWithSector[];
+  companies: CompanyWithRelations[];
 }) => {
   return (
     <Accordion selectionMode="multiple">
-      {companies.map((company: CompanyWithSector) => {
-        const isPriceUp = (company.currentStockPrice || 0) > 0; //company.previousStockPrice;
+      {companies.map((company: CompanyWithRelations) => {
+        //get last two prices and return bool true for positive or false for negative
+        const isPriceUp = company.StockHistory.slice(-2).reduce(
+          (acc, stock, index, array) => {
+            if (index == array.length - 1) {
+              return acc;
+            }
+            return stock.price > array[index + 1].price;
+          },
+          true
+        );
         const trendIcon = isPriceUp ? (
           <ArrowUpIcon className="size-4 text-green-500" />
         ) : (
@@ -116,7 +127,6 @@ const CompaniesAccordion = ({
             />
           );
         };
-
         return (
           <AccordionItem
             key={company.id}
@@ -148,6 +158,9 @@ const CompaniesAccordion = ({
                   <div className="flex items-center gap-1">
                     <span className="flex gap-1 items-center content-center">
                       <RiPriceTag3Fill size={18} /> ${company.unitPrice}
+                    </span>
+                    <span className="flex gap-1 items-center content-center">
+                      <RiWallet3Fill size={18} /> ${company.cashOnHand}
                     </span>
                     <span>{company.status}</span>
                   </div>

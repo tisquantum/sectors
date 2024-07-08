@@ -1,6 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
-import { Prisma, CompanyAction } from '@prisma/client';
+import { Prisma, CompanyAction, OperatingRoundAction } from '@prisma/client';
+import { CompanyActionWithCompany } from '@server/prisma/prisma.types';
+
+type MarketingCountGroupedBySectorId = {
+  sectorId: string;
+  count: number;
+};
 
 @Injectable()
 export class CompanyActionService {
@@ -14,16 +20,17 @@ export class CompanyActionService {
     });
   }
 
-  async companyActionFirst(
-    params: {
-      where?: Prisma.CompanyActionWhereInput;
-      orderBy?: Prisma.CompanyActionOrderByWithRelationInput;
-    },
-  ): Promise<CompanyAction | null> {
+  async companyActionFirst(params: {
+    where?: Prisma.CompanyActionWhereInput;
+    orderBy?: Prisma.CompanyActionOrderByWithRelationInput;
+  }): Promise<CompanyActionWithCompany | null> {
     const { where, orderBy } = params;
     return this.prisma.companyAction.findFirst({
       where,
       orderBy,
+      include: {
+        Company: true,
+      },
     });
   }
 
@@ -42,6 +49,39 @@ export class CompanyActionService {
       where,
       orderBy,
     });
+  }
+
+  async marketingOrdersGroupedBySectorId(
+    operatingRoundId: number,
+  ): Promise<MarketingCountGroupedBySectorId[]> {
+    //get all marketing orders
+    const marketingOrders = await this.prisma.companyAction.findMany({
+      where: {
+        operatingRoundId,
+        action: OperatingRoundAction.MARKETING,
+      },
+      include: {
+        Company: true,
+      },
+    });
+    //group by sectorId
+    const marketingOrdersGroupedBySectorId = marketingOrders.reduce<
+      Record<string, number>
+    >((acc, order) => {
+      const sectorId = order.Company.sectorId;
+      if (!acc[sectorId]) {
+        acc[sectorId] = 0;
+      }
+      acc[sectorId] += 1;
+      return acc;
+    }, {});
+    //convert to array
+    return Object.entries(marketingOrdersGroupedBySectorId).map(
+      ([sectorId, count]) => ({
+        sectorId,
+        count,
+      }),
+    );
   }
 
   async createCompanyAction(

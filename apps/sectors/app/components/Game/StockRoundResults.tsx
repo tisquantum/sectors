@@ -1,5 +1,6 @@
 import { trpc } from "@sectors/app/trpc";
 import { useGame } from "./GameContext";
+import { OrderType } from "@server/prisma/prisma.client";
 
 const StockRoundResults = () => {
   const { currentPhase } = useGame();
@@ -23,7 +24,7 @@ const StockRoundResults = () => {
           <div key={playerOrder.id} className="flex flex-col bg-slate-700 p-4">
             <h2>{playerOrder.Player.nickname}</h2>
             <span>Company: {playerOrder.Company.name}</span>
-            <span>Type: {playerOrder.orderType}</span>
+            <span>Type: {playerOrder.orderType} {(playerOrder.orderType == OrderType.MARKET || OrderType.LIMIT) && playerOrder.isSell ? "SELL" : "BUY"}</span>
             <span>Order Status: {playerOrder.orderStatus}</span>
           </div>
         ))}

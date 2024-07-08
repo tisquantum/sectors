@@ -32,6 +32,11 @@ export function determineNextGamePhase(
     case PhaseName.STOCK_MEET:
       stockActionCounter = 0;
       return {
+        phaseName: PhaseName.STOCK_RESOLVE_LIMIT_ORDER,
+        roundType: RoundType.STOCK,
+      };
+    case PhaseName.STOCK_RESOLVE_LIMIT_ORDER:
+      return {
         phaseName: PhaseName.STOCK_ACTION_ORDER,
         roundType: RoundType.STOCK,
       };

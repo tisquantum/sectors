@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { Prisma, Sector } from '@prisma/client';
-import { SectorWithCompanies } from '@server/prisma/prisma.types';
+import { SectorWithCompanies, SectorWithCompanyRelations } from '@server/prisma/prisma.types';
 
 @Injectable()
 export class SectorService {
@@ -38,7 +38,7 @@ export class SectorService {
     cursor?: Prisma.SectorWhereUniqueInput;
     where?: Prisma.SectorWhereInput;
     orderBy?: Prisma.SectorOrderByWithRelationInput;
-  }): Promise<SectorWithCompanies[]> {
+  }): Promise<SectorWithCompanyRelations[]> {
     const { skip, take, cursor, where, orderBy } = params;
     return this.prisma.sector.findMany({
       skip,
@@ -54,6 +54,7 @@ export class SectorService {
                 Player: true,
               }
             },
+            StockHistory: true,
             Sector: true,
           }
         },

@@ -8,6 +8,7 @@ import { trpc } from '@sectors/app/trpc';
 import { notFound } from 'next/navigation';
 import { PlayerWithShares } from '@server/prisma/prisma.types';
 import { Company } from '@server/prisma/prisma.client';
+import { RiWallet3Fill } from '@remixicon/react';
 
 export interface StockAggregation {
   totalShares: number;
@@ -66,7 +67,7 @@ const PlayersOverview = ({ gameId }: { gameId: string }) => {
             title={playerWithShares.nickname}
             subtitle={
               <span className="flex items-center content-center">
-                <CurrencyDollarIcon className="size-4" /> {playerWithShares.cashOnHand}
+                <RiWallet3Fill size={18} /> ${playerWithShares.cashOnHand}
               </span>
             }
           >

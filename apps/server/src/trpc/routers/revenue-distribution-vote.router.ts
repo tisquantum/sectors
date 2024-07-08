@@ -44,6 +44,27 @@ export default (trpc: TrpcService, ctx: Context) =>
         });
       }),
 
+    listRevenueDistributionVotesWithRelations: trpc.procedure
+      .input(
+        z.object({
+          skip: z.number().optional(),
+          take: z.number().optional(),
+          cursor: z.number().optional(),
+          where: z.any().optional(), // Define more specific validation if needed
+          orderBy: z.any().optional(), // Define more specific validation if needed
+        }),
+      )
+      .query(async ({ input }) => {
+        const { skip, take, cursor, where, orderBy } = input;
+        return ctx.revenueDistributionVoteService.revenueDistributionVotesWithRelations({
+          skip,
+          take,
+          cursor: cursor ? { id: cursor } : undefined,
+          where,
+          orderBy,
+        });
+      }),
+
     createRevenueDistributionVote: trpc.procedure
       .input(
         z.object({
@@ -55,7 +76,13 @@ export default (trpc: TrpcService, ctx: Context) =>
         }),
       )
       .mutation(async ({ input }) => {
-        const { playerId, companyId, operatingRoundId, productionResultId, ...rest } = input;
+        const {
+          playerId,
+          companyId,
+          operatingRoundId,
+          productionResultId,
+          ...rest
+        } = input;
         const data: Prisma.RevenueDistributionVoteCreateInput = {
           ...rest,
           OperatingRound: { connect: { id: operatingRoundId } },

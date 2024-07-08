@@ -29,7 +29,10 @@ const OperatingRoundProduction = () => {
             className="flex flex-col bg-slate-800 p-4"
             key={productionResult.id}
           >
-            <h2>{productionResult.Company.name}</h2>
+            <h2 className="text-xl">{productionResult.Company.name}</h2>
+            <span className="text-lg">
+              {productionResult.Company.Sector.name}
+            </span>
             <div className="flex gap-3">
               <span>Supply: {productionResult.Company.supplyMax}</span>
               <span>
@@ -37,13 +40,22 @@ const OperatingRoundProduction = () => {
                 {productionResult.Company.demandScore +
                   productionResult.Company.Sector.demand}
               </span>
-              <span>Revenue: {productionResult.revenue}</span>
+              <span>
+                Revenue: {productionResult.revenue} (
+                {productionResult.Company.unitPrice *
+                  Math.min(
+                    productionResult.Company.supplyMax,
+                    productionResult.Company.demandScore +
+                      productionResult.Company.Sector.demand
+                  )}
+                )
+              </span>
               <span>Throughput: {productionResult.throughputResult}</span>
               {throughputRewardOrPenalty(productionResult.throughputResult)
                 .type == ThroughputRewardType.SECTOR_REWARD ? (
                 <span>Prestige: +1</span>
               ) : (
-                <span>Share Steps: {productionResult.steps}</span>
+                <span>Share Steps: -{productionResult.steps}</span>
               )}
             </div>
           </div>

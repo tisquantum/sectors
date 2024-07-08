@@ -13,14 +13,22 @@ import { useEffect, useState } from "react";
 import CompanyActionVote from "./CompanyActionVote";
 import { trpc } from "@sectors/app/trpc";
 import { useGame } from "../Game/GameContext";
-import { getCompanyOperatingRoundTurnOrder } from "@server/data/constants";
 import {
+  CompanyActionCosts,
+  getCompanyOperatingRoundTurnOrder,
+} from "@server/data/constants";
+import {
+  Company,
   CompanyStatus,
   OperatingRoundAction,
   OperatingRoundVote,
 } from "@server/prisma/prisma.client";
 import ShareComponent from "./Share";
-import { OperatingRoundVoteWithPlayer } from "@server/prisma/prisma.types";
+import {
+  CompanyWithSector,
+  OperatingRoundVoteWithPlayer,
+} from "@server/prisma/prisma.types";
+import { RiWallet3Fill } from "@remixicon/react";
 const companyActions = [
   {
     id: 1,
@@ -69,18 +77,30 @@ const companyActions = [
     name: OperatingRoundAction.SPEND_PRESTIGE,
     message: "Spend 3 prestige to increase the unit price for the company.",
   },
+  {
+    id: 8,
+    title: "Veto",
+    name: OperatingRoundAction.VETO,
+    message:
+      "The company does nothing this turn. Pick this to ensure the company will not act on any other proposal.",
+  },
 ];
 const CompanyActionSelectionVote = ({
-  companyName,
+  company,
   actionVoteResults,
 }: {
-  companyName: string;
+  company?: CompanyWithSector;
   actionVoteResults?: OperatingRoundVoteWithPlayer[];
-
 }) => {
+  if (!company) return <div>No company found</div>;
   return (
     <div className="flex flex-col gap-3 p-5">
-      <h1 className="text-2xl">{companyName} Shareholder Meeting</h1>
+      <h1 className="text-2xl">{company.name} Shareholder Meeting</h1>
+      <div>
+        <div className="flex gap-2">
+          <RiWallet3Fill size={24} /> ${company.cashOnHand}
+        </div>
+      </div>
       <div className="flex flex-col gap-3">
         <div>
           <h3>Company Action Selection Vote</h3>
@@ -92,9 +112,15 @@ const CompanyActionSelectionVote = ({
         </div>
         <div className="grid grid-cols-3 gap-2">
           {companyActions.map((action) => (
-            <Card key={action.id}>
+            <Card
+              key={action.id}
+              isDisabled={CompanyActionCosts[action.name] > company.cashOnHand}
+            >
               <CardHeader>
-                <span className="font-bold mr-3">{action.title}</span>
+                <div className="flex justify-between">
+                  <span className="font-bold mr-3">{action.title}</span>
+                  <span>${CompanyActionCosts[action.name]}</span>
+                </div>
               </CardHeader>
               <CardBody>{action.message}</CardBody>
               <CardFooter>
@@ -136,17 +162,20 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
   } = trpc.company.listCompaniesWithSector.useQuery({
     where: { gameId, status: CompanyStatus.ACTIVE },
   });
-  const { data: companyVoteResults, isLoading: isLoadingCompanyVoteResults, refetch: refetchCompanyVoteResults } =
-    trpc.operatingRound.getOperatingRoundWithActionVotes.useQuery(
-      {
-        where: {
-          id: currentPhase?.operatingRoundId || "",
-        },
+  const {
+    data: companyVoteResults,
+    isLoading: isLoadingCompanyVoteResults,
+    refetch: refetchCompanyVoteResults,
+  } = trpc.operatingRound.getOperatingRoundWithActionVotes.useQuery(
+    {
+      where: {
+        id: currentPhase?.operatingRoundId || "",
       },
-      {
-        enabled: withResult,
-      }
-    );
+    },
+    {
+      enabled: withResult,
+    }
+  );
   const [currentCompany, setCurrentCompany] = useState<string | undefined>(
     undefined
   );
@@ -222,10 +251,9 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
         >
           <div className="flex flex-col justify-center items-center">
             <CompanyActionSelectionVote
-              companyName={
-                companies.find((company) => company.id === currentCompany)
-                  ?.name || ""
-              }
+              company={companies.find(
+                (company) => company.id === currentCompany
+              )}
               actionVoteResults={companyVoteResults?.operatingRoundVote.filter(
                 (vote) => vote.companyId === currentCompany
               )}

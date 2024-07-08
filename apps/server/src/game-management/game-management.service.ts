@@ -28,6 +28,7 @@ import { SectorService } from '@server/sector/sector.service';
 import { gameDataJson } from '@server/data/gameData';
 import { StartGameInput } from './game-management.interface';
 import {
+  CompanyActionWithCompany,
   CompanyWithSector,
   GameState,
   PlayerOrderWithCompany,
@@ -53,6 +54,8 @@ import {
   ThroughputRewardType,
   getStockPriceWithStepsDown,
   getStockPriceStepsUp,
+  STABLE_ECONOMY_SCORE,
+  CompanyActionCosts,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -172,9 +175,26 @@ export class GameManagementService {
     if (!companyAction) {
       throw new Error('Company action not found');
     }
+    //pay for company action
+    try{
+      await this.payForCompanyAction(companyAction);
+    } catch (error) {
+      console.error('Error paying for company action', error);
+      throw new Error('Company cannot pay for the action.');
+    }
+    
     switch (companyAction.action) {
       case OperatingRoundAction.SHARE_ISSUE:
         await this.resolveIssueShares(companyAction);
+        break;
+      case OperatingRoundAction.MARKETING:
+        await this.resolveMarketingAction(companyAction);
+        break;
+      case OperatingRoundAction.SHARE_BUYBACK:
+        await this.resolveShareBuyback(companyAction);
+        break;
+      case OperatingRoundAction.SHARE_ISSUE:
+        await this.resolveIssueShare(companyAction);
         break;
       default:
         return;
@@ -184,6 +204,97 @@ export class GameManagementService {
       where: { id: companyAction.id },
       data: { resolved: true },
     });
+  }
+
+  async resolveIssueShare(companyAction: CompanyAction) {
+    //get the company
+    const company = await this.companyService.company({
+      id: companyAction.companyId,
+    });
+    if (!company) {
+      throw new Error('Company not found');
+    }
+    //create new share for company
+    return await this.shareService.createShare({
+      Company: { connect: { id: companyAction.companyId } },
+      location: ShareLocation.OPEN_MARKET,
+      price: company.currentStockPrice,
+      Game: { connect: { id: company.gameId } },
+    });
+  }
+  
+  async resolveShareBuyback(companyAction: CompanyAction) {
+    //get the company
+    const company = await this.companyService.company({
+      id: companyAction.companyId,
+    });
+    if (!company) {
+      throw new Error('Company not found');
+    }
+    //get the shares
+    const shares = await this.shareService.shares({
+      where: {
+        companyId: company.id
+      }
+    });
+    //get one share from the open market and destroy it
+    const share = shares.find(s => s.location === ShareLocation.OPEN_MARKET);
+    if (!share) {
+      throw new Error('Share not found');
+    }
+    //destroy the share
+    await this.shareService.deleteShare({ id: share.id }
+    );
+    //update the company cash on hand
+    await this.companyService.updateCompany({
+      where: { id: company.id },
+      data: { cashOnHand: company.cashOnHand + share.price }
+    });
+  }
+
+  async payForCompanyAction(companyAction: CompanyAction) {
+    //get the company
+    const company = await this.companyService.company({
+      id: companyAction.companyId,
+    });
+    if (!company) {
+      throw new Error('Company not found');
+    }
+    //get the cost of the action
+    const cost = CompanyActionCosts[companyAction.action];
+
+    if (!cost) {
+      throw new Error('Cost not found');
+    }
+    //check if the company has enough cash on hand
+    if (company.cashOnHand < cost) {
+      throw new Error('Company does not have enough cash on hand');
+    }
+    //update the company cash on hand NOTE: this money does not go back to the bank.
+    await this.companyService.updateCompany({
+      where: { id: company.id },
+      data: { cashOnHand: company.cashOnHand - cost },
+    });
+  }
+
+  /**
+   * The company receives a bonus demand score of 3.
+   * This score decays by 1 every time the company operates.
+   * The sector receives a bonus of 5 consumers at the end of the turn, this is handled
+   * in the end turn phase.
+   *
+   * @param companyAction
+   */
+  async resolveMarketingAction(companyAction: CompanyActionWithCompany) {
+    try {
+      //give the company 3 demand
+      await this.companyService.updateCompany({
+        where: { id: companyAction.companyId },
+        data: { demandScore: companyAction.Company.demandScore + 3 },
+      });
+    } catch (error) {
+      console.error('Error updating company', error);
+    }
   }
 
   async resolveIssueShares(companyAction: CompanyAction) {
@@ -673,11 +784,70 @@ export class GameManagementService {
   }
 
   async resolveEndTurn(phase: Phase) {
-    //increase turn count
-    const game = await this.gamesService.getGameState(phase.gameId);
+    //get sectors
+    const sectors = await this.sectorService.sectors({
+      where: { gameId: phase.gameId },
+    });
+    //get game
+    const game = await this.gamesService.game({ id: phase.gameId });
     if (!game) {
       throw new Error('Game not found');
     }
+    //get all action orders of type marketing from the round and group by sector
+    const marketingOrdersGroupedBySectorId =
+      await this.companyActionService.marketingOrdersGroupedBySectorId(
+        game.currentOperatingRoundId || 0,
+      );
+    //distribute consumer pool to sectors
+    const sectorUpdates: {
+      where: { id: string };
+      data: { consumers: number };
+    }[] = [];
+    const economyScore = STABLE_ECONOMY_SCORE;
+    let consumersMovedCounter = 0;
+    sectors.forEach((sector) => {
+      const marketingBonus =
+        (marketingOrdersGroupedBySectorId.find(
+          (order) => order.sectorId === sector.id,
+        )?.count || 0) * 5;
+      consumersMovedCounter += marketingBonus;
+      sectorUpdates.push({
+        where: { id: sector.id },
+        data: { consumers: sector.consumers + marketingBonus },
+      });
+    });
+    let sectorIndex = 0;
+    let remainingEconomyScore = economyScore;
+    while (remainingEconomyScore > 0) {
+      const sector = sectors[sectorIndex];
+      const update = sectorUpdates.find(
+        (update) => update.where.id === sector.id,
+      );
+
+      if (update) {
+        const allocation = Math.min(sector.demand, remainingEconomyScore);
+        update.data.consumers += allocation;
+        remainingEconomyScore -= allocation;
+        consumersMovedCounter += allocation;
+      }
+
+      sectorIndex = (sectorIndex + 1) % sectors.length;
+    }
+    //update sectors
+    await Promise.all(
+      sectorUpdates.map((update) =>
+        this.prisma.sector.update({
+          where: update.where,
+          data: update.data,
+        }),
+      ),
+    );
+    //update game for new consumerPoolNumber
+    await this.gamesService.updateGameState({
+      where: { id: phase.gameId },
+      data: { consumerPoolNumber: game.consumerPoolNumber - consumersMovedCounter},
+    });
+
     const newTurn = game.currentTurn + 1;
     await this.gamesService.updateGameState({
       where: { id: phase.gameId },
@@ -814,6 +984,7 @@ export class GameManagementService {
             stockTier: stockTier,
             ipoAndFloatPrice: ipoPrice,
             currentStockPrice: ipoPrice,
+            cashOnHand: ipoPrice * DEFAULT_SHARE_DISTRIBUTION,
             gameId: game.id,
             sectorId: sector.id,
           };
@@ -1509,7 +1680,7 @@ export class GameManagementService {
             currentTierSize?.fillSize ?? 0,
             orders[0].Company.currentStockPrice ?? 0,
           );
-        
+
         //if the company share price is positive, move the stock price up
         if (netDifference > 0) {
           //update company shares

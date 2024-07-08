@@ -1,0 +1,9 @@
+.inactive-stripes {
+    background: repeating-linear-gradient(
+      45deg,
+      rgb(29, 26, 26),
+      rgb(29, 26, 26) 10px,
+      rgb(89, 89, 89) 10px,
+      rgb(89, 89, 89) 20px
+    );
+  }

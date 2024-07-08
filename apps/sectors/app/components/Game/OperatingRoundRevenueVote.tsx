@@ -101,6 +101,13 @@ const OperatingRoundRevenueVote = () => {
                       productionResult.Company.Sector.demand}
                   </span>
                   <span>Revenue: {productionResult.revenue}</span>
+                  <span>
+                    Unit Price: {productionResult.Company.unitPrice} * ( Supply
+                    Max: {productionResult.Company.supplyMax}
+                    {" "} OR Company Demand Score:{" "}
+                    {productionResult.Company.demandScore} + Sector Base Demand:{" "}
+                    {productionResult.Company.Sector.demand})
+                  </span>
                 </div>
                 {productionResult.Company && (
                   <DistributeSelection

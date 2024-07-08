@@ -13,6 +13,7 @@ import {
   RiHandCoinFill,
   RiAdvertisementFill,
   RiSailboatFill,
+  RiTeamFill,
 } from "@remixicon/react";
 import { useGame } from "../Game/GameContext";
 import { trpc } from "@sectors/app/trpc";
@@ -55,6 +56,9 @@ const SectorComponent = () => {
               </p>
               <p className="ml-2 text-small text-default-500 flex">
                 <RiAdvertisementFill size={18} className="mr-1" /> $50
+              </p>
+              <p className="ml-2 text-small text-default-500 flex">
+                <RiTeamFill size={18} className="mr-1" /> {sector.consumers}
               </p>
               <p className="ml-2 text-small text-default-500 flex">
                 {/** prestige total from all companies? */}

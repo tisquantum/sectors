@@ -28,9 +28,14 @@ import {
   StockTier,
 } from "@server/prisma/prisma.client";
 import {
+  RiBox2Fill,
   RiCheckboxBlankCircleFill,
   RiCheckboxCircleFill,
+  RiHandCoinFill,
+  RiPriceTag3Fill,
   RiSailboatFill,
+  RiSparkling2Fill,
+  RiSwap3Fill,
 } from "@remixicon/react";
 import "./StockChart.css";
 interface ChartData {
@@ -77,8 +82,9 @@ const Legend = () => {
         ))}
       </div>
       <p>
-        Shareholders must buy these amount of shares from the OPEN MARKET before they can advance one step
-        on the stock chart. A sell always moves the stock one step down.
+        Shareholders must buy these amount of shares from the OPEN MARKET before
+        they can advance one step on the stock chart. A sell always moves the
+        stock one step down.
       </p>
     </div>
   );
@@ -222,12 +228,19 @@ const StockChart = () => {
                           }}
                           onClick={() => handleCompanySelect(company.id)}
                         >
-                          {company.status === CompanyStatus.INACTIVE && (
+                          {company.status === CompanyStatus.INACTIVE ? (
                             <div className="ml-2 p-1 rounded-md text-small text-slate-800 flex bg-yellow-500">
                               <RiSailboatFill
                                 size={18}
                                 className="ml-2 text-slate-800"
                               />
+                              <span className="ml-1">
+                                %{company.Sector.sharePercentageToFloat}
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="ml-2 p-1 rounded-md text-small text-green-800 flex bg-green-500">
+                              <RiSailboatFill size={18} className="ml-2" />
                               <span className="ml-1">
                                 %{company.Sector.sharePercentageToFloat}
                               </span>
@@ -269,7 +282,48 @@ const StockChart = () => {
             {(onClose) => (
               <>
                 <ModalHeader>
-                  <h3>{selectedCompany.name}</h3>
+                  <div className="flex flex-col">
+                    <h3 className="text-xl">{selectedCompany.name}</h3>
+                    <div className="flex gap-2">
+                      <div className="flex flex-col flex-start">
+                        <div className="flex items-center gap-1">
+                          <span className="flex gap-1 items-center content-center">
+                            <RiPriceTag3Fill size={18} /> $
+                            {selectedCompany.unitPrice}
+                          </span>
+                          <span>{selectedCompany.status}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center">
+                        <div className="flex items-center">
+                          <RiSparkling2Fill className="ml-2 size-4 text-yellow-500" />
+                          <span className="ml-1">
+                            {selectedCompany.prestigeTokens}
+                          </span>
+                        </div>
+                        <div className="flex items-center">
+                          <RiHandCoinFill size={18} className="ml-2" />
+                          <span className="ml-1">
+                            {selectedCompany.demandScore}
+                          </span>
+                        </div>
+                        <div className="flex items-center">
+                          <RiBox2Fill size={18} className="ml-2" />
+                          <span className="ml-1">
+                            {selectedCompany.supplyMax}
+                          </span>
+                        </div>
+                        <div className="flex items-center">
+                          <RiSwap3Fill size={18} className="ml-2" />
+                          <span className="ml-1">
+                            {selectedCompany.demandScore +
+                              selectedCompany.Sector.demand -
+                              selectedCompany.supplyMax}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </ModalHeader>
                 <ModalBody>
                   <div className="flex flex-col justify-center items-center">

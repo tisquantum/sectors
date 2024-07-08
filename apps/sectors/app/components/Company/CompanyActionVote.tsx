@@ -3,6 +3,7 @@ import { trpc } from "@sectors/app/trpc";
 import { useGame } from "../Game/GameContext";
 import { Company, OperatingRoundAction } from "@server/prisma/prisma.client";
 import { useState } from "react";
+import { CompanyActionCosts } from "@server/data/constants";
 
 const CompanyActionVote = ({ company }: { company?: Company }) => {
   const { currentPhase, authPlayer } = useGame();
@@ -26,6 +27,17 @@ const CompanyActionVote = ({ company }: { company?: Company }) => {
       console.error(error);
     }
   };
+  const actions = [
+    { name: OperatingRoundAction.MARKETING, label: "Marketing" },
+    { name: OperatingRoundAction.RESEARCH, label: "Research" },
+    { name: OperatingRoundAction.EXPANSION, label: "Expansion" },
+    { name: OperatingRoundAction.DOWNSIZE, label: "Downsize" },
+    { name: OperatingRoundAction.MERGE, label: "Merge" },
+    { name: OperatingRoundAction.SHARE_BUYBACK, label: "Buyback Shares" },
+    { name: OperatingRoundAction.SHARE_ISSUE, label: "Issue Shares" },
+    { name: OperatingRoundAction.SPEND_PRESTIGE, label: "Prestige" },
+    { name: OperatingRoundAction.VETO, label: "Veto" }
+  ];
   return (
     <div className="flex flex-col items-center justify-center max-w-2xl">
       <h1 className="text-2xl font-bold">
@@ -37,13 +49,15 @@ const CompanyActionVote = ({ company }: { company?: Company }) => {
         value={selected}
         onValueChange={(value) => setSelected(value as OperatingRoundAction)}
       >
-        <Radio value={OperatingRoundAction.MARKETING}>Marketing</Radio>
-        <Radio value={OperatingRoundAction.RESEARCH}>Research</Radio>
-        <Radio value={OperatingRoundAction.EXPANSION}>Expansion</Radio>
-        <Radio value={OperatingRoundAction.DOWNSIZE}>Downsize</Radio>
-        <Radio value={OperatingRoundAction.MERGE}>Merge</Radio>
-        <Radio value={OperatingRoundAction.SHARE_BUYBACK}>Buyback Shares</Radio>
-        <Radio value={OperatingRoundAction.SHARE_ISSUE}>Issue Shares</Radio>
+        {actions
+          .filter(
+            (action) => CompanyActionCosts[action.name] <= company.cashOnHand
+          )
+          .map((action) => (
+            <Radio key={action.name} value={action.name}>
+              {action.label}
+            </Radio>
+          ))}
       </RadioGroup>
       <div className="flex flex-col items-center justify-center">
         {currentPhase?.companyId === company.id ? (
