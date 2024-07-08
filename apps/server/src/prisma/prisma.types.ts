@@ -149,3 +149,4 @@ export type RevenueDistributionVoteWithRelations = RevenueDistributionVote & {
   Player: Player;
   Company: Company;
 };
+export type ShareWithRelations = Share & { Player: Player | null };

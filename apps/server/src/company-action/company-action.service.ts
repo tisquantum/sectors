@@ -64,6 +64,10 @@ export class CompanyActionService {
         Company: true,
       },
     });
+    console.log('marketingOrders', marketingOrders);
+    if(!marketingOrders.length) {
+      return [];
+    }
     //group by sectorId
     const marketingOrdersGroupedBySectorId = marketingOrders.reduce<
       Record<string, number>

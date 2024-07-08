@@ -53,9 +53,7 @@ const GameTopBar = ({
     );
     let companyId;
     if (
-      nextPhase.phaseName === PhaseName.OPERATING_ACTION_COMPANY_VOTE ||
-      nextPhase.phaseName === PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT ||
-      nextPhase.phaseName === PhaseName.OPERATING_COMPANY_VOTE_RESOLVE
+      nextPhase.phaseName === PhaseName.OPERATING_ACTION_COMPANY_VOTE
     ) {
       if (currentPhase?.companyId) {
         companyId = getNextCompanyOperatingRoundTurn(
@@ -65,14 +63,17 @@ const GameTopBar = ({
       } else {
         companyId = getNextCompanyOperatingRoundTurn(gameState.Company.filter(company => company.status == CompanyStatus.ACTIVE)).id;
       }
+    } else {
+      companyId = currentPhase?.companyId;
     }
+
     useNextPhaseMutation.mutate({
       gameId,
       phaseName: nextPhase.phaseName,
       roundType: nextPhase.roundType,
       stockRoundId: currentPhase?.stockRoundId ?? 0,
       operatingRoundId: currentPhase?.operatingRoundId ?? 0,
-      companyId,
+      companyId: companyId || undefined,
     });
   };
   const handleRetryPhase = () => {

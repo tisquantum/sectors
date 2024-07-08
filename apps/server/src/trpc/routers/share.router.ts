@@ -43,6 +43,27 @@ export default (trpc: TrpcService, ctx: Context) =>
         });
       }),
 
+    listSharesWithRelations: trpc.procedure
+      .input(
+        z.object({
+          skip: z.number().optional(),
+          take: z.number().optional(),
+          cursor: z.string().optional(),
+          where: z.any().optional(),
+          orderBy: z.any().optional(),
+        }),
+      )
+      .query(async ({ input }) => {
+        const { skip, take, cursor, where, orderBy } = input;
+        return ctx.shareService.sharesWithRelations({
+          skip,
+          take,
+          cursor: cursor ? { id: cursor } : undefined,
+          where,
+          orderBy,
+        });
+      }),
+
     createShare: trpc.procedure
       .input(
         z.object({
@@ -52,13 +73,15 @@ export default (trpc: TrpcService, ctx: Context) =>
       )
       .mutation(async ({ input }) => {
         //get company
-        const company = await ctx.companyService.company({ id: input.companyId });
+        const company = await ctx.companyService.company({
+          id: input.companyId,
+        });
         // Implement creation logic
         return ctx.shareService.createShare({
-            price: company?.currentStockPrice ?? 0,
-            location: input.location,
-            Game: { connect: { id: company?.gameId } },
-            Company: { connect: { id: input.companyId } },
+          price: company?.currentStockPrice ?? 0,
+          location: input.location,
+          Game: { connect: { id: company?.gameId } },
+          Company: { connect: { id: input.companyId } },
         });
       }),
 

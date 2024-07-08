@@ -27,7 +27,11 @@ import {
 import PlayerOrderConcealed from "../Player/PlayerOrderConcealed";
 import { CompanyWithSector } from "@server/prisma/prisma.types";
 import { sectorColors } from "@server/data/gameData";
-import { RiPriceTag3Fill, RiSailboatFill } from "@remixicon/react";
+import {
+  RiPriceTag3Fill,
+  RiSailboatFill,
+  RiWallet3Fill,
+} from "@remixicon/react";
 import "./StockRoundOrderGrid.css";
 
 const StockRoundOrderGrid = ({
@@ -130,6 +134,9 @@ const StockRoundOrderGrid = ({
                     <div className="flex gap-3">
                       <span className="flex items-center">
                         <RiPriceTag3Fill size={20} /> ${company.unitPrice}
+                      </span>
+                      <span className="flex items-center">
+                        <RiWallet3Fill size={20} /> ${company.cashOnHand}
                       </span>
                       <span
                         className={`flex items-center ${

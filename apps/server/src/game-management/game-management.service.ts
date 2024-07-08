@@ -176,13 +176,13 @@ export class GameManagementService {
       throw new Error('Company action not found');
     }
     //pay for company action
-    try{
+    try {
       await this.payForCompanyAction(companyAction);
     } catch (error) {
       console.error('Error paying for company action', error);
       throw new Error('Company cannot pay for the action.');
     }
-    
+
     switch (companyAction.action) {
       case OperatingRoundAction.SHARE_ISSUE:
         await this.resolveIssueShares(companyAction);
@@ -222,7 +222,7 @@ export class GameManagementService {
       Game: { connect: { id: company.gameId } },
     });
   }
-  
+
   async resolveShareBuyback(companyAction: CompanyAction) {
     //get the company
     const company = await this.companyService.company({
@@ -234,21 +234,20 @@ export class GameManagementService {
     //get the shares
     const shares = await this.shareService.shares({
       where: {
-        companyId: company.id
-      }
+        companyId: company.id,
+      },
     });
     //get one share from the open market and destroy it
-    const share = shares.find(s => s.location === ShareLocation.OPEN_MARKET);
+    const share = shares.find((s) => s.location === ShareLocation.OPEN_MARKET);
     if (!share) {
       throw new Error('Share not found');
     }
     //destroy the share
-    await this.shareService.deleteShare({ id: share.id }
-    );
+    await this.shareService.deleteShare({ id: share.id });
     //update the company cash on hand
     await this.companyService.updateCompany({
       where: { id: company.id },
-      data: { cashOnHand: company.cashOnHand + share.price }
+      data: { cashOnHand: company.cashOnHand + share.price },
     });
   }
 
@@ -755,69 +754,106 @@ export class GameManagementService {
       return acc;
     }, {} as ActionVotesAccumulator);
 
+    console.log('Action votes:', actionVotes);
+
     // Find the maximum number of votes
     const maxVotes = Math.max(...Object.values(actionVotes));
-
+    console.log('Max votes:', maxVotes);
     // Get all actions with the maximum votes
     const actionsWithMaxVotes = Object.keys(actionVotes).filter(
       (key) => actionVotes[key as OperatingRoundAction] === maxVotes,
     ) as OperatingRoundAction[];
-
+    console.log('Actions with max votes:', actionsWithMaxVotes);
     const resolvedAction = companyVoteActionPriority(actionsWithMaxVotes);
-
-    //create new operating round action
-    await this.prisma.companyAction.create({
-      data: {
-        action: resolvedAction,
-        Company: {
-          connect: {
-            id: company.id,
+    console.log('Resolved action:', resolvedAction);
+    try {
+      //create new operating round action
+      await this.prisma.companyAction.create({
+        data: {
+          action: resolvedAction,
+          Company: {
+            connect: {
+              id: company.id,
+            },
+          },
+          OperatingRound: {
+            connect: {
+              id: phase.operatingRoundId || 0,
+            },
           },
         },
-        OperatingRound: {
-          connect: {
-            id: phase.operatingRoundId || 0,
-          },
-        },
-      },
-    });
+      });
+    } catch (error) {
+      console.error('Error creating company action', error);
+      throw new Error('Company action cannot be created');
+    }
   }
 
+  /**
+   * Increment the turn number and "spool" out the customer pool to the sectors.
+   * @param phase
+   */
   async resolveEndTurn(phase: Phase) {
-    //get sectors
-    const sectors = await this.sectorService.sectors({
-      where: { gameId: phase.gameId },
-    });
-    //get game
-    const game = await this.gamesService.game({ id: phase.gameId });
+    console.log('Resolving end turn', phase);
+    // Get sectors and game
+    const [sectors, game] = await Promise.all([
+      this.sectorService.sectors({ where: { gameId: phase.gameId } }),
+      this.gamesService.game({ id: phase.gameId }),
+    ]);
+
+    console.log('Sectors:', sectors);
+    console.log('Game:', game);
+
     if (!game) {
       throw new Error('Game not found');
     }
-    //get all action orders of type marketing from the round and group by sector
-    const marketingOrdersGroupedBySectorId =
-      await this.companyActionService.marketingOrdersGroupedBySectorId(
-        game.currentOperatingRoundId || 0,
-      );
-    //distribute consumer pool to sectors
+    
+    let marketingOrdersGroupedBySectorId: {
+      sectorId: string;
+      count: number;
+    }[] = [];
+
+    try {
+      // Get all action orders of type marketing from the round and group by sector
+      marketingOrdersGroupedBySectorId =
+        await this.companyActionService.marketingOrdersGroupedBySectorId(
+          game.currentOperatingRoundId || 0,
+        );
+    } catch (error) {
+      console.error('Error getting marketing orders', error);
+    }
+
+    // Initialize variables
     const sectorUpdates: {
       where: { id: string };
       data: { consumers: number };
     }[] = [];
     const economyScore = STABLE_ECONOMY_SCORE;
     let consumersMovedCounter = 0;
+
+    // Distribute consumer pool to sectors based on marketing bonus
     sectors.forEach((sector) => {
       const marketingBonus =
         (marketingOrdersGroupedBySectorId.find(
           (order) => order.sectorId === sector.id,
         )?.count || 0) * 5;
+
       consumersMovedCounter += marketingBonus;
-      sectorUpdates.push({
-        where: { id: sector.id },
-        data: { consumers: sector.consumers + marketingBonus },
-      });
+
+      const consumersToAdd = Math.min(game.consumerPoolNumber, marketingBonus);
+      if (consumersToAdd > 0) {
+        sectorUpdates.push({
+          where: { id: sector.id },
+          data: { consumers: sector.consumers + consumersToAdd },
+        });
+        game.consumerPoolNumber -= consumersToAdd;
+      }
     });
+
+    // Distribute remaining economy score to sectors
     let sectorIndex = 0;
     let remainingEconomyScore = economyScore;
+
     while (remainingEconomyScore > 0) {
       const sector = sectors[sectorIndex];
       const update = sectorUpdates.find(
@@ -826,35 +862,42 @@ export class GameManagementService {
 
       if (update) {
         const allocation = Math.min(sector.demand, remainingEconomyScore);
-        update.data.consumers += allocation;
-        remainingEconomyScore -= allocation;
-        consumersMovedCounter += allocation;
+        const consumersToAdd = Math.min(game.consumerPoolNumber, allocation);
+
+        if (consumersToAdd > 0) {
+          update.data.consumers += consumersToAdd;
+          game.consumerPoolNumber -= consumersToAdd;
+          remainingEconomyScore -= consumersToAdd;
+          consumersMovedCounter += consumersToAdd;
+        }
       }
 
       sectorIndex = (sectorIndex + 1) % sectors.length;
     }
-    //update sectors
-    await Promise.all(
-      sectorUpdates.map((update) =>
-        this.prisma.sector.update({
-          where: update.where,
-          data: update.data,
-        }),
-      ),
-    );
-    //update game for new consumerPoolNumber
-    await this.gamesService.updateGameState({
-      where: { id: phase.gameId },
-      data: { consumerPoolNumber: game.consumerPoolNumber - consumersMovedCounter},
-    });
 
-    const newTurn = game.currentTurn + 1;
-    await this.gamesService.updateGameState({
-      where: { id: phase.gameId },
-      data: {
-        currentTurn: newTurn,
-      },
-    });
+    try {
+      // Update sectors in database
+      await Promise.all(
+        sectorUpdates.map((update) =>
+          this.prisma.sector.update({
+            where: update.where,
+            data: update.data,
+          }),
+        ),
+      );
+
+      // Update game state for new consumerPoolNumber and turn
+      await this.gamesService.updateGameState({
+        where: { id: phase.gameId },
+        data: {
+          consumerPoolNumber: game.consumerPoolNumber,
+          currentTurn: game.currentTurn + 1,
+        },
+      });
+    } catch (error) {
+      console.error('Error updating sectors', error);
+      throw new Error('Failed to update sectors');
+    }
   }
 
   async addPlayersToGame(
@@ -1128,7 +1171,14 @@ export class GameManagementService {
       } else if (roundType === RoundType.OPERATING) {
         newOperatingRound = await this.startOperatingRound(gameId);
       } else if (roundType === RoundType.GAME_UPKEEP) {
-        //do nothing
+        await this.gamesService.updateGameState({
+          where: { id: gameId },
+          data: {
+            currentRound: RoundType.GAME_UPKEEP,
+            currentOperatingRoundId: null,
+            currentStockRoundId: null,
+          },
+        });
       }
     }
     const _stockRoundId =

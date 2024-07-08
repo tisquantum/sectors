@@ -40,16 +40,6 @@ const OperatingRoundProduction = () => {
                 {productionResult.Company.demandScore +
                   productionResult.Company.Sector.demand}
               </span>
-              <span>
-                Revenue: {productionResult.revenue} (
-                {productionResult.Company.unitPrice *
-                  Math.min(
-                    productionResult.Company.supplyMax,
-                    productionResult.Company.demandScore +
-                      productionResult.Company.Sector.demand
-                  )}
-                )
-              </span>
               <span>Throughput: {productionResult.throughputResult}</span>
               {throughputRewardOrPenalty(productionResult.throughputResult)
                 .type == ThroughputRewardType.SECTOR_REWARD ? (
@@ -57,6 +47,15 @@ const OperatingRoundProduction = () => {
               ) : (
                 <span>Share Steps: -{productionResult.steps}</span>
               )}
+              <div className="flex flex-col">
+                <span>Revenue: {productionResult.revenue}</span>
+                <span>
+                  Unit Price ${productionResult.Company.unitPrice} * Company Supply:{" "}
+                  {productionResult.Company.supplyMax} OR (Company Demand:{" "}
+                  {productionResult.Company.demandScore} + Sector Demand:{" "}
+                  {productionResult.Company.Sector.demand})
+                </span>
+              </div>
             </div>
           </div>
         ))}

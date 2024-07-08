@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { Prisma, Share } from '@prisma/client';
+import { ShareWithRelations } from '@server/prisma/prisma.types';
 
 @Injectable()
 export class ShareService {
@@ -28,6 +29,26 @@ export class ShareService {
       cursor,
       where,
       orderBy,
+    });
+  }
+
+  async sharesWithRelations(params: {
+    skip?: number;
+    take?: number;
+    cursor?: Prisma.ShareWhereUniqueInput;
+    where?: Prisma.ShareWhereInput;
+    orderBy?: Prisma.ShareOrderByWithRelationInput;
+  }): Promise<ShareWithRelations[]> {
+    const { skip, take, cursor, where, orderBy } = params;
+    return this.prisma.share.findMany({
+      skip,
+      take,
+      cursor,
+      where,
+      orderBy,
+      include: {
+        Player: true,
+      },
     });
   }
 

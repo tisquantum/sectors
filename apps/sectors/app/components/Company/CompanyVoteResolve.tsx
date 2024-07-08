@@ -40,6 +40,7 @@ const CompanyVoteResolve = () => {
   if (!companyAction) {
     return <div>No company actions found</div>;
   }
+  console.log("companyAction", companyAction);
 
   const renderAction = () => {
     switch (companyAction.action) {

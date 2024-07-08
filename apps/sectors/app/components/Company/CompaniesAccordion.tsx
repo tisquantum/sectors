@@ -47,6 +47,10 @@ const CompaniesAccordion = ({
   return (
     <Accordion selectionMode="multiple">
       {companies.map((company: CompanyWithRelations) => {
+        //sort company stock history in desc order
+        company.StockHistory = company.StockHistory.sort(
+          (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+        );
         //get last two prices and return bool true for positive or false for negative
         const isPriceUp = company.StockHistory.slice(-2).reduce(
           (acc, stock, index, array) => {

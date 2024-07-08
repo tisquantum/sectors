@@ -19,6 +19,7 @@ import {
 } from "@server/data/constants";
 import {
   Company,
+  CompanyAction,
   CompanyStatus,
   OperatingRoundAction,
   OperatingRoundVote,
@@ -29,6 +30,7 @@ import {
   OperatingRoundVoteWithPlayer,
 } from "@server/prisma/prisma.types";
 import { RiWallet3Fill } from "@remixicon/react";
+import ShareHolders from "./ShareHolders";
 const companyActions = [
   {
     id: 1,
@@ -88,9 +90,11 @@ const companyActions = [
 const CompanyActionSelectionVote = ({
   company,
   actionVoteResults,
+  companyAction
 }: {
   company?: CompanyWithSector;
   actionVoteResults?: OperatingRoundVoteWithPlayer[];
+  companyAction?: CompanyAction;
 }) => {
   if (!company) return <div>No company found</div>;
   return (
@@ -100,6 +104,9 @@ const CompanyActionSelectionVote = ({
         <div className="flex gap-2">
           <RiWallet3Fill size={24} /> ${company.cashOnHand}
         </div>
+      </div>
+      <div className="max-w-80">
+        <ShareHolders companyId={company.id} />
       </div>
       <div className="flex flex-col gap-3">
         <div>
@@ -115,6 +122,7 @@ const CompanyActionSelectionVote = ({
             <Card
               key={action.id}
               isDisabled={CompanyActionCosts[action.name] > company.cashOnHand}
+              className={`${companyAction?.action == action.name ? "bg-blue-700" : ""}`}
             >
               <CardHeader>
                 <div className="flex justify-between">
@@ -176,6 +184,21 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
       enabled: withResult,
     }
   );
+  const {
+    data: companyAction,
+    isLoading: isLoadingCompanyAction,
+    error: companyActionError,
+    refetch: refetchCompanyAction,
+  } = trpc.companyAction.getCompanyAction.useQuery(
+    {
+      operatingRoundId: currentPhase?.operatingRoundId || 0,
+      companyId: currentPhase?.companyId || "",
+    },
+    {
+      enabled: withResult,
+    }
+  );
+
   const [currentCompany, setCurrentCompany] = useState<string | undefined>(
     undefined
   );
@@ -190,6 +213,7 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
   }, [companies, currentPhase, isLoadingCompanies]);
   useEffect(() => {
     refetchCompanyVoteResults();
+    refetchCompanyAction();
   }, [currentPhase?.id]);
   if (isLoadingCompanies) return <div>Loading...</div>;
   if (!companies) return <div>No companies found</div>;
@@ -257,6 +281,7 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
               actionVoteResults={companyVoteResults?.operatingRoundVote.filter(
                 (vote) => vote.companyId === currentCompany
               )}
+              companyAction={companyAction}
             />
             {!withResult && (
               <CompanyActionVote
