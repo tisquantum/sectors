@@ -1,4 +1,4 @@
-import { Company, ResearchDeck, Sector } from "@prisma/client";
+import { Company, CompanyTier, ResearchDeck, Sector } from "@prisma/client";
 
 interface GameDataJson {
   sectors: any[],
@@ -144,6 +144,7 @@ export const gameDataJson: GameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
+      companyTier: CompanyTier.ESTABLISHED,
     },
     {
       id: '2',
@@ -155,6 +156,7 @@ export const gameDataJson: GameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
+      companyTier: CompanyTier.ESTABLISHED,
     },
     {
       id: '3',
@@ -166,6 +168,7 @@ export const gameDataJson: GameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
+      companyTier: CompanyTier.ESTABLISHED,
     },
     {
       id: '4',
@@ -177,6 +180,7 @@ export const gameDataJson: GameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
+      companyTier: CompanyTier.ESTABLISHED,
     },
     {
       id: '5',
@@ -188,6 +192,7 @@ export const gameDataJson: GameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
+      companyTier: CompanyTier.ESTABLISHED,
     },
     {
       id: '6',
@@ -199,6 +204,7 @@ export const gameDataJson: GameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
+      companyTier: CompanyTier.ESTABLISHED,
     },
     {
       id: '7',
@@ -210,6 +216,7 @@ export const gameDataJson: GameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
+      companyTier: CompanyTier.STARTUP,
     },
     {
       id: '8',
@@ -221,6 +228,7 @@ export const gameDataJson: GameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
+      companyTier: CompanyTier.STARTUP,
     },
     {
       id: '9',
@@ -232,6 +240,7 @@ export const gameDataJson: GameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
+      companyTier: CompanyTier.STARTUP,
     },
     {
       id: '10',
@@ -243,6 +252,7 @@ export const gameDataJson: GameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
+      companyTier: CompanyTier.STARTUP,
     },
     {
       id: '11',
@@ -254,6 +264,7 @@ export const gameDataJson: GameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
+      companyTier: CompanyTier.GROWTH,
     },
     {
       id: '12',
@@ -265,6 +276,7 @@ export const gameDataJson: GameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
+      companyTier: CompanyTier.GROWTH,
     },
     {
       id: '13',
@@ -276,6 +288,7 @@ export const gameDataJson: GameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
+      companyTier: CompanyTier.GROWTH,
     },
     {
       id: '14',
@@ -287,6 +300,7 @@ export const gameDataJson: GameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
+      companyTier: CompanyTier.GROWTH,
     },
     {
       id: '15',
@@ -298,6 +312,7 @@ export const gameDataJson: GameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
+      companyTier: CompanyTier.GROWTH,
     },
     {
       id: '16',
@@ -309,6 +324,7 @@ export const gameDataJson: GameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
+      companyTier: CompanyTier.INCUBATOR,
     },
     {
       id: '17',
@@ -320,6 +336,7 @@ export const gameDataJson: GameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
+      companyTier: CompanyTier.INCUBATOR,
     },
     {
       id: '18',
@@ -331,6 +348,7 @@ export const gameDataJson: GameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
+      companyTier: CompanyTier.INCUBATOR,
     },
     {
       id: '19',
@@ -342,6 +360,7 @@ export const gameDataJson: GameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
+      companyTier: CompanyTier.INCUBATOR,
     },
     {
       id: '20',
@@ -353,6 +372,7 @@ export const gameDataJson: GameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
+      companyTier: CompanyTier.INCUBATOR,
     },
     {
       id: '21',
@@ -364,6 +384,7 @@ export const gameDataJson: GameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
+      companyTier: CompanyTier.STARTUP,
     },
     {
       id: '22',
@@ -375,6 +396,7 @@ export const gameDataJson: GameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
+      companyTier: CompanyTier.STARTUP,
     },
     {
       id: '23',
@@ -386,6 +408,7 @@ export const gameDataJson: GameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
+      companyTier: CompanyTier.STARTUP,
     },
     {
       id: '24',
@@ -397,6 +420,7 @@ export const gameDataJson: GameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
+      companyTier: CompanyTier.STARTUP,
     },
     {
       id: '25',
@@ -408,6 +432,7 @@ export const gameDataJson: GameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
+      companyTier: CompanyTier.STARTUP,
     },
     {
       id: '26',
@@ -419,6 +444,7 @@ export const gameDataJson: GameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
+      companyTier: CompanyTier.ESTABLISHED,
     },
     {
       id: '27',
@@ -430,6 +456,7 @@ export const gameDataJson: GameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
+      companyTier: CompanyTier.ESTABLISHED,
     },
     {
       id: '28',
@@ -441,6 +468,7 @@ export const gameDataJson: GameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
+      companyTier: CompanyTier.ESTABLISHED,
     },
     {
       id: '29',
@@ -452,6 +480,7 @@ export const gameDataJson: GameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
+      companyTier: CompanyTier.ESTABLISHED,
     },
     {
       id: '30',
@@ -463,6 +492,7 @@ export const gameDataJson: GameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
+      companyTier: CompanyTier.ESTABLISHED,
     },
     {
       id: '31',
@@ -474,6 +504,7 @@ export const gameDataJson: GameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
+      companyTier: CompanyTier.GROWTH,
     },
     {
       id: '32',
@@ -485,6 +516,7 @@ export const gameDataJson: GameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
+      companyTier: CompanyTier.GROWTH,
     },
     {
       id: '33',
@@ -496,6 +528,7 @@ export const gameDataJson: GameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
+      companyTier: CompanyTier.GROWTH,
     },
     {
       id: '34',
@@ -507,6 +540,7 @@ export const gameDataJson: GameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
+      companyTier: CompanyTier.GROWTH,
     },
     {
       id: '35',
@@ -518,6 +552,7 @@ export const gameDataJson: GameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
+      companyTier: CompanyTier.GROWTH,
     },
   ],
   researchDeck: [

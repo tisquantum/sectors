@@ -1,6 +1,7 @@
 //make a map between PhaseName and phase times
 import {
   Company,
+  CompanyTier,
   OperatingRoundAction,
   PhaseName,
   StockTier,
@@ -274,4 +275,35 @@ export const CompanyActionCosts = {
   [OperatingRoundAction.LOBBY]: 0,
   [OperatingRoundAction.INCREASE_PRICE]: 0,
   [OperatingRoundAction.DECREASE_PRICE]: 0,
+}
+
+export const CompanyTierData = {
+  [CompanyTier.INCUBATOR]: {
+    operatingCosts: 100,
+    supplyMax: 1
+  },
+  [CompanyTier.STARTUP]: {
+    operatingCosts: 200,
+    supplyMax: 2
+  },
+  [CompanyTier.GROWTH]: {
+    operatingCosts: 300,
+    supplyMax: 3
+  },
+  [CompanyTier.ESTABLISHED]: {
+    operatingCosts: 400,
+    supplyMax: 4
+  },
+  [CompanyTier.ENTERPRISE]: {
+    operatingCosts: 500,
+    supplyMax: 5
+  },
+  [CompanyTier.CONGLOMERATE]: {
+    operatingCosts: 600,
+    supplyMax: 6
+  },
+  [CompanyTier.TITAN]: {
+    operatingCosts: 700,
+    supplyMax: 7
+  },
 }

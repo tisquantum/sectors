@@ -31,6 +31,8 @@ import {
 } from "@server/prisma/prisma.types";
 import { RiWallet3Fill } from "@remixicon/react";
 import ShareHolders from "./ShareHolders";
+import { sectorColors } from "@server/data/gameData";
+import { cp } from "fs";
 const companyActions = [
   {
     id: 1,
@@ -90,16 +92,23 @@ const companyActions = [
 const CompanyActionSelectionVote = ({
   company,
   actionVoteResults,
-  companyAction
+  companyAction,
+  withResult,
 }: {
   company?: CompanyWithSector;
   actionVoteResults?: OperatingRoundVoteWithPlayer[];
+  withResult?: boolean;
   companyAction?: CompanyAction;
 }) => {
   if (!company) return <div>No company found</div>;
   return (
     <div className="flex flex-col gap-3 p-5">
       <h1 className="text-2xl">{company.name} Shareholder Meeting</h1>
+      <div>
+        <span className={`text-lg text-[${sectorColors[company.Sector.name]}]`}>
+          {company.Sector.name}
+        </span>
+      </div>
       <div>
         <div className="flex gap-2">
           <RiWallet3Fill size={24} /> ${company.cashOnHand}
@@ -122,7 +131,9 @@ const CompanyActionSelectionVote = ({
             <Card
               key={action.id}
               isDisabled={CompanyActionCosts[action.name] > company.cashOnHand}
-              className={`${companyAction?.action == action.name ? "bg-blue-700" : ""}`}
+              className={`${
+                companyAction?.action == action.name ? "bg-blue-700" : ""
+              }`}
             >
               <CardHeader>
                 <div className="flex justify-between">
@@ -132,7 +143,7 @@ const CompanyActionSelectionVote = ({
               </CardHeader>
               <CardBody>{action.message}</CardBody>
               <CardFooter>
-                {actionVoteResults && (
+                {actionVoteResults && withResult && (
                   <div className="flex flex-col gap-2">
                     {actionVoteResults
                       .filter(
@@ -282,6 +293,7 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
                 (vote) => vote.companyId === currentCompany
               )}
               companyAction={companyAction}
+              withResult={withResult}
             />
             {!withResult && (
               <CompanyActionVote

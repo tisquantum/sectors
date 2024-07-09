@@ -18,6 +18,7 @@ import {
   Phase,
   PhaseName,
   Game as PrismaGame,
+  RoundType,
   StockRound,
 } from "@server/prisma/prisma.client";
 import Meeting from "../Meeting/Meeting";
@@ -38,10 +39,11 @@ const determineGameRound = (
 ):
   | { operatingRound: OperatingRound; phase: Phase }
   | { stockRound: StockRound; phase: Phase }
+  | { phase: Phase }
   | undefined => {
   const phase = game.Phase.find((phase) => phase.id === game.currentPhaseId);
   if (!phase) return undefined;
-  if (game.currentRound === "OPERATING") {
+  if (game.currentRound === RoundType.OPERATING) {
     //find the current operating round
     const operatingRound = game.OperatingRound.find(
       (round) => round.id === game.currentOperatingRoundId
@@ -50,7 +52,7 @@ const determineGameRound = (
       return undefined;
     }
     return { operatingRound, phase };
-  } else {
+  } else if(game.currentRound === RoundType.STOCK) {
     //find the current stock round
     const stockRound = game.StockRound.find(
       (round) => round.id === game.currentStockRoundId
@@ -59,6 +61,10 @@ const determineGameRound = (
       return undefined;
     }
     return { stockRound, phase };
+  } else if(game.currentRound === RoundType.GAME_UPKEEP) {
+    return {
+      phase
+    };
   }
 };
 const Game = ({ gameId }: { gameId: string }) => {

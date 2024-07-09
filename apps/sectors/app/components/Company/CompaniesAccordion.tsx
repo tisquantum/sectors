@@ -33,7 +33,11 @@ import {
   RiSailboatFill,
   RiUserFill,
   RiWallet3Fill,
+  RiIncreaseDecreaseFill,
+  RiStarFill,
+  RiExpandUpDownFill
 } from "@remixicon/react";
+import { CompanyTierData } from "@server/data/constants";
 
 type ShareGroupedByPlayer = {
   [key: string]: ShareWithPlayer[];
@@ -160,13 +164,17 @@ const CompaniesAccordion = ({
                 <div className="flex flex-col flex-start">
                   <span>{company.name}</span>
                   <div className="flex items-center gap-1">
+                          <span>{company.status}</span>
+                          <Divider orientation="vertical" />
+                          <span>{company.companyTier}</span>
+                        </div>
+                  <div className="flex items-center gap-1">
                     <span className="flex gap-1 items-center content-center">
                       <RiPriceTag3Fill size={18} /> ${company.unitPrice}
                     </span>
                     <span className="flex gap-1 items-center content-center">
                       <RiWallet3Fill size={18} /> ${company.cashOnHand}
                     </span>
-                    <span>{company.status}</span>
                   </div>
                 </div>
                 <div className="grid grid-cols-3 items-center">
@@ -183,11 +191,17 @@ const CompaniesAccordion = ({
                     <span className="ml-1">{company.supplyMax}</span>
                   </div>
                   <div className="flex items-center">
-                    <RiSwap3Fill size={18} className="ml-2" />
+                    <RiIncreaseDecreaseFill size={18} className="ml-2" />
                     <span className="ml-1">
                       {company.demandScore +
                         company.Sector.demand -
                         company.supplyMax}
+                    </span>
+                  </div>
+                  <div className="flex items-center">
+                    <RiExpandUpDownFill size={18} className="ml-2" />
+                    <span className="ml-1">
+                      ${CompanyTierData[company.companyTier].operatingCosts}
                     </span>
                   </div>
                 </div>

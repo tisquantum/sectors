@@ -55,17 +55,23 @@ export class CompanyActionService {
     operatingRoundId: number,
   ): Promise<MarketingCountGroupedBySectorId[]> {
     //get all marketing orders
-    const marketingOrders = await this.prisma.companyAction.findMany({
-      where: {
-        operatingRoundId,
-        action: OperatingRoundAction.MARKETING,
-      },
-      include: {
-        Company: true,
-      },
-    });
+    let marketingOrders;
+    try {
+      marketingOrders = await this.prisma.companyAction.findMany({
+        where: {
+          operatingRoundId,
+          action: OperatingRoundAction.MARKETING,
+        },
+        include: {
+          Company: true,
+        },
+      });
+    } catch (error) {
+      console.error('error', error);
+      throw new Error('Error getting marketing orders');
+    }
     console.log('marketingOrders', marketingOrders);
-    if(!marketingOrders.length) {
+    if (!marketingOrders.length) {
       return [];
     }
     //group by sectorId
@@ -79,6 +85,7 @@ export class CompanyActionService {
       acc[sectorId] += 1;
       return acc;
     }, {});
+    console.log('marketingOrdersGroupedBySectorId', marketingOrdersGroupedBySectorId);
     //convert to array
     return Object.entries(marketingOrdersGroupedBySectorId).map(
       ([sectorId, count]) => ({

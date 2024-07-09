@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
-import { Prisma, PlayerOrder, OrderType, Player, ShareLocation } from '@prisma/client';
+import { Prisma, PlayerOrder, OrderType, Player, ShareLocation, OrderStatus } from '@prisma/client';
 import {
   PlayerOrderConcealed,
   PlayerOrderConcealedWithPlayer,
@@ -277,5 +277,50 @@ export class PlayerOrderService {
     return this.prisma.playerOrder.delete({
       where,
     });
+  }
+
+  async triggerLimitOrdersFilled(
+    prevPrice: number,
+    currentPrice: number,
+    companyId: string
+  ): Promise<PlayerOrder[]> {
+    //get all limit orders for this company
+    const limitOrders = await this.prisma.playerOrder.findMany({
+      where: {
+        companyId,
+        orderType: OrderType.LIMIT,
+        orderStatus: OrderStatus.OPEN,
+        OR: [
+          // Condition for sell orders
+          {
+            isSell: true,
+            value: {
+              gte: currentPrice,
+              lt: prevPrice,
+            },
+          },
+          // Condition for buy orders
+          {
+            isSell: false,
+            value: {
+              lte: currentPrice,
+              gt: prevPrice,
+            },
+          },
+        ],
+      },
+    });
+    //update limit orders to market orders
+    const updatedOrders = await Promise.all(
+      limitOrders.map((order) => {
+        return this.prisma.playerOrder.update({
+          where: { id: order.id },
+          data: {
+            orderStatus: OrderStatus.FILLED_PENDING_SETTLEMENT,
+          },
+        });
+      }),
+    );
+    return updatedOrders;
   }
 }

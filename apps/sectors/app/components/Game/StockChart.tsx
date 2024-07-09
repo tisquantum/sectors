@@ -12,6 +12,7 @@ import {
   useDisclosure,
 } from "@nextui-org/react";
 import {
+  CompanyTierData,
   stockGridPrices,
   StockTierChartRange,
   stockTierChartRanges,
@@ -31,10 +32,13 @@ import {
   RiBox2Fill,
   RiCheckboxBlankCircleFill,
   RiCheckboxCircleFill,
+  RiExpandUpDownFill,
   RiHandCoinFill,
+  RiIncreaseDecreaseFill,
   RiPriceTag3Fill,
   RiSailboatFill,
   RiSparkling2Fill,
+  RiStarFill,
   RiSwap3Fill,
 } from "@remixicon/react";
 import "./StockChart.css";
@@ -287,14 +291,18 @@ const StockChart = () => {
                     <div className="flex gap-2">
                       <div className="flex flex-col flex-start">
                         <div className="flex items-center gap-1">
+                          <span>{selectedCompany.status}</span>
+                          <Divider  orientation="vertical"/>
+                          <span>{selectedCompany.companyTier}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
                           <span className="flex gap-1 items-center content-center">
                             <RiPriceTag3Fill size={18} /> $
                             {selectedCompany.unitPrice}
                           </span>
-                          <span>{selectedCompany.status}</span>
                         </div>
                       </div>
-                      <div className="flex items-center">
+                      <div className="grid grid-cols-4 gap-1 items-center">
                         <div className="flex items-center">
                           <RiSparkling2Fill className="ml-2 size-4 text-yellow-500" />
                           <span className="ml-1">
@@ -319,6 +327,23 @@ const StockChart = () => {
                             {selectedCompany.demandScore +
                               selectedCompany.Sector.demand -
                               selectedCompany.supplyMax}
+                          </span>
+                        </div>
+                        <div className="flex items-center">
+                          <RiIncreaseDecreaseFill size={18} className="ml-2" />
+                          <span className="ml-1">
+                            {selectedCompany.demandScore +
+                              selectedCompany.Sector.demand -
+                              selectedCompany.supplyMax}
+                          </span>
+                        </div>
+                        <div className="flex items-center">
+                          <RiExpandUpDownFill size={18} className="ml-2" />
+                          <span className="ml-1">
+                            ${
+                              CompanyTierData[selectedCompany.companyTier]
+                                .operatingCosts
+                            }
                           </span>
                         </div>
                       </div>

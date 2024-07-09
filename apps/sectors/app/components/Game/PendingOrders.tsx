@@ -74,7 +74,7 @@ const PendingMarketOrders = ({
               <ArrowTrendingUpIcon className="size-4" /> $
               {orders[0].Company.currentStockPrice}
               <span>
-              {company} {netDifference}
+                {company} {netDifference}
               </span>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -94,8 +94,8 @@ const PendingMarketOrders = ({
                         <CheckCircleIcon className="size-5 text-green-500" />
                       </motion.div>
                       <div>
-                      <OrderChipWithPlayer order={order} />
-                      {order.orderStatus}
+                        <OrderChipWithPlayer order={order} />
+                        {order.orderStatus}
                       </div>
                     </motion.div>
                   </>
@@ -161,10 +161,10 @@ const PendingLimitOrders = ({
                 <div>
                   {String(order.orderType).toUpperCase()} @ {order.value}
                 </div>
-                {order.orderStatus == OrderStatus.FILLED ? (
-                  <CheckCircleIcon className="size-5 text-green-500" />
+                {order.orderStatus == OrderStatus.OPEN ? (
+                  <ClockIcon className="size-5 text-yellow-500" />
                 ) : (
-                  <ClockIcon className="size-5" />
+                  <ClockIcon className="size-5 text-red-500" />
                 )}
               </div>
             ))}
@@ -221,11 +221,16 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
   if (!playerOrders) return <div>No pending orders.</div>;
 
   const limitOrdersPendingSettlement = playerOrders.filter(
-    (order) => order.orderType === OrderType.LIMIT && order.orderStatus === OrderStatus.FILLED_PENDING_SETTLEMENT
+    (order) =>
+      order.orderType === OrderType.LIMIT &&
+      order.orderStatus === OrderStatus.FILLED_PENDING_SETTLEMENT
   );
 
   const limitOrdersPendingToOpen = playerOrders.filter(
-    (order) => order.orderType === OrderType.LIMIT && order.orderStatus === OrderStatus.PENDING
+    (order) =>
+      (order.orderType === OrderType.LIMIT &&
+        order.orderStatus === OrderStatus.PENDING) ||
+      (OrderType.LIMIT && order.orderStatus === OrderStatus.OPEN)
   );
 
   let marketOrders = playerOrders.filter(
