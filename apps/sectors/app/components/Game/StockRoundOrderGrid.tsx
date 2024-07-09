@@ -142,11 +142,19 @@ const StockRoundOrderGrid = ({
                         className={`flex items-center ${
                           company.status == CompanyStatus.ACTIVE
                             ? "text-green-500"
-                            : "text-yellow-500"
+                            : company.status == CompanyStatus.INACTIVE
+                            ? "text-yellow-500"
+                            : "text-red-500"
                         }`}
                       >
-                        <RiSailboatFill size={20} />
-                        {company.Sector.sharePercentageToFloat}%
+                        {company.status == CompanyStatus.INACTIVE ? (
+                          <>
+                            <RiSailboatFill size={20} />{" "}
+                            {company.Sector.sharePercentageToFloat}%
+                          </>
+                        ) : (
+                          "BANKRUPT"
+                        )}
                       </span>
                     </div>
                     <div className="flex gap-3">

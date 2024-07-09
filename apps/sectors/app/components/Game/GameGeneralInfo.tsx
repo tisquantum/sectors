@@ -9,7 +9,12 @@ import {
   SquaresPlusIcon,
   UserIcon,
 } from "@heroicons/react/24/solid";
-import { RiWalletFill, RiFunctionAddFill, RiTeamFill } from "@remixicon/react";
+import {
+  RiWalletFill,
+  RiFunctionAddFill,
+  RiTeamFill,
+  RiBankFill,
+} from "@remixicon/react";
 import { Avatar } from "@nextui-org/react";
 
 const GameGeneralInfo = () => {
@@ -24,9 +29,8 @@ const GameGeneralInfo = () => {
             <RiWalletFill size={18} /> ${authPlayer.cashOnHand}
           </div>
           <div className="flex items-center text-md">
-            <RiFunctionAddFill size={24} /> LO{" "}
-            {authPlayer.limitOrderActions} MO {authPlayer.marketOrderActions} SO{" "}
-            {authPlayer.shortOrderActions}
+            <RiFunctionAddFill size={24} /> LO {authPlayer.limitOrderActions} MO{" "}
+            {authPlayer.marketOrderActions} SO {authPlayer.shortOrderActions}
           </div>
         </div>
       </div>
@@ -39,7 +43,9 @@ const GameGeneralInfo = () => {
       </div>
       <div>
         <div className="text-lg font-bold">Bank Total</div>
-        <div>${gameState.bankPoolNumber}</div>
+        <div className="flex gap-1 items-center">
+          <RiBankFill size={18} /> ${gameState.bankPoolNumber}
+        </div>
       </div>
       <div>
         <div className="text-lg font-bold">Round</div>

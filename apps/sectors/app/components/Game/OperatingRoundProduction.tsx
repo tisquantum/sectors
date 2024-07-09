@@ -1,6 +1,7 @@
 import { trpc } from "@sectors/app/trpc";
 import { useGame } from "./GameContext";
 import {
+  CompanyTierData,
   throughputRewardOrPenalty,
   ThroughputRewardType,
 } from "@server/data/constants";
@@ -33,6 +34,13 @@ const OperatingRoundProduction = () => {
             <span className="text-lg">
               {productionResult.Company.Sector.name}
             </span>
+            <span className="text-lg">
+              Operating Costs $
+              {
+                CompanyTierData[productionResult.Company.companyTier]
+                  .operatingCosts
+              }
+            </span>
             <div className="flex gap-3">
               <span>Supply: {productionResult.Company.supplyMax}</span>
               <span>
@@ -50,10 +58,10 @@ const OperatingRoundProduction = () => {
               <div className="flex flex-col">
                 <span>Revenue: {productionResult.revenue}</span>
                 <span>
-                  Unit Price ${productionResult.Company.unitPrice} * Company Supply:{" "}
-                  {productionResult.Company.supplyMax} OR (Company Demand:{" "}
-                  {productionResult.Company.demandScore} + Sector Demand:{" "}
-                  {productionResult.Company.Sector.demand})
+                  Unit Price ${productionResult.Company.unitPrice} * Company
+                  Supply: {productionResult.Company.supplyMax} OR (Company
+                  Demand: {productionResult.Company.demandScore} + Sector
+                  Demand: {productionResult.Company.Sector.demand})
                 </span>
               </div>
             </div>

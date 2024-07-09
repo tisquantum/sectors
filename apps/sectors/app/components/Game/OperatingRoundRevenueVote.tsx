@@ -8,6 +8,7 @@ import {
 } from "@server/prisma/prisma.client";
 import { Button, Radio, RadioGroup } from "@nextui-org/react";
 import { useState } from "react";
+import { CompanyTierData } from "@server/data/constants";
 
 const DistributeSelection = ({
   company,
@@ -85,7 +86,14 @@ const OperatingRoundRevenueVote = () => {
               className="flex flex-col bg-slate-800 p-4"
               key={productionResult.id}
             >
-              <h2>{productionResult.Company.name}</h2>
+              <h2 className="text-xl">{productionResult.Company.name}</h2>
+              <span className="text-lg">
+                Operating Costs $
+                {
+                  CompanyTierData[productionResult.Company.companyTier]
+                    .operatingCosts
+                }
+              </span>
               <div className="flex flex-col">
                 <div className="flex gap-3">
                   <span>
@@ -103,10 +111,9 @@ const OperatingRoundRevenueVote = () => {
                   <span>Revenue: {productionResult.revenue}</span>
                   <span>
                     Unit Price: {productionResult.Company.unitPrice} * ( Supply
-                    Max: {productionResult.Company.supplyMax}
-                    {" "} OR Company Demand Score:{" "}
-                    {productionResult.Company.demandScore} + Sector Base Demand:{" "}
-                    {productionResult.Company.Sector.demand})
+                    Max: {productionResult.Company.supplyMax} OR Company Demand
+                    Score: {productionResult.Company.demandScore} + Sector Base
+                    Demand: {productionResult.Company.Sector.demand})
                   </span>
                 </div>
                 {productionResult.Company && (

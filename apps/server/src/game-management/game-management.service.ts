@@ -717,16 +717,21 @@ export class GameManagementService {
         this.productionResultService.createManyProductionResults(
           productionResults,
         ),
-        ...stockPenalties.map((penalty) =>
-          this.stockHistoryService.moveStockPriceDown(
+        ...stockPenalties.map(async (penalty) => {
+          const newHistory = await this.stockHistoryService.moveStockPriceDown(
             penalty.gameId,
             penalty.companyId,
             penalty.phaseId,
             penalty.currentStockPrice,
             penalty.steps,
             StockAction.PRODUCTION,
-          ),
-        ),
+          );
+          return this.playerOrderService.triggerLimitOrdersFilled(
+            penalty.currentStockPrice,
+            newHistory.price,
+            penalty.companyId,
+          );
+        }),
         ...sectorConsumersUpdates.map((update) =>
           this.prisma.sector.update({
             where: { id: update.id },
@@ -1052,10 +1057,8 @@ export class GameManagementService {
           companyTier: company.companyTier,
           demandScore: 0,
           supplyCurrent: 0,
-          supplyMax: Math.floor(
-            Math.random() * (sector.supplyMax - sector.supplyMin + 1) +
-              sector.supplyMin,
-          ),
+          supplyMax:
+            CompanyTierData[company.companyTier as CompanyTier].supplyMax,
           sectorId: sector.name, //map to name at first then match to supabase for id
           gameId: game.id,
           insolvent: company.insolvent,
@@ -1691,7 +1694,7 @@ export class GameManagementService {
         //company is floated
         await this.companyService.updateCompany({
           where: { id: companyId },
-          data: { status: CompanyStatus.ACTIVE },
+          data: { status: CompanyStatus.ACTIVE, isFloated: true },
         });
       }
     }

@@ -125,3 +125,14 @@ I'm thinking short orders can only be performed on a company you have no ownersh
 - Market Orders are the only type of order that can be placed on the IPO
 
 - For determining the consumer pool distribution, what if the global game economy determined how much demand could be "spooled" out after a turn for the following turn/operation round?  The global economy being how much money is spent or stocks are doing?
+
+- If a company buys back shares, and this puts a player over the share cap for that company, they must divest
+
+- We need to use the idea of a marketing cap to identify stock price.
+
+- issuing shares does not change the stock price, simply the dividends pay out. the same is true conversely with share buyback.
+
+- I think the priority for customers buying from a company in a sector is
+-- 1. Prestige
+-- 2. Price (Lowest price first)
+-- 3. Demand Score

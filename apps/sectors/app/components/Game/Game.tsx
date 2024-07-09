@@ -52,7 +52,7 @@ const determineGameRound = (
       return undefined;
     }
     return { operatingRound, phase };
-  } else if(game.currentRound === RoundType.STOCK) {
+  } else if (game.currentRound === RoundType.STOCK) {
     //find the current stock round
     const stockRound = game.StockRound.find(
       (round) => round.id === game.currentStockRoundId
@@ -61,9 +61,9 @@ const determineGameRound = (
       return undefined;
     }
     return { stockRound, phase };
-  } else if(game.currentRound === RoundType.GAME_UPKEEP) {
+  } else if (game.currentRound === RoundType.GAME_UPKEEP) {
     return {
-      phase
+      phase,
     };
   }
 };
@@ -79,6 +79,8 @@ const Game = ({ gameId }: { gameId: string }) => {
   const renderCurrentPhase =
     currentRoundData?.phase.name === PhaseName.STOCK_MEET ? (
       <Meeting />
+    ) : currentRoundData?.phase.name === PhaseName.STOCK_RESOLVE_LIMIT_ORDER ? (
+      <PendingOrders />
     ) : currentRoundData?.phase.name === PhaseName.STOCK_ACTION_ORDER ? (
       <StockRoundAction />
     ) : currentRoundData?.phase.name === PhaseName.STOCK_ACTION_RESULT ? (
@@ -87,6 +89,8 @@ const Game = ({ gameId }: { gameId: string }) => {
       <StockRoundOrderGrid />
     ) : currentRoundData?.phase.name ===
       PhaseName.STOCK_RESOLVE_MARKET_ORDER ? (
+      <PendingOrders />
+    ) : currentRoundData?.phase.name === PhaseName.STOCK_OPEN_LIMIT_ORDERS ? (
       <PendingOrders />
     ) : currentRoundData?.phase.name === PhaseName.STOCK_RESULTS_OVERVIEW ? (
       <StockRoundResults />

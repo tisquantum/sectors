@@ -59,9 +59,12 @@ const GameTopBar = ({
         companyId = getNextCompanyOperatingRoundTurn(
           gameState.Company.filter(company => company.status == CompanyStatus.ACTIVE),
           currentPhase?.companyId
-        ).id;
+        )?.id;
       } else {
         companyId = getNextCompanyOperatingRoundTurn(gameState.Company.filter(company => company.status == CompanyStatus.ACTIVE)).id;
+      }
+      if(!companyId) {
+        nextPhase.phaseName = PhaseName.CAPITAL_GAINS;
       }
     } else {
       companyId = currentPhase?.companyId;

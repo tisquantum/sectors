@@ -264,12 +264,12 @@ export const throughputRewardOrPenalty = (
 export const CompanyActionCosts = {
   [OperatingRoundAction.DOWNSIZE]: 500,
   [OperatingRoundAction.EXPANSION]: 500,
-  [OperatingRoundAction.MARKETING]: 300,
+  [OperatingRoundAction.MARKETING]: 200,
   [OperatingRoundAction.MERGE]: 1000,
   [OperatingRoundAction.RESEARCH]: 200,
-  [OperatingRoundAction.SHARE_BUYBACK]: 50,
+  [OperatingRoundAction.SHARE_BUYBACK]: 0,
   [OperatingRoundAction.SHARE_ISSUE]: 50,
-  [OperatingRoundAction.PRODUCTION]: 100,
+  [OperatingRoundAction.PRODUCTION]: 0,
   [OperatingRoundAction.SPEND_PRESTIGE]: 0,
   [OperatingRoundAction.VETO]: 0,
   [OperatingRoundAction.LOBBY]: 0,
@@ -279,31 +279,31 @@ export const CompanyActionCosts = {
 
 export const CompanyTierData = {
   [CompanyTier.INCUBATOR]: {
-    operatingCosts: 100,
-    supplyMax: 1
-  },
-  [CompanyTier.STARTUP]: {
-    operatingCosts: 200,
+    operatingCosts: 25,
     supplyMax: 2
   },
-  [CompanyTier.GROWTH]: {
-    operatingCosts: 300,
+  [CompanyTier.STARTUP]: {
+    operatingCosts: 50,
     supplyMax: 3
   },
-  [CompanyTier.ESTABLISHED]: {
-    operatingCosts: 400,
+  [CompanyTier.GROWTH]: {
+    operatingCosts: 100,
     supplyMax: 4
   },
-  [CompanyTier.ENTERPRISE]: {
-    operatingCosts: 500,
+  [CompanyTier.ESTABLISHED]: {
+    operatingCosts: 150,
     supplyMax: 5
   },
-  [CompanyTier.CONGLOMERATE]: {
-    operatingCosts: 600,
+  [CompanyTier.ENTERPRISE]: {
+    operatingCosts: 200,
     supplyMax: 6
   },
+  [CompanyTier.CONGLOMERATE]: {
+    operatingCosts: 300,
+    supplyMax: 8
+  },
   [CompanyTier.TITAN]: {
-    operatingCosts: 700,
-    supplyMax: 7
+    operatingCosts: 400,
+    supplyMax: 10
   },
 }

@@ -61,6 +61,13 @@ const OperatingRoundRevenueVoteResolve = () => {
                       productionResult.Company.Sector.demand}
                   </span>
                   <span>Revenue: {productionResult.revenue}</span>
+                  <span>
+                    $ / Share:{" "}
+                    {Math.ceil(
+                      productionResult.revenue /
+                        productionResult.Company.Share.length
+                    )}
+                  </span>
                   <div className="flex flex-col">
                     <span>Vote Decision</span>
                     {productionResult.revenueDistribution}
