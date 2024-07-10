@@ -136,3 +136,5 @@ I'm thinking short orders can only be performed on a company you have no ownersh
 -- 1. Prestige
 -- 2. Price (Lowest price first)
 -- 3. Demand Score
+
+- bug with share distribution when 2 players are trying to buy the same amount of shares market order buy ipo

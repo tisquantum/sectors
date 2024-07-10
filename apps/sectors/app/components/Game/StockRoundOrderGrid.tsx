@@ -6,6 +6,7 @@ import {
   CardBody,
   CardFooter,
   CardHeader,
+  Divider,
 } from "@nextui-org/react";
 import React, { useEffect, useState } from "react";
 import PlayerOrder from "../Player/PlayerOrder";
@@ -28,11 +29,18 @@ import PlayerOrderConcealed from "../Player/PlayerOrderConcealed";
 import { CompanyWithSector } from "@server/prisma/prisma.types";
 import { sectorColors } from "@server/data/gameData";
 import {
+  RiBox2Fill,
+  RiExpandUpDownFill,
+  RiHandCoinFill,
+  RiIncreaseDecreaseFill,
   RiPriceTag3Fill,
   RiSailboatFill,
+  RiSparkling2Fill,
   RiWallet3Fill,
 } from "@remixicon/react";
 import "./StockRoundOrderGrid.css";
+import { CompanyTierData } from "@server/data/constants";
+import CompanyInfo from "../Company/CompanyInfo";
 
 const StockRoundOrderGrid = ({
   handleOrder,
@@ -128,38 +136,7 @@ const StockRoundOrderGrid = ({
               >
                 <CardHeader className="bg-gray-950">
                   <div className="flex flex-col w-full">
-                    <div className="flex flex-start">
-                      <div className="text-lg font-bold">{company.name}</div>
-                    </div>
-                    <div className="flex gap-3">
-                      <span className="flex items-center">
-                        <RiPriceTag3Fill size={20} /> ${company.unitPrice}
-                      </span>
-                      <span className="flex items-center">
-                        <RiWallet3Fill size={20} /> ${company.cashOnHand}
-                      </span>
-                      <span
-                        className={`flex items-center ${
-                          company.status == CompanyStatus.ACTIVE
-                            ? "text-green-500"
-                            : company.status == CompanyStatus.INACTIVE
-                            ? "text-yellow-500"
-                            : "text-red-500"
-                        }`}
-                      >
-                        {company.status == CompanyStatus.INACTIVE ? (
-                          <>
-                            <RiSailboatFill size={20} />{" "}
-                            {company.Sector.sharePercentageToFloat}%
-                          </>
-                        ) : (
-                          "BANKRUPT"
-                        )}
-                      </span>
-                    </div>
-                    <div className="flex gap-3">
-                      <span>{company.Sector.name}</span>
-                    </div>
+                    <CompanyInfo company={company}/>
                   </div>
                 </CardHeader>
                 <CardBody>

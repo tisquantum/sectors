@@ -63,6 +63,7 @@ import { TimerService } from '@server/timer/timer.service';
 import {
   calculateMarginAccountMinimum,
   calculateStepsAndRemainder,
+  companyPriorityOrderOperations,
   determineFloatPrice,
   determineNextGamePhase,
   determineStockTier,
@@ -620,7 +621,11 @@ export class GameManagementService {
     }, {});
 
     const sectorRewards: { [sectorId: string]: number } = {};
-    const companyUpdates: { id: string; prestigeTokens: number }[] = [];
+    const companyUpdates: {
+      id: string;
+      prestigeTokens?: number;
+      demandScore?: number;
+    }[] = [];
     const productionResults: Prisma.ProductionResultCreateManyInput[] = [];
     const stockPenalties: {
       gameId: string;
@@ -643,24 +648,26 @@ export class GameManagementService {
       }
 
       let consumers = sector.consumers;
-      //sort sectorCompanies by demandScore
-      sectorCompanies.sort((a, b) => b.demandScore - a.demandScore);
+      const sectorCompaniesSorted =
+        companyPriorityOrderOperations(sectorCompanies);
       // Iterate over companies in sector
-      for (const company of sectorCompanies) {
+      for (const company of sectorCompaniesSorted) {
         // Calculate throughput
         const throughput =
           company.demandScore + company.Sector.demand - company.supplyMax;
         console.log('Throughput:', throughput, company.name, company);
         // Consult throughput score to see reward or penalty.
         const throughputOutcome = throughputRewardOrPenalty(throughput);
-
+        //subtract one from demand score of company
+        const companyUpdate = {
+          id: company.id,
+          demandScore: company.demandScore - 1,
+          prestigeTokens: company.prestigeTokens || 0,
+        };
         // Award or penalize the company
         if (throughputOutcome.type === ThroughputRewardType.SECTOR_REWARD) {
           // Award prestige token
-          companyUpdates.push({
-            id: company.id,
-            prestigeTokens: company.prestigeTokens + 1,
-          });
+          companyUpdate.prestigeTokens = (company.prestigeTokens || 0) + 1;
           sectorRewards[sectorId] = (sectorRewards[sectorId] || 0) + 1; // TODO: Implement sector-wide rewards if needed.
         } else if (
           throughputOutcome.type === ThroughputRewardType.STOCK_PENALTY
@@ -702,6 +709,7 @@ export class GameManagementService {
           throughputResult: throughput,
           steps: throughputOutcome.share_price_steps_down || 0,
         });
+        companyUpdates.push(companyUpdate);
       }
     }
 

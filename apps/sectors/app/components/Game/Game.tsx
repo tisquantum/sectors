@@ -89,9 +89,18 @@ const Game = ({ gameId }: { gameId: string }) => {
       <StockRoundOrderGrid />
     ) : currentRoundData?.phase.name ===
       PhaseName.STOCK_RESOLVE_MARKET_ORDER ? (
-      <PendingOrders />
+      <PendingOrders isResolving={true} />
+    ) : currentRoundData?.phase.name ===
+      PhaseName.STOCK_SHORT_ORDER_INTEREST ? (
+      <PendingOrders isResolving={true} />
+    ) : currentRoundData?.phase.name ===
+      PhaseName.STOCK_RESOLVE_PENDING_SHORT_ORDER ? (
+      <PendingOrders isResolving={true} />
+    ) : currentRoundData?.phase.name ===
+      PhaseName.STOCK_RESOLVE_OPTION_ORDER ? (
+      <PendingOrders isResolving={true} />
     ) : currentRoundData?.phase.name === PhaseName.STOCK_OPEN_LIMIT_ORDERS ? (
-      <PendingOrders />
+      <PendingOrders isResolving={true} />
     ) : currentRoundData?.phase.name === PhaseName.STOCK_RESULTS_OVERVIEW ? (
       <StockRoundResults />
     ) : currentRoundData?.phase.name === PhaseName.OPERATING_PRODUCTION ? (
@@ -135,7 +144,7 @@ const Game = ({ gameId }: { gameId: string }) => {
       <div className="flex flex-col w-full">
         <GameTopBar gameId={gameId} handleCurrentView={handleCurrentView} />
         <div className="flex justify-between">
-          <div className="basis-10/12	active-panel flex flex-col overflow-hidden h-full">
+          <div className="basis-10/12	active-panel flex flex-col overflow-hidden h-full p-4">
             {currentView === "action" && renderCurrentPhase}
             {currentView === "chart" && <StockChart />}
             {currentView === "pending" && <PendingOrders />}

@@ -9,6 +9,8 @@ import {
 import { Button, Radio, RadioGroup } from "@nextui-org/react";
 import { useState } from "react";
 import { CompanyTierData } from "@server/data/constants";
+import CompanyInfo from "../Company/CompanyInfo";
+import { companyPriorityOrderOperations } from "@server/data/helpers";
 
 const DistributeSelection = ({
   company,
@@ -63,7 +65,7 @@ const DistributeSelection = ({
 
 const OperatingRoundRevenueVote = () => {
   const { currentPhase } = useGame();
-  const { data: productionResults, isLoading } =
+  const { data: operatingRound, isLoading } =
     trpc.operatingRound.getOperatingRoundWithProductionResults.useQuery({
       where: {
         id: currentPhase?.operatingRoundId,
@@ -72,49 +74,41 @@ const OperatingRoundRevenueVote = () => {
   if (isLoading) {
     return <div>Loading...</div>;
   }
-  if (!productionResults) {
+  if (!operatingRound) {
     return <div>No operating round found</div>;
   }
   return (
-    <div>
-      <h1>Operating Round Revenue Vote</h1>
-      <div className="grid grid-cols-3 gap-4">
-        {
-          //display all companies with revenue greater than 0
-          productionResults.productionResults.map((productionResult) => (
-            <div
-              className="flex flex-col bg-slate-800 p-4"
-              key={productionResult.id}
-            >
-              <h2 className="text-xl">{productionResult.Company.name}</h2>
-              <span className="text-lg">
-                Operating Costs $
-                {
-                  CompanyTierData[productionResult.Company.companyTier]
-                    .operatingCosts
-                }
-              </span>
+    <div className="p-6 rounded-lg shadow-md">
+    <h1 className="text-2xl font-bold mb-4">Operating Round Production Vote</h1>
+    <div className="flex gap-8">
+      <div className="grid grid-cols-3 gap-6 w-3/4">
+        {operatingRound.productionResults.map((productionResult) => {
+          const operatingCosts = CompanyTierData[productionResult.Company.companyTier].operatingCosts;
+          const revenue = productionResult.revenue;
+          const shareCount = productionResult.Company.Share.length;
+
+          const dividendFull = shareCount > 0 ? Math.floor(revenue / shareCount) : 0;
+          const dividendHalf = shareCount > 0 ? Math.floor(revenue / 2 / shareCount) : 0;
+          const retainedRevenueHalf = revenue / 2;
+
+          return (
+            <div className="flex flex-col bg-slate-800 p-4 rounded-lg shadow-md" key={productionResult.id}>
               <div className="flex flex-col">
-                <div className="flex gap-3">
-                  <span>
-                    Cash on Hand: ${productionResult.Company.cashOnHand}
-                  </span>
-                  <span>
-                    Stock Price: ${productionResult.Company.currentStockPrice}
-                  </span>
-                  <span>Supply: {productionResult.Company.supplyMax}</span>
-                  <span>
-                    Demand:{" "}
-                    {productionResult.Company.demandScore +
-                      productionResult.Company.Sector.demand}
-                  </span>
-                  <span>Revenue: {productionResult.revenue}</span>
-                  <span>
-                    Unit Price: {productionResult.Company.unitPrice} * ( Supply
-                    Max: {productionResult.Company.supplyMax} OR Company Demand
-                    Score: {productionResult.Company.demandScore} + Sector Base
-                    Demand: {productionResult.Company.Sector.demand})
-                  </span>
+                <CompanyInfo company={productionResult.Company} />
+                <div className="flex flex-col gap-2 rounded-md bg-gray-950 m-2 p-2">
+                  <span className="text-lg">Production Results</span>
+                  <span>Revenue: ${revenue}</span>
+                  <span className="text-md my-2">Operating Costs: ${operatingCosts}</span>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-lg font-semibold">Dividends</span>
+                    <span>Full Per Share: ${dividendFull}</span>
+                    <span>Half Per Share: ${dividendHalf}</span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-lg font-semibold">Retained Revenue</span>
+                    <span>To Company (Half): ${retainedRevenueHalf}</span>
+                    <span>To Company (Full): ${revenue}</span>
+                  </div>
                 </div>
                 {productionResult.Company && (
                   <DistributeSelection
@@ -125,10 +119,11 @@ const OperatingRoundRevenueVote = () => {
                 )}
               </div>
             </div>
-          ))
-        }
+          );
+        })}
       </div>
     </div>
+  </div>
   );
 };
 export default OperatingRoundRevenueVote;

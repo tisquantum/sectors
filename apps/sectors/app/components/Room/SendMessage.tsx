@@ -1,4 +1,3 @@
-// components/SendMessage.tsx
 import React, { useState } from 'react';
 import { Button, Textarea } from '@nextui-org/react';
 
@@ -16,12 +15,20 @@ const SendMessage: React.FC<SendMessageProps> = ({ onSendMessage }) => {
     }
   };
 
+  const handleKeyDown: React.KeyboardEventHandler<HTMLTextAreaElement> = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
   return (
     <div className="flex items-center p-4 bg-gray-200">
       <Textarea
         placeholder="Type your message..."
         value={message}
         onChange={(e) => setMessage(e.target.value)}
+        onKeyDown={handleKeyDown as unknown as React.KeyboardEventHandler<HTMLInputElement>}
       />
       <Button color="primary" onClick={handleSendMessage} className="ml-2">
         Send

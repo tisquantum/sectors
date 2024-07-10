@@ -9,7 +9,7 @@ import {
   ShareLocation,
   StockTier,
 } from '@prisma/client';
-import { PlayerOrderWithCompany } from '@server/prisma/prisma.types';
+import { CompanyWithSector, PlayerOrderWithCompany } from '@server/prisma/prisma.types';
 import {
   StockTierChartRange,
   stockGridPrices,
@@ -229,9 +229,7 @@ export const getPseudoSpend = (orders: PlayerOrderWithCompany[]) => {
 
 export function determineFloatPrice(sector: Sector) {
   const { ipoMin, ipoMax } = sector;
-  const floatValue = Math.floor(
-    Math.random() * (ipoMax - ipoMin + 1) + ipoMin,
-  );
+  const floatValue = Math.floor(Math.random() * (ipoMax - ipoMin + 1) + ipoMin);
   // pick the number closest in the stockGridPrices array
   const closest = stockGridPrices.reduce((a, b) => {
     return Math.abs(b - floatValue) < Math.abs(a - floatValue) ? b : a;
@@ -250,7 +248,9 @@ function getTierMaxValue(tier: StockTier): number {
     .chartMaxValue;
 }
 
-export function getCurrentTierBySharePrice(currentSharePrice: number): StockTier {
+export function getCurrentTierBySharePrice(
+  currentSharePrice: number,
+): StockTier {
   return stockTierChartRanges.find(
     (range) => currentSharePrice <= range.chartMaxValue,
   )!.tier;
@@ -259,7 +259,7 @@ export function getCurrentTierBySharePrice(currentSharePrice: number): StockTier
 /**
  * Calculates the number of steps required to fulfill a given net difference in shares,
  * updating the tier shares fulfilled, the current tier, and the new share price accordingly.
- * 
+ *
  * @param netDifference - The net number of shares to be processed.
  * @param tierSharesFulfilled - The number of shares already fulfilled in the current tier.
  * @param currentTierFillSize - The total number of shares required to fill the current tier.
@@ -337,4 +337,20 @@ export function getNextTier(currentTier: StockTier): StockTier | undefined {
 //TODO: We might need to adjust this.
 export function calculateMarginAccountMinimum(shortOrderValue: number): number {
   return Math.ceil(shortOrderValue / 2);
+}
+
+export function companyPriorityOrderOperations(companies: CompanyWithSector[]) {
+  // PRIORITY for production and consumption of goods
+  // 1: Sort companies by prestige tokens DESC
+  // 2. Sory companies by unit price ASC (cheapest first)
+  // 3: Sort companies by demand score DESC
+  return companies.sort((a, b) => {
+    if (b.prestigeTokens !== a.prestigeTokens) {
+      return b.prestigeTokens - a.prestigeTokens;
+    } else if (a.unitPrice !== b.unitPrice) {
+      return a.unitPrice - b.unitPrice;
+    } else {
+      return b.demandScore - a.demandScore;
+    }
+  });
 }

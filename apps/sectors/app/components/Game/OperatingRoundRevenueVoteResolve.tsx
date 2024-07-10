@@ -2,6 +2,8 @@ import { trpc } from "@sectors/app/trpc";
 import { useGame } from "./GameContext";
 import { RevenueDistributionVoteWithRelations } from "@server/prisma/prisma.types";
 import { Avatar, Chip } from "@nextui-org/react";
+import CompanyInfo from "../Company/CompanyInfo";
+import { CompanyTierData } from "@server/data/constants";
 
 const OperatingRoundRevenueVoteResolve = () => {
   const { currentPhase } = useGame();
@@ -40,60 +42,65 @@ const OperatingRoundRevenueVoteResolve = () => {
       <div className="grid grid-cols-3 gap-4">
         {
           //display all companies with revenue greater than 0
-          productionResults.productionResults.map((productionResult) => (
-            <div
-              className="flex flex-col bg-slate-800 p-4"
-              key={productionResult.id}
-            >
-              <h2>{productionResult.Company.name}</h2>
-              <div className="flex flex-col">
-                <div className="flex gap-3">
-                  <span>
-                    Cash on Hand: ${productionResult.Company.cashOnHand}
+          productionResults.productionResults.map((productionResult) => {
+            const operatingCosts =
+              CompanyTierData[productionResult.Company.companyTier]
+                .operatingCosts;
+            const revenue = productionResult.revenue;
+            const shareCount = productionResult.Company.Share.length;
+
+            const dividendFull =
+              shareCount > 0 ? Math.floor(revenue / shareCount) : 0;
+            const dividendHalf =
+              shareCount > 0 ? Math.floor(revenue / 2 / shareCount) : 0;
+            const retainedRevenueHalf = revenue / 2;
+
+            return (
+              <div
+                className="flex flex-col bg-slate-800 p-4"
+                key={productionResult.id}
+              >
+                <CompanyInfo company={productionResult.Company} />
+                <div className="flex flex-col gap-2 rounded-md bg-gray-950 m-2 p-2">
+                  <span className="text-lg">Production Results</span>
+                  <span>Revenue: ${revenue}</span>
+                  <span className="text-md my-2">
+                    Operating Costs: ${operatingCosts}
                   </span>
-                  <span>
-                    Stock Price: ${productionResult.Company.currentStockPrice}
-                  </span>
-                  <span>Supply: {productionResult.Company.supplyMax}</span>
-                  <span>
-                    Demand:{" "}
-                    {productionResult.Company.demandScore +
-                      productionResult.Company.Sector.demand}
-                  </span>
-                  <span>Revenue: {productionResult.revenue}</span>
-                  <span>
-                    $ / Share:{" "}
-                    {Math.ceil(
-                      productionResult.revenue /
-                        productionResult.Company.Share.length
-                    )}
-                  </span>
-                  <div className="flex flex-col">
-                    <span>Vote Decision</span>
-                    {productionResult.revenueDistribution}
+                  <div className="flex flex-col gap-1">
+                    <span className="text-lg font-semibold">Dividends</span>
+                    <span>Full Per Share: ${dividendFull}</span>
+                    <span>Half Per Share: ${dividendHalf}</span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-lg font-semibold">
+                      Retained Revenue
+                    </span>
+                    <span>To Company (Half): ${retainedRevenueHalf}</span>
+                    <span>To Company (Full): ${revenue}</span>
+                  </div>
+                </div>
+                <div className="flex flex-col">
+                  <span>Vote Results</span>
+                  <div className="flex gap-3">
+                    {revenueDistributionVote
+                      .filter(
+                        (vote: RevenueDistributionVoteWithRelations) =>
+                          vote.companyId === productionResult.Company.id
+                      )
+                      .map((vote: RevenueDistributionVoteWithRelations) => (
+                        <Chip
+                          key={vote.id}
+                          avatar={<Avatar name={vote.Player.nickname} />}
+                        >
+                          <span>{vote.revenueDistribution}</span>
+                        </Chip>
+                      ))}
                   </div>
                 </div>
               </div>
-              <div className="flex flex-col">
-                <span>Vote Results</span>
-                <div className="flex gap-3">
-                  {revenueDistributionVote
-                    .filter(
-                      (vote: RevenueDistributionVoteWithRelations) =>
-                        vote.companyId === productionResult.Company.id
-                    )
-                    .map((vote: RevenueDistributionVoteWithRelations) => (
-                      <Chip
-                        key={vote.id}
-                        avatar={<Avatar name={vote.Player.nickname} />}
-                      >
-                        <span>{vote.revenueDistribution}</span>
-                      </Chip>
-                    ))}
-                </div>
-              </div>
-            </div>
-          ))
+            );
+          })
         }
       </div>
     </div>

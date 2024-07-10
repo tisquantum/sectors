@@ -10,32 +10,39 @@ import { Avatar, Card, CardBody, CardHeader, Chip } from "@nextui-org/react";
 import "./PendingOrders.css";
 import { trpc } from "@sectors/app/trpc";
 import { useGame } from "./GameContext";
-import { OrderStatus, OrderType, Prisma } from "@server/prisma/prisma.client";
+import {
+  OrderStatus,
+  OrderType,
+  PhaseName,
+  Prisma,
+  ShareLocation,
+} from "@server/prisma/prisma.client";
 import {
   PlayerOrderWithPlayerCompany,
   PlayerOrderWithPlayerCompanySectorShortOrder,
-  PlayerOrdersPendingOrder,
+  PlayerOrdersAllRelations,
 } from "@server/prisma/prisma.types";
 import { interestRatesByTerm } from "@server/data/constants";
 import { create } from "domain";
 import { sectorColors } from "@server/data/gameData";
 import { motion, AnimatePresence } from "framer-motion";
 import OrderChipWithPlayer from "./OrderChipWithPlayer";
+import { RiCloseCircleFill } from "@remixicon/react";
 interface GroupedOrders {
-  [key: string]: PlayerOrdersPendingOrder[];
+  [key: string]: PlayerOrdersAllRelations[];
 }
 
 const PendingMarketOrders = ({
   marketOrders,
   isResolving,
 }: {
-  marketOrders: PlayerOrdersPendingOrder[];
+  marketOrders: PlayerOrdersAllRelations[];
   isResolving?: boolean;
 }) => {
   const { currentPhase } = useGame();
   // Assuming marketOrders is an array of objects with name, companyName, orderType (buy/sell), and shares
   const groupedOrders = marketOrders.reduce(
-    (acc: GroupedOrders, order: PlayerOrdersPendingOrder) => {
+    (acc: GroupedOrders, order: PlayerOrdersAllRelations) => {
       const key = order.Company.name;
       if (!acc[key]) {
         acc[key] = [];
@@ -51,18 +58,25 @@ const PendingMarketOrders = ({
   };
 
   const containerVariants = {
-    hidden: { opacity: 1, y: 0 },
-    visible: { opacity: 0, y: 20, transition: { delay: 0.5, duration: 0.5 } },
+    hidden: { opacity: 0, y: 0 },
+    visible: { opacity: 1, y: 20, transition: { delay: 0.5, duration: 0.5 } },
   };
   return (
     <div className="space-y-2">
       {Object.entries(groupedOrders).map(([company, orders]) => {
         let netDifference: string | number = orders.reduce((acc, order) => {
+          //if order is IPO, skip it
+          if (order.location === ShareLocation.IPO) {
+            return acc;
+          }
           return (
             acc + (!order.isSell ? order.quantity || 0 : -(order.quantity || 0))
           );
         }, 0);
         netDifference = netDifference > 0 ? `+${netDifference}` : netDifference;
+        if (netDifference === 0) {
+          netDifference = "+0";
+        }
         return (
           <div
             key={company}
@@ -77,7 +91,7 @@ const PendingMarketOrders = ({
                 {company} {netDifference}
               </span>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 mb-5">
               {orders.map((order, index) =>
                 isResolving ? (
                   <>
@@ -85,22 +99,28 @@ const PendingMarketOrders = ({
                       initial="hidden"
                       animate="visible"
                       variants={containerVariants}
+                      className="flex"
                     >
-                      <motion.div
-                        initial="hidden"
-                        animate="visible"
-                        variants={checkmarkVariants}
-                      >
-                        <CheckCircleIcon className="size-5 text-green-500" />
-                      </motion.div>
-                      <div>
-                        <OrderChipWithPlayer order={order} />
-                        {order.orderStatus}
-                      </div>
+                      <OrderChipWithPlayer
+                        order={order}
+                        status={order.orderStatus}
+                        endContent={
+                          order.orderStatus == OrderStatus.FILLED ? (
+                            <CheckCircleIcon className="size-5 text-green-500" />
+                          ) : OrderStatus.REJECTED ? (
+                            <RiCloseCircleFill className="size-5 text-red-500" />
+                          ) : (
+                            <ClockIcon className="size-5 text-yellow-500" />
+                          )
+                        }
+                      />
                     </motion.div>
                   </>
                 ) : (
-                  <OrderChipWithPlayer order={order} />
+                  <OrderChipWithPlayer
+                    order={order}
+                    status={order.orderStatus}
+                  />
                 )
               )}
             </div>
@@ -113,12 +133,14 @@ const PendingMarketOrders = ({
 
 const PendingLimitOrders = ({
   limitOrders,
+  isResolving,
 }: {
-  limitOrders: PlayerOrderWithPlayerCompany[];
+  limitOrders: PlayerOrdersAllRelations[];
+  isResolving?: boolean;
 }) => {
   // Group orders by company
   const groupedOrders = limitOrders.reduce(
-    (acc: GroupedOrders, order: PlayerOrderWithPlayerCompany) => {
+    (acc: GroupedOrders, order: PlayerOrdersAllRelations) => {
       const key = order.Company.name;
       if (!acc[key]) {
         acc[key] = [];
@@ -178,7 +200,7 @@ const PendingLimitOrders = ({
 const PendingShortOrders = ({
   shortOrders,
 }: {
-  shortOrders: PlayerOrdersPendingOrder[];
+  shortOrders: PlayerOrdersAllRelations[];
 }) => {
   return (
     <div className="space-y-2">
@@ -250,10 +272,18 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
   );
   return (
     <div className="flex space-x-4 z-0">
-      <Card className="flex-1">
+      <Card
+        className={`flex-1 ${
+          currentPhase?.name === PhaseName.STOCK_RESOLVE_LIMIT_ORDER &&
+          "ring-2 ring-blue-500"
+        }`}
+      >
         <CardHeader className="z-0">Limit Orders Pending Settlement</CardHeader>
         <CardBody>
-          <PendingLimitOrders limitOrders={limitOrdersPendingSettlement} />
+          <PendingLimitOrders
+            limitOrders={limitOrdersPendingSettlement}
+            isResolving={isResolving}
+          />
         </CardBody>
       </Card>
       <div className="flex items-center">
@@ -277,7 +307,12 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
       <div className="flex items-center">
         <ArrowRightIcon className="size-5" />
       </div>
-      <Card className="flex-1">
+      <Card
+        className={`flex-1 ${
+          currentPhase?.name === PhaseName.STOCK_RESOLVE_MARKET_ORDER &&
+          "ring-2 ring-blue-500"
+        }`}
+      >
         <CardHeader>Market Orders</CardHeader>
         <CardBody>
           <PendingMarketOrders
@@ -289,13 +324,33 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
       <div className="flex items-center">
         <ArrowRightIcon className="size-5" />
       </div>
-      <Card className="flex-1">
+      <Card
+        className={`flex-1 ${
+          (currentPhase?.name === PhaseName.STOCK_RESOLVE_PENDING_SHORT_ORDER ||
+            currentPhase?.name === PhaseName.STOCK_SHORT_ORDER_INTEREST) &&
+          "ring-2 ring-blue-500"
+        }`}
+      >
         <CardHeader>Short Orders</CardHeader>
         <CardBody>
           <PendingShortOrders shortOrders={shortOrders} />
         </CardBody>
       </Card>
-      <Card className="flex-1">
+      <Card
+        className={`flex-1 ${
+          currentPhase?.name === PhaseName.STOCK_RESOLVE_OPTION_ORDER &&
+          "ring-2 ring-blue-500"
+        }`}
+      >
+        <CardHeader className="z-0">Option Contracts</CardHeader>
+        <CardBody></CardBody>
+      </Card>
+      <Card
+        className={`flex-1 ${
+          currentPhase?.name === PhaseName.STOCK_OPEN_LIMIT_ORDERS &&
+          "ring-2 ring-blue-500"
+        }`}
+      >
         <CardHeader className="z-0">Limit Orders</CardHeader>
         <CardBody>
           <PendingLimitOrders limitOrders={limitOrdersPendingToOpen} />

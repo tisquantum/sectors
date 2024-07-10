@@ -42,6 +42,7 @@ import {
   RiSwap3Fill,
 } from "@remixicon/react";
 import "./StockChart.css";
+import CompanyInfo from "../Company/CompanyInfo";
 interface ChartData {
   phaseId: string;
   stockPrice: number;
@@ -287,67 +288,7 @@ const StockChart = () => {
               <>
                 <ModalHeader>
                   <div className="flex flex-col">
-                    <h3 className="text-xl">{selectedCompany.name}</h3>
-                    <div className="flex gap-2">
-                      <div className="flex flex-col flex-start">
-                        <div className="flex items-center gap-1">
-                          <span>{selectedCompany.status}</span>
-                          <Divider  orientation="vertical"/>
-                          <span>{selectedCompany.companyTier}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span className="flex gap-1 items-center content-center">
-                            <RiPriceTag3Fill size={18} /> $
-                            {selectedCompany.unitPrice}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-4 gap-1 items-center">
-                        <div className="flex items-center">
-                          <RiSparkling2Fill className="ml-2 size-4 text-yellow-500" />
-                          <span className="ml-1">
-                            {selectedCompany.prestigeTokens}
-                          </span>
-                        </div>
-                        <div className="flex items-center">
-                          <RiHandCoinFill size={18} className="ml-2" />
-                          <span className="ml-1">
-                            {selectedCompany.demandScore}
-                          </span>
-                        </div>
-                        <div className="flex items-center">
-                          <RiBox2Fill size={18} className="ml-2" />
-                          <span className="ml-1">
-                            {selectedCompany.supplyMax}
-                          </span>
-                        </div>
-                        <div className="flex items-center">
-                          <RiSwap3Fill size={18} className="ml-2" />
-                          <span className="ml-1">
-                            {selectedCompany.demandScore +
-                              selectedCompany.Sector.demand -
-                              selectedCompany.supplyMax}
-                          </span>
-                        </div>
-                        <div className="flex items-center">
-                          <RiIncreaseDecreaseFill size={18} className="ml-2" />
-                          <span className="ml-1">
-                            {selectedCompany.demandScore +
-                              selectedCompany.Sector.demand -
-                              selectedCompany.supplyMax}
-                          </span>
-                        </div>
-                        <div className="flex items-center">
-                          <RiExpandUpDownFill size={18} className="ml-2" />
-                          <span className="ml-1">
-                            ${
-                              CompanyTierData[selectedCompany.companyTier]
-                                .operatingCosts
-                            }
-                          </span>
-                        </div>
-                      </div>
-                    </div>
+                    <CompanyInfo company={selectedCompany} />
                   </div>
                 </ModalHeader>
                 <ModalBody>

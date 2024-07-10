@@ -287,23 +287,23 @@ export const CompanyTierData = {
     supplyMax: 3
   },
   [CompanyTier.GROWTH]: {
-    operatingCosts: 100,
+    operatingCosts: 75,
     supplyMax: 4
   },
   [CompanyTier.ESTABLISHED]: {
-    operatingCosts: 150,
+    operatingCosts: 100,
     supplyMax: 5
   },
   [CompanyTier.ENTERPRISE]: {
-    operatingCosts: 200,
+    operatingCosts: 150,
     supplyMax: 6
   },
   [CompanyTier.CONGLOMERATE]: {
-    operatingCosts: 300,
+    operatingCosts: 200,
     supplyMax: 8
   },
   [CompanyTier.TITAN]: {
-    operatingCosts: 400,
+    operatingCosts: 300,
     supplyMax: 10
   },
 }

@@ -39,7 +39,7 @@ const companyActions = [
     title: "Marketing",
     name: OperatingRoundAction.MARKETING,
     message:
-      "Increase the demand for your sector.  On the next OR, you take production (turn) priority regardless of share order.",
+      "The sector will receive an additional 5 consumers at the end of the turn. Your company receives +3 demand that decays 1 per production phase.",
   },
   {
     id: 2,

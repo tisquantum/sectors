@@ -35,9 +35,10 @@ import {
   RiWallet3Fill,
   RiIncreaseDecreaseFill,
   RiStarFill,
-  RiExpandUpDownFill
+  RiExpandUpDownFill,
 } from "@remixicon/react";
 import { CompanyTierData } from "@server/data/constants";
+import CompanyInfo from "./CompanyInfo";
 
 type ShareGroupedByPlayer = {
   [key: string]: ShareWithPlayer[];
@@ -160,51 +161,8 @@ const CompaniesAccordion = ({
               </div>
             }
             title={
-              <div className="flex gap-2">
-                <div className="flex flex-col flex-start">
-                  <span>{company.name}</span>
-                  <div className="flex items-center gap-1">
-                          <span>{company.status}</span>
-                          <Divider orientation="vertical" />
-                          <span>{company.companyTier}</span>
-                        </div>
-                  <div className="flex items-center gap-1">
-                    <span className="flex gap-1 items-center content-center">
-                      <RiPriceTag3Fill size={18} /> ${company.unitPrice}
-                    </span>
-                    <span className="flex gap-1 items-center content-center">
-                      <RiWallet3Fill size={18} /> ${company.cashOnHand}
-                    </span>
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 items-center">
-                  <div className="flex items-center">
-                    <RiSparkling2Fill className="ml-2 size-4 text-yellow-500" />
-                    <span className="ml-1">{company.prestigeTokens}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <RiHandCoinFill size={18} className="ml-2" />
-                    <span className="ml-1">{company.demandScore}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <RiBox2Fill size={18} className="ml-2" />
-                    <span className="ml-1">{company.supplyMax}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <RiIncreaseDecreaseFill size={18} className="ml-2" />
-                    <span className="ml-1">
-                      {company.demandScore +
-                        company.Sector.demand -
-                        company.supplyMax}
-                    </span>
-                  </div>
-                  <div className="flex items-center">
-                    <RiExpandUpDownFill size={18} className="ml-2" />
-                    <span className="ml-1">
-                      ${CompanyTierData[company.companyTier].operatingCosts}
-                    </span>
-                  </div>
-                </div>
+              <div className="flex flex-col gap-2">
+                <CompanyInfo company={company} />
               </div>
             }
             isCompact

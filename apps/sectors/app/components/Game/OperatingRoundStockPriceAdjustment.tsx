@@ -1,7 +1,7 @@
 import { trpc } from "@sectors/app/trpc";
 import { useGame } from "./GameContext";
-import { StockHistory } from "@server/prisma/prisma.client";
 import { StockHistoryWithPhase } from "@server/prisma/prisma.types";
+import CompanyInfo from "../Company/CompanyInfo";
 
 const OperatingRoundStockPriceAdjustment = () => {
   const { gameId, currentPhase } = useGame();
@@ -12,6 +12,7 @@ const OperatingRoundStockPriceAdjustment = () => {
   } = trpc.company.listCompaniesWithSectorAndStockHistory.useQuery({
     where: { gameId },
   });
+
   if (isLoading) {
     return <div>Loading...</div>;
   }
@@ -21,35 +22,49 @@ const OperatingRoundStockPriceAdjustment = () => {
   if (!companies) {
     return <div>No companies found</div>;
   }
+
   const displayLastStockPrices = (stockHistory: StockHistoryWithPhase[]) => {
-    //filter stock prices
-    const relevantStockPrices = stockHistory.filter((stockHistory) => {
-      return (
-        stockHistory.Phase.operatingRoundId === currentPhase?.operatingRoundId
-      );
-    });
-    //sort stock prices
-    relevantStockPrices.sort((a, b) => {
-      return a.Phase.createdAt > b.Phase.createdAt ? -1 : 1;
-    });
-    return relevantStockPrices.map((stockHistory) => (
-      <div className="flex flex-col bg-slate-800 p-4" key={stockHistory.id}>
-        <h2>Phase: {stockHistory.Phase.name}</h2>
-        <span>Price: {stockHistory.price}</span>
+    //sort stock history descending
+    stockHistory.sort((a, b) => b.id - a.id);
+    
+    const relevantStockPrices = //get the last 3 stock prices
+      stockHistory.length > 3
+        ? stockHistory.slice(stockHistory.length - 3)
+        : stockHistory;
+
+    return relevantStockPrices.map((history) => (
+      <div
+        className="flex flex-col bg-gray-900 p-3 rounded-md mb-2"
+        key={history.id}
+      >
+        <span className="text-sm font-semibold">
+          Phase: {history.Phase.name}
+        </span>
+        <span>Price: ${history.price}</span>
       </div>
     ));
   };
+
   return (
-    <div>
-      <h1>Operating Round Stock Price Adjustment</h1>
-      <div className="grid grid-cols-3 gap-3">
+    <div className="p-6 rounded-lg shadow-md">
+      <h1 className="text-2xl font-bold mb-6">
+        Operating Round Stock Price Adjustment
+      </h1>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {companies.map((company) => (
-          <div className="flex flex-col p-4 bg-slate-800" key={company.id}>
-            <h2>{company.name}</h2>
-            <div className="flex gap-3 flex-col">
-              <span>Current Stock Price: {company.currentStockPrice}</span>
-              <div className="grid grid-cols-3 gap-4">
-                <h3>Price Changes During Production</h3>
+          <div
+            className="flex flex-col p-4 bg-slate-800 rounded-lg shadow-md"
+            key={company.id}
+          >
+            <CompanyInfo company={company} />
+            <div className="mt-4">
+              <span className="block text-lg font-semibold mb-2">
+                Current Stock Price: ${company.currentStockPrice}
+              </span>
+              <div>
+                <h3 className="text-md font-semibold mb-2">
+                  Recent Price Changes
+                </h3>
                 {displayLastStockPrices(company.StockHistory)}
               </div>
             </div>
