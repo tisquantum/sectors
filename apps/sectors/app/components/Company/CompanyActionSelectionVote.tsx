@@ -33,6 +33,7 @@ import { RiWallet3Fill } from "@remixicon/react";
 import ShareHolders from "./ShareHolders";
 import { sectorColors } from "@server/data/gameData";
 import { cp } from "fs";
+import PlayerAvatar from "../Player/PlayerAvatar";
 const companyActions = [
   {
     id: 1,
@@ -151,14 +152,9 @@ const CompanyActionSelectionVote = ({
                           actionVoteResult.actionVoted == action.name
                       )
                       .map((action: OperatingRoundVoteWithPlayer) => (
-                        <ShareComponent
+                        <PlayerAvatar
                           key={action.id}
-                          quantity={
-                            action.Player.Share.filter(
-                              (share) => share.companyId === action.companyId
-                            ).length
-                          }
-                          name={action.Player.nickname}
+                          badgeContent={action.weight}
                           player={action.Player}
                         />
                       ))}

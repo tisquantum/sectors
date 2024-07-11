@@ -36,7 +36,6 @@ const MeetingMessages = () => {
     );
 
     return () => {
-      console.log("Unsubscribing from channel meeting");
       channel.unbind(EVENT_MEETING_MESSAGE_CREATED);
     };
   }, [channel, isLoading]);

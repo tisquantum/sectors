@@ -559,7 +559,7 @@ export class GameManagementService {
         if (!voteCount[vote.revenueDistribution]) {
           voteCount[vote.revenueDistribution] = 0;
         }
-        voteCount[vote.revenueDistribution] += 1;
+        voteCount[vote.revenueDistribution] += vote.weight;
       });
 
       // Get the option with the most votes
@@ -833,9 +833,9 @@ export class GameManagementService {
     const actionVotes = votes.reduce<ActionVotesAccumulator>((acc, vote) => {
       if (vote.actionVoted in acc) {
         acc[vote.actionVoted] =
-          (acc[vote.actionVoted] || 0) + vote.Player.Share.length;
+          (acc[vote.actionVoted] || 0) + vote.weight;
       } else {
-        acc[vote.actionVoted] = vote.Player.Share.length;
+        acc[vote.actionVoted] = vote.weight;
       }
       return acc;
     }, {} as ActionVotesAccumulator);
@@ -1364,6 +1364,8 @@ export class GameManagementService {
     operatingRoundId?: number;
     companyId?: string;
   }) {
+    console.log('start phase stock round id', stockRoundId);
+    console.log('start phase operating round id', operatingRoundId);
     const gameChannelId = getGameChannelId(gameId);
 
     const phase = await this.phaseService.createPhase({

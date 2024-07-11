@@ -223,7 +223,6 @@ const MeetingInput = () => {
   const [selectedSectorSubject, setSelectedSectorSubject] = useState("");
 
   const handleTopicChange: ChangeEventHandler<HTMLSelectElement> = (e) => {
-    console.log("e.target.value", e.target.value);
     const topic = topics.find(
       (topic) => topic.key === (e.target.value as TopicKey)
     ) as Topic | undefined;
@@ -242,7 +241,6 @@ const MeetingInput = () => {
     } else if (selectedTopic?.key === "sector") {
       content = `${selectedSectorTopic} ${selectedComplement} ${selectedSectorSubject}`;
     }
-    console.log("meeting message content", content);
     meetingMessageMutation.mutate(
       {
         content,

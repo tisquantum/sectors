@@ -11,7 +11,6 @@ import { CompanyStatus } from "@server/prisma/prisma.client";
 
 const OperatingRoundProduction = () => {
   const { currentPhase } = useGame();
-  console.log("currentPhase", currentPhase);
   const { data: operatingRound, isLoading } =
     trpc.operatingRound.getOperatingRoundWithProductionResults.useQuery({
       where: {

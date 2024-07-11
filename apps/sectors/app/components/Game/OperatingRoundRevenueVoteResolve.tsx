@@ -4,6 +4,8 @@ import { RevenueDistributionVoteWithRelations } from "@server/prisma/prisma.type
 import { Avatar, Chip } from "@nextui-org/react";
 import CompanyInfo from "../Company/CompanyInfo";
 import { CompanyTierData } from "@server/data/constants";
+import PlayerAvatar from "../Player/PlayerAvatar";
+import { RevenueDistribution } from "@server/prisma/prisma.client";
 
 const OperatingRoundRevenueVoteResolve = () => {
   const { currentPhase } = useGame();
@@ -36,9 +38,50 @@ const OperatingRoundRevenueVoteResolve = () => {
   if (!revenueDistributionVote) {
     return <div>No revenue distribution vote found</div>;
   }
+  const renderResultInfo = (
+    revenueDistribution: RevenueDistribution | null,
+    options: {
+      revenue?: number;
+      dividendFull?: number;
+      dividendHalf?: number;
+      retainedRevenueHalf?: number;
+    }
+  ) => {
+    switch (revenueDistribution) {
+      case RevenueDistribution.DIVIDEND_FULL:
+        return (
+          <div className="flex flex-col gap-1">
+            <span className="text-lg font-semibold">Dividends</span>
+            <span>Full Per Share: ${options.dividendFull}</span>
+          </div>
+        );
+      case RevenueDistribution.DIVIDEND_FIFTY_FIFTY:
+        return (
+          <>
+            <div className="flex flex-col gap-1">
+              <span className="text-lg font-semibold">Dividends</span>
+              <span>Half Per Share: ${options.dividendHalf}</span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-lg font-semibold">Retained Revenue</span>
+              <span>To Company (Half): ${options.retainedRevenueHalf}</span>
+            </div>
+          </>
+        );
+      case RevenueDistribution.RETAINED:
+        return (
+          <div className="flex flex-col gap-1">
+            <span className="text-lg font-semibold">Retained Revenue</span>
+            <span>To Company (Full): ${options.revenue}</span>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
   return (
     <div>
-      <h1>Operating Round Revenue Vote Resolution</h1>
+      <h1 className="text-2xl">Operating Round Revenue Vote Resolution</h1>
       <div className="grid grid-cols-3 gap-4">
         {
           //display all companies with revenue greater than 0
@@ -63,26 +106,21 @@ const OperatingRoundRevenueVoteResolve = () => {
                 <CompanyInfo company={productionResult.Company} />
                 <div className="flex flex-col gap-2 rounded-md bg-gray-950 m-2 p-2">
                   <span className="text-lg">Production Results</span>
+                  <span>Result: {productionResult.revenueDistribution}</span>
                   <span>Revenue: ${revenue}</span>
                   <span className="text-md my-2">
                     Operating Costs: ${operatingCosts}
                   </span>
-                  <div className="flex flex-col gap-1">
-                    <span className="text-lg font-semibold">Dividends</span>
-                    <span>Full Per Share: ${dividendFull}</span>
-                    <span>Half Per Share: ${dividendHalf}</span>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <span className="text-lg font-semibold">
-                      Retained Revenue
-                    </span>
-                    <span>To Company (Half): ${retainedRevenueHalf}</span>
-                    <span>To Company (Full): ${revenue}</span>
-                  </div>
+                  {renderResultInfo(productionResult.revenueDistribution, {
+                    revenue,
+                    dividendFull,
+                    dividendHalf,
+                    retainedRevenueHalf,
+                  })}
                 </div>
                 <div className="flex flex-col">
-                  <span>Vote Results</span>
-                  <div className="flex gap-3">
+                  <span className="mb-1">Vote Results</span>
+                  <div className="flex my-2 gap-3">
                     {revenueDistributionVote
                       .filter(
                         (vote: RevenueDistributionVoteWithRelations) =>
@@ -91,7 +129,12 @@ const OperatingRoundRevenueVoteResolve = () => {
                       .map((vote: RevenueDistributionVoteWithRelations) => (
                         <Chip
                           key={vote.id}
-                          avatar={<Avatar name={vote.Player.nickname} />}
+                          avatar={
+                            <PlayerAvatar
+                              player={vote.Player}
+                              badgeContent={vote.weight}
+                            />
+                          }
                         >
                           <span>{vote.revenueDistribution}</span>
                         </Chip>

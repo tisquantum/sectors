@@ -7,6 +7,7 @@ import {
   RiPriceTag3Fill,
   RiSailboatFill,
   RiSparkling2Fill,
+  RiTeamFill,
   RiWallet3Fill,
 } from "@remixicon/react";
 import { CompanyTierData } from "@server/data/constants";
@@ -47,9 +48,7 @@ const CompanyInfo = ({
             </div>
           </div>
           <div className="flex gap-1">
-            <span>{company.companyTier}</span>
-            |
-            <span>{company.status}</span>
+            <span>{company.companyTier}</span>|<span>{company.status}</span>
           </div>
           <div className="flex gap-3">
             <Tooltip content="Unit Price of goods. Each consumer consumes one good per operating round given the company meets supply and demand.">
@@ -89,12 +88,20 @@ const CompanyInfo = ({
             style={{ backgroundColor: sectorColors[company.Sector.name] }}
           >
             <span>{company.Sector.name}</span>
-            <Tooltip content="Base sector demand, every company in the sector receives this base bonus.">
-              <div className="flex items-center">
-                <RiHandCoinFill size={18} className="ml-2" />
-                <span className="ml-1">{company.Sector.demand}</span>
-              </div>
-            </Tooltip>
+            <div className="flex items-center gap-1">
+              <Tooltip content="Base sector demand, every company in the sector receives this base bonus.">
+                <div className="flex items-center">
+                  <RiHandCoinFill size={18} className="ml-2" />
+                  <span className="ml-1">{company.Sector.demand}</span>
+                </div>
+              </Tooltip>
+              <Tooltip content="The amount of consumers currently looking to buy in this sector.">
+                <div className="flex items-center">
+                  <RiTeamFill size={18} className="ml-2" />
+                  <span className="ml-1">{company.Sector.consumers}</span>
+                </div>
+              </Tooltip>
+            </div>
           </div>
           <div className="grid grid-cols-2 items-center">
             <Tooltip content="Prestige tokens. While held, they prioritize the company for production. Can be spent for a bonus.">

@@ -28,7 +28,6 @@ const ShareIssue = ({ companyAction }: { companyAction: CompanyAction }) => {
 
 const CompanyVoteResolve = () => {
   const { currentPhase } = useGame();
-  console.log("currentPhase", currentPhase);
   const { data: companyAction, isLoading } =
     trpc.companyAction.getCompanyAction.useQuery({
       operatingRoundId: currentPhase?.operatingRoundId || 0,
@@ -40,8 +39,7 @@ const CompanyVoteResolve = () => {
   if (!companyAction) {
     return <div>No company actions found</div>;
   }
-  console.log("companyAction", companyAction);
-
+  
   const renderAction = () => {
     switch (companyAction.action) {
       case OperatingRoundAction.MARKETING:

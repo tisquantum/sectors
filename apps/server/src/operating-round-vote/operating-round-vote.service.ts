@@ -31,15 +31,49 @@ export class OperatingRoundVoteService {
     });
   }
 
-  async createOperatingRoundVote(data: Prisma.OperatingRoundVoteCreateInput): Promise<OperatingRoundVote> {
+  async createOperatingRoundVote(
+    data: Prisma.OperatingRoundVoteCreateInput,
+  ): Promise<OperatingRoundVote> {
+    // Remove id
+    const newData = { ...data };
+
+    // Calculate vote weight
+    const sharesOwned = await this.prisma.share.findMany({
+      where: {
+        playerId: newData.Player.connect?.id,
+        companyId: newData.Company.connect?.id,
+      },
+    });
+
+    newData.weight = sharesOwned.length;
+
     return this.prisma.operatingRoundVote.create({
-      data,
+      data: newData,
     });
   }
 
-  async createManyOperatingRoundVotes(data: Prisma.OperatingRoundVoteCreateManyInput[]): Promise<Prisma.BatchPayload> {
+  async createManyOperatingRoundVotes(
+    data: Prisma.OperatingRoundVoteCreateManyInput[],
+  ): Promise<Prisma.BatchPayload> {
+    const processedData = await Promise.all(
+      data.map(async (d) => {
+        const newData = { ...d };
+
+        // Calculate vote weight
+        const sharesOwned = await this.prisma.share.findMany({
+          where: {
+            playerId: newData.playerId,
+            companyId: newData.companyId,
+          },
+        });
+
+        newData.weight = sharesOwned.length;
+        return newData;
+      }),
+    );
+
     return this.prisma.operatingRoundVote.createMany({
-      data,
+      data: processedData,
       skipDuplicates: true,
     });
   }
@@ -55,7 +89,9 @@ export class OperatingRoundVoteService {
     });
   }
 
-  async deleteOperatingRoundVote(where: Prisma.OperatingRoundVoteWhereUniqueInput): Promise<OperatingRoundVote> {
+  async deleteOperatingRoundVote(
+    where: Prisma.OperatingRoundVoteWhereUniqueInput,
+  ): Promise<OperatingRoundVote> {
     return this.prisma.operatingRoundVote.delete({
       where,
     });

@@ -328,6 +328,7 @@ model RevenueDistributionVote {
   productionResultId  Int
   playerId            String
   companyId           String
+  weight              Int                 @default(1)
   revenueDistribution RevenueDistribution
   ProductionResult    ProductionResult    @relation(fields: [productionResultId], references: [id])
   Player              Player              @relation(fields: [playerId], references: [id])
@@ -360,6 +361,7 @@ model OperatingRoundVote {
   operatingRoundId Int
   playerId         String
   companyId        String
+  weight           Int                  @default(1)
   actionVoted      OperatingRoundAction
   Company          Company              @relation(fields: [companyId], references: [id])
   OperatingRound   OperatingRound       @relation(fields: [operatingRoundId], references: [id])

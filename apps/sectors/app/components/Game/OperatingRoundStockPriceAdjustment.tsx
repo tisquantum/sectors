@@ -26,11 +26,9 @@ const OperatingRoundStockPriceAdjustment = () => {
   const displayLastStockPrices = (stockHistory: StockHistoryWithPhase[]) => {
     //sort stock history descending
     stockHistory.sort((a, b) => b.id - a.id);
-    
-    const relevantStockPrices = //get the last 3 stock prices
-      stockHistory.length > 3
-        ? stockHistory.slice(stockHistory.length - 3)
-        : stockHistory;
+
+    const relevantStockPrices = //get the first 3 stock prices
+      stockHistory.length > 3 ? stockHistory.slice(0, 3) : stockHistory;
 
     return relevantStockPrices.map((history) => (
       <div
@@ -44,7 +42,7 @@ const OperatingRoundStockPriceAdjustment = () => {
       </div>
     ));
   };
-
+  
   return (
     <div className="p-6 rounded-lg shadow-md">
       <h1 className="text-2xl font-bold mb-6">
@@ -56,7 +54,7 @@ const OperatingRoundStockPriceAdjustment = () => {
             className="flex flex-col p-4 bg-slate-800 rounded-lg shadow-md"
             key={company.id}
           >
-            <CompanyInfo company={company} />
+            <CompanyInfo company={company} showBarChart />
             <div className="mt-4">
               <span className="block text-lg font-semibold mb-2">
                 Current Stock Price: ${company.currentStockPrice}

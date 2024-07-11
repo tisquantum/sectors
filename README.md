@@ -140,3 +140,9 @@ I'm thinking short orders can only be performed on a company you have no ownersh
 - bug with share distribution when 2 players are trying to buy the same amount of shares market order buy ipo
 
 - research cards should probably, at first, only adjust the game state at the moment they occur.  this is simpler than, "when x happens, y should occur".  research upkeep can occur during "end turn" step.
+
+- TODO: Resolution for finding the next company to act is not working during company vote.
+
+- TODO: operating round id / stock round id is being set to null too early. maybe when we switch to upkeep phase?
+
+- TODO: Split out dividend payout.  Make sure calculations are correct.

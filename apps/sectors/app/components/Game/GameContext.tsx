@@ -70,11 +70,9 @@ export const GameProvider: React.FC<{
 
   useEffect(() => {
     if (!channel || !gameId) {
-      console.log("early return pusher subscription");
       return;
     }
     const handleNewPhase = (phaseName: PhaseName) => {
-      console.log('handleNewPhase', phaseName);
       refetchGameState();
       refetchAuthPlayer();
       if(phaseName == PhaseName.STOCK_RESOLVE_MARKET_ORDER) {
@@ -83,7 +81,6 @@ export const GameProvider: React.FC<{
     };
 
     const handleNewPlayerOrder = (data: EVENT_NEW_PLAYER_ORDER_PLAYER_ID__PAYLOAD) => {
-      console.log("New player order, updating player order list.");
       refetchPlayerOrder();
     };
 
@@ -91,7 +88,6 @@ export const GameProvider: React.FC<{
     channel.bind(EVENT_NEW_PLAYER_ORDER_PLAYER_ID, handleNewPlayerOrder);
 
     return () => {
-      console.log("Unsubscribing from game channel");
       channel.unbind(EVENT_NEW_PHASE, handleNewPhase);
       channel.unbind(EVENT_NEW_PLAYER_ORDER_PLAYER_ID, handleNewPlayerOrder);
     };

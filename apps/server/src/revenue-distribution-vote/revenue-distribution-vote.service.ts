@@ -56,18 +56,46 @@ export class RevenueDistributionVoteService {
   async createRevenueDistributionVote(
     data: Prisma.RevenueDistributionVoteCreateInput,
   ): Promise<RevenueDistributionVote> {
+    //calculate vote weight
+    let voteWeight = 1;
+    //get shares owned by player
+    const sharesOwned = await this.prisma.share.findMany({
+      where: {
+        playerId: data.Player.connect?.id,
+        companyId: data.Company.connect?.id,
+      },
+    });
+    voteWeight = sharesOwned.length;
+    const input = { ...data, weight: voteWeight };
     return this.prisma.revenueDistributionVote.create({
-      data,
+      data: input,
     });
   }
 
   async createManyRevenueDistributionVotes(
     data: Prisma.RevenueDistributionVoteCreateManyInput[],
   ): Promise<RevenueDistributionVote[]> {
-    // Remove id
-    data.forEach((d) => delete d.id);
+    // Remove id and calculate vote weight
+    const processedData = await Promise.all(
+      data.map(async (d) => {
+        const newData = { ...d };
+        delete newData.id;
+
+        // Calculate vote weight
+        const sharesOwned = await this.prisma.share.findMany({
+          where: {
+            playerId: newData.playerId,
+            companyId: newData.companyId,
+          },
+        });
+
+        newData.weight = sharesOwned.length;
+        return newData;
+      }),
+    );
+
     return this.prisma.revenueDistributionVote.createManyAndReturn({
-      data,
+      data: processedData,
       skipDuplicates: true,
     });
   }

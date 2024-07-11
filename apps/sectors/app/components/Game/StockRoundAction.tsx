@@ -14,7 +14,6 @@ const StockRoundAction = () => {
   const [currentOrder, setCurrentOrder] = useState<any>(null);
   const [isIpo, setIsIpo] = useState<boolean>(false);
   const handleOrder = (order: Company, isIpo?: boolean) => {
-    console.log("handleOrder", order, isIpo);
     setCurrentOrder(order);
     setIsIpo(isIpo || false);
   };
@@ -23,7 +22,6 @@ const StockRoundAction = () => {
   }, [currentPhase?.name]);
   const [newOrderCount, setNewOrderCount] = useState<number>(0);
   const doSomethingPostOrderConfirmed = () => {
-    console.log("doSomethingPostOrderConfirmed");
     setNewOrderCount((prev) => prev + 1);
   };
   return (

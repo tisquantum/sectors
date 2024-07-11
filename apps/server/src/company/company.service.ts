@@ -105,6 +105,7 @@ export class CompanyService {
       where,
       orderBy,
       include: {
+        Share: true,
         Sector: true,
         StockHistory: {
           include: {

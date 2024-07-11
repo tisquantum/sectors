@@ -25,20 +25,19 @@ const PlayerAvatar = ({
   player,
   showNameLabel,
   badgeContent,
-  size = "lg",
+  size = "md",
 }: {
   player: Player;
   showNameLabel?: boolean;
   badgeContent?: number;
   size?: "sm" | "md" | "lg" | undefined;
 }) => {
-  console.log("avatar color", hashStringToColor(player.nickname));
   const getSize = (size: "sm" | "md" | "lg" | undefined) => {
     switch (size) {
       case "sm":
         return 32;
       case "md":
-        return 40;
+        return 64;
       case "lg":
         return 128;
       default:
@@ -61,7 +60,7 @@ const PlayerAvatar = ({
             <Avatar size={size} name={player.nickname} src={avatar} />
           </Badge>
         ) : (
-          <Avatar name={player.nickname} src={avatar} />
+          <Avatar size={size} name={player.nickname} src={avatar} />
         )}
       </Tooltip>
       {showNameLabel && <span>{player.nickname}</span>}

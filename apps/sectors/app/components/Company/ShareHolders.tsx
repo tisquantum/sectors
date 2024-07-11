@@ -52,6 +52,7 @@ const ShareHolders = ({ companyId }: { companyId: string }) => {
           key={playerId}
           name={shares[0].Player?.nickname || "Unknown Player"}
           quantity={shares.length}
+          player={shares[0].Player}
         />
       ))}
     </div>

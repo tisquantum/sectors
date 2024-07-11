@@ -42,13 +42,12 @@ const GameTopBar = ({
     currentView === view
       ? "bg-blue-500 text-white"
       : "bg-slate-700 text-stone-100";
-  console.log("currentPhase", currentPhase);
   const checkNextPhase = async (nextPhaseName: PhaseName, currentPhase: any) => {
     const doesNextPhaseNeedToBePlayed = await trpcClient.query("game.doesNextPhaseNeedToBePlayed", {
       phaseName: nextPhaseName,
       currentPhase: currentPhase,
     });
-    console.log('doesNextPhaseNeedToBePlayed', doesNextPhaseNeedToBePlayed);
+    
     return doesNextPhaseNeedToBePlayed;
   };
 

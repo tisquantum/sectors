@@ -60,8 +60,8 @@ const PendingMarketOrders = ({
   };
 
   const containerVariants = {
-    hidden: { opacity: 0, y: 0 },
-    visible: { opacity: 1, y: 20, transition: { delay: 0.5, duration: 0.5 } },
+    hidden: { opacity: 0, y: -20 },
+    visible: { opacity: 1, y: 0, transition: { delay: 0.5, duration: 0.5 } },
   };
   return (
     <div className="space-y-2">
@@ -93,7 +93,7 @@ const PendingMarketOrders = ({
                 {company} {netDifference}
               </span>
             </div>
-            <div className="flex flex-wrap gap-2 mb-5">
+            <div className="flex flex-wrap gap-2">
               {orders.map((order, index) =>
                 isResolving ? (
                   <>

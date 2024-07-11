@@ -151,9 +151,6 @@ const StockChart = () => {
     onOpen();
   };
 
-  console.log("selectedCompany", selectedCompany);
-  console.log("chartData", chartData);
-
   const valueFormatter = function (number: number) {
     return "$ " + new Intl.NumberFormat("us").format(number).toString();
   };
@@ -195,7 +192,7 @@ const StockChart = () => {
       }
     });
   });
-  console.log("allChartData", allChartData);
+  
   return (
     <div className="flex flex-col">
       <Legend />

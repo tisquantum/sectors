@@ -24,7 +24,6 @@ const CountdownModal: React.FC<CountdownModalProps> = ({
   countdownCallback,
   isOpen
 }) => {
-  console.log("CountdownModal isOpen", isOpen);
   return (
     <Modal
       backdrop="opaque"

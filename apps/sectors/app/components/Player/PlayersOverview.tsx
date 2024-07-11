@@ -59,7 +59,7 @@ const PlayersOverview = ({ gameId }: { gameId: string }) => {
         return (
           <AccordionItem
             key={playerWithShares.id}
-            startContent={<PlayerAvatar player={playerWithShares} />}
+            startContent={<PlayerAvatar player={playerWithShares} size="lg" />}
             title={playerWithShares.nickname}
             subtitle={
               <span className="flex items-center content-center">
