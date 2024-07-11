@@ -11,11 +11,15 @@ import {
 } from '@prisma/client';
 import { CompanyWithSector, PlayerOrderWithCompany } from '@server/prisma/prisma.types';
 import {
+  STOCK_ACTION_SUB_ROUND_MAX,
   StockTierChartRange,
   stockGridPrices,
   stockTierChartRanges,
 } from './constants';
-let stockActionCounter = 0;
+interface NextPhaseOptions {
+  allCompaniesHaveVoted?: boolean;
+  stockActionSubRound?: number;
+}
 /**
  * Controls the flow of the game by determining the next phase.
  * @param phaseName
@@ -23,14 +27,13 @@ let stockActionCounter = 0;
  */
 export function determineNextGamePhase(
   phaseName: PhaseName,
-  allCompaniesHaveVoted?: boolean,
+  options?: NextPhaseOptions
 ): {
   phaseName: PhaseName;
   roundType: RoundType;
 } {
   switch (phaseName) {
     case PhaseName.STOCK_MEET:
-      stockActionCounter = 0;
       return {
         phaseName: PhaseName.STOCK_RESOLVE_LIMIT_ORDER,
         roundType: RoundType.STOCK,
@@ -46,14 +49,12 @@ export function determineNextGamePhase(
         roundType: RoundType.STOCK,
       };
     case PhaseName.STOCK_ACTION_RESULT:
-      if (stockActionCounter < 2) {
-        stockActionCounter++;
+      if ((options?.stockActionSubRound || 0 ) < STOCK_ACTION_SUB_ROUND_MAX) {
         return {
           phaseName: PhaseName.STOCK_ACTION_ORDER,
           roundType: RoundType.STOCK,
         };
       } else {
-        stockActionCounter = 0; // Reset counter after 3 repetitions
         return {
           phaseName: PhaseName.STOCK_ACTION_REVEAL,
           roundType: RoundType.STOCK,
@@ -137,7 +138,7 @@ export function determineNextGamePhase(
         roundType: RoundType.OPERATING,
       };
     case PhaseName.OPERATING_COMPANY_VOTE_RESOLVE:
-      if (allCompaniesHaveVoted) {
+      if (options?.allCompaniesHaveVoted) {
         return {
           phaseName: PhaseName.CAPITAL_GAINS,
           roundType: RoundType.OPERATING,

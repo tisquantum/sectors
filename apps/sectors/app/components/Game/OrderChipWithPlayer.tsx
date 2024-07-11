@@ -9,7 +9,8 @@ import {
   PlayerOrderWithPlayerCompany,
   PlayerOrdersAllRelations,
 } from "@server/prisma/prisma.types";
-import React from "react";
+import React, { useMemo } from "react";
+import PlayerAvatar from "../Player/PlayerAvatar";
 
 const OrderChipWithPlayer = ({
   order,
@@ -25,8 +26,9 @@ const OrderChipWithPlayer = ({
       key={order.id}
       variant="flat"
       color={determineColorByOrderType(order.orderType, order.isSell)}
-      avatar={<Avatar name={order.Player.nickname} />}
+      avatar={<PlayerAvatar player={order.Player} />}
       endContent={endContent}
+      className="my-2"
     >
       <div className="flex items-center text-gray-100">
         <span>{order.orderType}</span>

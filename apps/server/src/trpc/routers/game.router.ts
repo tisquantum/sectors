@@ -2,7 +2,7 @@ import { PusherService } from 'nestjs-pusher';
 import { z } from 'zod';
 import { GamesService } from '@server/games/games.service';
 import { TrpcService } from '../trpc.service';
-import { Game, PhaseName, Prisma, RoundType } from '@prisma/client';
+import { Game, Phase, PhaseName, Prisma, RoundType } from '@prisma/client';
 import { GameManagementService } from '@server/game-management/game-management.service';
 import {
   EVENT_GAME_STARTED,
@@ -190,6 +190,30 @@ export default (trpc: TrpcService, ctx: Context) =>
         const { gameId } = input;
         return ctx.gameManagementService.haveAllCompaniesActionsResolved(
           gameId,
+        );
+      }),
+    doesNextPhaseNeedToBePlayed: trpc.procedure
+      .input(
+        z.object({
+          phaseName: z.nativeEnum(PhaseName),
+          currentPhase: z.object({
+            name: z.nativeEnum(PhaseName),
+            id: z.string(),
+            gameId: z.string(),
+            stockRoundId: z.number().nullable(),
+            operatingRoundId: z.number().nullable(),
+            companyId: z.string().nullable(),
+            phaseTime: z.number(),
+            createdAt: z.date(),
+            updatedAt: z.date(),
+          }),
+        }),
+      )
+      .query(async ({ input }) => {
+        const { phaseName, currentPhase } = input;
+        return ctx.gameManagementService.doesNextPhaseNeedToBePlayed(
+          phaseName,
+          currentPhase,
         );
       }),
   });

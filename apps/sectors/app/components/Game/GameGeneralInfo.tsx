@@ -16,14 +16,15 @@ import {
   RiBankFill,
 } from "@remixicon/react";
 import { Avatar } from "@nextui-org/react";
+import PlayerAvatar from "../Player/PlayerAvatar";
 
 const GameGeneralInfo = () => {
   const { currentPhase, gameState, authPlayer } = useGame();
   if (!gameState) return notFound();
   return (
     <div className="flex space-x-4 items-center">
-      <div className="flex items-center">
-        <Avatar name={authPlayer.nickname} size="md" className="mr-2" />
+      <div className="flex items-center gap-2">
+        <PlayerAvatar player={authPlayer} />
         <div className="flex flex-col">
           <div className="flex items-center text-md font-bold">
             <RiWalletFill size={18} /> ${authPlayer.cashOnHand}

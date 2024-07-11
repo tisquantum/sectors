@@ -3,6 +3,7 @@ import { Chip, Avatar, Badge } from "@nextui-org/react";
 import { PlayerOrderConcealedWithPlayer } from "@server/prisma/prisma.types";
 import { Player } from "@server/prisma/prisma.client";
 import { group } from "console";
+import PlayerAvatar from "./PlayerAvatar";
 
 const PlayerOrderConcealed: React.FC<{
   orders?: PlayerOrderConcealedWithPlayer[];
@@ -24,12 +25,11 @@ const PlayerOrderConcealed: React.FC<{
     <div className="grid grid-cols-3 gap-4 w-full">
       {Object.keys(grouped).map((index) => (
         <div className="flex items-center justify-center" key={index}>
-          <Badge color="secondary" content={grouped[index].count}>
-            <Avatar
-              name={grouped[index].Player?.nickname ?? "Unknown"}
-              size="sm"
-            />
-          </Badge>
+          <PlayerAvatar
+            player={grouped[index].Player}
+            badgeContent={grouped[index].count}
+            showNameLabel
+          />
         </div>
       ))}
     </div>

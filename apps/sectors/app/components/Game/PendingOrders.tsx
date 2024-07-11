@@ -28,6 +28,8 @@ import { sectorColors } from "@server/data/gameData";
 import { motion, AnimatePresence } from "framer-motion";
 import OrderChipWithPlayer from "./OrderChipWithPlayer";
 import { RiCloseCircleFill } from "@remixicon/react";
+import { flushAllTraces } from "next/dist/trace";
+import PlayerAvatar from "../Player/PlayerAvatar";
 interface GroupedOrders {
   [key: string]: PlayerOrdersAllRelations[];
 }
@@ -178,7 +180,7 @@ const PendingLimitOrders = ({
                 className="p-2 rounded flex items-center gap-2"
                 style={{ backgroundColor: sectorColors[order.Sector.name] }}
               >
-                <Avatar name={order.Player.nickname} />
+                <PlayerAvatar player={order.Player} />
                 <div>{order.Company.name}</div>
                 <div>
                   {String(order.orderType).toUpperCase()} @ {order.value}
@@ -234,6 +236,7 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
         createdAt: Prisma.SortOrder.asc,
       },
       where: {
+        isConcealed: false,
         Game: {
           id: gameId,
         },

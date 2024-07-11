@@ -126,6 +126,12 @@ export class GameManagementService {
       case PhaseName.STOCK_OPEN_LIMIT_ORDERS:
         await this.openLimitOrders(phase);
         break;
+      case PhaseName.STOCK_ACTION_RESULT:
+        await this.handleNewSubStockActionRound(phase);
+        break;
+      case PhaseName.STOCK_ACTION_REVEAL:
+        await this.handleStockActionReveal(phase);
+        break;
       case PhaseName.STOCK_RESOLVE_MARKET_ORDER:
         //resolve stock round
         await this.resolveMarketOrders(phase);
@@ -157,6 +163,36 @@ export class GameManagementService {
       default:
         return;
     }
+  }
+
+  async handleStockActionReveal(phase: Phase) {
+    try {
+      await this.playerOrderService.updateManyPlayerOrders({
+        where: {
+          stockRoundId: phase.stockRoundId || 0,
+        },
+        data: {
+          isConcealed: false,
+        },
+      });
+    } catch (error) {
+      console.error('Error revealing stock actions', error);
+    }
+  }
+
+  async handleNewSubStockActionRound(phase: Phase) {
+    //get the stock round
+    const stockRound = await this.stockRoundService.stockRound({
+      id: phase.stockRoundId || 0,
+    });
+    if (!stockRound) {
+      throw new Error('Stock round not found');
+    }
+    //increment the sub round
+    await this.stockRoundService.updateStockRound({
+      where: { id: stockRound.id },
+      data: { stockActionSubRound: stockRound.stockActionSubRound + 1 },
+    });
   }
 
   /**
@@ -1946,23 +1982,41 @@ export class GameManagementService {
     }
   }
 
+  /**
+   * Distributes shares among players based on their buy orders and the current phase.
+   *
+   * Priority Order for Distributing Shares:
+   * 1. **Phases Sorted by Creation Time**: Shares are distributed based on the order of phase creation time, with earlier phases having higher priority.
+   * 2. **Within Each Phase**:
+   *    - **Proportional Distribution**: If total requested shares exceed remaining shares, shares are distributed proportionally based on the number of buyers.
+   *    - **Random Allocation (Lottery)**: If there are remaining shares after proportional distribution, they are allocated randomly among the remaining orders.
+   *    - **Direct Fulfillment**: If total requested shares do not exceed remaining shares, all requested shares are fulfilled directly.
+   *
+   * @param buyOrders - Array of player orders with player and company details.
+   * @param location - The location from where the shares are to be distributed.
+   * @param companyId - The ID of the company whose shares are being distributed.
+   * @param shareService - Service to handle share-related operations.
+   */
   async distributeShares(
     buyOrders: PlayerOrderWithPlayerCompany[],
     location: ShareLocation,
     companyId: string,
     shareService: ShareService,
   ) {
+    // Calculate the total number of shares requested
     const totalBuyOrderShares = buyOrders.reduce(
       (acc, order) => acc + (order.quantity || 0),
       0,
     );
 
+    // Calculate the number of remaining shares at the specified location
     let remainingShares = Math.min(
       buyOrders[0].Company.Share.filter((share) => share.location == location)
         .length,
       totalBuyOrderShares,
     );
 
+    // Group buy orders by their associated phase
     const groupedByPhase = buyOrders.reduce<GroupedByPhase>((acc, order) => {
       const phaseId = order.Phase.id;
       if (!acc[phaseId]) {
@@ -1975,31 +2029,46 @@ export class GameManagementService {
       return acc;
     }, {});
 
+    // Sort phases by their creation time, earliest first
     const sortedByPhaseCreatedAt = Object.values(groupedByPhase).sort(
-      (a, b) =>
-        a.phase.createdAt.getUTCMilliseconds() -
-        b.phase.createdAt.getUTCMilliseconds(),
+      (a, b) => a.phase.createdAt.getTime() - b.phase.createdAt.getTime(),
     );
 
+    // Fetch all shares that can be distributed upfront
+    const allAvailableShares = await shareService.shares({
+      where: { companyId, location },
+      take: remainingShares,
+    });
+
+    let currentShareIndex = 0;
+
+    // Distribute shares within each phase
     for (const groupedOrders of sortedByPhaseCreatedAt) {
       if (remainingShares <= 0) break;
 
-      const totalShares = groupedOrders.orders.reduce(
+      const totalSharesInPhase = groupedOrders.orders.reduce(
         (acc, order) => acc + (order.quantity || 0),
         0,
       );
 
-      if (totalShares > remainingShares) {
+      if (totalSharesInPhase > remainingShares) {
+        // If total shares requested in the phase exceed remaining shares
         const numBuyers = groupedOrders.orders.length;
         const sharesPerBuyer = Math.floor(remainingShares / numBuyers);
 
-        const distributePromises = groupedOrders.orders.map(async (order) => {
-          if (sharesPerBuyer <= 0) return;
+        // Distribute shares proportionally
+        for (const order of groupedOrders.orders) {
+          const sharesToDistribute = Math.min(
+            sharesPerBuyer,
+            order.quantity || 0,
+          );
+          if (sharesToDistribute <= 0) continue;
 
-          const shares = await shareService.shares({
-            where: { companyId, location },
-            take: sharesPerBuyer,
-          });
+          const shares = allAvailableShares.slice(
+            currentShareIndex,
+            currentShareIndex + sharesToDistribute,
+          );
+          currentShareIndex += sharesToDistribute;
 
           await Promise.all([
             shareService.updateManySharesUnchecked({
@@ -2012,7 +2081,7 @@ export class GameManagementService {
             this.playerRemoveMoney(
               order.gameId,
               order.playerId,
-              sharesPerBuyer * order.Company.currentStockPrice!,
+              sharesToDistribute * order.Company.currentStockPrice!,
             ),
             this.prisma.playerOrder.update({
               where: { id: order.id },
@@ -2020,58 +2089,49 @@ export class GameManagementService {
             }),
           ]);
 
-          remainingShares -= sharesPerBuyer;
-        });
-
-        await Promise.all(distributePromises);
-
-        if (remainingShares > 0) {
-          const lotteryPromises = [];
-
-          while (remainingShares > 0 && groupedOrders.orders.length > 0) {
-            const randomIndex = Math.floor(
-              Math.random() * groupedOrders.orders.length,
-            );
-            const order = groupedOrders.orders[randomIndex];
-
-            lotteryPromises.push(
-              (async () => {
-                const shares = await shareService.shares({
-                  where: { companyId, location },
-                  take: 1,
-                });
-
-                await Promise.all([
-                  shareService.updateManySharesUnchecked({
-                    where: { id: shares[0].id },
-                    data: {
-                      location: ShareLocation.PLAYER,
-                      playerId: order.playerId,
-                    },
-                  }),
-                  this.playersService.updatePlayer({
-                    where: { id: order.playerId },
-                    data: {
-                      cashOnHand: {
-                        decrement: order.Company.currentStockPrice!,
-                      },
-                    },
-                  }),
-                  this.prisma.playerOrder.update({
-                    where: { id: order.id },
-                    data: { orderStatus: OrderStatus.FILLED },
-                  }),
-                ]);
-
-                remainingShares -= 1;
-                groupedOrders.orders.splice(randomIndex, 1);
-              })(),
-            );
-          }
-
-          await Promise.all(lotteryPromises);
+          remainingShares -= sharesToDistribute;
         }
 
+        // Allocate remaining shares using a lottery system
+        while (remainingShares > 0 && groupedOrders.orders.length > 0) {
+          const randomIndex = Math.floor(
+            Math.random() * groupedOrders.orders.length,
+          );
+          const order = groupedOrders.orders[randomIndex];
+
+          const shares = allAvailableShares.slice(
+            currentShareIndex,
+            currentShareIndex + 1,
+          );
+          currentShareIndex += 1;
+
+          await Promise.all([
+            shareService.updateManySharesUnchecked({
+              where: { id: shares[0].id },
+              data: {
+                location: ShareLocation.PLAYER,
+                playerId: order.playerId,
+              },
+            }),
+            this.playersService.updatePlayer({
+              where: { id: order.playerId },
+              data: {
+                cashOnHand: {
+                  decrement: order.Company.currentStockPrice!,
+                },
+              },
+            }),
+            this.prisma.playerOrder.update({
+              where: { id: order.id },
+              data: { orderStatus: OrderStatus.FILLED },
+            }),
+          ]);
+
+          remainingShares -= 1;
+          groupedOrders.orders.splice(randomIndex, 1);
+        }
+
+        // Mark remaining orders as rejected
         await Promise.all(
           groupedOrders.orders.map((order) =>
             this.prisma.playerOrder.update({
@@ -2081,13 +2141,15 @@ export class GameManagementService {
           ),
         );
       } else {
-        const distributePromises = groupedOrders.orders.map(async (order) => {
+        // Distribute shares if total shares requested in phase do not exceed remaining shares
+        for (const order of groupedOrders.orders) {
           const sharesToGive = Math.min(order.quantity || 0, remainingShares);
 
-          const shares = await shareService.shares({
-            where: { companyId, location },
-            take: sharesToGive,
-          });
+          const shares = allAvailableShares.slice(
+            currentShareIndex,
+            currentShareIndex + sharesToGive,
+          );
+          currentShareIndex += sharesToGive;
 
           await Promise.all([
             shareService.updateManySharesUnchecked({
@@ -2109,9 +2171,7 @@ export class GameManagementService {
           ]);
 
           remainingShares -= sharesToGive;
-        });
-
-        await Promise.all(distributePromises);
+        }
       }
     }
   }
@@ -2186,5 +2246,79 @@ export class GameManagementService {
     return currentOperatingRound.companyActions.every(
       (action) => action.resolved,
     );
+  }
+
+  async doesNextPhaseNeedToBePlayed(phaseName: PhaseName, currentPhase: Phase) {
+    switch (phaseName) {
+      case PhaseName.STOCK_RESOLVE_LIMIT_ORDER:
+        //count limit orders
+        return this.limitOrdersRequiringFulfillment(currentPhase?.gameId || '');
+      case PhaseName.STOCK_RESOLVE_MARKET_ORDER:
+        return this.stockOrdersRequiredResolution(currentPhase?.stockRoundId || 0);
+      case PhaseName.STOCK_SHORT_ORDER_INTEREST:
+        return this.stockOrdersOpen(currentPhase?.gameId || '');
+      case PhaseName.STOCK_ACTION_SHORT_ORDER:
+        return this.stockOrdersOpen(currentPhase?.gameId || '');
+      case PhaseName.STOCK_RESOLVE_PENDING_SHORT_ORDER:
+        return this.stockOrdersPending(currentPhase?.stockRoundId || 0);
+      case PhaseName.STOCK_OPEN_LIMIT_ORDERS:
+        return this.limitOrdersPending(currentPhase?.stockRoundId || 0);
+      default:
+        return true;
+    }
+  }
+
+  async limitOrdersPending(stockRoundId: number) {
+    const playerOrders = await this.playerOrderService.playerOrders({
+      where: {
+        stockRoundId,
+        orderType: OrderType.LIMIT,
+        orderStatus: OrderStatus.PENDING,
+      },
+    });
+    return playerOrders.length > 0;
+  }
+
+  async stockOrdersPending(stockRoundId: number) {
+    const playerOrders = await this.playerOrderService.playerOrders({
+      where: {
+        stockRoundId,
+        orderType: OrderType.SHORT,
+        orderStatus: OrderStatus.PENDING,
+      },
+    });
+    return playerOrders.length > 0;
+  }
+
+  async stockOrdersOpen(gameId: string) {
+    const playerOrders = await this.playerOrderService.playerOrders({
+      where: {
+        gameId,
+        orderType: OrderType.SHORT,
+        orderStatus: OrderStatus.OPEN,
+      },
+    });
+    return playerOrders.length > 0;
+  }
+
+  async stockOrdersRequiredResolution(stockRoundId: number) {
+    const playerOrders = await this.playerOrderService.playerOrders({
+      where: {
+        stockRoundId,
+        orderType: OrderType.MARKET,
+        orderStatus: OrderStatus.PENDING,
+      },
+    });
+    return playerOrders.length > 0;
+  }
+  async limitOrdersRequiringFulfillment(gameId: string) {
+    const playerOrders = await this.playerOrderService.playerOrders({
+      where: {
+        gameId,
+        orderType: OrderType.LIMIT,
+        orderStatus: OrderStatus.FILLED_PENDING_SETTLEMENT,
+      },
+    });
+    return playerOrders.length > 0;
   }
 }

@@ -307,3 +307,5 @@ export const CompanyTierData = {
     supplyMax: 10
   },
 }
+
+export const STOCK_ACTION_SUB_ROUND_MAX = 2;

@@ -3,8 +3,12 @@ import GameGeneralInfo from "./GameGeneralInfo";
 import Timer from "./Timer";
 import { useGame } from "./GameContext";
 import { useState } from "react";
-import { trpc } from "@sectors/app/trpc";
-import { CompanyStatus, PhaseName, RoundType } from "@server/prisma/prisma.client";
+import { trpc, trpcClient } from "@sectors/app/trpc";
+import {
+  CompanyStatus,
+  PhaseName,
+  RoundType,
+} from "@server/prisma/prisma.client";
 import { determineNextGamePhase } from "@server/data/helpers";
 import next from "next";
 import { getNextCompanyOperatingRoundTurn } from "@server/data/constants";
@@ -39,31 +43,68 @@ const GameTopBar = ({
       ? "bg-blue-500 text-white"
       : "bg-slate-700 text-stone-100";
   console.log("currentPhase", currentPhase);
-  const handleNextPhase = () => {
-    if(!currentPhase) return;
+  const checkNextPhase = async (nextPhaseName: PhaseName, currentPhase: any) => {
+    const doesNextPhaseNeedToBePlayed = await trpcClient.query("game.doesNextPhaseNeedToBePlayed", {
+      phaseName: nextPhaseName,
+      currentPhase: currentPhase,
+    });
+    console.log('doesNextPhaseNeedToBePlayed', doesNextPhaseNeedToBePlayed);
+    return doesNextPhaseNeedToBePlayed;
+  };
+
+  const handleNextPhase = async () => {
+    if (!currentPhase) return;
+
     let nextPhase;
-    if(currentPhase.name === PhaseName.OPERATING_MEET) {
-      if(gameState.Company.every(company => company.status !== CompanyStatus.ACTIVE)) {
+    if (currentPhase.name === PhaseName.OPERATING_MEET) {
+      if (
+        gameState.Company.every(
+          (company) => company.status !== CompanyStatus.ACTIVE
+        )
+      ) {
         nextPhase = PhaseName.CAPITAL_GAINS;
       }
     }
+
     nextPhase = determineNextGamePhase(
       currentPhase?.name ?? PhaseName.STOCK_MEET,
-      allCompaniesVoted
+      {
+        allCompaniesHaveVoted: allCompaniesVoted,
+        stockActionSubRound: gameState.StockRound.find(
+          (stockRound) => stockRound.id === currentPhase?.stockRoundId
+        )?.stockActionSubRound,
+      }
     );
+
+    let doesNextPhaseNeedToBePlayed = await checkNextPhase(nextPhase.phaseName, currentPhase);
+
+    while (doesNextPhaseNeedToBePlayed === false) {
+      nextPhase = determineNextGamePhase(nextPhase.phaseName, {
+        allCompaniesHaveVoted: allCompaniesVoted,
+        stockActionSubRound: gameState.StockRound.find(
+          (stockRound) => stockRound.id === currentPhase?.stockRoundId
+        )?.stockActionSubRound,
+      });
+      doesNextPhaseNeedToBePlayed = await checkNextPhase(nextPhase.phaseName, currentPhase);
+    }
+
     let companyId;
-    if (
-      nextPhase.phaseName === PhaseName.OPERATING_ACTION_COMPANY_VOTE
-    ) {
+    if (nextPhase.phaseName === PhaseName.OPERATING_ACTION_COMPANY_VOTE) {
       if (currentPhase?.companyId) {
         companyId = getNextCompanyOperatingRoundTurn(
-          gameState.Company.filter(company => company.status == CompanyStatus.ACTIVE),
+          gameState.Company.filter(
+            (company) => company.status == CompanyStatus.ACTIVE
+          ),
           currentPhase?.companyId
         )?.id;
       } else {
-        companyId = getNextCompanyOperatingRoundTurn(gameState.Company.filter(company => company.status == CompanyStatus.ACTIVE)).id;
+        companyId = getNextCompanyOperatingRoundTurn(
+          gameState.Company.filter(
+            (company) => company.status == CompanyStatus.ACTIVE
+          )
+        ).id;
       }
-      if(!companyId) {
+      if (!companyId) {
         nextPhase.phaseName = PhaseName.CAPITAL_GAINS;
       }
     } else {

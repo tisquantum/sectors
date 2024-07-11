@@ -1,14 +1,15 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import { Accordion, AccordionItem, Avatar, Divider } from "@nextui-org/react";
 import { CurrencyDollarIcon } from "@heroicons/react/24/solid";
 import PlayerShares from "./PlayerShares";
-import { trpc } from '@sectors/app/trpc';
-import { notFound } from 'next/navigation';
-import { PlayerWithShares } from '@server/prisma/prisma.types';
-import { Company } from '@server/prisma/prisma.client';
-import { RiWallet3Fill } from '@remixicon/react';
+import { trpc } from "@sectors/app/trpc";
+import { notFound } from "next/navigation";
+import { PlayerWithShares } from "@server/prisma/prisma.types";
+import { Company } from "@server/prisma/prisma.client";
+import { RiWallet3Fill } from "@remixicon/react";
+import PlayerAvatar from "./PlayerAvatar";
 
 export interface StockAggregation {
   totalShares: number;
@@ -17,12 +18,13 @@ export interface StockAggregation {
 }
 
 const PlayersOverview = ({ gameId }: { gameId: string }) => {
-  const { data: playersWithShares, isLoading } = trpc.game.getPlayersWithShares.useQuery(
-    { gameId },
-    {
-      refetchOnMount: false,
-    }
-  );
+  const { data: playersWithShares, isLoading } =
+    trpc.game.getPlayersWithShares.useQuery(
+      { gameId },
+      {
+        refetchOnMount: false,
+      }
+    );
 
   if (isLoading) return <div>Loading...</div>;
   if (playersWithShares == undefined) return notFound();
@@ -57,13 +59,7 @@ const PlayersOverview = ({ gameId }: { gameId: string }) => {
         return (
           <AccordionItem
             key={playerWithShares.id}
-            startContent={
-              <Avatar
-                name={playerWithShares.nickname}
-                size="sm"
-                className="mr-2"
-              />
-            }
+            startContent={<PlayerAvatar player={playerWithShares} />}
             title={playerWithShares.nickname}
             subtitle={
               <span className="flex items-center content-center">
@@ -83,6 +79,5 @@ const PlayersOverview = ({ gameId }: { gameId: string }) => {
     </Accordion>
   );
 };
-
 
 export default PlayersOverview;

@@ -32,7 +32,11 @@ const playerCompanies = [
   },
 ];
 
-const PlayerShares = ({ playerWithShares }: { playerWithShares: PlayerWithShares }) => {
+const PlayerShares = ({
+  playerWithShares,
+}: {
+  playerWithShares: PlayerWithShares;
+}) => {
   // Aggregate total value and total shares owned for each company
   const stockAggregation = playerWithShares.Share.reduce(
     (acc: Record<string, StockAggregation>, playerShare) => {
@@ -49,25 +53,35 @@ const PlayerShares = ({ playerWithShares }: { playerWithShares: PlayerWithShares
   );
 
   // Extract and map the companies from the aggregation
-  const playerCompanies = Object.entries(stockAggregation).map(([companyId, aggregation]) => ({
-    companyId,
-    shareTotal: aggregation.totalShares,
-    pricePerShare: aggregation.totalValue / aggregation.totalShares,
-    totalValue: aggregation.totalValue,
-    company: aggregation.company
-  }));
+  const playerCompanies = Object.entries(stockAggregation).map(
+    ([companyId, aggregation]) => ({
+      companyId,
+      shareTotal: aggregation.totalShares,
+      pricePerShare: aggregation.totalValue / aggregation.totalShares,
+      totalValue: aggregation.totalValue,
+      company: aggregation.company,
+    })
+  );
 
   return (
     <div className="grid grid-cols-4 gap-4">
-      {playerCompanies.length > 0 ? playerCompanies.map((company) => (
-        <div
-          key={company.companyId}
-          className="flex flex-col justify-center items-center"
-        >
-          <ShareComponent name={company.company?.stockSymbol || ""} quantity={company.shareTotal} />
-          <div className="text-sm mt-1">${company.totalValue.toFixed(2)}</div>
-        </div>
-      )) : <div>No shares owned.</div>}
+      {playerCompanies.length > 0 ? (
+        playerCompanies.map((company) => (
+          <div
+            key={company.companyId}
+            className="flex flex-col justify-center items-center"
+          >
+            <ShareComponent
+              name={company.company?.stockSymbol || ""}
+              quantity={company.shareTotal}
+              price={company.pricePerShare}
+            />
+            <div className="text-sm mt-1">${company.totalValue.toFixed(2)}</div>
+          </div>
+        ))
+      ) : (
+        <div>No shares owned.</div>
+      )}
     </div>
   );
 };

@@ -271,6 +271,17 @@ export class PlayerOrderService {
     });
   }
 
+  async updateManyPlayerOrders(params: {
+    where: Prisma.PlayerOrderWhereInput;
+    data: Prisma.PlayerOrderUpdateManyMutationInput;
+  }): Promise<Prisma.BatchPayload> {
+    const { where, data } = params;
+    return this.prisma.playerOrder.updateMany({
+      data,
+      where,
+    });
+  }
+  
   async deletePlayerOrder(
     where: Prisma.PlayerOrderWhereUniqueInput,
   ): Promise<PlayerOrder> {

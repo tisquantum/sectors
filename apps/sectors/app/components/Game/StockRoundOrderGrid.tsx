@@ -136,7 +136,7 @@ const StockRoundOrderGrid = ({
               >
                 <CardHeader className="bg-gray-950">
                   <div className="flex flex-col w-full">
-                    <CompanyInfo company={company}/>
+                    <CompanyInfo company={company} showBarChart />
                   </div>
                 </CardHeader>
                 <CardBody>
@@ -146,7 +146,7 @@ const StockRoundOrderGrid = ({
                       "bg-gray-950 rounded-md"
                     }`}
                   >
-                    <div className="mb-3">
+                    <div>
                       <div
                         className={`${
                           company.status == CompanyStatus.INACTIVE &&
@@ -217,7 +217,7 @@ const StockRoundOrderGrid = ({
                           Place Order IPO
                         </Button>
                       )}
-                    <div className="my-2">
+                    <div>
                       <div
                         className={`${
                           company.status == CompanyStatus.INACTIVE &&

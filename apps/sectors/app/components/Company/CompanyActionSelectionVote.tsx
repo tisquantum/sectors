@@ -159,6 +159,7 @@ const CompanyActionSelectionVote = ({
                             ).length
                           }
                           name={action.Player.nickname}
+                          player={action.Player}
                         />
                       ))}
                   </div>

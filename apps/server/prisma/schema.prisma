@@ -211,13 +211,14 @@ enum StockAction {
 }
 
 model StockRound {
-  id           Int           @id @default(autoincrement())
-  phase        Phase[]
-  gameId       String
-  playerOrders PlayerOrder[]
-  Game         Game          @relation(fields: [gameId], references: [id])
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  id                  Int           @id @default(autoincrement())
+  phase               Phase[]
+  gameId              String
+  stockActionSubRound Int           @default(0)
+  playerOrders        PlayerOrder[]
+  Game                Game          @relation(fields: [gameId], references: [id])
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
 }
 
 //The order of operations here is action -> order -> stock
@@ -235,6 +236,7 @@ model PlayerOrder {
   quantity       Int?
   value          Int? //value to be used for limit orders
   isSell         Boolean?
+  isConcealed    Boolean?        @default(true)
   location       ShareLocation
   orderType      OrderType
   ShortOrder     ShortOrder?
