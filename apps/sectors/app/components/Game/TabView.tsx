@@ -3,6 +3,7 @@
 import PlayersOverview from "../Player/PlayersOverview";
 import { Accordion, Card, CardBody, Tab, Tabs } from "@nextui-org/react";
 import SectorComponent from "../Sector/Sector";
+import GameLog from "./GameLog";
 
 // const players: PlayerWithStock[] = [
 //   {
@@ -210,9 +211,9 @@ const TabView = ({ gameId }: { gameId: string }) => {
           <SectorComponent />
         </Card>
       </Tab>
-      <Tab key="history" title="History">
+      <Tab key="game-log" title="GameLog">
         <Card>
-          <CardBody>Display history here.</CardBody>
+          <GameLog />
         </Card>
       </Tab>
       <Tab key="close" title="Close"></Tab>

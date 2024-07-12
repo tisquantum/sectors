@@ -96,7 +96,7 @@ const OperatingRoundRevenueVote = () => {
               shareCount > 0 ? Math.floor(revenue / shareCount) : 0;
             const dividendHalf =
               shareCount > 0 ? Math.floor(revenue / 2 / shareCount) : 0;
-            const retainedRevenueHalf = revenue / 2;
+            const retainedRevenueHalf = Math.floor(revenue / 2);
 
             return (
               <div
@@ -124,7 +124,7 @@ const OperatingRoundRevenueVote = () => {
                         Retained Revenue
                       </span>
                       <span>To Company (Half): ${retainedRevenueHalf}</span>
-                      <span>To Company (Full): ${revenue}</span>
+                      <span>To Company (Retains): ${revenue}</span>
                     </div>
                   </div>
                   {productionResult.Company && (

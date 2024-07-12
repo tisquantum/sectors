@@ -263,9 +263,7 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
   );
   //filter out any market orders that are not from the current stock round and are filled
   const marketOrdersToFilterOut = marketOrders.filter(
-    (order) =>
-      order.orderStatus === OrderStatus.FILLED &&
-      order.stockRoundId !== currentPhase?.stockRoundId
+    (order) => order.stockRoundId !== currentPhase?.stockRoundId
   );
   marketOrders = marketOrders.filter(
     (order) => !marketOrdersToFilterOut.includes(order)

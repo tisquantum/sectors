@@ -29,7 +29,7 @@ const PlayerAvatar = ({
 }: {
   player: Player;
   showNameLabel?: boolean;
-  badgeContent?: number;
+  badgeContent?: number | string;
   size?: "sm" | "md" | "lg" | undefined;
 }) => {
   const getSize = (size: "sm" | "md" | "lg" | undefined) => {
@@ -55,13 +55,15 @@ const PlayerAvatar = ({
   return (
     <div className="flex flex-col items-center">
       <Tooltip content={player.nickname}>
-        {badgeContent ? (
-          <Badge color="secondary" content={badgeContent}>
+        <div className="flex items-center">
+          {badgeContent ? (
+            <Badge color="secondary" content={badgeContent}>
+              <Avatar size={size} name={player.nickname} src={avatar} />
+            </Badge>
+          ) : (
             <Avatar size={size} name={player.nickname} src={avatar} />
-          </Badge>
-        ) : (
-          <Avatar size={size} name={player.nickname} src={avatar} />
-        )}
+          )}
+        </div>
       </Tooltip>
       {showNameLabel && <span>{player.nickname}</span>}
     </div>

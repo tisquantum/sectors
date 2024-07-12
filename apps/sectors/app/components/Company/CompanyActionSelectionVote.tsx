@@ -34,6 +34,7 @@ import ShareHolders from "./ShareHolders";
 import { sectorColors } from "@server/data/gameData";
 import { cp } from "fs";
 import PlayerAvatar from "../Player/PlayerAvatar";
+import CompanyInfo from "./CompanyInfo";
 const companyActions = [
   {
     id: 1,
@@ -110,13 +111,11 @@ const CompanyActionSelectionVote = ({
           {company.Sector.name}
         </span>
       </div>
-      <div>
-        <div className="flex gap-2">
-          <RiWallet3Fill size={24} /> ${company.cashOnHand}
+      <div className="flex gap-2 items-center">
+        <CompanyInfo company={company} />
+        <div className="max-w-80">
+          <ShareHolders companyId={company.id} />
         </div>
-      </div>
-      <div className="max-w-80">
-        <ShareHolders companyId={company.id} />
       </div>
       <div className="flex flex-col gap-3">
         <div>
@@ -145,7 +144,7 @@ const CompanyActionSelectionVote = ({
               <CardBody>{action.message}</CardBody>
               <CardFooter>
                 {actionVoteResults && withResult && (
-                  <div className="flex flex-col gap-2">
+                  <div className="flex gap-2">
                     {actionVoteResults
                       .filter(
                         (actionVoteResult) =>

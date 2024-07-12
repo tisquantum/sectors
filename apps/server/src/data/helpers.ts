@@ -49,7 +49,7 @@ export function determineNextGamePhase(
         roundType: RoundType.STOCK,
       };
     case PhaseName.STOCK_ACTION_RESULT:
-      if ((options?.stockActionSubRound || 0 ) < STOCK_ACTION_SUB_ROUND_MAX) {
+      if ((options?.stockActionSubRound || 0 ) <= STOCK_ACTION_SUB_ROUND_MAX) {
         return {
           phaseName: PhaseName.STOCK_ACTION_ORDER,
           roundType: RoundType.STOCK,
@@ -138,12 +138,6 @@ export function determineNextGamePhase(
         roundType: RoundType.OPERATING,
       };
     case PhaseName.OPERATING_COMPANY_VOTE_RESOLVE:
-      if (options?.allCompaniesHaveVoted) {
-        return {
-          phaseName: PhaseName.CAPITAL_GAINS,
-          roundType: RoundType.OPERATING,
-        };
-      }
       return {
         phaseName: PhaseName.OPERATING_ACTION_COMPANY_VOTE,
         roundType: RoundType.OPERATING,

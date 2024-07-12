@@ -210,6 +210,10 @@ const TabContentMO: React.FC<TabContentProps> = ({
   maxValue,
   minValue,
 }) => {
+  const [shareValue, setShareValue] = useState<number>(1);
+  useEffect(() => {
+    handleShares(minValue);
+  }, []);
   return (
     <div className="flex flex-col text-center items-center center-content justify-center gap-2">
       <OrderCounter
@@ -217,24 +221,30 @@ const TabContentMO: React.FC<TabContentProps> = ({
         maxOrders={MAX_MARKET_ORDER}
       />
       <BuyOrSell handleSelectionIsBuy={handleSelectionIsBuy} isIpo={isIpo} />
-      <Slider
-        size="md"
-        step={1}
-        color="foreground"
-        label="Shares"
-        showSteps={true}
-        maxValue={maxValue}
-        minValue={minValue}
-        onChange={(value) => {
-          console.log("slider value mo", value);
-          if (Array.isArray(value)) {
-            value = value[0];
-          }
-          handleShares(value);
-        }}
-        defaultValue={1}
-        className="max-w-md"
-      />
+      {minValue === maxValue ? (
+        <div>{minValue} Share Remaining</div>
+      ) : (
+        <Slider
+          size="md"
+          step={1}
+          color="foreground"
+          label="Shares"
+          showSteps={true}
+          maxValue={maxValue}
+          minValue={minValue}
+          onChange={(value) => {
+            console.log("slider value mo", value);
+            if (Array.isArray(value)) {
+              value = value[0];
+            }
+            handleShares(value);
+            setShareValue(value);
+          }}
+          defaultValue={minValue}
+          className="max-w-md"
+          value={shareValue}
+        />
+      )}
     </div>
   );
 };

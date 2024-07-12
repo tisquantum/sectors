@@ -10,16 +10,22 @@ import React, {
 import { useAuthUser } from "../AuthUser.context";
 import { trpc } from "@sectors/app/trpc";
 import { Game, Phase, PhaseName, Player } from "@server/prisma/prisma.client";
-import { GameState } from "@server/prisma/prisma.types";
+import { GameState, PlayerWithShares } from "@server/prisma/prisma.types";
 import { usePusherSubscription } from "@sectors/app/hooks/pusher";
 import * as PusherTypes from "pusher-js";
-import { EVENT_NEW_PHASE, EVENT_NEW_PLAYER_ORDER_PLAYER_ID, EVENT_NEW_PLAYER_ORDER_PLAYER_ID__PAYLOAD, getGameChannelId } from "@server/pusher/pusher.types";
+import {
+  EVENT_NEW_PHASE,
+  EVENT_NEW_PLAYER_ORDER_PLAYER_ID,
+  EVENT_NEW_PLAYER_ORDER_PLAYER_ID__PAYLOAD,
+  getGameChannelId,
+} from "@server/pusher/pusher.types";
 interface GameContextProps {
   gameId: string;
   authPlayer: Player;
   gameState: GameState;
   currentPhase?: Phase;
   socketChannel: PusherTypes.Channel | null;
+  playersWithShares: PlayerWithShares[];
   refetchAuthPlayer: () => void;
 }
 
@@ -54,19 +60,26 @@ export const GameProvider: React.FC<{
     { where: { userId: user?.id, gameId: gameId } },
     { enabled: !!user }
   );
-  const { refetch: refetchPlayersWithShares,  } = trpc.game.getPlayersWithShares.useQuery(
-    { gameId },
-    {
-      refetchOnMount: false,
-    }
-  );
+  const { data: playersWithShares, refetch: refetchPlayersWithShares } =
+    trpc.game.getPlayersWithShares.useQuery(
+      { gameId },
+      {
+        refetchOnMount: false,
+      }
+    );
   const [currentPhase, setCurrentPhase] = useState<Phase | undefined>(
     gameState?.Phase.find((phase) => phase.id === gameState?.currentPhaseId)
   );
-  const { refetch: refetchPlayerOrder } = trpc.playerOrder.listPlayerOrdersWithCompany.useQuery({
-    where: { stockRoundId: currentPhase?.stockRoundId, playerId: player?.id },
-  },
-  { enabled: !!currentPhase?.stockRoundId });
+  const { refetch: refetchPlayerOrder } =
+    trpc.playerOrder.listPlayerOrdersWithCompany.useQuery(
+      {
+        where: {
+          stockRoundId: currentPhase?.stockRoundId,
+          playerId: player?.id,
+        },
+      },
+      { enabled: !!currentPhase?.stockRoundId }
+    );
 
   useEffect(() => {
     if (!channel || !gameId) {
@@ -75,12 +88,18 @@ export const GameProvider: React.FC<{
     const handleNewPhase = (phaseName: PhaseName) => {
       refetchGameState();
       refetchAuthPlayer();
-      if(phaseName == PhaseName.STOCK_RESOLVE_MARKET_ORDER) {
+      if (
+        phaseName == PhaseName.STOCK_RESOLVE_MARKET_ORDER ||
+        phaseName == PhaseName.OPERATING_PRODUCTION ||
+        phaseName == PhaseName.OPERATING_PRODUCTION_VOTE_RESOLVE
+      ) {
         refetchPlayersWithShares();
       }
     };
 
-    const handleNewPlayerOrder = (data: EVENT_NEW_PLAYER_ORDER_PLAYER_ID__PAYLOAD) => {
+    const handleNewPlayerOrder = (
+      data: EVENT_NEW_PLAYER_ORDER_PLAYER_ID__PAYLOAD
+    ) => {
       refetchPlayerOrder();
     };
 
@@ -94,15 +113,27 @@ export const GameProvider: React.FC<{
   }, [gameId, channel]);
 
   useEffect(() => {
-    setCurrentPhase(gameState?.Phase.find((phase) => phase.id === gameState?.currentPhaseId));
+    setCurrentPhase(
+      gameState?.Phase.find((phase) => phase.id === gameState?.currentPhaseId)
+    );
   }, [gameState?.Phase, gameState?.currentPhaseId]);
 
   if (isLoading || gameStateIsLoading) return <div>Loading...</div>;
   if (isError || gameStateIsError) return <div>Error...</div>;
-  if (!player || !gameState) return null;
+  if (!player || !gameState || !playersWithShares) return null;
 
   return (
-    <GameContext.Provider value={{ gameId, authPlayer: player, gameState, currentPhase, socketChannel: channel, refetchAuthPlayer }}>
+    <GameContext.Provider
+      value={{
+        gameId,
+        authPlayer: player,
+        gameState,
+        currentPhase,
+        socketChannel: channel,
+        refetchAuthPlayer,
+        playersWithShares,
+      }}
+    >
       {children}
     </GameContext.Provider>
   );

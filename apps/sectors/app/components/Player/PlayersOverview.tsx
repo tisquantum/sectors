@@ -10,6 +10,7 @@ import { PlayerWithShares } from "@server/prisma/prisma.types";
 import { Company } from "@server/prisma/prisma.client";
 import { RiWallet3Fill } from "@remixicon/react";
 import PlayerAvatar from "./PlayerAvatar";
+import { useGame } from "../Game/GameContext";
 
 export interface StockAggregation {
   totalShares: number;
@@ -18,16 +19,7 @@ export interface StockAggregation {
 }
 
 const PlayersOverview = ({ gameId }: { gameId: string }) => {
-  const { data: playersWithShares, isLoading } =
-    trpc.game.getPlayersWithShares.useQuery(
-      { gameId },
-      {
-        refetchOnMount: false,
-      }
-    );
-
-  if (isLoading) return <div>Loading...</div>;
-  if (playersWithShares == undefined) return notFound();
+  const { playersWithShares } = useGame();
 
   return (
     <Accordion selectionMode="multiple">

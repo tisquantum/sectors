@@ -38,6 +38,8 @@ import { RevenueDistributionVoteService } from '@server/revenue-distribution-vot
 import revenueDistributionVoteRouter from './routers/revenue-distribution-vote.router';
 import { CompanyActionService } from '@server/company-action/company-action.service';
 import companyActionRouter from './routers/company-action.router';
+import { GameLogService } from '@server/game-log/game-log.service';
+import gameLogRouter from './routers/game-log.router';
 @Injectable()
 export class TrpcRouter {
   constructor(
@@ -61,8 +63,9 @@ export class TrpcRouter {
     private readonly stockRoundService: StockRoundService,
     private readonly revenueDistributionVoteService: RevenueDistributionVoteService,
     private readonly companyActionService: CompanyActionService,
+    private readonly gameLogService: GameLogService,
   ) {}
-  
+
   appRouter = this.trpc.router({
     hello: this.trpc.procedure
       .input(
@@ -91,6 +94,9 @@ export class TrpcRouter {
       gameManagementService: this.gameManagementService,
       pusherService: this.pusherService,
     }),
+    gameLog: gameLogRouter(this.trpc, {
+      gameLogService: this.gameLogService,
+    }),
     player: playerRouter(this.trpc, {
       playersService: this.playersService,
     }),
@@ -112,6 +118,7 @@ export class TrpcRouter {
       playerOrdersService: this.playerOrderService,
       playerService: this.playersService,
       pusherService: this.pusherService,
+      gameLogService: this.gameLogService,
     }),
     share: shareRouter(this.trpc, {
       shareService: this.shareService,
@@ -121,7 +128,7 @@ export class TrpcRouter {
       operatingRoundService: this.operatingRoundService,
     }),
     operatingRoundVote: operatingRoundVoteRouter(this.trpc, {
-      operatingRoundVoteService: this.operatingRoundVoteService
+      operatingRoundVoteService: this.operatingRoundVoteService,
     }),
     stockRound: stockRoundRouter(this.trpc, {
       stockRoundService: this.stockRoundService,

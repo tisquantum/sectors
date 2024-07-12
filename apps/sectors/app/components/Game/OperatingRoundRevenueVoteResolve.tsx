@@ -8,7 +8,7 @@ import PlayerAvatar from "../Player/PlayerAvatar";
 import { RevenueDistribution } from "@server/prisma/prisma.client";
 
 const OperatingRoundRevenueVoteResolve = () => {
-  const { currentPhase } = useGame();
+  const { currentPhase, playersWithShares } = useGame();
   const { data: productionResults, isLoading } =
     trpc.operatingRound.getOperatingRoundWithProductionResults.useQuery({
       where: {
@@ -117,6 +117,46 @@ const OperatingRoundRevenueVoteResolve = () => {
                     dividendHalf,
                     retainedRevenueHalf,
                   })}
+                  <div className="flex gap-2">
+                    {productionResult?.revenueDistribution ===
+                      RevenueDistribution.DIVIDEND_FULL &&
+                      playersWithShares.map((playerWithShares) => {
+                        return (
+                          <PlayerAvatar
+                            player={playerWithShares}
+                            key={playerWithShares.id}
+                            badgeContent={
+                              "$" +
+                              playerWithShares.Share.filter(
+                                (share) =>
+                                  share.companyId ===
+                                  productionResult?.companyId
+                              ).length *
+                                dividendFull
+                            }
+                          />
+                        );
+                      })}
+                    {productionResult?.revenueDistribution ===
+                      RevenueDistribution.DIVIDEND_FIFTY_FIFTY &&
+                      playersWithShares.map((playerWithShares) => {
+                        return (
+                          <PlayerAvatar
+                            player={playerWithShares}
+                            key={playerWithShares.id}
+                            badgeContent={
+                              "$" +
+                              playerWithShares.Share.filter(
+                                (share) =>
+                                  share.companyId ===
+                                  productionResult?.companyId
+                              ).length *
+                                dividendHalf
+                            }
+                          />
+                        );
+                      })}
+                  </div>
                 </div>
                 <div className="flex flex-col">
                   <span className="mb-1">Vote Results</span>

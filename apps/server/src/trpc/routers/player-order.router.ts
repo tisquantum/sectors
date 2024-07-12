@@ -10,11 +10,13 @@ import {
 } from '@server/pusher/pusher.types';
 import { PlayersService } from '@server/players/players.service';
 import { TRPCError } from '@trpc/server';
+import { GameLogService } from '@server/game-log/game-log.service';
 
 type Context = {
   playerOrdersService: PlayerOrderService;
   playerService: PlayersService;
   pusherService: PusherService;
+  gameLogService: GameLogService;
 };
 
 export default (trpc: TrpcService, ctx: Context) =>
@@ -177,6 +179,12 @@ export default (trpc: TrpcService, ctx: Context) =>
             playerOrder.playerId,
             playerOrder.orderType,
           );
+          //get player 
+          const player = await ctx.playerService.player({ id: playerId });
+          await ctx.gameLogService.createGameLog({
+            game: { connect: { id: gameId } },
+            content: `Player ${player?.nickname} created an order.`,
+          });
           //Use for "ready up" and updating the authPlayerState
           ctx.pusherService.trigger(
             getGameChannelId(gameId),

@@ -214,14 +214,16 @@ export const getNextCompanyOperatingRoundTurn = (
   currentCompanyId?: string,
 ): Company => {
   const sortedCompanies = getCompanyOperatingRoundTurnOrder(companies);
+  let chosenCompany;
   if (!currentCompanyId) {
-    return sortedCompanies[0];
+    chosenCompany = sortedCompanies[0];
   } else {
     const currentIndex = sortedCompanies.findIndex(
       (company) => company.id === currentCompanyId,
     );
-    return sortedCompanies[(currentIndex + 1) % sortedCompanies.length];
+    chosenCompany = sortedCompanies[(currentIndex + 1) % sortedCompanies.length];
   }
+  return chosenCompany;
 };
 
 export enum ThroughputRewardType {
@@ -279,31 +281,31 @@ export const CompanyActionCosts = {
 
 export const CompanyTierData = {
   [CompanyTier.INCUBATOR]: {
-    operatingCosts: 25,
+    operatingCosts: 10,
     supplyMax: 2
   },
   [CompanyTier.STARTUP]: {
-    operatingCosts: 50,
+    operatingCosts: 15,
     supplyMax: 3
   },
   [CompanyTier.GROWTH]: {
-    operatingCosts: 75,
+    operatingCosts: 20,
     supplyMax: 4
   },
   [CompanyTier.ESTABLISHED]: {
-    operatingCosts: 100,
+    operatingCosts: 40,
     supplyMax: 5
   },
   [CompanyTier.ENTERPRISE]: {
-    operatingCosts: 150,
+    operatingCosts: 60,
     supplyMax: 6
   },
   [CompanyTier.CONGLOMERATE]: {
-    operatingCosts: 200,
+    operatingCosts: 90,
     supplyMax: 8
   },
   [CompanyTier.TITAN]: {
-    operatingCosts: 300,
+    operatingCosts: 150,
     supplyMax: 10
   },
 }

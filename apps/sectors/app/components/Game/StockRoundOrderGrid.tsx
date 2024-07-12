@@ -72,7 +72,6 @@ const StockRoundOrderGrid = ({
       stockRoundId: currentPhase?.stockRoundId,
     },
   });
-  console.log("playerOrdersConcealed", playerOrdersConcealed);
   const [showOrderInput, setShowOrderInput] = useState<string | undefined>(
     undefined
   );

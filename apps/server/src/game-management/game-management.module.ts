@@ -15,6 +15,7 @@ import { PlayerOrderModule } from '@server/player-order/player-order.module';
 import { ProductionResultModule } from '@server/production-result/production-result.module';
 import { StockHistoryModule } from '@server/stock-history/stock-history.module';
 import { CompanyActionModule } from '@server/company-action/company-action.module';
+import { GameLogModule } from '@server/game-log/game-log.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { CompanyActionModule } from '@server/company-action/company-action.modul
     StockHistoryModule,
     ProductionResultModule,
     CompanyActionModule,
+    GameLogModule
   ],
   providers: [GameManagementService],
   exports: [GameManagementService],

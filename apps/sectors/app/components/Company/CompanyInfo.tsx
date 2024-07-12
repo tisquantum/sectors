@@ -43,12 +43,21 @@ const CompanyInfo = ({
       <div className="flex flex-col gap-1">
         <div className="flex flex-col gap-1">
           <div className="flex flex-start gap-1 items-center justify-between">
-            <div className="text-lg font-bold">
-              {company.name} ${company.currentStockPrice}
+            <div className="flex gap-1 text-lg font-bold">
+              <span>{company.name} </span>
+              <Tooltip content="The current stock price">
+                <span>${company.currentStockPrice}</span>
+              </Tooltip>
             </div>
           </div>
           <div className="flex gap-1">
-            <span>{company.companyTier}</span>|<span>{company.status}</span>
+            <Tooltip content="The company tier, this determines the operational costs and supply.">
+              <span>{company.companyTier}</span>
+            </Tooltip>
+            |
+            <Tooltip content="The company status.  INACTIVE companies have not yet floated.">
+              <span>{company.status}</span>
+            </Tooltip>
           </div>
           <div className="flex gap-3">
             <Tooltip content="Unit Price of goods. Each consumer consumes one good per operating round given the company meets supply and demand.">

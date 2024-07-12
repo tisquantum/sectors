@@ -24,16 +24,7 @@ const GameTopBar = ({
   const useNextPhaseMutation = trpc.game.forceNextPhase.useMutation();
   const useRetryPhaseMutation = trpc.game.retryPhase.useMutation();
   const { currentPhase, gameState } = useGame();
-  const { data: allCompaniesVoted } =
-    trpc.game.allCompanyActionsOperatingRoundResolved.useQuery(
-      {
-        gameId,
-      },
-      {
-        enabled:
-          currentPhase?.name === PhaseName.OPERATING_COMPANY_VOTE_RESOLVE,
-      }
-    );
+
   const handleViewChange = (view: string) => {
     setCurrentView(view);
     handleCurrentView(view);
@@ -42,12 +33,18 @@ const GameTopBar = ({
     currentView === view
       ? "bg-blue-500 text-white"
       : "bg-slate-700 text-stone-100";
-  const checkNextPhase = async (nextPhaseName: PhaseName, currentPhase: any) => {
-    const doesNextPhaseNeedToBePlayed = await trpcClient.query("game.doesNextPhaseNeedToBePlayed", {
-      phaseName: nextPhaseName,
-      currentPhase: currentPhase,
-    });
-    
+  const checkNextPhase = async (
+    nextPhaseName: PhaseName,
+    currentPhase: any
+  ) => {
+    const doesNextPhaseNeedToBePlayed = await trpcClient.query(
+      "game.doesNextPhaseNeedToBePlayed",
+      {
+        phaseName: nextPhaseName,
+        currentPhase: currentPhase,
+      }
+    );
+
     return doesNextPhaseNeedToBePlayed;
   };
 
@@ -68,41 +65,58 @@ const GameTopBar = ({
     nextPhase = determineNextGamePhase(
       currentPhase?.name ?? PhaseName.STOCK_MEET,
       {
-        allCompaniesHaveVoted: allCompaniesVoted,
         stockActionSubRound: gameState.StockRound.find(
           (stockRound) => stockRound.id === currentPhase?.stockRoundId
         )?.stockActionSubRound,
       }
     );
 
-    let doesNextPhaseNeedToBePlayed = await checkNextPhase(nextPhase.phaseName, currentPhase);
+    let doesNextPhaseNeedToBePlayed = await checkNextPhase(
+      nextPhase.phaseName,
+      currentPhase
+    );
 
     while (doesNextPhaseNeedToBePlayed === false) {
       nextPhase = determineNextGamePhase(nextPhase.phaseName, {
-        allCompaniesHaveVoted: allCompaniesVoted,
         stockActionSubRound: gameState.StockRound.find(
           (stockRound) => stockRound.id === currentPhase?.stockRoundId
         )?.stockActionSubRound,
       });
-      doesNextPhaseNeedToBePlayed = await checkNextPhase(nextPhase.phaseName, currentPhase);
+      doesNextPhaseNeedToBePlayed = await checkNextPhase(
+        nextPhase.phaseName,
+        currentPhase
+      );
     }
 
     let companyId;
     if (nextPhase.phaseName === PhaseName.OPERATING_ACTION_COMPANY_VOTE) {
-      if (currentPhase?.companyId) {
-        companyId = getNextCompanyOperatingRoundTurn(
-          gameState.Company.filter(
-            (company) => company.status == CompanyStatus.ACTIVE
-          ),
-          currentPhase?.companyId
-        )?.id;
+      const allCompaniesVoted = await trpcClient.query(
+        "game.allCompanyActionsOperatingRoundResolved",
+        {
+          gameId,
+        }
+      );
+      console.log("allCompaniesVoted", allCompaniesVoted);
+      //check if all companies have voted
+      if (allCompaniesVoted) {
+        nextPhase.phaseName = PhaseName.CAPITAL_GAINS;
       } else {
-        companyId = getNextCompanyOperatingRoundTurn(
-          gameState.Company.filter(
-            (company) => company.status == CompanyStatus.ACTIVE
-          )
-        ).id;
+        if (currentPhase?.companyId) {
+          companyId = getNextCompanyOperatingRoundTurn(
+            gameState.Company.filter(
+              (company) => company.status == CompanyStatus.ACTIVE
+            ),
+            currentPhase?.companyId
+          )?.id;
+        } else {
+          companyId = getNextCompanyOperatingRoundTurn(
+            gameState.Company.filter(
+              (company) => company.status == CompanyStatus.ACTIVE
+            )
+          ).id;
+        }
       }
+      console.log('next company id', companyId);
       if (!companyId) {
         nextPhase.phaseName = PhaseName.CAPITAL_GAINS;
       }
