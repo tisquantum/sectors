@@ -28,7 +28,7 @@ export class OperatingRoundService {
       include: {
         companyActions: {
           include: {
-            Company: true
+            Company: true,
           },
         },
       },
@@ -82,7 +82,11 @@ export class OperatingRoundService {
             Company: {
               include: {
                 Sector: true,
-                Share: true,
+                Share: {
+                  include: {
+                    Player: true,
+                  },
+                },
               },
             },
           },

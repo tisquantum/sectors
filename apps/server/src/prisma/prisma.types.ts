@@ -1,4 +1,5 @@
 import {
+  CapitalGains,
   Company,
   CompanyAction,
   Game,
@@ -125,7 +126,7 @@ export type OperatingRoundWithRevenueDistributionVotes = OperatingRound & {
 };
 
 export type ProductionResultWithCompany = ProductionResult & {
-  Company: Company & { Sector: Sector; Share: Share[] };
+  Company: CompanyWithSector;
 };
 
 export type OperatingRoundWithProductionResults = OperatingRound & {
@@ -156,3 +157,4 @@ export type RevenueDistributionVoteWithRelations = RevenueDistributionVote & {
 };
 export type ShareWithRelations = Share & { Player: Player | null };
 export type GameWithGameTurns = Game & { GameTurn: GameTurn[] };
+export type CapitalGainsWithPlayer = CapitalGains & { Player: Player };

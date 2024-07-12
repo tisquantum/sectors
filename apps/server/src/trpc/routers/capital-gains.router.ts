@@ -45,8 +45,10 @@ export default (trpc: TrpcService, ctx: Context) =>
       .input(
         z.object({
           gameId: z.string(),
+          gameTurnId: z.string(),
           playerId: z.string(),
           capitalGains: z.number(),
+          taxPercentage: z.number(),
         }),
       )
       .mutation(async ({ input }) => {
@@ -54,6 +56,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         const data = {
           ...rest,
           Game: { connect: { id: gameId } },
+          GameTurn: { connect: { id: rest.gameTurnId } },
           Player: { connect: { id: playerId } },
         };
         return ctx.capitalGainsService.createCapitalGains(data);
@@ -64,8 +67,10 @@ export default (trpc: TrpcService, ctx: Context) =>
         z.array(
           z.object({
             gameId: z.string(),
+            gameTurnId: z.string(),
             playerId: z.string(),
             capitalGains: z.number(),
+            taxPercentage: z.number(),
           }),
         ),
       )

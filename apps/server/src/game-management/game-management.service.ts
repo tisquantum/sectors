@@ -222,9 +222,11 @@ export class GameManagementService {
       // Update player cash on hand
       capitalGainsUpdates.push({
         playerId,
-        taxAmount,
+        capitalGains: taxAmount,
         newCashOnHand,
+        gameId: phase.gameId,
         gameTurnId: phase.gameTurnId,
+        taxPercentage: tier.taxPercentage,
       });
 
       await this.playersService.updatePlayer({
@@ -1559,7 +1561,7 @@ export class GameManagementService {
     const game = await this.gamesService.getGameState(gameId);
     const stockRound = await this.stockRoundService.createStockRound({
       Game: { connect: { id: gameId } },
-      GameTurn: {connect: {id: game?.currentTurn}},
+      GameTurn: { connect: { id: game?.currentTurn } },
     });
     //update game
     await this.gamesService.updateGameState({
@@ -1580,7 +1582,7 @@ export class GameManagementService {
     const operatingRound =
       await this.operatingRoundService.createOperatingRound({
         Game: { connect: { id: gameId } },
-        GameTurn: {connect: {id: game?.currentTurn}},
+        GameTurn: { connect: { id: game?.currentTurn } },
       });
     //update game
     await this.gamesService.updateGameState({
@@ -1633,7 +1635,7 @@ export class GameManagementService {
       name: phaseName,
       phaseTime: phaseTimes[phaseName],
       Game: { connect: { id: gameId } },
-      GameTurn: {connect: {id: game?.currentTurn || ''}},
+      GameTurn: { connect: { id: game?.currentTurn || '' } },
       StockRound: stockRoundId ? { connect: { id: stockRoundId } } : undefined,
       OperatingRound: operatingRoundId
         ? { connect: { id: operatingRoundId } }

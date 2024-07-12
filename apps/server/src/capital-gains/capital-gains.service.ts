@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { Prisma, CapitalGains } from '@prisma/client';
+import { CapitalGainsWithPlayer } from '@server/prisma/prisma.types';
 
 @Injectable()
 export class CapitalGainsService {
@@ -35,7 +36,7 @@ export class CapitalGainsService {
     cursor?: Prisma.CapitalGainsWhereUniqueInput;
     where?: Prisma.CapitalGainsWhereInput;
     orderBy?: Prisma.CapitalGainsOrderByWithRelationInput;
-  }): Promise<CapitalGains[]> {
+  }): Promise<CapitalGainsWithPlayer[]> {
     const { skip, take, cursor, where, orderBy } = params;
     return this.prisma.capitalGains.findMany({
       skip,
@@ -43,6 +44,9 @@ export class CapitalGainsService {
       cursor,
       where,
       orderBy,
+      include: {
+        Player: true,
+      },
     });
   }
 
