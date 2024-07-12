@@ -33,6 +33,7 @@ import OperatingRoundStockPriceAdjustment from "./OperatingRoundStockPriceAdjust
 import CompanyVoteResolve from "../Company/CompanyVoteResolve";
 import EndTurnEconomy from "./EndTurnEconomy";
 import PhaseListComponent from "./PhaseListComponent";
+import CapitalGains from "./CapitalGains";
 
 const determineGameRound = (
   game: GameState
@@ -122,6 +123,8 @@ const Game = ({ gameId }: { gameId: string }) => {
     ) : currentRoundData?.phase.name ===
       PhaseName.OPERATING_COMPANY_VOTE_RESOLVE ? (
       <CompanyVoteResolve />
+    ) : currentRoundData?.phase.name === PhaseName.CAPITAL_GAINS ? (
+      <CapitalGains />
     ) : currentRoundData?.phase.name === PhaseName.END_TURN ? (
       <EndTurnEconomy />
     ) : null;

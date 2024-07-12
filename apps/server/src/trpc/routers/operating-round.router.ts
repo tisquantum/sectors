@@ -71,6 +71,7 @@ export default (trpc: TrpcService, ctx: Context) =>
       .input(
         z.object({
           gameId: z.string(),
+          gameTurnId: z.string(),
           roundNumber: z.number(),
           startTime: z.date().optional(),
           endTime: z.date().optional(),
@@ -80,6 +81,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         const data: Prisma.OperatingRoundCreateInput = {
           ...input,
           Game: { connect: { id: input.gameId } },
+          GameTurn: { connect: { id: input.gameTurnId } },
         };
         const operatingRound =
           await ctx.operatingRoundService.createOperatingRound(data);
@@ -91,6 +93,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         z.array(
           z.object({
             gameId: z.string(),
+            gameTurnId: z.string(),
             roundNumber: z.number(),
             phase: z.string().optional(),
             startTime: z.date().optional(),
@@ -103,6 +106,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           (round) => ({
             ...round,
             Game: { connect: { id: round.gameId } },
+            GameTurn: { connect: { id: round.gameTurnId } },
           }),
         );
         const batchPayload =

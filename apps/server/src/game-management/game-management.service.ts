@@ -2328,7 +2328,7 @@ export class GameManagementService {
 
     // Collect all updates to be made in batch
     const shareUpdates = [];
-    const playerCashUpdates = [];
+    const playerCashUpdates: { playerId: string; decrement: number }[] = [];
     const orderStatusUpdates = [];
     const gameLogEntries = [];
 
@@ -2370,13 +2370,8 @@ export class GameManagementService {
           });
 
           playerCashUpdates.push({
-            where: { id: order.playerId },
-            data: {
-              cashOnHand: {
-                decrement:
-                  sharesToDistribute * order.Company.currentStockPrice!,
-              },
-            },
+            playerId: order.playerId,
+            decrement: sharesToDistribute * order.Company.currentStockPrice!,
           });
 
           orderStatusUpdates.push({
@@ -2412,7 +2407,7 @@ export class GameManagementService {
           currentShareIndex += 1;
 
           shareUpdates.push({
-            where: { id: shares[0].id },
+            where: { id: { in: [shares[0].id] } },
             data: {
               location: ShareLocation.PLAYER,
               playerId: order.playerId,
@@ -2420,12 +2415,8 @@ export class GameManagementService {
           });
 
           playerCashUpdates.push({
-            where: { id: order.playerId },
-            data: {
-              cashOnHand: {
-                decrement: order.Company.currentStockPrice!,
-              },
-            },
+            playerId: order.playerId,
+            decrement: order.Company.currentStockPrice!,
           });
 
           orderStatusUpdates.push({
@@ -2474,12 +2465,8 @@ export class GameManagementService {
           });
 
           playerCashUpdates.push({
-            where: { id: order.playerId },
-            data: {
-              cashOnHand: {
-                decrement: sharesToGive * order.Company.currentStockPrice!,
-              },
-            },
+            playerId: order.playerId,
+            decrement: sharesToGive * order.Company.currentStockPrice!,
           });
 
           orderStatusUpdates.push({
@@ -2499,21 +2486,32 @@ export class GameManagementService {
       }
     }
 
-    // Execute all updates in batch
-    await Promise.all([
-      ...shareUpdates.map((update) =>
-        shareService.updateManySharesUnchecked(update),
-      ),
-      ...playerCashUpdates.map((update) =>
-        this.playersService.updatePlayer(update),
-      ),
-      ...orderStatusUpdates.map((update) =>
-        this.prisma.playerOrder.update(update),
-      ),
-      ...gameLogEntries.map((entry) =>
-        this.gameLogService.createGameLog(entry),
-      ),
-    ]);
+    console.log('playerCashUpdates', playerCashUpdates);
+
+    try {
+      // Execute all updates in a transaction
+      await this.prisma.$transaction([
+        ...shareUpdates.map((update) => this.prisma.share.updateMany(update)),
+        ...playerCashUpdates.map((update) =>
+          this.prisma.player.update({
+            where: { id: update.playerId },
+            data: {
+              cashOnHand: {
+                decrement: update.decrement,
+              },
+            },
+          }),
+        ),
+        ...orderStatusUpdates.map((update) =>
+          this.prisma.playerOrder.update(update),
+        ),
+        ...gameLogEntries.map((entry) =>
+          this.prisma.gameLog.create({ data: entry }),
+        ),
+      ]);
+    } catch (error) {
+      console.error('Error distributing shares:', error);
+    }
   }
 
   async playerAddMoney(gameId: string, playerId: string, amount: number) {

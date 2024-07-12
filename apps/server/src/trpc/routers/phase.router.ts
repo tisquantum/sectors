@@ -46,6 +46,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         z.object({
           name: z.nativeEnum(PhaseName),
           gameId: z.string(),
+          gameTurnId: z.string(),
           phaseTime: z.number(),
           stockRoundId: z.number().optional(),
           operatingRoundId: z.number().optional(),
@@ -55,8 +56,13 @@ export default (trpc: TrpcService, ctx: Context) =>
         const data: Prisma.PhaseCreateInput = {
           ...input,
           Game: { connect: { id: input.gameId } },
-          StockRound: input.stockRoundId ? { connect: { id: input.stockRoundId } } : undefined,
-          OperatingRound: input.operatingRoundId ? { connect: { id: input.operatingRoundId } } : undefined,
+          GameTurn: { connect: { id: input.gameTurnId } },
+          StockRound: input.stockRoundId
+            ? { connect: { id: input.stockRoundId } }
+            : undefined,
+          OperatingRound: input.operatingRoundId
+            ? { connect: { id: input.operatingRoundId } }
+            : undefined,
         };
         const phase = await ctx.phaseService.createPhase(data);
         return phase;

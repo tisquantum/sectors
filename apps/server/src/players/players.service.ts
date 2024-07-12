@@ -61,6 +61,17 @@ export class PlayersService {
     });
   }
 
+  async updateManyPlayers(params: {
+    where: Prisma.PlayerWhereInput;
+    data: Prisma.PlayerUpdateManyMutationInput;
+  }): Promise<Prisma.BatchPayload> {
+    const { where, data } = params;
+    return this.prisma.player.updateMany({
+      data,
+      where,
+    });
+  }
+
   async deletePlayer(where: Prisma.PlayerWhereUniqueInput): Promise<Player> {
     return this.prisma.player.delete({
       where,

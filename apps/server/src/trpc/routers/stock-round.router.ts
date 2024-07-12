@@ -57,12 +57,14 @@ export default (trpc: TrpcService, ctx: Context) =>
       .input(
         z.object({
           gameId: z.string(),
+          gameTurnId: z.string(),
         }),
       )
       .mutation(async ({ input }) => {
         const data: Prisma.StockRoundCreateInput = {
           ...input,
           Game: { connect: { id: input.gameId } },
+          GameTurn: { connect: { id: input.gameTurnId } },
         };
         const stockRound = await ctx.stockRoundService.createStockRound(data);
         return stockRound;
@@ -73,6 +75,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         z.array(
           z.object({
             gameId: z.string(),
+            gameTurnId: z.string(),
           }),
         ),
       )
@@ -80,6 +83,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         const data: Prisma.StockRoundCreateManyInput[] = input.map((round) => ({
           ...round,
           Game: { connect: { id: round.gameId } },
+          GameTurn: { connect: { id: round.gameTurnId } },
         }));
         const batchPayload =
           await ctx.stockRoundService.createManyStockRounds(data);

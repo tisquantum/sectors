@@ -12,6 +12,7 @@ import {
 } from "@server/prisma/prisma.types";
 import { BeakerIcon, SunIcon } from "@heroicons/react/24/solid";
 import { useRouter } from "next/navigation";
+import UserAvatar from "./UserAvatar";
 interface SidebarProps {
   roomUsers: RoomUserWithUser[];
   room: RoomWithUsersAndGames;
@@ -133,8 +134,10 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
       <ul className="flex-1 overflow-y-auto">
         {roomUsers.map((roomUser) => (
           <li key={roomUser.user.id} className="flex items-center mb-4 gap-1">
-            <Avatar name={roomUser.user.name} size="sm" className="mr-2" />
-            <span>{roomUser.user.name}</span>
+            <div className="flex items-center mr-1">
+              <UserAvatar user={roomUser.user} size="lg" />
+            </div>
+            <span className="text-xl">{roomUser.user.name}</span>
             {roomUser.roomHost && <BeakerIcon className="size-5" />}
           </li>
         ))}
