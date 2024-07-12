@@ -4,6 +4,7 @@ import {
   CompanyTier,
   OperatingRoundAction,
   PhaseName,
+  PrestigeReward,
   StockTier,
 } from '@prisma/client';
 
@@ -344,3 +345,32 @@ export const CapitalGainsTiers = [
     taxPercentage: 6,
   },
 ];
+
+export const PrestigeTrack = [
+  {
+    type: PrestigeReward.ELASTICITY,
+    name: 'Sector Elasticity',
+    description: 'The sector receives +1 base demand.',
+  },
+  {
+    type: PrestigeReward.MAGNET_EFFECT,
+    name: 'Magnet Effect',
+    description: 'A new company opens in the sector.',
+  },
+  {
+    type: PrestigeReward.INVESTOR_CONFIDENCE,
+    name: 'Investor Confidence',
+    description: 'The company puts 3 more shares into the open market.',
+  },
+  {
+    type: PrestigeReward.CAPITAL_INJECTION,
+    name: 'Capital Injection',
+    description: 'The company receives the money on this space of the track.',
+  },
+  {
+    type: PrestigeReward.BULL_SIGNAL,
+    name: 'Bull Signal',
+    description: 'The company receives a +1 stock price adjustment.',
+  },
+]
+

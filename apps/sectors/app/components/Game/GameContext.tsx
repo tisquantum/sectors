@@ -74,12 +74,7 @@ export const GameProvider: React.FC<{
     { enabled: !!user }
   );
   const { data: playersWithShares, refetch: refetchPlayersWithShares } =
-    trpc.game.getPlayersWithShares.useQuery(
-      { gameId },
-      {
-        refetchOnMount: false,
-      }
-    );
+    trpc.game.getPlayersWithShares.useQuery({ gameId });
   const [currentPhase, setCurrentPhase] = useState<Phase | undefined>(
     gameState?.Phase.find((phase) => phase.id === gameState?.currentPhaseId)
   );
@@ -99,6 +94,7 @@ export const GameProvider: React.FC<{
       return;
     }
     const handleNewPhase = (phaseName: PhaseName) => {
+      console.log('new phase', phaseName);
       refetchGameState();
       refetchAuthPlayer();
       if (
@@ -106,6 +102,7 @@ export const GameProvider: React.FC<{
         phaseName == PhaseName.OPERATING_PRODUCTION ||
         phaseName == PhaseName.OPERATING_PRODUCTION_VOTE_RESOLVE
       ) {
+        console.log('refetching players with shares');
         refetchPlayersWithShares();
       }
       if (

@@ -30,6 +30,7 @@ import { RevenueDistributionVoteModule } from './revenue-distribution-vote/reven
 import { CompanyActionModule } from './company-action/company-action.module';
 import { CapitalGainsModule } from './capital-gains/capital-gains.module';
 import { GameTurnModule } from './game-turn/game-turn.module';
+import { PrestigeRewardsModule } from './prestige-rewards/prestige-rewards.module';
 
 const yourPusherOptions = {
   cluster: process.env.PUSHER_CLUSTER ?? 'CLUSTER',
@@ -74,6 +75,7 @@ const chunkingOptions = {
     CompanyActionModule,
     CapitalGainsModule,
     GameTurnModule,
+    PrestigeRewardsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

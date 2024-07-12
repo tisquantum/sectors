@@ -84,6 +84,7 @@ import { CompanyActionService } from '@server/company-action/company-action.serv
 import { GameLogService } from '@server/game-log/game-log.service';
 import { CapitalGainsService } from '@server/capital-gains/capital-gains.service';
 import { GameTurnService } from '@server/game-turn/game-turn.service';
+import { PrestigeRewardsService } from '@server/prestige-rewards/prestige-rewards.service';
 
 type GroupedByPhase = {
   [key: string]: {
@@ -113,6 +114,7 @@ export class GameManagementService {
     private gameLogService: GameLogService,
     private capitalGainsService: CapitalGainsService,
     private gameTurnService: GameTurnService,
+    private prestigeRewardService: PrestigeRewardsService,
   ) {}
 
   /**
@@ -292,11 +294,13 @@ export class GameManagementService {
 
     for (const result of productionResults) {
       const company = result.Company;
-      const revenueDistribution = result.revenueDistribution;
+      let revenueDistribution = result.revenueDistribution;
 
       if (!revenueDistribution) {
-        console.error('Revenue distribution not found');
-        continue;
+        console.error(
+          'Revenue distribution not found, setting to default retain',
+        );
+        revenueDistribution = RevenueDistribution.RETAINED;
       }
 
       const revenue = result.revenue;

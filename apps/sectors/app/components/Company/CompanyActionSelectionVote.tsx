@@ -15,7 +15,7 @@ import { trpc } from "@sectors/app/trpc";
 import { useGame } from "../Game/GameContext";
 import {
   CompanyActionCosts,
-  getCompanyOperatingRoundTurnOrder,
+  getCompanyOperatingRoundTurnOrder
 } from "@server/data/constants";
 import {
   Company,
@@ -35,6 +35,7 @@ import { sectorColors } from "@server/data/gameData";
 import { cp } from "fs";
 import PlayerAvatar from "../Player/PlayerAvatar";
 import CompanyInfo from "./CompanyInfo";
+import PrestigeRewards from "../Game/PrestigeRewards";
 const companyActions = [
   {
     id: 1,
@@ -81,7 +82,8 @@ const companyActions = [
     id: 7,
     title: "Spend Prestige",
     name: OperatingRoundAction.SPEND_PRESTIGE,
-    message: "Spend 3 prestige to increase the unit price for the company.",
+    message:
+      "Spend 3 prestige to receive the reward on the prestige track, if the company does not have enough prestige, move the prestige track forward by 1.",
   },
   {
     id: 8,
@@ -141,7 +143,14 @@ const CompanyActionSelectionVote = ({
                   <span>${CompanyActionCosts[action.name]}</span>
                 </div>
               </CardHeader>
-              <CardBody>{action.message}</CardBody>
+              <CardBody>
+                <div className="flex flex-col">
+                  {action.message}
+                  {action.name == OperatingRoundAction.SPEND_PRESTIGE && (
+                    <PrestigeRewards />
+                  )}
+                </div>
+              </CardBody>
               <CardFooter>
                 {actionVoteResults && withResult && (
                   <div className="flex gap-2">

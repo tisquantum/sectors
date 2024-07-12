@@ -25,6 +25,7 @@ import { RevenueDistributionVoteService } from '@server/revenue-distribution-vot
 import { CompanyActionService } from '@server/company-action/company-action.service';
 import { CapitalGainsService } from '@server/capital-gains/capital-gains.service';
 import { GameTurnService } from '@server/game-turn/game-turn.service';
+import { PrestigeRewardsService } from '@server/prestige-rewards/prestige-rewards.service';
 
 @Module({
   imports: [PrismaModule],
@@ -56,6 +57,7 @@ import { GameTurnService } from '@server/game-turn/game-turn.service';
     CompanyActionService,
     CapitalGainsService,
     GameTurnService,
+    PrestigeRewardsService,
   ],
 })
 export class TrpcModule {}
