@@ -60,17 +60,19 @@ export const stockGridPrices = [
   470, 484, 498, 512, 526, 540, 555, 570, 585, 600,
 ];
 
-
 /**
  * Move the stock price up by a given number of steps.
  * @param currentPrice The current stock price.
  * @param steps The number of steps to move up.
  * @returns The new stock price after moving up.
  */
-export function getStockPriceStepsUp(currentPrice: number, steps: number): number {
+export function getStockPriceStepsUp(
+  currentPrice: number,
+  steps: number,
+): number {
   const currentIndex = stockGridPrices.indexOf(currentPrice);
   if (currentIndex === -1) throw new Error('Invalid current stock price');
-  
+
   const newIndex = Math.min(currentIndex + steps, stockGridPrices.length - 1);
   return stockGridPrices[newIndex];
 }
@@ -81,7 +83,10 @@ export function getStockPriceStepsUp(currentPrice: number, steps: number): numbe
  * @param steps The number of steps to move down.
  * @returns The new stock price after moving down.
  */
-export function getStockPriceWithStepsDown(currentPrice: number, steps: number): number {
+export function getStockPriceWithStepsDown(
+  currentPrice: number,
+  steps: number,
+): number {
   const currentIndex = stockGridPrices.indexOf(currentPrice);
   if (currentIndex === -1) throw new Error('Invalid current stock price');
   const newIndex = Math.max(currentIndex - Math.abs(steps), 0);
@@ -194,7 +199,7 @@ export const companyVoteActionPriority = (
     OperatingRoundAction.VETO,
     OperatingRoundAction.LOBBY,
     OperatingRoundAction.INCREASE_PRICE,
-    OperatingRoundAction.DECREASE_PRICE
+    OperatingRoundAction.DECREASE_PRICE,
   ];
   return actions.sort(
     (a, b) => actionPriority.indexOf(a) - actionPriority.indexOf(b),
@@ -222,7 +227,8 @@ export const getNextCompanyOperatingRoundTurn = (
     const currentIndex = sortedCompanies.findIndex(
       (company) => company.id === currentCompanyId,
     );
-    chosenCompany = sortedCompanies[(currentIndex + 1) % sortedCompanies.length];
+    chosenCompany =
+      sortedCompanies[(currentIndex + 1) % sortedCompanies.length];
   }
   return chosenCompany;
 };
@@ -246,21 +252,45 @@ export const throughputRewardOrPenalty = (
     case 0:
       return { type: ThroughputRewardType.SECTOR_REWARD };
     case 1:
-      return { type: ThroughputRewardType.STOCK_PENALTY, share_price_steps_down: 1 };
+      return {
+        type: ThroughputRewardType.STOCK_PENALTY,
+        share_price_steps_down: 1,
+      };
     case 2:
-      return { type: ThroughputRewardType.STOCK_PENALTY, share_price_steps_down: 1 };
+      return {
+        type: ThroughputRewardType.STOCK_PENALTY,
+        share_price_steps_down: 1,
+      };
     case 3:
-      return { type: ThroughputRewardType.STOCK_PENALTY, share_price_steps_down: 2 };
+      return {
+        type: ThroughputRewardType.STOCK_PENALTY,
+        share_price_steps_down: 2,
+      };
     case 4:
-      return { type: ThroughputRewardType.STOCK_PENALTY, share_price_steps_down: 2 };
+      return {
+        type: ThroughputRewardType.STOCK_PENALTY,
+        share_price_steps_down: 2,
+      };
     case 5:
-      return { type: ThroughputRewardType.STOCK_PENALTY, share_price_steps_down: 3 };
+      return {
+        type: ThroughputRewardType.STOCK_PENALTY,
+        share_price_steps_down: 3,
+      };
     case 6:
-      return { type: ThroughputRewardType.STOCK_PENALTY, share_price_steps_down: 3 };
+      return {
+        type: ThroughputRewardType.STOCK_PENALTY,
+        share_price_steps_down: 3,
+      };
     case 7:
-      return { type: ThroughputRewardType.STOCK_PENALTY, share_price_steps_down: 4 };
+      return {
+        type: ThroughputRewardType.STOCK_PENALTY,
+        share_price_steps_down: 4,
+      };
     default:
-      return { type: ThroughputRewardType.SECTOR_REWARD, share_price_steps_down: 1 };
+      return {
+        type: ThroughputRewardType.SECTOR_REWARD,
+        share_price_steps_down: 1,
+      };
   }
 };
 
@@ -278,38 +308,68 @@ export const CompanyActionCosts = {
   [OperatingRoundAction.LOBBY]: 0,
   [OperatingRoundAction.INCREASE_PRICE]: 0,
   [OperatingRoundAction.DECREASE_PRICE]: 0,
-}
+};
 
 export const CompanyTierData = {
   [CompanyTier.INCUBATOR]: {
     operatingCosts: 10,
-    supplyMax: 2
+    supplyMax: 2,
   },
   [CompanyTier.STARTUP]: {
     operatingCosts: 15,
-    supplyMax: 3
+    supplyMax: 3,
   },
   [CompanyTier.GROWTH]: {
     operatingCosts: 20,
-    supplyMax: 4
+    supplyMax: 4,
   },
   [CompanyTier.ESTABLISHED]: {
     operatingCosts: 40,
-    supplyMax: 5
+    supplyMax: 5,
   },
   [CompanyTier.ENTERPRISE]: {
     operatingCosts: 60,
-    supplyMax: 6
+    supplyMax: 6,
   },
   [CompanyTier.CONGLOMERATE]: {
     operatingCosts: 90,
-    supplyMax: 8
+    supplyMax: 8,
   },
   [CompanyTier.TITAN]: {
     operatingCosts: 150,
-    supplyMax: 10
+    supplyMax: 10,
   },
-}
+};
+
+export const getNextCompanyTier = (currentTier: CompanyTier): CompanyTier => {
+  const tierOrder = [
+    CompanyTier.INCUBATOR,
+    CompanyTier.STARTUP,
+    CompanyTier.GROWTH,
+    CompanyTier.ESTABLISHED,
+    CompanyTier.ENTERPRISE,
+    CompanyTier.CONGLOMERATE,
+    CompanyTier.TITAN,
+  ];
+  const currentIndex = tierOrder.indexOf(currentTier);
+  return tierOrder[currentIndex + 1];
+};
+
+export const getPreviousCompanyTier = (
+  currentTier: CompanyTier,
+): CompanyTier => {
+  const tierOrder = [
+    CompanyTier.INCUBATOR,
+    CompanyTier.STARTUP,
+    CompanyTier.GROWTH,
+    CompanyTier.ESTABLISHED,
+    CompanyTier.ENTERPRISE,
+    CompanyTier.CONGLOMERATE,
+    CompanyTier.TITAN,
+  ];
+  const currentIndex = tierOrder.indexOf(currentTier);
+  return tierOrder[currentIndex - 1];
+};
 
 export const STOCK_ACTION_SUB_ROUND_MAX = 2;
 
@@ -372,5 +432,4 @@ export const PrestigeTrack = [
     name: 'Bull Signal',
     description: 'The company receives a +1 stock price adjustment.',
   },
-]
-
+];

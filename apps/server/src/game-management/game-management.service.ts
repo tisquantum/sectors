@@ -60,6 +60,8 @@ import {
   CompanyActionCosts,
   CompanyTierData,
   CapitalGainsTiers,
+  getNextCompanyTier,
+  getPreviousCompanyTier,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -488,6 +490,12 @@ export class GameManagementService {
       case OperatingRoundAction.SHARE_ISSUE:
         await this.resolveIssueShare(companyAction);
         break;
+      case OperatingRoundAction.EXPANSION:
+        await this.expandCompany(companyAction);
+        break;
+      case OperatingRoundAction.DOWNSIZE:
+        await this.downsizeCompany(companyAction);
+        break;
       default:
         return;
     }
@@ -495,6 +503,50 @@ export class GameManagementService {
     await this.companyActionService.updateCompanyAction({
       where: { id: companyAction.id },
       data: { resolved: true },
+    });
+  }
+
+  async expandCompany(companyAction: CompanyAction) {
+    //increase the company tier and increase supply max by 1
+    const company = await this.companyService.company({
+      id: companyAction.companyId,
+    });
+    if (!company) {
+      throw new Error('Company not found');
+    }
+    const newTier = getNextCompanyTier(company.companyTier);
+    if (!newTier) {
+      throw new Error('Company tier not found');
+    }
+    //update the company tier
+    await this.companyService.updateCompany({
+      where: { id: company.id },
+      data: {
+        companyTier: newTier,
+        supplyMax: company.supplyMax + 1,
+      },
+    });
+  }
+
+  async downsizeCompany(companyAction: CompanyAction) {
+    //decrease the company tier and decrease supply max by 1
+    const company = await this.companyService.company({
+      id: companyAction.companyId,
+    });
+    if (!company) {
+      throw new Error('Company not found');
+    }
+    const newTier = getPreviousCompanyTier(company.companyTier);
+    if (!newTier) {
+      throw new Error('Company tier not found');
+    }
+    //update the company tier
+    await this.companyService.updateCompany({
+      where: { id: company.id },
+      data: {
+        companyTier: newTier,
+        supplyMax: Math.min(company.supplyMax - 1, 0),
+      },
     });
   }
 
