@@ -74,6 +74,7 @@ model Player {
   User                     User                      @relation(fields: [userId], references: [id])
   Share                    Share[]
   MeetingMessage           MeetingMessage[]
+  CaptialGains             CapitalGains[]
   createdAt                DateTime                  @default(now())
   updatedAt                DateTime                  @updatedAt
   marketOrderActions       Int
@@ -215,7 +216,9 @@ model StockRound {
   phase               Phase[]
   gameId              String
   stockActionSubRound Int           @default(0)
+  gameTurnId          String
   playerOrders        PlayerOrder[]
+  GameTurn            GameTurn      @relation(fields: [gameTurnId], references: [id])
   Game                Game          @relation(fields: [gameId], references: [id])
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
@@ -302,9 +305,24 @@ model OperatingRound {
   productionResults        ProductionResult[]
   revenueDistributionVotes RevenueDistributionVote[]
   gameId                   String
+  gameTurnId               String
+  GameTurn                 GameTurn                  @relation(fields: [gameTurnId], references: [id])
   Game                     Game                      @relation(fields: [gameId], references: [id])
   createdAt                DateTime                  @default(now())
   updatedAt                DateTime                  @updatedAt
+}
+
+model CapitalGains {
+  id           Int      @id @default(autoincrement())
+  gameId       String
+  playerId     String
+  capitalGains Int
+  gameTurnId   String
+  Game         Game     @relation(fields: [gameId], references: [id])
+  Player       Player   @relation(fields: [playerId], references: [id])
+  GameTurn     GameTurn @relation(fields: [gameTurnId], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model ProductionResult {
@@ -435,7 +453,7 @@ model Sector {
 model Game {
   id                      String           @id @default(uuid())
   name                    String
-  currentTurn             Int
+  currentTurn             String
   currentOrSubRound       Int
   currentRound            RoundType
   currentActivePlayer     String?
@@ -447,6 +465,7 @@ model Game {
   overdraft               Boolean          @default(true)
   gameLogs                GameLog[]
   sectors                 Sector[]
+  GameTurn                GameTurn[]
   Player                  Player[]
   Company                 Company[]
   Phase                   Phase[]
@@ -456,12 +475,27 @@ model Game {
   MeetingMessage          MeetingMessage[]
   PlayerOrder             PlayerOrder[]
   Share                   Share[]
+  CapitalGains            CapitalGains[]
   Room                    Room             @relation(fields: [roomId], references: [id])
   currentPhaseId          String?
   currentStockRoundId     Int?
   currentOperatingRoundId Int?
   createdAt               DateTime         @default(now())
   updatedAt               DateTime         @updatedAt
+}
+
+model GameTurn {
+  id        String   @id @default(uuid())
+  gameId    String
+  turn      Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  game            Game             @relation(fields: [gameId], references: [id])
+  operatingRounds OperatingRound[]
+  stockRounds     StockRound[]
+  phases          Phase[]
+  capitalGains    CapitalGains[]
 }
 
 enum RoundType {
@@ -474,6 +508,7 @@ model Phase {
   id               String          @id @default(uuid())
   name             PhaseName
   gameId           String
+  gameTurnId       String
   phaseTime        Int
   stockRoundId     Int?
   operatingRoundId Int?
@@ -482,6 +517,7 @@ model Phase {
   OperatingRound   OperatingRound? @relation(fields: [operatingRoundId], references: [id])
   StockRound       StockRound?     @relation(fields: [stockRoundId], references: [id])
   Game             Game            @relation(fields: [gameId], references: [id])
+  GameTurn         GameTurn        @relation(fields: [gameTurnId], references: [id])
   PlayerOrder      PlayerOrder[]
   StockHistory     StockHistory[]
   createdAt        DateTime        @default(now())

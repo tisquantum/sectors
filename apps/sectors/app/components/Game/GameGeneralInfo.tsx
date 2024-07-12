@@ -19,7 +19,7 @@ import { Avatar } from "@nextui-org/react";
 import PlayerAvatar from "../Player/PlayerAvatar";
 
 const GameGeneralInfo = () => {
-  const { currentPhase, gameState, authPlayer } = useGame();
+  const { gameState, currentTurn, authPlayer } = useGame();
   if (!gameState) return notFound();
   return (
     <div className="flex space-x-4 items-center">
@@ -54,7 +54,7 @@ const GameGeneralInfo = () => {
       </div>
       <div>
         <div className="text-lg font-bold">Turn</div>
-        <div>{gameState.currentTurn ?? "0"}</div>
+        <div>{currentTurn.turn ?? "0"}</div>
       </div>
     </div>
   );

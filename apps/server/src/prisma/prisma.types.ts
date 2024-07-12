@@ -3,6 +3,7 @@ import {
   CompanyAction,
   Game,
   GameLog,
+  GameTurn,
   MeetingMessage,
   OperatingRound,
   OperatingRoundVote,
@@ -154,3 +155,4 @@ export type RevenueDistributionVoteWithRelations = RevenueDistributionVote & {
   Company: Company;
 };
 export type ShareWithRelations = Share & { Player: Player | null };
+export type GameWithGameTurns = Game & { GameTurn: GameTurn[] };

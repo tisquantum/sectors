@@ -59,6 +59,7 @@ import {
   STABLE_ECONOMY_SCORE,
   CompanyActionCosts,
   CompanyTierData,
+  CapitalGainsTiers,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -81,6 +82,8 @@ import { StockHistoryService } from '@server/stock-history/stock-history.service
 import { ProductionResultService } from '@server/production-result/production-result.service';
 import { CompanyActionService } from '@server/company-action/company-action.service';
 import { GameLogService } from '@server/game-log/game-log.service';
+import { CapitalGainsService } from '@server/capital-gains/capital-gains.service';
+import { GameTurnService } from '@server/game-turn/game-turn.service';
 
 type GroupedByPhase = {
   [key: string]: {
@@ -108,6 +111,8 @@ export class GameManagementService {
     private productionResultService: ProductionResultService,
     private companyActionService: CompanyActionService,
     private gameLogService: GameLogService,
+    private capitalGainsService: CapitalGainsService,
+    private gameTurnService: GameTurnService,
   ) {}
 
   /**
@@ -161,12 +166,84 @@ export class GameManagementService {
       case PhaseName.OPERATING_COMPANY_VOTE_RESOLVE:
         await this.resolveCompanyAction(phase);
         break;
+      case PhaseName.CAPITAL_GAINS:
+        await this.resolveCapitalGains(phase);
+        break;
       case PhaseName.END_TURN:
         await this.resolveEndTurn(phase);
         break;
       default:
         return;
     }
+  }
+
+  async resolveCapitalGains(phase: Phase) {
+    // Calculate capital gains based on player net worth
+    const players = await this.playersService.playersWithShares({
+      gameId: phase.gameId,
+    });
+    if (!players) {
+      throw new Error('Players not found');
+    }
+
+    const netWorths = players.map((player) => {
+      const totalSharesValue = player.Share.reduce((acc, share) => {
+        return acc + share.price;
+      }, 0);
+      return {
+        playerId: player.id,
+        netWorth: player.cashOnHand + totalSharesValue,
+      };
+    });
+
+    const capitalGainsUpdates = [];
+
+    for (const { playerId, netWorth } of netWorths) {
+      // Find the appropriate tax tier
+      const tier = CapitalGainsTiers.find(
+        (tier) => netWorth >= tier.minNetWorth && netWorth <= tier.maxNetWorth,
+      );
+
+      if (!tier) {
+        console.error(`No tax tier found for net worth: ${netWorth}`);
+        continue;
+      }
+
+      const taxAmount = (netWorth * tier.taxPercentage) / 100;
+      const player = players.find((p) => p.id === playerId);
+
+      if (!player) {
+        console.error(`Player not found: ${playerId}`);
+        continue;
+      }
+
+      const newCashOnHand = Math.max(player.cashOnHand - taxAmount, 0);
+
+      // Update player cash on hand
+      capitalGainsUpdates.push({
+        playerId,
+        taxAmount,
+        newCashOnHand,
+        gameTurnId: phase.gameTurnId,
+      });
+
+      await this.playersService.updatePlayer({
+        where: { id: playerId },
+        data: { cashOnHand: newCashOnHand },
+      });
+
+      this.gameLogService.createGameLog({
+        game: { connect: { id: phase.gameId } },
+        content: `Player ${player.nickname} has paid capital gains tax of ${taxAmount}.`,
+      });
+
+      // Create a log entry
+      await this.capitalGainsService.createManyCapitalGains(
+        capitalGainsUpdates,
+      );
+    }
+
+    return capitalGainsUpdates;
   }
 
   async createOperatingRoundCompanyActions(phase: Phase) {
@@ -1135,12 +1212,26 @@ export class GameManagementService {
         ),
       );
 
+      //get current turn
+      const currentTurn = await this.gameTurnService.getCurrentTurn(
+        phase.gameId,
+      );
+
+      if (!currentTurn) {
+        throw new Error('Current turn not found');
+      }
+      //create a new game turn
+      const newTurn = await this.gameTurnService.createGameTurn({
+        game: { connect: { id: phase.gameId } },
+        turn: currentTurn?.turn + 1,
+      });
+
       // Update game state for new consumerPoolNumber and turn
       await this.gamesService.updateGameState({
         where: { id: phase.gameId },
         data: {
+          currentTurn: newTurn.id,
           consumerPoolNumber: game.consumerPoolNumber,
-          currentTurn: game.currentTurn + 1,
         },
       });
     } catch (error) {
@@ -1183,7 +1274,7 @@ export class GameManagementService {
 
     const gameData: Prisma.GameCreateInput = {
       name: `Game_Fantastic`,
-      currentTurn: 0,
+      currentTurn: '',
       currentOrSubRound: 0,
       currentRound: 'STOCK',
       bankPoolNumber,
@@ -1202,6 +1293,18 @@ export class GameManagementService {
     try {
       // Create the game
       const game = await this.gamesService.createGame(gameData);
+
+      //Create the first turn
+      const newTurn = await this.gameTurnService.createGameTurn({
+        game: { connect: { id: game.id } },
+        turn: 1,
+      });
+
+      //update the game currentTurn
+      await this.gamesService.updateGameState({
+        where: { id: game.id },
+        data: { currentTurn: newTurn.id },
+      });
 
       // Add players to the game
       await this.addPlayersToGame(game.id, roomId, startingCashOnHand);
@@ -1452,8 +1555,11 @@ export class GameManagementService {
   }
 
   public async startStockRound(gameId: string): Promise<StockRound | null> {
+    //get game
+    const game = await this.gamesService.getGameState(gameId);
     const stockRound = await this.stockRoundService.createStockRound({
       Game: { connect: { id: gameId } },
+      GameTurn: {connect: {id: game?.currentTurn}},
     });
     //update game
     await this.gamesService.updateGameState({
@@ -1469,9 +1575,12 @@ export class GameManagementService {
   public async startOperatingRound(
     gameId: string,
   ): Promise<OperatingRound | null> {
+    //get game
+    const game = await this.gamesService.getGameState(gameId);
     const operatingRound =
       await this.operatingRoundService.createOperatingRound({
         Game: { connect: { id: gameId } },
+        GameTurn: {connect: {id: game?.currentTurn}},
       });
     //update game
     await this.gamesService.updateGameState({
@@ -1517,11 +1626,14 @@ export class GameManagementService {
     console.log('start phase stock round id', stockRoundId);
     console.log('start phase operating round id', operatingRoundId);
     const gameChannelId = getGameChannelId(gameId);
+    //get game
+    let game = await this.gamesService.getGameState(gameId);
 
     const phase = await this.phaseService.createPhase({
       name: phaseName,
       phaseTime: phaseTimes[phaseName],
       Game: { connect: { id: gameId } },
+      GameTurn: {connect: {id: game?.currentTurn || ''}},
       StockRound: stockRoundId ? { connect: { id: stockRoundId } } : undefined,
       OperatingRound: operatingRoundId
         ? { connect: { id: operatingRoundId } }
@@ -1530,7 +1642,7 @@ export class GameManagementService {
     });
 
     // Update game state
-    const game = await this.gamesService.updateGameState({
+    game = await this.gamesService.updateGameState({
       where: { id: gameId },
       data: {
         currentPhaseId: phase.id,

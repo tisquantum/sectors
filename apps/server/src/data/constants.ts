@@ -311,3 +311,36 @@ export const CompanyTierData = {
 }
 
 export const STOCK_ACTION_SUB_ROUND_MAX = 2;
+
+export const CapitalGainsTiers = [
+  {
+    minNetWorth: 0,
+    maxNetWorth: 1000,
+    taxPercentage: 0,
+  },
+  {
+    minNetWorth: 1001,
+    maxNetWorth: 2000,
+    taxPercentage: 5,
+  },
+  {
+    minNetWorth: 2000,
+    maxNetWorth: 3000,
+    taxPercentage: 7,
+  },
+  {
+    minNetWorth: 3000,
+    maxNetWorth: 4000,
+    taxPercentage: 8,
+  },
+  {
+    minNetWorth: 4000,
+    maxNetWorth: 5000,
+    taxPercentage: 10,
+  },
+  {
+    minNetWorth: 5000,
+    maxNetWorth: Number.MAX_SAFE_INTEGER,
+    taxPercentage: 6,
+  },
+];

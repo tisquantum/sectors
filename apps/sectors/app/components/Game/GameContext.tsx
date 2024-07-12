@@ -9,7 +9,13 @@ import React, {
 } from "react";
 import { useAuthUser } from "../AuthUser.context";
 import { trpc } from "@sectors/app/trpc";
-import { Game, Phase, PhaseName, Player } from "@server/prisma/prisma.client";
+import {
+  Game,
+  GameTurn,
+  Phase,
+  PhaseName,
+  Player,
+} from "@server/prisma/prisma.client";
 import { GameState, PlayerWithShares } from "@server/prisma/prisma.types";
 import { usePusherSubscription } from "@sectors/app/hooks/pusher";
 import * as PusherTypes from "pusher-js";
@@ -27,6 +33,7 @@ interface GameContextProps {
   socketChannel: PusherTypes.Channel | null;
   playersWithShares: PlayerWithShares[];
   refetchAuthPlayer: () => void;
+  currentTurn: GameTurn;
 }
 
 const GameContext = createContext<GameContextProps | undefined>(undefined);
@@ -51,6 +58,12 @@ export const GameProvider: React.FC<{
     isError: gameStateIsError,
     refetch: refetchGameState,
   } = trpc.game.getGameState.useQuery({ gameId });
+  const {
+    data: currentTurn,
+    isLoading: currentTurnIsLoading,
+    isError: currentTurnIsError,
+    refetch: refetchCurrentTurn,
+  } = trpc.gameTurn.getCurrentGameTurn.useQuery({ gameId });
   const {
     data: player,
     isLoading,
@@ -95,6 +108,12 @@ export const GameProvider: React.FC<{
       ) {
         refetchPlayersWithShares();
       }
+      if (
+        phaseName == PhaseName.END_TURN ||
+        phaseName == PhaseName.START_TURN
+      ) {
+        refetchCurrentTurn();
+      }
     };
 
     const handleNewPlayerOrder = (
@@ -118,10 +137,11 @@ export const GameProvider: React.FC<{
     );
   }, [gameState?.Phase, gameState?.currentPhaseId]);
 
-  if (isLoading || gameStateIsLoading) return <div>Loading...</div>;
-  if (isError || gameStateIsError) return <div>Error...</div>;
-  if (!player || !gameState || !playersWithShares) return null;
-
+  if (isLoading || gameStateIsLoading || currentTurnIsLoading)
+    return <div>Loading...</div>;
+  if (isError || gameStateIsError || currentTurnIsError)
+    return <div>Error...</div>;
+  if (!player || !gameState || !playersWithShares || !currentTurn) return null;
   return (
     <GameContext.Provider
       value={{
@@ -132,6 +152,7 @@ export const GameProvider: React.FC<{
         socketChannel: channel,
         refetchAuthPlayer,
         playersWithShares,
+        currentTurn,
       }}
     >
       {children}

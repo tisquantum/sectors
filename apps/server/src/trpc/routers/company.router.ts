@@ -132,7 +132,7 @@ export default (trpc: TrpcService, ctx: Context) =>
             create: z
               .object({
                 name: z.string(),
-                currentTurn: z.number(),
+                currentTurn: z.string(),
                 currentOrSubRound: z.number(),
                 currentRound: z.nativeEnum(RoundType),
                 currentActivePlayer: z.string().nullable().optional(),
@@ -213,7 +213,7 @@ export default (trpc: TrpcService, ctx: Context) =>
                 create: z
                   .object({
                     name: z.string(),
-                    currentTurn: z.number(),
+                    currentTurn: z.string(),
                     currentOrSubRound: z.number(),
                     currentRound: z.string(),
                     currentActivePlayer: z.string().nullable().optional(),

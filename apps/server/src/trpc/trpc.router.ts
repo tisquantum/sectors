@@ -40,6 +40,10 @@ import { CompanyActionService } from '@server/company-action/company-action.serv
 import companyActionRouter from './routers/company-action.router';
 import { GameLogService } from '@server/game-log/game-log.service';
 import gameLogRouter from './routers/game-log.router';
+import { CapitalGainsService } from '@server/capital-gains/capital-gains.service';
+import capitalGainsRouter from './routers/capital-gains.router';
+import { GameTurnService } from '@server/game-turn/game-turn.service';
+import gameTurnRouter from './routers/game-turn.router';
 @Injectable()
 export class TrpcRouter {
   constructor(
@@ -64,6 +68,8 @@ export class TrpcRouter {
     private readonly revenueDistributionVoteService: RevenueDistributionVoteService,
     private readonly companyActionService: CompanyActionService,
     private readonly gameLogService: GameLogService,
+    private readonly capitalGainsService: CapitalGainsService,
+    private readonly gameTurnService: GameTurnService,
   ) {}
 
   appRouter = this.trpc.router({
@@ -138,6 +144,12 @@ export class TrpcRouter {
     }),
     companyAction: companyActionRouter(this.trpc, {
       companyActionService: this.companyActionService,
+    }),
+    capitalGains: capitalGainsRouter(this.trpc, {
+      capitalGainsService: this.capitalGainsService,
+    }),
+    gameTurn: gameTurnRouter(this.trpc, {
+      gameTurnService: this.gameTurnService,
     }),
   });
 

@@ -16,6 +16,8 @@ import { ProductionResultModule } from '@server/production-result/production-res
 import { StockHistoryModule } from '@server/stock-history/stock-history.module';
 import { CompanyActionModule } from '@server/company-action/company-action.module';
 import { GameLogModule } from '@server/game-log/game-log.module';
+import { CapitalGainsModule } from '@server/capital-gains/capital-gains.module';
+import { GameTurnModule } from '@server/game-turn/game-turn.module';
 
 @Module({
   imports: [
@@ -34,7 +36,9 @@ import { GameLogModule } from '@server/game-log/game-log.module';
     StockHistoryModule,
     ProductionResultModule,
     CompanyActionModule,
-    GameLogModule
+    GameLogModule,
+    CapitalGainsModule,
+    GameTurnModule,
   ],
   providers: [GameManagementService],
   exports: [GameManagementService],

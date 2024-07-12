@@ -28,6 +28,8 @@ import { StockHistoryModule } from './stock-history/stock-history.module';
 import { ProductionResultModule } from './production-result/production-result.module';
 import { RevenueDistributionVoteModule } from './revenue-distribution-vote/revenue-distribution-vote.module';
 import { CompanyActionModule } from './company-action/company-action.module';
+import { CapitalGainsModule } from './capital-gains/capital-gains.module';
+import { GameTurnModule } from './game-turn/game-turn.module';
 
 const yourPusherOptions = {
   cluster: process.env.PUSHER_CLUSTER ?? 'CLUSTER',
@@ -70,6 +72,8 @@ const chunkingOptions = {
     ProductionResultModule,
     RevenueDistributionVoteModule,
     CompanyActionModule,
+    CapitalGainsModule,
+    GameTurnModule,
   ],
   controllers: [AppController],
   providers: [AppService],

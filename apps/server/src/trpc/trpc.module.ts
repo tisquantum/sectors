@@ -23,6 +23,8 @@ import { StockHistoryService } from '@server/stock-history/stock-history.service
 import { ProductionResultService } from '@server/production-result/production-result.service';
 import { RevenueDistributionVoteService } from '@server/revenue-distribution-vote/revenue-distribution-vote.service';
 import { CompanyActionService } from '@server/company-action/company-action.service';
+import { CapitalGainsService } from '@server/capital-gains/capital-gains.service';
+import { GameTurnService } from '@server/game-turn/game-turn.service';
 
 @Module({
   imports: [PrismaModule],
@@ -52,6 +54,8 @@ import { CompanyActionService } from '@server/company-action/company-action.serv
     ProductionResultService,
     RevenueDistributionVoteService,
     CompanyActionService,
+    CapitalGainsService,
+    GameTurnService,
   ],
 })
 export class TrpcModule {}

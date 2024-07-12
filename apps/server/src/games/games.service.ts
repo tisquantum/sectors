@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { Game, Prisma } from '@prisma/client';
-import { GameState, GameWithPhase } from '@server/prisma/prisma.types';
+import { GameState, GameWithGameTurns, GameWithPhase } from '@server/prisma/prisma.types';
 
 @Injectable()
 export class GamesService {
@@ -9,9 +9,12 @@ export class GamesService {
 
   async game(
     gameWhereUniqueInput: Prisma.GameWhereUniqueInput,
-  ): Promise<Game | null> {
+  ): Promise<GameWithGameTurns | null> {
     return this.prisma.game.findUnique({
       where: gameWhereUniqueInput,
+      include: {
+        GameTurn: true,
+      },
     });
   }
 

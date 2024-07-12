@@ -105,7 +105,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           id: z.string(),
           data: z.object({
             name: z.string().optional(),
-            currentTurn: z.number().optional(),
+            currentTurn: z.string().optional(),
             currentOrSubRound: z.number().optional(),
             currentRound: z.nativeEnum(RoundType),
             currentActivePlayer: z.string().nullable().optional(),
@@ -200,6 +200,7 @@ export default (trpc: TrpcService, ctx: Context) =>
             name: z.nativeEnum(PhaseName),
             id: z.string(),
             gameId: z.string(),
+            gameTurnId: z.string(),
             stockRoundId: z.number().nullable(),
             operatingRoundId: z.number().nullable(),
             companyId: z.string().nullable(),
