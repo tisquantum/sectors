@@ -25,6 +25,7 @@ import {
   Share,
   PrestigeReward,
   PrestigeRewards,
+  ResearchCardEffect,
 } from '@prisma/client';
 import { GamesService } from '@server/games/games.service';
 import { CompanyService } from '@server/company/company.service';
@@ -67,6 +68,7 @@ import {
   DEFAULT_SHARE_LIMIT,
   MAX_SHARE_PERCENTAGE,
   DEFAULT_INCREASE_UNIT_PRICE,
+  GOVERNMENT_GRANT_AMOUNT,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -627,6 +629,9 @@ export class GameManagementService {
       case OperatingRoundAction.DECREASE_PRICE:
         await this.decreasePrice(companyAction);
         break;
+      case OperatingRoundAction.RESEARCH:
+        await this.research(companyAction);
+        break;
       default:
         return;
     }
@@ -634,6 +639,64 @@ export class GameManagementService {
     await this.companyActionService.updateCompanyAction({
       where: { id: companyAction.id },
       data: { resolved: true },
+    });
+  }
+
+  async research(companyAction: CompanyAction) {
+    //get the company
+    const company = await this.companyService.company({
+      id: companyAction.companyId,
+    });
+    if (!company) {
+      throw new Error('Company not found');
+    }
+    //get the research deck
+    const researchDeck = await this.researchDeckService.researchDeckFirst({
+      where: { gameId: company.gameId },
+    });
+    if (!researchDeck) {
+      throw new Error('Research deck not found');
+    }
+    //filter cards from the deck that do not have a company id
+    const cards = researchDeck.cards.filter((card) => !card.companyId);
+    //pick a random card
+    const card = cards[Math.floor(Math.random() * cards.length)];
+    //assign this card to the company
+    await this.cardsService.updateCard(
+      card.id,
+      { Company: { connect: { id: company.id } } },
+    );
+    //trigger effect
+    await this.triggerCardEffect(card.effect, company);
+  }
+
+  async triggerCardEffect(effect: ResearchCardEffect, company: Company) {
+    switch(effect) {
+      case ResearchCardEffect.GOVERNMENT_GRANT:
+        this.governmentGrantCardEffect(company);
+        break;
+      case ResearchCardEffect.QUALITY_CONTROL:
+        this.qualityControlCardEffect(company);
+        break;
+      case ResearchCardEffect.NO_DISCERNIBLE_FINDINGS:
+        return;
+      default:
+        return;
+    }
+  }
+  async qualityControlCardEffect(company: Company) {
+    //award the company 1 prestige token
+    await this.companyService.updateCompany({
+      where: { id: company.id },
+      data: { prestigeTokens: company.prestigeTokens + 1 },
+    });
+  }
+
+  async governmentGrantCardEffect(company: Company) {
+    //Award the company $500
+    await this.companyService.updateCompany({
+      where: { id: company.id },
+      data: { cashOnHand: company.cashOnHand + GOVERNMENT_GRANT_AMOUNT },
     });
   }
 

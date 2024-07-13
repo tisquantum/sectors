@@ -19,6 +19,7 @@ import {
 } from '@server/prisma/prisma.types';
 import {
   DEFAULT_RESEARCH_DECK_SIZE,
+  GOVERNMENT_GRANT_AMOUNT,
   PRESTIGE_TRACK_LENGTH,
   PrestigeTrack,
   PrestigeTrackItem,
@@ -490,7 +491,9 @@ export function createSeededResearchCards(seed: string): Card[] {
       id: i + 1,
       name: 'No Discernible Findings',
       description: 'This research yielded no discernible findings.',
-      sector: getSectorBasedOnEffect(ResearchCardEffect.NO_DISCERNIBLE_FINDINGS), // Provide appropriate sector
+      sector: getSectorBasedOnEffect(
+        ResearchCardEffect.NO_DISCERNIBLE_FINDINGS,
+      ), // Provide appropriate sector
       effect: ResearchCardEffect.NO_DISCERNIBLE_FINDINGS as ResearchCardEffect,
       deckId: 0, // Set appropriate deckId
       gameId: seed,
@@ -512,7 +515,7 @@ export function createSeededResearchCards(seed: string): Card[] {
     cards.push({
       id: i + 1,
       name: effect,
-      description: `Effect of ${effect}.`,
+      description: descriptionForEffect(effect as ResearchCardEffect),
       sector: getSectorBasedOnEffect(effect), // Provide appropriate sector
       effect: effect,
       deckId: 0, // Set appropriate deckId
@@ -530,4 +533,33 @@ export function createSeededResearchCards(seed: string): Card[] {
   }
 
   return cards;
+}
+
+function descriptionForEffect(effect: ResearchCardEffect): string {
+  switch (effect) {
+    case ResearchCardEffect.CLINICAL_TRIAL:
+      return 'This research has yielded a breakthrough in clinical trials.';
+    case ResearchCardEffect.ARTIFICIAL_INTELLIGENCE:
+      return 'This research has yielded a breakthrough in artificial intelligence.';
+    case ResearchCardEffect.ENERGY_SAVING:
+      return 'This research has yielded a breakthrough in energy saving.';
+    case ResearchCardEffect.GLOBALIZATION:
+      return 'This research has yielded a breakthrough in globalization.';
+    case ResearchCardEffect.ECOMMERCE:
+      return 'This research has yielded a breakthrough in ecommerce.';
+    case ResearchCardEffect.ROBOTICS:
+      return 'This research has yielded a breakthrough in robotics.';
+    case ResearchCardEffect.GOVERNMENT_GRANT:
+      return `The company has received a government grant, receive ${GOVERNMENT_GRANT_AMOUNT}.`;
+    case ResearchCardEffect.RENEWABLE_ENERGY:
+      return 'This research has yielded a breakthrough in renewable energy.';
+    case ResearchCardEffect.QUALITY_CONTROL:
+      return 'The company has achieved a breakthrough in quality control, receive 1 prestige token.';
+    case ResearchCardEffect.PRODUCT_DEVELOPMENT:
+      return 'The company has achieved a breakthrough in product development.';
+    case ResearchCardEffect.NO_DISCERNIBLE_FINDINGS:
+      return 'This research yielded no discernible findings.';
+    default:
+      return 'This research yielded no discernible findings.';
+  }
 }

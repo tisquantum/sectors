@@ -30,6 +30,8 @@ export const DEFAULT_INCREASE_UNIT_PRICE = 20;
 export const DEFAULT_DECREASE_UNIT_PRICE = 20;
 export const DEFAULT_RESEARCH_DECK_SIZE = 12;
 
+export const GOVERNMENT_GRANT_AMOUNT = 500;
+
 /**
  * Phase times in milliseconds
  */
