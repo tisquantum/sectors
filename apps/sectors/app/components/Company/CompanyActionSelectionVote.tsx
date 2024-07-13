@@ -268,6 +268,13 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
       return companies[currentIndex - 1].id;
     });
   };
+  const currentCompanyAction = companyActions?.find(
+    (companyAction) => companyAction.companyId === currentCompany
+  );
+  console.log('currentPhase', currentPhase);
+  console.log('currentCompany', currentCompany);
+  console.log('companyActions', companyActions);
+  console.log('currentCompanyAction', currentCompanyAction);
   return (
     <div className="flex flex-col flex-grow relative">
       <div className="flex flex-col gap-2 justify-center items-center">
@@ -302,9 +309,7 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
               actionVoteResults={companyVoteResults?.operatingRoundVote.filter(
                 (vote) => vote.companyId === currentCompany
               )}
-              companyAction={companyActions?.find(
-                (companyAction) => companyAction.companyId === currentCompany
-              )}
+              companyAction={currentCompanyAction}
               withResult={withResult}
             />
             {!withResult && (

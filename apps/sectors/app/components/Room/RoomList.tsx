@@ -7,6 +7,7 @@ import { RoomWithUsers } from "@server/prisma/prisma.types";
 import { useAuthUser } from "@sectors/app/components/AuthUser.context";
 import { useRouter } from "next/navigation";
 import Button from "@sectors/app/components/General/DebounceButton";
+import UserAvatar from "./UserAvatar";
 interface RoomListProps {
   room: RoomWithUsers;
 }
@@ -32,7 +33,7 @@ const RoomList: React.FC<RoomListProps> = ({ room }) => {
           {room.users &&
             room.users.length > 0 &&
             room.users.map((data) => (
-              <Avatar key={data.user.id} name={data.user.name} size="sm" />
+              <UserAvatar key={data.user.id} user={data.user} size="sm" />
             ))}
         </AvatarGroup>
         <h2 className="ml-4 text-lg font-bold">{room.name}</h2>

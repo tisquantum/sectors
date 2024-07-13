@@ -231,7 +231,9 @@ export class GameManagementService {
       const shareUpdates = sharesToDivest.map((share) => {
         return this.shareService.updateShare({
           where: { id: share.id },
-          data: { location: ShareLocation.OPEN_MARKET },
+          data: { location: ShareLocation.OPEN_MARKET,
+            Player: { disconnect: true },
+           },
         });
       });
 
@@ -391,10 +393,33 @@ export class GameManagementService {
       where: { gameId: phase.gameId, status: CompanyStatus.ACTIVE },
     });
 
-    const companyActions = companies.map((company) => ({
-      companyId: company.id,
-      operatingRoundId: phase.operatingRoundId || 0,
-    }));
+    // Fetch existing company actions for the current operating round
+    const existingCompanyActions = await this.prisma.companyAction.findMany({
+      where: {
+        operatingRoundId: phase.operatingRoundId || 0,
+        companyId: {
+          in: companies.map((company) => company.id),
+        },
+      },
+    });
+
+    // Create a set of existing company action company IDs for quick lookup
+    const existingCompanyActionCompanyIds = new Set(
+      existingCompanyActions.map((action) => action.companyId),
+    );
+
+    // Filter out companies that already have actions
+    let companyActions = companies
+      .filter((company) => !existingCompanyActionCompanyIds.has(company.id))
+      .map((company) => ({
+        companyId: company.id,
+        operatingRoundId: phase.operatingRoundId || 0,
+      }));
+
+    if (companyActions.length === 0) {
+      console.log('No new company actions to create');
+      return;
+    }
 
     try {
       await this.prisma.companyAction.createMany({
@@ -598,9 +623,13 @@ export class GameManagementService {
       await this.payForCompanyAction(companyAction);
     } catch (error) {
       console.error('Error paying for company action', error);
-      throw new Error('Company cannot pay for the action.');
+      companyAction.action = OperatingRoundAction.VETO;
     }
-
+    //resolve company action
+    await this.companyActionService.updateCompanyAction({
+      where: { id: companyAction.id },
+      data: { resolved: true },
+    });
     switch (companyAction.action) {
       case OperatingRoundAction.SHARE_ISSUE:
         await this.resolveIssueShares(companyAction);
@@ -632,14 +661,11 @@ export class GameManagementService {
       case OperatingRoundAction.RESEARCH:
         await this.research(companyAction);
         break;
+      case OperatingRoundAction.VETO:
+        break;
       default:
         return;
     }
-    //resolve company action
-    await this.companyActionService.updateCompanyAction({
-      where: { id: companyAction.id },
-      data: { resolved: true },
-    });
   }
 
   async research(companyAction: CompanyAction) {
@@ -662,16 +688,15 @@ export class GameManagementService {
     //pick a random card
     const card = cards[Math.floor(Math.random() * cards.length)];
     //assign this card to the company
-    await this.cardsService.updateCard(
-      card.id,
-      { Company: { connect: { id: company.id } } },
-    );
+    await this.cardsService.updateCard(card.id, {
+      Company: { connect: { id: company.id } },
+    });
     //trigger effect
     await this.triggerCardEffect(card.effect, company);
   }
 
   async triggerCardEffect(effect: ResearchCardEffect, company: Company) {
-    switch(effect) {
+    switch (effect) {
       case ResearchCardEffect.GOVERNMENT_GRANT:
         this.governmentGrantCardEffect(company);
         break;
@@ -857,7 +882,8 @@ export class GameManagementService {
     //get one share from the open market and destroy it
     const share = shares.find((s) => s.location === ShareLocation.OPEN_MARKET);
     if (!share) {
-      throw new Error('Share not found');
+      console.error('Share not found');
+      return;
     }
     //destroy the share
     await this.shareService.deleteShare({ id: share.id });
@@ -876,6 +902,7 @@ export class GameManagementService {
     if (!company) {
       throw new Error('Company not found');
     }
+    console.log('companyAction', companyAction);
     if (!companyAction.action) {
       throw new Error('Action not found');
     }
@@ -1413,25 +1440,32 @@ export class GameManagementService {
     console.log('Actions with max votes:', actionsWithMaxVotes);
     const resolvedAction = companyVoteActionPriority(actionsWithMaxVotes);
     console.log('Resolved action:', resolvedAction);
+    let companyAction;
     try {
-      const companyAction = await this.companyActionService.companyActionFirst({
+      companyAction = await this.companyActionService.companyActionFirst({
         where: {
           companyId: company.id,
           operatingRoundId: phase.operatingRoundId || 0,
         },
       });
       if (!companyAction) {
-        throw new Error('Company action not found');
-      }
-      //create new operating round action
-      await this.companyActionService.updateCompanyAction({
-        where: {
-          id: companyAction.id,
-        },
-        data: {
+        //create the company action
+        await this.companyActionService.createCompanyAction({
           action: resolvedAction,
-        },
-      });
+          Company: { connect: { id: company.id } },
+          OperatingRound: { connect: { id: phase.operatingRoundId || 0 } },
+        });
+      } else {
+        //create new operating round action
+        await this.companyActionService.updateCompanyAction({
+          where: {
+            id: companyAction.id,
+          },
+          data: {
+            action: resolvedAction,
+          },
+        });
+      }
     } catch (error) {
       console.error('Error creating company action', error);
       throw new Error('Company action cannot be created');
