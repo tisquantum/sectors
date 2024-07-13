@@ -27,6 +27,7 @@ import { CapitalGainsService } from '@server/capital-gains/capital-gains.service
 import { GameTurnService } from '@server/game-turn/game-turn.service';
 import { PrestigeRewardsService } from '@server/prestige-rewards/prestige-rewards.service';
 import { ResearchDeckService } from '@server/research-deck/research-deck.service';
+import { CardsService } from '@server/cards/cards.service';
 
 @Module({
   imports: [PrismaModule],
@@ -60,6 +61,7 @@ import { ResearchDeckService } from '@server/research-deck/research-deck.service
     GameTurnService,
     PrestigeRewardsService,
     ResearchDeckService,
+    CardsService,
   ],
 })
 export class TrpcModule {}

@@ -20,6 +20,7 @@ import { CapitalGainsModule } from '@server/capital-gains/capital-gains.module';
 import { GameTurnModule } from '@server/game-turn/game-turn.module';
 import { PrestigeRewardsModule } from '@server/prestige-rewards/prestige-rewards.module';
 import { CardsModule } from '@server/cards/cards.module';
+import { ResearchDeckModule } from '@server/research-deck/research-deck.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { CardsModule } from '@server/cards/cards.module';
     GameTurnModule,
     PrestigeRewardsModule,
     CardsModule,
+    ResearchDeckModule,
   ],
   providers: [GameManagementService],
   exports: [GameManagementService],

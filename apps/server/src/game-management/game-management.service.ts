@@ -1736,7 +1736,7 @@ export class GameManagementService {
       throw new Error('No cards generated');
     }
     const researchDeck = await this.researchDeckService.createResearchDeck({
-      Game: { connect: {id: gameId } },
+      Game: { connect: { id: gameId } },
     });
 
     researchCards = researchCards.map((card) => ({
@@ -1744,14 +1744,15 @@ export class GameManagementService {
       gameId,
       deckId: researchDeck.id,
     }));
-    
-    await this.cardsService.createManyCards(researchCards);
-    
+    const createdResearchCards =
+      await this.cardsService.createManyCards(researchCards);
+    console.log('Created research cards:', createdResearchCards);
+
     return this.researchDeckService.updateResearchDeck({
       where: { id: researchDeck.id },
       data: {
         cards: {
-          connect: researchCards.map((card) => ({ id: card.id })),
+          connect: createdResearchCards.map((card) => ({ id: card.id })),
         },
       },
     });

@@ -474,7 +474,7 @@ function getSectorBasedOnEffect(effect: ResearchCardEffect): SectorName {
   }
 }
 
-function createSeededResearchCards(seed: string): Card[] {
+export function createSeededResearchCards(seed: string): Card[] {
   const rng = lcg(stringToSeed(seed));
   const cards: Card[] = [];
   const effects = Object.values(ResearchCardEffect);
@@ -491,8 +491,10 @@ function createSeededResearchCards(seed: string): Card[] {
       name: 'No Discernible Findings',
       description: 'This research yielded no discernible findings.',
       sector: getSectorBasedOnEffect(ResearchCardEffect.NO_DISCERNIBLE_FINDINGS), // Provide appropriate sector
-      effect: ResearchCardEffect.NO_DISCERNIBLE_FINDINGS,
+      effect: ResearchCardEffect.NO_DISCERNIBLE_FINDINGS as ResearchCardEffect,
       deckId: 0, // Set appropriate deckId
+      gameId: seed,
+      companyId: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -506,13 +508,16 @@ function createSeededResearchCards(seed: string): Card[] {
   ) {
     const effectIndex = Math.floor(rng() * (effects.length - 1));
     const effect = effects[effectIndex];
+    console.log('effect', effect);
     cards.push({
       id: i + 1,
-      name: effect.replace(/_/g, ' '), // Just an example to convert ENUM to name
-      description: `Effect of ${effect.replace(/_/g, ' ')}.`,
+      name: effect,
+      description: `Effect of ${effect}.`,
       sector: getSectorBasedOnEffect(effect), // Provide appropriate sector
       effect: effect,
       deckId: 0, // Set appropriate deckId
+      gameId: seed,
+      companyId: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     });

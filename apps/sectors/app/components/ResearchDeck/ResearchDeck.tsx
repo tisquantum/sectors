@@ -22,7 +22,6 @@ const ResearchDeck = () => {
 
   return (
     <div className="p-4">
-      <h1 className="text-2xl mb-4">Research Deck</h1>
       <div className="mb-4">
         <Button onPress={onOpen}>Show Deck</Button>
       </div>
@@ -48,7 +47,7 @@ const ResearchDeck = () => {
         ))}
       </div>
 
-      <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
+      <Modal size="4xl" isOpen={isOpen} onOpenChange={onOpenChange}>
         <ModalContent>
           {(onClose) => (
             <>
