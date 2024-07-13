@@ -16,9 +16,15 @@ export const MAX_SHORT_ORDER = 2;
 
 export const DEFAULT_SHARE_LIMIT = 10;
 
+export const PRESTIGE_TRACK_LENGTH = 10;
+
 export const DEFAULT_SHARE_DISTRIBUTION = 10;
 
 export const STABLE_ECONOMY_SCORE = 15;
+
+export const MAX_SHARE_PERCENTAGE = 60;
+export const MAX_SHARE_DEFAULT =
+  DEFAULT_SHARE_DISTRIBUTION * (MAX_SHARE_PERCENTAGE / 100);
 
 /**
  * Phase times in milliseconds
@@ -406,30 +412,42 @@ export const CapitalGainsTiers = [
   },
 ];
 
+export interface PrestigeTrackItem {
+  type: PrestigeReward;
+  name: string;
+  description: string;
+  probability: number;
+}
+
 export const PrestigeTrack = [
   {
     type: PrestigeReward.ELASTICITY,
     name: 'Sector Elasticity',
     description: 'The sector receives +1 base demand.',
+    probability: 0.08,
   },
   {
     type: PrestigeReward.MAGNET_EFFECT,
     name: 'Magnet Effect',
     description: 'A new company opens in the sector.',
+    probability: 0.05,
   },
   {
     type: PrestigeReward.INVESTOR_CONFIDENCE,
     name: 'Investor Confidence',
     description: 'The company puts 3 more shares into the open market.',
+    probability: 0.09,
   },
   {
     type: PrestigeReward.CAPITAL_INJECTION,
     name: 'Capital Injection',
     description: 'The company receives the money on this space of the track.',
+    probability: 0.1,
   },
   {
     type: PrestigeReward.BULL_SIGNAL,
     name: 'Bull Signal',
     description: 'The company receives a +1 stock price adjustment.',
+    probability: 0.12,
   },
 ];

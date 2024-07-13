@@ -1,6 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
-import { Prisma, PlayerOrder, OrderType, Player, ShareLocation, OrderStatus } from '@prisma/client';
+import {
+  Prisma,
+  PlayerOrder,
+  OrderType,
+  Player,
+  ShareLocation,
+  OrderStatus,
+} from '@prisma/client';
 import {
   PlayerOrderConcealed,
   PlayerOrderConcealedWithPlayer,
@@ -9,6 +16,7 @@ import {
   PlayerOrdersAllRelations,
 } from '@server/prisma/prisma.types';
 import { getPseudoSpend } from '@server/data/helpers';
+import { MAX_SHARE_PERCENTAGE } from '@server/data/constants';
 
 @Injectable()
 export class PlayerOrderService {
@@ -158,12 +166,19 @@ export class PlayerOrderService {
       throw new Error('Player has already placed an order this phase');
     }
     // OrderType Market and BUY is the only type of order that can be placed on location IPO
-    if (data.location === ShareLocation.IPO && (data.orderType !== OrderType.MARKET)) {
+    if (
+      data.location === ShareLocation.IPO &&
+      data.orderType !== OrderType.MARKET
+    ) {
       throw new Error('Only market orders are allowed on IPO');
     }
 
     // OrderType Market and BUY is the only type of order that can be placed on location IPO
-    if (data.location === ShareLocation.IPO && (data.orderType === OrderType.MARKET && data.isSell)) {
+    if (
+      data.location === ShareLocation.IPO &&
+      data.orderType === OrderType.MARKET &&
+      data.isSell
+    ) {
       throw new Error('Cannot sell into IPO');
     }
 
@@ -215,6 +230,19 @@ export class PlayerOrderService {
       } else {
         if (spend + orderValue > player.cashOnHand!) {
           throw new Error('Player does not have enough cash to place order');
+        }
+
+        //get company with shares
+        const company = await this.prisma.company.findUnique({
+          where: { id: companyId },
+          include: { Share: true },
+        });
+
+        if (
+          player.Share.length + data.quantity! >
+          company?.Share.length! * (MAX_SHARE_PERCENTAGE / 100)
+        ) {
+          throw new Error('This buy would exceed the maximum share percentage.');
         }
       }
     }
@@ -281,7 +309,7 @@ export class PlayerOrderService {
       where,
     });
   }
-  
+
   async deletePlayerOrder(
     where: Prisma.PlayerOrderWhereUniqueInput,
   ): Promise<PlayerOrder> {
@@ -293,7 +321,7 @@ export class PlayerOrderService {
   async triggerLimitOrdersFilled(
     prevPrice: number,
     currentPrice: number,
-    companyId: string
+    companyId: string,
   ): Promise<PlayerOrder[]> {
     //get all limit orders for this company
     const limitOrders = await this.prisma.playerOrder.findMany({

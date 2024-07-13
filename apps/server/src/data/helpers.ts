@@ -3,14 +3,21 @@ import {
   OrderType,
   Phase,
   PhaseName,
+  PrestigeReward,
   Prisma,
   RoundType,
   Sector,
   ShareLocation,
   StockTier,
 } from '@prisma/client';
-import { CompanyWithSector, PlayerOrderWithCompany } from '@server/prisma/prisma.types';
 import {
+  CompanyWithSector,
+  PlayerOrderWithCompany,
+} from '@server/prisma/prisma.types';
+import {
+  PRESTIGE_TRACK_LENGTH,
+  PrestigeTrack,
+  PrestigeTrackItem,
   STOCK_ACTION_SUB_ROUND_MAX,
   StockTierChartRange,
   stockGridPrices,
@@ -27,7 +34,7 @@ interface NextPhaseOptions {
  */
 export function determineNextGamePhase(
   phaseName: PhaseName,
-  options?: NextPhaseOptions
+  options?: NextPhaseOptions,
 ): {
   phaseName: PhaseName;
   roundType: RoundType;
@@ -49,7 +56,7 @@ export function determineNextGamePhase(
         roundType: RoundType.STOCK,
       };
     case PhaseName.STOCK_ACTION_RESULT:
-      if ((options?.stockActionSubRound || 0 ) <= STOCK_ACTION_SUB_ROUND_MAX) {
+      if ((options?.stockActionSubRound || 0) <= STOCK_ACTION_SUB_ROUND_MAX) {
         return {
           phaseName: PhaseName.STOCK_ACTION_ORDER,
           roundType: RoundType.STOCK,
@@ -348,4 +355,85 @@ export function companyPriorityOrderOperations(companies: CompanyWithSector[]) {
       return b.demandScore - a.demandScore;
     }
   });
+}
+
+export function getNextPrestigeReward(prestigeReward: PrestigeReward) {
+  //find the next prestige reward on the prestige track
+  const currentIndex = PrestigeTrack.findIndex(
+    (reward) => reward.type === prestigeReward,
+  );
+  if (currentIndex !== -1 && currentIndex < PrestigeTrack.length - 1) {
+    return PrestigeTrack[currentIndex + 1].type;
+  } else {
+    return PrestigeTrack[0].type;
+  }
+}
+
+function lcg(seed: number): () => number {
+  const a = 1664525;
+  const c = 1013904223;
+  const m = 2 ** 32;
+  let state = seed;
+
+  return function (): number {
+    state = (a * state + c) % m;
+    return state / m;
+  };
+}
+
+function stringToSeed(str: string): number {
+  let seed = 0;
+  for (let i = 0; i < str.length; i++) {
+    seed = (seed << 5) - seed + str.charCodeAt(i);
+    seed |= 0; // Convert to 32bit integer
+  }
+  return seed;
+}
+
+
+function createCumulativeProbabilities(items: PrestigeTrackItem[]): number[] {
+  const cumulativeProbabilities = [];
+  let sum = 0;
+
+  for (const item of items) {
+    sum += item.probability;
+    cumulativeProbabilities.push(sum);
+  }
+
+  return cumulativeProbabilities;
+}
+
+function weightedRandom(rng: () => number, items: PrestigeTrackItem[], cumulative: number[]): PrestigeTrackItem {
+  const totalWeight = cumulative[cumulative.length - 1];
+  const random = rng() * totalWeight;
+
+  for (let i = 0; i < cumulative.length; i++) {
+    if (Math.abs(random) < cumulative[i]) {
+      return items[i];
+    }
+  }
+
+  return items[items.length - 1]; // Fallback, should not reach here
+}
+
+export function createPrestigeTrackBasedOnSeed(seed: string): PrestigeTrackItem[] {
+  const rng = lcg(stringToSeed(seed));
+  const cumulative = createCumulativeProbabilities(PrestigeTrack);
+
+  const track: PrestigeTrackItem[] = [];
+  while (track.length < PRESTIGE_TRACK_LENGTH) {
+    const item = weightedRandom(rng, PrestigeTrack, cumulative);
+    track.push(item);
+  }
+
+  return track;
+}
+
+export function getNextPrestigeInt(currentPrestigeInt: number): number {
+  //if prestige int is equal to 10, reset to 0
+  if (currentPrestigeInt === (PRESTIGE_TRACK_LENGTH - 1)) {
+    return 0;
+  } else {
+    return currentPrestigeInt + 1;
+  }
 }

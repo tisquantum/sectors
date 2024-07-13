@@ -1,10 +1,4 @@
 import React from "react";
-import { Chip, Avatar, Badge } from "@nextui-org/react";
-import { MinusIcon, PlusIcon } from "@heroicons/react/24/solid";
-import { determineColorByOrderType } from "@sectors/app/helpers";
-import { trpc } from "@sectors/app/trpc";
-import { useGame } from "../Game/GameContext";
-import { OrderType } from "@server/prisma/prisma.client";
 import OrderChipWithPlayer from "../Game/OrderChipWithPlayer";
 import { PlayerOrderWithPlayerCompany } from "@server/prisma/prisma.types";
 

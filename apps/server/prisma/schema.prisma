@@ -514,6 +514,7 @@ model Game {
   gameStep                Int
   roomId                  Int
   overdraft               Boolean           @default(true)
+  nextPrestigeReward      Int?
   gameLogs                GameLog[]
   sectors                 Sector[]
   GameTurn                GameTurn[]

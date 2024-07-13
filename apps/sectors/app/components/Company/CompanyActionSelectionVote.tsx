@@ -147,7 +147,7 @@ const CompanyActionSelectionVote = ({
                 <div className="flex flex-col">
                   {action.message}
                   {action.name == OperatingRoundAction.SPEND_PRESTIGE && (
-                    <PrestigeRewards />
+                    <PrestigeRewards layout="minimalist" />
                   )}
                 </div>
               </CardBody>

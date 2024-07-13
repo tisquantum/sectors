@@ -3,6 +3,7 @@ import "./EndTurnEconomy.css";
 import { sectorColors } from "@server/data/gameData";
 import { Sector } from "@server/prisma/prisma.client";
 import { RiTeamFill } from "@remixicon/react";
+import PrestigeRewards from "./PrestigeRewards";
 
 const SectorComponent = ({
   sector,
@@ -39,18 +40,23 @@ const EndTurnEconomy = () => {
     <div className="flex flex-col justify-center items-center content-center">
       <h1>Economy</h1>
       <div className="flex gap-2 text-xl">
-        <span>Consumer Pool</span>
-        <span>{gameState.consumerPoolNumber}</span>
-      </div>
-      <div className="flex gap-3">
-        {sectors.map((sector, index) => (
-          <SectorComponent
-            key={sector.id}
-            sector={sector}
-            sectorColor={sectorColors[sector.name]}
-            sectorIndex={index}
-          />
-        ))}
+        <div className="flex gap-2 text-xl">
+          <span>Consumer Pool</span>
+          <span>{gameState.consumerPoolNumber}</span>
+        </div>
+        <div className="flex gap-3">
+          {sectors.map((sector, index) => (
+            <SectorComponent
+              key={sector.id}
+              sector={sector}
+              sectorColor={sectorColors[sector.name]}
+              sectorIndex={index}
+            />
+          ))}
+        </div>
+        <div className="flex gap-2 text-xl">
+          <PrestigeRewards />
+        </div>
       </div>
     </div>
   );
