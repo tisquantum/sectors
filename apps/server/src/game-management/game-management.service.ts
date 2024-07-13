@@ -66,6 +66,7 @@ import {
   getPreviousCompanyTier,
   DEFAULT_SHARE_LIMIT,
   MAX_SHARE_PERCENTAGE,
+  DEFAULT_INCREASE_UNIT_PRICE,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -283,6 +284,11 @@ export class GameManagementService {
     await Promise.all(sharePromises);
   }
 
+  /**
+   * Create capital gains tax for players based on their net worth.
+   * @param phase
+   * @returns
+   */
   async resolveCapitalGains(phase: Phase) {
     // Calculate capital gains based on player net worth
     const players = await this.playersService.playersWithShares({
@@ -303,6 +309,8 @@ export class GameManagementService {
     });
 
     const capitalGainsUpdates = [];
+    const playerUpdatePromises = [];
+    const gameLogPromises = [];
 
     for (const { playerId, netWorth } of netWorths) {
       // Find the appropriate tax tier
@@ -325,31 +333,38 @@ export class GameManagementService {
 
       const newCashOnHand = Math.max(player.cashOnHand - taxAmount, 0);
 
-      // Update player cash on hand
-      capitalGainsUpdates.push({
-        playerId,
-        capitalGains: taxAmount,
-        newCashOnHand,
-        gameId: phase.gameId,
-        gameTurnId: phase.gameTurnId,
-        taxPercentage: tier.taxPercentage,
-      });
+      if (taxAmount > 0) {
+        // Update player cash on hand
+        capitalGainsUpdates.push({
+          playerId,
+          capitalGains: taxAmount,
+          gameId: phase.gameId,
+          gameTurnId: phase.gameTurnId,
+          taxPercentage: tier.taxPercentage,
+        });
 
-      await this.playersService.updatePlayer({
-        where: { id: playerId },
-        data: { cashOnHand: newCashOnHand },
-      });
+        playerUpdatePromises.push(
+          this.playersService.updatePlayer({
+            where: { id: playerId },
+            data: { cashOnHand: newCashOnHand },
+          }),
+        );
 
-      this.gameLogService.createGameLog({
-        game: { connect: { id: phase.gameId } },
-        content: `Player ${player.nickname} has paid capital gains tax of ${taxAmount}.`,
-      });
-
-      // Create a log entry
-      await this.capitalGainsService.createManyCapitalGains(
-        capitalGainsUpdates,
-      );
+        gameLogPromises.push(
+          this.gameLogService.createGameLog({
+            game: { connect: { id: phase.gameId } },
+            content: `Player ${player.nickname} has paid capital gains tax of ${taxAmount}.`,
+          }),
+        );
+      }
     }
+
+    // Await all player updates and game logs concurrently
+    await Promise.all(playerUpdatePromises);
+    await Promise.all(gameLogPromises);
+
+    // Create an entry for capital gains updates
+    await this.capitalGainsService.createManyCapitalGains(capitalGainsUpdates);
 
     return capitalGainsUpdates;
   }
@@ -601,6 +616,12 @@ export class GameManagementService {
       case OperatingRoundAction.SPEND_PRESTIGE:
         await this.spendPrestige(companyAction);
         break;
+      case OperatingRoundAction.INCREASE_PRICE:
+        await this.increasePrice(companyAction);
+        break;
+      case OperatingRoundAction.DECREASE_PRICE:
+        await this.decreasePrice(companyAction);
+        break;
       default:
         return;
     }
@@ -608,6 +629,40 @@ export class GameManagementService {
     await this.companyActionService.updateCompanyAction({
       where: { id: companyAction.id },
       data: { resolved: true },
+    });
+  }
+
+  async increasePrice(companyAction: CompanyAction) {
+    //get the company
+    const company = await this.companyService.company({
+      id: companyAction.companyId,
+    });
+    if (!company) {
+      throw new Error('Company not found');
+    }
+    //increase the company stock price
+    await this.companyService.updateCompany({
+      where: { id: company.id },
+      data: {
+        unitPrice: company.unitPrice + DEFAULT_INCREASE_UNIT_PRICE,
+      },
+    });
+  }
+
+  async decreasePrice(companyAction: CompanyAction) {
+    //get the company
+    const company = await this.companyService.company({
+      id: companyAction.companyId,
+    });
+    if (!company) {
+      throw new Error('Company not found');
+    }
+    //decrease the company stock price
+    await this.companyService.updateCompany({
+      where: { id: company.id },
+      data: {
+        unitPrice: Math.max(company.unitPrice - DEFAULT_INCREASE_UNIT_PRICE, 0),
+      },
     });
   }
 
@@ -1253,6 +1308,7 @@ export class GameManagementService {
     const votes = await this.prisma.operatingRoundVote.findMany({
       where: {
         companyId: company.id,
+        operatingRoundId: phase.operatingRoundId || 0,
       },
       include: {
         Player: {
@@ -1863,9 +1919,14 @@ export class GameManagementService {
       },
     });
 
-    await this.handlePhase(phase);
-
     try {
+      await this.handlePhase(phase);
+    } catch (error) {
+      console.error('Error during phase:', error);
+      // Optionally handle retries or fallback logic here
+    }
+    try {
+      console.log('pusher service new phase', EVENT_NEW_PHASE);
       this.pusherService.trigger(
         getGameChannelId(gameId),
         EVENT_NEW_PHASE,

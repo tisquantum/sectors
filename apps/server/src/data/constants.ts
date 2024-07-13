@@ -26,6 +26,9 @@ export const MAX_SHARE_PERCENTAGE = 60;
 export const MAX_SHARE_DEFAULT =
   DEFAULT_SHARE_DISTRIBUTION * (MAX_SHARE_PERCENTAGE / 100);
 
+export const DEFAULT_INCREASE_UNIT_PRICE = 20;
+export const DEFAULT_DECREASE_UNIT_PRICE = 20;
+
 /**
  * Phase times in milliseconds
  */

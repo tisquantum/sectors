@@ -12,7 +12,9 @@ import { trpc } from "@sectors/app/trpc";
 import { useGame } from "../Game/GameContext";
 import {
   CompanyActionCosts,
-  getCompanyOperatingRoundTurnOrder
+  DEFAULT_DECREASE_UNIT_PRICE,
+  DEFAULT_INCREASE_UNIT_PRICE,
+  getCompanyOperatingRoundTurnOrder,
 } from "@server/data/constants";
 import {
   Company,
@@ -29,7 +31,7 @@ import { sectorColors } from "@server/data/gameData";
 import PlayerAvatar from "../Player/PlayerAvatar";
 import CompanyInfo from "./CompanyInfo";
 import PrestigeRewards from "../Game/PrestigeRewards";
-import Button from '@sectors/app/components/General/DebounceButton';
+import Button from "@sectors/app/components/General/DebounceButton";
 
 const companyActions = [
   {
@@ -51,14 +53,14 @@ const companyActions = [
     title: "Expansion",
     name: OperatingRoundAction.EXPANSION,
     message:
-      "Increase company size (base operational costs per OR) and throughput to meet higher demand.",
+      "Increase company size (base operational costs per OR) to meet higher demand and increase supply.",
   },
   {
     id: 4,
     title: "Downsize",
     name: OperatingRoundAction.DOWNSIZE,
     message:
-      "Reduce company size (base operational costs per OR) and throughput to lower operation costs.",
+      "Reduce company size (base operational costs per OR) to lower operation costs and decrease supply.",
   },
   {
     id: 5,
@@ -75,13 +77,25 @@ const companyActions = [
   },
   {
     id: 7,
+    title: "Increase Unit Price",
+    name: OperatingRoundAction.INCREASE_PRICE,
+    message: `Increase the unit price of the company's product by ${DEFAULT_INCREASE_UNIT_PRICE}. This will increase the company's revenue. Be careful as consumers choose the company with the cheapest product in the sector first!`,
+  },
+  {
+    id: 8,
+    title: "Decrease Unit Price",
+    name: OperatingRoundAction.DECREASE_PRICE,
+    message: `Decrease the unit price of the company's product by ${DEFAULT_DECREASE_UNIT_PRICE}. This will decrease the company's revenue.`,
+  },
+  {
+    id: 9,
     title: "Spend Prestige",
     name: OperatingRoundAction.SPEND_PRESTIGE,
     message:
       "Spend 3 prestige to receive the reward on the prestige track, if the company does not have enough prestige, move the prestige track forward by 1.",
   },
   {
-    id: 8,
+    id: 10,
     title: "Veto",
     name: OperatingRoundAction.VETO,
     message:
@@ -147,7 +161,7 @@ const CompanyActionSelectionVote = ({
                 </div>
               </CardBody>
               <CardFooter>
-                {actionVoteResults && withResult && (
+                {actionVoteResults && (
                   <div className="flex gap-2">
                     {actionVoteResults
                       .filter(
@@ -196,19 +210,15 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
     }
   );
   const {
-    data: companyAction,
+    data: companyActions,
     isLoading: isLoadingCompanyAction,
     error: companyActionError,
     refetch: refetchCompanyAction,
-  } = trpc.companyAction.getCompanyAction.useQuery(
-    {
+  } = trpc.companyAction.listCompanyActions.useQuery({
+    where: {
       operatingRoundId: currentPhase?.operatingRoundId || 0,
-      companyId: currentPhase?.companyId || "",
     },
-    {
-      enabled: withResult,
-    }
-  );
+  });
 
   const [currentCompany, setCurrentCompany] = useState<string | undefined>(
     undefined
@@ -292,7 +302,9 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
               actionVoteResults={companyVoteResults?.operatingRoundVote.filter(
                 (vote) => vote.companyId === currentCompany
               )}
-              companyAction={companyAction}
+              companyAction={companyActions?.find(
+                (companyAction) => companyAction.companyId === currentCompany
+              )}
               withResult={withResult}
             />
             {!withResult && (

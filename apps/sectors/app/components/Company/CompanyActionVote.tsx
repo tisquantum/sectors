@@ -36,8 +36,10 @@ const CompanyActionVote = ({ company }: { company?: Company }) => {
     { name: OperatingRoundAction.MERGE, label: "Merge" },
     { name: OperatingRoundAction.SHARE_BUYBACK, label: "Buyback Shares" },
     { name: OperatingRoundAction.SHARE_ISSUE, label: "Issue Shares" },
+    { name: OperatingRoundAction.INCREASE_PRICE, label: "Increase Price" },
+    { name: OperatingRoundAction.DECREASE_PRICE, label: "Decrease Price" },
     { name: OperatingRoundAction.SPEND_PRESTIGE, label: "Prestige" },
-    { name: OperatingRoundAction.VETO, label: "Veto" }
+    { name: OperatingRoundAction.VETO, label: "Veto" },
   ];
   return (
     <div className="flex flex-col items-center justify-center max-w-2xl">
