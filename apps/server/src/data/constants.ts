@@ -28,6 +28,7 @@ export const MAX_SHARE_DEFAULT =
 
 export const DEFAULT_INCREASE_UNIT_PRICE = 20;
 export const DEFAULT_DECREASE_UNIT_PRICE = 20;
+export const DEFAULT_RESEARCH_DECK_SIZE = 12;
 
 /**
  * Phase times in milliseconds
@@ -454,3 +455,4 @@ export const PrestigeTrack = [
     probability: 0.12,
   },
 ];
+

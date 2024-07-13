@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { Prisma, ResearchDeck } from '@prisma/client';
+import { ResearchDeckWithCards } from '@server/prisma/prisma.types';
 
 @Injectable()
 export class ResearchDeckService {
@@ -8,9 +9,26 @@ export class ResearchDeckService {
 
   async researchDeck(
     researchDeckWhereUniqueInput: Prisma.ResearchDeckWhereUniqueInput,
-  ): Promise<ResearchDeck | null> {
+  ): Promise<ResearchDeckWithCards | null> {
     return this.prisma.researchDeck.findUnique({
       where: researchDeckWhereUniqueInput,
+      include: {
+        cards: true,
+      },
+    });
+  }
+
+  async researchDeckFirst(params: {
+    where?: Prisma.ResearchDeckWhereInput;
+    orderBy?: Prisma.ResearchDeckOrderByWithRelationInput;
+  }): Promise<ResearchDeckWithCards | null> {
+    const { where, orderBy } = params;
+    return this.prisma.researchDeck.findFirst({
+      where,
+      orderBy,
+      include: {
+        cards: true,
+      },
     });
   }
 

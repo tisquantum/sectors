@@ -4,6 +4,7 @@ import { sectorColors } from "@server/data/gameData";
 import { Sector } from "@server/prisma/prisma.client";
 import { RiTeamFill } from "@remixicon/react";
 import PrestigeRewards from "./PrestigeRewards";
+import ResearchDeck from "../ResearchDeck/ResearchDeck";
 
 const SectorComponent = ({
   sector,
@@ -58,6 +59,12 @@ const EndTurnEconomy = () => {
           <h3>Prestige Track</h3>
           <div className="flex gap-2 text-xl">
             <PrestigeRewards />
+          </div>
+        </div>
+        <div className="flex flex-col justify-center items-center gap-2 text-xl">
+          <h3>Research Deck</h3>
+          <div className="flex gap-2 text-xl">
+            <ResearchDeck />
           </div>
         </div>
       </div>

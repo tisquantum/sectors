@@ -74,6 +74,7 @@ import {
   calculateStepsAndRemainder,
   companyPriorityOrderOperations,
   createPrestigeTrackBasedOnSeed,
+  createSeededResearchCards,
   determineFloatPrice,
   determineNextGamePhase,
   determineStockTier,
@@ -94,6 +95,8 @@ import { GameLogService } from '@server/game-log/game-log.service';
 import { CapitalGainsService } from '@server/capital-gains/capital-gains.service';
 import { GameTurnService } from '@server/game-turn/game-turn.service';
 import { PrestigeRewardsService } from '@server/prestige-rewards/prestige-rewards.service';
+import { ResearchDeckService } from '@server/research-deck/research-deck.service';
+import { CardsService } from '@server/cards/cards.service';
 
 type GroupedByPhase = {
   [key: string]: {
@@ -124,6 +127,8 @@ export class GameManagementService {
     private capitalGainsService: CapitalGainsService,
     private gameTurnService: GameTurnService,
     private prestigeRewardService: PrestigeRewardsService,
+    private researchDeckService: ResearchDeckService,
+    private cardsService: CardsService,
   ) {}
 
   /**
@@ -1573,6 +1578,9 @@ export class GameManagementService {
         data: { currentTurn: newTurn.id, nextPrestigeReward: 0 },
       });
 
+      //create research deck
+      await this.createResearchDeck(game.id);
+
       // Add players to the game
       await this.addPlayersToGame(game.id, roomId, startingCashOnHand);
 
@@ -1720,6 +1728,33 @@ export class GameManagementService {
       console.error('Error starting game:', error);
       throw new Error('Failed to start the game');
     }
+  }
+
+  async createResearchDeck(gameId: string) {
+    let researchCards = createSeededResearchCards(gameId);
+    if (!researchCards || !Array.isArray(researchCards)) {
+      throw new Error('No cards generated');
+    }
+    const researchDeck = await this.researchDeckService.createResearchDeck({
+      Game: { connect: {id: gameId } },
+    });
+
+    researchCards = researchCards.map((card) => ({
+      ...card,
+      gameId,
+      deckId: researchDeck.id,
+    }));
+    
+    await this.cardsService.createManyCards(researchCards);
+    
+    return this.researchDeckService.updateResearchDeck({
+      where: { id: researchDeck.id },
+      data: {
+        cards: {
+          connect: researchCards.map((card) => ({ id: card.id })),
+        },
+      },
+    });
   }
 
   public getRandomElements<T>(arr: T[], n: number): T[] {

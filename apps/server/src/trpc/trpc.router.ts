@@ -46,6 +46,8 @@ import { GameTurnService } from '@server/game-turn/game-turn.service';
 import gameTurnRouter from './routers/game-turn.router';
 import prestigeRewardsRouter from './routers/prestige-rewards.router';
 import { PrestigeRewardsService } from '@server/prestige-rewards/prestige-rewards.service';
+import researchDeckRouter from './routers/research-deck.router';
+import { ResearchDeckService } from '@server/research-deck/research-deck.service';
 @Injectable()
 export class TrpcRouter {
   constructor(
@@ -73,6 +75,7 @@ export class TrpcRouter {
     private readonly capitalGainsService: CapitalGainsService,
     private readonly gameTurnService: GameTurnService,
     private readonly prestigeRewardsService: PrestigeRewardsService,
+    private readonly researchDeckService: ResearchDeckService,
   ) {}
 
   appRouter = this.trpc.router({
@@ -156,6 +159,9 @@ export class TrpcRouter {
     }),
     prestigeReward: prestigeRewardsRouter(this.trpc, {
       prestigeRewardsService: this.prestigeRewardsService,
+    }),
+    researchDeck: researchDeckRouter(this.trpc, {
+      researchDeckService: this.researchDeckService,
     }),
   });
 

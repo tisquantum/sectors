@@ -19,6 +19,7 @@ import { GameLogModule } from '@server/game-log/game-log.module';
 import { CapitalGainsModule } from '@server/capital-gains/capital-gains.module';
 import { GameTurnModule } from '@server/game-turn/game-turn.module';
 import { PrestigeRewardsModule } from '@server/prestige-rewards/prestige-rewards.module';
+import { CardsModule } from '@server/cards/cards.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { PrestigeRewardsModule } from '@server/prestige-rewards/prestige-rewards
     CapitalGainsModule,
     GameTurnModule,
     PrestigeRewardsModule,
+    CardsModule,
   ],
   providers: [GameManagementService],
   exports: [GameManagementService],

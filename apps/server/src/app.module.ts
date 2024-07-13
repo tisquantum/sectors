@@ -31,6 +31,7 @@ import { CompanyActionModule } from './company-action/company-action.module';
 import { CapitalGainsModule } from './capital-gains/capital-gains.module';
 import { GameTurnModule } from './game-turn/game-turn.module';
 import { PrestigeRewardsModule } from './prestige-rewards/prestige-rewards.module';
+import { CardsModule } from './cards/cards.module';
 
 const yourPusherOptions = {
   cluster: process.env.PUSHER_CLUSTER ?? 'CLUSTER',
@@ -76,6 +77,7 @@ const chunkingOptions = {
     CapitalGainsModule,
     GameTurnModule,
     PrestigeRewardsModule,
+    CardsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

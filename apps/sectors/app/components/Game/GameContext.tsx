@@ -15,8 +15,14 @@ import {
   Phase,
   PhaseName,
   Player,
+  ResearchDeck,
 } from "@server/prisma/prisma.client";
-import { GameState, PlayerWithPlayerOrders, PlayerWithShares } from "@server/prisma/prisma.types";
+import {
+  GameState,
+  PlayerWithPlayerOrders,
+  PlayerWithShares,
+  ResearchDeckWithCards,
+} from "@server/prisma/prisma.types";
 import { usePusherSubscription } from "@sectors/app/hooks/pusher";
 import * as PusherTypes from "pusher-js";
 import {
@@ -34,6 +40,7 @@ interface GameContextProps {
   playersWithShares: PlayerWithShares[];
   refetchAuthPlayer: () => void;
   currentTurn: GameTurn;
+  researchDeck: ResearchDeckWithCards;
 }
 
 const GameContext = createContext<GameContextProps | undefined>(undefined);
@@ -88,13 +95,21 @@ export const GameProvider: React.FC<{
       },
       { enabled: !!currentPhase?.stockRoundId }
     );
+  const {
+    data: researchDeck,
+    isLoading: researchDeckIsLoading,
+    error: researchDeckError,
+    refetch: researchDeckRefetch,
+  } = trpc.researchDeck.getResearchDeckFirst.useQuery({
+    where: { gameId },
+  });
 
   useEffect(() => {
     if (!channel || !gameId) {
       return;
     }
     const handleNewPhase = (phaseName: PhaseName) => {
-      console.log('new phase', phaseName);
+      console.log("new phase", phaseName);
       refetchGameState();
       refetchAuthPlayer();
       if (
@@ -102,7 +117,7 @@ export const GameProvider: React.FC<{
         phaseName == PhaseName.OPERATING_PRODUCTION ||
         phaseName == PhaseName.OPERATING_PRODUCTION_VOTE_RESOLVE
       ) {
-        console.log('refetching players with shares');
+        console.log("refetching players with shares");
         refetchPlayersWithShares();
       }
       if (
@@ -134,11 +149,23 @@ export const GameProvider: React.FC<{
     );
   }, [gameState?.Phase, gameState?.currentPhaseId]);
 
-  if (isLoading || gameStateIsLoading || currentTurnIsLoading)
+  if (
+    isLoading ||
+    gameStateIsLoading ||
+    currentTurnIsLoading ||
+    researchDeckIsLoading
+  )
     return <div>Loading...</div>;
-  if (isError || gameStateIsError || currentTurnIsError)
+  if (isError || gameStateIsError || currentTurnIsError || researchDeckError)
     return <div>Error...</div>;
-  if (!player || !gameState || !playersWithShares || !currentTurn) return null;
+  if (
+    !player ||
+    !gameState ||
+    !playersWithShares ||
+    !currentTurn ||
+    !researchDeck
+  )
+    return null;
   return (
     <GameContext.Provider
       value={{
@@ -150,6 +177,7 @@ export const GameProvider: React.FC<{
         refetchAuthPlayer,
         playersWithShares,
         currentTurn,
+        researchDeck,
       }}
     >
       {children}

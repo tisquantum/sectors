@@ -1,12 +1,15 @@
 import {
+  Card,
   Company,
   OrderType,
   Phase,
   PhaseName,
   PrestigeReward,
   Prisma,
+  ResearchCardEffect,
   RoundType,
   Sector,
+  SectorName,
   ShareLocation,
   StockTier,
 } from '@prisma/client';
@@ -15,6 +18,7 @@ import {
   PlayerOrderWithCompany,
 } from '@server/prisma/prisma.types';
 import {
+  DEFAULT_RESEARCH_DECK_SIZE,
   PRESTIGE_TRACK_LENGTH,
   PrestigeTrack,
   PrestigeTrackItem,
@@ -390,7 +394,6 @@ function stringToSeed(str: string): number {
   return seed;
 }
 
-
 function createCumulativeProbabilities(items: PrestigeTrackItem[]): number[] {
   const cumulativeProbabilities = [];
   let sum = 0;
@@ -403,7 +406,11 @@ function createCumulativeProbabilities(items: PrestigeTrackItem[]): number[] {
   return cumulativeProbabilities;
 }
 
-function weightedRandom(rng: () => number, items: PrestigeTrackItem[], cumulative: number[]): PrestigeTrackItem {
+function weightedRandom(
+  rng: () => number,
+  items: PrestigeTrackItem[],
+  cumulative: number[],
+): PrestigeTrackItem {
   const totalWeight = cumulative[cumulative.length - 1];
   const random = rng() * totalWeight;
 
@@ -416,7 +423,9 @@ function weightedRandom(rng: () => number, items: PrestigeTrackItem[], cumulativ
   return items[items.length - 1]; // Fallback, should not reach here
 }
 
-export function createPrestigeTrackBasedOnSeed(seed: string): PrestigeTrackItem[] {
+export function createPrestigeTrackBasedOnSeed(
+  seed: string,
+): PrestigeTrackItem[] {
   const rng = lcg(stringToSeed(seed));
   const cumulative = createCumulativeProbabilities(PrestigeTrack);
 
@@ -431,9 +440,89 @@ export function createPrestigeTrackBasedOnSeed(seed: string): PrestigeTrackItem[
 
 export function getNextPrestigeInt(currentPrestigeInt: number): number {
   //if prestige int is equal to 10, reset to 0
-  if (currentPrestigeInt === (PRESTIGE_TRACK_LENGTH - 1)) {
+  if (currentPrestigeInt === PRESTIGE_TRACK_LENGTH - 1) {
     return 0;
   } else {
     return currentPrestigeInt + 1;
   }
+}
+
+function getSectorBasedOnEffect(effect: ResearchCardEffect): SectorName {
+  switch (effect) {
+    case ResearchCardEffect.CLINICAL_TRIAL:
+      return SectorName.HEALTHCARE;
+    case ResearchCardEffect.ARTIFICIAL_INTELLIGENCE:
+      return SectorName.TECHNOLOGY;
+    case ResearchCardEffect.ENERGY_SAVING:
+      return SectorName.ENERGY;
+    case ResearchCardEffect.GLOBALIZATION:
+      return SectorName.TECHNOLOGY;
+    case ResearchCardEffect.ECOMMERCE:
+      return SectorName.CONSUMER_DEFENSIVE;
+    case ResearchCardEffect.ROBOTICS:
+      return SectorName.TECHNOLOGY;
+    case ResearchCardEffect.NO_DISCERNIBLE_FINDINGS:
+      return SectorName.GENERAL;
+    case ResearchCardEffect.PRODUCT_DEVELOPMENT:
+      return SectorName.GENERAL;
+    case ResearchCardEffect.RENEWABLE_ENERGY:
+      return SectorName.ENERGY;
+    case ResearchCardEffect.QUALITY_CONTROL:
+      return SectorName.GENERAL;
+    default:
+      return SectorName.GENERAL;
+  }
+}
+
+function createSeededResearchCards(seed: string): Card[] {
+  const rng = lcg(stringToSeed(seed));
+  const cards: Card[] = [];
+  const effects = Object.values(ResearchCardEffect);
+  const noDiscernibleFindingsCount = Math.floor(
+    DEFAULT_RESEARCH_DECK_SIZE * 0.25,
+  );
+  const otherEffectsCount =
+    DEFAULT_RESEARCH_DECK_SIZE - noDiscernibleFindingsCount;
+
+  // Add NO_DISCERNIBLE_FINDINGS cards
+  for (let i = 0; i < noDiscernibleFindingsCount; i++) {
+    cards.push({
+      id: i + 1,
+      name: 'No Discernible Findings',
+      description: 'This research yielded no discernible findings.',
+      sector: getSectorBasedOnEffect(ResearchCardEffect.NO_DISCERNIBLE_FINDINGS), // Provide appropriate sector
+      effect: ResearchCardEffect.NO_DISCERNIBLE_FINDINGS,
+      deckId: 0, // Set appropriate deckId
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+  }
+
+  // Add other effects cards
+  for (
+    let i = noDiscernibleFindingsCount;
+    i < DEFAULT_RESEARCH_DECK_SIZE;
+    i++
+  ) {
+    const effectIndex = Math.floor(rng() * (effects.length - 1));
+    const effect = effects[effectIndex];
+    cards.push({
+      id: i + 1,
+      name: effect.replace(/_/g, ' '), // Just an example to convert ENUM to name
+      description: `Effect of ${effect.replace(/_/g, ' ')}.`,
+      sector: getSectorBasedOnEffect(effect), // Provide appropriate sector
+      effect: effect,
+      deckId: 0, // Set appropriate deckId
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+  }
+
+  // Shuffle the deck
+  for (let i = cards.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [cards[i], cards[j]] = [cards[j], cards[i]];
+  }
+
+  return cards;
 }

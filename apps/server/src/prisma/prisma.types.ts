@@ -1,5 +1,6 @@
 import {
   CapitalGains,
+  Card,
   Company,
   CompanyAction,
   Game,
@@ -13,6 +14,7 @@ import {
   Player,
   PlayerOrder,
   ProductionResult,
+  ResearchDeck,
   RevenueDistributionVote,
   Room,
   RoomMessage,
@@ -162,3 +164,5 @@ export type CapitalGainsWithPlayer = CapitalGains & { Player: Player };
 export type PlayerWithPlayerOrders = Player & {
   PlayerOrder: PlayerOrder[];
 };
+
+export type ResearchDeckWithCards = ResearchDeck & { cards: Card[] };

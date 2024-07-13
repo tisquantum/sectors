@@ -168,6 +168,7 @@ model Company {
   ProductionResults        ProductionResult[]
   RevenueDistributionVotes RevenueDistributionVote[]
   PrestigeRewards          PrestigeRewards[]
+  Cards                    Card[]
 }
 
 enum CompanyTier {
@@ -443,7 +444,11 @@ model Card {
   sector       SectorName
   effect       ResearchCardEffect
   deckId       Int
+  gameId       String
+  companyId    String?
   ResearchDeck ResearchDeck       @relation(fields: [deckId], references: [id])
+  Game         Game               @relation(fields: [gameId], references: [id])
+  Company      Company?           @relation(fields: [companyId], references: [id])
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
 }
@@ -458,6 +463,9 @@ enum ResearchCardEffect {
   ECOMMERCE
   ROBOTICS
   NEW_ALLOY
+  ENERGY_SAVING
+  CORPORATE_ESPIONAGE
+  GLOBALIZATION
   NO_DISCERNIBLE_FINDINGS
 }
 
@@ -529,6 +537,7 @@ model Game {
   Share                   Share[]
   CapitalGains            CapitalGains[]
   PrestigeRewards         PrestigeRewards[]
+  Cards                   Card[]
   Room                    Room              @relation(fields: [roomId], references: [id])
   currentPhaseId          String?
   currentStockRoundId     Int?
