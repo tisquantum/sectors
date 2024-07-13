@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { OrderType, Player, Prisma } from '@prisma/client';
-import { PlayerWithShares } from '@server/prisma/prisma.types';
+import {
+  PlayerWithPlayerOrders,
+  PlayerWithShares,
+} from '@server/prisma/prisma.types';
 
 @Injectable()
 export class PlayersService {
@@ -9,11 +12,11 @@ export class PlayersService {
 
   async player(
     playerWhereInput: Prisma.PlayerWhereInput,
-  ): Promise<Player | null> {
+  ): Promise<PlayerWithPlayerOrders | null> {
     return this.prisma.player.findFirst({
       where: playerWhereInput,
       include: {
-        Game: true,
+        PlayerOrder: true,
       },
     });
   }

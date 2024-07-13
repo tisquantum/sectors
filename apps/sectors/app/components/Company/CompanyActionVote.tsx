@@ -1,9 +1,10 @@
-import { Button, RadioGroup, Radio } from "@nextui-org/react";
+import { RadioGroup, Radio } from "@nextui-org/react";
 import { trpc } from "@sectors/app/trpc";
 import { useGame } from "../Game/GameContext";
 import { Company, OperatingRoundAction } from "@server/prisma/prisma.client";
 import { useState } from "react";
 import { CompanyActionCosts } from "@server/data/constants";
+import Button from "@sectors/app/components/General/DebounceButton";
 
 const CompanyActionVote = ({ company }: { company?: Company }) => {
   const { currentPhase, authPlayer } = useGame();

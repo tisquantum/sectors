@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Button, Textarea } from '@nextui-org/react';
-
+import { Textarea } from '@nextui-org/react';
+import Button from "@sectors/app/components/General/DebounceButton";
 interface SendMessageProps {
   onSendMessage: (message: string) => void;
 }

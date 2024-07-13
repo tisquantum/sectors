@@ -2,7 +2,6 @@
 
 import {
   Navbar,
-  Button,
   Link,
   NavbarBrand,
   NavbarContent,
@@ -10,6 +9,7 @@ import {
 } from "@nextui-org/react";
 import { useAuthUser } from "./AuthUser.context";
 import ThemeSwitcher from "./ThemeSwitcher";
+import Button from "@sectors/app/components/General/DebounceButton";
 
 const TopBar = () => {
   const { user, loading } = useAuthUser();

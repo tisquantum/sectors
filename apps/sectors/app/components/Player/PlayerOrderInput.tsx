@@ -2,11 +2,8 @@
 
 import { CurrencyDollarIcon } from "@heroicons/react/24/solid";
 import {
-  Button,
   Card,
   CardBody,
-  Checkbox,
-  CheckboxGroup,
   Input,
   Radio,
   RadioGroup,
@@ -37,6 +34,7 @@ import {
 } from "@server/data/constants";
 import { PlayerOrderWithCompany } from "@server/prisma/prisma.types";
 import { getPseudoSpend } from "@server/data/helpers";
+import Button from "@sectors/app/components/General/DebounceButton";
 
 const RiskAssessment = () => {
   return (
@@ -504,7 +502,8 @@ const PlayerOrderInput = ({
       phaseId: gameState.currentPhaseId ?? "",
       sectorId: currentOrder.sectorId,
       quantity: share,
-      value: limitOrderValue,
+      value: orderType == OrderType.LIMIT ? limitOrderValue
+      : company?.currentStockPrice,
       isSell: !!!isBuy,
       orderType,
       location: isIpo ? ShareLocation.IPO : ShareLocation.OPEN_MARKET,

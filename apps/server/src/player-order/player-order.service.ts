@@ -237,9 +237,11 @@ export class PlayerOrderService {
           where: { id: companyId },
           include: { Share: true },
         });
-
+        const playerSharesOfCompany = player.Share.filter(
+          (share) => share.companyId === companyId,
+        );
         if (
-          player.Share.length + data.quantity! >
+          playerSharesOfCompany.length + data.quantity! >
           company?.Share.length! * (MAX_SHARE_PERCENTAGE / 100)
         ) {
           throw new Error('This buy would exceed the maximum share percentage.');

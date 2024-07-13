@@ -1,11 +1,14 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { TrpcRouter } from '@server/trpc/trpc.router';
-import { expressHandler } from 'trpc-playground/handlers/express'
+import { expressHandler } from 'trpc-playground/handlers/express';
+import { NextFunction } from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.enableCors();
+  app.enableCors({
+    origin: '*',
+  });
   const trpc = app.get(TrpcRouter);
   trpc.applyMiddleware(app);
   const trpcApiEndpoint = '/trpc';

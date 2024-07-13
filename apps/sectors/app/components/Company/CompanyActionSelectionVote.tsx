@@ -1,8 +1,5 @@
-import { ArrowDownIcon } from "@heroicons/react/24/solid";
 import {
   Avatar,
-  AvatarGroup,
-  Badge,
   Card,
   CardBody,
   CardFooter,
@@ -22,20 +19,18 @@ import {
   CompanyAction,
   CompanyStatus,
   OperatingRoundAction,
-  OperatingRoundVote,
 } from "@server/prisma/prisma.client";
-import ShareComponent from "./Share";
 import {
   CompanyWithSector,
   OperatingRoundVoteWithPlayer,
 } from "@server/prisma/prisma.types";
-import { RiWallet3Fill } from "@remixicon/react";
 import ShareHolders from "./ShareHolders";
 import { sectorColors } from "@server/data/gameData";
-import { cp } from "fs";
 import PlayerAvatar from "../Player/PlayerAvatar";
 import CompanyInfo from "./CompanyInfo";
 import PrestigeRewards from "../Game/PrestigeRewards";
+import Button from '@sectors/app/components/General/DebounceButton';
+
 const companyActions = [
   {
     id: 1,
@@ -278,8 +273,8 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
             />
           ))}
         </div>
-        <button onClick={handlePrevious}>Previous</button>
-        <button onClick={handleNext}>Next</button>
+        <Button onClick={handlePrevious}>Previous</Button>
+        <Button onClick={handleNext}>Next</Button>
       </div>
       <AnimatePresence mode="wait" initial={false}>
         <motion.div

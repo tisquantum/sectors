@@ -19,7 +19,7 @@ const SectorComponent = ({
       className={`flex flex-col gap-2 text-slate-200 p-4 justify-center items-center ${sectorColor}`}
       style={{ backgroundColor: sectorColor }}
     >
-      <div className="text-xl">Section {sectorIndex + 1}</div>
+      <div className="text-xl">{sector.name}</div>
       <div>Consumers {sector.consumers}</div>
       <div className="grid grid-cols-5 gap-2">
         {Array(sector.consumers)
@@ -38,7 +38,7 @@ const EndTurnEconomy = () => {
   const sectors = gameState?.sectors;
   return (
     <div className="flex flex-col justify-center items-center content-center">
-      <h1>Economy</h1>
+      <h1 className="text-2xl">Economy</h1>
       <div className="flex gap-2 text-xl">
         <div className="flex gap-2 text-xl">
           <span>Consumer Pool</span>
@@ -54,8 +54,11 @@ const EndTurnEconomy = () => {
             />
           ))}
         </div>
-        <div className="flex gap-2 text-xl">
-          <PrestigeRewards />
+        <div className="flex flex-col justify-center items-center gap-2 text-xl">
+          <h3>Prestige Track</h3>
+          <div className="flex gap-2 text-xl">
+            <PrestigeRewards />
+          </div>
         </div>
       </div>
     </div>

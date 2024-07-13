@@ -1,4 +1,4 @@
-import { Button, ButtonGroup } from "@nextui-org/react";
+import { ButtonGroup } from "@nextui-org/react";
 import GameGeneralInfo from "./GameGeneralInfo";
 import Timer from "./Timer";
 import { useGame } from "./GameContext";
@@ -12,6 +12,7 @@ import {
 import { determineNextGamePhase } from "@server/data/helpers";
 import next from "next";
 import { getNextCompanyOperatingRoundTurn } from "@server/data/constants";
+import Button from "@sectors/app/components/General/DebounceButton";
 
 const GameTopBar = ({
   gameId,

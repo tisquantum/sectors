@@ -1,8 +1,8 @@
 'use client';
 import React, { useEffect, useState } from 'react';
-import { Avatar, AvatarGroup, Button, Card } from '@nextui-org/react';
+import { Avatar, AvatarGroup, Card } from '@nextui-org/react';
 import { trpc } from '@sectors/app/trpc';
-
+import Button from "@sectors/app/components/General/DebounceButton";
 interface Player {
   id: string;
   nickname: string;

@@ -204,7 +204,7 @@ export const gameDataJson: GameDataJson = {
       gameId: '1',
       insolvent: false,
       mergedWithParent: null,
-      companyTier: CompanyTier.ESTABLISHED,
+      companyTier: CompanyTier.STARTUP,
     },
     {
       id: '7',

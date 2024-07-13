@@ -1,8 +1,9 @@
-import { Button, Input } from "@nextui-org/react";
+import { Input } from "@nextui-org/react";
 import { trpc } from "@sectors/app/trpc";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuthUser } from "../AuthUser.context";
+import Button from "@sectors/app/components/General/DebounceButton";
 
 const CreateRoom = () => {
   const router = useRouter();

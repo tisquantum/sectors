@@ -149,8 +149,8 @@ const Game = ({ gameId }: { gameId: string }) => {
       </motion.div>
       <div className="flex flex-col w-full">
         <GameTopBar gameId={gameId} handleCurrentView={handleCurrentView} />
-        <div className="flex justify-between">
-          <div className="basis-10/12	active-panel flex flex-col overflow-hidden h-full p-4">
+        <div className="flex justify-between overflow-y-auto">
+          <div className="basis-10/12	active-panel flex flex-col h-full p-4">
             {currentView === "action" && renderCurrentPhase}
             {currentView === "chart" && <StockChart />}
             {currentView === "pending" && <PendingOrders />}

@@ -20,7 +20,10 @@ export const trpcClient = trpc.createClient({
   links: [
     httpBatchLinkReact({
       url: `${process.env.NEXT_PUBLIC_NESTJS_SERVER}/trpc`,
-      transformer: superjson
+      transformer: superjson,
+      headers: () => ({
+        'ngrok-skip-browser-warning': 'true'
+      }),
     }),
   ],
 });

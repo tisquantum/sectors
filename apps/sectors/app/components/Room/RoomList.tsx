@@ -1,11 +1,12 @@
 'use client'
 
 import React from "react";
-import { AvatarGroup, Avatar, Button } from "@nextui-org/react";
+import { AvatarGroup, Avatar } from "@nextui-org/react";
 import { trpc } from "@sectors/app/trpc";
 import { RoomWithUsers } from "@server/prisma/prisma.types";
 import { useAuthUser } from "@sectors/app/components/AuthUser.context";
 import { useRouter } from "next/navigation";
+import Button from "@sectors/app/components/General/DebounceButton";
 interface RoomListProps {
   room: RoomWithUsers;
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Button,
   Card,
   CardBody,
   CardFooter,
@@ -10,7 +9,6 @@ import {
 } from "@nextui-org/react";
 import React, { useEffect, useState } from "react";
 import PlayerOrder from "../Player/PlayerOrder";
-import PlayerOrderInput from "../Player/PlayerOrderInput";
 import {
   isCurrentPhaseInteractive,
   organizeCompaniesBySector,
@@ -28,19 +26,9 @@ import {
 import PlayerOrderConcealed from "../Player/PlayerOrderConcealed";
 import { CompanyWithSector } from "@server/prisma/prisma.types";
 import { sectorColors } from "@server/data/gameData";
-import {
-  RiBox2Fill,
-  RiExpandUpDownFill,
-  RiHandCoinFill,
-  RiIncreaseDecreaseFill,
-  RiPriceTag3Fill,
-  RiSailboatFill,
-  RiSparkling2Fill,
-  RiWallet3Fill,
-} from "@remixicon/react";
 import "./StockRoundOrderGrid.css";
-import { CompanyTierData } from "@server/data/constants";
 import CompanyInfo from "../Company/CompanyInfo";
+import Button from "@sectors/app/components/General/DebounceButton";
 
 const StockRoundOrderGrid = ({
   handleOrder,

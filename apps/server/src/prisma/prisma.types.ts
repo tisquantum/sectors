@@ -158,3 +158,7 @@ export type RevenueDistributionVoteWithRelations = RevenueDistributionVote & {
 export type ShareWithRelations = Share & { Player: Player | null };
 export type GameWithGameTurns = Game & { GameTurn: GameTurn[] };
 export type CapitalGainsWithPlayer = CapitalGains & { Player: Player };
+
+export type PlayerWithPlayerOrders = Player & {
+  PlayerOrder: PlayerOrder[];
+};

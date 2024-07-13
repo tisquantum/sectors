@@ -7,7 +7,7 @@ export default function LoginPage() {
         <h3 className="text-lg text-black font-bold mb-4">Login</h3>
         <form>
           <div className="mb-4">
-            <label htmlFor="email" className="block text-gray-700 text-sm font-bold mb-2">
+            <label htmlFor="email" className="block text-gray-800 text-sm font-bold mb-2">
               Email:
             </label>
             <input
@@ -15,11 +15,11 @@ export default function LoginPage() {
               name="email"
               type="email"
               required
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-200 leading-tight focus:outline-none focus:shadow-outline"
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:shadow-outline"
             />
           </div>
           <div className="mb-6">
-            <label htmlFor="password" className="block text-gray-700 text-sm font-bold mb-2">
+            <label htmlFor="password" className="block text-gray-800 text-sm font-bold mb-2">
               Password:
             </label>
             <input
@@ -27,7 +27,7 @@ export default function LoginPage() {
               name="password"
               type="password"
               required
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-200 mb-3 leading-tight focus:outline-none focus:shadow-outline"
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-800 mb-3 leading-tight focus:outline-none focus:shadow-outline"
             />
           </div>
           <div className="flex items-center justify-between">

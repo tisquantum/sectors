@@ -756,10 +756,11 @@ export class GameManagementService {
     if (!companyAction.action) {
       throw new Error('Action not found');
     }
+    console.log('companyAction', companyAction);
     //get the cost of the action
     const cost = CompanyActionCosts[companyAction.action];
 
-    if (!cost) {
+    if (cost === undefined || cost === null) {
       throw new Error('Cost not found');
     }
     //check if the company has enough cash on hand
@@ -1123,7 +1124,7 @@ export class GameManagementService {
         //subtract one from demand score of company
         const companyUpdate = {
           id: company.id,
-          demandScore: company.demandScore - 1,
+          demandScore: Math.max(company.demandScore - 1, 0),
           prestigeTokens: company.prestigeTokens || 0,
         };
         // Award or penalize the company
@@ -1189,7 +1190,10 @@ export class GameManagementService {
         ...companyUpdates.map((update) =>
           this.prisma.company.update({
             where: { id: update.id },
-            data: { prestigeTokens: update.prestigeTokens },
+            data: {
+              prestigeTokens: update.prestigeTokens,
+              demandScore: update.demandScore,
+            },
           }),
         ),
         this.productionResultService.createManyProductionResults(
@@ -1830,6 +1834,7 @@ export class GameManagementService {
     operatingRoundId?: number;
     companyId?: string;
   }) {
+    console.log('start phase phase name', phaseName);
     console.log('start phase stock round id', stockRoundId);
     console.log('start phase operating round id', operatingRoundId);
     const gameChannelId = getGameChannelId(gameId);
@@ -2504,7 +2509,7 @@ export class GameManagementService {
     const playerCashUpdates: { playerId: string; decrement: number }[] = [];
     const orderStatusUpdates = [];
     const gameLogEntries = [];
-    
+
     // Fetch the company details including shares
     const company = buyOrders[0].Company;
     const totalCompanyShares = company.Share.length;
@@ -2529,22 +2534,18 @@ export class GameManagementService {
 
     const validBuyOrders = buyOrders.filter((order) => {
       const currentShares = playerShares[order.playerId] || 0;
-      console.log('currentShares', currentShares);
       const placedOrderQuantity = playerOrderQuantities[order.playerId] || 0;
-      console.log('placedOrderQuantity', placedOrderQuantity);
       const newTotalShares =
         currentShares + placedOrderQuantity + (order.quantity || 0);
-      console.log('newTotalShares', newTotalShares);
+
       if (newTotalShares > maxSharesPerPlayer) {
-        console.log(
-          `Order for player ${order.playerId} exceeds max share percentage for company ${companyId}`,
-        );
         orderStatusUpdates.push({
           where: { id: order.id },
           data: { orderStatus: OrderStatus.REJECTED },
         });
         return false;
       }
+
       playerOrderQuantities[order.playerId] =
         placedOrderQuantity + (order.quantity || 0);
       return true;
@@ -2746,26 +2747,45 @@ export class GameManagementService {
     console.log('playerCashUpdates', playerCashUpdates);
 
     try {
-      // Execute all updates in a transaction
-      await this.prisma.$transaction([
-        ...shareUpdates.map((update) => this.prisma.share.updateMany(update)),
-        ...playerCashUpdates.map((update) =>
-          this.prisma.player.update({
-            where: { id: update.playerId },
-            data: {
-              cashOnHand: {
-                decrement: update.decrement,
+      // Execute updates in smaller batches to reduce lock contention
+      const BATCH_SIZE = 5; // Define a suitable batch size
+
+      for (let i = 0; i < shareUpdates.length; i += BATCH_SIZE) {
+        const batch = shareUpdates.slice(i, i + BATCH_SIZE);
+        await this.prisma.$transaction(
+          batch.map((update) => this.prisma.share.updateMany(update)),
+        );
+      }
+
+      for (let i = 0; i < playerCashUpdates.length; i += BATCH_SIZE) {
+        const batch = playerCashUpdates.slice(i, i + BATCH_SIZE);
+        await this.prisma.$transaction(
+          batch.map((update) =>
+            this.prisma.player.update({
+              where: { id: update.playerId },
+              data: {
+                cashOnHand: {
+                  decrement: update.decrement,
+                },
               },
-            },
-          }),
-        ),
-        ...orderStatusUpdates.map((update) =>
-          this.prisma.playerOrder.update(update),
-        ),
-        ...gameLogEntries.map((entry) =>
-          this.prisma.gameLog.create({ data: entry }),
-        ),
-      ]);
+            }),
+          ),
+        );
+      }
+
+      for (let i = 0; i < orderStatusUpdates.length; i += BATCH_SIZE) {
+        const batch = orderStatusUpdates.slice(i, i + BATCH_SIZE);
+        await this.prisma.$transaction(
+          batch.map((update) => this.prisma.playerOrder.update(update)),
+        );
+      }
+
+      for (let i = 0; i < gameLogEntries.length; i += BATCH_SIZE) {
+        const batch = gameLogEntries.slice(i, i + BATCH_SIZE);
+        await this.prisma.$transaction(
+          batch.map((entry) => this.prisma.gameLog.create({ data: entry })),
+        );
+      }
     } catch (error) {
       console.error('Error distributing shares:', error);
     }
@@ -2860,9 +2880,22 @@ export class GameManagementService {
         return this.stockOrdersPending(currentPhase?.stockRoundId || 0);
       case PhaseName.STOCK_OPEN_LIMIT_ORDERS:
         return this.limitOrdersPending(currentPhase?.stockRoundId || 0);
+      case PhaseName.STOCK_RESOLVE_OPTION_ORDER:
+        return this.optionOrdersPending(currentPhase?.stockRoundId || 0);
       default:
         return true;
     }
+  }
+
+  async optionOrdersPending(stockRoundId: number) {
+    const playerOrders = await this.playerOrderService.playerOrders({
+      where: {
+        stockRoundId,
+        orderType: OrderType.OPTION,
+        orderStatus: OrderStatus.PENDING,
+      },
+    });
+    return playerOrders.length > 0;
   }
 
   async limitOrdersPending(stockRoundId: number) {

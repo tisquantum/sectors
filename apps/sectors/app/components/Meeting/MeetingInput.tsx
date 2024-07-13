@@ -1,11 +1,11 @@
-import { Button, Select, SelectItem, SelectSection } from "@nextui-org/react";
+import { Select, SelectItem, SelectSection } from "@nextui-org/react";
 import { ChangeEvent, ChangeEventHandler, useState } from "react";
 import { Topic, TopicKey, topics } from "./data";
 import PlayerSelect from "../Game/PlayerSelect";
 import { trpc } from "@sectors/app/trpc";
 import { useGame } from "../Game/GameContext";
 import { organizeCompaniesBySector } from "@sectors/app/helpers";
-import { Sector } from "@server/prisma/prisma.client";
+import Button from "@sectors/app/components/General/DebounceButton";
 
 type SelectChangeEvent = ChangeEvent<HTMLSelectElement>;
 

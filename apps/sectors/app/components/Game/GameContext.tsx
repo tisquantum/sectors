@@ -16,7 +16,7 @@ import {
   PhaseName,
   Player,
 } from "@server/prisma/prisma.client";
-import { GameState, PlayerWithShares } from "@server/prisma/prisma.types";
+import { GameState, PlayerWithPlayerOrders, PlayerWithShares } from "@server/prisma/prisma.types";
 import { usePusherSubscription } from "@sectors/app/hooks/pusher";
 import * as PusherTypes from "pusher-js";
 import {
@@ -27,7 +27,7 @@ import {
 } from "@server/pusher/pusher.types";
 interface GameContextProps {
   gameId: string;
-  authPlayer: Player;
+  authPlayer: PlayerWithPlayerOrders;
   gameState: GameState;
   currentPhase?: Phase;
   socketChannel: PusherTypes.Channel | null;

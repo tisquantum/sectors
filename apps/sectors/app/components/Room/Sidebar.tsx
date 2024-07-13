@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { Room, User } from "@server/prisma/prisma.client";
-import { Avatar, Button } from "@nextui-org/react";
+import { Avatar } from "@nextui-org/react";
 import { trpc } from "@sectors/app/trpc";
 import { useAuthUser } from "@sectors/app/components/AuthUser.context";
 import GameOptions from "./GameOptions";
@@ -13,6 +13,7 @@ import {
 import { BeakerIcon, SunIcon } from "@heroicons/react/24/solid";
 import { useRouter } from "next/navigation";
 import UserAvatar from "./UserAvatar";
+import Button from "../General/DebounceButton";
 interface SidebarProps {
   roomUsers: RoomUserWithUser[];
   room: RoomWithUsersAndGames;

@@ -5,16 +5,18 @@ import { useEffect, useState } from "react";
 import RoomList from "./RoomList";
 import { RoomWithUsers } from "@server/prisma/prisma.types";
 import { notFound } from "next/navigation";
-import { Button } from "@nextui-org/react";
+import Button from "@sectors/app/components/General/DebounceButton";
 import CreateRoom from "./CreateRoom";
 import { ArrowPathIcon } from "@heroicons/react/24/solid";
 
 export default function RoomBrowser() {
-  const { data: rooms, isLoading, refetch } = trpc.room.listRooms.useQuery({});
+  const { data: rooms, isLoading, error, refetch } = trpc.room.listRooms.useQuery({});
   if (isLoading) {
     return <div>Loading...</div>;
   }
-
+  if(error) {
+    return <div>Error: {error.message}</div>;
+  }
   if (rooms == undefined) {
     return notFound();
   }
