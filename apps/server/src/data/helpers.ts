@@ -523,9 +523,9 @@ export function createSeededResearchCards(seed: string): Card[] {
     i < DEFAULT_RESEARCH_DECK_SIZE;
     i++
   ) {
-    const effectIndex = Math.floor(rng() * (effects.length - 1));
+    const effectIndex = Math.abs(Math.floor(rng() * (effects.length - 1)));
     const effect = effects[effectIndex];
-    console.log('effect', effect);
+    console.log('effect', effect, effectIndex);
     cards.push({
       id: i + 1,
       name: effect,
@@ -544,10 +544,10 @@ export function createSeededResearchCards(seed: string): Card[] {
 
   // Shuffle the deck
   for (let i = cards.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
+    const j = Math.abs(Math.floor(rng() * (i + 1)));
     [cards[i], cards[j]] = [cards[j], cards[i]];
   }
-
+  console.log('cards', cards);
   return cards;
 }
 

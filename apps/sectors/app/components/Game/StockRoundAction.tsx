@@ -31,16 +31,7 @@ const StockRoundAction = () => {
       </div>
       <div className="flex justify-center items-center gap-10 basis-1/4">
         {isCurrentPhaseInteractive(currentPhase?.name) ? (
-          currentOrder ? (
-            <PlayerOrderInput
-              currentOrder={currentOrder}
-              handleCancel={() => {}}
-              isIpo={isIpo}
-              handlePlayerInputConfirmed={doSomethingPostOrderConfirmed}
-            />
-          ) : (
-            <div>Place an Order With A Company to Start.</div>
-          )
+          <div>Place an Order With A Company to Start.</div>
         ) : (
           <div>Viewing results.</div>
         )}

@@ -26,6 +26,7 @@ import {
   PrestigeReward,
   PrestigeRewards,
   ResearchCardEffect,
+  PlayerOrder,
 } from '@prisma/client';
 import { GamesService } from '@server/games/games.service';
 import { CompanyService } from '@server/company/company.service';
@@ -715,6 +716,14 @@ export class GameManagementService {
       case ResearchCardEffect.PRODUCT_DEVELOPMENT:
         this.productDevelopmentCardEffect(company);
         break;
+      case ResearchCardEffect.ROBOTICS:
+      case ResearchCardEffect.ARTIFICIAL_INTELLIGENCE:
+      case ResearchCardEffect.NEW_ALLOY:
+      case ResearchCardEffect.CLINICAL_TRIAL:
+      case ResearchCardEffect.RENEWABLE_ENERGY:
+      case ResearchCardEffect.ENERGY_SAVING:
+        this.genericSectorCompanyEffect(company);
+        return;
       case ResearchCardEffect.NO_DISCERNIBLE_FINDINGS:
         return;
       default:
@@ -722,6 +731,22 @@ export class GameManagementService {
     }
   }
 
+  async genericSectorCompanyEffect(company: Company) {
+    //get game
+    const game = await this.gamesService.game({ id: company.gameId });
+    if (!game) {
+      throw new Error('Game not found');
+    }
+    //increase the stock price by the company by 2
+    await this.stockHistoryService.moveStockPriceUp(
+      company.gameId,
+      company.id,
+      game.currentPhaseId || '',
+      company.currentStockPrice,
+      2,
+      StockAction.RESEARCH_EFFECT,
+    );
+  }
 
   async productDevelopmentCardEffect(company: Company) {
     //increate the company supply max by 1
@@ -2658,6 +2683,7 @@ export class GameManagementService {
                   ShareLocation.IPO,
                   companyId,
                   this.shareService,
+                  this.prisma,
                 );
                 await this.checkIfCompanyIsFloated(companyId);
               }
@@ -2671,6 +2697,7 @@ export class GameManagementService {
                   ShareLocation.OPEN_MARKET,
                   companyId,
                   this.shareService,
+                  this.prisma,
                 );
               }
             },
@@ -2719,25 +2746,21 @@ export class GameManagementService {
     location: ShareLocation,
     companyId: string,
     shareService: ShareService,
+    prisma: any,
   ) {
     let currentShareIndex = 0;
 
-    // Collect all updates to be made in batch
-    const shareUpdates = [];
+    const shareUpdates: any[] = [];
     const playerCashUpdates: { playerId: string; decrement: number }[] = [];
-    const orderStatusUpdates = [];
-    const gameLogEntries = [];
+    const orderStatusUpdates: any[] = [];
+    const gameLogEntries: any[] = [];
 
-    // Fetch the company details including shares
     const company = buyOrders[0].Company;
     const totalCompanyShares = company.Share.length;
     const maxSharesPerPlayer =
       totalCompanyShares * (MAX_SHARE_PERCENTAGE / 100);
 
-    // Track current shares owned by each player
     const playerShares: Record<string, number> = {};
-
-    // Calculate current shares owned by each player
     for (const share of company.Share) {
       if (share.location === ShareLocation.PLAYER && share.playerId) {
         if (!playerShares[share.playerId]) {
@@ -2747,10 +2770,60 @@ export class GameManagementService {
       }
     }
 
-    // Track running total of placed orders for each player
-    const playerOrderQuantities: Record<string, number> = {}; // { [playerId]: number }
+    const playerOrderQuantities: Record<string, number> = {};
+    const validBuyOrders = this.filterValidBuyOrders(
+      buyOrders,
+      playerShares,
+      playerOrderQuantities,
+      maxSharesPerPlayer,
+      orderStatusUpdates,
+    );
 
-    const validBuyOrders = buyOrders.filter((order) => {
+    const totalBuyOrderShares = validBuyOrders.reduce(
+      (acc, order) => acc + (order.quantity || 0),
+      0,
+    );
+    let remainingShares = Math.min(
+      company.Share.filter((share) => share.location == location).length,
+      totalBuyOrderShares,
+    );
+
+    const groupedByPhase = this.groupByPhase(validBuyOrders);
+    const sortedByPhaseCreatedAt = this.sortByPhaseCreationTime(groupedByPhase);
+
+    const allAvailableShares = await shareService.shares({
+      where: { companyId, location },
+      take: remainingShares,
+    });
+
+    this.distributeWithinPhases(
+      sortedByPhaseCreatedAt,
+      allAvailableShares,
+      remainingShares,
+      currentShareIndex,
+      shareUpdates,
+      playerCashUpdates,
+      orderStatusUpdates,
+      gameLogEntries,
+    );
+
+    await this.executeDatabaseOperations(
+      prisma,
+      shareUpdates,
+      playerCashUpdates,
+      orderStatusUpdates,
+      gameLogEntries,
+    );
+  }
+
+  filterValidBuyOrders(
+    buyOrders: PlayerOrderWithPlayerCompany[],
+    playerShares: Record<string, number>,
+    playerOrderQuantities: Record<string, number>,
+    maxSharesPerPlayer: number,
+    orderStatusUpdates: any[],
+  ) {
+    return buyOrders.filter((order) => {
       const currentShares = playerShares[order.playerId] || 0;
       const placedOrderQuantity = playerOrderQuantities[order.playerId] || 0;
       const newTotalShares =
@@ -2768,218 +2841,291 @@ export class GameManagementService {
         placedOrderQuantity + (order.quantity || 0);
       return true;
     });
+  }
 
-    // Calculate the total number of shares requested
-    const totalBuyOrderShares = validBuyOrders.reduce(
-      (acc, order) => acc + (order.quantity || 0),
-      0,
-    );
+  groupByPhase(buyOrders: PlayerOrderWithPlayerCompany[]) {
+    return buyOrders.reduce<GroupedByPhase>((acc, order) => {
+      const phaseId = order.Phase.id;
+      if (!acc[phaseId]) {
+        acc[phaseId] = {
+          phase: order.Phase,
+          orders: [],
+        };
+      }
+      acc[phaseId].orders.push(order);
+      return acc;
+    }, {});
+  }
 
-    // Calculate the number of remaining shares at the specified location
-    let remainingShares = Math.min(
-      company.Share.filter((share) => share.location == location).length,
-      totalBuyOrderShares,
-    );
-
-    // Group buy orders by their associated phase
-    const groupedByPhase = validBuyOrders.reduce<GroupedByPhase>(
-      (acc, order) => {
-        const phaseId = order.Phase.id;
-        if (!acc[phaseId]) {
-          acc[phaseId] = {
-            phase: order.Phase,
-            orders: [],
-          };
-        }
-        acc[phaseId].orders.push(order);
-        return acc;
-      },
-      {},
-    );
-
-    // Sort phases by their creation time, earliest first
-    const sortedByPhaseCreatedAt = Object.values(groupedByPhase).sort(
+  sortByPhaseCreationTime(groupedByPhase: GroupedByPhase) {
+    return Object.values(groupedByPhase).sort(
       (a, b) => a.phase.createdAt.getTime() - b.phase.createdAt.getTime(),
     );
+  }
 
-    // Fetch all shares that can be distributed upfront
-    const allAvailableShares = await shareService.shares({
-      where: { companyId, location },
-      take: remainingShares,
+  proportionalDistribution(
+    orders: PlayerOrderWithPlayerCompany[],
+    remainingShares: number,
+    allAvailableShares: Share[],
+    currentShareIndex: number,
+    shareUpdates: any[],
+    playerCashUpdates: { playerId: string; decrement: number }[],
+    orderStatusUpdates: any[],
+    gameLogEntries: any[],
+  ) {
+    //group orders by player id
+    const ordersGroupedByPlayer = orders.reduce<{
+      [key: string]: PlayerOrderWithPlayerCompany[];
+    }>((acc, order) => {
+      if (!acc[order.playerId]) {
+        acc[order.playerId] = [];
+      }
+      acc[order.playerId].push(order);
+      return acc;
+    }, {});
+    const numBuyers = Object.values(ordersGroupedByPlayer).length;
+    const sharesPerBuyer = Math.floor(remainingShares / numBuyers);
+    console.log('shares per buyer', sharesPerBuyer);
+    console.log('number of buyers', numBuyers);
+    for (const order of Object.values(ordersGroupedByPlayer)) {
+      //get total order quantity for shares of player
+      let totalOrderQuantity = 0;
+      for (const o of order) {
+        totalOrderQuantity += o.quantity || 0;
+      }
+      const sharesToDistribute = Math.min(sharesPerBuyer, totalOrderQuantity || 0);
+      if (sharesToDistribute <= 0) continue;
+
+      const shares = allAvailableShares.slice(
+        currentShareIndex,
+        currentShareIndex + sharesToDistribute,
+      );
+      currentShareIndex += sharesToDistribute;
+
+      shareUpdates.push({
+        where: { id: { in: shares.map((share) => share.id) } },
+        data: {
+          location: ShareLocation.PLAYER,
+          playerId: order[0].playerId,
+        },
+      });
+
+      playerCashUpdates.push({
+        playerId: order[0].playerId,
+        decrement: sharesToDistribute * order[0].Company.currentStockPrice!,
+      });
+
+      for (const o of order) {
+        orderStatusUpdates.push({
+          where: { id: o.id },
+          data: { orderStatus: OrderStatus.FILLED },
+        });
+      }
+
+      gameLogEntries.push({
+        game: { connect: { id: order[0].gameId } },
+        content: `Player ${order[0].Player.nickname} has bought ${sharesToDistribute} shares of ${
+          order[0].Company.name
+        } at $${order[0].Company.currentStockPrice.toFixed(2)}`,
+      });
+
+      remainingShares -= sharesToDistribute;
+    }
+
+    return sharesPerBuyer;
+  }
+
+  lotteryAllocation(
+    orders: PlayerOrderWithPlayerCompany[],
+    remainingShares: number,
+    sharesPerBuyer: number,
+    allAvailableShares: Share[],
+    currentShareIndex: number,
+    shareUpdates: any[],
+    playerCashUpdates: { playerId: string; decrement: number }[],
+    orderStatusUpdates: any[],
+    gameLogEntries: any[],
+  ) {
+    const remainingGroupedOrders = orders.filter(
+      (order) => (order.quantity || 0) > sharesPerBuyer,
+    );
+
+    while (remainingShares > 0 && remainingGroupedOrders.length > 0) {
+      const randomIndex = Math.floor(
+        Math.random() * remainingGroupedOrders.length,
+      );
+      const order = remainingGroupedOrders[randomIndex];
+
+      const shares = allAvailableShares.slice(
+        currentShareIndex,
+        currentShareIndex + 1,
+      );
+      currentShareIndex += 1;
+
+      shareUpdates.push({
+        where: { id: { in: [shares[0].id] } },
+        data: {
+          location: ShareLocation.PLAYER,
+          playerId: order.playerId,
+        },
+      });
+
+      playerCashUpdates.push({
+        playerId: order.playerId,
+        decrement: order.Company.currentStockPrice!,
+      });
+
+      orderStatusUpdates.push({
+        where: { id: order.id },
+        data: { orderStatus: OrderStatus.FILLED },
+      });
+
+      gameLogEntries.push({
+        game: { connect: { id: order.gameId } },
+        content: `Player ${order.Player.nickname} has won a lottery for a share of ${
+          order.Company.name
+        } at $${order.Company.currentStockPrice.toFixed(2)}`,
+      });
+
+      remainingShares -= 1;
+      remainingGroupedOrders[randomIndex].quantity! -= 1;
+      if (remainingGroupedOrders[randomIndex].quantity! <= 0) {
+        remainingGroupedOrders.splice(randomIndex, 1);
+      }
+    }
+
+    remainingGroupedOrders.forEach((order) => {
+      orderStatusUpdates.push({
+        where: { id: order.id },
+        data: { orderStatus: OrderStatus.REJECTED },
+      });
     });
+  }
 
-    // Distribute shares within each phase
+  directFulfillment(
+    orders: PlayerOrderWithPlayerCompany[],
+    remainingShares: number,
+    allAvailableShares: Share[],
+    currentShareIndex: number,
+    shareUpdates: any[],
+    playerCashUpdates: { playerId: string; decrement: number }[],
+    orderStatusUpdates: any[],
+    gameLogEntries: any[],
+  ) {
+    for (const order of orders) {
+      const sharesToGive = Math.min(order.quantity || 0, remainingShares);
+
+      const shares = allAvailableShares.slice(
+        currentShareIndex,
+        currentShareIndex + sharesToGive,
+      );
+      currentShareIndex += sharesToGive;
+
+      shareUpdates.push({
+        where: { id: { in: shares.map((share) => share.id) } },
+        data: {
+          location: ShareLocation.PLAYER,
+          playerId: order.playerId,
+        },
+      });
+
+      playerCashUpdates.push({
+        playerId: order.playerId,
+        decrement: sharesToGive * order.Company.currentStockPrice!,
+      });
+
+      orderStatusUpdates.push({
+        where: { id: order.id },
+        data: { orderStatus: OrderStatus.FILLED },
+      });
+
+      gameLogEntries.push({
+        game: { connect: { id: order.gameId } },
+        content: `Player ${order.Player.nickname} has bought ${sharesToGive} shares of ${
+          order.Company.name
+        } at $${order.Company.currentStockPrice.toFixed(2)}`,
+      });
+
+      remainingShares -= sharesToGive;
+    }
+  }
+
+  distributeWithinPhases(
+    sortedByPhaseCreatedAt: any[],
+    allAvailableShares: Share[],
+    remainingShares: number,
+    currentShareIndex: number,
+    shareUpdates: any[],
+    playerCashUpdates: { playerId: string; decrement: number }[],
+    orderStatusUpdates: any[],
+    gameLogEntries: any[],
+  ) {
     for (const groupedOrders of sortedByPhaseCreatedAt) {
       if (remainingShares <= 0) break;
 
       const totalSharesInPhase = groupedOrders.orders.reduce(
-        (acc, order) => acc + (order.quantity || 0),
+        (acc: number, order: PlayerOrder) => acc + (order.quantity || 0),
         0,
       );
-
       if (totalSharesInPhase > remainingShares) {
-        // If total shares requested in the phase exceed remaining shares
-        const numBuyers = groupedOrders.orders.length;
-        const sharesPerBuyer = Math.floor(remainingShares / numBuyers);
-        const extraShares = remainingShares % numBuyers;
-
-        // Distribute shares proportionally
-        for (const order of groupedOrders.orders) {
-          const sharesToDistribute = Math.min(
-            sharesPerBuyer,
-            order.quantity || 0,
-          );
-          if (sharesToDistribute <= 0) continue;
-
-          const shares = allAvailableShares.slice(
-            currentShareIndex,
-            currentShareIndex + sharesToDistribute,
-          );
-          currentShareIndex += sharesToDistribute;
-
-          shareUpdates.push({
-            where: { id: { in: shares.map((share) => share.id) } },
-            data: {
-              location: ShareLocation.PLAYER,
-              playerId: order.playerId,
-            },
-          });
-
-          playerCashUpdates.push({
-            playerId: order.playerId,
-            decrement: sharesToDistribute * order.Company.currentStockPrice!,
-          });
-
-          orderStatusUpdates.push({
-            where: { id: order.id },
-            data: { orderStatus: OrderStatus.FILLED },
-          });
-
-          gameLogEntries.push({
-            game: { connect: { id: order.gameId } },
-            content: `Player ${order.Player.nickname} has bought ${sharesToDistribute} shares of ${
-              order.Company.name
-            } at $${order.Company.currentStockPrice.toFixed(2)}`,
-          });
-
-          remainingShares -= sharesToDistribute;
-        }
-
-        // Allocate remaining shares using a lottery system
-        const remainingGroupedOrders = groupedOrders.orders.filter(
-          (order) => (order.quantity || 0) > sharesPerBuyer,
+        const sharesPerBuyer = this.proportionalDistribution(
+          groupedOrders.orders,
+          remainingShares,
+          allAvailableShares,
+          currentShareIndex,
+          shareUpdates,
+          playerCashUpdates,
+          orderStatusUpdates,
+          gameLogEntries,
         );
-
-        while (remainingShares > 0 && remainingGroupedOrders.length > 0) {
-          const randomIndex = Math.floor(
-            Math.random() * remainingGroupedOrders.length,
-          );
-          const order = remainingGroupedOrders[randomIndex];
-
-          const shares = allAvailableShares.slice(
-            currentShareIndex,
-            currentShareIndex + 1,
-          );
-          currentShareIndex += 1;
-
-          shareUpdates.push({
-            where: { id: { in: [shares[0].id] } },
-            data: {
-              location: ShareLocation.PLAYER,
-              playerId: order.playerId,
-            },
-          });
-
-          playerCashUpdates.push({
-            playerId: order.playerId,
-            decrement: order.Company.currentStockPrice!,
-          });
-
-          orderStatusUpdates.push({
-            where: { id: order.id },
-            data: { orderStatus: OrderStatus.FILLED },
-          });
-
-          gameLogEntries.push({
-            game: { connect: { id: order.gameId } },
-            content: `Player ${order.Player.nickname} has won a lottery for a share of ${
-              order.Company.name
-            } at $${order.Company.currentStockPrice.toFixed(2)}`,
-          });
-
-          remainingShares -= 1;
-          remainingGroupedOrders[randomIndex].quantity! -= 1;
-          if (remainingGroupedOrders[randomIndex].quantity! <= 0) {
-            remainingGroupedOrders.splice(randomIndex, 1);
-          }
-        }
-
-        // Mark remaining orders as rejected
-        remainingGroupedOrders.forEach((order) => {
-          orderStatusUpdates.push({
-            where: { id: order.id },
-            data: { orderStatus: OrderStatus.REJECTED },
-          });
-        });
+        this.lotteryAllocation(
+          groupedOrders.orders,
+          remainingShares,
+          sharesPerBuyer,
+          allAvailableShares,
+          currentShareIndex,
+          shareUpdates,
+          playerCashUpdates,
+          orderStatusUpdates,
+          gameLogEntries,
+        );
       } else {
-        // Distribute shares if total shares requested in phase do not exceed remaining shares
-        for (const order of groupedOrders.orders) {
-          const sharesToGive = Math.min(order.quantity || 0, remainingShares);
-
-          const shares = allAvailableShares.slice(
-            currentShareIndex,
-            currentShareIndex + sharesToGive,
-          );
-          currentShareIndex += sharesToGive;
-
-          shareUpdates.push({
-            where: { id: { in: shares.map((share) => share.id) } },
-            data: {
-              location: ShareLocation.PLAYER,
-              playerId: order.playerId,
-            },
-          });
-
-          playerCashUpdates.push({
-            playerId: order.playerId,
-            decrement: sharesToGive * order.Company.currentStockPrice!,
-          });
-
-          orderStatusUpdates.push({
-            where: { id: order.id },
-            data: { orderStatus: OrderStatus.FILLED },
-          });
-
-          gameLogEntries.push({
-            game: { connect: { id: order.gameId } },
-            content: `Player ${order.Player.nickname} has bought ${sharesToGive} shares of ${
-              order.Company.name
-            } at $${order.Company.currentStockPrice.toFixed(2)}`,
-          });
-
-          remainingShares -= sharesToGive;
-        }
+        this.directFulfillment(
+          groupedOrders.orders,
+          remainingShares,
+          allAvailableShares,
+          currentShareIndex,
+          shareUpdates,
+          playerCashUpdates,
+          orderStatusUpdates,
+          gameLogEntries,
+        );
       }
     }
+  }
 
-    console.log('playerCashUpdates', playerCashUpdates);
-
+  async executeDatabaseOperations(
+    prisma: any,
+    shareUpdates: any[],
+    playerCashUpdates: { playerId: string; decrement: number }[],
+    orderStatusUpdates: any[],
+    gameLogEntries: any[],
+  ) {
     try {
-      // Execute updates in smaller batches to reduce lock contention
-      const BATCH_SIZE = 5; // Define a suitable batch size
+      const BATCH_SIZE = 5;
 
       for (let i = 0; i < shareUpdates.length; i += BATCH_SIZE) {
         const batch = shareUpdates.slice(i, i + BATCH_SIZE);
-        await this.prisma.$transaction(
-          batch.map((update) => this.prisma.share.updateMany(update)),
+        await prisma.$transaction(
+          batch.map((update) => prisma.share.updateMany(update)),
         );
       }
 
       for (let i = 0; i < playerCashUpdates.length; i += BATCH_SIZE) {
         const batch = playerCashUpdates.slice(i, i + BATCH_SIZE);
-        await this.prisma.$transaction(
+        await prisma.$transaction(
           batch.map((update) =>
-            this.prisma.player.update({
+            prisma.player.update({
               where: { id: update.playerId },
               data: {
                 cashOnHand: {
@@ -2993,15 +3139,15 @@ export class GameManagementService {
 
       for (let i = 0; i < orderStatusUpdates.length; i += BATCH_SIZE) {
         const batch = orderStatusUpdates.slice(i, i + BATCH_SIZE);
-        await this.prisma.$transaction(
-          batch.map((update) => this.prisma.playerOrder.update(update)),
+        await prisma.$transaction(
+          batch.map((update) => prisma.playerOrder.update(update)),
         );
       }
 
       for (let i = 0; i < gameLogEntries.length; i += BATCH_SIZE) {
         const batch = gameLogEntries.slice(i, i + BATCH_SIZE);
-        await this.prisma.$transaction(
-          batch.map((entry) => this.prisma.gameLog.create({ data: entry })),
+        await prisma.$transaction(
+          batch.map((entry) => prisma.gameLog.create({ data: entry })),
         );
       }
     } catch (error) {

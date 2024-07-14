@@ -212,6 +212,7 @@ enum StockAction {
   LIMIT_SELL
   CALL_OPTION
   PRODUCTION
+  RESEARCH_EFFECT
 }
 
 model StockRound {
@@ -231,30 +232,31 @@ model StockRound {
 // Action being the player's choice, order being the player's request, and stock being the fulfilled order.
 //option order = premium, strike price, and term (expiration date)
 model PlayerOrder {
-  id             Int             @id @default(autoincrement())
-  stockRoundId   Int
-  phaseId        String
-  playerId       String
-  companyId      String //We can't reference stockId here because it's not known which stocks which actually be purchased yet, this is more of an "ask"
-  gameId         String
-  sectorId       String
-  orderStatus    OrderStatus
-  quantity       Int?
-  value          Int? //value to be used for limit orders
-  isSell         Boolean?
-  isConcealed    Boolean?        @default(true)
-  location       ShareLocation
-  orderType      OrderType
-  ShortOrder     ShortOrder?
-  OptionContract OptionContract?
-  Game           Game            @relation(fields: [gameId], references: [id])
-  StockRound     StockRound      @relation(fields: [stockRoundId], references: [id])
-  Player         Player          @relation(fields: [playerId], references: [id])
-  Company        Company         @relation(fields: [companyId], references: [id])
-  Phase          Phase           @relation(fields: [phaseId], references: [id])
-  Sector         Sector          @relation(fields: [sectorId], references: [id])
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  id               Int             @id @default(autoincrement())
+  stockRoundId     Int
+  phaseId          String
+  playerId         String
+  companyId        String //We can't reference stockId here because it's not known which stocks which actually be purchased yet, this is more of an "ask"
+  gameId           String
+  sectorId         String
+  orderStatus      OrderStatus
+  quantity         Int?
+  realizedQuantity Int? //quantity that was actually fulfilled
+  value            Int? //value to be used for limit orders
+  isSell           Boolean?
+  isConcealed      Boolean?        @default(true)
+  location         ShareLocation
+  orderType        OrderType
+  ShortOrder       ShortOrder?
+  OptionContract   OptionContract?
+  Game             Game            @relation(fields: [gameId], references: [id])
+  StockRound       StockRound      @relation(fields: [stockRoundId], references: [id])
+  Player           Player          @relation(fields: [playerId], references: [id])
+  Company          Company         @relation(fields: [companyId], references: [id])
+  Phase            Phase           @relation(fields: [phaseId], references: [id])
+  Sector           Sector          @relation(fields: [sectorId], references: [id])
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
 }
 
 enum OrderStatus {
