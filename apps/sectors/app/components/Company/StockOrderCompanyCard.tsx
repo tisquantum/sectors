@@ -147,17 +147,21 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
               >
                 <div className="grid grid-cols-3 gap-4 w-full">
                   {Object.keys(groupedIpoOrdersByPhase).map((index) => (
-                    <div
-                      className="flex items-center justify-center"
-                      key={index}
-                    >
-                      <PlayerOrderConcealed
-                        orders={ipoOrders.filter(
-                          (order) =>
-                            order.phaseId ==
-                            groupedIpoOrdersByPhase[index].phaseId
-                        )}
-                      />
+                    <div className="flex flex-col" key={index}>
+                      <div className="flex items-center justify-center">
+                        <span className="text-sm text-gray-400">
+                          {index + 1}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-center">
+                        <PlayerOrderConcealed
+                          orders={ipoOrders.filter(
+                            (order) =>
+                              order.phaseId ==
+                              groupedIpoOrdersByPhase[index].phaseId
+                          )}
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -207,17 +211,21 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
               >
                 <div className="grid grid-cols-3 gap-4 w-full">
                   {Object.keys(groupedOpenMarketOrdersByPhase).map((index) => (
-                    <div
-                      className="flex items-center justify-center"
-                      key={index}
-                    >
-                      <PlayerOrderConcealed
-                        orders={openMarketOrders.filter(
-                          (order) =>
-                            order.phaseId ==
-                            groupedOpenMarketOrdersByPhase[index].phaseId
-                        )}
-                      />
+                    <div className="flex flex-col" key={index}>
+                      <div className="flex items-center justify-center">
+                        <span className="text-sm text-gray-400">
+                          {index + 1}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-center">
+                        <PlayerOrderConcealed
+                          orders={openMarketOrders.filter(
+                            (order) =>
+                              order.phaseId ==
+                              groupedOpenMarketOrdersByPhase[index].phaseId
+                          )}
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>
