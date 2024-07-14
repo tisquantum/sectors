@@ -1688,8 +1688,13 @@ export class GameManagementService {
   }
 
   async startGame(input: StartGameInput): Promise<Game> {
-    const { roomId, startingCashOnHand, consumerPoolNumber, bankPoolNumber } =
-      input;
+    const {
+      roomId,
+      startingCashOnHand,
+      consumerPoolNumber,
+      bankPoolNumber,
+      distributionStrategy,
+    } = input;
 
     const gameData: Prisma.GameCreateInput = {
       name: `Game_Fantastic`,
@@ -1698,6 +1703,7 @@ export class GameManagementService {
       currentRound: 'STOCK',
       bankPoolNumber,
       consumerPoolNumber,
+      distributionStrategy,
       gameStatus: 'started',
       gameStep: 0,
       currentPhaseId: 'initial',
@@ -2726,6 +2732,169 @@ export class GameManagementService {
     }
   }
 
+  filterValidBidOrdersBidStrategy(
+    buyOrders: PlayerOrderWithPlayerCompany[],
+    playerShares: Record<string, number>,
+    playerOrderQuantities: Record<string, number>,
+    maxSharesPerPlayer: number,
+    orderStatusUpdates: any[],
+  ) {
+    return buyOrders.filter((order) => {
+      const currentShares = playerShares[order.playerId] || 0;
+      const placedOrderQuantity = playerOrderQuantities[order.playerId] || 0;
+      const newTotalShares =
+        currentShares + placedOrderQuantity + (order.quantity || 0);
+
+      if (newTotalShares > maxSharesPerPlayer) {
+        orderStatusUpdates.push({
+          where: { id: order.id },
+          data: { orderStatus: OrderStatus.REJECTED },
+        });
+        return false;
+      }
+
+      playerOrderQuantities[order.playerId] =
+        placedOrderQuantity + (order.quantity || 0);
+      return true;
+    });
+  }
+
+  sortByBidValue(buyOrders: PlayerOrderWithPlayerCompany[]) {
+    return buyOrders.sort((a, b) => (b.value || 0) - (a.value || 0));
+  }
+
+  processBidOrdersBidStrategy(
+    sortedOrders: PlayerOrderWithPlayerCompany[],
+    remainingShares: number,
+    allAvailableShares: Share[],
+    currentShareIndex: number,
+    shareUpdates: any[],
+    playerCashUpdates: { playerId: string; decrement: number }[],
+    orderStatusUpdates: any[],
+    gameLogEntries: any[],
+  ) {
+    for (const order of sortedOrders) {
+      if (remainingShares <= 0) break;
+
+      const sharesToGive = Math.min(order.quantity || 0, remainingShares);
+      if (sharesToGive < (order.quantity || 0)) {
+        // Reject the order if it cannot be fully fulfilled
+        orderStatusUpdates.push({
+          where: { id: order.id },
+          data: { orderStatus: OrderStatus.REJECTED },
+        });
+        continue;
+      }
+
+      const shares = allAvailableShares.slice(
+        currentShareIndex,
+        currentShareIndex + sharesToGive,
+      );
+      currentShareIndex += sharesToGive;
+
+      shareUpdates.push({
+        where: { id: { in: shares.map((share) => share.id) } },
+        data: {
+          location: ShareLocation.PLAYER,
+          playerId: order.playerId,
+        },
+      });
+
+      playerCashUpdates.push({
+        playerId: order.playerId,
+        decrement: sharesToGive * order.Company.currentStockPrice!,
+      });
+
+      orderStatusUpdates.push({
+        where: { id: order.id },
+        data: { orderStatus: OrderStatus.FILLED },
+      });
+
+      gameLogEntries.push({
+        game: { connect: { id: order.gameId } },
+        content: `Player ${order.Player.nickname} has bought ${sharesToGive} shares of ${
+          order.Company.name
+        } at $${order.Company.currentStockPrice.toFixed(2)}`,
+      });
+
+      remainingShares -= sharesToGive;
+    }
+  }
+
+  async distributeSharesBidStrategy(
+    buyOrders: PlayerOrderWithPlayerCompany[],
+    location: ShareLocation,
+    companyId: string,
+    shareService: ShareService,
+    prisma: any,
+  ) {
+    let currentShareIndex = 0;
+
+    const shareUpdates: any[] = [];
+    const playerCashUpdates: { playerId: string; decrement: number }[] = [];
+    const orderStatusUpdates: any[] = [];
+    const gameLogEntries: any[] = [];
+
+    const company = buyOrders[0].Company;
+    const totalCompanyShares = company.Share.length;
+    const maxSharesPerPlayer =
+      totalCompanyShares * (MAX_SHARE_PERCENTAGE / 100);
+
+    const playerShares: Record<string, number> = {};
+    for (const share of company.Share) {
+      if (share.location === ShareLocation.PLAYER && share.playerId) {
+        if (!playerShares[share.playerId]) {
+          playerShares[share.playerId] = 0;
+        }
+        playerShares[share.playerId] += 1;
+      }
+    }
+
+    const playerOrderQuantities: Record<string, number> = {};
+    const validBuyOrders = this.filterValidBidOrdersBidStrategy(
+      buyOrders,
+      playerShares,
+      playerOrderQuantities,
+      maxSharesPerPlayer,
+      orderStatusUpdates,
+    );
+
+    const totalBuyOrderShares = validBuyOrders.reduce(
+      (acc, order) => acc + (order.quantity || 0),
+      0,
+    );
+    let remainingShares = Math.min(
+      company.Share.filter((share) => share.location == location).length,
+      totalBuyOrderShares,
+    );
+
+    const sortedByBidValue = this.sortByBidValue(validBuyOrders);
+
+    const allAvailableShares = await shareService.shares({
+      where: { companyId, location },
+      take: remainingShares,
+    });
+
+    this.processBidOrdersBidStrategy(
+      sortedByBidValue,
+      remainingShares,
+      allAvailableShares,
+      currentShareIndex,
+      shareUpdates,
+      playerCashUpdates,
+      orderStatusUpdates,
+      gameLogEntries,
+    );
+
+    await this.executeDatabaseOperations(
+      prisma,
+      shareUpdates,
+      playerCashUpdates,
+      orderStatusUpdates,
+      gameLogEntries,
+    );
+  }
+
   /**
    * Distributes shares among players based on their buy orders and the current phase.
    *
@@ -2893,7 +3062,10 @@ export class GameManagementService {
       for (const o of order) {
         totalOrderQuantity += o.quantity || 0;
       }
-      const sharesToDistribute = Math.min(sharesPerBuyer, totalOrderQuantity || 0);
+      const sharesToDistribute = Math.min(
+        sharesPerBuyer,
+        totalOrderQuantity || 0,
+      );
       if (sharesToDistribute <= 0) continue;
 
       const shares = allAvailableShares.slice(

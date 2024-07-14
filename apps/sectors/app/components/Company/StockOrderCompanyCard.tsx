@@ -52,11 +52,37 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
       order.phaseId !== currentPhase?.id
   );
 
+  //group ipoOrders by phase
+  const groupedIpoOrdersByPhase = ipoOrders?.reduce((acc, order) => {
+    const phaseId = order.phaseId;
+    if (!phaseId) return acc;
+    if (acc[phaseId]) {
+      acc[phaseId].count++;
+    } else {
+      acc[phaseId] = { phaseId: order.phaseId, count: 1 };
+    }
+    return acc;
+  }, {} as { [key: string]: { phaseId: string; count: number } });
+
   const openMarketOrders = orders.filter(
     (order) =>
       order.companyId == company.id &&
       order.location == ShareLocation.OPEN_MARKET &&
       order.phaseId !== currentPhase?.id
+  );
+
+  const groupedOpenMarketOrdersByPhase = openMarketOrders?.reduce(
+    (acc, order) => {
+      const phaseId = order.phaseId;
+      if (!phaseId) return acc;
+      if (acc[phaseId]) {
+        acc[phaseId].count++;
+      } else {
+        acc[phaseId] = { phaseId: order.phaseId, count: 1 };
+      }
+      return acc;
+    },
+    {} as { [key: string]: { phaseId: string; count: number } }
   );
 
   const handleDisplayOrderInput = (company: Company, isIpo?: boolean) => {
@@ -119,14 +145,22 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
                   "bg-slate-950 rounded-md p-2"
                 }`}
               >
-                <PlayerOrder
-                  orders={playerOrdersRevealed.filter(
-                    (order) =>
-                      order.companyId == company.id &&
-                      order.location == ShareLocation.IPO &&
-                      order.phaseId !== currentPhase?.id
-                  )}
-                />
+                <div className="grid grid-cols-3 gap-4 w-full">
+                  {Object.keys(groupedIpoOrdersByPhase).map((index) => (
+                    <div
+                      className="flex items-center justify-center"
+                      key={index}
+                    >
+                      <PlayerOrderConcealed
+                        orders={ipoOrders.filter(
+                          (order) =>
+                            order.phaseId ==
+                            groupedIpoOrdersByPhase[index].phaseId
+                        )}
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
             {isInteractive &&
@@ -171,7 +205,22 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
                   "bg-slate-950 rounded-md p-2"
                 }`}
               >
-                <PlayerOrderConcealed orders={openMarketOrders} />
+                <div className="grid grid-cols-3 gap-4 w-full">
+                  {Object.keys(groupedOpenMarketOrdersByPhase).map((index) => (
+                    <div
+                      className="flex items-center justify-center"
+                      key={index}
+                    >
+                      <PlayerOrderConcealed
+                        orders={openMarketOrders.filter(
+                          (order) =>
+                            order.phaseId ==
+                            groupedOpenMarketOrdersByPhase[index].phaseId
+                        )}
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
             {isRevealRound && (

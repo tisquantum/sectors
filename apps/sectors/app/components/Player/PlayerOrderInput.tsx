@@ -14,6 +14,7 @@ import {
 import { trpc } from "@sectors/app/trpc";
 import {
   Company,
+  DistributionStrategy,
   OrderType,
   PlayerOrder,
   Prisma,
@@ -194,21 +195,29 @@ const BuyOrSell: React.FC<BuyOrSellProps> = ({
 interface TabContentProps {
   handleSelectionIsBuy: (event: boolean) => void;
   handleShares: (event: number) => void;
+  handleValueChange: (event: number) => void;
   ordersRemaining: number;
   isIpo?: boolean;
   maxValue: number;
   minValue: number;
+  defaultValue?: number;
 }
 
 const TabContentMO: React.FC<TabContentProps> = ({
   handleSelectionIsBuy,
   handleShares,
+  handleValueChange,
   ordersRemaining,
   isIpo,
   maxValue,
   minValue,
+  defaultValue,
 }) => {
+  const { gameState } = useGame();
   const [shareValue, setShareValue] = useState<number>(1);
+  const [marketOrderBidValue, setMarketOrderBidValue] = useState<number>(
+    defaultValue || 0
+  );
   useEffect(() => {
     handleShares(minValue);
   }, []);
@@ -219,6 +228,25 @@ const TabContentMO: React.FC<TabContentProps> = ({
         maxOrders={MAX_MARKET_ORDER}
       />
       <BuyOrSell handleSelectionIsBuy={handleSelectionIsBuy} isIpo={isIpo} />
+      {gameState.distributionStrategy == DistributionStrategy.BID_PRIORITY && (
+        <Input
+          id="moAmount"
+          type="number"
+          label="Market Order Amount"
+          placeholder="0.00"
+          labelPlacement="inside"
+          onValueChange={(value: string) => {
+            handleValueChange(Number(value));
+            setMarketOrderBidValue(Number(value));
+          }}
+          value={marketOrderBidValue.toString()}
+          startContent={
+            <div className="pointer-events-none flex items-center">
+              <span className="text-default-400 text-small">$</span>
+            </div>
+          }
+        />
+      )}
       {minValue === maxValue ? (
         <div>{minValue} Share Remaining</div>
       ) : (
@@ -444,7 +472,7 @@ const PlayerOrderInput = ({
     });
   const createPlayerOrder = trpc.playerOrder.createPlayerOrder.useMutation();
   const [share, setShare] = useState(1);
-  const [limitOrderValue, setLimitOrderValue] = useState(0);
+  const [orderValue, setOrderValue] = useState(0);
   const [isBuy, setIsBuy] = useState(true);
   const [isSubmit, setIsSubmit] = useState(false);
   const [orderType, setOrderType] = useState<OrderType>(OrderType.MARKET);
@@ -502,8 +530,7 @@ const PlayerOrderInput = ({
       phaseId: gameState.currentPhaseId ?? "",
       sectorId: currentOrder.sectorId,
       quantity: share,
-      value: orderType == OrderType.LIMIT ? limitOrderValue
-      : company?.currentStockPrice,
+      value: orderValue ?? company?.currentStockPrice,
       isSell: !!!isBuy,
       orderType,
       location: isIpo ? ShareLocation.IPO : ShareLocation.OPEN_MARKET,
@@ -551,6 +578,7 @@ const PlayerOrderInput = ({
                   <TabContentMO
                     handleSelectionIsBuy={setIsBuy}
                     handleShares={setShare}
+                    handleValueChange={setOrderValue}
                     ordersRemaining={authPlayer.marketOrderActions}
                     isIpo={isIpo}
                     maxValue={maxValue}
@@ -565,7 +593,7 @@ const PlayerOrderInput = ({
                   <CardBody>
                     <TabContentLO
                       isBuy={isBuy}
-                      handleLimitOrderChange={setLimitOrderValue}
+                      handleLimitOrderChange={setOrderValue}
                       handleSelectionIsBuy={setIsBuy}
                       ordersRemaining={authPlayer.limitOrderActions}
                     />

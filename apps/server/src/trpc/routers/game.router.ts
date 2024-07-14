@@ -2,7 +2,14 @@ import { PusherService } from 'nestjs-pusher';
 import { z } from 'zod';
 import { GamesService } from '@server/games/games.service';
 import { TrpcService } from '../trpc.service';
-import { Game, Phase, PhaseName, Prisma, RoundType } from '@prisma/client';
+import {
+  DistributionStrategy,
+  Game,
+  Phase,
+  PhaseName,
+  Prisma,
+  RoundType,
+} from '@prisma/client';
 import { GameManagementService } from '@server/game-management/game-management.service';
 import {
   EVENT_GAME_STARTED,
@@ -57,6 +64,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           consumerPoolNumber: z.number(),
           roomId: z.number(),
           startingCashOnHand: z.number(),
+          distributionStrategy: z.nativeEnum(DistributionStrategy),
           players: z.any().optional(),
           companies: z.any().optional(),
           Player: z.any().optional(),
@@ -75,6 +83,7 @@ export default (trpc: TrpcService, ctx: Context) =>
             startingCashOnHand: input.startingCashOnHand,
             consumerPoolNumber: input.consumerPoolNumber,
             bankPoolNumber: input.bankPoolNumber,
+            distributionStrategy: input.distributionStrategy,
           });
         } catch (error) {
           return {

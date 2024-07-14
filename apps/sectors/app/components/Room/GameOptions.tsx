@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { Select, SelectItem } from "@nextui-org/react";
+import { DistributionStrategy } from "@server/prisma/prisma.client";
 
 type ValueMap = {
   bankPoolNumber: { [key: number]: number };
   startingCashOnHand: { [key: number]: number };
   consumerPoolNumber: { [key: number]: number };
+  distributionStrategy: { [key: number]: DistributionStrategy };
 };
 
 type GameOptionsKeys = keyof ValueMap;
@@ -13,6 +15,7 @@ interface GameOptionsProps {
   initialBankPoolNumber?: number;
   initialConsumerPoolNumber?: number;
   initialStartingCashOnHand?: number;
+  initialDistributionStrategy?: DistributionStrategy;
   onOptionsChange?: (options: GameOptionsState) => void;
 }
 
@@ -20,18 +23,21 @@ interface GameOptionsState {
   bankPoolNumber: number;
   consumerPoolNumber: number;
   startingCashOnHand: number;
+  distributionStrategy: DistributionStrategy;
 }
 
 const GameOptions: React.FC<GameOptionsProps> = ({
   initialBankPoolNumber = 0,
   initialConsumerPoolNumber = 0,
   initialStartingCashOnHand = 0,
+  initialDistributionStrategy = DistributionStrategy.FAIR_SPLIT,
   onOptionsChange,
 }) => {
   const [options, setOptions] = useState<GameOptionsState>({
     bankPoolNumber: initialBankPoolNumber,
     consumerPoolNumber: initialConsumerPoolNumber,
     startingCashOnHand: initialStartingCashOnHand,
+    distributionStrategy: initialDistributionStrategy,
   });
 
   useEffect(() => {
@@ -54,6 +60,11 @@ const GameOptions: React.FC<GameOptionsProps> = ({
       1: 50,
       2: 75,
       3: 100,
+    },
+    distributionStrategy: {
+      1: DistributionStrategy.FAIR_SPLIT,
+      2: DistributionStrategy.BID_PRIORITY,
+      3: DistributionStrategy.PRIORITY,
     },
   };
 
@@ -128,6 +139,26 @@ const GameOptions: React.FC<GameOptionsProps> = ({
           </SelectItem>
           <SelectItem key={3} value={3}>
             100 (Friendly Game)
+          </SelectItem>
+        </Select>
+      </div>
+      <div className="mb-4">
+        <Select
+          label="Distribution Strategy"
+          size="lg"
+          className="max-w-xs"
+          onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+            handleSelectChange("distributionStrategy", Number(e.target.value))
+          }
+        >
+          <SelectItem key={1} value={1}>
+            Fair Split
+          </SelectItem>
+          <SelectItem key={2} value={2}>
+            Bid Priority
+          </SelectItem>
+          <SelectItem key={3} value={3}>
+            Priority
           </SelectItem>
         </Select>
       </div>

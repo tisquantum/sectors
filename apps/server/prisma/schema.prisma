@@ -259,6 +259,12 @@ model PlayerOrder {
   updatedAt        DateTime        @updatedAt
 }
 
+enum DistributionStrategy {
+  FAIR_SPLIT // Distribute shares and allow partial fills to orders, things that cannot be split evenly are filled via lottery
+  PRIORITY // A priority list is set prior to any distribution resolution based on some metric, orders that cannot be filled are outright rejected
+  BID_PRIORITY // Orders are filled based on the highest bid per share, orders that cannot be filled are outright rejected
+}
+
 enum OrderStatus {
   PENDING
   OPEN //only pertains to LIMIT, SHORT, OPTION
@@ -523,7 +529,7 @@ enum SectorName {
 }
 
 model Game {
-  id                      String            @id @default(uuid())
+  id                      String               @id @default(uuid())
   name                    String
   currentTurn             String
   currentOrSubRound       Int
@@ -534,8 +540,9 @@ model Game {
   gameStatus              String
   gameStep                Int
   roomId                  Int
-  overdraft               Boolean           @default(true)
+  overdraft               Boolean              @default(true)
   nextPrestigeReward      Int?
+  distributionStrategy    DistributionStrategy @default(FAIR_SPLIT)
   gameLogs                GameLog[]
   sectors                 Sector[]
   GameTurn                GameTurn[]
@@ -551,12 +558,12 @@ model Game {
   CapitalGains            CapitalGains[]
   PrestigeRewards         PrestigeRewards[]
   Cards                   Card[]
-  Room                    Room              @relation(fields: [roomId], references: [id])
+  Room                    Room                 @relation(fields: [roomId], references: [id])
   currentPhaseId          String?
   currentStockRoundId     Int?
   currentOperatingRoundId Int?
-  createdAt               DateTime          @default(now())
-  updatedAt               DateTime          @updatedAt
+  createdAt               DateTime             @default(now())
+  updatedAt               DateTime             @updatedAt
 }
 
 model GameTurn {

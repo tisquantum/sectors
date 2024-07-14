@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Room, User } from "@server/prisma/prisma.client";
+import { DistributionStrategy, Room, User } from "@server/prisma/prisma.client";
 import { Avatar } from "@nextui-org/react";
 import { trpc } from "@sectors/app/trpc";
 import { useAuthUser } from "@sectors/app/components/AuthUser.context";
@@ -23,6 +23,7 @@ interface GameOptionsState {
   bankPoolNumber: number;
   consumerPoolNumber: number;
   startingCashOnHand: number;
+  distributionStrategy: DistributionStrategy;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
@@ -32,6 +33,7 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
     bankPoolNumber: 0,
     consumerPoolNumber: 0,
     startingCashOnHand: 0,
+    distributionStrategy: DistributionStrategy.FAIR_SPLIT,
   });
   const joinRoomMutation = trpc.roomUser.joinRoom.useMutation();
   const leaveRoomMutation = trpc.roomUser.leaveRoom.useMutation();
@@ -75,7 +77,8 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
     roomId: number,
     startingCashOnHand: number,
     consumerPoolNumber: number,
-    bankPoolNumber: number
+    bankPoolNumber: number,
+    distributionStrategy: DistributionStrategy
   ) => {
     //response happens through pusher to all clients.
     startGameMutation.mutate({
@@ -83,6 +86,7 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
       startingCashOnHand,
       consumerPoolNumber,
       bankPoolNumber,
+      distributionStrategy
     });
   };
 
@@ -111,7 +115,8 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
                     room.id,
                     gameOptions.startingCashOnHand,
                     gameOptions.consumerPoolNumber,
-                    gameOptions.bankPoolNumber
+                    gameOptions.bankPoolNumber,
+                    gameOptions.distributionStrategy
                   )
                 }
                 radius="none"
