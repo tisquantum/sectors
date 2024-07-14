@@ -139,6 +139,7 @@ model Company {
   unitPrice                Int
   throughput               Int //TODO: Deprecated
   supplyMax                Int                       @default(0)
+  supplyBase               Int                       @default(0)
   supplyCurrent            Int                       @default(0)
   demandScore              Int                       @default(0)
   prestigeTokens           Int                       @default(0)
@@ -438,19 +439,27 @@ model ResearchDeck {
 }
 
 model Card {
-  id           Int                @id @default(autoincrement())
+  id           Int                    @id @default(autoincrement())
   name         String
   description  String
   sector       SectorName
   effect       ResearchCardEffect
+  effectType   ResearchCardEffectType @default(PERMANENT)
+  effectUsed   Boolean?               @default(false)
   deckId       Int
   gameId       String
   companyId    String?
-  ResearchDeck ResearchDeck       @relation(fields: [deckId], references: [id])
-  Game         Game               @relation(fields: [gameId], references: [id])
-  Company      Company?           @relation(fields: [companyId], references: [id])
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
+  ResearchDeck ResearchDeck           @relation(fields: [deckId], references: [id])
+  Game         Game                   @relation(fields: [gameId], references: [id])
+  Company      Company?               @relation(fields: [companyId], references: [id])
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+}
+
+enum ResearchCardEffectType {
+  PERMANENT
+  ONE_TIME_USE
+  DECAY
 }
 
 enum ResearchCardEffect {
@@ -466,6 +475,8 @@ enum ResearchCardEffect {
   ENERGY_SAVING
   CORPORATE_ESPIONAGE
   GLOBALIZATION
+  ECONOMIES_OF_SCALE
+  MARKET_EXPANSION
   NO_DISCERNIBLE_FINDINGS
 }
 

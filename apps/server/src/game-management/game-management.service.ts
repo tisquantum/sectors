@@ -72,6 +72,7 @@ import {
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
+  calculateCompanySupply,
   calculateMarginAccountMinimum,
   calculateStepsAndRemainder,
   companyPriorityOrderOperations,
@@ -175,6 +176,7 @@ export class GameManagementService {
         await this.resolveOperatingProductionVotes(phase);
         break;
       case PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT:
+        console.log('Adjusting stock prices', phase);
         await this.adjustStockPrices(phase);
         await this.createOperatingRoundCompanyActions(phase);
         break;
@@ -231,9 +233,10 @@ export class GameManagementService {
       const shareUpdates = sharesToDivest.map((share) => {
         return this.shareService.updateShare({
           where: { id: share.id },
-          data: { location: ShareLocation.OPEN_MARKET,
+          data: {
+            location: ShareLocation.OPEN_MARKET,
             Player: { disconnect: true },
-           },
+          },
         });
       });
 
@@ -420,6 +423,12 @@ export class GameManagementService {
       console.log('No new company actions to create');
       return;
     }
+    //ensure there are no duplicate companyIds in the companyActions array
+    companyActions = companyActions.filter(
+      (companyAction, index, self) =>
+        index ===
+        self.findIndex((t) => t.companyId === companyAction.companyId),
+    );
 
     try {
       await this.prisma.companyAction.createMany({
@@ -703,12 +712,25 @@ export class GameManagementService {
       case ResearchCardEffect.QUALITY_CONTROL:
         this.qualityControlCardEffect(company);
         break;
+      case ResearchCardEffect.PRODUCT_DEVELOPMENT:
+        this.productDevelopmentCardEffect(company);
+        break;
       case ResearchCardEffect.NO_DISCERNIBLE_FINDINGS:
         return;
       default:
         return;
     }
   }
+
+
+  async productDevelopmentCardEffect(company: Company) {
+    //increate the company supply max by 1
+    await this.companyService.updateCompany({
+      where: { id: company.id },
+      data: { supplyBase: company.supplyBase + 1 },
+    });
+  }
+
   async qualityControlCardEffect(company: Company) {
     //award the company 1 prestige token
     await this.companyService.updateCompany({
@@ -1267,7 +1289,9 @@ export class GameManagementService {
       for (const company of sectorCompaniesSorted) {
         // Calculate throughput
         const throughput =
-          company.demandScore + company.Sector.demand - company.supplyMax;
+          company.demandScore +
+          company.Sector.demand -
+          calculateCompanySupply(company.supplyBase, company.supplyMax);
         console.log('Throughput:', throughput, company.name, company);
         // Consult throughput score to see reward or penalty.
         const throughputOutcome = throughputRewardOrPenalty(throughput);
@@ -1305,7 +1329,7 @@ export class GameManagementService {
 
         // Calculate the revenue for the company units sold
         let unitsSold = Math.min(
-          company.supplyMax,
+          calculateCompanySupply(company.supplyBase, company.supplyMax),
           company.demandScore + company.Sector.demand,
         );
         //is there enough consumers to buy all the supply?

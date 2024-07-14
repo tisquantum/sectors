@@ -7,6 +7,7 @@ import {
   PrestigeReward,
   Prisma,
   ResearchCardEffect,
+  ResearchCardEffectType,
   RoundType,
   Sector,
   SectorName,
@@ -475,6 +476,17 @@ function getSectorBasedOnEffect(effect: ResearchCardEffect): SectorName {
   }
 }
 
+export function getEffectType(
+  effect: ResearchCardEffect,
+): ResearchCardEffectType {
+  switch (effect) {
+    case ResearchCardEffect.ECONOMIES_OF_SCALE:
+      return ResearchCardEffectType.ONE_TIME_USE;
+    default:
+      return ResearchCardEffectType.PERMANENT;
+  }
+}
+
 export function createSeededResearchCards(seed: string): Card[] {
   const rng = lcg(stringToSeed(seed));
   const cards: Card[] = [];
@@ -495,6 +507,8 @@ export function createSeededResearchCards(seed: string): Card[] {
         ResearchCardEffect.NO_DISCERNIBLE_FINDINGS,
       ), // Provide appropriate sector
       effect: ResearchCardEffect.NO_DISCERNIBLE_FINDINGS as ResearchCardEffect,
+      effectType: ResearchCardEffectType.PERMANENT,
+      effectUsed: false,
       deckId: 0, // Set appropriate deckId
       gameId: seed,
       companyId: null,
@@ -518,6 +532,8 @@ export function createSeededResearchCards(seed: string): Card[] {
       description: descriptionForEffect(effect as ResearchCardEffect),
       sector: getSectorBasedOnEffect(effect), // Provide appropriate sector
       effect: effect,
+      effectType: getEffectType(effect as ResearchCardEffect),
+      effectUsed: false,
       deckId: 0, // Set appropriate deckId
       gameId: seed,
       companyId: null,
@@ -556,10 +572,19 @@ function descriptionForEffect(effect: ResearchCardEffect): string {
     case ResearchCardEffect.QUALITY_CONTROL:
       return 'The company has achieved a breakthrough in quality control, receive 1 prestige token.';
     case ResearchCardEffect.PRODUCT_DEVELOPMENT:
-      return 'The company has achieved a breakthrough in product development.';
+      return 'The company has achieved a breakthrough in product development. Increase the supply permanently by 1.';
+    case ResearchCardEffect.ECONOMIES_OF_SCALE:
+      return "The next time this company operates, it is considered to be the cheapest company regardless of it's unit price.";
     case ResearchCardEffect.NO_DISCERNIBLE_FINDINGS:
       return 'This research yielded no discernible findings.';
     default:
       return 'This research yielded no discernible findings.';
   }
+}
+
+export function calculateCompanySupply(
+  supplyBase: number,
+  supplyScore: number,
+) {
+  return supplyBase + supplyScore;
 }
