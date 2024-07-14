@@ -13,7 +13,7 @@ import {
   PlayerOrderConcealedWithPlayer,
   PlayerOrderWithCompany,
   PlayerOrderWithPlayerCompany,
-  PlayerOrdersAllRelations,
+  PlayerOrderAllRelations,
 } from '@server/prisma/prisma.types';
 import { getPseudoSpend } from '@server/data/helpers';
 import { MAX_SHARE_PERCENTAGE } from '@server/data/constants';
@@ -134,7 +134,7 @@ export class PlayerOrderService {
     cursor?: Prisma.PlayerOrderWhereUniqueInput;
     where?: Prisma.PlayerOrderWhereInput;
     orderBy?: Prisma.PlayerOrderOrderByWithRelationInput;
-  }): Promise<PlayerOrdersAllRelations[]> {
+  }): Promise<PlayerOrderAllRelations[]> {
     const { skip, take, cursor, where, orderBy } = params;
     return this.prisma.playerOrder.findMany({
       skip,

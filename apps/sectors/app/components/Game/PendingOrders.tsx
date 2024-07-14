@@ -20,7 +20,7 @@ import {
 import {
   PlayerOrderWithPlayerCompany,
   PlayerOrderWithPlayerCompanySectorShortOrder,
-  PlayerOrdersAllRelations,
+  PlayerOrderAllRelations,
 } from "@server/prisma/prisma.types";
 import { interestRatesByTerm } from "@server/data/constants";
 import { create } from "domain";
@@ -31,20 +31,20 @@ import { RiCloseCircleFill } from "@remixicon/react";
 import { flushAllTraces } from "next/dist/trace";
 import PlayerAvatar from "../Player/PlayerAvatar";
 interface GroupedOrders {
-  [key: string]: PlayerOrdersAllRelations[];
+  [key: string]: PlayerOrderAllRelations[];
 }
 
 const PendingMarketOrders = ({
   marketOrders,
   isResolving,
 }: {
-  marketOrders: PlayerOrdersAllRelations[];
+  marketOrders: PlayerOrderAllRelations[];
   isResolving?: boolean;
 }) => {
   const { currentPhase } = useGame();
   // Assuming marketOrders is an array of objects with name, companyName, orderType (buy/sell), and shares
   const groupedOrders = marketOrders.reduce(
-    (acc: GroupedOrders, order: PlayerOrdersAllRelations) => {
+    (acc: GroupedOrders, order: PlayerOrderAllRelations) => {
       const key = order.Company.name;
       if (!acc[key]) {
         acc[key] = [];
@@ -79,6 +79,18 @@ const PendingMarketOrders = ({
         if (netDifference === 0) {
           netDifference = "+0";
         }
+        //group orders by phaseId
+        const groupedOrdersByPhase = orders.reduce((acc, order) => {
+          const phaseId = order.stockRoundId;
+          if (!phaseId) return acc;
+          if (acc[phaseId]) {
+            acc[phaseId].push(order);
+          } else {
+            acc[phaseId] = [order];
+          }
+          return acc;
+        }, {} as { [key: string]: PlayerOrderAllRelations[] });
+
         return (
           <div
             key={company}
@@ -94,36 +106,49 @@ const PendingMarketOrders = ({
               </span>
             </div>
             <div className="flex flex-wrap gap-2">
-              {orders.map((order, index) =>
-                isResolving ? (
-                  <>
-                    <motion.div
-                      initial="hidden"
-                      animate="visible"
-                      variants={containerVariants}
-                      className="flex"
-                    >
-                      <OrderChipWithPlayer
-                        order={order}
-                        status={order.orderStatus}
-                        endContent={
-                          order.orderStatus == OrderStatus.FILLED ? (
-                            <CheckCircleIcon className="size-5 text-green-500" />
-                          ) : OrderStatus.REJECTED ? (
-                            <RiCloseCircleFill className="size-5 text-red-500" />
+              {Object.entries(groupedOrdersByPhase).map(
+                ([phaseId, orders], index) => {
+                  return (
+                    <div className="flex flex-col">
+                      <div>
+                        <span> Stock Round {index + 1} </span>
+                      </div>
+                      <div>
+                        {orders.map((order, index) =>
+                          isResolving ? (
+                            <>
+                              <motion.div
+                                initial="hidden"
+                                animate="visible"
+                                variants={containerVariants}
+                                className="flex"
+                              >
+                                <OrderChipWithPlayer
+                                  order={order}
+                                  status={order.orderStatus}
+                                  endContent={
+                                    order.orderStatus == OrderStatus.FILLED ? (
+                                      <CheckCircleIcon className="size-5 text-green-500" />
+                                    ) : OrderStatus.REJECTED ? (
+                                      <RiCloseCircleFill className="size-5 text-red-500" />
+                                    ) : (
+                                      <ClockIcon className="size-5 text-yellow-500" />
+                                    )
+                                  }
+                                />
+                              </motion.div>
+                            </>
                           ) : (
-                            <ClockIcon className="size-5 text-yellow-500" />
+                            <OrderChipWithPlayer
+                              order={order}
+                              status={order.orderStatus}
+                            />
                           )
-                        }
-                      />
-                    </motion.div>
-                  </>
-                ) : (
-                  <OrderChipWithPlayer
-                    order={order}
-                    status={order.orderStatus}
-                  />
-                )
+                        )}
+                      </div>
+                    </div>
+                  );
+                }
               )}
             </div>
           </div>
@@ -137,12 +162,12 @@ const PendingLimitOrders = ({
   limitOrders,
   isResolving,
 }: {
-  limitOrders: PlayerOrdersAllRelations[];
+  limitOrders: PlayerOrderAllRelations[];
   isResolving?: boolean;
 }) => {
   // Group orders by company
   const groupedOrders = limitOrders.reduce(
-    (acc: GroupedOrders, order: PlayerOrdersAllRelations) => {
+    (acc: GroupedOrders, order: PlayerOrderAllRelations) => {
       const key = order.Company.name;
       if (!acc[key]) {
         acc[key] = [];
@@ -202,7 +227,7 @@ const PendingLimitOrders = ({
 const PendingShortOrders = ({
   shortOrders,
 }: {
-  shortOrders: PlayerOrdersAllRelations[];
+  shortOrders: PlayerOrderAllRelations[];
 }) => {
   return (
     <div className="space-y-2">

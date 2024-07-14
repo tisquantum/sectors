@@ -7,7 +7,7 @@ import {
 } from "@server/prisma/prisma.client";
 import {
   PlayerOrderWithPlayerCompany,
-  PlayerOrdersAllRelations,
+  PlayerOrderAllRelations,
 } from "@server/prisma/prisma.types";
 import React, { useMemo } from "react";
 import PlayerAvatar from "../Player/PlayerAvatar";
@@ -17,7 +17,7 @@ const OrderChipWithPlayer = ({
   status,
   endContent,
 }: {
-  order: PlayerOrdersAllRelations;
+  order: PlayerOrderAllRelations;
   status?: OrderStatus;
   endContent?: React.ReactNode;
 }) => {
