@@ -71,6 +71,7 @@ import {
   MAX_SHARE_PERCENTAGE,
   DEFAULT_INCREASE_UNIT_PRICE,
   GOVERNMENT_GRANT_AMOUNT,
+  PRESTIGE_ACTION_TOKEN_COST,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -717,6 +718,14 @@ export class GameManagementService {
       case ResearchCardEffect.PRODUCT_DEVELOPMENT:
         this.productDevelopmentCardEffect(company);
         break;
+      case ResearchCardEffect.AUTOMATION:
+        //reduce the operational costs by some amount
+        //TODO: Implement
+        break;
+      case ResearchCardEffect.ECONOMIES_OF_SCALE:
+        //The next time this company operates, it is considered to be the cheapest company regardless of it's unit price.
+        //TODO: Implement
+        break;
       case ResearchCardEffect.ROBOTICS:
       case ResearchCardEffect.ARTIFICIAL_INTELLIGENCE:
       case ResearchCardEffect.NEW_ALLOY:
@@ -821,7 +830,7 @@ export class GameManagementService {
       throw new Error('Game not found');
     }
     //if the company does not have 3 prestige, move the prestige track forward
-    if (company.prestigeTokens < 3) {
+    if (company.prestigeTokens < PRESTIGE_ACTION_TOKEN_COST) {
       await this.gamesService.updateGameState({
         where: { id: company.gameId },
         data: {
@@ -833,7 +842,7 @@ export class GameManagementService {
       await this.companyService.updateCompany({
         where: { id: company.id },
         data: {
-          prestigeTokens: Math.max(company.prestigeTokens - 3, 0),
+          prestigeTokens: Math.max(company.prestigeTokens - PRESTIGE_ACTION_TOKEN_COST, 0),
         },
       });
       const prestigeTrack = createPrestigeTrackBasedOnSeed(game.id);
@@ -850,7 +859,104 @@ export class GameManagementService {
     }
   }
 
-  async resolvePrestigeReward(prestigeReward: PrestigeRewards) {}
+  async resolvePrestigeReward(prestigeReward: PrestigeRewards) {
+    switch(prestigeReward.reward) {
+      case PrestigeReward.BULL_SIGNAL:
+        this.resolveBullSignal(prestigeReward);
+        return;
+      case PrestigeReward.CAPITAL_INJECTION:
+        this.resolveCapitalInjection(prestigeReward);
+        return;
+      case PrestigeReward.ELASTICITY:
+        this.resolveElasticity(prestigeReward);
+        return;
+      case PrestigeReward.INVESTOR_CONFIDENCE:
+        this.resolveInvestorConfidence(prestigeReward);
+        return;
+      case PrestigeReward.MAGNET_EFFECT:
+        //TODO: Functionality to open a new company.
+      default:
+        return;
+    }
+  }
+
+  async resolveCapitalInjection(prestigeReward: PrestigeRewards) {
+    //The company receives $400
+    const company = await this.companyService.company({
+      id: prestigeReward.companyId,
+    });
+    if (!company) {
+      throw new Error('Company not found');
+    }
+    //update the company cash on hand
+    await this.companyService.updateCompany({
+      where: { id: company.id },
+      data: { cashOnHand: company.cashOnHand + 400 },
+    });
+  }
+
+  async resolveElasticity(prestigeReward: PrestigeRewards) {
+    //the company sector receives +1 demand
+    const company = await this.companyService.company({
+      id: prestigeReward.companyId,
+    });
+    if (!company) {
+      throw new Error('Company not found');
+    }
+    //get the sector
+    const sector = await this.sectorService.sector({
+      id: company.sectorId,
+    });
+    if (!sector) {
+      throw new Error('Sector not found');
+    }
+    //update the sector demand
+    await this.sectorService.updateSector({
+      where: { id: sector.id },
+      data: { demand: sector.demand + 1 },
+    });
+  }
+
+  async resolveBullSignal(prestigeReward: PrestigeRewards) {
+    //the company adjusts it's stock price up by 1
+    const company = await this.companyService.company({
+      id: prestigeReward.companyId,
+    });
+    if (!company) {
+      throw new Error('Company not found');
+    }
+    //increase the company stock price
+    await this.stockHistoryService.moveStockPriceUp(
+      company.gameId,
+      company.id,
+      prestigeReward.gameTurnId || '',
+      company.currentStockPrice,
+      1,
+      StockAction.PRESTIGE_REWARD,
+    );
+  }
+
+  async resolveInvestorConfidence(prestigeReward: PrestigeRewards) {
+    //the company puts 3 more shares into the open market
+    const company = await this.companyService.company({
+      id: prestigeReward.companyId,
+    });
+    if (!company) {
+      throw new Error('Company not found');
+    }
+    //create 3 shares
+    const shares = [];
+    for (let i = 0; i < 3; i++) {
+      shares.push(
+        await this.shareService.createShare({
+          Company: { connect: { id: company.id } },
+          location: ShareLocation.OPEN_MARKET,
+          price: company.currentStockPrice,
+          Game: { connect: { id: company.gameId } },
+        }),
+      );
+    }
+  }
 
   async expandCompany(companyAction: CompanyAction) {
     //increase the company tier and increase supply max by 1
@@ -2794,8 +2900,8 @@ export class GameManagementService {
 
   /**
    * Sorts orders in DESCENDING order.
-   * @param buyOrders 
-   * @returns 
+   * @param buyOrders
+   * @returns
    */
   sortByBidValue(buyOrders: PlayerOrderWithPlayerCompany[]) {
     return buyOrders.sort((a, b) => (b.value || 0) - (a.value || 0));
@@ -2850,9 +2956,7 @@ export class GameManagementService {
 
       gameLogEntries.push({
         game: { connect: { id: order.gameId } },
-        content: `Player ${order.Player.nickname} has bought ${sharesToGive} shares of ${
-          order.Company.name
-        } at $${order.value}`,
+        content: `Player ${order.Player.nickname} has bought ${sharesToGive} shares of ${order.Company.name} at $${order.value}`,
       });
 
       remainingShares -= sharesToGive;
@@ -2906,23 +3010,33 @@ export class GameManagementService {
       totalBuyOrderShares,
     );
 
-    const sortedByBidValue = this.sortByBidValue(validBuyOrders);
-
     const allAvailableShares = await shareService.shares({
       where: { companyId, location },
       take: remainingShares,
     });
 
-    this.processBidOrdersBidStrategy(
-      sortedByBidValue,
-      remainingShares,
-      allAvailableShares,
-      currentShareIndex,
-      shareUpdates,
-      playerCashUpdates,
-      orderStatusUpdates,
-      gameLogEntries,
-    );
+    //group valid buy orders by phase id
+    const groupedByPhase = this.groupByPhase(validBuyOrders);
+
+    //iterate over each phase
+    const sortedByPhaseCreatedAt =
+      this.sortByPhaseCreationTimeAsc(groupedByPhase);
+
+    //iterate over sortedByPhaseCreatedAt
+    sortedByPhaseCreatedAt.forEach((phaseOrders) => {
+      const sortedByBidValue = this.sortByBidValue(phaseOrders.orders);
+
+      this.processBidOrdersBidStrategy(
+        sortedByBidValue,
+        remainingShares,
+        allAvailableShares,
+        currentShareIndex,
+        shareUpdates,
+        playerCashUpdates,
+        orderStatusUpdates,
+        gameLogEntries,
+      );
+    });
 
     await this.executeDatabaseOperations(
       prisma,
@@ -2996,7 +3110,8 @@ export class GameManagementService {
     );
 
     const groupedByPhase = this.groupByPhase(validBuyOrders);
-    const sortedByPhaseCreatedAt = this.sortByPhaseCreationTime(groupedByPhase);
+    const sortedByPhaseCreatedAt =
+      this.sortByPhaseCreationTimeAsc(groupedByPhase);
 
     const allAvailableShares = await shareService.shares({
       where: { companyId, location },
@@ -3064,7 +3179,7 @@ export class GameManagementService {
     }, {});
   }
 
-  sortByPhaseCreationTime(groupedByPhase: GroupedByPhase) {
+  sortByPhaseCreationTimeAsc(groupedByPhase: GroupedByPhase) {
     return Object.values(groupedByPhase).sort(
       (a, b) => a.phase.createdAt.getTime() - b.phase.createdAt.getTime(),
     );

@@ -160,7 +160,7 @@ const OperatingRoundRevenueVoteResolve = () => {
                 </div>
                 <div className="flex flex-col">
                   <span className="mb-1">Vote Results</span>
-                  <div className="flex my-2 gap-3">
+                  <div className="flex flex-col my-2 gap-3">
                     {revenueDistributionVote
                       .filter(
                         (vote: RevenueDistributionVoteWithRelations) =>
@@ -169,6 +169,7 @@ const OperatingRoundRevenueVoteResolve = () => {
                       .map((vote: RevenueDistributionVoteWithRelations) => (
                         <Chip
                           key={vote.id}
+                          className="my-2"
                           avatar={
                             <PlayerAvatar
                               player={vote.Player}

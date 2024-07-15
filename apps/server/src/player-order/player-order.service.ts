@@ -228,6 +228,11 @@ export class PlayerOrderService {
       const spend = getPseudoSpend(playerOrders);
       let orderValue = 0;
       if (game.distributionStrategy === DistributionStrategy.BID_PRIORITY) {
+        if (data.value! < company.currentStockPrice!) {
+          throw new Error(
+            'Bid value must be greater than or equal to current stock price',
+          );
+        }
         orderValue = data.quantity! * data.value!;
       } else {
         orderValue = data.quantity! * company.currentStockPrice!;

@@ -15,6 +15,7 @@ import {
   DEFAULT_DECREASE_UNIT_PRICE,
   DEFAULT_INCREASE_UNIT_PRICE,
   getCompanyOperatingRoundTurnOrder,
+  PRESTIGE_ACTION_TOKEN_COST,
 } from "@server/data/constants";
 import {
   Company,
@@ -91,8 +92,7 @@ const companyActions = [
     id: 9,
     title: "Spend Prestige",
     name: OperatingRoundAction.SPEND_PRESTIGE,
-    message:
-      "Spend 3 prestige to receive the reward on the prestige track, if the company does not have enough prestige, move the prestige track forward by 1.",
+    message: `Spend ${PRESTIGE_ACTION_TOKEN_COST} prestige to receive the reward on the prestige track, if the company does not have enough prestige, move the prestige track forward by 1.`,
   },
   {
     id: 10,
@@ -271,10 +271,10 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
   const currentCompanyAction = companyActions?.find(
     (companyAction) => companyAction.companyId === currentCompany
   );
-  console.log('currentPhase', currentPhase);
-  console.log('currentCompany', currentCompany);
-  console.log('companyActions', companyActions);
-  console.log('currentCompanyAction', currentCompanyAction);
+  console.log("currentPhase", currentPhase);
+  console.log("currentCompany", currentCompany);
+  console.log("companyActions", companyActions);
+  console.log("currentCompanyAction", currentCompanyAction);
   return (
     <div className="flex flex-col flex-grow relative">
       <div className="flex flex-col gap-2 justify-center items-center">

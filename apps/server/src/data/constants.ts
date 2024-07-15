@@ -18,6 +18,8 @@ export const DEFAULT_SHARE_LIMIT = 10;
 
 export const PRESTIGE_TRACK_LENGTH = 10;
 
+export const PRESTIGE_ACTION_TOKEN_COST = 2;
+
 export const DEFAULT_SHARE_DISTRIBUTION = 10;
 
 export const STABLE_ECONOMY_SCORE = 15;
@@ -31,6 +33,8 @@ export const DEFAULT_DECREASE_UNIT_PRICE = 20;
 export const DEFAULT_RESEARCH_DECK_SIZE = 12;
 
 export const GOVERNMENT_GRANT_AMOUNT = 500;
+
+export const AUTOMATION_CARD_REDUCTION_AMOUNT = 20
 
 /**
  * Phase times in milliseconds

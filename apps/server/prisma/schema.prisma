@@ -213,6 +213,7 @@ enum StockAction {
   CALL_OPTION
   PRODUCTION
   RESEARCH_EFFECT
+  PRESTIGE_REWARD
 }
 
 model StockRound {
@@ -485,6 +486,7 @@ enum ResearchCardEffect {
   GLOBALIZATION
   ECONOMIES_OF_SCALE
   MARKET_EXPANSION
+  AUTOMATION
   NO_DISCERNIBLE_FINDINGS
 }
 
@@ -540,7 +542,7 @@ model Game {
   gameStatus              String
   gameStep                Int
   roomId                  Int
-  overdraft               Boolean              @default(true)
+  overdraft               Boolean              @default(true) //facilitates overdrafts for player accounts during stock purchase
   nextPrestigeReward      Int?
   distributionStrategy    DistributionStrategy @default(FAIR_SPLIT)
   gameLogs                GameLog[]

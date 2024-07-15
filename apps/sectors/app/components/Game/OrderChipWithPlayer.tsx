@@ -32,6 +32,7 @@ const OrderChipWithPlayer = ({
     >
       <div className="flex items-center text-gray-100">
         <span>{order.orderType}</span>
+        {order.orderType === OrderType.MARKET && <span>@${order.value}</span>}
         <span>&nbsp;|&nbsp;{order.location}&nbsp;</span>
         {(order.orderType === OrderType.LIMIT ||
           order.orderType === OrderType.MARKET) && (

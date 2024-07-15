@@ -82,7 +82,7 @@ const PendingMarketOrders = ({
         }
         //group orders by phaseId
         const groupedOrdersByPhase = orders.reduce((acc, order) => {
-          const phaseId = order.stockRoundId;
+          const phaseId = order.phaseId;
           if (!phaseId) return acc;
           if (acc[phaseId]) {
             acc[phaseId].push(order);
@@ -91,7 +91,6 @@ const PendingMarketOrders = ({
           }
           return acc;
         }, {} as { [key: string]: PlayerOrderAllRelations[] });
-
         return (
           <div
             key={company}
@@ -406,8 +405,9 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
                 <span>Big Priority</span>
                 <p>
                   Bids are placed in priority according to the highest ask price
-                  of the market order. This ask price is quoted per share. If there are
-                  not enough shares to resolve the order, it is rejected.
+                  of the market order. This ask price is quoted per share. If
+                  there are not enough shares to resolve the order, it is
+                  rejected.
                 </p>
               </div>
             ) : gameState?.distributionStrategy ==

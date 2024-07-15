@@ -19,6 +19,7 @@ import {
   PlayerOrderWithCompany,
 } from '@server/prisma/prisma.types';
 import {
+  AUTOMATION_CARD_REDUCTION_AMOUNT,
   DEFAULT_RESEARCH_DECK_SIZE,
   GOVERNMENT_GRANT_AMOUNT,
   PRESTIGE_TRACK_LENGTH,
@@ -575,6 +576,8 @@ function descriptionForEffect(effect: ResearchCardEffect): string {
       return 'The company has achieved a breakthrough in product development. Increase the supply permanently by 1.';
     case ResearchCardEffect.ECONOMIES_OF_SCALE:
       return "The next time this company operates, it is considered to be the cheapest company regardless of it's unit price.";
+    case ResearchCardEffect.AUTOMATION:
+      return `This company reduces it's operating costs by ${AUTOMATION_CARD_REDUCTION_AMOUNT}.`
     case ResearchCardEffect.NO_DISCERNIBLE_FINDINGS:
       return 'This research yielded no discernible findings.';
     default:
