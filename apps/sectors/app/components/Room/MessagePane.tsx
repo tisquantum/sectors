@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import React, { useEffect, useRef } from 'react';
-import MessageComponent from './Message';
-import { RoomMessageWithUser } from '@server/prisma/prisma.types';
+import React, { useEffect, useRef } from "react";
+import MessageComponent from "./Message";
+import { RoomMessageWithUser } from "@server/prisma/prisma.types";
 
 interface MessagePaneProps {
   messages: RoomMessageWithUser[];
@@ -19,13 +19,17 @@ const MessagePane: React.FC<MessagePaneProps> = ({ messages }) => {
   }, [messages]);
 
   return (
-    <div ref={containerRef} className="bg-white p-4 overflow-y-scroll h-full">
+    <div
+      ref={containerRef}
+      className="bg-background p-4 overflow-y-scroll h-full flex flex-col justify-end"
+    >
       {messages.map((message) => (
         <div key={message.id}>
           <MessageComponent message={message} />
         </div>
       ))}
-      <div ref={containerRef} /> {/* This ensures the last element is always in view */}
+      <div ref={containerRef} />{" "}
+      {/* This ensures the last element is always in view */}
     </div>
   );
 };

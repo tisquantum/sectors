@@ -7,6 +7,7 @@ import {
   Player,
   ShareLocation,
   OrderStatus,
+  DistributionStrategy,
 } from '@prisma/client';
 import {
   PlayerOrderConcealed,
@@ -165,6 +166,13 @@ export class PlayerOrderService {
     if (playerOrder) {
       throw new Error('Player has already placed an order this phase');
     }
+    //get game
+    const game = await this.prisma.game.findUnique({
+      where: { id: data.Game.connect?.id },
+    });
+    if (!game) {
+      throw new Error('Game not found');
+    }
     // OrderType Market and BUY is the only type of order that can be placed on location IPO
     if (
       data.location === ShareLocation.IPO &&
@@ -218,7 +226,12 @@ export class PlayerOrderService {
       }
 
       const spend = getPseudoSpend(playerOrders);
-      const orderValue = data.quantity! * company.currentStockPrice!;
+      let orderValue = 0;
+      if (game.distributionStrategy === DistributionStrategy.BID_PRIORITY) {
+        orderValue = data.quantity! * data.value!;
+      } else {
+        orderValue = data.quantity! * company.currentStockPrice!;
+      }
 
       if (data.isSell) {
         const playerShares = player.Share.filter(
@@ -244,7 +257,9 @@ export class PlayerOrderService {
           playerSharesOfCompany.length + data.quantity! >
           company?.Share.length! * (MAX_SHARE_PERCENTAGE / 100)
         ) {
-          throw new Error('This buy would exceed the maximum share percentage.');
+          throw new Error(
+            'This buy would exceed the maximum share percentage.',
+          );
         }
       }
     }

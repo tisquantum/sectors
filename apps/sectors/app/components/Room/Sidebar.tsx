@@ -83,10 +83,11 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
     //response happens through pusher to all clients.
     startGameMutation.mutate({
       roomId,
+      roomName: room.name,
       startingCashOnHand,
       consumerPoolNumber,
       bankPoolNumber,
-      distributionStrategy
+      distributionStrategy,
     });
   };
 

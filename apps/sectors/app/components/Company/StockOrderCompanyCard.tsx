@@ -134,7 +134,28 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
                   "bg-slate-950 rounded-md p-2"
                 }`}
               >
-                <PlayerOrderConcealed orders={ipoOrders} />
+                <div className="flex gap-4 w-full">
+                  {Object.keys(groupedIpoOrdersByPhase).map(
+                    (index, indexInt) => (
+                      <div className="flex flex-col" key={index}>
+                        <div className="flex items-center justify-center">
+                          <span className="text-sm text-gray-400">
+                            {indexInt + 1}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-center">
+                          <PlayerOrderConcealed
+                            orders={ipoOrders.filter(
+                              (order) =>
+                                order.phaseId ==
+                                groupedIpoOrdersByPhase[index].phaseId
+                            )}
+                          />
+                        </div>
+                      </div>
+                    )
+                  )}
+                </div>
               </div>
             )}
             {isRevealRound && (
@@ -145,25 +166,27 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
                   "bg-slate-950 rounded-md p-2"
                 }`}
               >
-                <div className="grid grid-cols-3 gap-4 w-full">
-                  {Object.keys(groupedIpoOrdersByPhase).map((index) => (
-                    <div className="flex flex-col" key={index}>
-                      <div className="flex items-center justify-center">
-                        <span className="text-sm text-gray-400">
-                          {index + 1}
-                        </span>
+                <div className="flex gap-4 w-full">
+                  {Object.keys(groupedIpoOrdersByPhase).map(
+                    (index, indexInt) => (
+                      <div className="flex flex-col" key={index}>
+                        <div className="flex items-center justify-center">
+                          <span className="text-sm text-gray-400">
+                            {indexInt + 1}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-center">
+                          <PlayerOrder
+                            orders={playerOrdersRevealed.filter(
+                              (order) =>
+                                order.phaseId ==
+                                groupedIpoOrdersByPhase[index].phaseId
+                            )}
+                          />
+                        </div>
                       </div>
-                      <div className="flex items-center justify-center">
-                        <PlayerOrderConcealed
-                          orders={ipoOrders.filter(
-                            (order) =>
-                              order.phaseId ==
-                              groupedIpoOrdersByPhase[index].phaseId
-                          )}
-                        />
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  )}
                 </div>
               </div>
             )}
@@ -209,7 +232,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
                   "bg-slate-950 rounded-md p-2"
                 }`}
               >
-                <div className="grid grid-cols-3 gap-4 w-full">
+                <div className="flex gap-4 w-full">
                   {Object.keys(groupedOpenMarketOrdersByPhase).map((index) => (
                     <div className="flex flex-col" key={index}>
                       <div className="flex items-center justify-center">
@@ -239,14 +262,26 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
                   "bg-slate-950 rounded-md p-2"
                 }`}
               >
-                <PlayerOrder
-                  orders={playerOrdersRevealed.filter(
-                    (order) =>
-                      order.companyId == company.id &&
-                      order.location == ShareLocation.OPEN_MARKET &&
-                      order.phaseId !== currentPhase?.id
-                  )}
-                />
+                <div className="flex gap-4 w-full">
+                  {Object.keys(groupedOpenMarketOrdersByPhase).map((index) => (
+                    <div className="flex flex-col" key={index}>
+                      <div className="flex items-center justify-center">
+                        <span className="text-sm text-gray-400">
+                          {index + 1}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-center">
+                        <PlayerOrder
+                          orders={playerOrdersRevealed.filter(
+                            (order) =>
+                              order.phaseId ==
+                              groupedOpenMarketOrdersByPhase[index].phaseId
+                          )}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
             {isInteractive &&

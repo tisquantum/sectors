@@ -220,6 +220,7 @@ const TabContentMO: React.FC<TabContentProps> = ({
   );
   useEffect(() => {
     handleShares(minValue);
+    handleValueChange(defaultValue || 0);
   }, []);
   return (
     <div className="flex flex-col text-center items-center center-content justify-center gap-2">
@@ -583,6 +584,7 @@ const PlayerOrderInput = ({
                     isIpo={isIpo}
                     maxValue={maxValue}
                     minValue={minValue}
+                    defaultValue={currentOrder.currentStockPrice}
                   />
                 </CardBody>
               </Card>

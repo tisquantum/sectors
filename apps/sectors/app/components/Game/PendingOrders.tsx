@@ -11,6 +11,7 @@ import "./PendingOrders.css";
 import { trpc } from "@sectors/app/trpc";
 import { useGame } from "./GameContext";
 import {
+  DistributionStrategy,
   OrderStatus,
   OrderType,
   PhaseName,
@@ -254,7 +255,7 @@ const PendingShortOrders = ({
 };
 
 const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
-  const { gameId, currentPhase } = useGame();
+  const { gameId, currentPhase, gameState } = useGame();
   const { data: playerOrders, isLoading } =
     trpc.playerOrder.listPlayerOrdersAllRelations.useQuery({
       orderBy: {
@@ -297,91 +298,146 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
     (order) => order.orderType === OrderType.SHORT
   );
   return (
-    <div className="flex space-x-4 z-0">
-      <Card
-        className={`flex-1 ${
-          currentPhase?.name === PhaseName.STOCK_RESOLVE_LIMIT_ORDER &&
-          "ring-2 ring-blue-500"
-        }`}
-      >
-        <CardHeader className="z-0">Limit Orders Pending Settlement</CardHeader>
-        <CardBody>
-          <PendingLimitOrders
-            limitOrders={limitOrdersPendingSettlement}
-            isResolving={isResolving}
-          />
-        </CardBody>
-      </Card>
-      <div className="flex items-center">
-        <ArrowRightIcon className="size-5" />
-      </div>
-      <div className="flex items-center">
-        <div className="vertical-text">
-          <span>S</span>
-          <span>T</span>
-          <span>O</span>
-          <span>C</span>
-          <span>K</span>
-          <span> </span>
-          <span>R</span>
-          <span>O</span>
-          <span>U</span>
-          <span>N</span>
-          <span>D</span>
+    <div className="flex flex-col">
+      <div className="flex space-x-4 z-0">
+        <Card
+          className={`flex-1 ${
+            currentPhase?.name === PhaseName.STOCK_RESOLVE_LIMIT_ORDER &&
+            "ring-2 ring-blue-500"
+          }`}
+        >
+          <CardHeader className="z-0">
+            Limit Orders Pending Settlement
+          </CardHeader>
+          <CardBody>
+            <PendingLimitOrders
+              limitOrders={limitOrdersPendingSettlement}
+              isResolving={isResolving}
+            />
+          </CardBody>
+        </Card>
+        <div className="flex items-center">
+          <ArrowRightIcon className="size-5" />
         </div>
+        <div className="flex items-center">
+          <div className="vertical-text">
+            <span>S</span>
+            <span>T</span>
+            <span>O</span>
+            <span>C</span>
+            <span>K</span>
+            <span> </span>
+            <span>R</span>
+            <span>O</span>
+            <span>U</span>
+            <span>N</span>
+            <span>D</span>
+          </div>
+        </div>
+        <div className="flex items-center">
+          <ArrowRightIcon className="size-5" />
+        </div>
+        <Card
+          className={`flex-1 ${
+            currentPhase?.name === PhaseName.STOCK_RESOLVE_MARKET_ORDER &&
+            "ring-2 ring-blue-500"
+          }`}
+        >
+          <CardHeader>Market Orders</CardHeader>
+          <CardBody>
+            <PendingMarketOrders
+              marketOrders={marketOrders}
+              isResolving={isResolving}
+            />
+          </CardBody>
+        </Card>
+        <div className="flex items-center">
+          <ArrowRightIcon className="size-5" />
+        </div>
+        <Card
+          className={`flex-1 ${
+            (currentPhase?.name ===
+              PhaseName.STOCK_RESOLVE_PENDING_SHORT_ORDER ||
+              currentPhase?.name === PhaseName.STOCK_SHORT_ORDER_INTEREST) &&
+            "ring-2 ring-blue-500"
+          }`}
+        >
+          <CardHeader>Short Orders</CardHeader>
+          <CardBody>
+            <PendingShortOrders shortOrders={shortOrders} />
+          </CardBody>
+        </Card>
+        <Card
+          className={`flex-1 ${
+            currentPhase?.name === PhaseName.STOCK_RESOLVE_OPTION_ORDER &&
+            "ring-2 ring-blue-500"
+          }`}
+        >
+          <CardHeader className="z-0">Option Contracts</CardHeader>
+          <CardBody></CardBody>
+        </Card>
+        <Card
+          className={`flex-1 ${
+            currentPhase?.name === PhaseName.STOCK_OPEN_LIMIT_ORDERS &&
+            "ring-2 ring-blue-500"
+          }`}
+        >
+          <CardHeader className="z-0">Limit Orders</CardHeader>
+          <CardBody>
+            <PendingLimitOrders limitOrders={limitOrdersPendingToOpen} />
+          </CardBody>
+        </Card>
       </div>
-      <div className="flex items-center">
-        <ArrowRightIcon className="size-5" />
+      <div className="mt-4">
+        <Card>
+          <CardHeader>
+            <div className="flex flex-col justify-start gap-2">
+              <h3>Distribution Strategy</h3>
+              <p>
+                When shares are contested in a stock round, they are resolved
+                according to the distribution strategy.
+              </p>
+            </div>
+          </CardHeader>
+          <CardBody>
+            {gameState?.distributionStrategy ==
+            DistributionStrategy.BID_PRIORITY ? (
+              <div className="flex flex-col gap-2">
+                <span>Big Priority</span>
+                <p>
+                  Bids are placed in priority according to the highest ask price
+                  of the market order. This ask price is quoted per share. If there are
+                  not enough shares to resolve the order, it is rejected.
+                </p>
+              </div>
+            ) : gameState?.distributionStrategy ==
+              DistributionStrategy.FAIR_SPLIT ? (
+              <div className="flex flex-col gap-2">
+                <span>Fair Split</span>
+                <p>
+                  When there is not enough shares to distribute, orders are
+                  split evenly amongst the remaining orders. Any remaining
+                  shares are distributed on a lottery to a random player who has
+                  placed an order for this company in that stock round.
+                </p>
+              </div>
+            ) : gameState?.distributionStrategy ==
+              DistributionStrategy.PRIORITY ? (
+              <div className="flex flex-col gap-2">
+                <span>Priority</span>
+                <p>
+                  Orders are filled in priority. If there are not enough shares
+                  to resolve the order, the order is rejected.
+                </p>
+              </div>
+            ) : (
+              <div>
+                <p>No distribution strategy found.</p>
+              </div>
+            )}
+          </CardBody>
+        </Card>
       </div>
-      <Card
-        className={`flex-1 ${
-          currentPhase?.name === PhaseName.STOCK_RESOLVE_MARKET_ORDER &&
-          "ring-2 ring-blue-500"
-        }`}
-      >
-        <CardHeader>Market Orders</CardHeader>
-        <CardBody>
-          <PendingMarketOrders
-            marketOrders={marketOrders}
-            isResolving={isResolving}
-          />
-        </CardBody>
-      </Card>
-      <div className="flex items-center">
-        <ArrowRightIcon className="size-5" />
-      </div>
-      <Card
-        className={`flex-1 ${
-          (currentPhase?.name === PhaseName.STOCK_RESOLVE_PENDING_SHORT_ORDER ||
-            currentPhase?.name === PhaseName.STOCK_SHORT_ORDER_INTEREST) &&
-          "ring-2 ring-blue-500"
-        }`}
-      >
-        <CardHeader>Short Orders</CardHeader>
-        <CardBody>
-          <PendingShortOrders shortOrders={shortOrders} />
-        </CardBody>
-      </Card>
-      <Card
-        className={`flex-1 ${
-          currentPhase?.name === PhaseName.STOCK_RESOLVE_OPTION_ORDER &&
-          "ring-2 ring-blue-500"
-        }`}
-      >
-        <CardHeader className="z-0">Option Contracts</CardHeader>
-        <CardBody></CardBody>
-      </Card>
-      <Card
-        className={`flex-1 ${
-          currentPhase?.name === PhaseName.STOCK_OPEN_LIMIT_ORDERS &&
-          "ring-2 ring-blue-500"
-        }`}
-      >
-        <CardHeader className="z-0">Limit Orders</CardHeader>
-        <CardBody>
-          <PendingLimitOrders limitOrders={limitOrdersPendingToOpen} />
-        </CardBody>
-      </Card>
     </div>
   );
 };

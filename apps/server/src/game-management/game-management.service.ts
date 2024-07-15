@@ -27,6 +27,7 @@ import {
   PrestigeRewards,
   ResearchCardEffect,
   PlayerOrder,
+  DistributionStrategy,
 } from '@prisma/client';
 import { GamesService } from '@server/games/games.service';
 import { CompanyService } from '@server/company/company.service';
@@ -1690,6 +1691,7 @@ export class GameManagementService {
   async startGame(input: StartGameInput): Promise<Game> {
     const {
       roomId,
+      roomName,
       startingCashOnHand,
       consumerPoolNumber,
       bankPoolNumber,
@@ -1697,7 +1699,7 @@ export class GameManagementService {
     } = input;
 
     const gameData: Prisma.GameCreateInput = {
-      name: `Game_Fantastic`,
+      name: roomName,
       currentTurn: '',
       currentOrSubRound: 0,
       currentRound: 'STOCK',
@@ -2470,6 +2472,11 @@ export class GameManagementService {
   }
 
   async resolveMarketOrders(phase: Phase) {
+    //get game
+    const game = await this.gamesService.getGameState(phase.gameId);
+    if (!game) {
+      throw new Error('Game not found');
+    }
     if (phase.stockRoundId) {
       const playerOrders: PlayerOrderWithPlayerCompany[] =
         await this.playerOrderService.playerOrdersWithPlayerCompany({
@@ -2684,13 +2691,26 @@ export class GameManagementService {
                 (order) => !order.isSell && order.location == ShareLocation.IPO,
               );
               if (buyOrdersIPO.length > 0) {
-                await this.distributeShares(
-                  buyOrdersIPO,
-                  ShareLocation.IPO,
-                  companyId,
-                  this.shareService,
-                  this.prisma,
-                );
+                if (
+                  game.distributionStrategy ===
+                  DistributionStrategy.BID_PRIORITY
+                ) {
+                  await this.distributeSharesBidStrategy(
+                    buyOrdersIPO,
+                    ShareLocation.IPO,
+                    companyId,
+                    this.shareService,
+                    this.prisma,
+                  );
+                } else {
+                  await this.distributeShares(
+                    buyOrdersIPO,
+                    ShareLocation.IPO,
+                    companyId,
+                    this.shareService,
+                    this.prisma,
+                  );
+                }
                 await this.checkIfCompanyIsFloated(companyId);
               }
               const buyOrdersOM = orders.filter(
@@ -2698,13 +2718,26 @@ export class GameManagementService {
                   !order.isSell && order.location == ShareLocation.OPEN_MARKET,
               );
               if (buyOrdersOM.length > 0) {
-                await this.distributeShares(
-                  buyOrdersOM,
-                  ShareLocation.OPEN_MARKET,
-                  companyId,
-                  this.shareService,
-                  this.prisma,
-                );
+                if (
+                  game.distributionStrategy ===
+                  DistributionStrategy.BID_PRIORITY
+                ) {
+                  await this.distributeSharesBidStrategy(
+                    buyOrdersOM,
+                    ShareLocation.OPEN_MARKET,
+                    companyId,
+                    this.shareService,
+                    this.prisma,
+                  );
+                } else {
+                  await this.distributeShares(
+                    buyOrdersOM,
+                    ShareLocation.OPEN_MARKET,
+                    companyId,
+                    this.shareService,
+                    this.prisma,
+                  );
+                }
               }
             },
           ),
@@ -2759,6 +2792,11 @@ export class GameManagementService {
     });
   }
 
+  /**
+   * Sorts orders in DESCENDING order.
+   * @param buyOrders 
+   * @returns 
+   */
   sortByBidValue(buyOrders: PlayerOrderWithPlayerCompany[]) {
     return buyOrders.sort((a, b) => (b.value || 0) - (a.value || 0));
   }
@@ -2802,7 +2840,7 @@ export class GameManagementService {
 
       playerCashUpdates.push({
         playerId: order.playerId,
-        decrement: sharesToGive * order.Company.currentStockPrice!,
+        decrement: sharesToGive * order.value!,
       });
 
       orderStatusUpdates.push({
@@ -2814,7 +2852,7 @@ export class GameManagementService {
         game: { connect: { id: order.gameId } },
         content: `Player ${order.Player.nickname} has bought ${sharesToGive} shares of ${
           order.Company.name
-        } at $${order.Company.currentStockPrice.toFixed(2)}`,
+        } at $${order.value}`,
       });
 
       remainingShares -= sharesToGive;

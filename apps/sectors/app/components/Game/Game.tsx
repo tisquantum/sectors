@@ -134,7 +134,7 @@ const Game = ({ gameId }: { gameId: string }) => {
 
   return (
     <div className="relative flex flex-grow overflow-hidden">
-      {/* <GameSidebar /> */}
+      <GameSidebar />
       <motion.div
         className="absolute inset-0 z-10 pointer-events-none"
         ref={constraintsRef}

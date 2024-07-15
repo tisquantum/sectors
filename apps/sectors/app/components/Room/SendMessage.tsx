@@ -23,7 +23,7 @@ const SendMessage: React.FC<SendMessageProps> = ({ onSendMessage }) => {
   };
 
   return (
-    <div className="flex items-center p-4 bg-gray-200">
+    <div className="flex items-center p-4 bg-background">
       <Textarea
         placeholder="Type your message..."
         value={message}

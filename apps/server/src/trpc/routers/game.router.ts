@@ -63,6 +63,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           bankPoolNumber: z.number(),
           consumerPoolNumber: z.number(),
           roomId: z.number(),
+          roomName: z.string(),
           startingCashOnHand: z.number(),
           distributionStrategy: z.nativeEnum(DistributionStrategy),
           players: z.any().optional(),
@@ -80,6 +81,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         try {
           game = await ctx.gameManagementService.startGame({
             roomId: input.roomId,
+            roomName: input.roomName,
             startingCashOnHand: input.startingCashOnHand,
             consumerPoolNumber: input.consumerPoolNumber,
             bankPoolNumber: input.bankPoolNumber,
