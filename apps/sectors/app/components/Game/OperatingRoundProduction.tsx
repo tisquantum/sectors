@@ -42,36 +42,41 @@ const OperatingRoundProduction = () => {
       <h1 className="text-2xl font-bold mb-4">Operating Round Production</h1>
       <div className="flex gap-8">
         <div className="bg-slate-800 p-4 rounded-lg shadow-md w-1/4 flex gap-4">
-        <div>
-          <h2 className="text-lg font-semibold mb-2">Operations Priority</h2>
-          {companyPriorityOrderOperations(companiesWithSector).map(
-            (company, index) => (
-              <div key={company.id} className="flex items-center gap-2 mb-1">
-                <span className="font-medium">{index + 1}.</span>
-                <span>{company.name}</span>
-              </div>
-            )
-          )}
+          <div>
+            <h2 className="text-lg font-semibold mb-2">Operations Priority</h2>
+            {companyPriorityOrderOperations(companiesWithSector).map(
+              (company, index) => (
+                <div key={company.id} className="flex items-center gap-2 mb-1">
+                  <span className="font-medium">{index + 1}.</span>
+                  <span>{company.name}</span>
+                </div>
+              )
+            )}
           </div>
           <div>
-          <h2 className="text-lg font-semibold mb-2">Throughput Legend</h2>
-          {
-            //iterate from 0 to 7 in for each
-            Array.from(Array(8).keys()).map((throughput) => {
-              const throughputReward = throughputRewardOrPenalty(throughput);
-              return (
-                <div key={throughput} className="flex items-center gap-2 mb-1">
-                  <span className="font-medium flex items-center gap-1"><RiIncreaseDecreaseFill size={18} /> {throughput}:</span>
-                  <span>
-                    {throughputReward.type ===
-                    ThroughputRewardType.SECTOR_REWARD
-                      ? "Sector Reward"
-                      : `Share Steps -${throughputReward.share_price_steps_down}`}
-                  </span>
-                </div>
-              );
-            })
-          }
+            <h2 className="text-lg font-semibold mb-2">Throughput Legend</h2>
+            {
+              //iterate from 0 to 7 in for each
+              Array.from(Array(8).keys()).map((throughput) => {
+                const throughputReward = throughputRewardOrPenalty(throughput);
+                return (
+                  <div
+                    key={throughput}
+                    className="flex items-center gap-2 mb-1"
+                  >
+                    <span className="font-medium flex items-center gap-1">
+                      <RiIncreaseDecreaseFill size={18} /> {throughput}:
+                    </span>
+                    <span>
+                      {throughputReward.type ===
+                      ThroughputRewardType.SECTOR_REWARD
+                        ? "Sector Reward"
+                        : `Share Steps -${throughputReward.share_price_steps_down}`}
+                    </span>
+                  </div>
+                );
+              })
+            }
           </div>
         </div>
         <div className="grid grid-cols-3 gap-6 w-3/4">
@@ -80,17 +85,21 @@ const OperatingRoundProduction = () => {
               className="flex flex-col bg-slate-800 text-white p-4 rounded-lg shadow-md"
               key={productionResult.id}
             >
-              <CompanyInfo company={productionResult.Company} />
+              <CompanyInfo
+                company={productionResult.Company}
+                showingProductionResults
+              />
               <div className="flex flex-col m-2 rounded-md bg-gray-950 p-2">
                 <span className="text-lg">Production Results</span>
-                <span className="flex gap-1 items-center"><RiIncreaseDecreaseFill size={18} /> {productionResult.throughputResult}</span>
+                <span className="flex gap-1 items-center">
+                  <RiIncreaseDecreaseFill size={18} />{" "}
+                  {productionResult.throughputResult}
+                </span>
                 {throughputRewardOrPenalty(productionResult.throughputResult)
                   .type === ThroughputRewardType.SECTOR_REWARD ? (
                   <span>Prestige: +1</span>
                 ) : (
-                  <span>
-                    Share Steps: -{productionResult.steps}
-                  </span>
+                  <span>Share Steps: -{productionResult.steps}</span>
                 )}
                 <span>Revenue: ${productionResult.revenue}</span>
               </div>

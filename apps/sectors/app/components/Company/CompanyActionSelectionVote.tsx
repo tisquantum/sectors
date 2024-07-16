@@ -15,6 +15,7 @@ import {
   DEFAULT_DECREASE_UNIT_PRICE,
   DEFAULT_INCREASE_UNIT_PRICE,
   getCompanyOperatingRoundTurnOrder,
+  MARKETING_CONSUMER_BONUS,
   PRESTIGE_ACTION_TOKEN_COST,
 } from "@server/data/constants";
 import {
@@ -39,8 +40,7 @@ const companyActions = [
     id: 1,
     title: "Marketing",
     name: OperatingRoundAction.MARKETING,
-    message:
-      "The sector will receive an additional 5 consumers at the end of the turn. Your company receives +3 demand that decays 1 per production phase.",
+    message: `The sector will receive an additional ${MARKETING_CONSUMER_BONUS} consumers at the end of the turn. Your company receives +3 demand that decays 1 per production phase.`,
   },
   {
     id: 2,

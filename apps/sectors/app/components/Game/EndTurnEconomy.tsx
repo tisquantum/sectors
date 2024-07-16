@@ -40,7 +40,7 @@ const EndTurnEconomy = () => {
   return (
     <div className="flex flex-col justify-center items-center content-center">
       <h1 className="text-2xl">Economy</h1>
-      <div className="flex gap-2 text-xl">
+      <div className="flex flex-wrap gap-2 text-xl">
         <div className="flex gap-2 text-xl">
           <span>Consumer Pool</span>
           <span>{gameState.consumerPoolNumber}</span>

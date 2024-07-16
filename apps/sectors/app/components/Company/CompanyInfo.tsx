@@ -34,9 +34,11 @@ const buildBarChart = (share: Share[]) => {
 const CompanyInfo = ({
   company,
   showBarChart,
+  showingProductionResults,
 }: {
   company: CompanyWithSector;
   showBarChart?: boolean;
+  showingProductionResults?: boolean;
 }) => (
   <>
     <div className="flex flex-row gap-1 items-center h-full">
@@ -137,11 +139,22 @@ const CompanyInfo = ({
             <Tooltip content="Throughput. The base sector demand plus the companies demand minus it's supply. The closer to zero, the more efficient the company is operating.  Companies that score 0 receive a prestige bonus.">
               <div className="flex items-center">
                 <RiIncreaseDecreaseFill size={18} className="ml-2" />
-                <span className="ml-1">
-                  {company.demandScore +
-                    company.Sector.demand -
-                    company.supplyMax}
-                </span>
+                <div className="ml-1 flex">
+                  <span>
+                    {showingProductionResults
+                      ? company.demandScore +
+                        company.Sector.demand -
+                        company.supplyMax +
+                        1
+                      : company.demandScore +
+                        company.Sector.demand -
+                        company.supplyMax}
+                  </span>
+                  &nbsp;
+                  {showingProductionResults && (
+                    <span className="text-red-500"> -1</span>
+                  )}
+                </div>
               </div>
             </Tooltip>
             <Tooltip content="The cost to operate the company per operating round.  This cost is tied to your company tier.">

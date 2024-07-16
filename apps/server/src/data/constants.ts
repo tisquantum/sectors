@@ -14,7 +14,7 @@ export const MAX_LIMIT_ORDER = 5;
 
 export const MAX_SHORT_ORDER = 2;
 
-export const DEFAULT_SHARE_LIMIT = 10;
+export const DEFAULT_SHARE_LIMIT = 12;
 
 export const PRESTIGE_TRACK_LENGTH = 10;
 
@@ -35,6 +35,8 @@ export const DEFAULT_RESEARCH_DECK_SIZE = 12;
 export const GOVERNMENT_GRANT_AMOUNT = 500;
 
 export const AUTOMATION_CARD_REDUCTION_AMOUNT = 20
+
+export const MARKETING_CONSUMER_BONUS = 4;
 
 /**
  * Phase times in milliseconds
@@ -311,8 +313,8 @@ export const throughputRewardOrPenalty = (
 };
 
 export const CompanyActionCosts = {
-  [OperatingRoundAction.DOWNSIZE]: 500,
-  [OperatingRoundAction.EXPANSION]: 500,
+  [OperatingRoundAction.DOWNSIZE]: 200,
+  [OperatingRoundAction.EXPANSION]: 350,
   [OperatingRoundAction.MARKETING]: 200,
   [OperatingRoundAction.MERGE]: 1000,
   [OperatingRoundAction.RESEARCH]: 200,
@@ -418,7 +420,7 @@ export const CapitalGainsTiers = [
   {
     minNetWorth: 5000,
     maxNetWorth: Number.MAX_SAFE_INTEGER,
-    taxPercentage: 6,
+    taxPercentage: 12,
   },
 ];
 
@@ -439,7 +441,7 @@ export const PrestigeTrack = [
   {
     type: PrestigeReward.MAGNET_EFFECT,
     name: 'Magnet Effect',
-    description: 'A new company opens in the sector.',
+    description: 'All other companies in the stock sector receive +1 stock price.',
     probability: 0.05,
   },
   {

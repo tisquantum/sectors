@@ -86,7 +86,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
   );
 
   const handleDisplayOrderInput = (company: Company, isIpo?: boolean) => {
-    setIsIpo(true);
+    setIsIpo(isIpo || false);
     setShowPlayerInput(true);
   };
 
@@ -233,11 +233,11 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
                 }`}
               >
                 <div className="flex gap-4 w-full">
-                  {Object.keys(groupedOpenMarketOrdersByPhase).map((index) => (
+                  {Object.keys(groupedOpenMarketOrdersByPhase).map((index, indexInt) => (
                     <div className="flex flex-col" key={index}>
                       <div className="flex items-center justify-center">
                         <span className="text-sm text-gray-400">
-                          {index + 1}
+                          {indexInt + 1}
                         </span>
                       </div>
                       <div className="flex items-center justify-center">
@@ -263,11 +263,11 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
                 }`}
               >
                 <div className="flex gap-4 w-full">
-                  {Object.keys(groupedOpenMarketOrdersByPhase).map((index) => (
+                  {Object.keys(groupedOpenMarketOrdersByPhase).map((index, indexInt) => (
                     <div className="flex flex-col" key={index}>
                       <div className="flex items-center justify-center">
                         <span className="text-sm text-gray-400">
-                          {index + 1}
+                          {indexInt + 1}
                         </span>
                       </div>
                       <div className="flex items-center justify-center">
@@ -297,7 +297,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
                       ? "my-3 bg-gradient-to-tr from-pink-500 to-yellow-500 text-white shadow-lg"
                       : "my-3 ring-2 ring-gray-950"
                   }
-                  onClick={() => handleDisplayOrderInput(company)}
+                  onClick={() => handleDisplayOrderInput(company, false)}
                 >
                   Place Order OPEN MARKET
                 </Button>

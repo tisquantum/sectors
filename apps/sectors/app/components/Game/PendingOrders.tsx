@@ -212,6 +212,11 @@ const PendingLimitOrders = ({
                 </div>
                 {order.orderStatus == OrderStatus.OPEN ? (
                   <ClockIcon className="size-5 text-yellow-500" />
+                ) : order.orderStatus ==
+                  OrderStatus.FILLED_PENDING_SETTLEMENT ? (
+                  <ClockIcon className="size-5 text-green-500" />
+                ) : order.orderStatus == OrderStatus.FILLED ? (
+                  <CheckCircleIcon className="size-5 text-green-500" />
                 ) : (
                   <ClockIcon className="size-5 text-red-500" />
                 )}
@@ -298,9 +303,9 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
   );
   return (
     <div className="flex flex-col">
-      <div className="flex space-x-4 z-0">
+      <div className="flex justify-center flex-wrap gap-3 z-0">
         <Card
-          className={`flex-1 ${
+          className={`flex ${
             currentPhase?.name === PhaseName.STOCK_RESOLVE_LIMIT_ORDER &&
             "ring-2 ring-blue-500"
           }`}
@@ -315,29 +320,31 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
             />
           </CardBody>
         </Card>
-        <div className="flex items-center">
-          <ArrowRightIcon className="size-5" />
-        </div>
-        <div className="flex items-center">
-          <div className="vertical-text">
-            <span>S</span>
-            <span>T</span>
-            <span>O</span>
-            <span>C</span>
-            <span>K</span>
-            <span> </span>
-            <span>R</span>
-            <span>O</span>
-            <span>U</span>
-            <span>N</span>
-            <span>D</span>
+        <div className="flex gap-4 items-center">
+          <div className="flex items-center">
+            <ArrowRightIcon className="size-5" />
+          </div>
+          <div className="flex items-center">
+            <div className="vertical-text">
+              <span>S</span>
+              <span>T</span>
+              <span>O</span>
+              <span>C</span>
+              <span>K</span>
+              <span> </span>
+              <span>R</span>
+              <span>O</span>
+              <span>U</span>
+              <span>N</span>
+              <span>D</span>
+            </div>
+          </div>
+          <div className="flex items-center">
+            <ArrowRightIcon className="size-5" />
           </div>
         </div>
-        <div className="flex items-center">
-          <ArrowRightIcon className="size-5" />
-        </div>
         <Card
-          className={`flex-1 ${
+          className={`flex ${
             currentPhase?.name === PhaseName.STOCK_RESOLVE_MARKET_ORDER &&
             "ring-2 ring-blue-500"
           }`}
@@ -350,11 +357,8 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
             />
           </CardBody>
         </Card>
-        <div className="flex items-center">
-          <ArrowRightIcon className="size-5" />
-        </div>
         <Card
-          className={`flex-1 ${
+          className={`flex ${
             (currentPhase?.name ===
               PhaseName.STOCK_RESOLVE_PENDING_SHORT_ORDER ||
               currentPhase?.name === PhaseName.STOCK_SHORT_ORDER_INTEREST) &&
@@ -367,7 +371,7 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
           </CardBody>
         </Card>
         <Card
-          className={`flex-1 ${
+          className={`flex ${
             currentPhase?.name === PhaseName.STOCK_RESOLVE_OPTION_ORDER &&
             "ring-2 ring-blue-500"
           }`}
@@ -376,7 +380,7 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
           <CardBody></CardBody>
         </Card>
         <Card
-          className={`flex-1 ${
+          className={`flex ${
             currentPhase?.name === PhaseName.STOCK_OPEN_LIMIT_ORDERS &&
             "ring-2 ring-blue-500"
           }`}

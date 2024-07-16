@@ -18,10 +18,14 @@ import {
 } from '@server/prisma/prisma.types';
 import { getPseudoSpend } from '@server/data/helpers';
 import { MAX_SHARE_PERCENTAGE } from '@server/data/constants';
+import { GameLogService } from '@server/game-log/game-log.service';
 
 @Injectable()
 export class PlayerOrderService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private gameLogService: GameLogService,
+  ) {}
 
   async playerOrder(
     playerOrderWhereUniqueInput: Prisma.PlayerOrderWhereUniqueInput,
@@ -370,10 +374,18 @@ export class PlayerOrderService {
           },
         ],
       },
+      include: {
+        Player: true,
+      },
     });
+
     //update limit orders to market orders
     const updatedOrders = await Promise.all(
       limitOrders.map((order) => {
+        this.gameLogService.createGameLog({
+          game: { connect: { id: order.gameId } },
+          content: `Player ${order.Player.nickname} limit order ${order.isSell ? 'SELL' : 'BUY'} @${order.value} for company ${companyId} filled`,
+        });
         return this.prisma.playerOrder.update({
           where: { id: order.id },
           data: {

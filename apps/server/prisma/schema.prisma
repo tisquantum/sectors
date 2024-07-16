@@ -83,6 +83,7 @@ model Player {
   OperatingRoundVote       OperatingRoundVote[]
   PlayerOrder              PlayerOrder[]
   RevenueDistributionVotes RevenueDistributionVote[]
+  PlayerPriority           PlayerPriority[]
 }
 
 enum AccountStatus {
@@ -569,11 +570,12 @@ model Game {
 }
 
 model GameTurn {
-  id        String   @id @default(uuid())
-  gameId    String
-  turn      Int
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String           @id @default(uuid())
+  gameId         String
+  turn           Int
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  playerPriority PlayerPriority[]
 
   game            Game              @relation(fields: [gameId], references: [id])
   operatingRounds OperatingRound[]
@@ -581,6 +583,16 @@ model GameTurn {
   phases          Phase[]
   capitalGains    CapitalGains[]
   prestigeRewards PrestigeRewards[]
+}
+
+model PlayerPriority {
+  id         String @id @default(uuid())
+  gameTurnId String
+  playerId   String
+  priority   Int
+
+  gameTurn GameTurn @relation(fields: [gameTurnId], references: [id])
+  player   Player   @relation(fields: [playerId], references: [id])
 }
 
 enum RoundType {
