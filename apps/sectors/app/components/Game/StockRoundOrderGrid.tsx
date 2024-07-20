@@ -57,11 +57,19 @@ const StockRoundOrderGrid = ({
   const {
     data: playerOrdersRevealed,
     isLoading: isLoadingPlayerOrdersRevealed,
-  } = trpc.playerOrder.listPlayerOrdersWithPlayerCompany.useQuery({
+  } = trpc.playerOrder.listPlayerOrdersWithPlayerRevealed.useQuery({
     where: {
       stockRoundId: currentPhase?.stockRoundId,
     },
   });
+  const { data: phasesOfStockRound, isLoading: isLoadingPhases } =
+    trpc.phase.listPhases.useQuery({
+      where: {
+        stockRoundId: currentPhase?.stockRoundId,
+        name: PhaseName.STOCK_ACTION_ORDER,
+      },
+      orderBy: { createdAt: "asc" },
+    });
   const [showOrderInput, setShowOrderInput] = useState<string | undefined>(
     undefined
   );
@@ -82,7 +90,10 @@ const StockRoundOrderGrid = ({
   if (isLoadingPlayerOrdersRevealed) return <div>Loading...</div>;
   if (playerOrdersRevealed == undefined) return null;
   if (isLoading) return null;
+  if (isLoadingPhases) return null;
   if (companies == undefined) return notFound();
+  if (currentPhase == undefined) return notFound();
+  if (phasesOfStockRound == undefined) return notFound();
   const isRevealRound = currentPhase?.name === PhaseName.STOCK_ACTION_REVEAL;
   const orders = playerOrdersConcealed ?? [];
   const companiesBySector = organizeCompaniesBySector(companies);
@@ -112,12 +123,17 @@ const StockRoundOrderGrid = ({
             >
               <CompanyCard
                 company={company}
-                orders={orders}
+                orders={orders.filter(
+                  (order) => order.companyId === company.id
+                )}
                 isRevealRound={isRevealRound}
                 isInteractive={isInteractive}
                 focusedOrder={focusedOrder}
                 currentPhase={currentPhase}
-                playerOrdersRevealed={playerOrdersRevealed}
+                playerOrdersRevealed={playerOrdersRevealed.filter(
+                  (order) => order.companyId === company.id
+                )}
+                phasesOfStockRound={phasesOfStockRound}
               />
             </div>
           )

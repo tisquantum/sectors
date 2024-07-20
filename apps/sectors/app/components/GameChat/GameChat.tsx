@@ -50,7 +50,9 @@ const GameChat = ({
 
   const createRoomMessageMutation =
     trpc.roomMessage.createRoomMessage.useMutation();
-
+  useEffect(() => {
+    refetchPlayerPriority();
+  }, [currentPhase?.name]);
   useEffect(() => {
     if (!pusher) return;
 

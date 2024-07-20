@@ -43,6 +43,19 @@ const PendingMarketOrders = ({
   isResolving?: boolean;
 }) => {
   const { currentPhase } = useGame();
+  const { data: phasesOfStockRound, isLoading: isLoadingPhases } =
+    trpc.phase.listPhases.useQuery({
+      where: {
+        stockRoundId: currentPhase?.stockRoundId,
+        name: PhaseName.STOCK_ACTION_ORDER,
+      },
+      orderBy: { createdAt: "asc" },
+    });
+  if(isLoadingPhases) return <div>Loading...</div>
+  if(!phasesOfStockRound) return <div>No phases found.</div>
+  const mapPhaseIdToSubRound = (phaseId: string) => {
+    return phasesOfStockRound.findIndex((phase) => phase.id === phaseId) + 1;
+  };
   // Assuming marketOrders is an array of objects with name, companyName, orderType (buy/sell), and shares
   const groupedOrders = marketOrders.reduce(
     (acc: GroupedOrders, order: PlayerOrderAllRelations) => {
@@ -64,6 +77,7 @@ const PendingMarketOrders = ({
     hidden: { opacity: 0, y: -20 },
     visible: { opacity: 1, y: 0, transition: { delay: 0.5, duration: 0.5 } },
   };
+
   return (
     <div className="space-y-2">
       {Object.entries(groupedOrders).map(([company, orders]) => {
@@ -85,12 +99,12 @@ const PendingMarketOrders = ({
           const phaseId = order.phaseId;
           if (!phaseId) return acc;
           if (acc[phaseId]) {
-            acc[phaseId].push(order);
+            acc[phaseId].orders.push(order);
           } else {
-            acc[phaseId] = [order];
+            acc[phaseId] = {orders: [order], subRound: mapPhaseIdToSubRound(order.phaseId)};
           }
           return acc;
-        }, {} as { [key: string]: PlayerOrderAllRelations[] });
+        }, {} as { [key: string]: {orders: PlayerOrderAllRelations[], subRound: number}});
         return (
           <div
             key={company}
@@ -111,10 +125,10 @@ const PendingMarketOrders = ({
                   return (
                     <div className="flex flex-col">
                       <div>
-                        <span> Stock Round {index + 1} </span>
+                        <span> Stock Round {orders.subRound} </span>
                       </div>
                       <div>
-                        {orders.map((order, index) =>
+                        {orders.orders.map((order, index) =>
                           isResolving ? (
                             <>
                               <motion.div

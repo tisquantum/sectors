@@ -15,6 +15,8 @@ import {
   PlayerOrderWithCompany,
   PlayerOrderWithPlayerCompany,
   PlayerOrderAllRelations,
+  PhaseWithStockRound,
+  PlayerOrderWithPlayerRevealed,
 } from '@server/prisma/prisma.types';
 import { getPseudoSpend } from '@server/data/helpers';
 import { MAX_SHARE_PERCENTAGE } from '@server/data/constants';
@@ -99,6 +101,37 @@ export class PlayerOrderService {
     });
   }
 
+  async playerOrdersWithPlayerRevealed(params: {
+    skip?: number;
+    take?: number;
+    cursor?: Prisma.PlayerOrderWhereUniqueInput;
+    where?: Prisma.PlayerOrderWhereInput;
+    orderBy?: Prisma.PlayerOrderOrderByWithRelationInput;
+  }): Promise<PlayerOrderWithPlayerRevealed[]> {
+    const { skip, take, cursor, where, orderBy } = params;
+    return this.prisma.playerOrder.findMany({
+      skip,
+      take,
+      cursor,
+      where,
+      orderBy,
+      include: {
+        Company: {
+          include: {
+            Share: true,
+          },
+        },
+        Player: true,
+        Sector: true,
+        Phase: {
+          include: {
+            StockRound: true,
+          },
+        },
+      },
+    });
+  }
+
   private concealOrder(order: PlayerOrder): PlayerOrderConcealed {
     const { value, quantity, isSell, orderType, ...concealedOrder } = order;
     return concealedOrder;
@@ -125,12 +158,19 @@ export class PlayerOrderService {
       orderBy,
       include: {
         Player: true,
+        Phase: {
+          include: {
+            StockRound: true,
+          },
+        },
       },
     });
-    return orders.map((order: PlayerOrder & { Player: Player }) => {
-      const concealedOrder = this.concealOrder(order);
-      return { ...concealedOrder, Player: order.Player };
-    });
+    return orders.map(
+      (order: PlayerOrder & { Player: Player; Phase: PhaseWithStockRound }) => {
+        const concealedOrder = this.concealOrder(order);
+        return { ...concealedOrder, Player: order.Player, Phase: order.Phase };
+      },
+    );
   }
 
   async playerOrdersAllRelations(params: {

@@ -89,6 +89,7 @@ export type PlayerOrderHiddenFields =
 export type PlayerOrderConcealed = Omit<PlayerOrder, PlayerOrderHiddenFields>;
 export type PlayerOrderConcealedWithPlayer = PlayerOrderConcealed & {
   Player: Player;
+  Phase: PhaseWithStockRound;
 };
 export type PlayerOrderWithCompany = PlayerOrder & { Company: Company };
 export type CompanyWithShare = Company & { Share: Share[] };
@@ -96,11 +97,18 @@ export type CompanyWithShareAndSector = Company & {
   Share: Share[];
   Sector: Sector;
 };
+export type PhaseWithStockRound = Phase & { StockRound: StockRound | null };
 export type PlayerOrderWithPlayerCompany = PlayerOrder & {
   Company: CompanyWithShare;
   Player: Player;
   Sector: Sector;
   Phase: Phase;
+};
+export type PlayerOrderWithPlayerRevealed = PlayerOrder & {
+  Company: CompanyWithShare;
+  Player: Player;
+  Sector: Sector;
+  Phase: PhaseWithStockRound;
 };
 export type SectorWithCompanyRelations = Sector & {
   Company: CompanyWithRelations[];

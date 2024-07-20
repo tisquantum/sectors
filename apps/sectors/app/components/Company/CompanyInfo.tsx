@@ -128,6 +128,9 @@ const CompanyInfo = ({
               <div className="flex items-center">
                 <RiHandCoinFill size={18} className="ml-2" />
                 <span className="ml-1">{company.demandScore}</span>
+                {showingProductionResults && (
+                  <span className="text-red-500"> -1</span>
+                )}
               </div>
             </Tooltip>
             <Tooltip content="The amount of goods the company produces per operating round.">
@@ -141,19 +144,10 @@ const CompanyInfo = ({
                 <RiIncreaseDecreaseFill size={18} className="ml-2" />
                 <div className="ml-1 flex">
                   <span>
-                    {showingProductionResults
-                      ? company.demandScore +
-                        company.Sector.demand -
-                        company.supplyMax +
-                        1
-                      : company.demandScore +
-                        company.Sector.demand -
-                        company.supplyMax}
+                    {company.demandScore +
+                      company.Sector.demand -
+                      company.supplyMax}
                   </span>
-                  &nbsp;
-                  {showingProductionResults && (
-                    <span className="text-red-500"> -1</span>
-                  )}
                 </div>
               </div>
             </Tooltip>

@@ -93,6 +93,26 @@ export default (trpc: TrpcService, ctx: Context) =>
           orderBy,
         });
       }),
+    listPlayerOrdersWithPlayerRevealed: trpc.procedure
+      .input(
+        z.object({
+          skip: z.number().optional(),
+          take: z.number().optional(),
+          cursor: z.number().optional(),
+          where: z.any().optional(),
+          orderBy: z.any().optional(),
+        }),
+      )
+      .query(async ({ input }) => {
+        const { skip, take, cursor, where, orderBy } = input;
+        return ctx.playerOrdersService.playerOrdersWithPlayerRevealed({
+          skip,
+          take,
+          cursor: cursor ? { id: cursor } : undefined,
+          where,
+          orderBy,
+        });
+      }),
     listPlayerOrdersConcealed: trpc.procedure
       .input(
         z.object({
@@ -179,7 +199,7 @@ export default (trpc: TrpcService, ctx: Context) =>
             playerOrder.playerId,
             playerOrder.orderType,
           );
-          //get player 
+          //get player
           const player = await ctx.playerService.player({ id: playerId });
           await ctx.gameLogService.createGameLog({
             game: { connect: { id: gameId } },
@@ -197,7 +217,9 @@ export default (trpc: TrpcService, ctx: Context) =>
           console.error(error);
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: error.message || 'An error occurred while creating the player order',
+            message:
+              error.message ||
+              'An error occurred while creating the player order',
           });
         }
         return playerOrder;

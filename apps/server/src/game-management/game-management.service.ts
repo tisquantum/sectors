@@ -1765,7 +1765,9 @@ export class GameManagementService {
     console.log('Resolving end turn', phase);
     // Get sectors and game
     const [sectors, game] = await Promise.all([
-      this.sectorService.sectors({ where: { gameId: phase.gameId } }),
+      this.sectorService.sectorsWithCompanies({
+        where: { gameId: phase.gameId },
+      }),
       this.gamesService.game({ id: phase.gameId }),
     ]);
 
@@ -1799,8 +1801,30 @@ export class GameManagementService {
     const economyScore = STABLE_ECONOMY_SCORE;
     let consumersMovedCounter = 0;
 
+    // reduce sectors sector.Company prestige total
+    const prestigeTotalsBySector = sectors.reduce(
+      (acc, sector) => {
+        const prestigeTotal = sector.Company.reduce(
+          (companyAcc, company) => companyAcc + (company.prestigeTokens || 0),
+          0,
+        );
+        acc[sector.name] = prestigeTotal; // You can use sector.id or sector.name as key
+        return acc;
+      },
+      {} as { [key: string]: number },
+    );
+
+    // Convert the prestigeTotalsBySector object to an array of [sectorName, prestigeTotal] pairs
+    const sortedSectors = Object.entries(prestigeTotalsBySector)
+      .sort((a, b) => b[1] - a[1]) // Sort by prestige total in descending order
+      .map(([name]) => sectors.find((sector) => sector.name === name)); // Map back to the original sectors
+
     // Distribute consumer pool to sectors based on marketing bonus
-    sectors.forEach((sector) => {
+    sortedSectors.forEach((sector) => {
+      if (!sector) {
+        console.error('Sector not found');
+        return;
+      }
       let marketingBonus = 0;
       if (marketingOrdersGroupedBySectorId.length > 0) {
         marketingBonus =
@@ -2237,12 +2261,16 @@ export class GameManagementService {
           ? newOperatingRound.id
           : operatingRoundId
         : undefined;
+    const _influenceRoundId =
+      roundType === RoundType.INFLUENCE ? influenceRoundId : undefined;
+    console.log('determine if new round _influenceRoundId', _influenceRoundId);
     return this.startPhase({
       gameId,
       phaseName,
       roundType,
       stockRoundId: _stockRoundId,
       operatingRoundId: _operatingRoundId,
+      influenceRoundId: _influenceRoundId,
       companyId,
     });
   }
@@ -3047,66 +3075,73 @@ export class GameManagementService {
     gameLogEntries: any[],
   ) {
     for (const order of sortedOrders) {
-      if (remainingShares <= 0) break;
-
-      //const player share total
-      const playerShareTotal = order.Company.Share.filter(
-        (share) =>
-          share.location === ShareLocation.PLAYER &&
-          share.playerId === order.playerId,
-      ).length;
-      if (
-        order.quantity +
-          this.getCurrentShareOrderFilledTotalPlayer(shareUpdates) +
-          playerShareTotal >
-        (MAX_SHARE_PERCENTAGE * order.Company.Share.length) / 100
-      ) {
+      if (remainingShares <= 0) {
         orderStatusUpdates.push({
           where: { id: order.id },
           data: { orderStatus: OrderStatus.REJECTED },
         });
       } else {
-        const sharesToGive = Math.min(order.quantity || 0, remainingShares);
-        if (sharesToGive < (order.quantity || 0)) {
-          // Reject the order if it cannot be fully fulfilled
+        //const player share total
+        const playerShareTotal = order.Company.Share.filter(
+          (share) =>
+            share.location === ShareLocation.PLAYER &&
+            share.playerId === order.playerId,
+        ).length;
+        if (
+          order.quantity +
+            this.getCurrentShareOrderFilledTotalPlayer(shareUpdates) +
+            playerShareTotal >
+          (MAX_SHARE_PERCENTAGE * order.Company.Share.length) / 100
+        ) {
           orderStatusUpdates.push({
             where: { id: order.id },
             data: { orderStatus: OrderStatus.REJECTED },
           });
         } else {
-          const shares = allAvailableShares.slice(
-            currentShareIndex,
-            currentShareIndex + sharesToGive,
-          );
-          currentShareIndex += sharesToGive;
+          const sharesToGive = order.quantity || 0;
+          if (sharesToGive > remainingShares) {
+            // Reject the order if it cannot be fully fulfilled
+            orderStatusUpdates.push({
+              where: { id: order.id },
+              data: { orderStatus: OrderStatus.REJECTED },
+            });
+          } else {
+            const shares = allAvailableShares.slice(
+              currentShareIndex,
+              currentShareIndex + sharesToGive,
+            );
+            currentShareIndex += sharesToGive;
+            console.log('all available shares', allAvailableShares);
+            console.log('shares to take', shares);
+            shareUpdates.push({
+              where: { id: { in: shares.map((share) => share.id) } },
+              data: {
+                location: ShareLocation.PLAYER,
+                playerId: order.playerId,
+              },
+            });
 
-          shareUpdates.push({
-            where: { id: { in: shares.map((share) => share.id) } },
-            data: {
-              location: ShareLocation.PLAYER,
+            playerCashUpdates.push({
               playerId: order.playerId,
-            },
-          });
+              decrement: sharesToGive * order.value!,
+            });
 
-          playerCashUpdates.push({
-            playerId: order.playerId,
-            decrement: sharesToGive * order.value!,
-          });
+            orderStatusUpdates.push({
+              where: { id: order.id },
+              data: { orderStatus: OrderStatus.FILLED },
+            });
 
-          orderStatusUpdates.push({
-            where: { id: order.id },
-            data: { orderStatus: OrderStatus.FILLED },
-          });
+            gameLogEntries.push({
+              game: { connect: { id: order.gameId } },
+              content: `Player ${order.Player.nickname} has bought ${sharesToGive} shares of ${order.Company.name} at $${order.value}`,
+            });
 
-          gameLogEntries.push({
-            game: { connect: { id: order.gameId } },
-            content: `Player ${order.Player.nickname} has bought ${sharesToGive} shares of ${order.Company.name} at $${order.value}`,
-          });
-
-          remainingShares -= sharesToGive;
+            remainingShares -= sharesToGive;
+          }
         }
       }
     }
+    return { currentShareIndex, remainingShares };
   }
 
   async fetchPlayerPriorities(playerIds: string[], prisma: PrismaService) {
@@ -3161,6 +3196,8 @@ export class GameManagementService {
       totalBuyOrderShares,
     );
 
+    console.log('remaining shares', remainingShares);
+
     const allAvailableShares = await shareService.shares({
       where: { companyId, location },
       take: remainingShares,
@@ -3174,31 +3211,34 @@ export class GameManagementService {
       this.sortByPhaseCreationTimeAsc(groupedByPhase);
 
     //iterate over sortedByPhaseCreatedAt
-    await Promise.all(
-      sortedByPhaseCreatedAt.map(async (phaseOrders) => {
-        const playerIds = buyOrders.map((order) => order.playerId);
-        // Get player priorities
-        const playerPriorities = await this.fetchPlayerPriorities(
-          playerIds,
-          prisma,
-        );
-        const sortedByBidValue = this.sortByBidValue(
-          phaseOrders.orders,
-          playerPriorities,
-        );
+    for (const phaseOrders of sortedByPhaseCreatedAt) {
+      const playerIds = buyOrders.map((order) => order.playerId);
+      // Get player priorities
+      const playerPriorities = await this.fetchPlayerPriorities(
+        playerIds,
+        prisma,
+      );
+      const sortedByBidValue = this.sortByBidValue(
+        phaseOrders.orders,
+        playerPriorities,
+      );
 
-        this.processBidOrdersBidStrategy(
-          sortedByBidValue,
-          remainingShares,
-          allAvailableShares,
-          currentShareIndex,
-          shareUpdates,
-          playerCashUpdates,
-          orderStatusUpdates,
-          gameLogEntries,
-        );
-      }),
-    );
+      const {
+        currentShareIndex: _currentShareIndex,
+        remainingShares: _remainingShares,
+      } = await this.processBidOrdersBidStrategy(
+        sortedByBidValue,
+        remainingShares,
+        allAvailableShares,
+        currentShareIndex,
+        shareUpdates,
+        playerCashUpdates,
+        orderStatusUpdates,
+        gameLogEntries,
+      );
+      currentShareIndex = _currentShareIndex;
+      remainingShares = _remainingShares;
+    }
 
     await this.executeDatabaseOperations(
       prisma,

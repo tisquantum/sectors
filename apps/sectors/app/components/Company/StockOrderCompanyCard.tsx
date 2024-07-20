@@ -6,6 +6,7 @@ import {
   PhaseName,
   Share,
   ShareLocation,
+  StockRound,
 } from "@server/prisma/prisma.client";
 import {
   CompanyWithSector,
@@ -27,6 +28,7 @@ type CompanyCardProps = {
   focusedOrder: CompanyWithSector; // Replace with the actual type
   currentPhase?: Phase;
   playerOrdersRevealed: PlayerOrderWithPlayerCompany[]; // Replace with the actual type
+  phasesOfStockRound: Phase[];
 };
 
 const CompanyCard: React.FC<CompanyCardProps> = ({
@@ -37,6 +39,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
   focusedOrder,
   currentPhase,
   playerOrdersRevealed,
+  phasesOfStockRound,
 }) => {
   const [isIpo, setIsIpo] = useState<boolean>(false);
   const [showPlayerInput, setShowPlayerInput] = useState<boolean>(false);
@@ -52,17 +55,43 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
       order.phaseId !== currentPhase?.id
   );
 
+  const mapPhaseToStockRound = (phaseId: string) => {
+    return phasesOfStockRound.findIndex((phase) => phase.id === phaseId) + 1;
+  };
+
   //group ipoOrders by phase
-  const groupedIpoOrdersByPhase = ipoOrders?.reduce((acc, order) => {
+  let groupedIpoOrdersByPhase = ipoOrders?.reduce((acc, order) => {
+    console.log("groupedIpoOrdersByPhase", order);
     const phaseId = order.phaseId;
     if (!phaseId) return acc;
     if (acc[phaseId]) {
       acc[phaseId].count++;
     } else {
-      acc[phaseId] = { phaseId: order.phaseId, count: 1 };
+      acc[phaseId] = {
+        phaseId: order.phaseId,
+        count: 1,
+        stockRound: order.Phase.StockRound,
+        subRound: mapPhaseToStockRound(order.phaseId),
+      };
     }
     return acc;
-  }, {} as { [key: string]: { phaseId: string; count: number } });
+  }, {} as { [key: string]: { phaseId: string; count: number; stockRound: StockRound | null; subRound: number } });
+
+  // Get the entries (key-value pairs) of the object
+  const groupedIpoOrdersByPhaseEntries = Object.entries(
+    groupedIpoOrdersByPhase
+  );
+
+  // Sort the entries based on subRound
+  const sortedGroupedIpoOrdersByPhaseEntries =
+    groupedIpoOrdersByPhaseEntries.sort(
+      ([, valueA], [, valueB]) => valueA.subRound - valueB.subRound
+    );
+
+  // If you need to use the sorted entries as an object again
+  groupedIpoOrdersByPhase = Object.fromEntries(
+    sortedGroupedIpoOrdersByPhaseEntries
+  );
 
   const openMarketOrders = orders.filter(
     (order) =>
@@ -71,18 +100,48 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
       order.phaseId !== currentPhase?.id
   );
 
-  const groupedOpenMarketOrdersByPhase = openMarketOrders?.reduce(
+  //TODO: Identify all phases for the stock round, map them to a number.
+  let groupedOpenMarketOrdersByPhase = openMarketOrders?.reduce(
     (acc, order) => {
+      console.log("groupedOpenMarketOrdersByPhase", order);
       const phaseId = order.phaseId;
       if (!phaseId) return acc;
       if (acc[phaseId]) {
         acc[phaseId].count++;
       } else {
-        acc[phaseId] = { phaseId: order.phaseId, count: 1 };
+        acc[phaseId] = {
+          phaseId: order.phaseId,
+          count: 1,
+          stockRound: order.Phase.StockRound,
+          subRound: mapPhaseToStockRound(order.phaseId),
+        };
       }
       return acc;
     },
-    {} as { [key: string]: { phaseId: string; count: number } }
+    {} as {
+      [key: string]: {
+        phaseId: string;
+        count: number;
+        stockRound: StockRound | null;
+        subRound: number;
+      };
+    }
+  );
+
+  // Get the entries (key-value pairs) of the object
+  const groupedOpenMarketOrdersByPhaseEntries = Object.entries(
+    groupedOpenMarketOrdersByPhase
+  );
+
+  // Sort the entries based on subRound
+  const sortedGroupedOpenMarketOrdersByPhaseEntries =
+    groupedOpenMarketOrdersByPhaseEntries.sort(
+      ([, valueA], [, valueB]) => valueA.subRound - valueB.subRound
+    );
+
+  // Convert the sorted entries back into an object
+  groupedOpenMarketOrdersByPhase = Object.fromEntries(
+    sortedGroupedOpenMarketOrdersByPhaseEntries
   );
 
   const handleDisplayOrderInput = (company: Company, isIpo?: boolean) => {
@@ -140,7 +199,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
                       <div className="flex flex-col" key={index}>
                         <div className="flex items-center justify-center">
                           <span className="text-sm text-gray-400">
-                            {indexInt + 1}
+                            {groupedIpoOrdersByPhase[index]?.subRound}
                           </span>
                         </div>
                         <div className="flex items-center justify-center">
@@ -172,7 +231,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
                       <div className="flex flex-col" key={index}>
                         <div className="flex items-center justify-center">
                           <span className="text-sm text-gray-400">
-                            {indexInt + 1}
+                            {groupedIpoOrdersByPhase[index]?.subRound}
                           </span>
                         </div>
                         <div className="flex items-center justify-center">
@@ -233,24 +292,26 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
                 }`}
               >
                 <div className="flex gap-4 w-full">
-                  {Object.keys(groupedOpenMarketOrdersByPhase).map((index, indexInt) => (
-                    <div className="flex flex-col" key={index}>
-                      <div className="flex items-center justify-center">
-                        <span className="text-sm text-gray-400">
-                          {indexInt + 1}
-                        </span>
+                  {Object.keys(groupedOpenMarketOrdersByPhase).map(
+                    (index, indexInt) => (
+                      <div className="flex flex-col" key={index}>
+                        <div className="flex items-center justify-center">
+                          <span className="text-sm text-gray-400">
+                            {groupedOpenMarketOrdersByPhase[index]?.subRound}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-center">
+                          <PlayerOrderConcealed
+                            orders={openMarketOrders.filter(
+                              (order) =>
+                                order.phaseId ==
+                                groupedOpenMarketOrdersByPhase[index].phaseId
+                            )}
+                          />
+                        </div>
                       </div>
-                      <div className="flex items-center justify-center">
-                        <PlayerOrderConcealed
-                          orders={openMarketOrders.filter(
-                            (order) =>
-                              order.phaseId ==
-                              groupedOpenMarketOrdersByPhase[index].phaseId
-                          )}
-                        />
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  )}
                 </div>
               </div>
             )}
@@ -263,24 +324,26 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
                 }`}
               >
                 <div className="flex gap-4 w-full">
-                  {Object.keys(groupedOpenMarketOrdersByPhase).map((index, indexInt) => (
-                    <div className="flex flex-col" key={index}>
-                      <div className="flex items-center justify-center">
-                        <span className="text-sm text-gray-400">
-                          {indexInt + 1}
-                        </span>
+                  {Object.keys(groupedOpenMarketOrdersByPhase).map(
+                    (index, indexInt) => (
+                      <div className="flex flex-col" key={index}>
+                        <div className="flex items-center justify-center">
+                          <span className="text-sm text-gray-400">
+                            {groupedOpenMarketOrdersByPhase[index]?.subRound}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-center">
+                          <PlayerOrder
+                            orders={playerOrdersRevealed.filter(
+                              (order) =>
+                                order.phaseId ==
+                                groupedOpenMarketOrdersByPhase[index].phaseId
+                            )}
+                          />
+                        </div>
                       </div>
-                      <div className="flex items-center justify-center">
-                        <PlayerOrder
-                          orders={playerOrdersRevealed.filter(
-                            (order) =>
-                              order.phaseId ==
-                              groupedOpenMarketOrdersByPhase[index].phaseId
-                          )}
-                        />
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  )}
                 </div>
               </div>
             )}
