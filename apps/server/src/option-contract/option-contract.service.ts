@@ -28,6 +28,9 @@ export class OptionContractService {
       cursor,
       where,
       orderBy,
+      include: {
+        Company: true,
+      }
     });
   }
 

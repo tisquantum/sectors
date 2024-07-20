@@ -11,6 +11,7 @@ import "./PendingOrders.css";
 import { trpc } from "@sectors/app/trpc";
 import { useGame } from "./GameContext";
 import {
+  ContractState,
   DistributionStrategy,
   OrderStatus,
   OrderType,
@@ -33,6 +34,40 @@ import { flushAllTraces } from "next/dist/trace";
 import PlayerAvatar from "../Player/PlayerAvatar";
 interface GroupedOrders {
   [key: string]: PlayerOrderAllRelations[];
+}
+
+const OpenOptionContracts = () => {
+  const { gameId } = useGame();
+  const { data: openOptionContracts, isLoading} = trpc.optionContract.listOptionContracts.useQuery({
+    where: {
+      Game: {
+        id: gameId,
+      },
+      OR: [
+        { contractState: ContractState.FOR_SALE },
+        { contractState: ContractState.QUEUED },
+      ],
+    },
+  });
+  if (isLoading) return <div>Loading...</div>;
+  if (!openOptionContracts) return <div>No open option contracts.</div>;
+  return (
+    <div className="space-y-2">
+      {openOptionContracts.map((contract, index) => (
+        <div
+          key={index}
+          className="bg-gray-500 p-2 rounded flex items-center gap-2"
+        >
+          <div>{contract.Company.name}</div>
+          <div>
+            <span>Strike Price: ${contract.strikePrice}</span>
+            <span>Term: {contract.term} turns</span>
+            <span>Share Count: {contract.shareCount}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 const PendingMarketOrders = ({
@@ -391,7 +426,9 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
           }`}
         >
           <CardHeader className="z-0">Option Contracts</CardHeader>
-          <CardBody></CardBody>
+          <CardBody>
+            <OpenOptionContracts />
+          </CardBody>
         </Card>
         <Card
           className={`flex ${

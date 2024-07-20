@@ -263,7 +263,7 @@ export class GameManagementService {
   }
 
   createOptionContract(
-    companies: CompanyWithSector[],
+    randomCompany: CompanyWithSector,
     _contractState: ContractState,
   ): {
     premium: number;
@@ -273,9 +273,6 @@ export class GameManagementService {
     stepBonus: number;
     contractState: ContractState;
   } {
-    //pick a random company
-    const randomCompany =
-      companies[Math.floor(Math.random() * companies.length)];
     const minTermLength = OPTION_CONTRACT_MIN_TERM;
     const maxTermLength = OPTION_CONTRACT_MAX_TERM;
     //pick a term length between min and max
@@ -347,10 +344,14 @@ export class GameManagementService {
   ) {
     const optionContractsToAdd = [];
     for (let i = 0; i < OPTION_CONTRACT_ACTIVE_COUNT; i++) {
+      //pick a random company
+      const randomCompany =
+        companies[Math.floor(Math.random() * companies.length)];
       optionContractsToAdd.push({
-        ...this.createOptionContract(companies, ContractState.FOR_SALE),
+        ...this.createOptionContract(randomCompany, ContractState.FOR_SALE),
         tableauSlot: i + 1,
         gameId,
+        companyId: randomCompany.id,
       });
     }
     await this.optionContractService.createManyOptionContracts(
@@ -409,14 +410,18 @@ export class GameManagementService {
     gameId: string,
     companies: CompanyWithSector[],
   ) {
+    //pick a random company
+    const randomCompany =
+      companies[Math.floor(Math.random() * companies.length)];
     const newOptionContract = this.createOptionContract(
-      companies,
+      randomCompany,
       ContractState.QUEUED,
     );
     await this.optionContractService.createOptionContract({
       ...newOptionContract,
       tableauSlot: OPTION_CONTRACT_ACTIVE_COUNT + 1,
       Game: { connect: { id: gameId } },
+      Company: { connect: { id: randomCompany.id } },
     });
   }
   /**

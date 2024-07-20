@@ -172,6 +172,7 @@ model Company {
   RevenueDistributionVotes RevenueDistributionVote[]
   PrestigeRewards          PrestigeRewards[]
   Cards                    Card[]
+  OptionContracts          OptionContract[]
 }
 
 enum CompanyTier {
@@ -303,10 +304,12 @@ model OptionContract {
   stepBonus      Int           @default(0) // how many steps the price will move up if option contract is fulfilled
   tableauSlot    Int?          @default(0) // the slot in the tableau where the option contract is placed
   playerOrderId  Int?          @unique
+  companyId      String
   contractState  ContractState
   gameId         String
   PlayerOrder    PlayerOrder?  @relation(fields: [playerOrderId], references: [id])
   Game           Game          @relation(fields: [gameId], references: [id])
+  Company        Company       @relation(fields: [companyId], references: [id])
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 }
