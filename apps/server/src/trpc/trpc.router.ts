@@ -52,6 +52,8 @@ import { InfluenceRoundVotesService } from '@server/influence-round-votes/influe
 import influenceRoundVotesRouter from './routers/influence-round-votes.router';
 import { InfluenceRoundService } from '@server/influence-round/influence-round.service';
 import influenceRoundRouter from './routers/influence-round.router';
+import playerPriorityRouter from './routers/player-priority.router';
+import { PlayerPriorityService } from '@server/player-priority/player-priority.service';
 @Injectable()
 export class TrpcRouter {
   constructor(
@@ -82,6 +84,7 @@ export class TrpcRouter {
     private readonly researchDeckService: ResearchDeckService,
     private readonly influenceRound: InfluenceRoundService,
     private readonly influenceRoundVotesService: InfluenceRoundVotesService,
+    private readonly playerPriorityService: PlayerPriorityService,
   ) {}
 
   appRouter = this.trpc.router({
@@ -174,6 +177,10 @@ export class TrpcRouter {
     }),
     influenceRoundVotes: influenceRoundVotesRouter(this.trpc, {
       influenceRoundVotesService: this.influenceRoundVotesService,
+      phaseService: this.phaseService,
+    }),
+    playerPriority: playerPriorityRouter(this.trpc, {
+      playerPriorityService: this.playerPriorityService,
     }),
   });
 

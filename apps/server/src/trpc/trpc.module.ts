@@ -30,6 +30,7 @@ import { ResearchDeckService } from '@server/research-deck/research-deck.service
 import { CardsService } from '@server/cards/cards.service';
 import { InfluenceRoundService } from '@server/influence-round/influence-round.service';
 import { InfluenceRoundVotesService } from '@server/influence-round-votes/influence-round-votes.service';
+import { PlayerPriorityService } from '@server/player-priority/player-priority.service';
 
 @Module({
   imports: [PrismaModule],
@@ -64,6 +65,7 @@ import { InfluenceRoundVotesService } from '@server/influence-round-votes/influe
     PrestigeRewardsService,
     ResearchDeckService,
     CardsService,
+    PlayerPriorityService,
     InfluenceRoundService,
     InfluenceRoundVotesService,
   ],

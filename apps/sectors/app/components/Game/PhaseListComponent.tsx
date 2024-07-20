@@ -4,9 +4,8 @@ import { friendlyPhaseName } from "@sectors/app/helpers";
 import { STOCK_ACTION_SUB_ROUND_MAX } from "@server/data/constants";
 
 const phasesInOrder = [
-  // PhaseName.INFLUENCE_BID_ACTION,
-  // PhaseName.INFLUENCE_BID_REVEAL,
-  // PhaseName.INFLUENCE_BID_RESOLVE,
+  PhaseName.INFLUENCE_BID_ACTION,
+  PhaseName.INFLUENCE_BID_RESOLVE,
   PhaseName.START_TURN,
   PhaseName.STOCK_MEET,
   PhaseName.STOCK_RESOLVE_LIMIT_ORDER,
@@ -64,7 +63,7 @@ const StockActionSubRoundIndicator = ({
 };
 
 const PhaseListComponent = () => {
-  const { currentPhase, gameState } = useGame();
+  const { currentPhase, gameState, currentTurn } = useGame();
   const currentStockActionSubRound = gameState?.StockRound.find(
     (round) => round.id == currentPhase?.stockRoundId
   )?.stockActionSubRound;
@@ -79,9 +78,17 @@ const PhaseListComponent = () => {
         return "border-slate-400";
     }
   };
+  let _phasesInOrder = [...phasesInOrder];
+  if (currentTurn.turn > 1) {
+    _phasesInOrder = phasesInOrder.filter(
+      (phase) =>
+        phase !== PhaseName.INFLUENCE_BID_ACTION &&
+        phase !== PhaseName.INFLUENCE_BID_RESOLVE
+    );
+  }
   return (
     <div className="flex flex-col gap-2">
-      {phasesInOrder.map((phase) => (
+      {_phasesInOrder.map((phase) => (
         <div key={phase}>
           {phase === PhaseName.STOCK_ACTION_ORDER && (
             <div

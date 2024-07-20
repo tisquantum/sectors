@@ -15,6 +15,7 @@ import {
   Phase,
   Player,
   PlayerOrder,
+  PlayerPriority,
   ProductionResult,
   ResearchDeck,
   RevenueDistributionVote,
@@ -175,3 +176,5 @@ export type InfluenceVoteWithPlayer = InfluenceVote & { Player: Player };
 export type InfluenceRoundWithVotes = InfluenceRound & {
   InfluenceVotes: InfluenceVoteWithPlayer[];
 };
+
+export type PlayerPriorityWithPlayer = PlayerPriority & { player: Player };

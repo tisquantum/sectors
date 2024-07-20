@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { Prisma, PlayerPriority } from '@prisma/client';
+import { PlayerPriorityWithPlayer } from '@server/prisma/prisma.types';
 
 @Injectable()
 export class PlayerPriorityService {
@@ -20,7 +21,7 @@ export class PlayerPriorityService {
     cursor?: Prisma.PlayerPriorityWhereUniqueInput;
     where?: Prisma.PlayerPriorityWhereInput;
     orderBy?: Prisma.PlayerPriorityOrderByWithRelationInput;
-  }): Promise<PlayerPriority[]> {
+  }): Promise<PlayerPriorityWithPlayer[]> {
     const { skip, take, cursor, where, orderBy } = params;
     return this.prisma.playerPriority.findMany({
       skip,
@@ -28,6 +29,9 @@ export class PlayerPriorityService {
       cursor,
       where,
       orderBy,
+      include: {
+        player: true,
+      },
     });
   }
 

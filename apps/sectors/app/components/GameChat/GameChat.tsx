@@ -19,6 +19,7 @@ import { useAuthUser } from "../AuthUser.context";
 import { usePusher } from "../Pusher.context";
 import { RoomUser } from "@server/prisma/prisma.client";
 import UserAvatar from "../Room/UserAvatar";
+import PlayerAvatar from "../Player/PlayerAvatar";
 
 const GameChat = ({
   roomId,
@@ -27,12 +28,19 @@ const GameChat = ({
   roomId: number;
   gameName: string;
 }) => {
+  const { currentPhase } = useGame();
   const { user } = useAuthUser();
   const { pusher } = usePusher();
   const utils = trpc.useUtils();
   const { data: roomUsers, isLoading: isLoadingRoomUsers } =
     trpc.roomUser.listRoomUsers.useQuery({
       where: { roomId },
+    });
+  const { data: playerPriorities, refetch: refetchPlayerPriority } =
+    trpc.playerPriority.listPlayerPriorities.useQuery({
+      where: {
+        gameTurnId: currentPhase?.gameTurnId,
+      },
     });
 
   const { data: messages, isLoading: isLoadingMessages } =
@@ -110,11 +118,20 @@ const GameChat = ({
         <h1 className="text-xl font-bold">{gameName}</h1>
       </div>
       <div className="flex gap-2 p-4">
-        {roomUsers?.map((roomUser) => (
-          <div key={roomUser.user.id}>
-            <UserAvatar user={roomUser.user} />
-          </div>
-        ))}
+        {(playerPriorities?.length || 0) > 0
+          ? playerPriorities?.map((playerPriority) => (
+              <div key={playerPriority.player.id}>
+                <PlayerAvatar
+                  player={playerPriority.player}
+                  badgeContent={playerPriority.priority}
+                />
+              </div>
+            ))
+          : roomUsers?.map((roomUser) => (
+              <div key={roomUser.user.id}>
+                <UserAvatar user={roomUser.user} />
+              </div>
+            ))}
       </div>
       <div className="grow flex flex-col flex-grow bg-gray-100">
         {messages && <MessagePane messages={messages} />}

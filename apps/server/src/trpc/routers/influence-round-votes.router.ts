@@ -1,9 +1,12 @@
 import { z } from 'zod';
 import { TrpcService } from '../trpc.service';
 import { InfluenceRoundVotesService } from '@server/influence-round-votes/influence-round-votes.service';
+import { PhaseService } from '@server/phase/phase.service';
+import { PhaseName } from '@prisma/client';
 
 type Context = {
   influenceRoundVotesService: InfluenceRoundVotesService;
+  phaseService: PhaseService;
 };
 
 export default (trpc: TrpcService, ctx: Context) =>
@@ -47,17 +50,25 @@ export default (trpc: TrpcService, ctx: Context) =>
           influenceRoundId: z.number(),
           playerId: z.string(),
           influence: z.number(),
+          gameId: z.string(),
         }),
       )
       .mutation(async ({ input }) => {
-        const { influenceRoundId, playerId, influence } = input;
+        const { influenceRoundId, playerId, influence, gameId } = input;
         const data = {
           influence,
           InfluenceRound: { connect: { id: influenceRoundId } },
           Player: { connect: { id: playerId } },
         };
-
-        return ctx.influenceRoundVotesService.createInfluenceVote(data);
+        // ensure current phase is influence voting round
+        const currentPhase = await ctx.phaseService.currentPhase(gameId);
+        if (currentPhase?.name == PhaseName.INFLUENCE_BID_ACTION) {
+          return ctx.influenceRoundVotesService.createInfluenceVote(data);
+        } else {
+          throw new Error(
+            'Cannot create influence vote outside of influence voting round',
+          );
+        }
       }),
 
     createManyInfluenceVotes: trpc.procedure

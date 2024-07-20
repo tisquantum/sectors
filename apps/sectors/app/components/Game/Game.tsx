@@ -22,7 +22,7 @@ import {
   StockRound,
 } from "@server/prisma/prisma.client";
 import Meeting from "../Meeting/Meeting";
-import { GameState } from "@server/prisma/prisma.types";
+import { GameState, InfluenceRoundWithVotes } from "@server/prisma/prisma.types";
 import { useGame } from "./GameContext";
 import StockRoundAction from "./StockRoundAction";
 import OperatingRoundProduction from "./OperatingRoundProduction";
@@ -42,7 +42,7 @@ const determineGameRound = (
 ):
   | { operatingRound: OperatingRound; phase: Phase }
   | { stockRound: StockRound; phase: Phase }
-  | { influenceRound: Phase; phase: Phase }
+  | { influenceRound: InfluenceRoundWithVotes; phase: Phase }
   | { phase: Phase }
   | undefined => {
   const phase = game.Phase.find((phase) => phase.id === game.currentPhaseId);

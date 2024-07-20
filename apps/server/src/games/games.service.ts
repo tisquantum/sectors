@@ -114,6 +114,15 @@ export class GamesService {
         sectors: true,
         OperatingRound: true,
         StockRound: true,
+        InfluenceRound: {
+          include: {
+            InfluenceVotes: {
+              include: {
+                Player: true,
+              },
+            },
+          },
+        },
         Phase: true,
       },
     });

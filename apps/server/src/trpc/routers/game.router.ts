@@ -168,6 +168,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           roundType: z.nativeEnum(RoundType),
           stockRoundId: z.number().optional(),
           operatingRoundId: z.number().optional(),
+          influenceRoundId: z.number().optional(),
           companyId: z.string().optional(),
         }),
       )
@@ -178,6 +179,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           roundType,
           stockRoundId,
           operatingRoundId,
+          influenceRoundId,
           companyId,
         } = input;
         return ctx.gameManagementService.determineIfNewRoundAndStartPhase({
@@ -186,6 +188,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           roundType,
           stockRoundId,
           operatingRoundId,
+          influenceRoundId,
           companyId,
         });
       }),
@@ -214,6 +217,7 @@ export default (trpc: TrpcService, ctx: Context) =>
             gameTurnId: z.string(),
             stockRoundId: z.number().nullable(),
             operatingRoundId: z.number().nullable(),
+            influenceRoundId: z.number().nullable(),
             companyId: z.string().nullable(),
             phaseTime: z.number(),
             createdAt: z.date(),

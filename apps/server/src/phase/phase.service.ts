@@ -65,4 +65,17 @@ export class PhaseService {
       where,
     });
   }
+
+  async currentPhase(gameId: string): Promise<Phase | null> {
+    const currentPhase = await this.prisma.phase.findFirst({
+      where: {
+        gameId,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    return currentPhase;
+  }
 }

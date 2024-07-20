@@ -29,6 +29,7 @@ import {
   PlayerOrder,
   DistributionStrategy,
   InfluenceRound,
+  PlayerPriority,
 } from '@prisma/client';
 import { GamesService } from '@server/games/games.service';
 import { CompanyService } from '@server/company/company.service';
@@ -286,9 +287,15 @@ export class GameManagementService {
     } catch (error) {
       console.error('Error creating game logs', error);
     }
+    const playerPriorityAddMany = allPlayerPriority.map((priority) => {
+      //remove influence from object
+      const { influence, ...rest } = priority;
+      return rest;
+    });
+
     try {
       await this.playerPriorityService.createManyPlayerPriorities(
-        allPlayerPriority,
+        playerPriorityAddMany,
       );
     } catch (error) {
       console.error('Error creating player priority', error);
@@ -2173,6 +2180,7 @@ export class GameManagementService {
     roundType,
     stockRoundId,
     operatingRoundId,
+    influenceRoundId,
     companyId,
   }: {
     gameId: string;
@@ -2180,6 +2188,7 @@ export class GameManagementService {
     roundType: RoundType;
     stockRoundId?: number;
     operatingRoundId?: number;
+    influenceRoundId?: number;
     companyId?: string;
   }) {
     const game = await this.gamesService.getGameState(gameId);
@@ -2312,6 +2321,7 @@ export class GameManagementService {
     console.log('start phase phase name', phaseName);
     console.log('start phase stock round id', stockRoundId);
     console.log('start phase operating round id', operatingRoundId);
+    console.log('start phase influence round id', influenceRoundId);
     const gameChannelId = getGameChannelId(gameId);
     //get game
     let game = await this.gamesService.getGameState(gameId);
@@ -2383,9 +2393,14 @@ export class GameManagementService {
       phaseName: currentPhase.name,
       roundType: currentPhase.stockRoundId
         ? RoundType.STOCK
-        : RoundType.OPERATING,
+        : currentPhase.operatingRoundId
+          ? RoundType.OPERATING
+          : currentPhase.influenceRoundId
+            ? RoundType.INFLUENCE
+            : RoundType.GAME_UPKEEP,
       stockRoundId: game.currentStockRoundId || 0,
       operatingRoundId: game.currentOperatingRoundId || 0,
+      influenceRoundId: game.InfluenceRound?.[0].id || 0,
       companyId: currentPhase.companyId || '',
     });
   }
@@ -2932,6 +2947,7 @@ export class GameManagementService {
                     ShareLocation.IPO,
                     companyId,
                     this.shareService,
+                    game,
                     this.prisma,
                   );
                 } else {
@@ -2959,6 +2975,7 @@ export class GameManagementService {
                     ShareLocation.OPEN_MARKET,
                     companyId,
                     this.shareService,
+                    game,
                     this.prisma,
                   );
                 } else {
@@ -2997,13 +3014,18 @@ export class GameManagementService {
     }
   }
 
-  /**
-   * Sorts orders in DESCENDING order.
-   * @param buyOrders
-   * @returns
-   */
-  sortByBidValue(buyOrders: PlayerOrderWithPlayerCompany[]) {
-    return buyOrders.sort((a, b) => (b.value || 0) - (a.value || 0));
+  sortByBidValue(
+    buyOrders: PlayerOrderWithPlayerCompany[],
+    playerPriorities: Record<string, number>,
+  ) {
+    return buyOrders.sort((a, b) => {
+      const valueDifference = (b.value || 0) - (a.value || 0);
+      if (valueDifference !== 0) return valueDifference;
+
+      const priorityA = playerPriorities[a.playerId] || Infinity;
+      const priorityB = playerPriorities[b.playerId] || Infinity;
+      return priorityA - priorityB;
+    });
   }
 
   getCurrentShareOrderFilledTotalPlayer(shareUpdates: any[]) {
@@ -3087,11 +3109,26 @@ export class GameManagementService {
     }
   }
 
+  async fetchPlayerPriorities(playerIds: string[], prisma: PrismaService) {
+    const playerPriorities =
+      await this.playerPriorityService.listPlayerPriorities({
+        where: {
+          playerId: { in: playerIds },
+        },
+      });
+
+    return playerPriorities.reduce<Record<string, number>>((acc, priority) => {
+      acc[priority.playerId] = priority.priority;
+      return acc;
+    }, {});
+  }
+
   async distributeSharesBidStrategy(
     buyOrders: PlayerOrderWithPlayerCompany[],
     location: ShareLocation,
     companyId: string,
     shareService: ShareService,
+    game: Game,
     prisma: any,
   ) {
     let currentShareIndex = 0;
@@ -3137,20 +3174,31 @@ export class GameManagementService {
       this.sortByPhaseCreationTimeAsc(groupedByPhase);
 
     //iterate over sortedByPhaseCreatedAt
-    sortedByPhaseCreatedAt.forEach((phaseOrders) => {
-      const sortedByBidValue = this.sortByBidValue(phaseOrders.orders);
+    await Promise.all(
+      sortedByPhaseCreatedAt.map(async (phaseOrders) => {
+        const playerIds = buyOrders.map((order) => order.playerId);
+        // Get player priorities
+        const playerPriorities = await this.fetchPlayerPriorities(
+          playerIds,
+          prisma,
+        );
+        const sortedByBidValue = this.sortByBidValue(
+          phaseOrders.orders,
+          playerPriorities,
+        );
 
-      this.processBidOrdersBidStrategy(
-        sortedByBidValue,
-        remainingShares,
-        allAvailableShares,
-        currentShareIndex,
-        shareUpdates,
-        playerCashUpdates,
-        orderStatusUpdates,
-        gameLogEntries,
-      );
-    });
+        this.processBidOrdersBidStrategy(
+          sortedByBidValue,
+          remainingShares,
+          allAvailableShares,
+          currentShareIndex,
+          shareUpdates,
+          playerCashUpdates,
+          orderStatusUpdates,
+          gameLogEntries,
+        );
+      }),
+    );
 
     await this.executeDatabaseOperations(
       prisma,
