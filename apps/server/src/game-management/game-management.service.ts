@@ -30,6 +30,9 @@ import {
   DistributionStrategy,
   InfluenceRound,
   PlayerPriority,
+  SectorName,
+  ContractState,
+  OptionContract,
 } from '@prisma/client';
 import { GamesService } from '@server/games/games.service';
 import { CompanyService } from '@server/company/company.service';
@@ -77,6 +80,10 @@ import {
   PRESTIGE_ACTION_TOKEN_COST,
   MARKETING_CONSUMER_BONUS,
   DEFAULT_INFLUENCE,
+  OPTION_CONTRACT_ACTIVE_COUNT,
+  OPTION_CONTRACT_MIN_TERM,
+  OPTION_CONTRACT_MAX_TERM,
+  sectorVolatility,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -112,6 +119,7 @@ import { InfluenceRoundVotesService } from '@server/influence-round-votes/influe
 import { InfluenceRoundService } from '@server/influence-round/influence-round.service';
 import { PlayerPriorityService } from '@server/player-priority/player-priority.service';
 import { number } from 'zod';
+import { OptionContractService } from '@server/option-contract/option-contract.service';
 
 type GroupedByPhase = {
   [key: string]: {
@@ -147,6 +155,7 @@ export class GameManagementService {
     private playerPriorityService: PlayerPriorityService,
     private influenceRoundService: InfluenceRoundService,
     private influenceRoundVotes: InfluenceRoundVotesService,
+    private optionContractService: OptionContractService,
   ) {}
 
   /**
@@ -209,6 +218,7 @@ export class GameManagementService {
         break;
       case PhaseName.END_TURN:
         await this.resolveEndTurn(phase);
+        await this.optionContractGenerate(phase);
         break;
       case PhaseName.DIVESTMENT:
         await this.resolveDivestment(phase);
@@ -218,6 +228,197 @@ export class GameManagementService {
     }
   }
 
+  getStrikePrice(
+    term: number,
+    currentPrice: number,
+    sector: SectorName,
+  ): number {
+    // Get the interest rate for the term
+    const interestRate = interestRatesByTerm[term] || 0;
+
+    // Get the sector volatility
+    const volatility = sectorVolatility[sector] || 0;
+
+    // Calculate the premium increment factor based on interest rate and volatility
+    const premiumIncrementFactor = 1 + interestRate / 100 + volatility;
+
+    // Calculate the strike price
+    const strikePrice = currentPrice * premiumIncrementFactor;
+
+    return strikePrice;
+  }
+
+  calculatePremium(
+    currentPrice: number,
+    term: number,
+    shareCount: number,
+  ): number {
+    // Get the interest rate for the term
+    const interestRate = interestRatesByTerm[term] || 0;
+
+    // Calculate the premium based on the current price, interest rate, and share count
+    const premium = currentPrice * (1 + interestRate / 100) * shareCount;
+
+    return premium;
+  }
+
+  createOptionContract(
+    companies: CompanyWithSector[],
+    _contractState: ContractState,
+  ): {
+    premium: number;
+    strikePrice: number;
+    term: number;
+    shareCount: number;
+    stepBonus: number;
+    contractState: ContractState;
+  } {
+    //pick a random company
+    const randomCompany =
+      companies[Math.floor(Math.random() * companies.length)];
+    const minTermLength = OPTION_CONTRACT_MIN_TERM;
+    const maxTermLength = OPTION_CONTRACT_MAX_TERM;
+    //pick a term length between min and max
+    const term =
+      Math.floor(Math.random() * (maxTermLength - minTermLength + 1)) +
+      minTermLength;
+    const strikePrice = this.getStrikePrice(
+      term,
+      randomCompany.currentStockPrice,
+      randomCompany.Sector.sectorName,
+    );
+    const shareCounts = [
+      { shareCount: 3, stepBonus: 1 },
+      { shareCount: 5, stepBonus: 1 },
+      { shareCount: 7, stepBonus: 2 },
+      { shareCount: 10, stepBonus: 2 },
+      { shareCount: 12, stepBonus: 3 },
+    ];
+    const shareCountData =
+      shareCounts[Math.floor(Math.random() * shareCounts.length)];
+    const premium = this.calculatePremium(
+      randomCompany.currentStockPrice,
+      term,
+      shareCountData.shareCount,
+    );
+    const stepBonus = shareCountData.stepBonus;
+    return {
+      premium,
+      strikePrice,
+      term,
+      shareCount: shareCountData.shareCount,
+      stepBonus,
+      contractState: _contractState,
+    };
+  }
+  //generate, queue up and discard option contracts as appropriate.
+  //contracts are placed on a tableau, one card is on top is queued, the middle cards are "for sale" and the bottom card is discarded.
+  async optionContractGenerate(phase: Phase) {
+    const companies = await this.companyService.companiesWithSector({
+      where: { gameId: phase.gameId },
+    });
+
+    // Fetch existing option contracts in play
+    const optionContracts =
+      await this.optionContractService.listOptionContracts({
+        where: {
+          gameId: phase.gameId,
+          OR: [
+            { contractState: ContractState.FOR_SALE },
+            { contractState: ContractState.QUEUED },
+          ],
+        },
+      });
+
+    // Generate new option contracts if none exist
+    if (optionContracts.length === 0) {
+      await this.createInitialOptionContracts(phase.gameId, companies);
+    } else {
+      // Update existing option contracts and add a new queued contract
+      await this.updateExistingOptionContracts(optionContracts);
+      await this.addNewQueuedOptionContract(phase.gameId, companies);
+    }
+  }
+
+  // Function to create initial option contracts
+  async createInitialOptionContracts(
+    gameId: string,
+    companies: CompanyWithSector[],
+  ) {
+    const optionContractsToAdd = [];
+    for (let i = 0; i < OPTION_CONTRACT_ACTIVE_COUNT; i++) {
+      optionContractsToAdd.push({
+        ...this.createOptionContract(companies, ContractState.FOR_SALE),
+        tableauSlot: i + 1,
+        gameId,
+      });
+    }
+    await this.optionContractService.createManyOptionContracts(
+      optionContractsToAdd,
+    );
+  }
+
+  // Function to update existing option contracts
+  async updateExistingOptionContracts(optionContracts: OptionContract[]) {
+    const optionContractsToUpdate: {
+      where: Prisma.OptionContractWhereUniqueInput;
+      data: Prisma.OptionContractUpdateInput;
+    }[] = [];
+    const optionContractsToDiscard: number[] = [];
+    const optionContractsToRequeue: number[] = [];
+
+    optionContracts.forEach((contract) => {
+      const newTableauSlot = (contract?.tableauSlot || 0) - 1;
+      if (newTableauSlot < 0) {
+        optionContractsToDiscard.push(contract.id);
+      } else {
+        optionContractsToUpdate.push({
+          where: { id: contract.id },
+          data: { tableauSlot: newTableauSlot },
+        });
+        if (
+          newTableauSlot > 0 &&
+          newTableauSlot < OPTION_CONTRACT_ACTIVE_COUNT
+        ) {
+          optionContractsToRequeue.push(contract.id);
+        }
+      }
+    });
+
+    await Promise.all([
+      ...optionContractsToUpdate.map((contract) =>
+        this.optionContractService.updateOptionContract(contract),
+      ),
+      ...optionContractsToDiscard.map((contractId) =>
+        this.optionContractService.updateOptionContract({
+          where: { id: contractId },
+          data: { contractState: ContractState.DISCARDED },
+        }),
+      ),
+      ...optionContractsToRequeue.map((contractId) =>
+        this.optionContractService.updateOptionContract({
+          where: { id: contractId },
+          data: { contractState: ContractState.FOR_SALE },
+        }),
+      ),
+    ]);
+  }
+
+  // Function to add a new queued option contract
+  async addNewQueuedOptionContract(
+    gameId: string,
+    companies: CompanyWithSector[],
+  ) {
+    const newOptionContract = this.createOptionContract(
+      companies,
+      ContractState.QUEUED,
+    );
+    await this.optionContractService.createOptionContract({
+      ...newOptionContract,
+      tableauSlot: OPTION_CONTRACT_ACTIVE_COUNT + 1,
+      Game: { connect: { id: gameId } },
+    });
+  }
   /**
    * Initial priority order is determined by an influence bid.  Player earn $1 per unspent influence.
    * @param phase

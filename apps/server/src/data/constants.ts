@@ -5,6 +5,7 @@ import {
   OperatingRoundAction,
   PhaseName,
   PrestigeReward,
+  SectorName,
   StockTier,
 } from '@prisma/client';
 
@@ -40,6 +41,9 @@ export const MARKETING_CONSUMER_BONUS = 4;
 
 export const DEFAULT_INFLUENCE = 100;
 
+export const OPTION_CONTRACT_ACTIVE_COUNT = 2;
+export const OPTION_CONTRACT_MIN_TERM = 1;
+export const OPTION_CONTRACT_MAX_TERM = 4;
 /**
  * Phase times in milliseconds
  */
@@ -123,6 +127,19 @@ export const interestRatesByTerm: { [key: number]: number } = {
   3: 4,
   4: 3.5,
   5: 5,
+};
+
+export const sectorVolatility: Record<SectorName, number> = {
+  [SectorName.CONSUMER_CYCLICAL]: 0.2,
+  [SectorName.CONSUMER_DEFENSIVE]: 0.1,
+  [SectorName.CONSUMER_DISCRETIONARY]: 0.3,
+  [SectorName.CONSUMER_STAPLES]: 0.15,
+  [SectorName.ENERGY]: 0.2,
+  [SectorName.GENERAL]: 0,
+  [SectorName.HEALTHCARE]: 0.3,
+  [SectorName.INDUSTRIALS]: 0.25,
+  [SectorName.MATERIALS]: 0.3,
+  [SectorName.TECHNOLOGY]: 0.4,
 };
 
 export const BORROW_RATE = 5; // 5%

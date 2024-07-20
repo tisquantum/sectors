@@ -54,6 +54,8 @@ import { InfluenceRoundService } from '@server/influence-round/influence-round.s
 import influenceRoundRouter from './routers/influence-round.router';
 import playerPriorityRouter from './routers/player-priority.router';
 import { PlayerPriorityService } from '@server/player-priority/player-priority.service';
+import optionContractRouter from './routers/option-contract.router';
+import { OptionContractService } from '@server/option-contract/option-contract.service';
 @Injectable()
 export class TrpcRouter {
   constructor(
@@ -85,6 +87,7 @@ export class TrpcRouter {
     private readonly influenceRound: InfluenceRoundService,
     private readonly influenceRoundVotesService: InfluenceRoundVotesService,
     private readonly playerPriorityService: PlayerPriorityService,
+    private readonly optionContractService: OptionContractService,
   ) {}
 
   appRouter = this.trpc.router({
@@ -181,6 +184,9 @@ export class TrpcRouter {
     }),
     playerPriority: playerPriorityRouter(this.trpc, {
       playerPriorityService: this.playerPriorityService,
+    }),
+    optionContract: optionContractRouter(this.trpc, {
+      optionContractService: this.optionContractService,
     }),
   });
 

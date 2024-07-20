@@ -24,6 +24,7 @@ import { ResearchDeckModule } from '@server/research-deck/research-deck.module';
 import { InfluenceRoundVotesModule } from '@server/influence-round-votes/influence-round-votes.module';
 import { InfluenceRoundModule } from '@server/influence-round/influence-round.module';
 import { PlayerPriorityModule } from '@server/player-priority/player-priority.module';
+import { OptionContractModule } from '@server/option-contract/option-contract.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { PlayerPriorityModule } from '@server/player-priority/player-priority.mo
     PlayerPriorityModule,
     InfluenceRoundModule,
     InfluenceRoundVotesModule,
+    OptionContractModule,
   ],
   providers: [GameManagementService],
   exports: [GameManagementService],

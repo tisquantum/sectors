@@ -291,17 +291,33 @@ model ShortOrder {
 }
 
 //premium should be calculated as strike price - current price * term or something like this
+//term advances every stock round
 model OptionContract {
-  id             Int          @id @default(autoincrement())
-  premium        Int
+  id             Int           @id @default(autoincrement())
+  premium        Int //the price of the option contract to be paid by the player
   currentPremium Int?
-  strikePrice    Int
+  strikePrice    Int //the price at which the player can buy the shares
   term           Int
   shares         Share[]
-  playerOrderId  Int?         @unique
-  PlayerOrder    PlayerOrder? @relation(fields: [playerOrderId], references: [id])
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  shareCount     Int           @default(0) // the amount of shares in the contract
+  stepBonus      Int           @default(0) // how many steps the price will move up if option contract is fulfilled
+  tableauSlot    Int?          @default(0) // the slot in the tableau where the option contract is placed
+  playerOrderId  Int?          @unique
+  contractState  ContractState
+  gameId         String
+  PlayerOrder    PlayerOrder?  @relation(fields: [playerOrderId], references: [id])
+  Game           Game          @relation(fields: [gameId], references: [id])
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+enum ContractState {
+  PURCHASED
+  FOR_SALE
+  DISCARDED
+  QUEUED
+  EXPIRED
+  EXERCISED
 }
 
 enum OrderType {
@@ -560,6 +576,7 @@ model Game {
   MeetingMessage          MeetingMessage[]
   PlayerOrder             PlayerOrder[]
   Share                   Share[]
+  OptionContracts         OptionContract[]
   CapitalGains            CapitalGains[]
   PrestigeRewards         PrestigeRewards[]
   Cards                   Card[]
