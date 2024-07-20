@@ -42,6 +42,7 @@ const determineGameRound = (
 ):
   | { operatingRound: OperatingRound; phase: Phase }
   | { stockRound: StockRound; phase: Phase }
+  | { influenceRound: Phase; phase: Phase }
   | { phase: Phase }
   | undefined => {
   const phase = game.Phase.find((phase) => phase.id === game.currentPhaseId);
@@ -68,6 +69,12 @@ const determineGameRound = (
     return {
       phase,
     };
+  } else if (game.currentRound === RoundType.INFLUENCE) {
+    const influenceRound = game.InfluenceRound?.[0];
+    if (!influenceRound) {
+      return undefined;
+    }
+    return { influenceRound, phase };
   }
 };
 const Game = ({ gameId }: { gameId: string }) => {

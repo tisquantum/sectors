@@ -28,6 +28,7 @@ import {
   ResearchCardEffect,
   PlayerOrder,
   DistributionStrategy,
+  InfluenceRound,
 } from '@prisma/client';
 import { GamesService } from '@server/games/games.service';
 import { CompanyService } from '@server/company/company.service';
@@ -109,6 +110,7 @@ import { CardsService } from '@server/cards/cards.service';
 import { InfluenceRoundVotesService } from '@server/influence-round-votes/influence-round-votes.service';
 import { InfluenceRoundService } from '@server/influence-round/influence-round.service';
 import { PlayerPriorityService } from '@server/player-priority/player-priority.service';
+import { number } from 'zod';
 
 type GroupedByPhase = {
   [key: string]: {
@@ -1928,7 +1930,7 @@ export class GameManagementService {
       name: roomName,
       currentTurn: '',
       currentOrSubRound: 0,
-      currentRound: 'STOCK',
+      currentRound: 'INFLUENCE',
       bankPoolNumber,
       consumerPoolNumber,
       distributionStrategy,
@@ -2062,47 +2064,46 @@ export class GameManagementService {
         console.error('Error starting game:', error);
         throw new Error('Failed to start the game');
       }
-      let stockRound: StockRound | null;
-      try {
-        stockRound = await this.startStockRound(game.id);
-      } catch (error) {
-        console.error('Error starting game:', error);
-        throw new Error('Failed to start the stock round.');
+      let influenceRound: InfluenceRound | null;
+      influenceRound = await this.influenceRoundService.createInfluenceRound({
+        roundStep: 0,
+        Game: { connect: { id: game.id } },
+        GameTurn: { connect: { id: newTurn.id } },
+      });
+      if (!influenceRound) {
+        throw new Error('Failed to create influence round');
       }
-      if (!stockRound) {
-        throw new Error('Stock round not found');
-      } else {
-        // Start the stock round phase
-        const newPhase = await this.startPhase({
+      // Start the stock round phase
+      const newPhase = await this.startPhase({
+        gameId: game.id,
+        influenceRoundId: influenceRound.id,
+        phaseName: PhaseName.INFLUENCE_BID_ACTION,
+        roundType: RoundType.INFLUENCE,
+      });
+      //iterate through companies and create initial stock history
+      const stockHistories: {
+        companyId: string;
+        price: number;
+        gameId: string;
+        phaseId: string;
+        stepsMoved: number;
+        action: StockAction;
+      }[] = [];
+      //create initial stock history for starting stock price
+      companies.forEach((company) => {
+        stockHistories.push({
+          companyId: company.id,
+          price: company.currentStockPrice || 0,
           gameId: game.id,
-          stockRoundId: stockRound.id,
-          phaseName: PhaseName.STOCK_MEET,
-          roundType: RoundType.STOCK,
+          phaseId: newPhase.id || '',
+          stepsMoved: 0,
+          action: StockAction.INITIAL,
         });
-        //iterate through companies and create initial stock history
-        const stockHistories: {
-          companyId: string;
-          price: number;
-          gameId: string;
-          phaseId: string;
-          stepsMoved: number;
-          action: StockAction;
-        }[] = [];
-        //create initial stock history for starting stock price
-        companies.forEach((company) => {
-          stockHistories.push({
-            companyId: company.id,
-            price: company.currentStockPrice || 0,
-            gameId: game.id,
-            phaseId: newPhase.id || '',
-            stepsMoved: 0,
-            action: StockAction.INITIAL,
-          });
-        });
-        await this.stockHistoryService.createManyStockHistories(stockHistories);
-        // Start the timer for advancing to the next phase
-        await this.startPhaseTimer(newPhase, game.id, stockRound.id);
-      }
+      });
+      await this.stockHistoryService.createManyStockHistories(stockHistories);
+      // Start the timer for advancing to the next phase
+      //TODO: Once the game is fully implemented, we can start the timer service again.  Something is wrong with it right now.
+      //await this.startPhaseTimer(newPhase, game.id, influenceRound.id);
       return game;
     } catch (error) {
       console.error('Error starting game:', error);
@@ -2297,6 +2298,7 @@ export class GameManagementService {
     roundType,
     stockRoundId,
     operatingRoundId,
+    influenceRoundId,
     companyId,
   }: {
     gameId: string;
@@ -2304,6 +2306,7 @@ export class GameManagementService {
     roundType: RoundType;
     stockRoundId?: number;
     operatingRoundId?: number;
+    influenceRoundId?: number;
     companyId?: string;
   }) {
     console.log('start phase phase name', phaseName);
@@ -2321,6 +2324,9 @@ export class GameManagementService {
       StockRound: stockRoundId ? { connect: { id: stockRoundId } } : undefined,
       OperatingRound: operatingRoundId
         ? { connect: { id: operatingRoundId } }
+        : undefined,
+      InfluenceRound: influenceRoundId
+        ? { connect: { id: influenceRoundId } }
         : undefined,
       Company: companyId ? { connect: { id: companyId } } : undefined,
     });

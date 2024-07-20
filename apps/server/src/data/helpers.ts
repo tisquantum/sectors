@@ -46,6 +46,19 @@ export function determineNextGamePhase(
   phaseName: PhaseName;
   roundType: RoundType;
 } {
+  //Only applicable to the first turn
+  if (phaseName === PhaseName.INFLUENCE_BID_ACTION) {
+    return {
+      phaseName: PhaseName.INFLUENCE_BID_RESOLVE,
+      roundType: RoundType.INFLUENCE,
+    };
+  }
+  if (phaseName === PhaseName.INFLUENCE_BID_RESOLVE) {
+    return {
+      phaseName: PhaseName.STOCK_MEET,
+      roundType: RoundType.STOCK,
+    };
+  }
   switch (phaseName) {
     case PhaseName.STOCK_MEET:
       return {
@@ -577,7 +590,7 @@ function descriptionForEffect(effect: ResearchCardEffect): string {
     case ResearchCardEffect.ECONOMIES_OF_SCALE:
       return "The next time this company operates, it is considered to be the cheapest company regardless of it's unit price.";
     case ResearchCardEffect.AUTOMATION:
-      return `This company reduces it's operating costs by ${AUTOMATION_CARD_REDUCTION_AMOUNT}.`
+      return `This company reduces it's operating costs by ${AUTOMATION_CARD_REDUCTION_AMOUNT}.`;
     case ResearchCardEffect.NO_DISCERNIBLE_FINDINGS:
       return 'This research yielded no discernible findings.';
     default:

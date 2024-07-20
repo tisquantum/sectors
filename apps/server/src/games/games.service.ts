@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { Game, Prisma } from '@prisma/client';
-import { GameState, GameWithGameTurns, GameWithPhase } from '@server/prisma/prisma.types';
+import {
+  GameState,
+  GameWithGameTurns,
+  GameWithPhase,
+} from '@server/prisma/prisma.types';
 
 @Injectable()
 export class GamesService {
@@ -81,6 +85,15 @@ export class GamesService {
         sectors: true,
         OperatingRound: true,
         StockRound: true,
+        InfluenceRound: {
+          include: {
+            InfluenceVotes: {
+              include: {
+                Player: true,
+              },
+            },
+          },
+        },
         Phase: true,
       },
     });

@@ -69,6 +69,7 @@ export type GameState = Game & {
   gameLogs: GameLog[];
   OperatingRound: OperatingRound[];
   StockRound: StockRound[];
+  InfluenceRound: InfluenceRoundWithVotes[];
   Phase: Phase[];
 };
 
