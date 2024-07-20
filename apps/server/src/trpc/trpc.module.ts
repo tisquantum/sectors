@@ -28,6 +28,8 @@ import { GameTurnService } from '@server/game-turn/game-turn.service';
 import { PrestigeRewardsService } from '@server/prestige-rewards/prestige-rewards.service';
 import { ResearchDeckService } from '@server/research-deck/research-deck.service';
 import { CardsService } from '@server/cards/cards.service';
+import { InfluenceRoundService } from '@server/influence-round/influence-round.service';
+import { InfluenceRoundVotesService } from '@server/influence-round-votes/influence-round-votes.service';
 
 @Module({
   imports: [PrismaModule],
@@ -62,6 +64,8 @@ import { CardsService } from '@server/cards/cards.service';
     PrestigeRewardsService,
     ResearchDeckService,
     CardsService,
+    InfluenceRoundService,
+    InfluenceRoundVotesService,
   ],
 })
 export class TrpcModule {}

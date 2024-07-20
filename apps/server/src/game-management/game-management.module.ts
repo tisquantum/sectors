@@ -21,6 +21,9 @@ import { GameTurnModule } from '@server/game-turn/game-turn.module';
 import { PrestigeRewardsModule } from '@server/prestige-rewards/prestige-rewards.module';
 import { CardsModule } from '@server/cards/cards.module';
 import { ResearchDeckModule } from '@server/research-deck/research-deck.module';
+import { InfluenceRoundVotesModule } from '@server/influence-round-votes/influence-round-votes.module';
+import { InfluenceRoundModule } from '@server/influence-round/influence-round.module';
+import { PlayerPriorityModule } from '@server/player-priority/player-priority.module';
 
 @Module({
   imports: [
@@ -45,6 +48,9 @@ import { ResearchDeckModule } from '@server/research-deck/research-deck.module';
     PrestigeRewardsModule,
     CardsModule,
     ResearchDeckModule,
+    PlayerPriorityModule,
+    InfluenceRoundModule,
+    InfluenceRoundVotesModule,
   ],
   providers: [GameManagementService],
   exports: [GameManagementService],

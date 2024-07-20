@@ -33,6 +33,8 @@ import { GameTurnModule } from './game-turn/game-turn.module';
 import { PrestigeRewardsModule } from './prestige-rewards/prestige-rewards.module';
 import { CardsModule } from './cards/cards.module';
 import { PlayerPriorityModule } from './player-priority/player-priority.module';
+import { InfluenceRoundModule } from './influence-round/influence-round.module';
+import { InfluenceRoundVotesModule } from './influence-round-votes/influence-round-votes.module';
 
 const yourPusherOptions = {
   cluster: process.env.PUSHER_CLUSTER ?? 'CLUSTER',
@@ -80,6 +82,8 @@ const chunkingOptions = {
     PrestigeRewardsModule,
     CardsModule,
     PlayerPriorityModule,
+    InfluenceRoundModule,
+    InfluenceRoundVotesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

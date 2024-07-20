@@ -35,6 +35,7 @@ import EndTurnEconomy from "./EndTurnEconomy";
 import PhaseListComponent from "./PhaseListComponent";
 import CapitalGains from "./CapitalGains";
 import Divestment from "./Divestment";
+import InfluenceBid from "./InfluenceBid";
 
 const determineGameRound = (
   game: GameState
@@ -130,6 +131,10 @@ const Game = ({ gameId }: { gameId: string }) => {
       <Divestment />
     ) : currentRoundData?.phase.name === PhaseName.END_TURN ? (
       <EndTurnEconomy />
+    ) : currentRoundData?.phase.name === PhaseName.INFLUENCE_BID_ACTION ? (
+      <InfluenceBid />
+    ) : currentRoundData?.phase.name === PhaseName.INFLUENCE_BID_RESOLVE ? (
+      <InfluenceBid isRevealRound />
     ) : null;
 
   return (

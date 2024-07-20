@@ -48,6 +48,10 @@ import prestigeRewardsRouter from './routers/prestige-rewards.router';
 import { PrestigeRewardsService } from '@server/prestige-rewards/prestige-rewards.service';
 import researchDeckRouter from './routers/research-deck.router';
 import { ResearchDeckService } from '@server/research-deck/research-deck.service';
+import { InfluenceRoundVotesService } from '@server/influence-round-votes/influence-round-votes.service';
+import influenceRoundVotesRouter from './routers/influence-round-votes.router';
+import { InfluenceRoundService } from '@server/influence-round/influence-round.service';
+import influenceRoundRouter from './routers/influence-round.router';
 @Injectable()
 export class TrpcRouter {
   constructor(
@@ -76,6 +80,8 @@ export class TrpcRouter {
     private readonly gameTurnService: GameTurnService,
     private readonly prestigeRewardsService: PrestigeRewardsService,
     private readonly researchDeckService: ResearchDeckService,
+    private readonly influenceRound: InfluenceRoundService,
+    private readonly influenceRoundVotesService: InfluenceRoundVotesService,
   ) {}
 
   appRouter = this.trpc.router({
@@ -162,6 +168,12 @@ export class TrpcRouter {
     }),
     researchDeck: researchDeckRouter(this.trpc, {
       researchDeckService: this.researchDeckService,
+    }),
+    influenceRound: influenceRoundRouter(this.trpc, {
+      influenceRoundService: this.influenceRound,
+    }),
+    influenceRoundVotes: influenceRoundVotesRouter(this.trpc, {
+      influenceRoundVotesService: this.influenceRoundVotesService,
     }),
   });
 

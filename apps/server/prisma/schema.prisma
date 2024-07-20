@@ -84,6 +84,7 @@ model Player {
   PlayerOrder              PlayerOrder[]
   RevenueDistributionVotes RevenueDistributionVote[]
   PlayerPriority           PlayerPriority[]
+  InfluenceVote            InfluenceVote[]
 }
 
 enum AccountStatus {
@@ -548,6 +549,7 @@ model Game {
   distributionStrategy    DistributionStrategy @default(FAIR_SPLIT)
   gameLogs                GameLog[]
   sectors                 Sector[]
+  InfluenceRound          InfluenceRound[]
   GameTurn                GameTurn[]
   Player                  Player[]
   Company                 Company[]
@@ -580,6 +582,7 @@ model GameTurn {
   game            Game              @relation(fields: [gameId], references: [id])
   operatingRounds OperatingRound[]
   stockRounds     StockRound[]
+  influenceRounds InfluenceRound[]
   phases          Phase[]
   capitalGains    CapitalGains[]
   prestigeRewards PrestigeRewards[]
@@ -596,6 +599,7 @@ model PlayerPriority {
 }
 
 enum RoundType {
+  INFLUENCE
   GAME_UPKEEP
   STOCK
   OPERATING
@@ -609,10 +613,12 @@ model Phase {
   phaseTime        Int
   stockRoundId     Int?
   operatingRoundId Int?
+  influenceRoundId Int?
   companyId        String?
   Company          Company?        @relation(fields: [companyId], references: [id])
   OperatingRound   OperatingRound? @relation(fields: [operatingRoundId], references: [id])
   StockRound       StockRound?     @relation(fields: [stockRoundId], references: [id])
+  InfluenceRound   InfluenceRound? @relation(fields: [influenceRoundId], references: [id])
   Game             Game            @relation(fields: [gameId], references: [id])
   GameTurn         GameTurn        @relation(fields: [gameTurnId], references: [id])
   PlayerOrder      PlayerOrder[]
@@ -622,6 +628,9 @@ model Phase {
 }
 
 enum PhaseName {
+  INFLUENCE_BID_ACTION
+  INFLUENCE_BID_REVEAL
+  INFLUENCE_BID_RESOLVE
   START_TURN
   END_TURN
   STOCK_RESOLVE_LIMIT_ORDER
@@ -647,6 +656,31 @@ enum PhaseName {
   CAPITAL_GAINS
   DIVESTMENT
   SECTOR_NEW_COMPANY
+}
+
+model InfluenceRound {
+  id             Int             @id @default(autoincrement())
+  gameId         String
+  roundStep      Int
+  gameTurnId     String
+  phase          Phase[]
+  InfluenceVotes InfluenceVote[]
+  isRevealed     Boolean         @default(false)
+  Game           Game            @relation(fields: [gameId], references: [id])
+  GameTurn       GameTurn        @relation(fields: [gameTurnId], references: [id])
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+model InfluenceVote {
+  id               Int            @id @default(autoincrement())
+  influenceRoundId Int
+  playerId         String
+  influence        Int
+  InfluenceRound   InfluenceRound @relation(fields: [influenceRoundId], references: [id])
+  Player           Player         @relation(fields: [playerId], references: [id])
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 }
 
 model GameLog {

@@ -6,6 +6,8 @@ import {
   Game,
   GameLog,
   GameTurn,
+  InfluenceRound,
+  InfluenceVote,
   MeetingMessage,
   OperatingRound,
   OperatingRoundVote,
@@ -166,3 +168,9 @@ export type PlayerWithPlayerOrders = Player & {
 };
 
 export type ResearchDeckWithCards = ResearchDeck & { cards: Card[] };
+
+export type InfluenceVoteWithPlayer = InfluenceVote & { Player: Player };
+
+export type InfluenceRoundWithVotes = InfluenceRound & {
+  InfluenceVotes: InfluenceVoteWithPlayer[];
+};

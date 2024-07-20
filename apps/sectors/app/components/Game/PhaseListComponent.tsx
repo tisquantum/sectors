@@ -4,6 +4,9 @@ import { friendlyPhaseName } from "@sectors/app/helpers";
 import { STOCK_ACTION_SUB_ROUND_MAX } from "@server/data/constants";
 
 const phasesInOrder = [
+  // PhaseName.INFLUENCE_BID_ACTION,
+  // PhaseName.INFLUENCE_BID_REVEAL,
+  // PhaseName.INFLUENCE_BID_RESOLVE,
   PhaseName.START_TURN,
   PhaseName.STOCK_MEET,
   PhaseName.STOCK_RESOLVE_LIMIT_ORDER,

@@ -74,6 +74,7 @@ import {
   GOVERNMENT_GRANT_AMOUNT,
   PRESTIGE_ACTION_TOKEN_COST,
   MARKETING_CONSUMER_BONUS,
+  DEFAULT_INFLUENCE,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -105,6 +106,9 @@ import { GameTurnService } from '@server/game-turn/game-turn.service';
 import { PrestigeRewardsService } from '@server/prestige-rewards/prestige-rewards.service';
 import { ResearchDeckService } from '@server/research-deck/research-deck.service';
 import { CardsService } from '@server/cards/cards.service';
+import { InfluenceRoundVotesService } from '@server/influence-round-votes/influence-round-votes.service';
+import { InfluenceRoundService } from '@server/influence-round/influence-round.service';
+import { PlayerPriorityService } from '@server/player-priority/player-priority.service';
 
 type GroupedByPhase = {
   [key: string]: {
@@ -137,6 +141,9 @@ export class GameManagementService {
     private prestigeRewardService: PrestigeRewardsService,
     private researchDeckService: ResearchDeckService,
     private cardsService: CardsService,
+    private playerPriorityService: PlayerPriorityService,
+    private influenceRoundService: InfluenceRoundService,
+    private influenceRoundVotes: InfluenceRoundVotesService,
   ) {}
 
   /**
@@ -152,6 +159,9 @@ export class GameManagementService {
    */
   async handlePhase(phase: Phase) {
     switch (phase.name) {
+      case PhaseName.INFLUENCE_BID_RESOLVE:
+        await this.resolveInfluenceBid(phase);
+        break;
       case PhaseName.STOCK_RESOLVE_LIMIT_ORDER:
         await this.resolveLimitOrders(phase);
         break;
@@ -203,6 +213,101 @@ export class GameManagementService {
       default:
         return;
     }
+  }
+
+  /**
+   * Initial priority order is determined by an influence bid.  Player earn $1 per unspent influence.
+   * @param phase
+   */
+  async resolveInfluenceBid(phase: Phase) {
+    //get the game
+    const game = await this.gamesService.game({ id: phase.gameId });
+    if (!game) {
+      throw new Error('Game not found');
+    }
+    //get the influence round
+    const influenceRoundWithVotes =
+      await this.influenceRoundService.getInfluenceRound({
+        id: phase.influenceRoundId || 0,
+      });
+    if (!influenceRoundWithVotes) {
+      throw new Error('Influence round not found');
+    }
+    //sort the votes in descending order
+    const sortedVotes = influenceRoundWithVotes.InfluenceVotes.sort(
+      (a, b) => b.influence - a.influence,
+    );
+    //create player priority for the turn
+    const playerPriority = sortedVotes.map((vote, index) => {
+      return {
+        playerId: vote.playerId,
+        priority: index + 1,
+        influence: vote.influence,
+        gameTurnId: phase.gameTurnId,
+      };
+    });
+    //get all players in the game
+    const players = await this.playersService.players({
+      where: { gameId: game.id },
+    });
+    //if there are any missing players from the playerPriority, add them
+    const missingPlayers = players.filter(
+      (player) =>
+        !playerPriority.find((priority) => priority.playerId === player.id),
+    );
+    const missingPlayerPriority = missingPlayers.map((player) => {
+      return {
+        playerId: player.id,
+        priority: playerPriority.length + 1,
+        influence: 0,
+        gameTurnId: phase.gameTurnId,
+      };
+    });
+    //create the player priority
+    const allPlayerPriority = [...playerPriority, ...missingPlayerPriority];
+    const gameLogMessages: Prisma.GameLogCreateManyInput[] = [];
+    //create game logs
+    allPlayerPriority.forEach(async (priority) => {
+      const player = await this.playersService.player({
+        id: priority.playerId,
+      });
+      if (!player) {
+        throw new Error('Player not found');
+      }
+      gameLogMessages.push({
+        gameId: phase.gameId,
+        content: `Player ${player.nickname} has a priority of ${priority.priority} with ${priority.influence} influence. They earned a total of $${DEFAULT_INFLUENCE - priority.influence} for unspent influence.`,
+      });
+    });
+    try {
+      await this.gameLogService.createManyGameLogs(gameLogMessages);
+    } catch (error) {
+      console.error('Error creating game logs', error);
+    }
+    try {
+      await this.playerPriorityService.createManyPlayerPriorities(
+        allPlayerPriority,
+      );
+    } catch (error) {
+      console.error('Error creating player priority', error);
+    }
+    //give players money for unspent priority
+    const playerPriorityUnspent = allPlayerPriority.filter(
+      (priority) => priority.influence < DEFAULT_INFLUENCE,
+    );
+    const playerPriorityUnspentMoney = playerPriorityUnspent.map((priority) => {
+      return {
+        playerId: priority.playerId,
+        amount: DEFAULT_INFLUENCE - priority.influence,
+        gameTurnId: phase.gameTurnId,
+      };
+    });
+    const playerPriorityUnspentPromises = playerPriorityUnspentMoney.map(
+      async (money) => {
+        await this.playerAddMoney(phase.gameId, money.playerId, money.amount);
+      },
+    );
+    await Promise.all(playerPriorityUnspentPromises);
   }
 
   shuffleArray(array: any[]) {
@@ -3484,6 +3589,11 @@ export class GameManagementService {
   }
 
   async playerAddMoney(gameId: string, playerId: string, amount: number) {
+    //create game log
+    await this.gameLogService.createGameLog({
+      game: { connect: { id: gameId } },
+      content: `Player ${playerId} has received $${amount} in cash`,
+    });
     //update bank pool for game
     await this.prisma.game.update({
       where: { id: gameId },
@@ -3504,6 +3614,11 @@ export class GameManagementService {
   }
 
   async playerRemoveMoney(gameId: string, playerId: string, amount: number) {
+    ///create game log
+    await this.gameLogService.createGameLog({
+      game: { connect: { id: gameId } },
+      content: `Player ${playerId} has spent $${amount} in cash`,
+    });
     //update bank pool for game
     await this.prisma.game.update({
       where: { id: gameId },

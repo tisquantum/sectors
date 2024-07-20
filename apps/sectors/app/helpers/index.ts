@@ -29,6 +29,12 @@ export function friendlyPhaseName(name: PhaseName | undefined): string {
     return "Unknown Phase";
   }
   switch (name) {
+    case PhaseName.INFLUENCE_BID_ACTION:
+      return "Influence Bid";
+    case PhaseName.INFLUENCE_BID_REVEAL:
+      return "Influence Bid Reveal";
+    case PhaseName.INFLUENCE_BID_RESOLVE:
+      return "Influence Bid Resolve";
     case PhaseName.OPERATING_ACTION_COMPANY_VOTE:
       return "Company Vote";
     case PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT:

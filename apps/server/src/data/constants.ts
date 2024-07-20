@@ -38,10 +38,15 @@ export const AUTOMATION_CARD_REDUCTION_AMOUNT = 20
 
 export const MARKETING_CONSUMER_BONUS = 4;
 
+export const DEFAULT_INFLUENCE = 100;
+
 /**
  * Phase times in milliseconds
  */
 export const phaseTimes = {
+  [PhaseName.INFLUENCE_BID_ACTION]: 40 * 1000,
+  [PhaseName.INFLUENCE_BID_REVEAL]: 10 * 1000,
+  [PhaseName.INFLUENCE_BID_RESOLVE]: 15 * 1000,
   [PhaseName.STOCK_RESOLVE_LIMIT_ORDER]: 15 * 1000,
   [PhaseName.STOCK_MEET]: 30 * 1000,
   [PhaseName.STOCK_ACTION_ORDER]: 15 * 1000,
