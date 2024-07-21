@@ -84,6 +84,8 @@ import {
   OPTION_CONTRACT_MIN_TERM,
   OPTION_CONTRACT_MAX_TERM,
   sectorVolatility,
+  LOAN_AMOUNT,
+  LOAN_INTEREST_RATE,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -120,6 +122,7 @@ import { InfluenceRoundService } from '@server/influence-round/influence-round.s
 import { PlayerPriorityService } from '@server/player-priority/player-priority.service';
 import { number } from 'zod';
 import { OptionContractService } from '@server/option-contract/option-contract.service';
+import { cp } from 'fs';
 
 type GroupedByPhase = {
   [key: string]: {
@@ -226,6 +229,7 @@ export class GameManagementService {
         await this.resolveCapitalGains(phase);
         break;
       case PhaseName.END_TURN:
+        await this.resolveCompanyLoans(phase);
         await this.optionContractGenerate(phase);
         await this.resolveEndTurn(phase);
         break;
@@ -235,6 +239,28 @@ export class GameManagementService {
       default:
         return;
     }
+  }
+
+  async resolveCompanyLoans(phase: Phase) {
+    const companies = await this.companyService.companiesWithSector({
+      where: { gameId: phase.gameId, hasLoan: true },
+    });
+    if (!companies) {
+      throw new Error('Companies not found');
+    }
+
+    //take 10% of the loan amount from the company cash on hand, the company cannot go below 0
+    const companyLoans = companies.map(async (company) => {
+      const newCashOnHand = Math.max(
+        company.cashOnHand - LOAN_AMOUNT * LOAN_INTEREST_RATE,
+        0,
+      );
+      await this.companyService.updateCompany({
+        where: { id: company.id },
+        data: { cashOnHand: newCashOnHand },
+      });
+    });
+    await Promise.all(companyLoans);
   }
 
   async resolveExpiredOptionContracts(phase: Phase) {
@@ -1103,11 +1129,29 @@ export class GameManagementService {
       case OperatingRoundAction.RESEARCH:
         await this.research(companyAction);
         break;
+      case OperatingRoundAction.LOAN:
+        await this.companyLoan(companyAction);
+        break;
       case OperatingRoundAction.VETO:
         break;
       default:
         return;
     }
+  }
+
+  async companyLoan(companyAction: CompanyAction) {
+    //get the company
+    const company = await this.companyService.company({
+      id: companyAction.companyId,
+    });
+    if (!company) {
+      throw new Error('Company not found');
+    }
+    //increase the company cash on hand by $500
+    await this.companyService.updateCompany({
+      where: { id: companyAction.companyId },
+      data: { cashOnHand: company.cashOnHand + LOAN_AMOUNT },
+    });
   }
 
   async research(companyAction: CompanyAction) {

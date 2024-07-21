@@ -149,6 +149,7 @@ model Company {
   gameId                   String
   insolvent                Boolean
   isFloated                Boolean                   @default(false)
+  hasLoan                  Boolean                   @default(false)
   stockTier                StockTier                 @default(TIER_1)
   tierSharesFulfilled      Int                       @default(0)
   currentStockPrice        Int                       @default(0)
@@ -459,6 +460,7 @@ enum OperatingRoundAction {
   INCREASE_PRICE
   DECREASE_PRICE
   LOBBY
+  LOAN
 }
 
 model ResearchDeck {

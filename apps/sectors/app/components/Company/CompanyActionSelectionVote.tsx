@@ -15,6 +15,8 @@ import {
   DEFAULT_DECREASE_UNIT_PRICE,
   DEFAULT_INCREASE_UNIT_PRICE,
   getCompanyOperatingRoundTurnOrder,
+  LOAN_AMOUNT,
+  LOAN_INTEREST_RATE,
   MARKETING_CONSUMER_BONUS,
   PRESTIGE_ACTION_TOKEN_COST,
 } from "@server/data/constants";
@@ -96,6 +98,12 @@ const companyActions = [
   },
   {
     id: 10,
+    title: "Loan",
+    name: OperatingRoundAction.LOAN,
+    message: `Take out a loan of $${LOAN_AMOUNT} to increase cash on hand. Be careful, loans must be paid back with interest @ %${LOAN_INTEREST_RATE} per turn. This action can only be taken once per game.`,
+  },
+  {
+    id: 11,
     title: "Veto",
     name: OperatingRoundAction.VETO,
     message:

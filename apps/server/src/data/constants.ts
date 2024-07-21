@@ -35,7 +35,7 @@ export const DEFAULT_RESEARCH_DECK_SIZE = 12;
 
 export const GOVERNMENT_GRANT_AMOUNT = 500;
 
-export const AUTOMATION_CARD_REDUCTION_AMOUNT = 20
+export const AUTOMATION_CARD_REDUCTION_AMOUNT = 20;
 
 export const MARKETING_CONSUMER_BONUS = 4;
 
@@ -44,6 +44,9 @@ export const DEFAULT_INFLUENCE = 100;
 export const OPTION_CONTRACT_ACTIVE_COUNT = 3;
 export const OPTION_CONTRACT_MIN_TERM = 1;
 export const OPTION_CONTRACT_MAX_TERM = 4;
+export const LOAN_AMOUNT = 250;
+export const LOAN_INTEREST_RATE = 0.1;
+
 /**
  * Phase times in milliseconds
  */
@@ -124,9 +127,9 @@ export function getStockPriceWithStepsDown(
 
 export const interestRatesByTerm: { [key: number]: number } = {
   1: 0.5,
-  2: 0.10,
+  2: 0.1,
   3: 0.15,
-  4: 0.20,
+  4: 0.2,
   5: 0.25,
 };
 
@@ -241,6 +244,7 @@ export const companyVoteActionPriority = (
     OperatingRoundAction.LOBBY,
     OperatingRoundAction.INCREASE_PRICE,
     OperatingRoundAction.DECREASE_PRICE,
+    OperatingRoundAction.LOAN,
   ];
   return actions.sort(
     (a, b) => actionPriority.indexOf(a) - actionPriority.indexOf(b),
@@ -349,6 +353,7 @@ export const CompanyActionCosts = {
   [OperatingRoundAction.LOBBY]: 0,
   [OperatingRoundAction.INCREASE_PRICE]: 0,
   [OperatingRoundAction.DECREASE_PRICE]: 0,
+  [OperatingRoundAction.LOAN]: 0,
 };
 
 export const CompanyTierData = {
@@ -464,7 +469,8 @@ export const PrestigeTrack = [
   {
     type: PrestigeReward.MAGNET_EFFECT,
     name: 'Magnet Effect',
-    description: 'All other companies in the stock sector receive +1 stock price.',
+    description:
+      'All other companies in the stock sector receive +1 stock price.',
     probability: 0.05,
   },
   {
@@ -486,4 +492,3 @@ export const PrestigeTrack = [
     probability: 0.12,
   },
 ];
-
