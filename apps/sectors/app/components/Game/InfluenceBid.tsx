@@ -9,6 +9,7 @@ import { useState } from "react";
 const InfluenceBidAction = () => {
   const { currentPhase, authPlayer } = useGame();
   const [influence, setInfluence] = useState("0");
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const { mutate: createInfluenceVote } =
     trpc.influenceRoundVotes.createInfluenceVote.useMutation();
   if (!currentPhase?.influenceRoundId) {
@@ -26,23 +27,28 @@ const InfluenceBidAction = () => {
           setInfluence(e.target.value);
         }}
       />
-      <DebounceButton
-        onClick={() => {
-          let influenceNum = parseInt(influence);
-          if (influenceNum < 0 || influenceNum > DEFAULT_INFLUENCE) {
-            return;
-          }
-          createInfluenceVote({
-            influenceRoundId: currentPhase.influenceRoundId || 0,
-            playerId: authPlayer.id,
-            influence: influenceNum,
-            gameId: currentPhase.gameId,
-          });
-        }}
-        className="mt-2"
-      >
-        Submit Influence Bid
-      </DebounceButton>
+      {isSubmitted ? (
+        <div>Bid has been submit.</div>
+      ) : (
+        <DebounceButton
+          onClick={() => {
+            let influenceNum = parseInt(influence);
+            if (influenceNum < 0 || influenceNum > DEFAULT_INFLUENCE) {
+              return;
+            }
+            createInfluenceVote({
+              influenceRoundId: currentPhase.influenceRoundId || 0,
+              playerId: authPlayer.id,
+              influence: influenceNum,
+              gameId: currentPhase.gameId,
+            });
+            setIsSubmitted(true);
+          }}
+          className="mt-2"
+        >
+          Submit Influence Bid
+        </DebounceButton>
+      )}
     </div>
   );
 };

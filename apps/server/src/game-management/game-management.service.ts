@@ -171,6 +171,9 @@ export class GameManagementService {
    */
   async handlePhase(phase: Phase) {
     switch (phase.name) {
+      case PhaseName.START_TURN:
+        await this.determinePriorityOrderBasedOnNetWorth(phase);
+        break;
       case PhaseName.INFLUENCE_BID_RESOLVE:
         await this.resolveInfluenceBid(phase);
         break;
@@ -189,6 +192,12 @@ export class GameManagementService {
       case PhaseName.STOCK_RESOLVE_MARKET_ORDER:
         //resolve stock round
         await this.resolveMarketOrders(phase);
+        break;
+      case PhaseName.STOCK_RESOLVE_PENDING_OPTION_ORDER:
+        await this.openOptionsOrders(phase);
+        break;
+      case PhaseName.STOCK_RESOLVE_OPTION_ORDER:
+        await this.resolveExpiredOptionContracts(phase);
         break;
       case PhaseName.STOCK_SHORT_ORDER_INTEREST:
         await this.resolveShortOrdersInterest(phase);
@@ -217,8 +226,8 @@ export class GameManagementService {
         await this.resolveCapitalGains(phase);
         break;
       case PhaseName.END_TURN:
-        await this.resolveEndTurn(phase);
         await this.optionContractGenerate(phase);
+        await this.resolveEndTurn(phase);
         break;
       case PhaseName.DIVESTMENT:
         await this.resolveDivestment(phase);
@@ -226,6 +235,88 @@ export class GameManagementService {
       default:
         return;
     }
+  }
+
+  async resolveExpiredOptionContracts(phase: Phase) {
+    const openContracts = await this.optionContractService.listOptionContracts({
+      where: {
+        gameId: phase.gameId,
+        contractState: ContractState.PURCHASED,
+      },
+    });
+    //check if the contract has expired
+    const expiredContracts = openContracts.filter((contract) => {
+      return contract.term === contract.currentTerm;
+    });
+    //resolve the expired contracts
+    const expiredContractPromises = expiredContracts.map(async (contract) => {
+      await this.optionContractService.updateOptionContract({
+        where: { id: contract.id },
+        data: { contractState: ContractState.EXPIRED },
+      });
+    });
+    //get the attached player orders
+    const playerOrders = await this.playerOrderService.playerOrders({
+      where: {
+        gameId: phase.gameId,
+        optionContractId: {
+          in: expiredContracts.map((contract) => contract.id),
+        },
+      },
+    });
+    //reject the player orders
+    const playerOrderPromises = playerOrders.map(async (order) => {
+      await this.playerOrderService.updatePlayerOrder({
+        where: { id: order.id },
+        data: { orderStatus: OrderStatus.REJECTED },
+      });
+    });
+    //increment the term of the contracts
+    const incrementContractPromises = openContracts.map(async (contract) => {
+      await this.optionContractService.updateOptionContract({
+        where: { id: contract.id },
+        data: { currentTerm: contract.currentTerm + 1 },
+      });
+    });
+  }
+
+  async determinePriorityOrderBasedOnNetWorth(phase: Phase) {
+    //get game turn
+    const gameTurn = await this.gameTurnService.getCurrentTurn(phase.gameId);
+    if (!gameTurn) {
+      throw new Error('Game turn not found');
+    }
+    //if current turn is 1, return
+    if (gameTurn?.turn === 1) {
+      return;
+    }
+    //get players
+    const players = await this.playersService.playersWithShares({
+      gameId: phase.gameId,
+    });
+    //calculate net worth by iterating over shares and adding cash on hand
+    const netWorths = players.map((player) => {
+      const totalSharesValue = player.Share.reduce((acc, share) => {
+        return acc + share.price;
+      }, 0);
+      return {
+        playerId: player.id,
+        netWorth: player.cashOnHand + totalSharesValue,
+      };
+    });
+    //create priority player order by ASCENDING net worth
+    const priorityPlayerOrder = netWorths.sort(
+      (a, b) => a.netWorth - b.netWorth,
+    );
+    //create player priority for the turn
+    const playerPriority = priorityPlayerOrder.map((playerPrority, index) => {
+      return {
+        playerId: playerPrority.playerId,
+        priority: index + 1,
+        gameTurnId: phase.gameTurnId,
+      };
+    });
+    await this.playerPriorityService.createManyPlayerPriorities(playerPriority);
   }
 
   getStrikePrice(
@@ -240,26 +331,32 @@ export class GameManagementService {
     const volatility = sectorVolatility[sector] || 0;
 
     // Calculate the premium increment factor based on interest rate and volatility
-    const premiumIncrementFactor = 1 + interestRate / 100 + volatility;
+    const premiumIncrementFactor = 1 + interestRate + volatility;
 
     // Calculate the strike price
     const strikePrice = currentPrice * premiumIncrementFactor;
 
-    return strikePrice;
+    //round up as int
+    return Math.ceil(strikePrice);
   }
 
   calculatePremium(
     currentPrice: number,
     term: number,
     shareCount: number,
+    sectorName: SectorName,
   ): number {
     // Get the interest rate for the term
     const interestRate = interestRatesByTerm[term] || 0;
 
     // Calculate the premium based on the current price, interest rate, and share count
-    const premium = currentPrice * (1 + interestRate / 100) * shareCount;
+    const premium =
+      currentPrice *
+      (interestRate + sectorVolatility[sectorName] / 2) *
+      shareCount;
 
-    return premium;
+    //round up
+    return Math.ceil(premium);
   }
 
   createOptionContract(
@@ -287,9 +384,9 @@ export class GameManagementService {
     const shareCounts = [
       { shareCount: 3, stepBonus: 1 },
       { shareCount: 5, stepBonus: 1 },
-      { shareCount: 7, stepBonus: 2 },
+      { shareCount: 7, stepBonus: 1 },
       { shareCount: 10, stepBonus: 2 },
-      { shareCount: 12, stepBonus: 3 },
+      { shareCount: 12, stepBonus: 2 },
     ];
     const shareCountData =
       shareCounts[Math.floor(Math.random() * shareCounts.length)];
@@ -297,6 +394,7 @@ export class GameManagementService {
       randomCompany.currentStockPrice,
       term,
       shareCountData.shareCount,
+      randomCompany.Sector.sectorName,
     );
     const stepBonus = shareCountData.stepBonus;
     return {
@@ -320,28 +418,28 @@ export class GameManagementService {
       await this.optionContractService.listOptionContracts({
         where: {
           gameId: phase.gameId,
-          OR: [
-            { contractState: ContractState.FOR_SALE },
-            { contractState: ContractState.QUEUED },
-          ],
+          contractState: ContractState.FOR_SALE,
         },
       });
 
     // Generate new option contracts if none exist
     if (optionContracts.length === 0) {
-      await this.createInitialOptionContracts(phase.gameId, companies);
+      await this.fillOptionContracts(phase.gameId, companies);
     } else {
-      // Update existing option contracts and add a new queued contract
-      await this.updateExistingOptionContracts(optionContracts);
-      await this.addNewQueuedOptionContract(phase.gameId, companies);
+      //set all option contracts to be discarded
+      await this.optionContractService.updateManyOptionContracts({
+        where: {
+          gameId: phase.gameId,
+          contractState: ContractState.FOR_SALE,
+        },
+        data: { contractState: ContractState.DISCARDED },
+      });
+      await this.fillOptionContracts(phase.gameId, companies);
     }
   }
 
   // Function to create initial option contracts
-  async createInitialOptionContracts(
-    gameId: string,
-    companies: CompanyWithSector[],
-  ) {
+  async fillOptionContracts(gameId: string, companies: CompanyWithSector[]) {
     const optionContractsToAdd = [];
     for (let i = 0; i < OPTION_CONTRACT_ACTIVE_COUNT; i++) {
       //pick a random company
@@ -896,7 +994,7 @@ export class GameManagementService {
         }
         this.gameLogService.createGameLog({
           game: { connect: { id: phase.gameId } },
-          content: `Company ${company.name} has retained ${moneyFromBank}.`,
+          content: `Company ${company.name} has retained $${moneyFromBank}.`,
         });
       }
 
@@ -1079,13 +1177,13 @@ export class GameManagementService {
     if (!game) {
       throw new Error('Game not found');
     }
-    //increase the stock price by the company by 2
+    //increase the stock price by the company by 1
     await this.stockHistoryService.moveStockPriceUp(
       company.gameId,
       company.id,
       game.currentPhaseId || '',
       company.currentStockPrice,
-      2,
+      1,
       StockAction.RESEARCH_EFFECT,
     );
   }
@@ -1473,11 +1571,13 @@ export class GameManagementService {
 
     for (const result of productionResults) {
       const company = result.Company;
-      const revenueDistribution = result.revenueDistribution;
+      let revenueDistribution = result.revenueDistribution;
 
       if (!revenueDistribution) {
-        console.error('Revenue distribution not found');
-        continue;
+        console.error(
+          'Revenue distribution not found, setting to default RETAINED',
+        );
+        revenueDistribution = RevenueDistribution.RETAINED;
       }
 
       const revenue = result.revenue;
@@ -1563,6 +1663,12 @@ export class GameManagementService {
    * @returns
    */
   async resolveOperatingProductionVotes(phase: Phase) {
+    const game = await this.gamesService.game({ id: phase.gameId });
+    if (!game) {
+      console.error('Game not found');
+      return;
+    }
+
     const operatingRound =
       await this.operatingRoundService.operatingRoundWithRevenueDistributionVotes(
         {
@@ -1594,7 +1700,7 @@ export class GameManagementService {
       );
 
     if (!groupedVotes) {
-      console.error('No grouped votes not found');
+      console.error('No grouped votes found');
       return;
     }
 
@@ -1616,10 +1722,34 @@ export class GameManagementService {
 
       // Get the option with the most votes
       const maxVotes = Math.max(...Object.values(voteCount));
-      const maxVote = Object.keys(voteCount).find(
+
+      // Get the options that have the max vote count
+      const maxVoteOptions = Object.keys(voteCount).filter(
         (key) => voteCount[key] === maxVotes,
       );
-      //TODO: How do we resolve ties?
+
+      // Get player priorities
+      const playerPriorities =
+        await this.playerPriorityService.listPlayerPriorities({
+          where: { gameTurnId: game.currentTurn },
+        });
+
+      // Sort player priorities by priority (lower number means higher priority)
+      playerPriorities.sort((a, b) => a.priority - b.priority);
+
+      // Find the vote option with the highest player priority
+      let maxVote: string | null = null;
+      for (const player of playerPriorities) {
+        const playerVote = votes.find(
+          (vote) =>
+            vote.playerId === player.playerId &&
+            maxVoteOptions.includes(vote.revenueDistribution),
+        );
+        if (playerVote) {
+          maxVote = playerVote.revenueDistribution;
+          break;
+        }
+      }
 
       if (maxVote) {
         productionResultsUpdates.push({
@@ -1647,16 +1777,38 @@ export class GameManagementService {
     }
   }
 
+  async retry<T>(fn: () => Promise<T>, retries: number = 3): Promise<T> {
+    for (let i = 0; i < retries; i++) {
+      try {
+        return await fn();
+      } catch (error) {
+        if (i === retries - 1) {
+          throw error;
+        }
+      }
+    }
+    throw new Error('Exceeded maximum retries');
+  }
+
+  async processBatch(batch: Array<() => Promise<any>>): Promise<void> {
+    await Promise.all(batch.map((fn) => this.retry(fn)));
+  }
+
   /**
    * Determine supply and demand difference, award bonuses and penalties.
    * Determine company operations revenue.
    * Calculate the "throughput" by finding the diff between the supply and demand.
-   * If a company has a throughput of 0, it is considered to have met optimal efficieny
+   * If a company has a throughput of 0, it is considered to have met optimal efficiency
    * and gets a prestige token and also benefits the entire sector.
    * @param phase
    * @returns
    */
   async resolveOperatingProduction(phase: Phase) {
+    const game = await this.gamesService.game({ id: phase.gameId });
+    if (!game) {
+      throw new Error('Game not found');
+    }
+
     let companies = await this.companyService.companiesWithSector({
       where: { gameId: phase.gameId, status: CompanyStatus.ACTIVE },
     });
@@ -1664,13 +1816,9 @@ export class GameManagementService {
       throw new Error('Companies not found');
     }
 
-    //reduce company cash on hand by operating fees
-    const companyCashOnHandUpdates: {
-      id: string;
-      cashOnHand: number;
-      status: CompanyStatus;
-    }[] = companies.map((company) => {
-      //if company cannot afford to pay operating costs, it goes insolvent
+    // Reduce company cash on hand by operating fees
+    const companyCashOnHandUpdates = companies.map((company) => {
+      // If company cannot afford to pay operating costs, it goes insolvent
       if (
         company.cashOnHand < CompanyTierData[company.companyTier].operatingCosts
       ) {
@@ -1696,7 +1844,8 @@ export class GameManagementService {
         status: CompanyStatus.ACTIVE,
       };
     });
-    //update companies
+
+    // Update companies
     await Promise.all(
       companyCashOnHandUpdates.map((update) =>
         this.companyService.updateCompany({
@@ -1706,7 +1855,7 @@ export class GameManagementService {
       ),
     );
 
-    //filter out bankrupt companies
+    // Filter out bankrupt companies
     companies = companies.filter(
       (company) => company.status === CompanyStatus.ACTIVE,
     );
@@ -1738,6 +1887,7 @@ export class GameManagementService {
     }[] = [];
     const sectorConsumersUpdates: { id: string; consumers: number }[] = [];
 
+    let globalConsumers = game.consumerPoolNumber;
     // Iterate through each sector and the companies inside them
     for (const [sectorId, sectorCompanies] of Object.entries(
       groupedCompanies,
@@ -1762,7 +1912,7 @@ export class GameManagementService {
         console.log('Throughput:', throughput, company.name, company);
         // Consult throughput score to see reward or penalty.
         const throughputOutcome = throughputRewardOrPenalty(throughput);
-        //subtract one from demand score of company
+        // Subtract one from demand score of company
         const companyUpdate = {
           id: company.id,
           demandScore: Math.max(company.demandScore - 1, 0),
@@ -1799,16 +1949,17 @@ export class GameManagementService {
           calculateCompanySupply(company.supplyBase, company.supplyMax),
           company.demandScore + company.Sector.demand,
         );
-        //is there enough consumers to buy all the supply?
-        // consumers are 1:1 with units sold, TODO: We may want to allow
+        // Is there enough consumers to buy all the supply?
+        // Consumers are 1:1 with units sold, TODO: We may want to allow
         // this ratio to be different at some point, perhaps even by sector
         if (unitsSold > consumers) {
           unitsSold = consumers;
         }
         const revenue = company.unitPrice * unitsSold;
-        //update consumers
+        // Update consumers
         consumers -= unitsSold;
-        //update sector consumers
+        globalConsumers += unitsSold;
+        // Update sector consumers
         sectorConsumersUpdates.push({
           id: sectorId,
           consumers,
@@ -1825,10 +1976,9 @@ export class GameManagementService {
       }
     }
 
-    // Perform bulk updates
-    await Promise.all(
-      [
-        ...companyUpdates.map((update) =>
+    const allUpdates = [
+      ...companyUpdates.map(
+        (update) => () =>
           this.prisma.company.update({
             where: { id: update.id },
             data: {
@@ -1836,33 +1986,46 @@ export class GameManagementService {
               demandScore: update.demandScore,
             },
           }),
-        ),
+      ),
+      () =>
         this.productionResultService.createManyProductionResults(
           productionResults,
         ),
-        ...stockPenalties.map(async (penalty) => {
-          const newHistory = await this.stockHistoryService.moveStockPriceDown(
-            penalty.gameId,
-            penalty.companyId,
-            penalty.phaseId,
-            penalty.currentStockPrice,
-            penalty.steps,
-            StockAction.PRODUCTION,
-          );
-          return this.playerOrderService.triggerLimitOrdersFilled(
-            penalty.currentStockPrice,
-            newHistory.price,
-            penalty.companyId,
-          );
-        }),
-        ...sectorConsumersUpdates.map((update) =>
+      ...stockPenalties.map((penalty) => async () => {
+        const newHistory = await this.stockHistoryService.moveStockPriceDown(
+          penalty.gameId,
+          penalty.companyId,
+          penalty.phaseId,
+          penalty.currentStockPrice,
+          penalty.steps,
+          StockAction.PRODUCTION,
+        );
+        return this.playerOrderService.triggerLimitOrdersFilled(
+          penalty.currentStockPrice,
+          newHistory.price,
+          penalty.companyId,
+        );
+      }),
+      ...sectorConsumersUpdates.map(
+        (update) => () =>
           this.prisma.sector.update({
             where: { id: update.id },
             data: { consumers: update.consumers },
           }),
-        ),
-      ].filter(Boolean),
-    );
+      ),
+      () =>
+        this.gamesService.updateGame({
+          where: { id: phase.gameId },
+          data: { consumerPoolNumber: globalConsumers },
+        }),
+    ].filter(Boolean);
+
+    const BATCH_SIZE = 4;
+
+    for (let i = 0; i < allUpdates.length; i += BATCH_SIZE) {
+      const batch = allUpdates.slice(i, i + BATCH_SIZE);
+      await this.processBatch(batch);
+    }
   }
 
   async createManyProductionResults(
@@ -2038,6 +2201,7 @@ export class GameManagementService {
             (order) => order.sectorId === sector.id,
           )?.count || 0) * MARKETING_CONSUMER_BONUS;
       }
+      console.log('marketingBonus:', marketingBonus);
       consumersMovedCounter += marketingBonus;
 
       const consumersToAdd = Math.min(game.consumerPoolNumber, marketingBonus);
@@ -2421,6 +2585,7 @@ export class GameManagementService {
     influenceRoundId?: number;
     companyId?: string;
   }) {
+    console.log('infleunce round id', phaseName, influenceRoundId, roundType);
     const game = await this.gamesService.getGameState(gameId);
 
     if (!game) {
@@ -2744,7 +2909,6 @@ export class GameManagementService {
       }
     });
   }
-
   async openLimitOrders(phase: Phase) {
     if (phase.stockRoundId) {
       const playerOrders: PlayerOrderWithPlayerCompany[] =
@@ -2769,6 +2933,176 @@ export class GameManagementService {
           });
         }),
       );
+    }
+  }
+
+  async openOptionsOrders(phase: Phase) {
+    if (phase.stockRoundId) {
+      const playerOrders: PlayerOrderWithPlayerCompany[] =
+        await this.playerOrderService.playerOrdersWithPlayerCompany({
+          where: {
+            stockRoundId: phase.stockRoundId,
+            orderType: OrderType.OPTION,
+            orderStatus: OrderStatus.PENDING,
+          },
+        });
+      if (!playerOrders) {
+        throw new Error('Stock round not found');
+      }
+      //get game
+      const game = await this.gamesService.getGameState(phase.gameId);
+      if (!game) {
+        throw new Error('Game not found');
+      }
+      //group player options order by contract id
+      const groupedOrders: { [key: number]: PlayerOrderWithPlayerCompany[] } =
+        playerOrders.reduce(
+          (acc, order) => {
+            if (!order.optionContractId) {
+              throw new Error('Option contract not found');
+            }
+            if (order.optionContractId in acc) {
+              acc[order.optionContractId].push(order);
+            } else {
+              acc[order.optionContractId] = [order];
+            }
+            return acc;
+          },
+          {} as { [key: number]: PlayerOrderWithPlayerCompany[] },
+        );
+
+      //iterate over grouped orders and resolve them
+      await Promise.all(
+        Object.values(groupedOrders).map(async (orders) => {
+          //if distribution strategy is bid, prioritize conflicting orders by value
+          if (game.distributionStrategy === DistributionStrategy.BID_PRIORITY) {
+            const playerIds = orders.map((order) => order.playerId);
+            // Get player priorities
+            const playerPriorities = await this.fetchPlayerPriorities(
+              playerIds,
+              this.prisma,
+            );
+            const sortedByBidValue = this.sortByBidValue(
+              orders,
+              playerPriorities,
+            );
+            //reject all orders except the first
+            await Promise.all(
+              sortedByBidValue.slice(1).map(async (order) => {
+                await this.prisma.playerOrder.update({
+                  where: { id: order.id },
+                  data: {
+                    orderStatus: OrderStatus.REJECTED,
+                  },
+                });
+              }),
+            );
+            //update the first order to be FILLED
+            const playerOrderResolved = await this.prisma.playerOrder.update({
+              where: { id: sortedByBidValue[0].id },
+              data: {
+                orderStatus: OrderStatus.OPEN,
+              },
+            });
+            //update the contract
+            const optionContractPurchased =
+              await this.optionContractService.updateOptionContract({
+                where: { id: sortedByBidValue[0].optionContractId || 0 },
+                data: {
+                  contractState: ContractState.PURCHASED,
+                  currentPremium: sortedByBidValue[0].value || 0,
+                },
+              });
+            //remove premium from players cash on hand
+            this.playerRemoveMoney(
+              phase.gameId,
+              playerOrderResolved.playerId,
+              playerOrderResolved.value || 0,
+            );
+          }
+        }),
+      );
+    }
+  }
+
+  /**
+   * Cycle the option contract tableau when a contract is purchased.
+   * Purchasing a contract removes it from the tableau and "pushes up" any contracts behind it.
+   * A new contract is generated to fill the queued space.
+   *
+   * @param gameId
+   * @param optionContract
+   */
+  async cycleOptionContractsOnTableau(
+    gameId: string,
+    optionContract: OptionContract,
+  ) {
+    // Get companies
+    const companies = await this.companyService.companiesWithSector({
+      where: { gameId },
+    });
+    if (!companies) {
+      throw new Error('Companies not found');
+    }
+
+    const optionContracts =
+      await this.optionContractService.listOptionContracts({
+        where: {
+          gameId,
+          OR: [
+            { contractState: ContractState.FOR_SALE },
+            { contractState: ContractState.QUEUED },
+          ],
+        },
+      });
+    if (!optionContracts) {
+      throw new Error('Option contracts not found');
+    }
+
+    // Sort option contracts by tableau slot
+    const sortedContracts = optionContracts.sort(
+      (a, b) => (a.tableauSlot || 0) - (b.tableauSlot || 0),
+    );
+
+    // Find the index of the purchased contract
+    const purchasedContractIndex = sortedContracts.findIndex(
+      (contract) => contract.id === optionContract.id,
+    );
+
+    // Iterate through each contract in tableau and update slot, if it is queued, switch it to for sale
+    const updatePromises = sortedContracts.map((contract, index) => {
+      if (index < purchasedContractIndex) {
+        return this.optionContractService.updateOptionContract({
+          where: { id: contract.id },
+          data: { tableauSlot: index },
+        });
+      } else if (index === purchasedContractIndex) {
+        return this.optionContractService.updateOptionContract({
+          where: { id: contract.id },
+          data: { tableauSlot: null },
+        });
+      } else {
+        return this.optionContractService.updateOptionContract({
+          where: { id: contract.id },
+          data: {
+            tableauSlot: index - 1,
+            contractState: ContractState.FOR_SALE,
+          },
+        });
+      }
+    });
+
+    try {
+      await Promise.all(updatePromises);
+    } catch (error) {
+      console.error('Error cycling option contracts', error);
+    }
+
+    // Create a new contract for the queued slot
+    try {
+      await this.addNewQueuedOptionContract(gameId, companies);
+    } catch (error) {
+      console.error('Error adding new queued option contract', error);
     }
   }
 
@@ -3267,6 +3601,9 @@ export class GameManagementService {
       if (update.data.location === ShareLocation.PLAYER) {
         return acc + 1;
       }
+      if (update.data.location === ShareLocation.OPEN_MARKET) {
+        return acc - 1;
+      }
       return acc;
     }, 0);
   }
@@ -3288,11 +3625,17 @@ export class GameManagementService {
         });
       } else {
         //const player share total
+        console.log('order playerShareTotal', order);
         const playerShareTotal = order.Company.Share.filter(
           (share) =>
             share.location === ShareLocation.PLAYER &&
             share.playerId === order.playerId,
         ).length;
+        console.log(
+          'share order filled total',
+          this.getCurrentShareOrderFilledTotalPlayer(shareUpdates),
+        );
+        console.log('player share total', playerShareTotal);
         if (
           order.quantity +
             this.getCurrentShareOrderFilledTotalPlayer(shareUpdates) +
@@ -3303,6 +3646,10 @@ export class GameManagementService {
             where: { id: order.id },
             data: { orderStatus: OrderStatus.REJECTED },
           });
+          gameLogEntries.push({
+            game: { connect: { id: order.gameId } },
+            content: `Player ${order.Player.nickname} has exceeded the maximum share percentage of ${MAX_SHARE_PERCENTAGE}% for ${order.Company.name}`,
+          });
         } else {
           const sharesToGive = order.quantity || 0;
           if (sharesToGive > remainingShares) {
@@ -3311,14 +3658,16 @@ export class GameManagementService {
               where: { id: order.id },
               data: { orderStatus: OrderStatus.REJECTED },
             });
+            gameLogEntries.push({
+              game: { connect: { id: order.gameId } },
+              content: `Player ${order.Player.nickname} was not able to purchase shares of ${order.Company.name} from ${order.location} due to their not being enough shares available.`,
+            });
           } else {
             const shares = allAvailableShares.slice(
               currentShareIndex,
               currentShareIndex + sharesToGive,
             );
             currentShareIndex += sharesToGive;
-            console.log('all available shares', allAvailableShares);
-            console.log('shares to take', shares);
             shareUpdates.push({
               where: { id: { in: shares.map((share) => share.id) } },
               data: {
@@ -3845,8 +4194,8 @@ export class GameManagementService {
     gameLogEntries: any[],
   ) {
     try {
-      const BATCH_SIZE = 5;
-
+      const BATCH_SIZE = 4;
+      const MAX_RETRIES = 3;
       for (let i = 0; i < shareUpdates.length; i += BATCH_SIZE) {
         const batch = shareUpdates.slice(i, i + BATCH_SIZE);
         await prisma.$transaction(
@@ -3856,18 +4205,42 @@ export class GameManagementService {
 
       for (let i = 0; i < playerCashUpdates.length; i += BATCH_SIZE) {
         const batch = playerCashUpdates.slice(i, i + BATCH_SIZE);
-        await prisma.$transaction(
-          batch.map((update) =>
-            prisma.player.update({
-              where: { id: update.playerId },
-              data: {
-                cashOnHand: {
-                  decrement: update.decrement,
-                },
-              },
-            }),
-          ),
-        );
+        let attempts = 0;
+        let success = false;
+
+        while (!success && attempts < MAX_RETRIES) {
+          try {
+            await prisma.$transaction(
+              batch.map((update) =>
+                prisma.player.update({
+                  where: { id: update.playerId },
+                  data: {
+                    cashOnHand: {
+                      decrement: update.decrement,
+                    },
+                  },
+                }),
+              ),
+            );
+            success = true; // Transaction succeeded
+          } catch (error) {
+            if (error.code === '40P01') {
+              // Deadlock detected
+              attempts++;
+              console.warn(
+                `Deadlock detected. Retrying attempt ${attempts}/${MAX_RETRIES}`,
+              );
+            } else {
+              throw error; // Other errors should be thrown
+            }
+          }
+        }
+
+        if (!success) {
+          throw new Error(
+            'Failed to update player cash due to repeated deadlocks',
+          );
+        }
       }
 
       for (let i = 0; i < orderStatusUpdates.length; i += BATCH_SIZE) {
@@ -3988,10 +4361,50 @@ export class GameManagementService {
       case PhaseName.STOCK_OPEN_LIMIT_ORDERS:
         return this.limitOrdersPending(currentPhase?.stockRoundId || 0);
       case PhaseName.STOCK_RESOLVE_OPTION_ORDER:
+        return this.anyOptionOrdersExpired(currentPhase?.gameId || '');
+      case PhaseName.STOCK_RESOLVE_PENDING_OPTION_ORDER:
         return this.optionOrdersPending(currentPhase?.stockRoundId || 0);
+      case PhaseName.STOCK_ACTION_OPTION_ORDER:
+        return this.anyOptionOrdersToBeExercised(currentPhase?.gameId || '');
       default:
         return true;
     }
+  }
+
+  async anyOptionOrdersExpired(gameId: string) {
+    const playerOrders =
+      await this.playerOrderService.playerOrdersWithCompanyAndOptionContract({
+        where: {
+          gameId,
+          orderType: OrderType.OPTION,
+          orderStatus: OrderStatus.OPEN,
+        },
+      });
+    return (
+      playerOrders.filter(
+        (order) =>
+          (order.OptionContract?.currentTerm || 0) >=
+          (order.OptionContract?.term || 0),
+      ).length > 0
+    );
+  }
+
+  async anyOptionOrdersToBeExercised(gameId: string) {
+    const playerOrders =
+      await this.playerOrderService.playerOrdersWithCompanyAndOptionContract({
+        where: {
+          gameId,
+          orderType: OrderType.OPTION,
+          orderStatus: OrderStatus.OPEN,
+        },
+      });
+    return (
+      playerOrders.filter(
+        (order) =>
+          order.Company.currentStockPrice >=
+          (order.OptionContract?.strikePrice || 0),
+      ).length > 0
+    );
   }
 
   async optionOrdersPending(stockRoundId: number) {

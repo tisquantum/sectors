@@ -17,6 +17,7 @@ import {
   PlayerOrderAllRelations,
   PhaseWithStockRound,
   PlayerOrderWithPlayerRevealed,
+  PlayerOrderWithCompanyAndOptionContract,
 } from '@server/prisma/prisma.types';
 import { getPseudoSpend } from '@server/data/helpers';
 import { MAX_SHARE_PERCENTAGE } from '@server/data/constants';
@@ -70,6 +71,27 @@ export class PlayerOrderService {
       orderBy,
       include: {
         Company: true,
+      },
+    });
+  }
+
+  async playerOrdersWithCompanyAndOptionContract(params: {
+    skip?: number;
+    take?: number;
+    cursor?: Prisma.PlayerOrderWhereUniqueInput;
+    where?: Prisma.PlayerOrderWhereInput;
+    orderBy?: Prisma.PlayerOrderOrderByWithRelationInput;
+  }): Promise<PlayerOrderWithCompanyAndOptionContract[]> {
+    const { skip, take, cursor, where, orderBy } = params;
+    return this.prisma.playerOrder.findMany({
+      skip,
+      take,
+      cursor,
+      where,
+      orderBy,
+      include: {
+        Company: true,
+        OptionContract: true,
       },
     });
   }
@@ -294,22 +316,22 @@ export class PlayerOrderService {
           throw new Error('Player does not have enough cash to place order');
         }
 
-        //get company with shares
-        const company = await this.prisma.company.findUnique({
-          where: { id: companyId },
-          include: { Share: true },
-        });
-        const playerSharesOfCompany = player.Share.filter(
-          (share) => share.companyId === companyId,
-        );
-        if (
-          playerSharesOfCompany.length + data.quantity! >
-          company?.Share.length! * (MAX_SHARE_PERCENTAGE / 100)
-        ) {
-          throw new Error(
-            'This buy would exceed the maximum share percentage.',
-          );
-        }
+        //get company with shares TODO: Leaving this open for now, will reject during resolution instead so player can combo.
+        // const company = await this.prisma.company.findUnique({
+        //   where: { id: companyId },
+        //   include: { Share: true },
+        // });
+        // const playerSharesOfCompany = player.Share.filter(
+        //   (share) => share.companyId === companyId,
+        // );
+        // if (
+        //   playerSharesOfCompany.length + data.quantity! >
+        //   company?.Share.length! * (MAX_SHARE_PERCENTAGE / 100)
+        // ) {
+        //   throw new Error(
+        //     'This buy would exceed the maximum share percentage.',
+        //   );
+        // }
       }
     }
 

@@ -50,19 +50,11 @@ export default (trpc: TrpcService, ctx: Context) =>
           term: z.number(),
           shareCount: z.number(),
           stepBonus: z.number().optional(),
-          playerOrderId: z.number().optional(),
         }),
       )
       .mutation(async ({ input }) => {
-        const { playerOrderId, ...rest } = input;
-        const data = {
-          ...rest,
-          PlayerOrder: playerOrderId
-            ? { connect: { id: playerOrderId } }
-            : undefined,
-        };
         return ctx.optionContractService.createOptionContract(
-          data as Prisma.OptionContractCreateInput,
+          input as Prisma.OptionContractCreateInput,
         );
       }),
 

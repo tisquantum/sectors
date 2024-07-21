@@ -55,12 +55,12 @@ export function determineNextGamePhase(
   }
   if (phaseName === PhaseName.INFLUENCE_BID_RESOLVE) {
     return {
-      phaseName: PhaseName.STOCK_MEET,
+      phaseName: PhaseName.STOCK_RESOLVE_LIMIT_ORDER,
       roundType: RoundType.STOCK,
     };
   }
   switch (phaseName) {
-    case PhaseName.STOCK_MEET:
+    case PhaseName.START_TURN:
       return {
         phaseName: PhaseName.STOCK_RESOLVE_LIMIT_ORDER,
         roundType: RoundType.STOCK,
@@ -114,6 +114,16 @@ export function determineNextGamePhase(
       };
     case PhaseName.STOCK_RESOLVE_OPTION_ORDER:
       return {
+        phaseName: PhaseName.STOCK_RESOLVE_PENDING_OPTION_ORDER,
+        roundType: RoundType.STOCK,
+      };
+    case PhaseName.STOCK_RESOLVE_PENDING_OPTION_ORDER:
+      return {
+        phaseName: PhaseName.STOCK_ACTION_OPTION_ORDER,
+        roundType: RoundType.STOCK,
+      };
+    case PhaseName.STOCK_ACTION_OPTION_ORDER:
+      return {
         phaseName: PhaseName.STOCK_OPEN_LIMIT_ORDERS,
         roundType: RoundType.STOCK,
       };
@@ -125,11 +135,6 @@ export function determineNextGamePhase(
         roundType: RoundType.STOCK,
       };
     case PhaseName.STOCK_RESULTS_OVERVIEW:
-      return {
-        phaseName: PhaseName.OPERATING_MEET,
-        roundType: RoundType.OPERATING,
-      };
-    case PhaseName.OPERATING_MEET:
       return {
         phaseName: PhaseName.OPERATING_PRODUCTION,
         roundType: RoundType.OPERATING,
@@ -183,11 +188,14 @@ export function determineNextGamePhase(
       };
     case PhaseName.END_TURN:
       return {
-        phaseName: PhaseName.STOCK_MEET,
-        roundType: RoundType.STOCK,
+        phaseName: PhaseName.START_TURN,
+        roundType: RoundType.GAME_UPKEEP,
       };
     default:
-      return { phaseName: PhaseName.STOCK_MEET, roundType: RoundType.STOCK };
+      return {
+        phaseName: PhaseName.START_TURN,
+        roundType: RoundType.GAME_UPKEEP,
+      };
   }
 }
 
@@ -568,21 +576,23 @@ export function createSeededResearchCards(seed: string): Card[] {
 function descriptionForEffect(effect: ResearchCardEffect): string {
   switch (effect) {
     case ResearchCardEffect.CLINICAL_TRIAL:
-      return 'This research has yielded a breakthrough in clinical trials.';
+      return 'This research has yielded a breakthrough in clinical trials. Move stock price up 1 step.';
     case ResearchCardEffect.ARTIFICIAL_INTELLIGENCE:
-      return 'This research has yielded a breakthrough in artificial intelligence.';
+      return 'This research has yielded a breakthrough in artificial intelligence.  Move stock price up 1 step.';
     case ResearchCardEffect.ENERGY_SAVING:
-      return 'This research has yielded a breakthrough in energy saving.';
+      return 'This research has yielded a breakthrough in energy saving.  Move stock price up 1 step.';
     case ResearchCardEffect.GLOBALIZATION:
-      return 'This research has yielded a breakthrough in globalization.';
+      return 'This research has yielded a breakthrough in globalization.  Move stock price up 1 step.';
     case ResearchCardEffect.ECOMMERCE:
-      return 'This research has yielded a breakthrough in ecommerce.';
+      return 'This research has yielded a breakthrough in ecommerce.  Move stock price up 1 step.';
     case ResearchCardEffect.ROBOTICS:
-      return 'This research has yielded a breakthrough in robotics.';
+      return 'This research has yielded a breakthrough in robotics.  Move stock price up 1 step.';
+    case ResearchCardEffect.NEW_ALLOY:
+      return 'This research has yielded a breakthrough in a new alloy.  Move stock price up 1 step.';
     case ResearchCardEffect.GOVERNMENT_GRANT:
       return `The company has received a government grant, receive ${GOVERNMENT_GRANT_AMOUNT}.`;
     case ResearchCardEffect.RENEWABLE_ENERGY:
-      return 'This research has yielded a breakthrough in renewable energy.';
+      return 'This research has yielded a breakthrough in renewable energy.  Move stock price up 1 step.';
     case ResearchCardEffect.QUALITY_CONTROL:
       return 'The company has achieved a breakthrough in quality control, receive 1 prestige token.';
     case ResearchCardEffect.PRODUCT_DEVELOPMENT:

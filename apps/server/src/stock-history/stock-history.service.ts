@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { Prisma, StockAction, StockHistory } from '@prisma/client';
-import { getStockPriceStepsUp, getStockPriceWithStepsDown } from '@server/data/constants';
+import {
+  getStockPriceStepsUp,
+  getStockPriceWithStepsDown,
+} from '@server/data/constants';
 import { Action } from 'rxjs/internal/scheduler/Action';
 
 @Injectable()
@@ -33,13 +36,17 @@ export class StockHistoryService {
     });
   }
 
-  async createStockHistory(data: Prisma.StockHistoryCreateInput): Promise<StockHistory> {
+  async createStockHistory(
+    data: Prisma.StockHistoryCreateInput,
+  ): Promise<StockHistory> {
     return this.prisma.stockHistory.create({
       data,
     });
   }
 
-  async createManyStockHistories(data: Prisma.StockHistoryCreateManyInput[]): Promise<Prisma.BatchPayload> {
+  async createManyStockHistories(
+    data: Prisma.StockHistoryCreateManyInput[],
+  ): Promise<Prisma.BatchPayload> {
     return this.prisma.stockHistory.createMany({
       data,
       skipDuplicates: true,
@@ -57,13 +64,22 @@ export class StockHistoryService {
     });
   }
 
-  async deleteStockHistory(where: Prisma.StockHistoryWhereUniqueInput): Promise<StockHistory> {
+  async deleteStockHistory(
+    where: Prisma.StockHistoryWhereUniqueInput,
+  ): Promise<StockHistory> {
     return this.prisma.stockHistory.delete({
       where,
     });
   }
 
-  async moveStockPriceUp(gameId: string, companyId: string, phaseId: string, currentStockPrice: number, steps: number, action: StockAction): Promise<StockHistory> {
+  async moveStockPriceUp(
+    gameId: string,
+    companyId: string,
+    phaseId: string,
+    currentStockPrice: number,
+    steps: number,
+    action: StockAction,
+  ): Promise<StockHistory> {
     //get new stock price
     const newPrice = getStockPriceStepsUp(currentStockPrice, steps);
     //update company stock price
@@ -71,6 +87,12 @@ export class StockHistoryService {
       where: { id: companyId },
       data: {
         currentStockPrice: newPrice,
+      },
+    });
+    await this.prisma.gameLog.create({
+      data: {
+        gameId: gameId,
+        content: `Stock price for ${companyId} moved up by ${steps} steps`,
       },
     });
     //create new stock history
@@ -92,7 +114,14 @@ export class StockHistoryService {
     });
   }
 
-  async moveStockPriceDown(gameId: string, companyId: string, phaseId: string, currentStockPrice: number, steps: number, action: StockAction): Promise<StockHistory> {
+  async moveStockPriceDown(
+    gameId: string,
+    companyId: string,
+    phaseId: string,
+    currentStockPrice: number,
+    steps: number,
+    action: StockAction,
+  ): Promise<StockHistory> {
     //get new stock price
     const newPrice = getStockPriceWithStepsDown(currentStockPrice, steps);
     //update company stock price
@@ -100,6 +129,12 @@ export class StockHistoryService {
       where: { id: companyId },
       data: {
         currentStockPrice: newPrice,
+      },
+    });
+    await this.prisma.gameLog.create({
+      data: {
+        gameId: gameId,
+        content: `Stock price for ${companyId} moved down by ${steps} steps`,
       },
     });
     //create new stock history

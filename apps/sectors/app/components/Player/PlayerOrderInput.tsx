@@ -36,6 +36,7 @@ import {
 import { PlayerOrderWithCompany } from "@server/prisma/prisma.types";
 import { getPseudoSpend } from "@server/data/helpers";
 import Button from "@sectors/app/components/General/DebounceButton";
+import { set } from "lodash";
 
 const RiskAssessment = () => {
   return (
@@ -201,6 +202,7 @@ interface TabContentProps {
   maxValue: number;
   minValue: number;
   defaultValue?: number;
+  isBuy?: boolean;
 }
 
 const TabContentMO: React.FC<TabContentProps> = ({
@@ -212,6 +214,7 @@ const TabContentMO: React.FC<TabContentProps> = ({
   maxValue,
   minValue,
   defaultValue,
+  isBuy,
 }) => {
   const { gameState } = useGame();
   const [shareValue, setShareValue] = useState<number>(1);
@@ -229,25 +232,26 @@ const TabContentMO: React.FC<TabContentProps> = ({
         maxOrders={MAX_MARKET_ORDER}
       />
       <BuyOrSell handleSelectionIsBuy={handleSelectionIsBuy} isIpo={isIpo} />
-      {gameState.distributionStrategy == DistributionStrategy.BID_PRIORITY && (
-        <Input
-          id="moAmount"
-          type="number"
-          label="Market Order Amount"
-          placeholder="0.00"
-          labelPlacement="inside"
-          onValueChange={(value: string) => {
-            handleValueChange(Number(value));
-            setMarketOrderBidValue(Number(value));
-          }}
-          value={marketOrderBidValue.toString()}
-          startContent={
-            <div className="pointer-events-none flex items-center">
-              <span className="text-default-400 text-small">$</span>
-            </div>
-          }
-        />
-      )}
+      {gameState.distributionStrategy == DistributionStrategy.BID_PRIORITY &&
+        isBuy && (
+          <Input
+            id="moAmount"
+            type="number"
+            label="Market Order Amount"
+            placeholder="0.00"
+            labelPlacement="inside"
+            onValueChange={(value: string) => {
+              handleValueChange(Number(value));
+              setMarketOrderBidValue(Number(value));
+            }}
+            value={marketOrderBidValue.toString()}
+            startContent={
+              <div className="pointer-events-none flex items-center">
+                <span className="text-default-400 text-small">$</span>
+              </div>
+            }
+          />
+        )}
       {minValue === maxValue ? (
         <div>{minValue} Share Remaining</div>
       ) : (
@@ -518,7 +522,7 @@ const PlayerOrderInput = ({
   const currentOrderValue = calculatePseudoOrderValue({
     orderType,
     quantity: share,
-    currentStockPrice: currentOrder.currentStockPrice,
+    currentStockPrice: orderValue || currentOrder.currentStockPrice,
     premium: 0, // TODO: Fill for option orders
     isBuy,
   });
@@ -585,6 +589,7 @@ const PlayerOrderInput = ({
                     maxValue={maxValue}
                     minValue={minValue}
                     defaultValue={currentOrder.currentStockPrice}
+                    isBuy={isBuy}
                   />
                 </CardBody>
               </Card>

@@ -6,6 +6,8 @@ import {
   CardFooter,
   CardHeader,
   Divider,
+  Tab,
+  Tabs,
 } from "@nextui-org/react";
 import React, { useEffect, useState } from "react";
 import PlayerOrder from "../Player/PlayerOrder";
@@ -31,6 +33,7 @@ import CompanyInfo from "../Company/CompanyInfo";
 import Button from "@sectors/app/components/General/DebounceButton";
 import PlayerOrderInput from "../Player/PlayerOrderInput";
 import CompanyCard from "../Company/StockOrderCompanyCard";
+import Derivatives from "./Derivatives";
 
 const StockRoundOrderGrid = ({
   handleOrder,
@@ -62,14 +65,17 @@ const StockRoundOrderGrid = ({
       stockRoundId: currentPhase?.stockRoundId,
     },
   });
-  const { data: phasesOfStockRound, isLoading: isLoadingPhases } =
-    trpc.phase.listPhases.useQuery({
-      where: {
-        stockRoundId: currentPhase?.stockRoundId,
-        name: PhaseName.STOCK_ACTION_ORDER,
-      },
-      orderBy: { createdAt: "asc" },
-    });
+  const {
+    data: phasesOfStockRound,
+    isLoading: isLoadingPhases,
+    refetch: refetchPhasesOfStockRound,
+  } = trpc.phase.listPhases.useQuery({
+    where: {
+      stockRoundId: currentPhase?.stockRoundId,
+      name: PhaseName.STOCK_ACTION_ORDER,
+    },
+    orderBy: { createdAt: "asc" },
+  });
   const [showOrderInput, setShowOrderInput] = useState<string | undefined>(
     undefined
   );
@@ -86,7 +92,8 @@ const StockRoundOrderGrid = ({
   useEffect(() => {
     setIsInteractive(isCurrentPhaseInteractive(currentPhase?.name));
     refetchPlayerOrdersConcealed();
-  }, [currentPhase?.name]);
+    refetchPhasesOfStockRound();
+  }, [currentPhase?.id]);
   if (isLoadingPlayerOrdersRevealed) return <div>Loading...</div>;
   if (playerOrdersRevealed == undefined) return null;
   if (isLoading) return null;
@@ -110,36 +117,43 @@ const StockRoundOrderGrid = ({
   };
 
   return (
-    <div className="flex flex-wrap">
-      {Object.keys(companiesBySector).flatMap((sectorId) =>
-        companiesBySector[sectorId].companies.map(
-          (company: CompanyWithSector) => (
-            <div
-              key={company.id}
-              className={`z-0 p-4 flex`}
-              style={{
-                backgroundColor: sectorColors[company.Sector.name],
-              }}
-            >
-              <CompanyCard
-                company={company}
-                orders={orders.filter(
-                  (order) => order.companyId === company.id
-                )}
-                isRevealRound={isRevealRound}
-                isInteractive={isInteractive}
-                focusedOrder={focusedOrder}
-                currentPhase={currentPhase}
-                playerOrdersRevealed={playerOrdersRevealed.filter(
-                  (order) => order.companyId === company.id
-                )}
-                phasesOfStockRound={phasesOfStockRound}
-              />
-            </div>
-          )
-        )
-      )}
-    </div>
+    <Tabs>
+      <Tab key="spot-market" title="Spot Market">
+        <div className="flex flex-wrap">
+          {Object.keys(companiesBySector).flatMap((sectorId) =>
+            companiesBySector[sectorId].companies.map(
+              (company: CompanyWithSector) => (
+                <div
+                  key={company.id}
+                  className={`z-0 p-4 flex`}
+                  style={{
+                    backgroundColor: sectorColors[company.Sector.name],
+                  }}
+                >
+                  <CompanyCard
+                    company={company}
+                    orders={orders.filter(
+                      (order) => order.companyId === company.id
+                    )}
+                    isRevealRound={isRevealRound}
+                    isInteractive={isInteractive}
+                    focusedOrder={focusedOrder}
+                    currentPhase={currentPhase}
+                    playerOrdersRevealed={playerOrdersRevealed.filter(
+                      (order) => order.companyId === company.id
+                    )}
+                    phasesOfStockRound={phasesOfStockRound}
+                  />
+                </div>
+              )
+            )
+          )}
+        </div>
+      </Tab>
+      <Tab key="derivatives" title="Derivatives">
+        <Derivatives />
+      </Tab>
+    </Tabs>
   );
 };
 

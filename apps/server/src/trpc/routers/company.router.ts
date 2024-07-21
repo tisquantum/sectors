@@ -33,7 +33,16 @@ export default (trpc: TrpcService, ctx: Context) =>
         }
         return company;
       }),
-
+    getCompanyWithCards: trpc.procedure
+      .input(z.object({ id: z.string() }))
+      .query(async ({ input }) => {
+        const { id } = input;
+        const company = await ctx.companyService.companyWithCards({ id });
+        if (!company) {
+          throw new Error('Company not found');
+        }
+        return company;
+      }),
     listCompanies: trpc.procedure
       .input(
         z.object({
@@ -53,6 +62,17 @@ export default (trpc: TrpcService, ctx: Context) =>
           where,
           orderBy,
         });
+      }),
+
+    getCompanyWithSector: trpc.procedure
+      .input(z.object({ id: z.string() }))
+      .query(async ({ input }) => {
+        const { id } = input;
+        const company = await ctx.companyService.companyWithSector({ id });
+        if (!company) {
+          throw new Error('Company not found');
+        }
+        return company;
       }),
 
     listCompaniesWithSector: trpc.procedure

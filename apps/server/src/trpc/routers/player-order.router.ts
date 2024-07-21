@@ -168,6 +168,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           isSell: z.boolean().optional(),
           location: z.nativeEnum(ShareLocation),
           orderType: z.nativeEnum(OrderType),
+          contractId: z.number().optional(),
         }),
       )
       .mutation(async ({ input }) => {
@@ -179,8 +180,10 @@ export default (trpc: TrpcService, ctx: Context) =>
           playerId,
           phaseId,
           sectorId,
+          contractId,
           ...playerOrderInput
         } = input;
+        console.log('playerOrderInput', playerOrderInput);
         const data: Prisma.PlayerOrderCreateInput = {
           ...playerOrderInput,
           orderStatus: OrderStatus.PENDING,
@@ -190,6 +193,9 @@ export default (trpc: TrpcService, ctx: Context) =>
           Player: { connect: { id: playerId } },
           Phase: { connect: { id: phaseId } },
           Sector: { connect: { id: sectorId } },
+          ...(contractId && {
+            OptionContract: { connect: { id: contractId } },
+          }),
         };
         let playerOrder;
         try {

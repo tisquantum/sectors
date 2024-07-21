@@ -57,8 +57,12 @@ export function friendlyPhaseName(name: PhaseName | undefined): string {
       return "Cover Short Orders";
     case PhaseName.STOCK_RESOLVE_PENDING_SHORT_ORDER:
       return "Resolve Pending Short Orders";
+    case PhaseName.STOCK_ACTION_OPTION_ORDER:
+      return "Exercise Option Orders";
+    case PhaseName.STOCK_RESOLVE_PENDING_OPTION_ORDER:
+      return "Resolve Pending Option Orders";
     case PhaseName.STOCK_RESOLVE_OPTION_ORDER:
-      return "Purchase Option Contracts";
+      return "Resolve Expired Contracts";
     case PhaseName.STOCK_OPEN_LIMIT_ORDERS:
       return "Open Pending Limit Orders";
     case PhaseName.STOCK_RESULTS_OVERVIEW:

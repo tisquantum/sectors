@@ -22,7 +22,10 @@ import {
   StockRound,
 } from "@server/prisma/prisma.client";
 import Meeting from "../Meeting/Meeting";
-import { GameState, InfluenceRoundWithVotes } from "@server/prisma/prisma.types";
+import {
+  GameState,
+  InfluenceRoundWithVotes,
+} from "@server/prisma/prisma.types";
 import { useGame } from "./GameContext";
 import StockRoundAction from "./StockRoundAction";
 import OperatingRoundProduction from "./OperatingRoundProduction";
@@ -89,6 +92,8 @@ const Game = ({ gameId }: { gameId: string }) => {
   const renderCurrentPhase =
     currentRoundData?.phase.name === PhaseName.STOCK_MEET ? (
       <Meeting />
+    ) : currentRoundData?.phase.name === PhaseName.START_TURN ? (
+      <Meeting />
     ) : currentRoundData?.phase.name === PhaseName.STOCK_RESOLVE_LIMIT_ORDER ? (
       <PendingOrders />
     ) : currentRoundData?.phase.name === PhaseName.STOCK_ACTION_ORDER ? (
@@ -108,6 +113,9 @@ const Game = ({ gameId }: { gameId: string }) => {
       <PendingOrders isResolving={true} />
     ) : currentRoundData?.phase.name ===
       PhaseName.STOCK_RESOLVE_OPTION_ORDER ? (
+      <PendingOrders isResolving={true} />
+    ) : currentRoundData?.phase.name ===
+      PhaseName.STOCK_RESOLVE_PENDING_OPTION_ORDER ? (
       <PendingOrders isResolving={true} />
     ) : currentRoundData?.phase.name === PhaseName.STOCK_OPEN_LIMIT_ORDERS ? (
       <PendingOrders isResolving={true} />

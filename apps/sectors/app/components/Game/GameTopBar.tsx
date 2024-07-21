@@ -53,7 +53,7 @@ const GameTopBar = ({
     if (!currentPhase) return;
 
     let nextPhase;
-    if (currentPhase.name === PhaseName.OPERATING_MEET) {
+    if (currentPhase.name === PhaseName.STOCK_RESULTS_OVERVIEW) {
       if (
         gameState.Company.every(
           (company) => company.status !== CompanyStatus.ACTIVE
@@ -64,7 +64,7 @@ const GameTopBar = ({
     }
 
     nextPhase = determineNextGamePhase(
-      currentPhase?.name ?? PhaseName.STOCK_MEET,
+      currentPhase?.name ?? PhaseName.START_TURN,
       {
         stockActionSubRound: gameState.StockRound.find(
           (stockRound) => stockRound.id === currentPhase?.stockRoundId
@@ -124,13 +124,15 @@ const GameTopBar = ({
     } else {
       companyId = currentPhase?.companyId;
     }
-
+    console.log('next phase', nextPhase);
+    console.log('influence round id', currentPhase?.influenceRoundId);
     useNextPhaseMutation.mutate({
       gameId,
       phaseName: nextPhase.phaseName,
       roundType: nextPhase.roundType,
       stockRoundId: currentPhase?.stockRoundId ?? 0,
       operatingRoundId: currentPhase?.operatingRoundId ?? 0,
+      influenceRoundId: currentPhase?.influenceRoundId ?? 0,
       companyId: companyId || undefined,
     });
   };

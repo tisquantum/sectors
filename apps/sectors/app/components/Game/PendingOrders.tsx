@@ -32,43 +32,37 @@ import OrderChipWithPlayer from "./OrderChipWithPlayer";
 import { RiCloseCircleFill } from "@remixicon/react";
 import { flushAllTraces } from "next/dist/trace";
 import PlayerAvatar from "../Player/PlayerAvatar";
+import OptionContract from "./OptionContract";
 interface GroupedOrders {
   [key: string]: PlayerOrderAllRelations[];
 }
 
 const OpenOptionContracts = () => {
   const { gameId } = useGame();
-  const { data: openOptionContracts, isLoading} = trpc.optionContract.listOptionContracts.useQuery({
-    where: {
-      Game: {
-        id: gameId,
+  const { data: openOptionContracts, isLoading } =
+    trpc.optionContract.listOptionContracts.useQuery({
+      where: {
+        Game: {
+          id: gameId,
+        },
+        OR: [
+          { contractState: ContractState.FOR_SALE },
+          { contractState: ContractState.QUEUED },
+        ],
       },
-      OR: [
-        { contractState: ContractState.FOR_SALE },
-        { contractState: ContractState.QUEUED },
-      ],
-    },
-  });
+    });
   if (isLoading) return <div>Loading...</div>;
   if (!openOptionContracts) return <div>No open option contracts.</div>;
   return (
-    <div className="space-y-2">
+    <div className="space-y-4">
       {openOptionContracts.map((contract, index) => (
-        <div
-          key={index}
-          className="bg-gray-500 p-2 rounded flex items-center gap-2"
-        >
-          <div>{contract.Company.name}</div>
-          <div>
-            <span>Strike Price: ${contract.strikePrice}</span>
-            <span>Term: {contract.term} turns</span>
-            <span>Share Count: {contract.shareCount}</span>
-          </div>
+        <div key={index}>
+          <OptionContract contract={contract} />
         </div>
       ))}
     </div>
   );
-}
+};
 
 const PendingMarketOrders = ({
   marketOrders,
@@ -86,8 +80,8 @@ const PendingMarketOrders = ({
       },
       orderBy: { createdAt: "asc" },
     });
-  if(isLoadingPhases) return <div>Loading...</div>
-  if(!phasesOfStockRound) return <div>No phases found.</div>
+  if (isLoadingPhases) return <div>Loading...</div>;
+  if (!phasesOfStockRound) return <div>No phases found.</div>;
   const mapPhaseIdToSubRound = (phaseId: string) => {
     return phasesOfStockRound.findIndex((phase) => phase.id === phaseId) + 1;
   };
@@ -136,10 +130,13 @@ const PendingMarketOrders = ({
           if (acc[phaseId]) {
             acc[phaseId].orders.push(order);
           } else {
-            acc[phaseId] = {orders: [order], subRound: mapPhaseIdToSubRound(order.phaseId)};
+            acc[phaseId] = {
+              orders: [order],
+              subRound: mapPhaseIdToSubRound(order.phaseId),
+            };
           }
           return acc;
-        }, {} as { [key: string]: {orders: PlayerOrderAllRelations[], subRound: number}});
+        }, {} as { [key: string]: { orders: PlayerOrderAllRelations[]; subRound: number } });
         return (
           <div
             key={company}
@@ -321,6 +318,15 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
         },
       },
     });
+  const { data: openOptionContracts, isLoading: isLoadingOpenOptionContracts } =
+    trpc.optionContract.listOptionContracts.useQuery({
+      where: {
+        Game: {
+          id: gameId,
+        },
+        contractState: ContractState.PURCHASED,
+      },
+    });
   if (isLoading) return <div>Loading...</div>;
   if (!playerOrders) return <div>No pending orders.</div>;
 
@@ -334,7 +340,8 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
     (order) =>
       (order.orderType === OrderType.LIMIT &&
         order.orderStatus === OrderStatus.PENDING) ||
-      (OrderType.LIMIT && order.orderStatus === OrderStatus.OPEN)
+      (order.orderType === OrderType.LIMIT &&
+        order.orderStatus === OrderStatus.OPEN)
   );
 
   let marketOrders = playerOrders.filter(
@@ -425,7 +432,7 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
             "ring-2 ring-blue-500"
           }`}
         >
-          <CardHeader className="z-0">Option Contracts</CardHeader>
+          <CardHeader className="z-0">Options Contracts</CardHeader>
           <CardBody>
             <OpenOptionContracts />
           </CardBody>
@@ -439,6 +446,16 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
           <CardHeader className="z-0">Limit Orders</CardHeader>
           <CardBody>
             <PendingLimitOrders limitOrders={limitOrdersPendingToOpen} />
+          </CardBody>
+        </Card>
+      </div>
+      <div className="mt-4">
+        <Card>
+          <CardHeader>Purchased and Open Options Contracts</CardHeader>
+          <CardBody>
+            {openOptionContracts?.map((contract, index) => (
+              <OptionContract contract={contract} key={index} />
+            ))}
           </CardBody>
         </Card>
       </div>
@@ -463,6 +480,12 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
                   of the market order. This ask price is quoted per share. If
                   there are not enough shares to resolve the order, it is
                   rejected.
+                </p>
+                <p>
+                  If shares are still contested (ie: a tie-breaker for players
+                  who purchase the same amount of shares), they are resolved by
+                  priority where the player with the lowest player priority
+                  takes precedence.
                 </p>
               </div>
             ) : gameState?.distributionStrategy ==

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { Prisma, OptionContract } from '@prisma/client';
+import { OptionContractWithRelations } from '@server/prisma/prisma.types';
 
 @Injectable()
 export class OptionContractService {
@@ -20,7 +21,7 @@ export class OptionContractService {
     cursor?: Prisma.OptionContractWhereUniqueInput;
     where?: Prisma.OptionContractWhereInput;
     orderBy?: Prisma.OptionContractOrderByWithRelationInput;
-  }): Promise<OptionContract[]> {
+  }): Promise<OptionContractWithRelations[]> {
     const { skip, take, cursor, where, orderBy } = params;
     return this.prisma.optionContract.findMany({
       skip,
@@ -30,7 +31,8 @@ export class OptionContractService {
       orderBy,
       include: {
         Company: true,
-      }
+        PlayerOrders: true,
+      },
     });
   }
 

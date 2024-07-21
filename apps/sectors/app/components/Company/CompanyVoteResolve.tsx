@@ -33,13 +33,30 @@ const CompanyVoteResolve = () => {
       operatingRoundId: currentPhase?.operatingRoundId || 0,
       companyId: currentPhase?.companyId || "",
     });
+  const { data: company, isLoading: companyLoading } =
+    trpc.company.getCompanyWithCards.useQuery({
+      id: currentPhase?.companyId || "",
+    });
   if (isLoading) {
     return <div>Loading...</div>;
   }
   if (!companyAction) {
     return <div>No company actions found</div>;
   }
-  
+
+  if (companyLoading) {
+    return <div>Loading...</div>;
+  }
+  if (!company) {
+    return <div>No company found</div>;
+  }
+  const researchCardDrawn =
+    companyAction.action === OperatingRoundAction.RESEARCH
+      ? company.Cards.sort(
+          (a, b) => a.createdAt.getTime() - b.createdAt.getTime()
+        )[0]
+      : null;
+
   const renderAction = () => {
     switch (companyAction.action) {
       case OperatingRoundAction.MARKETING:
@@ -55,7 +72,16 @@ const CompanyVoteResolve = () => {
           </div>
         );
       case OperatingRoundAction.RESEARCH:
-        return <div>Research</div>;
+        return (
+          <div>
+            <h1>Research</h1>
+            <div>You drew a research card.</div>
+            <div className="flex flex-col bg-slate-800 rounded-md p-6 border border-blue-800">
+              <span>{researchCardDrawn?.name}</span>
+              <span>{researchCardDrawn?.description}</span>
+            </div>
+          </div>
+        );
       case OperatingRoundAction.EXPANSION:
         return <div>Expansion</div>;
       case OperatingRoundAction.DOWNSIZE:
@@ -71,6 +97,10 @@ const CompanyVoteResolve = () => {
             <ShareIssue companyAction={companyAction} />
           </div>
         );
+      case OperatingRoundAction.INCREASE_PRICE:
+        return <div>Increase Price</div>;
+      case OperatingRoundAction.DECREASE_PRICE:
+        return <div>Decrease Price</div>;
       default:
         return <div>Unknown action</div>;
     }

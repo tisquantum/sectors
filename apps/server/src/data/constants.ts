@@ -23,7 +23,7 @@ export const PRESTIGE_ACTION_TOKEN_COST = 2;
 
 export const DEFAULT_SHARE_DISTRIBUTION = 10;
 
-export const STABLE_ECONOMY_SCORE = 15;
+export const STABLE_ECONOMY_SCORE = 12;
 
 export const MAX_SHARE_PERCENTAGE = 60;
 export const MAX_SHARE_DEFAULT =
@@ -41,7 +41,7 @@ export const MARKETING_CONSUMER_BONUS = 4;
 
 export const DEFAULT_INFLUENCE = 100;
 
-export const OPTION_CONTRACT_ACTIVE_COUNT = 2;
+export const OPTION_CONTRACT_ACTIVE_COUNT = 3;
 export const OPTION_CONTRACT_MIN_TERM = 1;
 export const OPTION_CONTRACT_MAX_TERM = 4;
 /**
@@ -60,7 +60,9 @@ export const phaseTimes = {
   [PhaseName.STOCK_SHORT_ORDER_INTEREST]: 12 * 1000,
   [PhaseName.STOCK_ACTION_SHORT_ORDER]: 12 * 1000,
   [PhaseName.STOCK_RESOLVE_PENDING_SHORT_ORDER]: 15 * 1000,
+  [PhaseName.STOCK_RESOLVE_PENDING_OPTION_ORDER]: 10 * 1000,
   [PhaseName.STOCK_RESOLVE_OPTION_ORDER]: 15 * 1000,
+  [PhaseName.STOCK_ACTION_OPTION_ORDER]: 30 * 1000,
   [PhaseName.STOCK_OPEN_LIMIT_ORDERS]: 10 * 1000,
   [PhaseName.STOCK_RESULTS_OVERVIEW]: 15 * 1000,
   [PhaseName.OPERATING_PRODUCTION]: 15 * 1000,
@@ -120,26 +122,25 @@ export function getStockPriceWithStepsDown(
   return stockGridPrices[newIndex];
 }
 
-/** DEPRECATED */
 export const interestRatesByTerm: { [key: number]: number } = {
-  1: 2.5,
-  2: 4.5,
-  3: 4,
-  4: 3.5,
-  5: 5,
+  1: 0.5,
+  2: 0.10,
+  3: 0.15,
+  4: 0.20,
+  5: 0.25,
 };
 
 export const sectorVolatility: Record<SectorName, number> = {
-  [SectorName.CONSUMER_CYCLICAL]: 0.2,
-  [SectorName.CONSUMER_DEFENSIVE]: 0.1,
-  [SectorName.CONSUMER_DISCRETIONARY]: 0.3,
-  [SectorName.CONSUMER_STAPLES]: 0.15,
-  [SectorName.ENERGY]: 0.2,
+  [SectorName.CONSUMER_CYCLICAL]: 0.7,
+  [SectorName.CONSUMER_DEFENSIVE]: 0.2,
+  [SectorName.CONSUMER_DISCRETIONARY]: 0.35,
+  [SectorName.CONSUMER_STAPLES]: 0.3,
+  [SectorName.ENERGY]: 0.45,
   [SectorName.GENERAL]: 0,
-  [SectorName.HEALTHCARE]: 0.3,
-  [SectorName.INDUSTRIALS]: 0.25,
-  [SectorName.MATERIALS]: 0.3,
-  [SectorName.TECHNOLOGY]: 0.4,
+  [SectorName.HEALTHCARE]: 0.6,
+  [SectorName.INDUSTRIALS]: 0.4,
+  [SectorName.MATERIALS]: 0.5,
+  [SectorName.TECHNOLOGY]: 0.9,
 };
 
 export const BORROW_RATE = 5; // 5%

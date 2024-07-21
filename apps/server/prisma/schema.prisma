@@ -249,10 +249,11 @@ model PlayerOrder {
   value            Int? //value to be used for limit orders
   isSell           Boolean?
   isConcealed      Boolean?        @default(true)
+  optionContractId Int?
   location         ShareLocation
   orderType        OrderType
   ShortOrder       ShortOrder?
-  OptionContract   OptionContract?
+  OptionContract   OptionContract? @relation(fields: [optionContractId], references: [id])
   Game             Game            @relation(fields: [gameId], references: [id])
   StockRound       StockRound      @relation(fields: [stockRoundId], references: [id])
   Player           Player          @relation(fields: [playerId], references: [id])
@@ -299,6 +300,7 @@ model OptionContract {
   currentPremium Int?
   strikePrice    Int //the price at which the player can buy the shares
   term           Int
+  currentTerm    Int           @default(0)
   shares         Share[]
   shareCount     Int           @default(0) // the amount of shares in the contract
   stepBonus      Int           @default(0) // how many steps the price will move up if option contract is fulfilled
@@ -307,7 +309,7 @@ model OptionContract {
   companyId      String
   contractState  ContractState
   gameId         String
-  PlayerOrder    PlayerOrder?  @relation(fields: [playerOrderId], references: [id])
+  PlayerOrders   PlayerOrder[] //only one will ultimately be the "filled order"
   Game           Game          @relation(fields: [gameId], references: [id])
   Company        Company       @relation(fields: [companyId], references: [id])
   createdAt      DateTime      @default(now())
@@ -662,6 +664,8 @@ enum PhaseName {
   STOCK_SHORT_ORDER_INTEREST
   STOCK_ACTION_SHORT_ORDER //let players cover their open shorts if they choose to
   STOCK_RESOLVE_PENDING_SHORT_ORDER //open all pending short orders
+  STOCK_RESOLVE_PENDING_OPTION_ORDER //resolve all pending conflicts
+  STOCK_ACTION_OPTION_ORDER //let players exercise their options if they choose to 
   STOCK_RESOLVE_OPTION_ORDER //players either succeed or fail after expiration (?)
   STOCK_OPEN_LIMIT_ORDERS //open all pending limit orders
   STOCK_RESULTS_OVERVIEW

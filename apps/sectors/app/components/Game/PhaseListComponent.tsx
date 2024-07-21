@@ -7,7 +7,7 @@ const phasesInOrder = [
   PhaseName.INFLUENCE_BID_ACTION,
   PhaseName.INFLUENCE_BID_RESOLVE,
   PhaseName.START_TURN,
-  PhaseName.STOCK_MEET,
+  //PhaseName.STOCK_MEET,
   PhaseName.STOCK_RESOLVE_LIMIT_ORDER,
   PhaseName.STOCK_ACTION_ORDER,
   PhaseName.STOCK_ACTION_RESULT,
@@ -16,10 +16,12 @@ const phasesInOrder = [
   PhaseName.STOCK_SHORT_ORDER_INTEREST,
   PhaseName.STOCK_ACTION_SHORT_ORDER,
   PhaseName.STOCK_RESOLVE_PENDING_SHORT_ORDER,
-  PhaseName.STOCK_RESOLVE_OPTION_ORDER,
+  PhaseName.STOCK_RESOLVE_OPTION_ORDER, //this is the first thing that has to happen, as it expires you will no chance to act on it that turn
+  PhaseName.STOCK_RESOLVE_PENDING_OPTION_ORDER,
+  PhaseName.STOCK_ACTION_OPTION_ORDER, //exercise option orders, this can currently happen the turn they are opened
   PhaseName.STOCK_OPEN_LIMIT_ORDERS,
   PhaseName.STOCK_RESULTS_OVERVIEW,
-  PhaseName.OPERATING_MEET,
+  //PhaseName.OPERATING_MEET,
   PhaseName.OPERATING_PRODUCTION,
   PhaseName.OPERATING_PRODUCTION_VOTE,
   PhaseName.OPERATING_PRODUCTION_VOTE_RESOLVE,

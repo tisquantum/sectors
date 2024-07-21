@@ -92,6 +92,10 @@ export type PlayerOrderConcealedWithPlayer = PlayerOrderConcealed & {
   Phase: PhaseWithStockRound;
 };
 export type PlayerOrderWithCompany = PlayerOrder & { Company: Company };
+export type PlayerOrderWithCompanyAndOptionContract = PlayerOrder & {
+  Company: Company;
+  OptionContract: OptionContract | null;
+};
 export type CompanyWithShare = Company & { Share: Share[] };
 export type CompanyWithShareAndSector = Company & {
   Share: Share[];
@@ -186,3 +190,10 @@ export type InfluenceRoundWithVotes = InfluenceRound & {
 };
 
 export type PlayerPriorityWithPlayer = PlayerPriority & { player: Player };
+
+export type OptionContractWithRelations = OptionContract & {
+  Company: Company;
+  PlayerOrders: PlayerOrder[];
+};
+
+export type CompanyWithCards = Company & { Cards: Card[] };
