@@ -55,14 +55,7 @@ const SectorComponent = () => {
                 <span className="ml-1">{sector.sharePercentageToFloat}%</span>
               </p>
               <p className="ml-2 text-small text-default-500 flex">
-                <RiAdvertisementFill size={18} className="mr-1" /> $50
-              </p>
-              <p className="ml-2 text-small text-default-500 flex">
                 <RiTeamFill size={18} className="mr-1" /> {sector.consumers}
-              </p>
-              <p className="ml-2 text-small text-default-500 flex">
-                {/** prestige total from all companies? */}
-                <StarIcon className="size-4 mr-1" /> +3
               </p>
             </div>
           }

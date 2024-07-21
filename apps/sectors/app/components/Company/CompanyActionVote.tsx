@@ -39,8 +39,16 @@ const CompanyActionVote = ({ company }: { company?: Company }) => {
     { name: OperatingRoundAction.INCREASE_PRICE, label: "Increase Price" },
     { name: OperatingRoundAction.DECREASE_PRICE, label: "Decrease Price" },
     { name: OperatingRoundAction.SPEND_PRESTIGE, label: "Prestige" },
+    { name: OperatingRoundAction.LOAN, label: "Loan" },
     { name: OperatingRoundAction.VETO, label: "Veto" },
   ];
+  //if company hasLoan, remove the loan option
+  if (company.hasLoan) {
+    actions.splice(
+      actions.findIndex((action) => action.name === OperatingRoundAction.LOAN),
+      1
+    );
+  }
   return (
     <div className="flex flex-col items-center justify-center max-w-2xl">
       <h1 className="text-2xl font-bold">

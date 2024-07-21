@@ -42,7 +42,7 @@ const companyActions = [
     id: 1,
     title: "Marketing",
     name: OperatingRoundAction.MARKETING,
-    message: `The sector will receive an additional ${MARKETING_CONSUMER_BONUS} consumers at the end of the turn. Your company receives +3 demand that decays 1 per production phase.`,
+    message: `The sector receives an additional ${MARKETING_CONSUMER_BONUS} consumers. Your company receives +3 demand that decays 1 per production phase.`,
   },
   {
     id: 2,
@@ -122,6 +122,14 @@ const CompanyActionSelectionVote = ({
   companyAction?: CompanyAction;
 }) => {
   if (!company) return <div>No company found</div>;
+  const checkIfDisabled = (actionName: OperatingRoundAction) => {
+    if (CompanyActionCosts[actionName] > company.cashOnHand) {
+      return true;
+    }
+    if (actionName == OperatingRoundAction.LOAN && company.hasLoan) {
+      return true;
+    }
+  };
   return (
     <div className="flex flex-col gap-3 p-5">
       <h1 className="text-2xl">{company.name} Shareholder Meeting</h1>
@@ -149,15 +157,22 @@ const CompanyActionSelectionVote = ({
           {companyActions.map((action) => (
             <Card
               key={action.id}
-              isDisabled={CompanyActionCosts[action.name] > company.cashOnHand}
+              isDisabled={checkIfDisabled(action.name)}
               className={`${
                 companyAction?.action == action.name ? "bg-blue-700" : ""
               }`}
             >
               <CardHeader>
-                <div className="flex justify-between">
-                  <span className="font-bold mr-3">{action.title}</span>
-                  <span>${CompanyActionCosts[action.name]}</span>
+                <div className="flex flex-col">
+                  <div className="flex justify-between">
+                    <span className="font-bold mr-3">{action.title}</span>
+                    <span>${CompanyActionCosts[action.name]}</span>
+                  </div>
+                  {action.name == OperatingRoundAction.LOAN && (
+                    <span>One time only</span>
+                  )}
+                  {action.name == OperatingRoundAction.LOAN &&
+                    company.hasLoan && <span>Loan has been taken.</span>}
                 </div>
               </CardHeader>
               <CardBody>

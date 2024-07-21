@@ -29,6 +29,8 @@ type CompanyCardProps = {
   currentPhase?: Phase;
   playerOrdersRevealed: PlayerOrderWithPlayerCompany[]; // Replace with the actual type
   phasesOfStockRound: Phase[];
+  isOrderInputOpen?: boolean;
+  handleButtonSelect: () => void;
 };
 
 const CompanyCard: React.FC<CompanyCardProps> = ({
@@ -40,7 +42,10 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
   currentPhase,
   playerOrdersRevealed,
   phasesOfStockRound,
+  isOrderInputOpen,
+  handleButtonSelect
 }) => {
+  const [showButton, setShowButton] = useState<boolean | undefined>(isOrderInputOpen);
   const [isIpo, setIsIpo] = useState<boolean>(false);
   const [showPlayerInput, setShowPlayerInput] = useState<boolean>(false);
   useEffect(() => {
@@ -250,6 +255,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
               </div>
             )}
             {isInteractive &&
+              showButton &&
               company.Share.filter(
                 (share: Share) => share.location == ShareLocation.IPO
               ).length > 0 && (
@@ -348,6 +354,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
               </div>
             )}
             {isInteractive &&
+              showButton &&
               (company.Share.filter(
                 (share: Share) => share.location == ShareLocation.OPEN_MARKET
               ).length > 0 ||
@@ -385,7 +392,10 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
                     setShowPlayerInput(false);
                   }}
                   isIpo={isIpo} // Pass IPO state here
-                  handlePlayerInputConfirmed={() => {}} // Callback on input confirmed
+                  handlePlayerInputConfirmed={() => {
+                    setShowButton(false);
+                    handleButtonSelect();
+                  }} // Callback on input confirmed
                 />
               </CardBody>
             </Card>

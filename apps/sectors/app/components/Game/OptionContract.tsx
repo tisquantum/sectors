@@ -4,6 +4,8 @@ import CompanyInfo from "../Company/CompanyInfo";
 import { trpc } from "@sectors/app/trpc";
 import {
   RiArrowUpCircleFill,
+  RiCalendar2Fill,
+  RiCalendarEventLine,
   RiCalendarScheduleFill,
   RiPriceTag2Fill,
   RiStrikethrough,
@@ -27,17 +29,19 @@ import PlayerAvatar from "../Player/PlayerAvatar";
 const OptionContract = ({
   contract,
   isInteractive,
+  isExercisableByAuth,
 }: {
   contract: OptionContractWithRelations;
   isInteractive?: boolean;
+  isExercisableByAuth?: boolean;
 }) => {
   const { gameState, authPlayer, currentPhase } = useGame();
   const { data: company, isLoading } =
     trpc.company.getCompanyWithSector.useQuery({ id: contract.companyId });
   const useCreatePlayerOrderMutation =
     trpc.playerOrder.createPlayerOrder.useMutation();
-  const useUpdateOptionContractMutation =
-    trpc.optionContract.updateOptionContract.useMutation();
+  const useExerciseContract =
+    trpc.optionContract.exerciseOptionContract.useMutation();
   const { data: pendingOrders, isLoading: pendingOrdersLoading } =
     trpc.playerOrder.listPlayerOrdersWithPlayerRevealed.useQuery({
       where: {
@@ -65,6 +69,7 @@ const OptionContract = ({
     contract.premium.toString()
   );
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isExercised, setIsExercised] = useState(false);
   if (isLoading) return <div>Loading...</div>;
   if (!company) return <div>No company found</div>;
   return (
@@ -100,6 +105,14 @@ const OptionContract = ({
               {contract.term}
             </div>
           </Tooltip>
+          {contract.currentTerm > 0 && (
+            <Tooltip content="Current Term: The number of turns the options contract has been active for">
+              <div className="flex gap-1 justify-center items-center">
+                <RiCalendar2Fill />
+                {contract.currentTerm}
+              </div>
+            </Tooltip>
+          )}
           <Tooltip content="Step Bonus: The amount the stock price will increase should the option be exercised.">
             <div className="flex gap-1 justify-center items-center">
               <RiArrowUpCircleFill /> {contract.stepBonus}
@@ -175,6 +188,23 @@ const OptionContract = ({
             </div>
           </div>
         )}
+      {isExercisableByAuth && (
+        <div className="flex flex-col gap-2">
+          {isExercised ? (
+            <div>Option Exercised</div>
+          ) : (
+            <DebounceButton
+              className="bg-blue-500 text-white px-4 py-2 rounded-lg"
+              onClick={() => {
+                useExerciseContract.mutate({ contractId: contract.id });
+                setIsExercised(true);
+              }}
+            >
+              Exercise Option
+            </DebounceButton>
+          )}
+        </div>
+      )}
       {contract.contractState == ContractState.PURCHASED &&
         playerOrderPurchased && <PlayerAvatar player={playerOrderPurchased} />}
     </div>

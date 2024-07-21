@@ -43,6 +43,7 @@ import {
 } from "@remixicon/react";
 import "./StockChart.css";
 import CompanyInfo from "../Company/CompanyInfo";
+
 interface ChartData {
   phaseId: string;
   stockPrice: number;
@@ -166,33 +167,58 @@ const StockChart = () => {
     companies?.flatMap((company) =>
       company.StockHistory.map((stockHistory) => ({
         phaseId: stockHistory.phaseId,
+        phaseName: stockHistory.Phase.name,
         companyName: company.name,
         stockPrice: stockHistory.price,
       }))
     ) ?? [];
 
-  const allChartData: AllChartData[] = [];
+  interface PhaseEntry {
+    phaseId: string;
+    phaseName: string;
+    [key: string]: string | number; // Allows dynamic company names as keys with stock prices as values
+  }
 
-  groupedData.forEach(({ phaseId, companyName, stockPrice }) => {
+  interface LastKnownPrices {
+    [key: string]: number; // Company names as keys with last known stock prices as values
+  }
+
+  const allChartData: PhaseEntry[] = [];
+  const lastKnownPrices: LastKnownPrices = {}; // Keeps track of the last known price for each company
+
+  groupedData.forEach(({ phaseId, phaseName, companyName, stockPrice }) => {
+    // Find or create a phase entry
     let phaseEntry = allChartData.find((entry) => entry.phaseId === phaseId);
     if (!phaseEntry) {
-      phaseEntry = { phaseId };
+      phaseEntry = { phaseId, phaseName };
       allChartData.push(phaseEntry);
     }
+
+    // Update the phase entry with the current stock price
     phaseEntry[companyName] = stockPrice;
+
+    // Update the last known price for the company
+    lastKnownPrices[companyName] = stockPrice;
   });
 
-  // Ensure every company name is included in each phase
-  const companyNames = companies?.map((company) => company.name) ?? [];
-
+  // Ensure every phase entry contains the price for every company
+  const companyNames = companies.map((company) => company.name);
   allChartData.forEach((entry) => {
-    companyNames.forEach((name) => {
-      if (!(name in entry)) {
-        entry[name] = undefined;
+    companyNames.forEach((companyName) => {
+      if (!(companyName in entry)) {
+        // If the company doesn't have a price in the current phase, use the last known price
+        entry[companyName] = lastKnownPrices[companyName];
       }
     });
   });
-  
+
+  //iterate through all chart data and update phase id to be the phase name with a unique number
+  allChartData.forEach((entry, index) => {
+    entry.phaseId = `${index + 1} ${entry.phaseName}`;
+  });
+
+  console.log("allChartData", allChartData);
+
   return (
     <div className="flex flex-col">
       <Legend />
@@ -265,8 +291,9 @@ const StockChart = () => {
           </div>
         </Tab>
         <Tab key="stock-chart" title="Stock Chart">
-          <div className="flex flex-col justify-center items-center">
+          <div className="flex flex-col justify-center items-center h-[800px]">
             <LineChart
+              className="h-full"
               data={allChartData}
               index="phaseId"
               categories={companies.map((company) => company.name)}

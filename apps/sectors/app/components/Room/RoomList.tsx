@@ -12,7 +12,7 @@ interface RoomListProps {
   room: RoomWithUsers;
 }
 
-const RoomList: React.FC<RoomListProps> = ({ room }) => {
+const RoomListItem: React.FC<RoomListProps> = ({ room }) => {
   const { user } = useAuthUser();
   const router = useRouter();
   const joinRoomMutation = trpc.roomUser.joinRoom.useMutation();
@@ -45,4 +45,4 @@ const RoomList: React.FC<RoomListProps> = ({ room }) => {
   );
 };
 
-export default RoomList;
+export default RoomListItem;

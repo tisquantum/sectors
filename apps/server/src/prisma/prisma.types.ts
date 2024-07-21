@@ -53,6 +53,7 @@ export type CompanyWithRelations = Company & {
   Sector: Sector;
   Share: ShareWithPlayer[];
   StockHistory: StockHistory[];
+  Cards: Card[];
 };
 export type StockHistoryWithPhase = StockHistory & { Phase: Phase };
 export type CompanyWithSectorAndStockHistory = Company & {
@@ -175,7 +176,9 @@ export type RevenueDistributionVoteWithRelations = RevenueDistributionVote & {
 };
 export type ShareWithRelations = Share & { Player: Player | null };
 export type GameWithGameTurns = Game & { GameTurn: GameTurn[] };
-export type CapitalGainsWithPlayer = CapitalGains & { Player: Player };
+export type CapitalGainsWithPlayer = CapitalGains & {
+  Player: PlayerWithShares | null;
+};
 
 export type PlayerWithPlayerOrders = Player & {
   PlayerOrder: PlayerOrder[];
@@ -197,3 +200,8 @@ export type OptionContractWithRelations = OptionContract & {
 };
 
 export type CompanyWithCards = Company & { Cards: Card[] };
+
+export type PlayerOrderWithShortOrder = PlayerOrder & {
+  ShortOrder: ShortOrder | null;
+  Player: Player;
+};

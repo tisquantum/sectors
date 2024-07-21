@@ -1,9 +1,9 @@
-import { Company, CompanyTier, ResearchDeck, Sector } from "@prisma/client";
+import { Company, CompanyTier, ResearchDeck, Sector } from '@prisma/client';
 
 interface GameDataJson {
-  sectors: any[],
-  companies: any[],
-  researchDeck: Partial<any>[],
+  sectors: any[];
+  companies: any[];
+  researchDeck: Partial<any>[];
 }
 export const gameDataJson: GameDataJson = {
   sectors: [
@@ -31,7 +31,7 @@ export const gameDataJson: GameDataJson = {
       demand: 2,
       marketingPrice: 50.0,
       basePrice: 75.0,
-      sharePercentageToFloat: 55, 
+      sharePercentageToFloat: 55,
       ipoMin: 40,
       ipoMax: 60,
       supplyDefault: 3,
@@ -46,7 +46,7 @@ export const gameDataJson: GameDataJson = {
       id: '3',
       name: 'Industrial',
       supply: 100,
-      demand: 1,
+      demand: 2,
       marketingPrice: 50.0,
       basePrice: 75.0,
       ipoMin: 55,
@@ -64,7 +64,7 @@ export const gameDataJson: GameDataJson = {
       id: '4',
       name: 'Technology',
       supply: 100,
-      demand: 0,
+      demand: 1,
       marketingPrice: 50.0,
       basePrice: 75.0,
       ipoMin: 5,
@@ -100,7 +100,7 @@ export const gameDataJson: GameDataJson = {
       id: '6',
       name: 'Energy',
       supply: 100,
-      demand: 1,
+      demand: 2,
       marketingPrice: 50.0,
       basePrice: 75.0,
       sharePercentageToFloat: 60,

@@ -15,12 +15,6 @@ const Derivatives = () => {
     trpc.optionContract.listOptionContracts.useQuery({
       where: { gameId, contractState: ContractState.FOR_SALE },
     });
-  const {
-    data: queuedOptionContracts,
-    isLoading: queuedOptionContractsLoading,
-  } = trpc.optionContract.listOptionContracts.useQuery({
-    where: { gameId, contractState: ContractState.QUEUED },
-  });
   const { data: playerOrders, isLoading: playerOrdersLoading } =
     trpc.playerOrder.listPlayerOrdersConcealed.useQuery({
       where: {
@@ -33,7 +27,6 @@ const Derivatives = () => {
 
   if (isLoading) return <div>Loading...</div>;
   if (!optionsContracts) return <div>No options contracts found</div>;
-  if (queuedOptionContractsLoading) return <div>Loading...</div>;
   console.log("currentPhase", currentPhase);
   return (
     <div>

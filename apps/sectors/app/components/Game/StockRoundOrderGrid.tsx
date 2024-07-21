@@ -1,16 +1,7 @@
 "use client";
 
-import {
-  Card,
-  CardBody,
-  CardFooter,
-  CardHeader,
-  Divider,
-  Tab,
-  Tabs,
-} from "@nextui-org/react";
+import { Tab, Tabs } from "@nextui-org/react";
 import React, { useEffect, useState } from "react";
-import PlayerOrder from "../Player/PlayerOrder";
 import {
   isCurrentPhaseInteractive,
   organizeCompaniesBySector,
@@ -18,20 +9,13 @@ import {
 import { trpc } from "@sectors/app/trpc";
 import { useGame } from "./GameContext";
 import { notFound } from "next/navigation";
+import { Company, PhaseName } from "@server/prisma/prisma.client";
 import {
-  Company,
-  CompanyStatus,
-  PhaseName,
-  Share,
-  ShareLocation,
-} from "@server/prisma/prisma.client";
-import PlayerOrderConcealed from "../Player/PlayerOrderConcealed";
-import { CompanyWithSector } from "@server/prisma/prisma.types";
+  CompanyWithSector,
+  PlayerOrderConcealed,
+} from "@server/prisma/prisma.types";
 import { sectorColors } from "@server/data/gameData";
 import "./StockRoundOrderGrid.css";
-import CompanyInfo from "../Company/CompanyInfo";
-import Button from "@sectors/app/components/General/DebounceButton";
-import PlayerOrderInput from "../Player/PlayerOrderInput";
 import CompanyCard from "../Company/StockOrderCompanyCard";
 import Derivatives from "./Derivatives";
 
@@ -40,7 +24,7 @@ const StockRoundOrderGrid = ({
 }: {
   handleOrder?: (company: Company, isIpo?: boolean) => void;
 }) => {
-  const { gameId, currentPhase, gameState } = useGame();
+  const { gameId, currentPhase, gameState, authPlayer } = useGame();
   const { data: companies, isLoading } =
     trpc.company.listCompaniesWithSector.useQuery({
       where: { gameId },
@@ -94,6 +78,12 @@ const StockRoundOrderGrid = ({
     refetchPlayerOrdersConcealed();
     refetchPhasesOfStockRound();
   }, [currentPhase?.id]);
+  useEffect(() => {
+    if (playerOrdersConcealed) {
+      isOrderInputOpenPlayerOrderCounter(playerOrdersConcealed);
+    }
+  }, [playerOrdersConcealed]);
+  const [isOrderInputOpen, setIsOrderInputOpen] = useState<boolean>(false);
   if (isLoadingPlayerOrdersRevealed) return <div>Loading...</div>;
   if (playerOrdersRevealed == undefined) return null;
   if (isLoading) return null;
@@ -116,6 +106,20 @@ const StockRoundOrderGrid = ({
     setShowOrderInput(undefined);
   };
 
+  const isOrderInputOpenPlayerOrderCounter = (
+    playerOrdersConcealed: PlayerOrderConcealed[]
+  ) => {
+    const orderCount = playerOrdersConcealed?.filter(
+      (order) =>
+        order.playerId === authPlayer.id && order.phaseId == currentPhase.id
+    ).length;
+    console.log("isOrderInputOpen", orderCount);
+    setIsOrderInputOpen(orderCount == 0);
+  };
+  const companyCardButtonClicked = () => {
+    console.log("Company card button clicked");
+    setIsOrderInputOpen(true);
+  };
   return (
     <Tabs>
       <Tab key="spot-market" title="Spot Market">
@@ -143,6 +147,8 @@ const StockRoundOrderGrid = ({
                       (order) => order.companyId === company.id
                     )}
                     phasesOfStockRound={phasesOfStockRound}
+                    isOrderInputOpen={isOrderInputOpen}
+                    handleButtonSelect={companyCardButtonClicked}
                   />
                 </div>
               )

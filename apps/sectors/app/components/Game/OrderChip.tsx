@@ -20,7 +20,7 @@ const OrderChip = ({ order }: { order: PlayerOrder }) => {
         {order.orderType === OrderType.LIMIT && <span>@${order.value}</span>}
         {(order.orderType === OrderType.MARKET ||
           order.orderType === OrderType.SHORT) && <span>{order.quantity}</span>}
-        {order.orderType === OrderType.SHORT && <span>@T{order.term}</span>}
+        {order.orderType === OrderType.SHORT && <span>@${order.value}</span>}
       </div>
     </Chip>
   );

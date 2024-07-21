@@ -43,6 +43,16 @@ export default (trpc: TrpcService, ctx: Context) =>
         }
         return company;
       }),
+    getCompanyWithRelations: trpc.procedure
+      .input(z.object({ id: z.string() }))
+      .query(async ({ input }) => {
+        const { id } = input;
+        const company = await ctx.companyService.companyWithRelations({ id });
+        if (!company) {
+          throw new Error('Company not found');
+        }
+        return company;
+      }),
     listCompanies: trpc.procedure
       .input(
         z.object({

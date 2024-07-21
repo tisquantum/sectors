@@ -9,9 +9,13 @@ export class OptionContractService {
 
   async getOptionContract(
     optionContractWhereUniqueInput: Prisma.OptionContractWhereUniqueInput,
-  ): Promise<OptionContract | null> {
+  ): Promise<OptionContractWithRelations | null> {
     return this.prisma.optionContract.findUnique({
       where: optionContractWhereUniqueInput,
+      include: {
+        PlayerOrders: true,
+        Company: true,
+      },
     });
   }
 

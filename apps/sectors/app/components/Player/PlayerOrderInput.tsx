@@ -29,9 +29,10 @@ import React, {
 import { useGame } from "../Game/GameContext";
 import {
   BORROW_RATE,
-  MAX_LIMIT_ORDER,
-  MAX_MARKET_ORDER,
-  MAX_SHORT_ORDER,
+  MAX_LIMIT_ORDER_ACTIONS,
+  MAX_MARKET_ORDER_ACTIONS,
+  MAX_SHORT_ORDER_ACTIONS,
+  MAX_SHORT_ORDER_QUANTITY,
 } from "@server/data/constants";
 import { PlayerOrderWithCompany } from "@server/prisma/prisma.types";
 import { getPseudoSpend } from "@server/data/helpers";
@@ -48,8 +49,10 @@ const RiskAssessment = () => {
 
 const ShortOrderInput: React.FC<{
   company: Company;
-  onShareChange: (value: number) => void;
-}> = ({ company, onShareChange }) => {
+  handleShares: (value: number) => void;
+  minValue: number;
+  maxValue: number;
+}> = ({ company, handleShares, minValue, maxValue }) => {
   const [maxStockValue, setMaxStockValue] = useState<number>(3);
   const [minStockValue, setMinStockValue] = useState<number>(1);
   const [shareValue, setShareValue] = useState<number>(1);
@@ -69,6 +72,7 @@ const ShortOrderInput: React.FC<{
       value = value[0];
     }
     setShareValue(value);
+    handleShares(value);
   };
 
   return (
@@ -79,7 +83,10 @@ const ShortOrderInput: React.FC<{
         <span>${minimumMarginAccount}</span>
       </div>
       <div>
-        <span>All collected dividends must be paid back to lender</span>
+        <span>
+          All collected dividends must be paid back to borrower (ie: you must
+          pay dividends for these shares from your cash on hand).
+        </span>
       </div>
       <Slider
         size="md"
@@ -87,15 +94,15 @@ const ShortOrderInput: React.FC<{
         color="foreground"
         label="Shares"
         showSteps={true}
-        maxValue={maxStockValue}
-        minValue={minStockValue}
-        defaultValue={minStockValue}
+        maxValue={maxValue}
+        minValue={minValue}
+        defaultValue={minValue}
         value={shareValue}
         onChange={handleShareChange}
         className="max-w-md"
         marks={[
-          { value: minStockValue, label: `${minStockValue}` },
-          { value: maxStockValue, label: `${maxStockValue}` },
+          { value: minValue, label: `${minValue}` },
+          { value: maxValue, label: `${maxValue}` },
         ]}
       />
     </>
@@ -229,7 +236,7 @@ const TabContentMO: React.FC<TabContentProps> = ({
     <div className="flex flex-col text-center items-center center-content justify-center gap-2">
       <OrderCounter
         ordersRemaining={ordersRemaining}
-        maxOrders={MAX_MARKET_ORDER}
+        maxOrders={MAX_MARKET_ORDER_ACTIONS}
       />
       <BuyOrSell handleSelectionIsBuy={handleSelectionIsBuy} isIpo={isIpo} />
       {gameState.distributionStrategy == DistributionStrategy.BID_PRIORITY &&
@@ -282,22 +289,35 @@ const TabContentMO: React.FC<TabContentProps> = ({
 
 interface TabContentPropsSO {
   company: Company;
-  onShareChange: (value: number) => void;
+  handleShares: (value: number) => void;
   ordersRemaining: number;
+  maxValue: number;
+  minValue: number;
 }
 
 const TabContentSO: React.FC<TabContentPropsSO> = ({
   company,
-  onShareChange,
+  handleShares,
   ordersRemaining,
+  maxValue,
+  minValue,
 }) => {
   return (
     <div className="flex flex-col text-center items-center center-content justify-center gap-2">
+      <p>
+        Note that short order market values may fluctuate before action is
+        resolved.
+      </p>
       <OrderCounter
         ordersRemaining={ordersRemaining}
-        maxOrders={MAX_SHORT_ORDER}
+        maxOrders={MAX_SHORT_ORDER_ACTIONS}
       />
-      <ShortOrderInput company={company} onShareChange={onShareChange} />
+      <ShortOrderInput
+        company={company}
+        handleShares={handleShares}
+        minValue={minValue}
+        maxValue={maxValue}
+      />
     </div>
   );
 };
@@ -319,7 +339,7 @@ const TabContentLO: React.FC<TabContentPropsLO> = ({
     <div className="flex flex-col text-center items-center center-content justify-center gap-2">
       <OrderCounter
         ordersRemaining={ordersRemaining}
-        maxOrders={MAX_LIMIT_ORDER}
+        maxOrders={MAX_LIMIT_ORDER_ACTIONS}
       />
       <LimitOrderInput
         handleLimitOrder={handleLimitOrderChange}
@@ -527,6 +547,7 @@ const PlayerOrderInput = ({
     isBuy,
   });
   const handleConfirm = () => {
+    console.log("handleConfirm", orderValue, company?.currentStockPrice, share);
     createPlayerOrder.mutate({
       gameId,
       stockRoundId: gameState.currentStockRoundId ?? 0,
@@ -614,8 +635,10 @@ const PlayerOrderInput = ({
                   <CardBody>
                     <TabContentSO
                       company={currentOrder}
-                      onShareChange={setShare}
+                      handleShares={setShare}
                       ordersRemaining={authPlayer.shortOrderActions}
+                      maxValue={Math.min(maxValue, MAX_SHORT_ORDER_QUANTITY)}
+                      minValue={1}
                     />
                   </CardBody>
                 </Card>

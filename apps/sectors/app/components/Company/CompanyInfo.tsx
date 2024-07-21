@@ -1,5 +1,6 @@
 import { Accordion, AccordionItem, Divider, Tooltip } from "@nextui-org/react";
 import {
+  RiBankCard2Fill,
   RiBox2Fill,
   RiExpandUpDownFill,
   RiHandCoinFill,
@@ -10,7 +11,11 @@ import {
   RiTeamFill,
   RiWallet3Fill,
 } from "@remixicon/react";
-import { CompanyTierData } from "@server/data/constants";
+import {
+  CompanyTierData,
+  LOAN_AMOUNT,
+  LOAN_INTEREST_RATE,
+} from "@server/data/constants";
 import { sectorColors } from "@server/data/gameData";
 import { CompanyStatus, Share } from "@server/prisma/prisma.client";
 import { CompanyWithSector } from "@server/prisma/prisma.types";
@@ -100,6 +105,18 @@ const CompanyMoreInfo = ({
           </span>
         </div>
       </Tooltip>
+      {company.hasLoan && (
+        <Tooltip
+          content={`This company has taken a loan.  The company must pay back the loan in interest at a fixed rate of $${
+            LOAN_AMOUNT * LOAN_INTEREST_RATE
+          } per turn.`}
+        >
+          <div className="flex items-center col-span-2">
+            <RiBankCard2Fill size={18} className="ml-2" />
+            <span className="ml-1">${LOAN_AMOUNT * LOAN_INTEREST_RATE}</span>
+          </div>
+        </Tooltip>
+      )}
     </div>
   </div>
 );

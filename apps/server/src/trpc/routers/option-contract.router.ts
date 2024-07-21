@@ -2,9 +2,11 @@ import { z } from 'zod';
 import { TrpcService } from '../trpc.service';
 import { Prisma } from '@prisma/client';
 import { OptionContractService } from '@server/option-contract/option-contract.service';
+import { GameManagementService } from '@server/game-management/game-management.service';
 
 type Context = {
   optionContractService: OptionContractService;
+  gameManagementService: GameManagementService;
 };
 
 export default (trpc: TrpcService, ctx: Context) =>
@@ -86,5 +88,11 @@ export default (trpc: TrpcService, ctx: Context) =>
       .mutation(async ({ input }) => {
         const { id } = input;
         return ctx.optionContractService.deleteOptionContract({ id });
+      }),
+      exerciseOptionContract: trpc.procedure
+      .input(z.object({ contractId: z.number() }))
+      .mutation(async ({ input }) => {
+        const { contractId } = input;
+        return ctx.gameManagementService.exerciseOptionContract(contractId);
       }),
   });

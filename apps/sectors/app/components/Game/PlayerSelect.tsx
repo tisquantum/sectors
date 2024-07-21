@@ -3,6 +3,7 @@ import { trpc } from "@sectors/app/trpc";
 import { useGame } from "./GameContext";
 import { notFound } from "next/navigation";
 import { ChangeEventHandler } from "react";
+import PlayerAvatar from "../Player/PlayerAvatar";
 
 const PlayerSelect = ({ onChange }: { onChange: ChangeEventHandler<HTMLSelectElement> }) => {
   const { gameId } = useGame();
@@ -40,7 +41,7 @@ const PlayerSelect = ({ onChange }: { onChange: ChangeEventHandler<HTMLSelectEle
       {(player) => (
         <SelectItem key={player.id} textValue={player.nickname}>
           <div className="flex gap-2 items-center">
-            <Avatar alt={player.nickname} className="flex-shrink-0" size="sm" />
+            <PlayerAvatar player={player} />
             <div className="flex flex-col">
               <span className="text-small">{player.nickname}</span>
             </div>

@@ -14,10 +14,12 @@ import {
   RiFunctionAddFill,
   RiTeamFill,
   RiBankFill,
+  RiTicket2Fill,
 } from "@remixicon/react";
 import { Avatar, Tooltip } from "@nextui-org/react";
 import PlayerAvatar from "../Player/PlayerAvatar";
 import { OrderType, PhaseName } from "@server/prisma/prisma.client";
+import { DEFAULT_SHARE_LIMIT } from "@server/data/constants";
 
 const GameGeneralInfo = () => {
   const { gameState, currentTurn, authPlayer, currentPhase } = useGame();
@@ -50,17 +52,26 @@ const GameGeneralInfo = () => {
         </div>
       </div>
       <div>
-        <div className="text-lg font-bold">Consumer Pool</div>
-        <div className="flex items-center gap-2">
-          <RiTeamFill size={18} />
-          {gameState.consumerPoolNumber}
-        </div>
+        <Tooltip content="The global consumer pool.">
+          <div className="flex items-center gap-2">
+            <RiTeamFill size={18} />
+            {gameState.consumerPoolNumber}
+          </div>
+        </Tooltip>
       </div>
       <div>
-        <div className="text-lg font-bold">Bank Total</div>
-        <div className="flex gap-1 items-center">
-          <RiBankFill size={18} /> ${gameState.bankPoolNumber}
-        </div>
+        <Tooltip content="The bank pool. Once the bank pool is exhausted, the game ends.">
+          <div className="flex gap-1 items-center">
+            <RiBankFill size={18} /> ${gameState.bankPoolNumber}
+          </div>
+        </Tooltip>
+      </div>
+      <div>
+        <Tooltip content="The share limit. If a player exceeds this limit, they must divest down to the limit.">
+          <div className="flex gap-1 items-center">
+            <RiTicket2Fill size={18} /> {DEFAULT_SHARE_LIMIT}
+          </div>
+        </Tooltip>
       </div>
       <div>
         <div className="text-lg font-bold">Round</div>

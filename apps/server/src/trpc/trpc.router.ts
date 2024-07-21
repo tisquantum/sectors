@@ -187,6 +187,7 @@ export class TrpcRouter {
     }),
     optionContract: optionContractRouter(this.trpc, {
       optionContractService: this.optionContractService,
+      gameManagementService: this.gameManagementService,
     }),
   });
 

@@ -138,16 +138,16 @@ const CompanySubject = ({
       description="The subject of discussion"
       onChange={onChange}
     >
-      <SelectItem key="ready_to_run" value="ready_to_run">
+      <SelectItem key="ready to run." value="ready_to_run">
         ready to run.
       </SelectItem>
-      <SelectItem key="trash" value="trash">
+      <SelectItem key="trash." value="trash">
         trash.
       </SelectItem>
-      <SelectItem key="looking_stale" value="looking_stale">
+      <SelectItem key="looking stale." value="looking_stale">
         looking stale.
       </SelectItem>
-      <SelectItem key="needs_better_leadership" value="needs_better_leadership">
+      <SelectItem key="needs better leadership." value="needs_better_leadership">
         needs better leadership.
       </SelectItem>
     </Select>
@@ -197,16 +197,16 @@ const SectorSubject = ({
       description="The subject of discussion"
       onChange={onChange}
     >
-      <SelectItem key="booming">booming.</SelectItem>
-      <SelectItem key="crashing">crashing.</SelectItem>
-      <SelectItem key="stable">stable.</SelectItem>
-      <SelectItem key="unstable">unstable.</SelectItem>
+      <SelectItem key="booming.">booming.</SelectItem>
+      <SelectItem key="crashing.">crashing.</SelectItem>
+      <SelectItem key="stable.">stable.</SelectItem>
+      <SelectItem key="unstable.">unstable.</SelectItem>
     </Select>
   );
 };
 
 const MeetingInput = () => {
-  const { gameId, authPlayer } = useGame();
+  const { gameId, authPlayer, gameState } = useGame();
   const meetingMessageMutation =
     trpc.meetingMessage.createMessage.useMutation();
   const [isSubmit, setIsSubmit] = useState(false);
@@ -260,6 +260,39 @@ const MeetingInput = () => {
     );
   };
 
+  const handlePlayerSelect = (identifier: string) => {
+    //get player nickname by id
+    const nickname = gameState.Player.find(
+      (player) => player.id == identifier
+    )?.nickname;
+    setSelectedPlayer(nickname || "?");
+  };
+
+  const handleTopicPlayer = (identifier: string) => {
+    //look for sector based on identifier, then if none look for company
+    const sector = gameState.sectors.find((sector) => sector.id == identifier);
+    const company = gameState.Company.find(
+      (company) => company.id == identifier
+    );
+    if (sector) {
+      setSelectedPlayerTopic(sector.name);
+    } else if (company) {
+      setSelectedPlayerTopic(company.name);
+    }
+  };
+
+  const handleTopicCompany = (identifier: string) => {
+    const company = gameState.Company.find(
+      (company) => company.id == identifier
+    );
+    setSelectedCompanyTopic(company?.name || "");
+  };
+
+  const handleTopicSector = (identifier: string) => {
+    const sector = gameState.sectors.find((sector) => sector.id == identifier);
+    setSelectedSectorTopic(sector?.name || "");
+  };
+
   return (
     <div className="flex flex-col justify-center content-center">
       <Select
@@ -275,24 +308,23 @@ const MeetingInput = () => {
       </Select>
       {selectedTopic?.key == "player" && (
         <div className="grid grid-cols-4 gap-4 mt-4 w-full">
-          <PlayerSelect onChange={(e) => setSelectedPlayer(e.target.value)} />
+          <PlayerSelect onChange={(e) => handlePlayerSelect(e.target.value)} />
           <Complement onChange={(e) => setSelectedComplement(e.target.value)} />
           <PlayerSubject
             onChange={(e) => setSelectedPlayerSubject(e.target.value)}
           />
-          <PlayerTopic
-            onChange={(e) => setSelectedPlayerTopic(e.target.value)}
-          />
+          <PlayerTopic onChange={(e) => handleTopicPlayer(e.target.value)} />
         </div>
       )}
       {selectedTopic?.key == "company" && (
         <div className="grid grid-cols-4 gap-4 mt-4 w-full">
-          <CompanyTopic
-            onChange={(e) => setSelectedCompanyTopic(e.target.value)}
-          />
+          <CompanyTopic onChange={(e) => handleTopicCompany(e.target.value)} />
           <Complement onChange={(e) => setSelectedComplement(e.target.value)} />
           <CompanySubject
-            onChange={(e) => setSelectedCompanySubject(e.target.value)}
+            onChange={(e) => {
+              //set text
+              setSelectedCompanySubject(e.target.value);  
+            }}
           />
         </div>
       )}

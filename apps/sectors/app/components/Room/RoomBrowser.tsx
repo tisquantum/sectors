@@ -2,7 +2,7 @@
 
 import { trpc } from "@sectors/app/trpc";
 import { useEffect, useState } from "react";
-import RoomList from "./RoomList";
+import RoomListItem from "./RoomList";
 import { RoomWithUsers } from "@server/prisma/prisma.types";
 import { notFound } from "next/navigation";
 import Button from "@sectors/app/components/General/DebounceButton";
@@ -10,11 +10,18 @@ import CreateRoom from "./CreateRoom";
 import { ArrowPathIcon } from "@heroicons/react/24/solid";
 
 export default function RoomBrowser() {
-  const { data: rooms, isLoading, error, refetch } = trpc.room.listRooms.useQuery({});
+  const {
+    data: rooms,
+    isLoading,
+    error,
+    refetch,
+  } = trpc.room.listRooms.useQuery({});
+  const [searchQuery, setSearchQuery] = useState("");
+
   if (isLoading) {
     return <div>Loading...</div>;
   }
-  if(error) {
+  if (error) {
     return <div>Error: {error.message}</div>;
   }
   if (rooms == undefined) {
@@ -25,6 +32,14 @@ export default function RoomBrowser() {
     refetch();
   };
 
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+  };
+
+  const filteredRooms = rooms.filter((room) =>
+    room.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div className="container mx-auto">
       <div className="flex items-center justify-between content-center my-4">
@@ -33,9 +48,18 @@ export default function RoomBrowser() {
           <ArrowPathIcon className="size-4" />
         </Button>
       </div>
+      <div className="mb-4">
+        <input
+          type="text"
+          placeholder="Search rooms..."
+          value={searchQuery}
+          onChange={handleSearchChange}
+          className="w-full p-2 border border-gray-300 rounded text-slate-900"
+        />
+      </div>
       <div className="grid grid-flow-row auto-rows-max">
-        {rooms.map((room) => (
-          <RoomList room={room} key={room.id} />
+        {filteredRooms.map((room) => (
+          <RoomListItem room={room} key={room.id} />
         ))}
       </div>
       <CreateRoom />

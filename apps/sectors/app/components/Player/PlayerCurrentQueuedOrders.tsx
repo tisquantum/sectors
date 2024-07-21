@@ -56,7 +56,10 @@ const PlayerCurrentQueuedOrders = ({
       <h3>Current Queued Orders</h3>
       <div className="grid grid-cols-2 gap-3">
         {playerOrders.map((playerOrder) => (
-          <Card className="flex flex-col justify-center p-2 gap-1">
+          <Card
+            className="flex flex-col justify-center p-2 gap-1"
+            key={playerOrder.id}
+          >
             <span>{playerOrder.Company.name}</span>
             {renderBasedOnOrderType(playerOrder)}
           </Card>

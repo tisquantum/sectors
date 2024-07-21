@@ -253,7 +253,7 @@ model PlayerOrder {
   optionContractId Int?
   location         ShareLocation
   orderType        OrderType
-  ShortOrder       ShortOrder?
+  ShortOrder       ShortOrder?    
   OptionContract   OptionContract? @relation(fields: [optionContractId], references: [id])
   Game             Game            @relation(fields: [gameId], references: [id])
   StockRound       StockRound      @relation(fields: [stockRoundId], references: [id])
@@ -281,16 +281,17 @@ enum OrderStatus {
 }
 
 model ShortOrder {
-  id                   Int          @id @default(autoincrement())
-  Share                Share[]
-  shortSalePrice       Int
-  marginAccountMinimum Int
-  borrowRate           Int
-  coverPrice           Int?
-  playerOrderId        Int?         @unique
-  PlayerOrder          PlayerOrder? @relation(fields: [playerOrderId], references: [id])
-  createdAt            DateTime     @default(now())
-  updatedAt            DateTime     @updatedAt
+  id                        Int          @id @default(autoincrement())
+  Share                     Share[]
+  shortSalePrice            Int
+  shortStockPriceAtPurchase Int
+  marginAccountMinimum      Int
+  borrowRate                Int
+  coverPrice                Int?
+  playerOrderId             Int?         @unique
+  PlayerOrder               PlayerOrder? @relation(fields: [playerOrderId], references: [id])
+  createdAt                 DateTime     @default(now())
+  updatedAt                 DateTime     @updatedAt
 }
 
 //premium should be calculated as strike price - current price * term or something like this
@@ -300,6 +301,7 @@ model OptionContract {
   premium        Int //the price of the option contract to be paid by the player
   currentPremium Int?
   strikePrice    Int //the price at which the player can buy the shares
+  exercisePrice  Int? //the price at which the player sold the shares
   term           Int
   currentTerm    Int           @default(0)
   shares         Share[]

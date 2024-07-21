@@ -43,6 +43,7 @@ import {
   CompanyActionWithCompany,
   CompanyWithSector,
   GameState,
+  OptionContractWithRelations,
   PlayerOrderWithCompany,
   PlayerOrderWithPlayerCompany,
   PlayerOrderWithPlayerCompanySectorShortOrder,
@@ -54,9 +55,9 @@ import { StockRoundService } from '@server/stock-round/stock-round.service';
 import { PhaseService } from '@server/phase/phase.service';
 import {
   DEFAULT_SHARE_DISTRIBUTION,
-  MAX_LIMIT_ORDER,
-  MAX_MARKET_ORDER,
-  MAX_SHORT_ORDER,
+  MAX_LIMIT_ORDER_ACTIONS,
+  MAX_MARKET_ORDER_ACTIONS,
+  MAX_SHORT_ORDER_ACTIONS,
   stockTierChartRanges,
   phaseTimes,
   StockTierChartRange,
@@ -228,17 +229,48 @@ export class GameManagementService {
       case PhaseName.CAPITAL_GAINS:
         await this.resolveCapitalGains(phase);
         break;
-      case PhaseName.END_TURN:
-        await this.resolveCompanyLoans(phase);
-        await this.optionContractGenerate(phase);
-        await this.resolveEndTurn(phase);
-        break;
       case PhaseName.DIVESTMENT:
         await this.resolveDivestment(phase);
+        break;
+      case PhaseName.END_TURN:
+        await this.resolveCompanyLoans(phase);
+        await this.resolveBorrowInterestShorts(phase);
+        await this.optionContractGenerate(phase);
+        await this.resolveEndTurn(phase);
         break;
       default:
         return;
     }
+  }
+
+  async resolveBorrowInterestShorts(phase: Phase) {
+    //get all short orders that are open
+    const shortOrders =
+      await this.playerOrderService.playerOrdersWithShortOrder({
+        where: {
+          gameId: phase.gameId,
+          orderType: OrderType.SHORT,
+          orderStatus: OrderStatus.OPEN,
+        },
+      });
+    //charge interest to players cash on hand (cannot go below 0) by mutltiplying borrowRate by the short order amount
+    const shortOrderPromises = shortOrders.map(async (shortOrder) => {
+      const newCashOnHand = Math.max(
+        shortOrder.Player.cashOnHand -
+          (shortOrder?.ShortOrder?.shortSalePrice || 0) *
+            ((shortOrder?.ShortOrder?.borrowRate || BORROW_RATE) / 100),
+        0,
+      );
+      await this.playersService.updatePlayer({
+        where: { id: shortOrder.playerId },
+        data: { cashOnHand: newCashOnHand },
+      });
+      await this.gameLogService.createGameLog({
+        game: { connect: { id: phase.gameId } },
+        content: `Player ${shortOrder.Player.nickname} has been charged $${(shortOrder?.ShortOrder?.shortSalePrice || 0) * (shortOrder?.ShortOrder?.borrowRate || BORROW_RATE)} for interest on a short order.`,
+      });
+    });
+    await Promise.all(shortOrderPromises);
   }
 
   async resolveCompanyLoans(phase: Phase) {
@@ -378,7 +410,7 @@ export class GameManagementService {
     // Calculate the premium based on the current price, interest rate, and share count
     const premium =
       currentPrice *
-      (interestRate + sectorVolatility[sectorName] / 2) *
+      (interestRate + sectorVolatility[sectorName] / 3) *
       shareCount;
 
     //round up
@@ -468,9 +500,9 @@ export class GameManagementService {
   async fillOptionContracts(gameId: string, companies: CompanyWithSector[]) {
     const optionContractsToAdd = [];
     for (let i = 0; i < OPTION_CONTRACT_ACTIVE_COUNT; i++) {
-      //pick a random company
-      const randomCompany =
-        companies[Math.floor(Math.random() * companies.length)];
+      // Pick a random company
+      const randomIndex = Math.floor(Math.random() * companies.length);
+      const randomCompany = companies[randomIndex];
       optionContractsToAdd.push({
         ...this.createOptionContract(randomCompany, ContractState.FOR_SALE),
         tableauSlot: i + 1,
@@ -679,18 +711,16 @@ export class GameManagementService {
       return;
     }
 
-    const sharePromises = playersToDivest.map(async (player) => {
-      // Get the shares
+    const sharePromises = playersToDivest.map((player) => async () => {
       const shares = player.Share;
       const shuffledShares = this.shuffleArray([
         ...shares,
       ]) as ShareWithCompany[];
-      // Get the shares to divest at random
       const sharesToDivest = shuffledShares.slice(DEFAULT_SHARE_LIMIT);
-      const companyId = sharesToDivest[0].companyId; // Assuming all shares are from the same company
+      const companyId = sharesToDivest[0].companyId;
 
-      const shareUpdates = sharesToDivest.map((share) => {
-        return this.shareService.updateShare({
+      const shareUpdates = sharesToDivest.map((share) => async () => {
+        await this.shareService.updateShare({
           where: { id: share.id },
           data: {
             location: ShareLocation.OPEN_MARKET,
@@ -699,29 +729,20 @@ export class GameManagementService {
         });
       });
 
-      const sellPromises = sharesToDivest.map(async (share) => {
+      const sellPromises = sharesToDivest.map((share) => async () => {
         const sharePrice = share.Company.currentStockPrice || 0;
-        try {
-          // Add money to the player
-          await this.playerAddMoney(share.gameId, player.id, sharePrice);
-
-          // Log the sale
-          await this.gameLogService.createGameLog({
-            game: { connect: { id: share.gameId } },
-            content: `Player ${player.nickname} has sold 1 share of ${share.Company.name} at $${sharePrice.toFixed(2)} due to DIVESTMENT`,
-          });
-        } catch (error) {
-          console.error('Error selling shares:', error);
-        }
+        await this.playerAddMoney(share.gameId, player.id, sharePrice);
+        await this.gameLogService.createGameLog({
+          game: { connect: { id: share.gameId } },
+          content: `Player ${player.nickname} has sold 1 share of ${share.Company.name} at $${sharePrice.toFixed(2)} due to DIVESTMENT`,
+        });
       });
 
-      await Promise.all(sellPromises);
-      await Promise.all(shareUpdates);
+      await this.processBatch(sellPromises);
+      await this.processBatch(shareUpdates);
 
-      // Calculate the net difference as the number of shares sold
       const netDifference = sharesToDivest.length;
 
-      // Adjust stock price and trigger limit orders
       const stockPrice = await this.stockHistoryService.moveStockPriceDown(
         phase.gameId,
         companyId,
@@ -731,11 +752,9 @@ export class GameManagementService {
         StockAction.MARKET_SELL,
       );
 
-      this.gameLogService.createGameLog({
+      await this.gameLogService.createGameLog({
         game: { connect: { id: phase.gameId } },
-        content: `Stock price for ${
-          sharesToDivest[0].Company.name
-        } has decreased to $${stockPrice.price.toFixed(2)} due to market sell orders during DIVESTMENT`,
+        content: `Stock price for ${sharesToDivest[0].Company.name} has decreased to $${stockPrice.price.toFixed(2)} due to market sell orders during DIVESTMENT`,
       });
 
       await this.playerOrderService.triggerLimitOrdersFilled(
@@ -752,7 +771,11 @@ export class GameManagementService {
       });
     });
 
-    await Promise.all(sharePromises);
+    const BATCH_SIZE = 5;
+    for (let i = 0; i < sharePromises.length; i += BATCH_SIZE) {
+      const batch = sharePromises.slice(i, i + BATCH_SIZE);
+      await this.processBatch(batch);
+    }
   }
 
   /**
@@ -771,7 +794,7 @@ export class GameManagementService {
 
     const netWorths = players.map((player) => {
       const totalSharesValue = player.Share.reduce((acc, share) => {
-        return acc + share.price;
+        return acc + share.Company.currentStockPrice;
       }, 0);
       return {
         playerId: player.id,
@@ -794,9 +817,10 @@ export class GameManagementService {
         continue;
       }
 
-      const taxAmount = (netWorth * tier.taxPercentage) / 100;
+      let taxAmount = netWorth * (tier.taxPercentage / 100);
       const player = players.find((p) => p.id === playerId);
-
+      //round tax amount down
+      taxAmount = Math.floor(taxAmount);
       if (!player) {
         console.error(`Player not found: ${playerId}`);
         continue;
@@ -1074,7 +1098,7 @@ export class GameManagementService {
    */
   async resolveCompanyAction(phase: Phase) {
     //get the company action
-    const companyAction = await this.prisma.companyAction.findFirst({
+    let companyAction = await this.prisma.companyAction.findFirst({
       where: {
         operatingRoundId: phase.operatingRoundId || 0,
         companyId: phase.companyId || '',
@@ -1084,7 +1108,25 @@ export class GameManagementService {
       },
     });
     if (!companyAction) {
-      throw new Error('Company action not found');
+      //if no company action, create a veto action
+      await this.companyActionService.createCompanyAction({
+        Company: { connect: { id: phase.companyId || '' } },
+        OperatingRound: { connect: { id: phase.operatingRoundId || 0 } },
+        action: OperatingRoundAction.VETO,
+        resolved: true,
+      });
+      companyAction = await this.prisma.companyAction.findFirst({
+        where: {
+          operatingRoundId: phase.operatingRoundId || 0,
+          companyId: phase.companyId || '',
+        },
+        include: {
+          Company: true,
+        },
+      });
+      if (!companyAction) {
+        throw new Error('Company action not created or found');
+      }
     }
     //pay for company action
     try {
@@ -1150,7 +1192,12 @@ export class GameManagementService {
     //increase the company cash on hand by $500
     await this.companyService.updateCompany({
       where: { id: companyAction.companyId },
-      data: { cashOnHand: company.cashOnHand + LOAN_AMOUNT },
+      data: { cashOnHand: company.cashOnHand + LOAN_AMOUNT, hasLoan: true },
+    });
+    //game log
+    await this.gameLogService.createGameLog({
+      game: { connect: { id: company.gameId } },
+      content: `Company ${company.name} has taken a loan of $${LOAN_AMOUNT}.`,
     });
   }
 
@@ -1303,16 +1350,9 @@ export class GameManagementService {
     if (!game) {
       throw new Error('Game not found');
     }
-    //if the company does not have 3 prestige, move the prestige track forward
-    if (company.prestigeTokens < PRESTIGE_ACTION_TOKEN_COST) {
-      await this.gamesService.updateGameState({
-        where: { id: company.gameId },
-        data: {
-          nextPrestigeReward: getNextPrestigeInt(game.nextPrestigeReward || 0),
-        },
-      });
-    } else {
-      //if the company has 3 prestige, spend it
+    //if the company does not have enough prestige, move the prestige track forward
+    if (company.prestigeTokens >= PRESTIGE_ACTION_TOKEN_COST) {
+      //if the company has enough prestige, spend it
       await this.companyService.updateCompany({
         where: { id: company.id },
         data: {
@@ -1334,6 +1374,13 @@ export class GameManagementService {
       //resolve Reward
       this.resolvePrestigeReward(prestigeReward);
     }
+    //move the track forward
+    await this.gamesService.updateGameState({
+      where: { id: company.gameId },
+      data: {
+        nextPrestigeReward: getNextPrestigeInt(game.nextPrestigeReward || 0),
+      },
+    });
   }
 
   async resolvePrestigeReward(prestigeReward: PrestigeRewards) {
@@ -1569,6 +1616,33 @@ export class GameManagementService {
       await this.companyService.updateCompany({
         where: { id: companyAction.companyId },
         data: { demandScore: companyAction.Company.demandScore + 3 },
+      });
+      //get the sector
+      const sector = await this.sectorService.sector({
+        id: companyAction.Company.sectorId,
+      });
+      //if the sector is not found, throw error
+      if (!sector) {
+        throw new Error('Sector not found');
+      }
+      //get game
+      const game = await this.gamesService.game({ id: sector.gameId || '' });
+      //if the game is not found, throw error
+      if (!game) {
+        throw new Error('Game not found');
+      }
+      //add consumers to sector
+      await this.sectorService.updateSector({
+        where: { id: sector.id },
+        data: { consumers: sector.consumers + MARKETING_CONSUMER_BONUS },
+      });
+      //subtract consumers from game
+      await this.gamesService.updateGameState({
+        where: { id: game.id },
+        data: {
+          consumerPoolNumber:
+            game.consumerPoolNumber - MARKETING_CONSUMER_BONUS,
+        },
       });
     } catch (error) {
       console.error('Error updating company', error);
@@ -2214,50 +2288,6 @@ export class GameManagementService {
     const economyScore = STABLE_ECONOMY_SCORE;
     let consumersMovedCounter = 0;
 
-    // reduce sectors sector.Company prestige total
-    const prestigeTotalsBySector = sectors.reduce(
-      (acc, sector) => {
-        const prestigeTotal = sector.Company.reduce(
-          (companyAcc, company) => companyAcc + (company.prestigeTokens || 0),
-          0,
-        );
-        acc[sector.name] = prestigeTotal; // You can use sector.id or sector.name as key
-        return acc;
-      },
-      {} as { [key: string]: number },
-    );
-
-    // Convert the prestigeTotalsBySector object to an array of [sectorName, prestigeTotal] pairs
-    const sortedSectors = Object.entries(prestigeTotalsBySector)
-      .sort((a, b) => b[1] - a[1]) // Sort by prestige total in descending order
-      .map(([name]) => sectors.find((sector) => sector.name === name)); // Map back to the original sectors
-
-    // Distribute consumer pool to sectors based on marketing bonus
-    sortedSectors.forEach((sector) => {
-      if (!sector) {
-        console.error('Sector not found');
-        return;
-      }
-      let marketingBonus = 0;
-      if (marketingOrdersGroupedBySectorId.length > 0) {
-        marketingBonus =
-          (marketingOrdersGroupedBySectorId.find(
-            (order) => order.sectorId === sector.id,
-          )?.count || 0) * MARKETING_CONSUMER_BONUS;
-      }
-      console.log('marketingBonus:', marketingBonus);
-      consumersMovedCounter += marketingBonus;
-
-      const consumersToAdd = Math.min(game.consumerPoolNumber, marketingBonus);
-      if (consumersToAdd > 0) {
-        sectorUpdates.push({
-          where: { id: sector.id },
-          data: { consumers: sector.consumers + consumersToAdd },
-        });
-        game.consumerPoolNumber -= consumersToAdd;
-      }
-    });
-
     // Distribute remaining economy score to sectors
     let sectorIndex = 0;
     let remainingEconomyScore = economyScore;
@@ -2353,9 +2383,9 @@ export class GameManagementService {
         cashOnHand: startingCashOnHand,
         gameId,
         userId: user.userId,
-        marketOrderActions: MAX_MARKET_ORDER,
-        limitOrderActions: MAX_LIMIT_ORDER,
-        shortOrderActions: MAX_SHORT_ORDER,
+        marketOrderActions: MAX_MARKET_ORDER_ACTIONS,
+        limitOrderActions: MAX_LIMIT_ORDER_ACTIONS,
+        shortOrderActions: MAX_SHORT_ORDER_ACTIONS,
         marginAccount: 0,
       })),
     );
@@ -3192,11 +3222,12 @@ export class GameManagementService {
 
   async resolvePendingShortOrders(phase: Phase) {
     if (phase.stockRoundId) {
-      const playerOrders: PlayerOrderWithPlayerCompanySectorShortOrder[] =
+      const shortOrders: PlayerOrderWithPlayerCompanySectorShortOrder[] =
         await this.prisma.playerOrder.findMany({
           where: {
             stockRoundId: phase.stockRoundId,
             orderStatus: OrderStatus.PENDING,
+            orderType: OrderType.SHORT,
           },
           include: {
             Company: true,
@@ -3209,13 +3240,9 @@ export class GameManagementService {
             },
           },
         });
-      if (!playerOrders) {
+      if (!shortOrders) {
         throw new Error('Stock round not found');
       }
-      //filter all short orders
-      const shortOrders = playerOrders.filter(
-        (order) => order.orderType === OrderType.SHORT,
-      );
       shortOrders.forEach(async (order) => {
         //check if the short order has already been created
         if (!order.ShortOrder) {
@@ -3233,70 +3260,123 @@ export class GameManagementService {
                 orderStatus: OrderStatus.REJECTED,
               },
             });
+            //game log
+            await this.gameLogService.createGameLog({
+              game: { connect: { id: order.gameId } },
+              content: `Player ${order.Player.nickname} does not have enough cash to fund margin account to place short order`,
+            });
             throw new Error(
               'Player does not have enough cash to fund margin account to place order',
             );
           } else {
-            //check player margin account balance
-            const player = order.Player;
-            //get all player short orders and calculate margin account required total
-            const playerShortOrders = await this.prisma.playerOrder.findMany({
+            //ensure there are enough shares to short
+            const shares = await this.shareService.shares({
               where: {
-                playerId: player.id,
-                orderType: OrderType.SHORT,
-              },
-              include: {
-                ShortOrder: true,
+                companyId: order.companyId,
+                location: ShareLocation.OPEN_MARKET,
               },
             });
-            //add marginAccountMinimum together
-            const marginAccountMinimumTotal = playerShortOrders.reduce(
-              (acc, order) =>
-                acc + (order.ShortOrder?.marginAccountMinimum || 0),
-              0,
-            );
-            const newShortOrderMarginAccountMinimum =
-              calculateMarginAccountMinimum(shortInitialTotalValue);
-            //if the player does not have enough currently, take money from cashOnHand and fill the marginAccount
-            if (
-              marginAccountMinimumTotal + newShortOrderMarginAccountMinimum >
-              player.cashOnHand
-            ) {
-              const difference =
-                marginAccountMinimumTotal +
-                newShortOrderMarginAccountMinimum -
-                player.cashOnHand;
+            if (!shares || shares.length < (order.quantity || 0)) {
+              //reject order
+              await this.prisma.playerOrder.update({
+                where: { id: order.id },
+                data: {
+                  orderStatus: OrderStatus.REJECTED,
+                },
+              });
+
+              //game log
+              await this.gameLogService.createGameLog({
+                game: { connect: { id: order.gameId } },
+                content: `Player ${order.Player.nickname} does not have enough shares to place short order`,
+              });
+              throw new Error('Not enough shares to place short order');
+            } else {
+              //check player margin account balance
+              const player = order.Player;
+              //get all player short orders and calculate margin account required total
+              const playerShortOrdersOpen =
+                await this.prisma.playerOrder.findMany({
+                  where: {
+                    playerId: player.id,
+                    orderType: OrderType.SHORT,
+                    orderStatus: OrderStatus.OPEN,
+                  },
+                  include: {
+                    ShortOrder: true,
+                  },
+                });
+              //add marginAccountMinimum together
+              const marginAccountMinimumTotal = playerShortOrdersOpen.reduce(
+                (acc, order) =>
+                  acc + (order.ShortOrder?.marginAccountMinimum || 0),
+                0,
+              );
+              const newShortOrderMarginAccountMinimum =
+                calculateMarginAccountMinimum(shortInitialTotalValue);
+
               await this.prisma.player.update({
                 where: { id: player.id },
                 data: {
                   cashOnHand: {
-                    decrement: difference,
+                    decrement: newShortOrderMarginAccountMinimum,
                   },
                   marginAccount: {
-                    increment: difference,
+                    increment:
+                      player.marginAccount ||
+                      0 + newShortOrderMarginAccountMinimum,
                   },
+                },
+              });
+              //game log
+              await this.gameLogService.createGameLog({
+                game: { connect: { id: order.gameId } },
+                content: `Player ${order.Player.nickname} has funded their margin account with $${newShortOrderMarginAccountMinimum} to place a short order`,
+              });
+
+              //create the short order
+              const shortOrder = await this.prisma.shortOrder.create({
+                data: {
+                  shortSalePrice: shortInitialTotalValue,
+                  shortStockPriceAtPurchase:
+                    order.Company.currentStockPrice || 0,
+                  marginAccountMinimum: calculateMarginAccountMinimum(
+                    shortInitialTotalValue,
+                  ),
+                  borrowRate: BORROW_RATE,
+                  PlayerOrder: { connect: { id: order.id } },
+                },
+              });
+              //game log
+              await this.gameLogService.createGameLog({
+                game: { connect: { id: order.gameId } },
+                content: `Player ${order.Player.nickname} has placed a short order for ${order.quantity} shares of ${order.Company.name} and receives $${shortInitialTotalValue} in cash.`,
+              });
+              //update the player order status to opened
+              await this.prisma.playerOrder.update({
+                where: { id: order.id },
+                data: {
+                  orderStatus: OrderStatus.OPEN,
+                  ShortOrder: { connect: { id: shortOrder.id } },
+                },
+              });
+              //allocate the shares
+              const shareIds = shares
+                .slice(0, order.quantity || 0)
+                .map((share) => {
+                  return share.id;
+                });
+              //update the shares
+              await this.shareService.updateManySharesUnchecked({
+                where: { id: { in: shareIds } },
+                data: {
+                  playerId: order.playerId,
+                  location: ShareLocation.PLAYER,
+                  shortOrderId: shortOrder.id,
                 },
               });
             }
           }
-          //create the short order
-          await this.prisma.shortOrder.create({
-            data: {
-              shortSalePrice: order.Company.currentStockPrice || 0,
-              marginAccountMinimum: calculateMarginAccountMinimum(
-                shortInitialTotalValue,
-              ),
-              borrowRate: BORROW_RATE,
-              PlayerOrder: { connect: { id: order.id } },
-            },
-          });
-          //update the player order status to filled
-          await this.prisma.playerOrder.update({
-            where: { id: order.id },
-            data: {
-              orderStatus: OrderStatus.OPEN,
-            },
-          });
         }
       });
     }
@@ -3616,7 +3696,7 @@ export class GameManagementService {
           players.map((player) =>
             this.playersService.updatePlayer({
               where: { id: player.id },
-              data: { marketOrderActions: MAX_MARKET_ORDER },
+              data: { marketOrderActions: MAX_MARKET_ORDER_ACTIONS },
             }),
           ),
         );
@@ -3845,6 +3925,7 @@ export class GameManagementService {
       playerCashUpdates,
       orderStatusUpdates,
       gameLogEntries,
+      game.id,
     );
   }
 
@@ -3936,6 +4017,7 @@ export class GameManagementService {
       playerCashUpdates,
       orderStatusUpdates,
       gameLogEntries,
+      company.gameId,
     );
   }
 
@@ -4236,6 +4318,7 @@ export class GameManagementService {
     playerCashUpdates: { playerId: string; decrement: number }[],
     orderStatusUpdates: any[],
     gameLogEntries: any[],
+    gameId: string,
   ) {
     try {
       const BATCH_SIZE = 4;
@@ -4249,42 +4332,19 @@ export class GameManagementService {
 
       for (let i = 0; i < playerCashUpdates.length; i += BATCH_SIZE) {
         const batch = playerCashUpdates.slice(i, i + BATCH_SIZE);
-        let attempts = 0;
-        let success = false;
-
-        while (!success && attempts < MAX_RETRIES) {
-          try {
-            await prisma.$transaction(
-              batch.map((update) =>
-                prisma.player.update({
-                  where: { id: update.playerId },
-                  data: {
-                    cashOnHand: {
-                      decrement: update.decrement,
-                    },
-                  },
-                }),
-              ),
-            );
-            success = true; // Transaction succeeded
-          } catch (error) {
-            if (error.code === '40P01') {
-              // Deadlock detected
-              attempts++;
-              console.warn(
-                `Deadlock detected. Retrying attempt ${attempts}/${MAX_RETRIES}`,
-              );
-            } else {
-              throw error; // Other errors should be thrown
-            }
-          }
-        }
-
-        if (!success) {
-          throw new Error(
-            'Failed to update player cash due to repeated deadlocks',
-          );
-        }
+        await Promise.all(
+          batch.map((update) =>
+            this.retry(
+              () =>
+                this.playerRemoveMoney(
+                  gameId,
+                  update.playerId,
+                  update.decrement,
+                ),
+              MAX_RETRIES,
+            ),
+          ),
+        );
       }
 
       for (let i = 0; i < orderStatusUpdates.length; i += BATCH_SIZE) {
@@ -4306,36 +4366,32 @@ export class GameManagementService {
   }
 
   async playerAddMoney(gameId: string, playerId: string, amount: number) {
+    //update bank pool for game
+    await this.prisma.game.update({
+      where: { id: gameId },
+      data: {
+        bankPoolNumber: {
+          decrement: amount,
+        },
+      },
+    });
+    const updatedPlayer = await this.prisma.player.update({
+      where: { id: playerId },
+      data: {
+        cashOnHand: {
+          increment: amount,
+        },
+      },
+    });
     //create game log
     await this.gameLogService.createGameLog({
       game: { connect: { id: gameId } },
-      content: `Player ${playerId} has received $${amount} in cash`,
+      content: `Player ${updatedPlayer.nickname} has received $${amount} in cash`,
     });
-    //update bank pool for game
-    await this.prisma.game.update({
-      where: { id: gameId },
-      data: {
-        bankPoolNumber: {
-          decrement: amount,
-        },
-      },
-    });
-    return this.prisma.player.update({
-      where: { id: playerId },
-      data: {
-        cashOnHand: {
-          increment: amount,
-        },
-      },
-    });
+    return updatedPlayer;
   }
 
   async playerRemoveMoney(gameId: string, playerId: string, amount: number) {
-    ///create game log
-    await this.gameLogService.createGameLog({
-      game: { connect: { id: gameId } },
-      content: `Player ${playerId} has spent $${amount} in cash`,
-    });
     //update bank pool for game
     await this.prisma.game.update({
       where: { id: gameId },
@@ -4345,7 +4401,7 @@ export class GameManagementService {
         },
       },
     });
-    return this.prisma.player.update({
+    const updatedPlayer = await this.prisma.player.update({
       where: { id: playerId },
       data: {
         cashOnHand: {
@@ -4353,6 +4409,13 @@ export class GameManagementService {
         },
       },
     });
+
+    ///create game log
+    await this.gameLogService.createGameLog({
+      game: { connect: { id: gameId } },
+      content: `Player ${updatedPlayer.nickname} has spent $${amount} in cash`,
+    });
+    return updatedPlayer;
   }
 
   async haveAllCompaniesActionsResolved(gameId: string) {
@@ -4405,7 +4468,7 @@ export class GameManagementService {
       case PhaseName.STOCK_OPEN_LIMIT_ORDERS:
         return this.limitOrdersPending(currentPhase?.stockRoundId || 0);
       case PhaseName.STOCK_RESOLVE_OPTION_ORDER:
-        return this.anyOptionOrdersExpired(currentPhase?.gameId || '');
+        return this.anyOptionOrdersPurchased(currentPhase?.gameId || '');
       case PhaseName.STOCK_RESOLVE_PENDING_OPTION_ORDER:
         return this.optionOrdersPending(currentPhase?.stockRoundId || 0);
       case PhaseName.STOCK_ACTION_OPTION_ORDER:
@@ -4415,7 +4478,7 @@ export class GameManagementService {
     }
   }
 
-  async anyOptionOrdersExpired(gameId: string) {
+  async anyOptionOrdersPurchased(gameId: string) {
     const playerOrders =
       await this.playerOrderService.playerOrdersWithCompanyAndOptionContract({
         where: {
@@ -4424,13 +4487,7 @@ export class GameManagementService {
           orderStatus: OrderStatus.OPEN,
         },
       });
-    return (
-      playerOrders.filter(
-        (order) =>
-          (order.OptionContract?.currentTerm || 0) >=
-          (order.OptionContract?.term || 0),
-      ).length > 0
-    );
+    return playerOrders.length > 0;
   }
 
   async anyOptionOrdersToBeExercised(gameId: string) {
@@ -4514,5 +4571,76 @@ export class GameManagementService {
       },
     });
     return playerOrders.length > 0;
+  }
+  async exerciseOptionContract(id: number): Promise<OptionContract> {
+    //get the option contract with related player orders
+    const optionContract = await this.optionContractService.getOptionContract({
+      id,
+    });
+    //throw error if option contract not found
+    if (!optionContract) {
+      throw new Error('Option contract not found');
+    }
+    //find the player order that's open
+    const playerOrder = optionContract.PlayerOrders.find(
+      (order) => order.orderStatus === 'OPEN',
+    );
+    // throw error if player order not found
+    if (!playerOrder) {
+      throw new Error('Player order not found');
+    }
+    //update player order to filled
+    await this.playerOrderService.updatePlayerOrder({
+      where: { id: playerOrder.id },
+      data: { orderStatus: OrderStatus.FILLED },
+    });
+    //get game
+    const game = await this.gamesService.getGameState(optionContract.gameId);
+    //throw error if game not found
+    if (!game) {
+      throw new Error('Game not found');
+    }
+    //grant step bonus
+    await this.stockHistoryService.moveStockPriceUp(
+      optionContract.gameId,
+      optionContract.companyId,
+      game.currentPhaseId || '',
+      optionContract.Company.currentStockPrice || 0,
+      optionContract.stepBonus,
+      StockAction.CALL_OPTION,
+    );
+    //give the player the money from the option contract which is the difference between the current stock price and the strike price
+    await this.playerAddMoney(
+      optionContract.gameId,
+      playerOrder.playerId,
+      (optionContract.Company.currentStockPrice -
+        (optionContract.strikePrice || 0)) *
+        optionContract.shareCount,
+    );
+    //get player
+    const player = await this.playersService.player({
+      id: playerOrder.playerId,
+    });
+    //throw error if player not found
+    if (!player) {
+      throw new Error('Player not found');
+    }
+    //game log
+    await this.gameLogService.createGameLog({
+      game: { connect: { id: optionContract.gameId } },
+      content: `Player ${player.nickname} has exercised an option contract for ${
+        optionContract.Company.name
+      } at $${optionContract.Company.currentStockPrice.toFixed(2)}`,
+    });
+    const updatedOptionContract =
+      await this.optionContractService.updateOptionContract({
+        where: { id },
+        data: {
+          contractState: ContractState.EXERCISED,
+          exercisePrice: optionContract.Company.currentStockPrice,
+        },
+      });
+    //return the option contract
+    return updatedOptionContract;
   }
 }

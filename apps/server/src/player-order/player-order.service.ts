@@ -18,6 +18,7 @@ import {
   PhaseWithStockRound,
   PlayerOrderWithPlayerRevealed,
   PlayerOrderWithCompanyAndOptionContract,
+  PlayerOrderWithShortOrder,
 } from '@server/prisma/prisma.types';
 import { getPseudoSpend } from '@server/data/helpers';
 import { MAX_SHARE_PERCENTAGE } from '@server/data/constants';
@@ -71,6 +72,27 @@ export class PlayerOrderService {
       orderBy,
       include: {
         Company: true,
+      },
+    });
+  }
+
+  async playerOrdersWithShortOrder(params: {
+    skip?: number;
+    take?: number;
+    cursor?: Prisma.PlayerOrderWhereUniqueInput;
+    where?: Prisma.PlayerOrderWhereInput;
+    orderBy?: Prisma.PlayerOrderOrderByWithRelationInput;
+  }): Promise<PlayerOrderWithShortOrder[]> {
+    const { skip, take, cursor, where, orderBy } = params;
+    return this.prisma.playerOrder.findMany({
+      skip,
+      take,
+      cursor,
+      where,
+      orderBy,
+      include: {
+        ShortOrder: true,
+        Player: true,
       },
     });
   }
@@ -354,7 +376,6 @@ export class PlayerOrderService {
       }
     }
     if (data.orderType === OrderType.SHORT) {
-      delete data.value;
       delete data.isSell;
       //get player
       const playerId = data.Player.connect?.id;

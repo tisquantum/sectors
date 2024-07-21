@@ -9,17 +9,19 @@ import {
   StockTier,
 } from '@prisma/client';
 
-export const MAX_MARKET_ORDER = 3;
+export const MAX_MARKET_ORDER_ACTIONS = 3;
 
-export const MAX_LIMIT_ORDER = 5;
+export const MAX_LIMIT_ORDER_ACTIONS = 5;
 
-export const MAX_SHORT_ORDER = 2;
+export const MAX_SHORT_ORDER_ACTIONS = 2;
+
+export const MAX_SHORT_ORDER_QUANTITY = 3;
 
 export const DEFAULT_SHARE_LIMIT = 12;
 
 export const PRESTIGE_TRACK_LENGTH = 10;
 
-export const PRESTIGE_ACTION_TOKEN_COST = 2;
+export const PRESTIGE_ACTION_TOKEN_COST = 1;
 
 export const DEFAULT_SHARE_DISTRIBUTION = 10;
 

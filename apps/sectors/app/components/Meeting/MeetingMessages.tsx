@@ -10,6 +10,7 @@ import { MeetingMessage } from "@server/prisma/prisma.client";
 import { Avatar } from "@nextui-org/react";
 import { MeetingMessageWithPlayer } from "@server/prisma/prisma.types";
 import { motion } from "framer-motion";
+import PlayerAvatar from "../Player/PlayerAvatar";
 
 const MeetingMessages = () => {
   const { gameId, socketChannel: channel } = useGame();
@@ -45,7 +46,7 @@ const MeetingMessages = () => {
   if (meetingMessages == undefined) return null;
 
   return (
-    <div className="flex flex-col gap-3 items-center justify-center content-center">
+    <div className="flex flex-wrap gap-3 items-center justify-center content-center">
       {meetingMessages.map((message) => (
         <motion.div
           initial={{ opacity: 0, scale: 0.5 }}
@@ -54,7 +55,7 @@ const MeetingMessages = () => {
           className="flex gap-3 w-64 justify-center items-center content-center p-2"
           key={message.id}
         >
-          <Avatar name={message.player.nickname} size="sm" className="mr-2" />
+          <PlayerAvatar player={message.player} />
           <span>{message.content}</span>
         </motion.div>
       ))}

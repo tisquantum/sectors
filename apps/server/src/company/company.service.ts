@@ -3,6 +3,7 @@ import { PrismaService } from '@server/prisma/prisma.service';
 import { Prisma, Company, Sector } from '@prisma/client';
 import {
   CompanyWithCards,
+  CompanyWithRelations,
   CompanyWithSector,
   CompanyWithSectorAndStockHistory,
   CompanyWithShare,
@@ -88,6 +89,24 @@ export class CompanyService {
     return this.prisma.company.findUnique({
       where: companyWhereUniqueInput,
       include: {
+        Cards: true,
+      },
+    });
+  }
+
+  async companyWithRelations(
+    companyWhereUniqueInput: Prisma.CompanyWhereUniqueInput,
+  ): Promise<CompanyWithRelations | null> {
+    return this.prisma.company.findUnique({
+      where: companyWhereUniqueInput,
+      include: {
+        Sector: true,
+        Share: {
+          include: {
+            Player: true,
+          },
+        },
+        StockHistory: true,
         Cards: true,
       },
     });

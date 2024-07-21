@@ -1,14 +1,20 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Accordion, AccordionItem, Avatar, Divider } from "@nextui-org/react";
+import {
+  Accordion,
+  AccordionItem,
+  Avatar,
+  Divider,
+  Tooltip,
+} from "@nextui-org/react";
 import { CurrencyDollarIcon } from "@heroicons/react/24/solid";
 import PlayerShares from "./PlayerShares";
 import { trpc } from "@sectors/app/trpc";
 import { notFound } from "next/navigation";
 import { PlayerWithShares } from "@server/prisma/prisma.types";
 import { Company } from "@server/prisma/prisma.client";
-import { RiWallet3Fill } from "@remixicon/react";
+import { RiSafe2Fill, RiWallet3Fill } from "@remixicon/react";
 import PlayerAvatar from "./PlayerAvatar";
 import { useGame } from "../Game/GameContext";
 
@@ -54,9 +60,21 @@ const PlayersOverview = ({ gameId }: { gameId: string }) => {
             startContent={<PlayerAvatar player={playerWithShares} size="lg" />}
             title={playerWithShares.nickname}
             subtitle={
-              <span className="flex items-center content-center">
-                <RiWallet3Fill size={18} /> ${playerWithShares.cashOnHand}
-              </span>
+              <div className="flex gap-2">
+                <Tooltip content="Cash on hand.">
+                  <span className="flex items-center content-center">
+                    <RiWallet3Fill size={18} /> ${playerWithShares.cashOnHand}
+                  </span>
+                </Tooltip>
+                {playerWithShares.marginAccount > 0 && (
+                  <Tooltip content="Margin account balance. This balance is locked for short orders until they are covered. It cannot be used for any other purpose until then.">
+                    <span className="flex items-center content-center">
+                      <RiSafe2Fill size={18} /> $
+                      {playerWithShares.marginAccount}
+                    </span>
+                  </Tooltip>
+                )}
+              </div>
             }
           >
             <div>

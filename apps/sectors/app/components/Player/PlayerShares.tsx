@@ -37,8 +37,16 @@ const PlayerShares = ({
 }: {
   playerWithShares: PlayerWithShares;
 }) => {
+  //get all shares that don't have shortOrderId
+  const marketShares = playerWithShares.Share.filter(
+    (share) => !share.shortOrderId
+  );
+  //get all shares that have shortOrderId
+  const shortShares = playerWithShares.Share.filter(
+    (share) => share.shortOrderId
+  );
   // Aggregate total value and total shares owned for each company
-  const stockAggregation = playerWithShares.Share.reduce(
+  const stockAggregation = marketShares.reduce(
     (acc: Record<string, StockAggregation>, playerShare) => {
       const { companyId, price } = playerShare;
       if (!acc[companyId]) {
@@ -64,7 +72,7 @@ const PlayerShares = ({
   );
 
   return (
-    <div className="grid grid-cols-4 gap-4">
+    <div className="flex flex-wrap gap-4">
       {playerCompanies.length > 0 ? (
         playerCompanies.map((company) => (
           <div
@@ -82,6 +90,26 @@ const PlayerShares = ({
       ) : (
         <div>No shares owned.</div>
       )}
+      <div className="w-full border-t border-gray-300 my-4"></div>
+      <div className="flex flex-col gap-2">
+        <div className="text-lg">Short Orders</div>
+        {shortShares.length > 0 ? (
+          shortShares.map((share) => (
+            <div key={share.id} className="flex items-center gap-2">
+              <div className="flex flex-col">
+                <div className="text-sm">
+                  {share.Company?.stockSymbol || "Company"} -{" "}
+                </div>
+                <div className="text-sm">
+                  Short Order ID: {share.shortOrderId}
+                </div>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div>No short orders.</div>
+        )}
+      </div>
     </div>
   );
 };

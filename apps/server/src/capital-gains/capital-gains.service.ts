@@ -45,7 +45,15 @@ export class CapitalGainsService {
       where,
       orderBy,
       include: {
-        Player: true,
+        Player: {
+          include: {
+            Share: {
+              include: {
+                Company: true,
+              },
+            },
+          },
+        },
       },
     });
   }

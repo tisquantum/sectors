@@ -24,7 +24,7 @@ import {
   PlayerOrderWithPlayerCompanySectorShortOrder,
   PlayerOrderAllRelations,
 } from "@server/prisma/prisma.types";
-import { interestRatesByTerm } from "@server/data/constants";
+import { BORROW_RATE, interestRatesByTerm } from "@server/data/constants";
 import { create } from "domain";
 import { sectorColors } from "@server/data/gameData";
 import { motion, AnimatePresence } from "framer-motion";
@@ -45,10 +45,7 @@ const OpenOptionContracts = () => {
         Game: {
           id: gameId,
         },
-        OR: [
-          { contractState: ContractState.FOR_SALE },
-          { contractState: ContractState.QUEUED },
-        ],
+        contractState: ContractState.FOR_SALE,
       },
     });
   if (isLoading) return <div>Loading...</div>;
@@ -287,15 +284,28 @@ const PendingShortOrders = ({
           key={index}
           className="bg-gray-500 p-2 rounded flex items-center gap-2"
         >
-          <Avatar name={order.Player.nickname} />
+          <PlayerAvatar player={order.Player} />
           <div>{order.Company.name}</div>
-          <div>
-            <span>${order.ShortOrder?.shortSalePrice}</span>
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2">
+              <span>
+                $
+                {order.ShortOrder?.shortStockPriceAtPurchase ??
+                  order.Company.currentStockPrice}
+              </span>
+              <span>
+                {order.quantity} SHARES @ {BORROW_RATE}%
+              </span>
+              <span>{order.orderStatus}</span>
+            </div>
             <span>
-              {order.quantity} SHARES @ {order.ShortOrder?.borrowRate}%
-            </span>
-            <span>
-              Margin Account Minimum ${order.ShortOrder?.marginAccountMinimum}
+              Margin Account Minimum $
+              {order.ShortOrder?.marginAccountMinimum ??
+                Math.floor(
+                  ((order.Company.currentStockPrice || 0) *
+                    (order.quantity || 0)) /
+                    2
+                )}
             </span>
           </div>
         </div>

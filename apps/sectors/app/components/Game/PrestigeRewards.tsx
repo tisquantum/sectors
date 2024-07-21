@@ -1,5 +1,3 @@
-import { identicon, rings } from "@dicebear/collection";
-import { createAvatar } from "@dicebear/core";
 import { Tooltip } from "@nextui-org/react";
 import { PrestigeTrack } from "@server/data/constants";
 import { createPrestigeTrackBasedOnSeed } from "@server/data/helpers";
@@ -7,20 +5,7 @@ import { PrestigeReward } from "@server/prisma/prisma.client";
 import { motion } from "framer-motion";
 import { useMemo } from "react";
 import { useGame } from "./GameContext";
-
-const PrestigeIcon = ({
-  prestigeType,
-}: {
-  prestigeType: PrestigeReward | undefined;
-}) => {
-  const icon = useMemo(() => {
-    return createAvatar(identicon, {
-      size: 64,
-      seed: prestigeType || "default",
-    }).toDataUri();
-  }, []);
-  return <img src={icon} alt={prestigeType} className="w-full h-full" />;
-};
+import PrestigeIcon from "./PrestigeIcon";
 interface PrestigeRewardsProps {
   layout?: "minimalist" | "grid";
 }

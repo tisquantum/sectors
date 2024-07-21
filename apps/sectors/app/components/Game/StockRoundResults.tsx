@@ -22,10 +22,18 @@ const StockRoundResults = () => {
       <h1 className="text-2xl">Stock Round Results</h1>
       <div className="flex gap-3">
         {stockRound.playerOrders.map((playerOrder) => (
-          <div key={playerOrder.id} className="flex flex-col bg-slate-700 p-4 rounded-md">
+          <div
+            key={playerOrder.id}
+            className="flex flex-col bg-slate-700 p-4 rounded-md"
+          >
             <PlayerAvatar player={playerOrder.Player} showNameLabel />
             <span>Company: {playerOrder.Company.name}</span>
-            <span>Type: {playerOrder.orderType} {(playerOrder.orderType == OrderType.MARKET || OrderType.LIMIT) && playerOrder.isSell ? "SELL" : "BUY"}</span>
+            <span>
+              Type: {playerOrder.orderType}{" "}
+              {(playerOrder.orderType == OrderType.MARKET ||
+                playerOrder.orderType == OrderType.LIMIT) &&
+                (playerOrder.isSell ? "SELL" : "BUY")}
+            </span>
             <span>Order Status: {playerOrder.orderStatus}</span>
           </div>
         ))}

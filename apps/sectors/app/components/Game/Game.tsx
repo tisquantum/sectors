@@ -7,7 +7,7 @@ import ReadyUp from "../Player/PlayerReadyUp";
 import GameSidebar from "./GameSidebar";
 import GameTopBar from "./GameTopBar";
 import StockRoundOrderGrid from "./StockRoundOrderGrid";
-import TabView, { companies } from "./TabView";
+import TabView from "./TabView";
 import PendingOrders from "./PendingOrders";
 import StockChart from "./StockChart";
 import CompanyActionSlider from "@sectors/app/components/Company/CompanyActionSelectionVote";
@@ -39,6 +39,7 @@ import PhaseListComponent from "./PhaseListComponent";
 import CapitalGains from "./CapitalGains";
 import Divestment from "./Divestment";
 import InfluenceBid from "./InfluenceBid";
+import ExerciseOptionOrders from "./ExerciseOptionOrders";
 
 const determineGameRound = (
   game: GameState
@@ -117,6 +118,8 @@ const Game = ({ gameId }: { gameId: string }) => {
     ) : currentRoundData?.phase.name ===
       PhaseName.STOCK_RESOLVE_PENDING_OPTION_ORDER ? (
       <PendingOrders isResolving={true} />
+    ) : currentRoundData?.phase.name === PhaseName.STOCK_ACTION_OPTION_ORDER ? (
+      <ExerciseOptionOrders />
     ) : currentRoundData?.phase.name === PhaseName.STOCK_OPEN_LIMIT_ORDERS ? (
       <PendingOrders isResolving={true} />
     ) : currentRoundData?.phase.name === PhaseName.STOCK_RESULTS_OVERVIEW ? (

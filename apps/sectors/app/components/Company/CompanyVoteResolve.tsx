@@ -4,6 +4,10 @@ import {
   CompanyAction,
   OperatingRoundAction,
 } from "@server/prisma/prisma.client";
+import CompanyInfo from "./CompanyInfo";
+import PrestigeRewardComponent from "../Game/PrestigeReward";
+import { MARKETING_CONSUMER_BONUS, PrestigeTrack } from "@server/data/constants";
+import PrestigeRewards from "../Game/PrestigeRewards";
 
 const ShareIssue = ({ companyAction }: { companyAction: CompanyAction }) => {
   const { authPlayer } = useGame();
@@ -27,15 +31,25 @@ const ShareIssue = ({ companyAction }: { companyAction: CompanyAction }) => {
 };
 
 const CompanyVoteResolve = () => {
-  const { currentPhase } = useGame();
+  const { currentPhase, currentTurn } = useGame();
   const { data: companyAction, isLoading } =
     trpc.companyAction.getCompanyAction.useQuery({
       operatingRoundId: currentPhase?.operatingRoundId || 0,
       companyId: currentPhase?.companyId || "",
     });
   const { data: company, isLoading: companyLoading } =
-    trpc.company.getCompanyWithCards.useQuery({
+    trpc.company.getCompanyWithRelations.useQuery({
       id: currentPhase?.companyId || "",
+    });
+  const { data: prestigeRewards, isLoading: prestigeRewardsLoading } =
+    trpc.prestigeReward.listPrestigeRewards.useQuery({
+      where: {
+        gameTurnId: currentTurn?.id || "",
+        companyId: currentPhase?.companyId || "",
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
     });
   if (isLoading) {
     return <div>Loading...</div>;
@@ -49,6 +63,9 @@ const CompanyVoteResolve = () => {
   }
   if (!company) {
     return <div>No company found</div>;
+  }
+  if (prestigeRewardsLoading) {
+    return <div>Loading...</div>;
   }
   const researchCardDrawn =
     companyAction.action === OperatingRoundAction.RESEARCH
@@ -65,7 +82,7 @@ const CompanyVoteResolve = () => {
             <span>Marketing</span>
             <div>
               <p>
-                The sector will receive 5 consumers at the end of the turn. Your
+                The sector receives {MARKETING_CONSUMER_BONUS} additional consumers. Your
                 company receives +3 demand that decays 1 per production phase.
               </p>
             </div>
@@ -101,13 +118,29 @@ const CompanyVoteResolve = () => {
         return <div>Increase Price</div>;
       case OperatingRoundAction.DECREASE_PRICE:
         return <div>Decrease Price</div>;
+      case OperatingRoundAction.LOAN:
+        return <div>Loan</div>;
+      case OperatingRoundAction.SPEND_PRESTIGE:
+        return (
+          <div>
+            <span>Spent Prestige and received a reward.</span>
+            <div>
+              {prestigeRewards?.map((reward) => (
+                <div key={reward.id}>
+                  <PrestigeRewardComponent prestigeReward={reward} />
+                </div>
+              ))}
+            </div>
+          </div>
+        );
       default:
         return <div>Unknown action</div>;
     }
   };
   return (
     <div>
-      {companyAction.Company.name}
+      <CompanyInfo company={company} showBarChart />
+      <div className="border-b-2 border-gray-200 my-4"></div>
       {renderAction()}
     </div>
   );

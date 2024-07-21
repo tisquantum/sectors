@@ -83,7 +83,7 @@ export class StockHistoryService {
     //get new stock price
     const newPrice = getStockPriceStepsUp(currentStockPrice, steps);
     //update company stock price
-    await this.prisma.company.update({
+    const updatedCompany = await this.prisma.company.update({
       where: { id: companyId },
       data: {
         currentStockPrice: newPrice,
@@ -92,7 +92,7 @@ export class StockHistoryService {
     await this.prisma.gameLog.create({
       data: {
         gameId: gameId,
-        content: `Stock price for ${companyId} moved up by ${steps} steps`,
+        content: `Stock price for ${updatedCompany.name} moved up by ${steps} steps`,
       },
     });
     //create new stock history
@@ -125,7 +125,7 @@ export class StockHistoryService {
     //get new stock price
     const newPrice = getStockPriceWithStepsDown(currentStockPrice, steps);
     //update company stock price
-    await this.prisma.company.update({
+    const updatedCompany = await this.prisma.company.update({
       where: { id: companyId },
       data: {
         currentStockPrice: newPrice,
@@ -134,7 +134,7 @@ export class StockHistoryService {
     await this.prisma.gameLog.create({
       data: {
         gameId: gameId,
-        content: `Stock price for ${companyId} moved down by ${steps} steps`,
+        content: `Stock price for ${updatedCompany.name} moved down by ${steps} steps`,
       },
     });
     //create new stock history
