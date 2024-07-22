@@ -29,7 +29,8 @@ const CompanyActionVote = ({ company }: { company?: Company }) => {
     }
   };
   const actions = [
-    { name: OperatingRoundAction.MARKETING, label: "Marketing" },
+    { name: OperatingRoundAction.MARKETING, label: "Large Marketing Campaign" },
+    { name: OperatingRoundAction.MARKETING_SMALL_CAMPAIGN, label: "Small Marketing Campaign" },
     { name: OperatingRoundAction.RESEARCH, label: "Research" },
     { name: OperatingRoundAction.EXPANSION, label: "Expansion" },
     { name: OperatingRoundAction.DOWNSIZE, label: "Downsize" },
@@ -40,6 +41,7 @@ const CompanyActionVote = ({ company }: { company?: Company }) => {
     { name: OperatingRoundAction.DECREASE_PRICE, label: "Decrease Price" },
     { name: OperatingRoundAction.SPEND_PRESTIGE, label: "Prestige" },
     { name: OperatingRoundAction.LOAN, label: "Loan" },
+    { name: OperatingRoundAction.LOBBY, label: "Lobby" },
     { name: OperatingRoundAction.VETO, label: "Veto" },
   ];
   //if company hasLoan, remove the loan option

@@ -118,7 +118,7 @@ const StockRoundOrderGrid = ({
   };
   const companyCardButtonClicked = () => {
     console.log("Company card button clicked");
-    setIsOrderInputOpen(true);
+    setIsOrderInputOpen(false);
   };
   return (
     <Tabs>

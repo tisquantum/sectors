@@ -33,21 +33,28 @@ import { RiCloseCircleFill } from "@remixicon/react";
 import { flushAllTraces } from "next/dist/trace";
 import PlayerAvatar from "../Player/PlayerAvatar";
 import OptionContract from "./OptionContract";
+import { useEffect } from "react";
 interface GroupedOrders {
   [key: string]: PlayerOrderAllRelations[];
 }
 
 const OpenOptionContracts = () => {
-  const { gameId } = useGame();
-  const { data: openOptionContracts, isLoading } =
-    trpc.optionContract.listOptionContracts.useQuery({
-      where: {
-        Game: {
-          id: gameId,
-        },
-        contractState: ContractState.FOR_SALE,
+  const { gameId, currentPhase } = useGame();
+  const {
+    data: openOptionContracts,
+    isLoading,
+    refetch,
+  } = trpc.optionContract.listOptionContracts.useQuery({
+    where: {
+      Game: {
+        id: gameId,
       },
-    });
+      contractState: ContractState.FOR_SALE,
+    },
+  });
+  useEffect(() => {
+    refetch();
+  }, [currentPhase?.name]);
   if (isLoading) return <div>Loading...</div>;
   if (!openOptionContracts) return <div>No open option contracts.</div>;
   return (
@@ -316,18 +323,21 @@ const PendingShortOrders = ({
 
 const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
   const { gameId, currentPhase, gameState } = useGame();
-  const { data: playerOrders, isLoading } =
-    trpc.playerOrder.listPlayerOrdersAllRelations.useQuery({
-      orderBy: {
-        createdAt: Prisma.SortOrder.asc,
+  const {
+    data: playerOrders,
+    isLoading,
+    refetch: refetchPlayerOrders,
+  } = trpc.playerOrder.listPlayerOrdersAllRelations.useQuery({
+    orderBy: {
+      createdAt: Prisma.SortOrder.asc,
+    },
+    where: {
+      isConcealed: false,
+      Game: {
+        id: gameId,
       },
-      where: {
-        isConcealed: false,
-        Game: {
-          id: gameId,
-        },
-      },
-    });
+    },
+  });
   const { data: openOptionContracts, isLoading: isLoadingOpenOptionContracts } =
     trpc.optionContract.listOptionContracts.useQuery({
       where: {
@@ -337,6 +347,9 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
         contractState: ContractState.PURCHASED,
       },
     });
+  useEffect(() => {
+    refetchPlayerOrders();
+  }, [currentPhase?.name]);
   if (isLoading) return <div>Loading...</div>;
   if (!playerOrders) return <div>No pending orders.</div>;
 

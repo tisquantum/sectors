@@ -9,6 +9,8 @@ import { companyPriorityOrderOperations } from "@server/data/helpers";
 import CompanyInfo from "../Company/CompanyInfo";
 import { CompanyStatus } from "@server/prisma/prisma.client";
 import { RiIncreaseDecreaseFill } from "@remixicon/react";
+import { Tooltip } from "@nextui-org/react";
+import { tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
 
 const OperatingRoundProduction = () => {
   const { currentPhase } = useGame();
@@ -71,7 +73,11 @@ const OperatingRoundProduction = () => {
                       {throughputReward.type ===
                       ThroughputRewardType.SECTOR_REWARD
                         ? "Sector Reward"
-                        : `Share Steps -${throughputReward.share_price_steps_down}`}
+                        : `Share Steps ${
+                            throughputReward.share_price_steps_down == 0
+                              ? "0"
+                              : "-" + throughputReward.share_price_steps_down
+                          }`}
                     </span>
                   </div>
                 );
@@ -99,9 +105,27 @@ const OperatingRoundProduction = () => {
                   .type === ThroughputRewardType.SECTOR_REWARD ? (
                   <span>Prestige: +1</span>
                 ) : (
-                  <span>Share Steps: -{productionResult.steps}</span>
+                  <span>
+                    Share Steps:{" "}
+                    {productionResult.steps == 0
+                      ? "0"
+                      : `-${productionResult.steps}`}
+                  </span>
                 )}
-                <span>Revenue: ${productionResult.revenue}</span>
+                <Tooltip
+                  className={tooltipStyle}
+                  content={
+                    <p>
+                      Revenue is calculated by multiplying the unit price times
+                      units sold. The units sold is whatever is less, the sector
+                      demand plus company demand or the supply of the company.
+                      There must be enough consumers available to fulfill
+                      demand.
+                    </p>
+                  }
+                >
+                  <span>Revenue: ${productionResult.revenue}</span>
+                </Tooltip>
               </div>
             </div>
           ))}

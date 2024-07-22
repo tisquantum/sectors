@@ -8,6 +8,7 @@ import {
 } from "@server/prisma/prisma.client";
 import OptionContract from "./OptionContract";
 import PlayerAvatar from "../Player/PlayerAvatar";
+import { useEffect } from "react";
 
 const Derivatives = () => {
   const { gameId, currentPhase } = useGame();
@@ -15,15 +16,21 @@ const Derivatives = () => {
     trpc.optionContract.listOptionContracts.useQuery({
       where: { gameId, contractState: ContractState.FOR_SALE },
     });
-  const { data: playerOrders, isLoading: playerOrdersLoading } =
-    trpc.playerOrder.listPlayerOrdersConcealed.useQuery({
-      where: {
-        gameId,
-        orderStatus: OrderStatus.PENDING,
-        stockRoundId: currentPhase?.stockRoundId,
-        orderType: OrderType.OPTION,
-      },
-    });
+  const {
+    data: playerOrders,
+    isLoading: playerOrdersLoading,
+    refetch,
+  } = trpc.playerOrder.listPlayerOrdersConcealed.useQuery({
+    where: {
+      gameId,
+      orderStatus: OrderStatus.PENDING,
+      stockRoundId: currentPhase?.stockRoundId,
+      orderType: OrderType.OPTION,
+    },
+  });
+  useEffect(() => {
+    refetch();
+  }, [currentPhase?.name]);
 
   if (isLoading) return <div>Loading...</div>;
   if (!optionsContracts) return <div>No options contracts found</div>;

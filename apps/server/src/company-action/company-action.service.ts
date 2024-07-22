@@ -117,11 +117,14 @@ export class CompanyActionService {
   async updateCompanyAction(params: {
     where: Prisma.CompanyActionWhereUniqueInput;
     data: Prisma.CompanyActionUpdateInput;
-  }): Promise<CompanyAction> {
+  }): Promise<CompanyActionWithCompany> {
     const { where, data } = params;
     return this.prisma.companyAction.update({
       data,
       where,
+      include: {
+        Company: true,
+      },
     });
   }
 

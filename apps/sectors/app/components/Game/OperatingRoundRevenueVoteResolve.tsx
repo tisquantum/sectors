@@ -1,11 +1,18 @@
 import { trpc } from "@sectors/app/trpc";
 import { useGame } from "./GameContext";
-import { RevenueDistributionVoteWithRelations } from "@server/prisma/prisma.types";
-import { Avatar, Chip } from "@nextui-org/react";
+import {
+  ProductionResultWithCompany,
+  RevenueDistributionVoteWithRelations,
+} from "@server/prisma/prisma.types";
+import { Avatar, Badge, Chip } from "@nextui-org/react";
 import CompanyInfo from "../Company/CompanyInfo";
 import { CompanyTierData } from "@server/data/constants";
 import PlayerAvatar from "../Player/PlayerAvatar";
-import { RevenueDistribution } from "@server/prisma/prisma.client";
+import {
+  Company,
+  RevenueDistribution,
+  ShareLocation,
+} from "@server/prisma/prisma.client";
 
 const OperatingRoundRevenueVoteResolve = () => {
   const { currentPhase, playersWithShares } = useGame();
@@ -38,6 +45,9 @@ const OperatingRoundRevenueVoteResolve = () => {
   if (!revenueDistributionVote) {
     return <div>No revenue distribution vote found</div>;
   }
+  const playersWithSharesAboveZero = playersWithShares.filter(
+    (player) => player.Share.length > 0
+  );
   const renderResultInfo = (
     revenueDistribution: RevenueDistribution | null,
     options: {
@@ -79,10 +89,22 @@ const OperatingRoundRevenueVoteResolve = () => {
         return null;
     }
   };
+
+  const calculateDividendFullRetainedRevenue = (
+    productionResult: ProductionResultWithCompany
+  ) => {
+    const shareCount = productionResult.Company.Share.filter(
+      (share) => share.location === ShareLocation.IPO
+    ).length;
+    const totalShares = productionResult.Company.Share.length;
+    return shareCount > 0
+      ? Math.floor((productionResult.revenue / totalShares) * shareCount)
+      : 0;
+  };
   return (
     <div>
       <h1 className="text-2xl">Operating Round Revenue Vote Resolution</h1>
-      <div className="grid grid-cols-3 gap-4">
+      <div className="flex flex-wrap gap-4">
         {
           //display all companies with revenue greater than 0
           productionResults.productionResults.map((productionResult) => {
@@ -103,7 +125,7 @@ const OperatingRoundRevenueVoteResolve = () => {
                 className="flex flex-col bg-slate-800 p-4"
                 key={productionResult.id}
               >
-                <CompanyInfo company={productionResult.Company} />
+                <CompanyInfo company={productionResult.Company} showBarChart />
                 <div className="flex flex-col gap-2 rounded-md bg-gray-950 m-2 p-2">
                   <span className="text-lg">Production Results</span>
                   <span>Result: {productionResult.revenueDistribution}</span>
@@ -117,45 +139,86 @@ const OperatingRoundRevenueVoteResolve = () => {
                     dividendHalf,
                     retainedRevenueHalf,
                   })}
-                  <div className="flex gap-2">
+                  <div className="flex gap-5 mt-1">
                     {productionResult?.revenueDistribution ===
-                      RevenueDistribution.DIVIDEND_FULL &&
-                      playersWithShares.map((playerWithShares) => {
-                        return (
-                          <PlayerAvatar
-                            player={playerWithShares}
-                            key={playerWithShares.id}
-                            badgeContent={
-                              "$" +
-                              playerWithShares.Share.filter(
-                                (share) =>
-                                  share.companyId ===
-                                  productionResult?.companyId
-                              ).length *
-                                dividendFull
-                            }
-                          />
-                        );
-                      })}
+                      RevenueDistribution.DIVIDEND_FULL && (
+                      <>
+                        {playersWithSharesAboveZero.map((playerWithShares) => {
+                          const doesPlayerOwnAnyShares =
+                            playerWithShares.Share.filter(
+                              (share) =>
+                                share.companyId === productionResult?.companyId
+                            ).length > 0;
+                          if (!doesPlayerOwnAnyShares) {
+                            return null;
+                          }
+                          return (
+                            <PlayerAvatar
+                              player={playerWithShares}
+                              key={playerWithShares.id}
+                              badgeContent={
+                                "$" +
+                                playerWithShares.Share.filter(
+                                  (share) =>
+                                    share.companyId ===
+                                    productionResult?.companyId
+                                ).length *
+                                  dividendFull
+                              }
+                            />
+                          );
+                        })}
+                        <Badge
+                          content={
+                            "$" +
+                            calculateDividendFullRetainedRevenue(
+                              productionResult
+                            )
+                          }
+                        >
+                          <Avatar name={productionResult.Company.stockSymbol} />
+                        </Badge>
+                      </>
+                    )}
                     {productionResult?.revenueDistribution ===
-                      RevenueDistribution.DIVIDEND_FIFTY_FIFTY &&
-                      playersWithShares.map((playerWithShares) => {
-                        return (
-                          <PlayerAvatar
-                            player={playerWithShares}
-                            key={playerWithShares.id}
-                            badgeContent={
-                              "$" +
-                              playerWithShares.Share.filter(
-                                (share) =>
-                                  share.companyId ===
-                                  productionResult?.companyId
-                              ).length *
-                                dividendHalf
-                            }
-                          />
-                        );
-                      })}
+                      RevenueDistribution.DIVIDEND_FIFTY_FIFTY && (
+                      <>
+                        {playersWithSharesAboveZero.map((playerWithShares) => {
+                          const doesPlayerOwnAnyShares =
+                            playerWithShares.Share.filter(
+                              (share) =>
+                                share.companyId === productionResult?.companyId
+                            ).length > 0;
+                          if (!doesPlayerOwnAnyShares) {
+                            return null;
+                          }
+                          return (
+                            <PlayerAvatar
+                              player={playerWithShares}
+                              key={playerWithShares.id}
+                              badgeContent={
+                                "$" +
+                                playerWithShares.Share.filter(
+                                  (share) =>
+                                    share.companyId ===
+                                    productionResult?.companyId
+                                ).length *
+                                  dividendHalf
+                              }
+                            />
+                          );
+                        })}
+                        <Badge content={"$" + retainedRevenueHalf}>
+                          <Avatar name={productionResult.Company.stockSymbol} />
+                        </Badge>
+                      </>
+                    )}
+                    {productionResult?.revenueDistribution ===
+                      RevenueDistribution.RETAINED && (
+                      <Badge content={"$" + revenue}>
+                        <Avatar name={productionResult.Company.stockSymbol} />
+                      </Badge>
+                    )}
                   </div>
                 </div>
                 <div className="flex flex-col">

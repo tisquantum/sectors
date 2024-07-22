@@ -6,7 +6,10 @@ import {
 } from "@server/prisma/prisma.client";
 import CompanyInfo from "./CompanyInfo";
 import PrestigeRewardComponent from "../Game/PrestigeReward";
-import { MARKETING_CONSUMER_BONUS, PrestigeTrack } from "@server/data/constants";
+import {
+  MARKETING_CONSUMER_BONUS,
+  PrestigeTrack,
+} from "@server/data/constants";
 import PrestigeRewards from "../Game/PrestigeRewards";
 
 const ShareIssue = ({ companyAction }: { companyAction: CompanyAction }) => {
@@ -79,11 +82,24 @@ const CompanyVoteResolve = () => {
       case OperatingRoundAction.MARKETING:
         return (
           <div>
-            <span>Marketing</span>
+            <span>Large Marketing Campaign</span>
             <div>
               <p>
-                The sector receives {MARKETING_CONSUMER_BONUS} additional consumers. Your
-                company receives +3 demand that decays 1 per production phase.
+                The sector receives {MARKETING_CONSUMER_BONUS} additional
+                consumers. Your company receives +3 demand that decays 1 per
+                production phase.
+              </p>
+            </div>
+          </div>
+        );
+      case OperatingRoundAction.MARKETING_SMALL_CAMPAIGN:
+        return (
+          <div>
+            <span>Small Marketing Campaign</span>
+            <div>
+              <p>
+                The company receives +2 demand that decays 1 per production
+                phase.
               </p>
             </div>
           </div>
@@ -120,6 +136,8 @@ const CompanyVoteResolve = () => {
         return <div>Decrease Price</div>;
       case OperatingRoundAction.LOAN:
         return <div>Loan</div>;
+      case OperatingRoundAction.LOBBY:
+        return <div>Lobby</div>;
       case OperatingRoundAction.SPEND_PRESTIGE:
         return (
           <div>
@@ -133,6 +151,8 @@ const CompanyVoteResolve = () => {
             </div>
           </div>
         );
+      case OperatingRoundAction.VETO:
+        return <div>Action vetoed.</div>;
       default:
         return <div>Unknown action</div>;
     }

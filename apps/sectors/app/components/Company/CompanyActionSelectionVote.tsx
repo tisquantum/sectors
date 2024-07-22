@@ -40,70 +40,82 @@ import Button from "@sectors/app/components/General/DebounceButton";
 const companyActions = [
   {
     id: 1,
-    title: "Marketing",
+    title: "Large Marketing Campaign",
     name: OperatingRoundAction.MARKETING,
     message: `The sector receives an additional ${MARKETING_CONSUMER_BONUS} consumers. Your company receives +3 demand that decays 1 per production phase.`,
   },
   {
     id: 2,
+    title: "Small Marketing Campaign",
+    name: OperatingRoundAction.MARKETING_SMALL_CAMPAIGN,
+    message: `The company receives +2 demand that decays 1 per production phase.`,
+  },
+  {
+    id: 3,
     title: "Research",
     name: OperatingRoundAction.RESEARCH,
     message:
       "Invest in research to gain a competitive edge. Draw one card from the research deck.",
   },
   {
-    id: 3,
+    id: 4,
     title: "Expansion",
     name: OperatingRoundAction.EXPANSION,
     message:
       "Increase company size (base operational costs per OR) to meet higher demand and increase supply.",
   },
   {
-    id: 4,
+    id: 5,
     title: "Downsize",
     name: OperatingRoundAction.DOWNSIZE,
     message:
       "Reduce company size (base operational costs per OR) to lower operation costs and decrease supply.",
   },
   {
-    id: 5,
+    id: 6,
     title: "Share Buyback",
     name: OperatingRoundAction.SHARE_BUYBACK,
     message:
       "Buy back a share from the open market. This share is taken out of rotation from the game.",
   },
   {
-    id: 6,
+    id: 7,
     title: "Share Issue",
     name: OperatingRoundAction.SHARE_ISSUE,
     message: "Issue a share to the open market.",
   },
   {
-    id: 7,
+    id: 8,
     title: "Increase Unit Price",
     name: OperatingRoundAction.INCREASE_PRICE,
     message: `Increase the unit price of the company's product by ${DEFAULT_INCREASE_UNIT_PRICE}. This will increase the company's revenue. Be careful as consumers choose the company with the cheapest product in the sector first!`,
   },
   {
-    id: 8,
+    id: 9,
     title: "Decrease Unit Price",
     name: OperatingRoundAction.DECREASE_PRICE,
     message: `Decrease the unit price of the company's product by ${DEFAULT_DECREASE_UNIT_PRICE}. This will decrease the company's revenue.`,
   },
   {
-    id: 9,
+    id: 10,
     title: "Spend Prestige",
     name: OperatingRoundAction.SPEND_PRESTIGE,
-    message: `Spend ${PRESTIGE_ACTION_TOKEN_COST} prestige to receive the reward on the prestige track, if the company does not have enough prestige, move the prestige track forward by 1.`,
+    message: `Spend ${PRESTIGE_ACTION_TOKEN_COST} prestige to receive the reward on the prestige track and move it forward by 1. If the company does not have enough prestige, move the prestige track forward by 1.`,
   },
   {
-    id: 10,
+    id: 11,
     title: "Loan",
     name: OperatingRoundAction.LOAN,
     message: `Take out a loan of $${LOAN_AMOUNT} to increase cash on hand. Be careful, loans must be paid back with interest @ %${LOAN_INTEREST_RATE} per turn. This action can only be taken once per game.`,
   },
   {
-    id: 11,
+    id: 12,
+    title: "Lobby",
+    name: OperatingRoundAction.LOBBY,
+    message: `Lobby the government to force demand in your favor. Boost the entire sectors demand by 1 for the next operating round.`,
+  },
+  {
+    id: 13,
     title: "Veto",
     name: OperatingRoundAction.VETO,
     message:

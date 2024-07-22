@@ -181,16 +181,16 @@ const CompaniesAccordion = ({
                     <strong>Company Demand:</strong> {company.demandScore || 0}
                   </p>
                   <p>
-                    <strong>Sector Demand:</strong> {company.Sector.demand || 0}
+                    <strong>Sector Demand:</strong> {(company.Sector.demand + (company.Sector.demandBonus || 0)) || 0}
                   </p>
                   <p>
                     <strong>Demand Score:</strong>{" "}
-                    {company.demandScore || 0 + company.Sector.demand || 0}
+                    {company.demandScore || 0 + company.Sector.demand + (company.Sector.demandBonus || 0) || 0}
                   </p>
                   <p>
                     <strong>Throughput:</strong>{" "}
                     {company.demandScore ||
-                      0 + company.Sector.demand ||
+                      0 + company.Sector.demand + (company.Sector.demandBonus || 0) ||
                       0 - company.supplyMax ||
                       0}
                   </p>

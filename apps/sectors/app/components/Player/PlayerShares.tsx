@@ -45,6 +45,22 @@ const PlayerShares = ({
   const shortShares = playerWithShares.Share.filter(
     (share) => share.shortOrderId
   );
+  //aggregate shortShares by shortOrderId and company
+  const shortSharesAggregation = shortShares.reduce(
+    (acc: Record<string, StockAggregation>, playerShare) => {
+      const { shortOrderId, price } = playerShare;
+      if(!shortOrderId) {
+        return acc;
+      }
+      if (!acc[shortOrderId]) {
+        acc[shortOrderId] = { totalShares: 0, totalValue: 0, company: playerShare.Company };
+      }
+      acc[shortOrderId].totalShares += 1;
+      acc[shortOrderId].totalValue += price;
+      return acc;
+    },
+    {}
+  );
   // Aggregate total value and total shares owned for each company
   const stockAggregation = marketShares.reduce(
     (acc: Record<string, StockAggregation>, playerShare) => {
@@ -93,22 +109,14 @@ const PlayerShares = ({
       <div className="w-full border-t border-gray-300 my-4"></div>
       <div className="flex flex-col gap-2">
         <div className="text-lg">Short Orders</div>
-        {shortShares.length > 0 ? (
-          shortShares.map((share) => (
-            <div key={share.id} className="flex items-center gap-2">
-              <div className="flex flex-col">
-                <div className="text-sm">
-                  {share.Company?.stockSymbol || "Company"} -{" "}
-                </div>
-                <div className="text-sm">
-                  Short Order ID: {share.shortOrderId}
-                </div>
+        {shortSharesAggregation &&
+          Object.entries(shortSharesAggregation).map(
+            ([shortOrderId, aggregation]) => (
+              <div key={shortOrderId} className="flex flex-col gap-2">
+                <ShareComponent name={aggregation.company?.stockSymbol || ""} quantity={aggregation.totalShares} price={aggregation.totalValue / aggregation.totalShares} />
               </div>
-            </div>
-          ))
-        ) : (
-          <div>No short orders.</div>
-        )}
+            )
+          )}
       </div>
     </div>
   );

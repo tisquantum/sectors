@@ -236,6 +236,7 @@ export const companyVoteActionPriority = (
     OperatingRoundAction.DOWNSIZE,
     OperatingRoundAction.EXPANSION,
     OperatingRoundAction.MARKETING,
+    OperatingRoundAction.MARKETING_SMALL_CAMPAIGN,
     OperatingRoundAction.MERGE,
     OperatingRoundAction.RESEARCH,
     OperatingRoundAction.SHARE_BUYBACK,
@@ -246,6 +247,7 @@ export const companyVoteActionPriority = (
     OperatingRoundAction.LOBBY,
     OperatingRoundAction.INCREASE_PRICE,
     OperatingRoundAction.DECREASE_PRICE,
+    OperatingRoundAction.LOBBY,
     OperatingRoundAction.LOAN,
   ];
   return actions.sort(
@@ -301,7 +303,7 @@ export const throughputRewardOrPenalty = (
     case 1:
       return {
         type: ThroughputRewardType.STOCK_PENALTY,
-        share_price_steps_down: 1,
+        share_price_steps_down: 0,
       };
     case 2:
       return {
@@ -344,7 +346,8 @@ export const throughputRewardOrPenalty = (
 export const CompanyActionCosts = {
   [OperatingRoundAction.DOWNSIZE]: 200,
   [OperatingRoundAction.EXPANSION]: 350,
-  [OperatingRoundAction.MARKETING]: 200,
+  [OperatingRoundAction.MARKETING]: 220,
+  [OperatingRoundAction.MARKETING_SMALL_CAMPAIGN]: 100,
   [OperatingRoundAction.MERGE]: 1000,
   [OperatingRoundAction.RESEARCH]: 200,
   [OperatingRoundAction.SHARE_BUYBACK]: 0,
@@ -352,7 +355,7 @@ export const CompanyActionCosts = {
   [OperatingRoundAction.PRODUCTION]: 0,
   [OperatingRoundAction.SPEND_PRESTIGE]: 0,
   [OperatingRoundAction.VETO]: 0,
-  [OperatingRoundAction.LOBBY]: 0,
+  [OperatingRoundAction.LOBBY]: 120,
   [OperatingRoundAction.INCREASE_PRICE]: 0,
   [OperatingRoundAction.DECREASE_PRICE]: 0,
   [OperatingRoundAction.LOAN]: 0,

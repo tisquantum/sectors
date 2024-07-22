@@ -11,6 +11,7 @@ import {
   RiTeamFill,
   RiWallet3Fill,
 } from "@remixicon/react";
+import { tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
 import {
   CompanyTierData,
   LOAN_AMOUNT,
@@ -51,13 +52,30 @@ const CompanyMoreInfo = ({
     >
       <span>{company.Sector.name}</span>
       <div className="flex items-center gap-1">
-        <Tooltip content="Base sector demand, every company in the sector receives this base bonus.">
+        <Tooltip
+          className={tooltipStyle}
+          content={
+            <p>
+              Base sector demand, every company in the sector receives this base
+              bonus.
+            </p>
+          }
+        >
           <div className="flex items-center">
             <RiHandCoinFill size={18} className="ml-2" />
-            <span className="ml-1">{company.Sector.demand}</span>
+            <span className="ml-1">
+              {company.Sector.demand + (company.Sector.demandBonus || 0)}
+            </span>
           </div>
         </Tooltip>
-        <Tooltip content="The amount of consumers currently looking to buy in this sector.">
+        <Tooltip
+          className={tooltipStyle}
+          content={
+            <p>
+              The amount of consumers currently looking to buy in this sector.
+            </p>
+          }
+        >
           <div className="flex items-center">
             <RiTeamFill size={18} className="ml-2" />
             <span className="ml-1">{company.Sector.consumers}</span>
@@ -66,13 +84,29 @@ const CompanyMoreInfo = ({
       </div>
     </div>
     <div className="grid grid-cols-2 items-center">
-      <Tooltip content="Prestige tokens. While held, they prioritize the company for production. Can be spent for a bonus.">
+      <Tooltip
+        className={tooltipStyle}
+        content={
+          <p>
+            Prestige tokens. While held, they prioritize the company for
+            production. Can be spent for a bonus.
+          </p>
+        }
+      >
         <div className="flex items-center">
           <RiSparkling2Fill className="ml-2 size-4 text-yellow-500" />
           <span className="ml-1">{company.prestigeTokens}</span>
         </div>
       </Tooltip>
-      <Tooltip content="The companies demand score.  The maximum amount of customers that will visit your company before spending somewhere else.">
+      <Tooltip
+        className={tooltipStyle}
+        content={
+          <p>
+            The companies demand score. The maximum amount of customers that
+            will visit your company before spending somewhere else.
+          </p>
+        }
+      >
         <div className="flex items-center">
           <RiHandCoinFill size={18} className="ml-2" />
           <span className="ml-1">{company.demandScore}</span>
@@ -81,23 +115,48 @@ const CompanyMoreInfo = ({
           )}
         </div>
       </Tooltip>
-      <Tooltip content="The amount of goods the company produces per operating round.">
+      <Tooltip
+        className={tooltipStyle}
+        content={
+          <p>The amount of goods the company produces per operating round.</p>
+        }
+      >
         <div className="flex items-center">
           <RiBox2Fill size={18} className="ml-2" />
           <span className="ml-1">{company.supplyMax}</span>
         </div>
       </Tooltip>
-      <Tooltip content="Throughput. The base sector demand plus the companies demand minus it's supply. The closer to zero, the more efficient the company is operating.  Companies that score 0 receive a prestige bonus.">
+      <Tooltip
+        className={tooltipStyle}
+        content={
+          <p>
+            Throughput. The base sector demand plus the companies demand minus
+            it's supply. The closer to zero, the more efficient the company is
+            operating. Companies that score 0 receive a prestige bonus.
+          </p>
+        }
+      >
         <div className="flex items-center">
           <RiIncreaseDecreaseFill size={18} className="ml-2" />
           <div className="ml-1 flex">
             <span>
-              {company.demandScore + company.Sector.demand - company.supplyMax}
+              {company.demandScore +
+                company.Sector.demand +
+                (company.Sector.demandBonus || 0) -
+                company.supplyMax}
             </span>
           </div>
         </div>
       </Tooltip>
-      <Tooltip content="The cost to operate the company per operating round.  This cost is tied to your company tier.">
+      <Tooltip
+        className={tooltipStyle}
+        content={
+          <p>
+            The cost to operate the company per operating round. This cost is
+            tied to your company tier.
+          </p>
+        }
+      >
         <div className="flex items-center col-span-2">
           <RiExpandUpDownFill size={18} className="ml-2" />
           <span className="ml-1">
@@ -107,9 +166,14 @@ const CompanyMoreInfo = ({
       </Tooltip>
       {company.hasLoan && (
         <Tooltip
-          content={`This company has taken a loan.  The company must pay back the loan in interest at a fixed rate of $${
-            LOAN_AMOUNT * LOAN_INTEREST_RATE
-          } per turn.`}
+          className={tooltipStyle}
+          content={
+            <p>
+              This company has taken a loan. The company must pay back the loan
+              in interest at a fixed rate of ${LOAN_AMOUNT * LOAN_INTEREST_RATE}{" "}
+              per turn.
+            </p>
+          }
         >
           <div className="flex items-center col-span-2">
             <RiBankCard2Fill size={18} className="ml-2" />
@@ -143,31 +207,67 @@ const CompanyInfo = ({
           </div>
           <div className="flex gap-1">
             <span>{company.stockSymbol}</span>
-            <Tooltip content="The current stock price">
+            <Tooltip
+              className={tooltipStyle}
+              content={<p>The current stock price</p>}
+            >
               <span>${company.currentStockPrice}</span>
             </Tooltip>
           </div>
           <div className="flex gap-1">
-            <Tooltip content="The company tier, this determines the operational costs and supply.">
+            <Tooltip
+              className={tooltipStyle}
+              content={
+                <p>
+                  The company tier, this determines the operational costs and
+                  supply.
+                </p>
+              }
+            >
               <span>{company.companyTier}</span>
             </Tooltip>
             |
-            <Tooltip content="The company status.  INACTIVE companies have not yet floated.">
+            <Tooltip
+              className={tooltipStyle}
+              content={
+                <p>
+                  The company status. INACTIVE companies have not yet floated.
+                </p>
+              }
+            >
               <span>{company.status}</span>
             </Tooltip>
           </div>
           <div className="flex gap-3">
-            <Tooltip content="Unit Price of goods. Each consumer consumes one good per operating round given the company meets supply and demand.">
+            <Tooltip
+              className={tooltipStyle}
+              content={
+                <p>
+                  Unit Price of goods. Each consumer consumes one good per
+                  operating round given the company meets supply and demand.
+                </p>
+              }
+            >
               <span className="flex items-center">
                 <RiPriceTag3Fill size={20} /> ${company.unitPrice}
               </span>
             </Tooltip>
-            <Tooltip content="Corporate treasury or cash on hand.">
+            <Tooltip
+              className={tooltipStyle}
+              content={<p>Corporate treasury or cash on hand.</p>}
+            >
               <span className="flex items-center">
                 <RiWallet3Fill size={20} /> ${company.cashOnHand}
               </span>
             </Tooltip>
-            <Tooltip content="Company status, inactive companies have not yet been floated.">
+            <Tooltip
+              className={tooltipStyle}
+              content={
+                <p>
+                  Company status, inactive companies have not yet been floated.
+                </p>
+              }
+            >
               <span
                 className={`flex items-center ${
                   company.status == CompanyStatus.ACTIVE

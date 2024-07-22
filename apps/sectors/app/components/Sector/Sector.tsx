@@ -48,7 +48,8 @@ const SectorComponent = () => {
           subtitle={
             <div className="flex items-center">
               <p className="ml-2 text-small text-default-500 flex">
-                <RiHandCoinFill size={18} className="mr-1" /> {sector.demand}
+                <RiHandCoinFill size={18} className="mr-1" />{" "}
+                {sector.demand + (sector.demandBonus || 0)}
               </p>
               <p className="ml-2 text-small text-default-500 flex">
                 <RiSailboatFill size={18} className="ml-2" />

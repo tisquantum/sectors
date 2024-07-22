@@ -253,7 +253,7 @@ model PlayerOrder {
   optionContractId Int?
   location         ShareLocation
   orderType        OrderType
-  ShortOrder       ShortOrder?    
+  ShortOrder       ShortOrder?
   OptionContract   OptionContract? @relation(fields: [optionContractId], references: [id])
   Game             Game            @relation(fields: [gameId], references: [id])
   StockRound       StockRound      @relation(fields: [stockRoundId], references: [id])
@@ -450,6 +450,7 @@ model OperatingRoundVote {
 
 enum OperatingRoundAction {
   MARKETING
+  MARKETING_SMALL_CAMPAIGN
   RESEARCH
   MERGE
   DOWNSIZE
@@ -524,6 +525,7 @@ model Sector {
   consumers              Int           @default(0)
   supply                 Int
   demand                 Int
+  demandBonus            Int?          @default(0)
   marketingPrice         Float
   basePrice              Float
   ipoMin                 Int           @default(10)

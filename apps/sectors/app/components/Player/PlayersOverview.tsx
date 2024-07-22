@@ -17,6 +17,7 @@ import { Company } from "@server/prisma/prisma.client";
 import { RiSafe2Fill, RiWallet3Fill } from "@remixicon/react";
 import PlayerAvatar from "./PlayerAvatar";
 import { useGame } from "../Game/GameContext";
+import { tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
 
 export interface StockAggregation {
   totalShares: number;
@@ -61,13 +62,25 @@ const PlayersOverview = ({ gameId }: { gameId: string }) => {
             title={playerWithShares.nickname}
             subtitle={
               <div className="flex gap-2">
-                <Tooltip content="Cash on hand.">
+                <Tooltip
+                  className={tooltipStyle}
+                  content={<p>Cash on hand.</p>}
+                >
                   <span className="flex items-center content-center">
                     <RiWallet3Fill size={18} /> ${playerWithShares.cashOnHand}
                   </span>
                 </Tooltip>
                 {playerWithShares.marginAccount > 0 && (
-                  <Tooltip content="Margin account balance. This balance is locked for short orders until they are covered. It cannot be used for any other purpose until then.">
+                  <Tooltip
+                    className={tooltipStyle}
+                    content={
+                      <p>
+                        Margin account balance. This balance is locked for short
+                        orders until they are covered. It cannot be used for any
+                        other purpose until then.
+                      </p>
+                    }
+                  >
                     <span className="flex items-center content-center">
                       <RiSafe2Fill size={18} /> $
                       {playerWithShares.marginAccount}

@@ -219,6 +219,7 @@ export class GameManagementService {
         console.log('Adjusting stock prices', phase);
         await this.adjustStockPrices(phase);
         await this.createOperatingRoundCompanyActions(phase);
+        await this.decrementSectorDemandBonus(phase);
         break;
       case PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT:
         await this.resolveCompanyVotes(phase);
@@ -241,6 +242,29 @@ export class GameManagementService {
       default:
         return;
     }
+  }
+
+  /**
+   * Any demand bonuses are set back to 0.
+   * This is necessary for temporary bonuses given from the lobby action.
+   *
+   * @param phase
+   */
+  async decrementSectorDemandBonus(phase: Phase) {
+    //get all sectors and set their demandBonus to 0
+    const sectors = await this.sectorService.sectors({
+      where: { gameId: phase.gameId },
+    });
+    if (!sectors) {
+      throw new Error('Sectors not found');
+    }
+    const sectorPromises = sectors.map(async (sector) => {
+      await this.sectorService.updateSector({
+        where: { id: sector.id },
+        data: { demandBonus: 0 },
+      });
+    });
+    await Promise.all(sectorPromises);
   }
 
   async resolveBorrowInterestShorts(phase: Phase) {
@@ -754,7 +778,7 @@ export class GameManagementService {
 
       await this.gameLogService.createGameLog({
         game: { connect: { id: phase.gameId } },
-        content: `Stock price for ${sharesToDivest[0].Company.name} has decreased to $${stockPrice.price.toFixed(2)} due to market sell orders during DIVESTMENT`,
+        content: `Stock price for ${sharesToDivest[0].Company.name} has decreased to $${stockPrice.price.toFixed(2)} by ${netDifference} steps due to market sell orders during DIVESTMENT`,
       });
 
       await this.playerOrderService.triggerLimitOrdersFilled(
@@ -1128,6 +1152,15 @@ export class GameManagementService {
         throw new Error('Company action not created or found');
       }
     }
+    console.log('companyAction', companyAction.action);
+    if (!companyAction.action) {
+      console.log('Company action has no action');
+      //update company action to veto
+      companyAction = await this.companyActionService.updateCompanyAction({
+        where: { id: companyAction.id },
+        data: { action: OperatingRoundAction.VETO },
+      });
+    }
     //pay for company action
     try {
       await this.payForCompanyAction(companyAction);
@@ -1146,6 +1179,9 @@ export class GameManagementService {
         break;
       case OperatingRoundAction.MARKETING:
         await this.resolveMarketingAction(companyAction);
+        break;
+      case OperatingRoundAction.MARKETING_SMALL_CAMPAIGN:
+        await this.resolveMarketingSmallCampaignAction(companyAction);
         break;
       case OperatingRoundAction.SHARE_BUYBACK:
         await this.resolveShareBuyback(companyAction);
@@ -1174,11 +1210,50 @@ export class GameManagementService {
       case OperatingRoundAction.LOAN:
         await this.companyLoan(companyAction);
         break;
+      case OperatingRoundAction.LOBBY:
+        await this.lobbyCompany(companyAction);
+        break;
       case OperatingRoundAction.VETO:
         break;
       default:
         return;
     }
+  }
+
+  async lobbyCompany(companyAction: CompanyAction) {
+    //get the company
+    const company = await this.companyService.company({
+      id: companyAction.companyId,
+    });
+    if (!company) {
+      throw new Error('Company not found');
+    }
+    const sector = await this.sectorService.sector({
+      id: company.sectorId,
+    });
+    if (!sector) {
+      throw new Error('Sector not found');
+    }
+    //increase demand for the sector by 1
+    await this.sectorService.updateSector({
+      where: { id: sector.id },
+      data: { demandBonus: (sector.demandBonus || 0) + 1 },
+    });
+  }
+
+  async resolveMarketingSmallCampaignAction(companyAction: CompanyAction) {
+    //get the company
+    const company = await this.companyService.company({
+      id: companyAction.companyId,
+    });
+    if (!company) {
+      throw new Error('Company not found');
+    }
+    //increase demand for the company by 2
+    await this.companyService.updateCompany({
+      where: { id: company.id },
+      data: { demandScore: company.demandScore + 2 },
+    });
   }
 
   async companyLoan(companyAction: CompanyAction) {
@@ -2025,7 +2100,7 @@ export class GameManagementService {
         // Calculate throughput
         const throughput =
           company.demandScore +
-          company.Sector.demand -
+          (company.Sector.demand + (company.Sector.demandBonus || 0)) -
           calculateCompanySupply(company.supplyBase, company.supplyMax);
         console.log('Throughput:', throughput, company.name, company);
         // Consult throughput score to see reward or penalty.
@@ -2065,7 +2140,9 @@ export class GameManagementService {
         // Calculate the revenue for the company units sold
         let unitsSold = Math.min(
           calculateCompanySupply(company.supplyBase, company.supplyMax),
-          company.demandScore + company.Sector.demand,
+          company.demandScore +
+            company.Sector.demand +
+            (company.Sector.demandBonus || 0),
         );
         // Is there enough consumers to buy all the supply?
         // Consumers are 1:1 with units sold, TODO: We may want to allow
@@ -2308,7 +2385,10 @@ export class GameManagementService {
       }
 
       if (update) {
-        const allocation = Math.min(sector.demand, remainingEconomyScore);
+        const allocation = Math.min(
+          sector.demand + (sector.demandBonus || 0),
+          remainingEconomyScore,
+        );
         const consumersToAdd = Math.min(game.consumerPoolNumber, allocation);
         console.log('update:', update, game.consumerPoolNumber, consumersToAdd);
 
@@ -2659,7 +2739,7 @@ export class GameManagementService {
     influenceRoundId?: number;
     companyId?: string;
   }) {
-    console.log('infleunce round id', phaseName, influenceRoundId, roundType);
+    console.log('influence round id', phaseName, influenceRoundId, roundType);
     const game = await this.gamesService.getGameState(gameId);
 
     if (!game) {
@@ -3181,43 +3261,39 @@ export class GameManagementService {
   }
 
   async resolveShortOrdersInterest(phase: Phase) {
-    if (phase.stockRoundId) {
-      const playerOrders: PlayerOrderWithPlayerCompanySectorShortOrder[] =
-        await this.prisma.playerOrder.findMany({
-          where: { stockRoundId: phase.stockRoundId },
-          include: {
-            Company: true,
-            Player: true,
-            Sector: true,
-            ShortOrder: {
-              include: {
-                Share: true,
-              },
+    const shortOrdersOpen: PlayerOrderWithPlayerCompanySectorShortOrder[] =
+      await this.prisma.playerOrder.findMany({
+        where: {
+          orderStatus: OrderStatus.OPEN,
+          orderType: OrderType.SHORT,
+        },
+        include: {
+          Company: true,
+          Player: true,
+          Sector: true,
+          ShortOrder: {
+            include: {
+              Share: true,
             },
           },
-        });
-      if (!playerOrders) {
-        throw new Error('Stock round not found');
-      }
-      //filter all short orders
-      const shortOrders = playerOrders.filter(
-        (order) => order.orderType === OrderType.SHORT,
-      );
-      //collect interest from the players who have short orders by multiplying the interest rate by the "principal", which is the price of the share at the time it was issued.
-      shortOrders.forEach(async (order) => {
-        if (order.ShortOrder) {
-          //after the first turn, short orders begin to accrue interest
-          const shortOrder: ShortOrderWithShares = order.ShortOrder;
-          //subtract this from the players cash on hand
-          this.playerRemoveMoney(
-            order.gameId,
-            order.playerId,
-            shortOrder.borrowRate *
-              (shortOrder.shortSalePrice * shortOrder.Share.length),
-          );
-        }
+        },
       });
+    if (!shortOrdersOpen) {
+      throw new Error('Stock round not found');
     }
+    //collect interest from the players who have short orders by multiplying the interest rate by the "principal", which is the price of the share at the time it was issued.
+    shortOrdersOpen.forEach(async (order) => {
+      if (order.ShortOrder) {
+        //after the first turn, short orders begin to accrue interest
+        const shortOrder: ShortOrderWithShares = order.ShortOrder;
+        //subtract this from the players cash on hand
+        this.playerRemoveMoney(
+          order.gameId,
+          order.playerId,
+          Math.floor(shortOrder.shortSalePrice * (shortOrder.borrowRate / 100)),
+        );
+      }
+    });
   }
 
   async resolvePendingShortOrders(phase: Phase) {
@@ -3528,7 +3604,7 @@ export class GameManagementService {
                 );
               await this.gameLogService.createGameLog({
                 game: { connect: { id: orders[0].gameId } },
-                content: `Stock price for ${orders[0].Company.name} has decreased to $${stockPrice.price.toFixed(2)} due to market sell orders`,
+                content: `Stock price for ${orders[0].Company.name} has decreased to $${stockPrice.price.toFixed(2)} by ${netDifference} steps due to market sell orders`,
               });
               await this.playerOrderService.triggerLimitOrdersFilled(
                 orders[0].Company.currentStockPrice || 0,

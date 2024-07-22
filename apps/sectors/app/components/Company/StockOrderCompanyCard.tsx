@@ -43,9 +43,11 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
   playerOrdersRevealed,
   phasesOfStockRound,
   isOrderInputOpen,
-  handleButtonSelect
+  handleButtonSelect,
 }) => {
-  const [showButton, setShowButton] = useState<boolean | undefined>(isOrderInputOpen);
+  const [showButton, setShowButton] = useState<boolean | undefined>(
+    isOrderInputOpen
+  );
   const [isIpo, setIsIpo] = useState<boolean>(false);
   const [showPlayerInput, setShowPlayerInput] = useState<boolean>(false);
   useEffect(() => {
@@ -53,6 +55,9 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
       setShowPlayerInput(false);
     }
   }, [currentPhase?.name]);
+  useEffect(() => {
+    setShowButton(isOrderInputOpen);
+  }, [isOrderInputOpen]);
   const ipoOrders = orders.filter(
     (order) =>
       order.companyId == company.id &&
