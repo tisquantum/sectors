@@ -205,3 +205,11 @@ export type PlayerOrderWithShortOrder = PlayerOrder & {
   ShortOrder: ShortOrder | null;
   Player: Player;
 };
+
+export type ShortOrderWithCompany = ShortOrder & { Company: Company };
+
+export type ShortOrderWithRelations = ShortOrder & {
+  Company: Company;
+  PlayerOrder: PlayerOrder | null;
+  Share: Share[];
+};

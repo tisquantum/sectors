@@ -25,6 +25,7 @@ import { InfluenceRoundVotesModule } from '@server/influence-round-votes/influen
 import { InfluenceRoundModule } from '@server/influence-round/influence-round.module';
 import { PlayerPriorityModule } from '@server/player-priority/player-priority.module';
 import { OptionContractModule } from '@server/option-contract/option-contract.module';
+import { ShortOrderModule } from '@server/short-order/short-order.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { OptionContractModule } from '@server/option-contract/option-contract.mo
     InfluenceRoundModule,
     InfluenceRoundVotesModule,
     OptionContractModule,
+    ShortOrderModule,
   ],
   providers: [GameManagementService],
   exports: [GameManagementService],

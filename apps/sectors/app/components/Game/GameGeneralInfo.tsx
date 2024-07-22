@@ -25,7 +25,6 @@ import { tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
 const GameGeneralInfo = () => {
   const { gameState, currentTurn, authPlayer, currentPhase } = useGame();
   if (!gameState) return notFound();
-  console.log("authPlayer", authPlayer);
   const pseudoSpend = authPlayer.PlayerOrder?.filter(
     (order) =>
       order.stockRoundId === gameState.currentStockRoundId &&

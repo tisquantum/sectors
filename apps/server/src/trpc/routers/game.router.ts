@@ -232,4 +232,10 @@ export default (trpc: TrpcService, ctx: Context) =>
           currentPhase,
         );
       }),
+
+    coverShort: trpc.procedure
+      .input(z.object({ shortId: z.number() }))
+      .mutation(async ({ input }) => {
+        return ctx.gameManagementService.coverShortOrder(input.shortId);
+      }),
   });

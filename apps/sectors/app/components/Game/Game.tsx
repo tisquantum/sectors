@@ -40,6 +40,7 @@ import CapitalGains from "./CapitalGains";
 import Divestment from "./Divestment";
 import InfluenceBid from "./InfluenceBid";
 import ExerciseOptionOrders from "./ExerciseOptionOrders";
+import CoverShortOrders from "./CoverShortOrders";
 
 const determineGameRound = (
   game: GameState
@@ -90,6 +91,7 @@ const Game = ({ gameId }: { gameId: string }) => {
     setCurrentView(view);
   };
   const currentRoundData = determineGameRound(gameState);
+  console.log("currentRoundData", currentRoundData);
   const renderCurrentPhase =
     currentRoundData?.phase.name === PhaseName.STOCK_MEET ? (
       <Meeting />
@@ -153,6 +155,8 @@ const Game = ({ gameId }: { gameId: string }) => {
       <InfluenceBid />
     ) : currentRoundData?.phase.name === PhaseName.INFLUENCE_BID_RESOLVE ? (
       <InfluenceBid isRevealRound />
+    ) : currentRoundData?.phase.name === PhaseName.STOCK_ACTION_SHORT_ORDER ? (
+      <CoverShortOrders />
     ) : null;
 
   return (

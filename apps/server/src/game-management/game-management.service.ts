@@ -124,6 +124,7 @@ import { PlayerPriorityService } from '@server/player-priority/player-priority.s
 import { number } from 'zod';
 import { OptionContractService } from '@server/option-contract/option-contract.service';
 import { cp } from 'fs';
+import { ShortOrderService } from '@server/short-order/short-order.service';
 
 type GroupedByPhase = {
   [key: string]: {
@@ -160,6 +161,7 @@ export class GameManagementService {
     private influenceRoundService: InfluenceRoundService,
     private influenceRoundVotes: InfluenceRoundVotesService,
     private optionContractService: OptionContractService,
+    private shortOrdersService: ShortOrderService,
   ) {}
 
   /**
@@ -4718,5 +4720,59 @@ export class GameManagementService {
       });
     //return the option contract
     return updatedOptionContract;
+  }
+
+  async coverShortOrder(shortOrderId: number) {
+    //get the short order
+    const shortOrder = await this.shortOrdersService.getShortOrder({
+      id: shortOrderId,
+    });
+    if(!shortOrder) {
+      throw new Error('Short order not found');
+    }
+    //get the price of the stock
+    const stockPrice = shortOrder.Company.currentStockPrice;
+    //get the player
+    const player = await this.playersService.player({
+      id: shortOrder.PlayerOrder?.playerId || '',
+    });
+    if(!player) {
+      throw new Error('Player not found');
+    }
+    //release the margin account funds
+    this.playersService.updatePlayer({
+      where: { id: player.id },
+      data: {
+        marginAccount: {
+          decrement: Math.floor(shortOrder.shortSalePrice / 2),
+        },
+        cashOnHand: {
+          increment: Math.floor(shortOrder.shortSalePrice / 2),
+        },
+      },
+    });
+    //cover the short by "buying back" the shares
+    await this.playerRemoveMoney(
+      player.gameId,
+      player.id,
+      shortOrder.Company.currentStockPrice * shortOrder.Share.length,
+    );
+    //put the shares back in the open market
+    await this.shareService.updateManySharesUnchecked({
+      where: {
+        id: { in: shortOrder.Share.map((share) => share.id) },
+      },
+      data: {
+        location: ShareLocation.OPEN_MARKET,
+        playerId: null,
+      },
+    });
+    //game log
+    await this.gameLogService.createGameLog({
+      game: { connect: { id: player.gameId } },
+      content: `Player ${player.nickname} has covered a short order for ${
+        shortOrder.Company.name
+      } at $${stockPrice.toFixed(2)}`,
+    });
   }
 }

@@ -9,7 +9,12 @@ import {
 import { trpc } from "@sectors/app/trpc";
 import { useGame } from "./GameContext";
 import { notFound } from "next/navigation";
-import { Company, PhaseName } from "@server/prisma/prisma.client";
+import {
+  Company,
+  Phase,
+  PhaseName,
+  Player,
+} from "@server/prisma/prisma.client";
 import {
   CompanyWithSector,
   PlayerOrderConcealed,
@@ -18,6 +23,20 @@ import { sectorColors } from "@server/data/gameData";
 import "./StockRoundOrderGrid.css";
 import CompanyCard from "../Company/StockOrderCompanyCard";
 import Derivatives from "./Derivatives";
+
+function isOrderInputOpenPlayerOrderCounter(
+  playerOrdersConcealed: PlayerOrderConcealed[],
+  authPlayer: Player,
+  currentPhase: Phase,
+  setIsOrderInputOpen: (open: boolean) => void
+) {
+  const orderCount = playerOrdersConcealed?.filter(
+    (order) =>
+      order.playerId === authPlayer.id && order.phaseId == currentPhase.id
+  ).length;
+  console.log("isOrderInputOpen", orderCount);
+  setIsOrderInputOpen(orderCount == 0);
+}
 
 const StockRoundOrderGrid = ({
   handleOrder,
@@ -79,10 +98,15 @@ const StockRoundOrderGrid = ({
     refetchPhasesOfStockRound();
   }, [currentPhase?.id]);
   useEffect(() => {
-    if (playerOrdersConcealed) {
-      isOrderInputOpenPlayerOrderCounter(playerOrdersConcealed);
+    if (playerOrdersConcealed && currentPhase) {
+      isOrderInputOpenPlayerOrderCounter(
+        playerOrdersConcealed,
+        authPlayer,
+        currentPhase,
+        setIsOrderInputOpen
+      );
     }
-  }, [playerOrdersConcealed]);
+  }, [playerOrdersConcealed, currentPhase]);
   const [isOrderInputOpen, setIsOrderInputOpen] = useState<boolean>(false);
   if (isLoadingPlayerOrdersRevealed) return <div>Loading...</div>;
   if (playerOrdersRevealed == undefined) return null;
@@ -106,16 +130,6 @@ const StockRoundOrderGrid = ({
     setShowOrderInput(undefined);
   };
 
-  const isOrderInputOpenPlayerOrderCounter = (
-    playerOrdersConcealed: PlayerOrderConcealed[]
-  ) => {
-    const orderCount = playerOrdersConcealed?.filter(
-      (order) =>
-        order.playerId === authPlayer.id && order.phaseId == currentPhase.id
-    ).length;
-    console.log("isOrderInputOpen", orderCount);
-    setIsOrderInputOpen(orderCount == 0);
-  };
   const companyCardButtonClicked = () => {
     console.log("Company card button clicked");
     setIsOrderInputOpen(false);
