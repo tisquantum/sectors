@@ -7,7 +7,7 @@
     "dev": "pnpm run --parallel dev",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build:server": "pnpm --filter server build",
-    "build:web": "pnpm --filter sectors build",
+    "build:web": "cd apps/server && npx prisma generate && cd .. && pnpm --filter sectors build",
     "start:server": "pnpm --filter server start:prod",
     "start:web": "pnpm --filter sectors start"
   },
