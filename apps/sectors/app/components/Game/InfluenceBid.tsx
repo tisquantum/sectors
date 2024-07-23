@@ -116,7 +116,7 @@ const InfluenceBid = ({ isRevealRound }: { isRevealRound?: boolean }) => {
           <div>
             <h2>
               Place a bid of influence to determine starting player priority.
-              For every influence you don't spend, collect $1.
+              For every influence you don&apos;t spend, collect $1.
             </h2>
           </div>
         )}

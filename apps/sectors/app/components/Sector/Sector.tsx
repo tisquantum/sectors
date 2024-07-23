@@ -61,7 +61,7 @@ const SectorComponent = () => {
             </div>
           }
         >
-          <Companies companies={sector.Company} />
+          <Companies sectorId={sector.id} />
         </AccordionItem>
       ))}
     </Accordion>

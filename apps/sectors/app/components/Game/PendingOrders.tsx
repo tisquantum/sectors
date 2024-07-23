@@ -159,7 +159,7 @@ const PendingMarketOrders = ({
               {Object.entries(groupedOrdersByPhase).map(
                 ([phaseId, orders], index) => {
                   return (
-                    <div className="flex flex-col">
+                    <div className="flex flex-col" key={index}>
                       <div>
                         <span> Stock Round {orders.subRound} </span>
                       </div>
@@ -192,6 +192,7 @@ const PendingMarketOrders = ({
                             <OrderChipWithPlayer
                               order={order}
                               status={order.orderStatus}
+                              key={index}
                             />
                           )
                         )}

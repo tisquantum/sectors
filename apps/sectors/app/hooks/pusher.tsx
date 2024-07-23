@@ -8,16 +8,13 @@ export const usePusherSubscription = (gameId: string) => {
   const { pusher } = usePusher();
   useEffect(() => {
     if (!pusher || !gameId) {
-      console.log("early return pusher subscription");
       return;
     }
 
-    console.log("Subscribing to game channel");
     const newChannel = pusher.subscribe(getGameChannelId(gameId));
     setChannel(newChannel);
 
     return () => {
-      console.log("Unsubscribing from game channel");
       newChannel.unsubscribe();
     };
   }, [gameId, pusher]);

@@ -365,20 +365,24 @@ export class GameManagementService {
   }
 
   async determinePriorityOrderBasedOnNetWorth(phase: Phase) {
-    //get game turn
-    const gameTurn = await this.gameTurnService.getCurrentTurn(phase.gameId);
+    const gameTurnPromise = this.gameTurnService.getCurrentTurn(phase.gameId);
+    const playersPromise = this.playersService.playersWithShares({
+      gameId: phase.gameId,
+    });
+
+    const [gameTurn, players] = await Promise.all([
+      gameTurnPromise,
+      playersPromise,
+    ]);
+
     if (!gameTurn) {
       throw new Error('Game turn not found');
     }
-    //if current turn is 1, return
-    if (gameTurn?.turn === 1) {
+
+    if (gameTurn.turn === 1) {
       return;
     }
-    //get players
-    const players = await this.playersService.playersWithShares({
-      gameId: phase.gameId,
-    });
-    //calculate net worth by iterating over shares and adding cash on hand
+
     const netWorths = players.map((player) => {
       const totalSharesValue = player.Share.reduce((acc, share) => {
         return acc + share.price;
@@ -388,18 +392,17 @@ export class GameManagementService {
         netWorth: player.cashOnHand + totalSharesValue,
       };
     });
-    //create priority player order by ASCENDING net worth
+
     const priorityPlayerOrder = netWorths.sort(
       (a, b) => a.netWorth - b.netWorth,
     );
-    //create player priority for the turn
-    const playerPriority = priorityPlayerOrder.map((playerPrority, index) => {
-      return {
-        playerId: playerPrority.playerId,
-        priority: index + 1,
-        gameTurnId: phase.gameTurnId,
-      };
-    });
+
+    const playerPriority = priorityPlayerOrder.map((playerPriority, index) => ({
+      playerId: playerPriority.playerId,
+      priority: index + 1,
+      gameTurnId: phase.gameTurnId,
+    }));
+
     await this.playerPriorityService.createManyPlayerPriorities(playerPriority);
   }
 
@@ -3423,6 +3426,7 @@ export class GameManagementService {
                   ),
                   borrowRate: BORROW_RATE,
                   PlayerOrder: { connect: { id: order.id } },
+                  Company: { connect: { id: order.companyId } },
                 },
               });
               //game log
@@ -4727,7 +4731,7 @@ export class GameManagementService {
     const shortOrder = await this.shortOrdersService.getShortOrder({
       id: shortOrderId,
     });
-    if(!shortOrder) {
+    if (!shortOrder) {
       throw new Error('Short order not found');
     }
     //get the price of the stock
@@ -4736,8 +4740,13 @@ export class GameManagementService {
     const player = await this.playersService.player({
       id: shortOrder.PlayerOrder?.playerId || '',
     });
-    if(!player) {
+    if (!player) {
       throw new Error('Player not found');
+    }
+    //get game
+    const game = await this.gamesService.getGameState(player.gameId);
+    if (!game) {
+      throw new Error('Game not found');
     }
     //release the margin account funds
     this.playersService.updatePlayer({
@@ -4767,6 +4776,29 @@ export class GameManagementService {
         playerId: null,
       },
     });
+    //calculate steps by shares
+    const slotsToFill = shortOrder.Share.length;
+    let currentTier = shortOrder.Company.stockTier;
+    let currentTierSize = stockTierChartRanges.find(
+      (range) => range.tier === currentTier,
+    );
+
+    const { steps, newTierSharesFulfilled, newTier, newSharePrice } =
+      calculateStepsAndRemainder(
+        slotsToFill,
+        shortOrder.Company.tierSharesFulfilled,
+        currentTierSize?.fillSize ?? 0,
+        shortOrder.Company.currentStockPrice ?? 0,
+      );
+    //move stock price up by steps
+    await this.stockHistoryService.moveStockPriceUp(
+      player.gameId,
+      shortOrder.companyId,
+      game.currentPhaseId || '',
+      shortOrder.Company.currentStockPrice,
+      steps,
+      StockAction.SHORT,
+    );
     //game log
     await this.gameLogService.createGameLog({
       game: { connect: { id: player.gameId } },

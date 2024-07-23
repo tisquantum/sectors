@@ -306,10 +306,6 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
   const currentCompanyAction = companyActions?.find(
     (companyAction) => companyAction.companyId === currentCompany
   );
-  console.log("currentPhase", currentPhase);
-  console.log("currentCompany", currentCompany);
-  console.log("companyActions", companyActions);
-  console.log("currentCompanyAction", currentCompanyAction);
   return (
     <div className="flex flex-col flex-grow relative">
       <div className="flex flex-col gap-2 justify-center items-center">

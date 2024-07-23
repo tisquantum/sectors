@@ -65,7 +65,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           const roomUser = await ctx.roomUserService.createRoomUser({
             user: { connect: { id: userId } },
             room: { connect: { id: roomId } },
-            roomHost
+            roomHost,
           });
 
           //pusher logic
@@ -80,21 +80,24 @@ export default (trpc: TrpcService, ctx: Context) =>
             message: 'User successfully added to the room',
             data: roomUser,
           };
-        } catch (error) {
-          // Handle specific error if user is already in the room
-          if (error.code === 'P2002') {
-            // Prisma unique constraint violation error code
-            return {
-              success: false,
-              message: 'User is already in the room',
-            };
+        } catch (error: unknown) {
+          // Type guard to check if the error is an instance of PrismaClientKnownRequestError
+          if (error instanceof Prisma.PrismaClientKnownRequestError) {
+            // Handle specific error if user is already in the room
+            if (error.code === 'P2002') {
+              // Prisma unique constraint violation error code
+              return {
+                success: false,
+                message: 'User is already in the room',
+              };
+            }
           }
 
           // Handle other errors
           return {
             success: false,
             message: 'An unexpected error occurred',
-            error: error.message,
+            error: (error as Error).message, // Type assertion to access the message property
           };
         }
       }),
@@ -153,21 +156,24 @@ export default (trpc: TrpcService, ctx: Context) =>
             message: 'User successfully removed from the room',
             data: roomUser,
           };
-        } catch (error) {
-          // Handle specific errors if needed
-          if (error.code === 'P2025') {
-            // Prisma record not found error code
-            return {
-              success: false,
-              message: 'User is not in the room',
-            };
+        } catch (error: unknown) {
+          // Type guard to check if the error is an instance of PrismaClientKnownRequestError
+          if (error instanceof Prisma.PrismaClientKnownRequestError) {
+            // Handle specific error if user is not in the room
+            if (error.code === 'P2025') {
+              // Prisma record not found error code
+              return {
+                success: false,
+                message: 'User is not in the room',
+              };
+            }
           }
 
           // Handle other errors
           return {
             success: false,
             message: 'An unexpected error occurred',
-            error: error.message,
+            error: (error as Error).message, // Type assertion to access the message property
           };
         }
       }),

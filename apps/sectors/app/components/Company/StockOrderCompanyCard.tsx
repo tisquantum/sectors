@@ -71,7 +71,6 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
 
   //group ipoOrders by phase
   let groupedIpoOrdersByPhase = ipoOrders?.reduce((acc, order) => {
-    console.log("groupedIpoOrdersByPhase", order);
     const phaseId = order.phaseId;
     if (!phaseId) return acc;
     if (acc[phaseId]) {
@@ -113,7 +112,6 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
   //TODO: Identify all phases for the stock round, map them to a number.
   let groupedOpenMarketOrdersByPhase = openMarketOrders?.reduce(
     (acc, order) => {
-      console.log("groupedOpenMarketOrdersByPhase", order);
       const phaseId = order.phaseId;
       if (!phaseId) return acc;
       if (acc[phaseId]) {

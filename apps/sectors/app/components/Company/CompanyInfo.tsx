@@ -131,7 +131,7 @@ const CompanyMoreInfo = ({
         content={
           <p>
             Throughput. The base sector demand plus the companies demand minus
-            it's supply. The closer to zero, the more efficient the company is
+            it&apos;s supply. The closer to zero, the more efficient the company is
             operating. Companies that score 0 receive a prestige bonus.
           </p>
         }

@@ -185,7 +185,6 @@ const OptionContract = ({
                   max={authPlayer.cashOnHand}
                   value={bidAmount}
                   onChange={(e) => {
-                    console.log("Bid amount changed to:", e.target.value);
                     setBidAmount(e.target.value);
                   }}
                 />

@@ -21,7 +21,6 @@ export const PusherProvider: React.FC<{ children: React.ReactNode }> = ({
       cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!
     });
 
-    console.log('pusherClient', pusherClient);
     pusherClient.connection.bind("error", function (err: any) {
       if (err.data.code === 4004) {
         console.error("Over limit!");

@@ -1,9 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { motion } from "framer-motion";
-import PlayerOrderInput from "../Player/PlayerOrderInput";
-import ReadyUp from "../Player/PlayerReadyUp";
 import GameSidebar from "./GameSidebar";
 import GameTopBar from "./GameTopBar";
 import StockRoundOrderGrid from "./StockRoundOrderGrid";
@@ -11,13 +9,10 @@ import TabView from "./TabView";
 import PendingOrders from "./PendingOrders";
 import StockChart from "./StockChart";
 import CompanyActionSlider from "@sectors/app/components/Company/CompanyActionSelectionVote";
-import Timer from "./Timer";
-import CompanyActionVote from "../Company/CompanyActionVote";
 import {
   OperatingRound,
   Phase,
   PhaseName,
-  Game as PrismaGame,
   RoundType,
   StockRound,
 } from "@server/prisma/prisma.client";
@@ -91,7 +86,6 @@ const Game = ({ gameId }: { gameId: string }) => {
     setCurrentView(view);
   };
   const currentRoundData = determineGameRound(gameState);
-  console.log("currentRoundData", currentRoundData);
   const renderCurrentPhase =
     currentRoundData?.phase.name === PhaseName.STOCK_MEET ? (
       <Meeting />

@@ -98,7 +98,6 @@ export default (trpc: TrpcService, ctx: Context) =>
           return {
             success: false,
             message: 'An unexpected error occurred',
-            error: error.message,
           };
         }
       }),

@@ -34,7 +34,6 @@ const Derivatives = () => {
 
   if (isLoading) return <div>Loading...</div>;
   if (!optionsContracts) return <div>No options contracts found</div>;
-  console.log("currentPhase", currentPhase);
   return (
     <div>
       <h1 className="text-2xl">Derivatives Options Contracts</h1>

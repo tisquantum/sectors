@@ -56,11 +56,9 @@ const GameChat = ({
   useEffect(() => {
     if (!pusher) return;
 
-    console.log("Subscribing to channel");
     const channel = pusher.subscribe(getRoomChannelId(roomId));
 
     channel.bind(EVENT_ROOM_JOINED, (data: RoomUserWithUser) => {
-      console.log("User joined:", data);
       utils.roomUser.listRoomUsers.setData(
         { where: { roomId } },
         (oldData: RoomUserWithUser[] | undefined) => [...(oldData || []), data]
@@ -68,7 +66,6 @@ const GameChat = ({
     });
 
     channel.bind(EVENT_ROOM_LEFT, (data: RoomUser) => {
-      console.log("User left:", data);
       utils.roomUser.listRoomUsers.setData(
         { where: { roomId } },
         (oldData: RoomUserWithUser[] | undefined) =>
@@ -77,7 +74,6 @@ const GameChat = ({
     });
 
     channel.bind(EVENT_ROOM_MESSAGE, (data: RoomMessageWithUser) => {
-      console.log("Message received:", data);
       // Ensure timestamp remains a string in the cache
       utils.roomMessage.listRoomMessages.setData(
         { where: { roomId } },
@@ -89,7 +85,6 @@ const GameChat = ({
     });
 
     return () => {
-      console.log("Unsubscribing from channel");
       channel.unbind(EVENT_ROOM_JOINED);
       channel.unbind(EVENT_ROOM_LEFT);
       channel.unbind(EVENT_ROOM_MESSAGE);

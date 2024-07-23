@@ -4,6 +4,7 @@ import {
   OrderStatus,
   OrderType,
   PlayerOrder,
+  Player,
 } from "@server/prisma/prisma.client";
 import {
   PlayerOrderWithPlayerCompany,
@@ -17,7 +18,7 @@ const OrderChipWithPlayer = ({
   status,
   endContent,
 }: {
-  order: PlayerOrderAllRelations;
+  order: PlayerOrder & { Player: Player };
   status?: OrderStatus;
   endContent?: React.ReactNode;
 }) => {

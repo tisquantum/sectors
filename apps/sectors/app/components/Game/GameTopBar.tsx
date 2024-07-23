@@ -97,7 +97,6 @@ const GameTopBar = ({
           gameId,
         }
       );
-      console.log("allCompaniesVoted", allCompaniesVoted);
       //check if all companies have voted
       if (allCompaniesVoted) {
         nextPhase.phaseName = PhaseName.CAPITAL_GAINS;
@@ -117,15 +116,12 @@ const GameTopBar = ({
           ).id;
         }
       }
-      console.log('next company id', companyId);
       if (!companyId) {
         nextPhase.phaseName = PhaseName.CAPITAL_GAINS;
       }
     } else {
       companyId = currentPhase?.companyId;
     }
-    console.log('next phase', nextPhase);
-    console.log('influence round id', currentPhase?.influenceRoundId);
     useNextPhaseMutation.mutate({
       gameId,
       phaseName: nextPhase.phaseName,

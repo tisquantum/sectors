@@ -34,7 +34,6 @@ function isOrderInputOpenPlayerOrderCounter(
     (order) =>
       order.playerId === authPlayer.id && order.phaseId == currentPhase.id
   ).length;
-  console.log("isOrderInputOpen", orderCount);
   setIsOrderInputOpen(orderCount == 0);
 }
 
@@ -120,7 +119,6 @@ const StockRoundOrderGrid = ({
   const companiesBySector = organizeCompaniesBySector(companies);
   const handleDisplayOrderInput = (company: Company, isIpo?: boolean) => {
     //   setShowOrderInput(companyId);
-    //   console.log("Order input displayed for company with ID:", companyId);
     if (!handleOrder) return;
     handleOrder(company, isIpo);
     setFocusedOrder(company);
@@ -131,7 +129,6 @@ const StockRoundOrderGrid = ({
   };
 
   const companyCardButtonClicked = () => {
-    console.log("Company card button clicked");
     setIsOrderInputOpen(false);
   };
   return (

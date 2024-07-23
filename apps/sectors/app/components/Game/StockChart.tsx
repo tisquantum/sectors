@@ -217,8 +217,6 @@ const StockChart = () => {
     entry.phaseId = `${index + 1} ${entry.phaseName}`;
   });
 
-  console.log("allChartData", allChartData);
-
   return (
     <div className="flex flex-col">
       <Legend />

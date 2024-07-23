@@ -26,7 +26,7 @@ const SectorComponent = ({
         {Array(sector.consumers)
           .fill(0)
           .map((_, index) => (
-            <RiTeamFill size={30} />
+            <RiTeamFill key={index} size={30} />
           ))}
       </div>
     </div>

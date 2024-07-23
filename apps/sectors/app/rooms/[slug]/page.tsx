@@ -9,8 +9,6 @@ export default function RoomPage({ params }: { params: { slug: string } }) {
 
   const { data: room, isLoading, isError, error } = trpc.room.getRoom.useQuery({ id: roomId });
 
-  console.log('isLoading', isLoading);
-  console.log('isError', isError);
   if (isError) {
     console.error('Error fetching room:', error);
     return <div>Error loading room</div>;

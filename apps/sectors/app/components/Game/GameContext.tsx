@@ -109,7 +109,6 @@ export const GameProvider: React.FC<{
       return;
     }
     const handleNewPhase = (phaseName: PhaseName) => {
-      console.log("new phase", phaseName);
       refetchGameState();
       refetchAuthPlayer();
       if (
@@ -117,7 +116,6 @@ export const GameProvider: React.FC<{
         phaseName == PhaseName.OPERATING_PRODUCTION ||
         phaseName == PhaseName.OPERATING_PRODUCTION_VOTE_RESOLVE
       ) {
-        console.log("refetching players with shares");
         refetchPlayersWithShares();
       }
       if (

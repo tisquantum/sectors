@@ -39,10 +39,6 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
   const leaveRoomMutation = trpc.roomUser.leaveRoom.useMutation();
   const startGameMutation = trpc.game.startGame.useMutation();
 
-  useEffect(() => {
-    console.log("gameOptions", gameOptions);
-  }, [gameOptions]);
-
   let roomHostAuthUser: RoomUserWithUser | undefined;
   if (user && roomUsers) {
     roomHostAuthUser = roomUsers.find(

@@ -49,11 +49,9 @@ const RoomComponent = ({ room }: { room: RoomWithUsersAndGames }) => {
   useEffect(() => {
     if (!pusher) return;
 
-    console.log("Subscribing to channel");
     const channel = pusher.subscribe(getRoomChannelId(id));
 
     channel.bind(EVENT_ROOM_JOINED, (data: RoomUserWithUser) => {
-      console.log("User joined:", data);
       utils.roomUser.listRoomUsers.setData(
         { where: { roomId: id } },
         (oldData: RoomUserWithUser[] | undefined) => [...(oldData || []), data]
@@ -61,7 +59,6 @@ const RoomComponent = ({ room }: { room: RoomWithUsersAndGames }) => {
     });
 
     channel.bind(EVENT_ROOM_LEFT, (data: RoomUser) => {
-      console.log("User left:", data);
       utils.roomUser.listRoomUsers.setData(
         { where: { roomId: id } },
         (oldData: RoomUserWithUser[] | undefined) =>
@@ -70,7 +67,6 @@ const RoomComponent = ({ room }: { room: RoomWithUsersAndGames }) => {
     });
 
     channel.bind(EVENT_ROOM_MESSAGE, (data: RoomMessageWithUser) => {
-      console.log("Message received:", data);
       // Ensure timestamp remains a string in the cache
       utils.roomMessage.listRoomMessages.setData(
         { where: { roomId: id } },
@@ -82,13 +78,11 @@ const RoomComponent = ({ room }: { room: RoomWithUsersAndGames }) => {
     });
 
     channel.bind(EVENT_GAME_STARTED, (data: { gameId: string }) => {
-      console.log("Game started");
       setIsOpen(true);
       setGameId(data.gameId);
     });
 
     return () => {
-      console.log("Unsubscribing from channel");
       channel.unbind(EVENT_ROOM_JOINED);
       channel.unbind(EVENT_ROOM_LEFT);
       channel.unbind(EVENT_ROOM_MESSAGE);

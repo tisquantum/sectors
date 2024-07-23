@@ -125,27 +125,4 @@ export default (trpc: TrpcService, ctx: Context) =>
         gamePlayers.set(playerId, true);
         return { success: true, message: 'Player marked as ready' };
       }),
-
-    areAllPlayersReady: trpc.procedure
-      .input(z.object({ gameId: z.string() }))
-      .query(async ({ input }) => {
-        const { gameId } = input;
-
-        if (!gamePlayerReadyStatus.has(gameId)) {
-          throw new Error('Game not found');
-        }
-
-        const gamePlayers = gamePlayerReadyStatus.get(gameId);
-        if (!gamePlayers) {
-          return { allReady: false };
-        }
-
-        for (const ready of gamePlayers.values()) {
-          if (!ready) {
-            return { allReady: false };
-          }
-        }
-
-        return { allReady: true };
-      }),
   });

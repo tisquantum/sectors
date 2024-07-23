@@ -271,7 +271,6 @@ const TabContentMO: React.FC<TabContentProps> = ({
           maxValue={maxValue}
           minValue={minValue}
           onChange={(value) => {
-            console.log("slider value mo", value);
             if (Array.isArray(value)) {
               value = value[0];
             }
@@ -547,7 +546,6 @@ const PlayerOrderInput = ({
     isBuy,
   });
   const handleConfirm = () => {
-    console.log("handleConfirm", orderValue, company?.currentStockPrice, share);
     createPlayerOrder.mutate({
       gameId,
       stockRoundId: gameState.currentStockRoundId ?? 0,

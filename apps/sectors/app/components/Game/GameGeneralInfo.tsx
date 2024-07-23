@@ -44,7 +44,7 @@ const GameGeneralInfo = () => {
                   className={tooltipStyle}
                   content={
                     <p>
-                      The potential maximum amount of money you've queued for
+                      The potential maximum amount of money you&apos;ve queued for
                       orders this stock round.
                     </p>
                   }

@@ -74,6 +74,27 @@ export default (trpc: TrpcService, ctx: Context) =>
         });
       }),
 
+    listCompaniesWithRelations: trpc.procedure
+      .input(
+        z.object({
+          skip: z.number().optional(),
+          take: z.number().optional(),
+          cursor: z.string().optional(),
+          where: z.any().optional(),
+          orderBy: z.any().optional(),
+        }),
+      )
+      .query(async ({ input }) => {
+        const { skip, take, cursor, where, orderBy } = input;
+        return ctx.companyService.companiesWithRelations({
+          skip,
+          take,
+          cursor: cursor ? { id: cursor } : undefined,
+          where,
+          orderBy,
+        });
+      }),
+
     getCompanyWithSector: trpc.procedure
       .input(z.object({ id: z.string() }))
       .query(async ({ input }) => {

@@ -47,14 +47,20 @@ const ShareHolders = ({ companyId }: { companyId: string }) => {
         name="IPO"
         quantity={shareGroups[ShareLocation.IPO]?.length || 0}
       />
-      {Object.entries(playerSharesByPlayerId).map(([playerId, shares]) => (
-        <ShareComponent
-          key={playerId}
-          name={shares[0].Player?.nickname || "Unknown Player"}
-          quantity={shares.length}
-          player={shares[0].Player}
-        />
-      ))}
+      {Object.entries(playerSharesByPlayerId).map(([playerId, shares]) => {
+        if (shares[0].Player == null) {
+          return null;
+        } else {
+          return (
+            <ShareComponent
+              key={playerId}
+              name={shares[0].Player?.nickname || "Unknown Player"}
+              quantity={shares.length}
+              player={shares[0].Player}
+            />
+          );
+        }
+      })}
     </div>
   );
 };

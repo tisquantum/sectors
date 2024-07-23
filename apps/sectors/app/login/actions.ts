@@ -6,7 +6,6 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@sectors/utils/supabase/server'
 
 export async function login(formData: FormData) {
-  console.log('login');
   const supabase = createClient()
 
   // type-casting here for convenience
@@ -27,7 +26,6 @@ export async function login(formData: FormData) {
 }
 
 export async function signup(formData: FormData) {
-  console.log('signup', formData);
   const supabase = createClient()
 
   // type-casting here for convenience

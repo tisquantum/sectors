@@ -112,6 +112,33 @@ export class CompanyService {
     });
   }
 
+  async companiesWithRelations(params: {
+    skip?: number;
+    take?: number;
+    cursor?: Prisma.CompanyWhereUniqueInput;
+    where?: Prisma.CompanyWhereInput;
+    orderBy?: Prisma.CompanyOrderByWithRelationInput;
+  }): Promise<CompanyWithRelations[]> {
+    const { skip, take, cursor, where, orderBy } = params;
+    return this.prisma.company.findMany({
+      skip,
+      take,
+      cursor,
+      where,
+      orderBy,
+      include: {
+        Sector: true,
+        Share: {
+          include: {
+            Player: true,
+          },
+        },
+        StockHistory: true,
+        Cards: true,
+      },
+    });
+  }
+
   async companiesWithSector(params: {
     skip?: number;
     take?: number;
@@ -152,7 +179,11 @@ export class CompanyService {
       where,
       orderBy,
       include: {
-        Share: true,
+        Share: {
+          include: {
+            Player: true,
+          },
+        },
         Sector: true,
         StockHistory: {
           include: {

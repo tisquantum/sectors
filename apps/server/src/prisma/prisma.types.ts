@@ -59,7 +59,7 @@ export type StockHistoryWithPhase = StockHistory & { Phase: Phase };
 export type CompanyWithSectorAndStockHistory = Company & {
   Sector: Sector;
   StockHistory: StockHistoryWithPhase[];
-  Share: Share[];
+  Share: ShareWithPlayer[];
 };
 
 export type MeetingMessageWithPlayer = MeetingMessage & { player: Player };
