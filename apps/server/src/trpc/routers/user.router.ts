@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { UsersService } from '@server/users/users.service';
 import { TrpcService } from '../trpc.service';
+import { USER_NAME_MAX_LENGTH } from '@server/data/constants';
 
 type Context = {
   userService: UsersService;
@@ -38,6 +39,25 @@ export default (trpc: TrpcService, ctx: Context) =>
           cursor: cursor ? { id: cursor } : undefined,
           where,
           orderBy,
+        });
+      }),
+    updateUserName: trpc.procedure
+      .input(z.object({ id: z.string(), name: z.string() }))
+      .mutation(async ({ input }) => {
+        const { id, name } = input;
+        //return early if over max character limit
+        if (name.length > USER_NAME_MAX_LENGTH) {
+          throw new Error(
+            `Name must be less than or equal to ${USER_NAME_MAX_LENGTH} characters.`,
+          );
+        }
+        return ctx.userService.updateUser({
+          where: {
+            id,
+          },
+          data: {
+            name,
+          },
         });
       }),
   });

@@ -6,14 +6,28 @@ import {
   NavbarBrand,
   NavbarContent,
   NavbarItem,
+  Dropdown,
+  DropdownTrigger,
+  DropdownMenu,
+  DropdownItem,
+  Button,
 } from "@nextui-org/react";
 import { useAuthUser } from "./AuthUser.context";
 import ThemeSwitcher from "./ThemeSwitcher";
-import Button from "@sectors/app/components/General/DebounceButton";
+import DebounceButton from "@sectors/app/components/General/DebounceButton";
+import { createClient } from "@sectors/utils/supabase/client";
+import { useRouter } from "next/navigation";
+import UserAvatar from "./Room/UserAvatar";
 
 const TopBar = () => {
   const { user, loading } = useAuthUser();
-
+  const supabase = createClient();
+  const router = useRouter();
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    //redirect/refresh to login page
+    router.push("/login");
+  };
   return (
     <Navbar isBordered>
       <NavbarBrand>
@@ -31,12 +45,22 @@ const TopBar = () => {
           </NavbarItem>
         ) : user ? (
           <NavbarItem>
-            <Button>Welcome, {user.name}</Button>
+            <Dropdown>
+              <DropdownTrigger>
+                <Button>
+                  <UserAvatar user={user} size="sm" /> {user.name}
+                </Button>
+              </DropdownTrigger>
+              <DropdownMenu>
+                <DropdownItem href="/settings">Settings</DropdownItem>
+                <DropdownItem onClick={handleLogout}>Logout</DropdownItem>
+              </DropdownMenu>
+            </Dropdown>
           </NavbarItem>
         ) : (
           <NavbarItem>
             <Link href="/login">
-              <Button>Log in</Button>
+              <DebounceButton>Log in</DebounceButton>
             </Link>
           </NavbarItem>
         )}

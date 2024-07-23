@@ -9,6 +9,8 @@ import {
   StockTier,
 } from '@prisma/client';
 
+export const USER_NAME_MAX_LENGTH = 20;
+
 export const MAX_MARKET_ORDER_ACTIONS = 3;
 
 export const MAX_LIMIT_ORDER_ACTIONS = 5;

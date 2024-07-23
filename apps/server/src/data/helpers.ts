@@ -511,7 +511,7 @@ export function getEffectType(
 
 export function createSeededResearchCards(seed: string): Card[] {
   const rng = lcg(stringToSeed(seed));
-  const cards: Card[] = [];
+  let cards: Card[] = [];
   const effects = Object.values(ResearchCardEffect);
   const noDiscernibleFindingsCount = Math.floor(
     DEFAULT_RESEARCH_DECK_SIZE * 0.25,
@@ -569,6 +569,8 @@ export function createSeededResearchCards(seed: string): Card[] {
     const j = Math.abs(Math.floor(rng() * (i + 1)));
     [cards[i], cards[j]] = [cards[j], cards[i]];
   }
+  //remove any cards that are undefined
+  cards = cards.filter((card) => card !== undefined);
   console.log('cards', cards);
   return cards;
 }

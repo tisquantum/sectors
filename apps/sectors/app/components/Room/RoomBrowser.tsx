@@ -8,8 +8,10 @@ import { notFound } from "next/navigation";
 import Button from "@sectors/app/components/General/DebounceButton";
 import CreateRoom from "./CreateRoom";
 import { ArrowPathIcon } from "@heroicons/react/24/solid";
+import { useAuthUser } from "../AuthUser.context";
 
 export default function RoomBrowser() {
+  const { user } = useAuthUser();
   const {
     data: rooms,
     isLoading,
@@ -62,7 +64,7 @@ export default function RoomBrowser() {
           <RoomListItem room={room} key={room.id} />
         ))}
       </div>
-      <CreateRoom />
+      {user && <CreateRoom />}
     </div>
   );
 }

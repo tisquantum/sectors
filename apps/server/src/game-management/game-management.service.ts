@@ -87,6 +87,7 @@ import {
   sectorVolatility,
   LOAN_AMOUNT,
   LOAN_INTEREST_RATE,
+  getNextCompanyOperatingRoundTurn,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -2979,20 +2980,153 @@ export class GameManagementService {
   ) {
     await this.timerService.setTimer(phase.id, phase.phaseTime, async () => {
       try {
-        const nextPhase = determineNextGamePhase(phase.name);
-
-        await this.startPhase({
+        const nextPhase = await this.determineAndHandleNextPhase(
+          phase,
           gameId,
-          phaseName: nextPhase.phaseName,
-          roundType: nextPhase.roundType,
           stockRoundId,
           operatingRoundId,
-        });
+        );
+        await this.startPhaseTimer(
+          nextPhase,
+          gameId,
+          stockRoundId,
+          operatingRoundId,
+        );
       } catch (error) {
         console.error('Error during phase transition:', error);
         // Optionally handle retries or fallback logic here
       }
     });
+  }
+
+  /**
+   * Determines and handles the transition to the next phase.
+   * @param phase - The current phase object.
+   * @param gameId - ID of the game.
+   * @param stockRoundId - Optional ID of the stock round.
+   * @param operatingRoundId - Optional ID of the operating round.
+   * @returns The next phase object.
+   */
+  private async determineAndHandleNextPhase(
+    phase: Phase,
+    gameId: string,
+    stockRoundId?: number,
+    operatingRoundId?: number,
+  ): Promise<Phase> {
+    const determinedNextPhase = determineNextGamePhase(phase.name);
+
+    let nextPhaseName = await this.adjustPhaseBasedOnGameState(
+      determinedNextPhase.phaseName,
+      phase,
+      gameId,
+    );
+
+    let companyId;
+    if (nextPhaseName === PhaseName.OPERATING_ACTION_COMPANY_VOTE) {
+      companyId = await this.handleOperatingActionCompanyVote(
+        nextPhaseName,
+        phase,
+        gameId,
+      );
+      if (!companyId) {
+        nextPhaseName = PhaseName.CAPITAL_GAINS;
+      }
+    } else {
+      companyId = phase.companyId;
+    }
+
+    if (!companyId) {
+      companyId = undefined;
+    }
+
+    return await this.startPhase({
+      gameId,
+      phaseName: nextPhaseName,
+      roundType: determinedNextPhase.roundType,
+      stockRoundId,
+      operatingRoundId,
+      companyId,
+    });
+  }
+
+  /**
+   * Adjusts the next phase based on the current game state.
+   * @param nextPhase - The next phase object.
+   * @param currentPhase - The current phase object.
+   * @param gameId - ID of the game.
+   * @returns The adjusted next phase object.
+   */
+  private async adjustPhaseBasedOnGameState(
+    nextPhaseName: PhaseName,
+    currentPhase: Phase,
+    gameId: string,
+  ): Promise<PhaseName> {
+    //game state
+    const gameState = await this.gamesService.getGameState(gameId);
+    if (!gameState) {
+      throw new Error('Game not found');
+    }
+    let doesNextPhaseNeedToBePlayed = await this.doesNextPhaseNeedToBePlayed(
+      nextPhaseName,
+      currentPhase,
+    );
+    while (!doesNextPhaseNeedToBePlayed) {
+      nextPhaseName = determineNextGamePhase(nextPhaseName, {
+        stockActionSubRound: gameState.StockRound.find(
+          (stockRound) => stockRound.id === currentPhase?.stockRoundId,
+        )?.stockActionSubRound,
+      }).phaseName;
+      doesNextPhaseNeedToBePlayed = await this.doesNextPhaseNeedToBePlayed(
+        nextPhaseName,
+        currentPhase,
+      );
+    }
+    if (!nextPhaseName) {
+      nextPhaseName = nextPhaseName;
+    }
+
+    return nextPhaseName;
+  }
+
+  /**
+   * Handles the logic for the OPERATING_ACTION_COMPANY_VOTE phase.
+   * @param nextPhase - The next phase object.
+   * @param currentPhase - The current phase object.
+   * @param gameId - ID of the game.
+   * @returns The company ID for the next phase.
+   */
+  private async handleOperatingActionCompanyVote(
+    nextPhase: PhaseName,
+    currentPhase: Phase,
+    gameId: string,
+  ): Promise<string | undefined> {
+    //get game
+    const gameState = await this.gamesService.getGameState(gameId);
+    if (!gameState) {
+      throw new Error('Game not found');
+    }
+    const allCompaniesVoted =
+      await this.haveAllCompaniesActionsResolved(gameId);
+
+    if (allCompaniesVoted) {
+      nextPhase = PhaseName.CAPITAL_GAINS;
+      return undefined;
+    } else {
+      if (currentPhase?.companyId) {
+        return getNextCompanyOperatingRoundTurn(
+          gameState.Company.filter(
+            (company) => company.status == CompanyStatus.ACTIVE,
+          ),
+          currentPhase?.companyId,
+        )?.id;
+      } else {
+        return getNextCompanyOperatingRoundTurn(
+          gameState.Company.filter(
+            (company) => company.status == CompanyStatus.ACTIVE,
+          ),
+        ).id;
+      }
+    }
   }
 
   /**
