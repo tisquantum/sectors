@@ -32,6 +32,7 @@ import { InfluenceRoundService } from '@server/influence-round/influence-round.s
 import { InfluenceRoundVotesService } from '@server/influence-round-votes/influence-round-votes.service';
 import { PlayerPriorityService } from '@server/player-priority/player-priority.service';
 import { OptionContractService } from '@server/option-contract/option-contract.service';
+import { ShortOrderService } from '@server/short-order/short-order.service';
 
 @Module({
   imports: [PrismaModule],
@@ -70,6 +71,7 @@ import { OptionContractService } from '@server/option-contract/option-contract.s
     InfluenceRoundService,
     InfluenceRoundVotesService,
     OptionContractService,
+    ShortOrderService,
   ],
 })
 export class TrpcModule {}
