@@ -27,7 +27,7 @@ export const PRESTIGE_ACTION_TOKEN_COST = 1;
 
 export const DEFAULT_SHARE_DISTRIBUTION = 10;
 
-export const STABLE_ECONOMY_SCORE = 12;
+export const STABLE_ECONOMY_SCORE = 10;
 
 export const MAX_SHARE_PERCENTAGE = 60;
 export const MAX_SHARE_DEFAULT =
@@ -291,6 +291,7 @@ export enum ThroughputRewardType {
 export interface ThroughputReward {
   type: ThroughputRewardType;
   share_price_steps_down?: number;
+  share_price_steps_up?: number;
 }
 
 export const throughputRewardOrPenalty = (
@@ -464,6 +465,7 @@ export interface PrestigeTrackItem {
   name: string;
   description: string;
   probability: number;
+  cost: number;
 }
 
 export const PrestigeTrack = [
@@ -472,6 +474,7 @@ export const PrestigeTrack = [
     name: 'Sector Elasticity',
     description: 'The sector receives +1 base demand.',
     probability: 0.08,
+    cost: 3,
   },
   {
     type: PrestigeReward.MAGNET_EFFECT,
@@ -479,23 +482,27 @@ export const PrestigeTrack = [
     description:
       'All other companies in the stock sector receive +1 stock price.',
     probability: 0.05,
+    cost: 2,
   },
   {
     type: PrestigeReward.INVESTOR_CONFIDENCE,
     name: 'Investor Confidence',
     description: 'The company puts 3 more shares into the open market.',
     probability: 0.09,
+    cost: 2,
   },
   {
     type: PrestigeReward.CAPITAL_INJECTION,
     name: 'Capital Injection',
     description: 'The company receives the money on this space of the track.',
     probability: 0.1,
+    cost: 2,
   },
   {
     type: PrestigeReward.BULL_SIGNAL,
     name: 'Bull Signal',
     description: 'The company receives a +1 stock price adjustment.',
     probability: 0.12,
+    cost: 1,
   },
 ];

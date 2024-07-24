@@ -1,6 +1,7 @@
 import { PrestigeTrack } from "@server/data/constants";
 import { PrestigeReward, PrestigeRewards } from "@server/prisma/prisma.client";
 import PrestigeIcon from "./PrestigeIcon";
+import { RiSparkling2Fill } from "@remixicon/react";
 
 const PrestigeRewardComponent = ({
   prestigeReward,
@@ -18,6 +19,10 @@ const PrestigeRewardComponent = ({
       <PrestigeIcon prestigeType={prestigeReward.reward} />
       <span className="text-lg">{prestigeRewardItem.name}</span>
       <span className="text-md">{prestigeRewardItem.description}</span>
+      <span className="text-md">
+        <RiSparkling2Fill className="ml-2 size-4 text-yellow-500" />
+        {prestigeRewardItem.cost}
+      </span>
     </div>
   );
 };

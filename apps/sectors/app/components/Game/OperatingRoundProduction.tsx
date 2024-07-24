@@ -103,7 +103,7 @@ const OperatingRoundProduction = () => {
                 </span>
                 {throughputRewardOrPenalty(productionResult.throughputResult)
                   .type === ThroughputRewardType.SECTOR_REWARD ? (
-                  <span>Prestige: +1</span>
+                  <span>Share Steps: +1</span>
                 ) : (
                   <span>
                     Share Steps:{" "}
@@ -117,9 +117,10 @@ const OperatingRoundProduction = () => {
                   content={
                     <p>
                       Revenue is calculated by multiplying the unit price times
-                      units sold. The units sold is whatever is less, the sector
-                      demand plus company demand or the supply of the company.
-                      There must be enough consumers available to fulfill
+                      units sold. The units sold is whatever is less, the
+                      customers wanting product from the company or the supply
+                      of the company. The amount of customers who visit the
+                      company is equal to the sector demand plus the company
                       demand.
                     </p>
                   }

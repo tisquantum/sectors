@@ -1431,26 +1431,23 @@ export class GameManagementService {
     if (!game) {
       throw new Error('Game not found');
     }
-    //if the company does not have enough prestige, move the prestige track forward
-    if (company.prestigeTokens >= PRESTIGE_ACTION_TOKEN_COST) {
+    const prestigeTrack = createPrestigeTrackBasedOnSeed(game.id);
+    const reward = prestigeTrack[game.nextPrestigeReward || 0];
+    if (company.prestigeTokens >= reward.cost) {
       //if the company has enough prestige, spend it
       await this.companyService.updateCompany({
         where: { id: company.id },
         data: {
-          prestigeTokens: Math.max(
-            company.prestigeTokens - PRESTIGE_ACTION_TOKEN_COST,
-            0,
-          ),
+          prestigeTokens: Math.max(company.prestigeTokens - reward.cost, 0),
         },
       });
-      const prestigeTrack = createPrestigeTrackBasedOnSeed(game.id);
       //create the prestige reward
       const prestigeReward =
         await this.prestigeRewardService.createPrestigeReward({
           Company: { connect: { id: company.id } },
           Game: { connect: { id: company.gameId } },
           GameTurn: { connect: { id: game.currentTurn } },
-          reward: prestigeTrack[game.nextPrestigeReward || 0].type,
+          reward: reward.type,
         });
       //resolve Reward
       this.resolvePrestigeReward(prestigeReward);
@@ -1994,6 +1991,37 @@ export class GameManagementService {
   }
 
   /**
+   * Calculates the throughput of a company by finding the difference between the demand score, sector demand, and supply.
+   * @param company - The company object containing demand score, sector demand, and supply details.
+   * @returns The calculated throughput value.
+   */
+  calculateThroughputByTheoreticalDemand(company: {
+    demandScore: number;
+    Sector: {
+      demand: number;
+      demandBonus?: number;
+    };
+    supplyBase: number;
+    supplyMax: number;
+  }): number {
+    const totalSectorDemand =
+      company.Sector.demand + (company.Sector.demandBonus || 0);
+    const companySupply = calculateCompanySupply(
+      company.supplyBase,
+      company.supplyMax,
+    );
+    const throughput = company.demandScore + totalSectorDemand - companySupply;
+    return throughput;
+  }
+
+  calculateThroughputByUnitsSold(
+    unitsManufactured: number,
+    unitsSold: number,
+  ): number {
+    return unitsManufactured - unitsSold;
+  }
+
+  /**
    * Determine supply and demand difference, award bonuses and penalties.
    * Determine company operations revenue.
    * Calculate the "throughput" by finding the diff between the supply and demand.
@@ -2084,6 +2112,13 @@ export class GameManagementService {
       currentStockPrice: number;
       steps: number;
     }[] = [];
+    const stockRewards: {
+      gameId: string;
+      companyId: string;
+      phaseId: string;
+      currentStockPrice: number;
+      steps: number;
+    }[] = [];
     const sectorConsumersUpdates: { id: string; consumers: number }[] = [];
 
     let globalConsumers = game.consumerPoolNumber;
@@ -2103,11 +2138,49 @@ export class GameManagementService {
         companyPriorityOrderOperations(sectorCompanies);
       // Iterate over companies in sector
       for (const company of sectorCompaniesSorted) {
-        // Calculate throughput
-        const throughput =
+        // Calculate the revenue for the company units sold
+        let unitsManufactured = calculateCompanySupply(
+          company.supplyBase,
+          company.supplyMax,
+        );
+        const maxCustomersAttracted =
           company.demandScore +
-          (company.Sector.demand + (company.Sector.demandBonus || 0)) -
-          calculateCompanySupply(company.supplyBase, company.supplyMax);
+          company.Sector.demand +
+          (company.Sector.demandBonus || 0);
+        let unitsSold = Math.min(
+          calculateCompanySupply(company.supplyBase, company.supplyMax),
+          maxCustomersAttracted,
+        );
+        // Is there enough consumers to buy all the supply?
+        // Consumers are 1:1 with units sold, TODO: We may want to allow
+        // this ratio to be different at some point, perhaps even by sector
+        if (unitsSold > consumers) {
+          unitsSold = consumers;
+        }
+        const revenue = company.unitPrice * unitsSold;
+        // Update consumers
+        consumers -= unitsSold;
+        globalConsumers += unitsSold;
+        // Update sector consumers
+        sectorConsumersUpdates.push({
+          id: sectorId,
+          consumers,
+        });
+
+        // Calculate throughput
+        // const throughput = this.calculateThroughputByTheoreticalDemand({
+        //   demandScore: company.demandScore,
+        //   Sector: {
+        //     demand: sector.demand,
+        //     demandBonus: sector.demandBonus || 0,
+        //   },
+        //   supplyBase: company.supplyBase,
+        //   supplyMax: company.supplyMax,
+        // });
+        const throughput = this.calculateThroughputByUnitsSold(
+          unitsManufactured,
+          maxCustomersAttracted,
+        );
         console.log('Throughput:', throughput, company.name, company);
         // Consult throughput score to see reward or penalty.
         const throughputOutcome = throughputRewardOrPenalty(throughput);
@@ -2117,14 +2190,25 @@ export class GameManagementService {
           demandScore: Math.max(company.demandScore - 1, 0),
           prestigeTokens: company.prestigeTokens || 0,
         };
-        // Award or penalize the company
-        if (throughputOutcome.type === ThroughputRewardType.SECTOR_REWARD) {
+        //if the company has sold all of it's inventory, give it a prestige token
+        if (unitsSold >= unitsManufactured) {
           // Award prestige token
           companyUpdate.prestigeTokens = (company.prestigeTokens || 0) + 1;
-          sectorRewards[sectorId] = (sectorRewards[sectorId] || 0) + 1; // TODO: Implement sector-wide rewards if needed.
+        }
+        // Award or penalize the company
+        if (throughputOutcome.type === ThroughputRewardType.SECTOR_REWARD) {
+          // sectorRewards[sectorId] = (sectorRewards[sectorId] || 0) + 1; // TODO: Implement sector-wide rewards if needed.
+          // Move the stock price up
+          stockRewards.push({
+            gameId: phase.gameId,
+            companyId: company.id,
+            phaseId: String(phase.id),
+            currentStockPrice: company.currentStockPrice || 0,
+            steps: 1,
+          });
           this.gameLogService.createGameLog({
             game: { connect: { id: phase.gameId } },
-            content: `Company ${company.name} has met optimal efficiency and has been awarded a prestige token.`,
+            content: `Company ${company.name} has met optimal efficiency and has moved +1 on the stock chart.`,
           });
         } else if (
           throughputOutcome.type === ThroughputRewardType.STOCK_PENALTY
@@ -2142,29 +2226,6 @@ export class GameManagementService {
             content: `Company ${company.name} has not met optimal efficiency and has been penalized ${throughputOutcome.share_price_steps_down} share price steps down.`,
           });
         }
-
-        // Calculate the revenue for the company units sold
-        let unitsSold = Math.min(
-          calculateCompanySupply(company.supplyBase, company.supplyMax),
-          company.demandScore +
-            company.Sector.demand +
-            (company.Sector.demandBonus || 0),
-        );
-        // Is there enough consumers to buy all the supply?
-        // Consumers are 1:1 with units sold, TODO: We may want to allow
-        // this ratio to be different at some point, perhaps even by sector
-        if (unitsSold > consumers) {
-          unitsSold = consumers;
-        }
-        const revenue = company.unitPrice * unitsSold;
-        // Update consumers
-        consumers -= unitsSold;
-        globalConsumers += unitsSold;
-        // Update sector consumers
-        sectorConsumersUpdates.push({
-          id: sectorId,
-          consumers,
-        });
         // Create a production result
         productionResults.push({
           revenue,
@@ -2205,6 +2266,21 @@ export class GameManagementService {
           penalty.currentStockPrice,
           newHistory.price,
           penalty.companyId,
+        );
+      }),
+      ...stockRewards.map((reward) => async () => {
+        const newHistory = await this.stockHistoryService.moveStockPriceUp(
+          reward.gameId,
+          reward.companyId,
+          reward.phaseId,
+          reward.currentStockPrice,
+          reward.steps,
+          StockAction.PRODUCTION,
+        );
+        return this.playerOrderService.triggerLimitOrdersFilled(
+          reward.currentStockPrice,
+          newHistory.price,
+          reward.companyId,
         );
       }),
       ...sectorConsumersUpdates.map(
@@ -2664,7 +2740,11 @@ export class GameManagementService {
       await this.stockHistoryService.createManyStockHistories(stockHistories);
       // Start the timer for advancing to the next phase
       //TODO: Once the game is fully implemented, we can start the timer service again.  Something is wrong with it right now.
-      //await this.startPhaseTimer(newPhase, game.id, influenceRound.id);
+      await this.startPhaseTimer({
+        phase: newPhase,
+        gameId: game.id,
+        influenceRoundId: influenceRound.id,
+      });
       return game;
     } catch (error) {
       console.error('Error starting game:', error);
@@ -2745,7 +2825,14 @@ export class GameManagementService {
     influenceRoundId?: number;
     companyId?: string;
   }) {
-    console.log('influence round id', phaseName, influenceRoundId, roundType);
+    console.log(
+      'determineIfNewRoundAndStartPhase',
+      phaseName,
+      stockRoundId,
+      operatingRoundId,
+      influenceRoundId,
+      roundType,
+    );
     const game = await this.gamesService.getGameState(gameId);
 
     if (!game) {
@@ -2794,7 +2881,6 @@ export class GameManagementService {
         : undefined;
     const _influenceRoundId =
       roundType === RoundType.INFLUENCE ? influenceRoundId : undefined;
-    console.log('determine if new round _influenceRoundId', _influenceRoundId);
     return this.startPhase({
       gameId,
       phaseName,
@@ -2972,26 +3058,54 @@ export class GameManagementService {
    * @param stockRoundId - Optional ID of the stock round.
    * @param operatingRoundId - Optional ID of the operating round.
    */
-  private async startPhaseTimer(
-    phase: Phase,
-    gameId: string,
-    stockRoundId?: number,
-    operatingRoundId?: number,
-  ) {
+  private async startPhaseTimer({
+    phase,
+    gameId,
+    stockRoundId,
+    operatingRoundId,
+    influenceRoundId,
+  }: {
+    phase: Phase;
+    gameId: string;
+    stockRoundId?: number;
+    operatingRoundId?: number;
+    influenceRoundId?: number;
+  }) {
+    console.log(
+      'start phase timer',
+      phase,
+      gameId,
+      stockRoundId,
+      operatingRoundId,
+      influenceRoundId,
+    );
     await this.timerService.setTimer(phase.id, phase.phaseTime, async () => {
       try {
-        const nextPhase = await this.determineAndHandleNextPhase(
+        //get current phase
+        const currentPhase = await this.phaseService.phase({
+          id: phase.id,
+        });
+        const nameAndRoundType = await this.determineAndHandleNextPhase({
           phase,
           gameId,
-          stockRoundId,
-          operatingRoundId,
-        );
-        await this.startPhaseTimer(
-          nextPhase,
+        });
+
+        const nextPhase = await this.determineIfNewRoundAndStartPhase({
           gameId,
-          stockRoundId,
-          operatingRoundId,
-        );
+          phaseName: nameAndRoundType.phaseName,
+          roundType: nameAndRoundType.roundType,
+          stockRoundId: phase.stockRoundId || undefined,
+          operatingRoundId: phase.operatingRoundId || undefined,
+          influenceRoundId: phase.influenceRoundId || undefined,
+          companyId: currentPhase?.companyId || '',
+        });
+        await this.startPhaseTimer({
+          phase: nextPhase,
+          gameId,
+          stockRoundId: nextPhase.stockRoundId || undefined,
+          operatingRoundId: nextPhase.operatingRoundId || undefined,
+          influenceRoundId: nextPhase.influenceRoundId || undefined,
+        });
       } catch (error) {
         console.error('Error during phase transition:', error);
         // Optionally handle retries or fallback logic here
@@ -3007,13 +3121,25 @@ export class GameManagementService {
    * @param operatingRoundId - Optional ID of the operating round.
    * @returns The next phase object.
    */
-  private async determineAndHandleNextPhase(
-    phase: Phase,
-    gameId: string,
-    stockRoundId?: number,
-    operatingRoundId?: number,
-  ): Promise<Phase> {
-    const determinedNextPhase = determineNextGamePhase(phase.name);
+  private async determineAndHandleNextPhase({
+    phase,
+    gameId,
+  }: {
+    phase: Phase;
+    gameId: string;
+  }): Promise<{
+    phaseName: PhaseName;
+    roundType: RoundType;
+  }> {
+    const determinedNextPhase = determineNextGamePhase(phase.name, {
+      stockActionSubRound: phase.stockRoundId
+        ? (
+            await this.stockRoundService.stockRound({
+              id: phase.stockRoundId,
+            })
+          )?.stockActionSubRound
+        : undefined,
+    });
 
     let nextPhaseName = await this.adjustPhaseBasedOnGameState(
       determinedNextPhase.phaseName,
@@ -3039,14 +3165,10 @@ export class GameManagementService {
       companyId = undefined;
     }
 
-    return await this.startPhase({
-      gameId,
+    return {
       phaseName: nextPhaseName,
       roundType: determinedNextPhase.roundType,
-      stockRoundId,
-      operatingRoundId,
-      companyId,
-    });
+    };
   }
 
   /**

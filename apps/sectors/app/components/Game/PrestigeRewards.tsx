@@ -1,4 +1,4 @@
-import { Tooltip } from "@nextui-org/react";
+import { Badge, Tooltip } from "@nextui-org/react";
 import { PrestigeTrack } from "@server/data/constants";
 import { createPrestigeTrackBasedOnSeed } from "@server/data/helpers";
 import { PrestigeReward } from "@server/prisma/prisma.client";
@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { useMemo } from "react";
 import { useGame } from "./GameContext";
 import PrestigeIcon from "./PrestigeIcon";
+import { RiSparkling2Fill } from "@remixicon/react";
 interface PrestigeRewardsProps {
   layout?: "minimalist" | "grid";
 }
@@ -46,8 +47,14 @@ const PrestigeRewards: React.FC<PrestigeRewardsProps> = ({
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
           >
-            <div className="w-6 h-6">
-              <PrestigeIcon prestigeType={reward.type} />
+            <div className="flex gap-1">
+              <div className="w-6 h-6">
+                <PrestigeIcon prestigeType={reward.type} />
+              </div>
+              <div className="flex gap-1">
+                <RiSparkling2Fill className="ml-2 size-4 text-yellow-500" />{" "}
+                {reward.cost}
+              </div>
             </div>
             {layout === "grid" && (
               <div className="mt-2 text-center text-md">{reward.name}</div>

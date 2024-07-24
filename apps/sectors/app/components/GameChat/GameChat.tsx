@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useEffect, useState } from "react";
 import MessagePane from "../Room/MessagePane";
 import SendMessage from "../Room/SendMessage";
 import {
@@ -14,7 +15,6 @@ import {
 } from "@server/prisma/prisma.types";
 import { trpc } from "@sectors/app/trpc";
 import { useGame } from "../Game/GameContext";
-import { useEffect, useState } from "react";
 import { useAuthUser } from "../AuthUser.context";
 import { usePusher } from "../Pusher.context";
 import { RoomUser } from "@server/prisma/prisma.client";
@@ -31,16 +31,15 @@ const GameChat = ({
   const { currentPhase } = useGame();
   const { user } = useAuthUser();
   const { pusher } = usePusher();
-  const utils = trpc.useUtils();
+  const utils = trpc.useContext();
+
   const { data: roomUsers, isLoading: isLoadingRoomUsers } =
     trpc.roomUser.listRoomUsers.useQuery({
       where: { roomId },
     });
   const { data: playerPriorities, refetch: refetchPlayerPriority } =
     trpc.playerPriority.listPlayerPriorities.useQuery({
-      where: {
-        gameTurnId: currentPhase?.gameTurnId,
-      },
+      where: { gameTurnId: currentPhase?.gameTurnId },
     });
 
   const { data: messages, isLoading: isLoadingMessages } =
@@ -50,50 +49,55 @@ const GameChat = ({
 
   const createRoomMessageMutation =
     trpc.roomMessage.createRoomMessage.useMutation();
+
   useEffect(() => {
     refetchPlayerPriority();
   }, [currentPhase?.name]);
+
   useEffect(() => {
     if (!pusher) return;
 
     const channel = pusher.subscribe(getRoomChannelId(roomId));
 
-    channel.bind(EVENT_ROOM_JOINED, (data: RoomUserWithUser) => {
+    const handleRoomJoined = (data: RoomUserWithUser) => {
       utils.roomUser.listRoomUsers.setData(
         { where: { roomId } },
         (oldData: RoomUserWithUser[] | undefined) => [...(oldData || []), data]
       );
-    });
+    };
 
-    channel.bind(EVENT_ROOM_LEFT, (data: RoomUser) => {
+    const handleRoomLeft = (data: RoomUser) => {
       utils.roomUser.listRoomUsers.setData(
         { where: { roomId } },
         (oldData: RoomUserWithUser[] | undefined) =>
           oldData?.filter((user) => user.user.id !== data.userId)
       );
-    });
+    };
 
-    channel.bind(EVENT_ROOM_MESSAGE, (data: RoomMessageWithUser) => {
-      // Ensure timestamp remains a string in the cache
+    const handleRoomMessage = (data: RoomMessageWithUser) => {
       utils.roomMessage.listRoomMessages.setData(
         { where: { roomId } },
         (oldData: RoomMessageWithUser[] | undefined) => [
           ...(oldData || []),
-          { ...data, timestamp: new Date(data.timestamp).toISOString() }, // Keep as string
+          { ...data, timestamp: new Date(data.timestamp).toISOString() },
         ]
       );
-    });
+    };
+
+    channel.bind(EVENT_ROOM_JOINED, handleRoomJoined);
+    channel.bind(EVENT_ROOM_LEFT, handleRoomLeft);
+    channel.bind(EVENT_ROOM_MESSAGE, handleRoomMessage);
 
     return () => {
-      channel.unbind(EVENT_ROOM_JOINED);
-      channel.unbind(EVENT_ROOM_LEFT);
-      channel.unbind(EVENT_ROOM_MESSAGE);
-      channel.unsubscribe();
+      channel.unbind(EVENT_ROOM_JOINED, handleRoomJoined);
+      channel.unbind(EVENT_ROOM_LEFT, handleRoomLeft);
+      channel.unbind(EVENT_ROOM_MESSAGE, handleRoomMessage);
+      pusher.unsubscribe(getRoomChannelId(roomId));
     };
-  }, [pusher, roomId, isLoadingRoomUsers, isLoadingMessages]);
+  }, [pusher, roomId, utils]);
 
   if (isLoadingRoomUsers || isLoadingMessages) {
-    return <div>Loading Inner Component...</div>;
+    return <div>Loading...</div>;
   }
 
   if (!user) {

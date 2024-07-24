@@ -11,11 +11,13 @@ export const usePusherSubscription = (gameId: string) => {
       return;
     }
 
-    const newChannel = pusher.subscribe(getGameChannelId(gameId));
+    const channelName = getGameChannelId(gameId);
+    const newChannel = pusher.subscribe(channelName);
     setChannel(newChannel);
 
     return () => {
-      newChannel.unsubscribe();
+      pusher.unsubscribe(channelName);
+      setChannel(null);
     };
   }, [gameId, pusher]);
 

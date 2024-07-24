@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import GameSidebar from "./GameSidebar";
 import GameTopBar from "./GameTopBar";
@@ -77,11 +77,46 @@ const determineGameRound = (
     return { influenceRound, phase };
   }
 };
+
+const TimesUp = () => (
+  <div className="flex justify-center items-center relative">
+    <motion.div
+      className="absolute bg-slate-600 p-4 rounded-lg h-40 w-40"
+      animate={{
+        scale: [1, 1.5, 1.5, 1, 1],
+        rotate: [0, 0, 180, 180, 0],
+        borderRadius: ["0%", "0%", "50%", "50%", "0%"],
+      }}
+      transition={{
+        duration: 2,
+        ease: "easeInOut",
+        times: [0, 0.2, 0.5, 0.8, 1],
+        repeat: Infinity,
+        repeatDelay: 1,
+      }}
+    />
+    <h1 className="text-slate-100 text-center font-bold	text-2xl z-10">TIME'S UP!</h1>
+  </div>
+);
+
 const Game = ({ gameId }: { gameId: string }) => {
-  const { gameState } = useGame();
+  const { gameState, currentPhase } = useGame();
 
   const [currentView, setCurrentView] = useState<string>("action");
   const constraintsRef = useRef(null);
+  const [isTimerAtZero, setIsTimerAtZero] = useState(false);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (currentPhase) {
+        const now = Date.now();
+        const phaseStart = new Date(currentPhase.createdAt).getTime();
+        const phaseDuration = currentPhase.phaseTime;
+        const timeLeft = phaseStart + phaseDuration - now;
+        setIsTimerAtZero(timeLeft <= 0);
+      }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [currentPhase?.name]);
   const handleCurrentView = (view: string) => {
     setCurrentView(view);
   };
@@ -170,7 +205,16 @@ const Game = ({ gameId }: { gameId: string }) => {
       </motion.div>
       <div className="flex flex-col w-full">
         <GameTopBar gameId={gameId} handleCurrentView={handleCurrentView} />
-        <div className="flex justify-between overflow-y-auto">
+        <div className="relative flex justify-between overflow-y-auto">
+          <div
+            className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${
+              isTimerAtZero
+                ? "opacity-100 z-20 bg-black bg-opacity-50"
+                : "opacity-0 z-0"
+            }`}
+          >
+            <TimesUp />
+          </div>
           <div className="basis-10/12	active-panel flex flex-col h-full p-4">
             {currentView === "action" && renderCurrentPhase}
             {currentView === "chart" && <StockChart />}

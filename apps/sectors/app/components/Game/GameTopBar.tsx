@@ -165,8 +165,8 @@ const GameTopBar = ({
           Economy
         </Button>
       </ButtonGroup>
-      <Button onClick={handleNextPhase}>Next Phase</Button>
-      <Button onClick={handleRetryPhase}>Retry Phase</Button>
+      {/* <Button onClick={handleNextPhase}>Next Phase</Button>
+      <Button onClick={handleRetryPhase}>Retry Phase</Button> */}
       {currentPhase && (
         <Timer
           countdownTime={currentPhase.phaseTime / 1000} //convert from seconds to milliseconds

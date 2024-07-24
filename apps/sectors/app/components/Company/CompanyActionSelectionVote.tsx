@@ -100,7 +100,7 @@ const companyActions = [
     id: 10,
     title: "Spend Prestige",
     name: OperatingRoundAction.SPEND_PRESTIGE,
-    message: `Spend ${PRESTIGE_ACTION_TOKEN_COST} prestige to receive the reward on the prestige track and move it forward by 1. If the company does not have enough prestige, move the prestige track forward by 1.`,
+    message: `Purchase the current prestige track item at it's cost to receive the reward on the prestige track and move it forward by 1. If the company does not have enough prestige, move the prestige track forward by 1.`,
   },
   {
     id: 11,

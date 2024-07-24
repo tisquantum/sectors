@@ -18,6 +18,7 @@ import {
   LOAN_INTEREST_RATE,
 } from "@server/data/constants";
 import { sectorColors } from "@server/data/gameData";
+import { calculateCompanySupply } from "@server/data/helpers";
 import { CompanyStatus, Share } from "@server/prisma/prisma.client";
 import { CompanyWithSector } from "@server/prisma/prisma.types";
 import { BarList } from "@tremor/react";
@@ -123,7 +124,9 @@ const CompanyMoreInfo = ({
       >
         <div className="flex items-center">
           <RiBox2Fill size={18} className="ml-2" />
-          <span className="ml-1">{company.supplyMax}</span>
+          <span className="ml-1">
+            {calculateCompanySupply(company.supplyMax, company.supplyBase)}
+          </span>
         </div>
       </Tooltip>
       <Tooltip
@@ -131,8 +134,8 @@ const CompanyMoreInfo = ({
         content={
           <p>
             Throughput. The base sector demand plus the companies demand minus
-            it&apos;s supply. The closer to zero, the more efficient the company is
-            operating. Companies that score 0 receive a prestige bonus.
+            it&apos;s supply. The closer to zero, the more efficient the company
+            is operating. Companies that score 0 receive a prestige bonus.
           </p>
         }
       >
@@ -143,7 +146,7 @@ const CompanyMoreInfo = ({
               {company.demandScore +
                 company.Sector.demand +
                 (company.Sector.demandBonus || 0) -
-                company.supplyMax}
+                calculateCompanySupply(company.supplyMax, company.supplyBase)}
             </span>
           </div>
         </div>
