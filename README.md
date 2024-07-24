@@ -146,3 +146,5 @@ I'm thinking short orders can only be performed on a company you have no ownersh
 - TODO: operating round id / stock round id is being set to null too early. maybe when we switch to upkeep phase?
 
 - TODO: Split out dividend payout.  Make sure calculations are correct.
+
+- Should prestige bonus be based on selling out of your inventory or hitting the expected target customers?  If a companies product is hard to get, does that make it prestigious?
