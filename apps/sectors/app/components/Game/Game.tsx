@@ -95,7 +95,9 @@ const TimesUp = () => (
         repeatDelay: 1,
       }}
     />
-    <h1 className="text-slate-100 text-center font-bold	text-2xl z-10">TIME'S UP!</h1>
+    <h1 className="text-slate-100 text-center font-bold	text-2xl z-10">
+      TIME&apos;S UP!
+    </h1>
   </div>
 );
 
