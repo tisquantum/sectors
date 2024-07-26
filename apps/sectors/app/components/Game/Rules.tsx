@@ -168,7 +168,7 @@ const customerMovement = (
   <>
     <p>
       Each stock sector has customers that move to it from the global consumer
-      pool every turn, based on the sector's demand. Various events can trigger
+      pool every turn, based on the sector&apos;s demand. Various events can trigger
       customer movement to a sector.
     </p>
   </>
