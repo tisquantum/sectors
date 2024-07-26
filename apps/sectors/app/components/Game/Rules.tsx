@@ -8,9 +8,9 @@ const overviewRules = (
       <strong>Sectors</strong> is a game of stocks and running companies. You
       play as an influential investor trying to make the most money through
       clever investments and company management. The winner of the game is the
-      player with the greatest net worth by the time the bank <i>"breaks"</i>{" "}
-      and reaches or goes below 0. The game is played over turns, each turn is
-      separated into distinct sections.
+      player with the greatest net worth by the time the bank{" "}
+      <i>&quot;breaks&quot;</i> and reaches or goes below 0. The game is played
+      over turns, each turn is separated into distinct sections.
     </p>
     <p>
       <strong>Sections of the Game:</strong>
@@ -33,11 +33,11 @@ const stockRoundRules = (
     <p>
       <strong>The Stock Round</strong> is the first section of each turn.
       Players take turns buying and selling shares of companies. The Stock Round
-      is broken down into a number of <i>"sub-rounds"</i> where players can
-      place one order in each round. Players have 4 distinct order mechanisms:
-      Market Orders, Limit Orders, Short Orders, and Options Contracts. Market
-      Orders reset every round, while Limit and Short Orders are permanent until
-      resolved.
+      is broken down into a number of <i>&quot;sub-rounds&quot;</i> where
+      players can place one order in each round. Players have 4 distinct order
+      mechanisms: Market Orders, Limit Orders, Short Orders, and Options
+      Contracts. Market Orders reset every round, while Limit and Short Orders
+      are permanent until resolved.
     </p>
     <p>
       <strong>Order Mechanisms:</strong>
@@ -64,8 +64,9 @@ const stockRoundRules = (
         <li>
           <strong>Options Contracts:</strong> Purchase the right to buy or sell
           stock at a certain price. These contracts are placed against the
-          DERIVATIVES MARKET. The contract price is called the <i>"premium"</i>.
-          Contracts have set premiums, shares, terms, and strike prices.
+          DERIVATIVES MARKET. The contract price is called the{" "}
+          <i>&quot;premium&quot;</i>. Contracts have set premiums, shares,
+          terms, and strike prices.
         </li>
       </ul>
     </p>
@@ -74,7 +75,7 @@ const stockRoundRules = (
       <ul className="list-disc pl-5">
         <li>
           Players must have at least half the total value of the short order in
-          cash to set aside for a <i>"margin account"</i>.
+          cash to set aside for a <i>&quot;margin account&quot;</i>.
         </li>
         <li>
           The margin account locks these funds until the short order is covered.
