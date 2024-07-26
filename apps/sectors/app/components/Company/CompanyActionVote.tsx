@@ -7,7 +7,7 @@ import { CompanyActionCosts } from "@server/data/constants";
 import Button from "@sectors/app/components/General/DebounceButton";
 
 const CompanyActionVote = ({ company }: { company?: Company }) => {
-  const { currentPhase, authPlayer } = useGame();
+  const { currentPhase, authPlayer, gameId } = useGame();
   const [selected, setSelected] = useState<OperatingRoundAction>(
     OperatingRoundAction.MARKETING
   );
@@ -22,6 +22,7 @@ const CompanyActionVote = ({ company }: { company?: Company }) => {
         playerId: authPlayer.id,
         companyId: company.id,
         actionVoted: selected,
+        gameId,
       });
       setSubmitComplete(true);
     } catch (error) {
@@ -30,7 +31,10 @@ const CompanyActionVote = ({ company }: { company?: Company }) => {
   };
   const actions = [
     { name: OperatingRoundAction.MARKETING, label: "Large Marketing Campaign" },
-    { name: OperatingRoundAction.MARKETING_SMALL_CAMPAIGN, label: "Small Marketing Campaign" },
+    {
+      name: OperatingRoundAction.MARKETING_SMALL_CAMPAIGN,
+      label: "Small Marketing Campaign",
+    },
     { name: OperatingRoundAction.RESEARCH, label: "Research" },
     { name: OperatingRoundAction.EXPANSION, label: "Expansion" },
     { name: OperatingRoundAction.DOWNSIZE, label: "Downsize" },

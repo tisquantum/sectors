@@ -92,6 +92,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           playerId: z.string(),
           companyId: z.string(),
           revenueDistribution: z.nativeEnum(RevenueDistribution),
+          gameId: z.string(),
         }),
       )
       .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
@@ -102,6 +103,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           companyId,
           operatingRoundId,
           productionResultId,
+          gameId,
           ...rest
         } = input;
         const data: Prisma.RevenueDistributionVoteCreateInput = {

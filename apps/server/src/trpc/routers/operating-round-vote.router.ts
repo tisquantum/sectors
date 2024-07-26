@@ -54,12 +54,13 @@ export default (trpc: TrpcService, ctx: Context) =>
           playerId: z.string(),
           companyId: z.string(),
           actionVoted: z.nativeEnum(OperatingRoundAction),
+          gameId: z.string(),
         }),
       )
       .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
       .use(async (opts) => checkSubmissionTime(opts, ctx.phaseService))
       .mutation(async ({ input, ctx: ctxMiddleware }) => {
-        const { operatingRoundId, playerId, companyId, ...rest } = input;
+        const { operatingRoundId, playerId, companyId, gameId, ...rest } = input;
         const data: Prisma.OperatingRoundVoteCreateInput = {
           ...rest,
           OperatingRound: { connect: { id: operatingRoundId } },
