@@ -39,8 +39,6 @@ export const DEFAULT_RESEARCH_DECK_SIZE = 12;
 
 export const GOVERNMENT_GRANT_AMOUNT = 500;
 
-export const AUTOMATION_CARD_REDUCTION_AMOUNT = 20;
-
 export const MARKETING_CONSUMER_BONUS = 4;
 
 export const DEFAULT_INFLUENCE = 100;
@@ -50,7 +48,8 @@ export const OPTION_CONTRACT_MIN_TERM = 1;
 export const OPTION_CONTRACT_MAX_TERM = 4;
 export const LOAN_AMOUNT = 250;
 export const LOAN_INTEREST_RATE = 0.1;
-
+export const PRESTIGE_EFFECT_INCREASE_AMOUNT = 2;
+export const AUTOMATION_EFFECT_OPERATIONS_REDUCTION = 20;
 /**
  * Phase times in milliseconds
  */
@@ -83,8 +82,8 @@ export const phaseTimes = {
   [PhaseName.CAPITAL_GAINS]: 15 * 1000,
   [PhaseName.DIVESTMENT]: 15 * 1000,
   [PhaseName.SECTOR_NEW_COMPANY]: 10 * 1000,
-  [PhaseName.START_TURN]: 10 * 1000,
-  [PhaseName.END_TURN]: 15 * 1000,
+  [PhaseName.START_TURN]: 20 * 1000,
+  [PhaseName.END_TURN]: 20 * 1000,
 };
 
 //Stock Grid Prices

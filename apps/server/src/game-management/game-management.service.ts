@@ -88,6 +88,8 @@ import {
   LOAN_AMOUNT,
   LOAN_INTEREST_RATE,
   getNextCompanyOperatingRoundTurn,
+  PRESTIGE_EFFECT_INCREASE_AMOUNT,
+  AUTOMATION_EFFECT_OPERATIONS_REDUCTION,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -1314,19 +1316,21 @@ export class GameManagementService {
       case ResearchCardEffect.GOVERNMENT_GRANT:
         this.governmentGrantCardEffect(company);
         break;
+      case ResearchCardEffect.SPECIALIZATION:
+        //increase the company prestige by 2
+        await this.prestigeIncreaseEffect(company);
+        return;
       case ResearchCardEffect.QUALITY_CONTROL:
-        this.qualityControlCardEffect(company);
-        break;
       case ResearchCardEffect.PRODUCT_DEVELOPMENT:
-        this.productDevelopmentCardEffect(company);
-        break;
+        this.companySupplyIncreaseEffect(company);
+        return;
       case ResearchCardEffect.AUTOMATION:
         //reduce the operational costs by some amount
         //TODO: Implement
         break;
       case ResearchCardEffect.ECONOMIES_OF_SCALE:
-        //The next time this company operates, it is considered to be the cheapest company regardless of it's unit price.
-        //TODO: Implement
+        //When this company operates, it is considered to be the cheapest company regardless of it's unit price.
+        this.economiesOfScaleEffect(company);
         break;
       case ResearchCardEffect.ROBOTICS:
       case ResearchCardEffect.ARTIFICIAL_INTELLIGENCE:
@@ -1343,6 +1347,12 @@ export class GameManagementService {
     }
   }
 
+  async economiesOfScaleEffect(company: Company) {
+    await this.companyService.updateCompany({
+      where: { id: company.id },
+      data: { hasEconomiesOfScale: true },
+    });
+  }
   async genericSectorCompanyEffect(company: Company) {
     //get game
     const game = await this.gamesService.game({ id: company.gameId });
@@ -1360,7 +1370,7 @@ export class GameManagementService {
     );
   }
 
-  async productDevelopmentCardEffect(company: Company) {
+  async companySupplyIncreaseEffect(company: Company) {
     //increate the company supply max by 1
     await this.companyService.updateCompany({
       where: { id: company.id },
@@ -1368,11 +1378,14 @@ export class GameManagementService {
     });
   }
 
-  async qualityControlCardEffect(company: Company) {
+  async prestigeIncreaseEffect(company: Company) {
     //award the company 1 prestige token
     await this.companyService.updateCompany({
       where: { id: company.id },
-      data: { prestigeTokens: company.prestigeTokens + 1 },
+      data: {
+        prestigeTokens:
+          company.prestigeTokens + PRESTIGE_EFFECT_INCREASE_AMOUNT,
+      },
     });
   }
 
@@ -2036,7 +2049,7 @@ export class GameManagementService {
       throw new Error('Game not found');
     }
 
-    let companies = await this.companyService.companiesWithSector({
+    let companies = await this.companyService.companiesWithRelations({
       where: { gameId: phase.gameId, status: CompanyStatus.ACTIVE },
     });
     if (!companies) {
@@ -2045,9 +2058,18 @@ export class GameManagementService {
 
     // Reduce company cash on hand by operating fees
     const companyCashOnHandUpdates = companies.map((company) => {
+      //check if company owns the AUTOMATION card
+      const hasAutomationCard = company.Cards.some(
+        (card) => card.effect === ResearchCardEffect.AUTOMATION,
+      );
+      let operatingCosts = CompanyTierData[company.companyTier].operatingCosts;
+      if(hasAutomationCard){
+        operatingCosts = operatingCosts - AUTOMATION_EFFECT_OPERATIONS_REDUCTION;
+      }
+      operatingCosts = Math.max(operatingCosts, 0);
       // If company cannot afford to pay operating costs, it goes insolvent
       if (
-        company.cashOnHand < CompanyTierData[company.companyTier].operatingCosts
+        company.cashOnHand < operatingCosts
       ) {
         this.gameLogService.createGameLog({
           game: { connect: { id: phase.gameId } },
@@ -2067,7 +2089,7 @@ export class GameManagementService {
         id: company.id,
         cashOnHand:
           company.cashOnHand -
-          CompanyTierData[company.companyTier].operatingCosts,
+          operatingCosts,
         status: CompanyStatus.ACTIVE,
       };
     });

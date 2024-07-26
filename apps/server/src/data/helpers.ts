@@ -19,7 +19,7 @@ import {
   PlayerOrderWithCompany,
 } from '@server/prisma/prisma.types';
 import {
-  AUTOMATION_CARD_REDUCTION_AMOUNT,
+  AUTOMATION_EFFECT_OPERATIONS_REDUCTION,
   DEFAULT_RESEARCH_DECK_SIZE,
   GOVERNMENT_GRANT_AMOUNT,
   PRESTIGE_TRACK_LENGTH,
@@ -371,11 +371,14 @@ export function calculateMarginAccountMinimum(shortOrderValue: number): number {
 
 export function companyPriorityOrderOperations(companies: CompanyWithSector[]) {
   // PRIORITY for production and consumption of goods
+  // 0: If company has ECONOMIES_OF_SCALE, it is considered to be the cheapest company regardless of it's unit price.
   // 1: Sort companies by prestige tokens DESC
   // 2. Sory companies by unit price ASC (cheapest first)
   // 3: Sort companies by demand score DESC
   return companies.sort((a, b) => {
-    if (b.prestigeTokens !== a.prestigeTokens) {
+    if(a.hasEconomiesOfScale && !b.hasEconomiesOfScale) {
+      return -1;
+    } else if (b.prestigeTokens !== a.prestigeTokens) {
       return b.prestigeTokens - a.prestigeTokens;
     } else if (a.unitPrice !== b.unitPrice) {
       return a.unitPrice - b.unitPrice;
@@ -596,13 +599,15 @@ function descriptionForEffect(effect: ResearchCardEffect): string {
     case ResearchCardEffect.RENEWABLE_ENERGY:
       return 'This research has yielded a breakthrough in renewable energy.  Move stock price up 1 step.';
     case ResearchCardEffect.QUALITY_CONTROL:
-      return 'The company has achieved a breakthrough in quality control, receive 1 prestige token.';
+      return 'The company has achieved a breakthrough in quality control. Increase the supply permanently by 1.';
     case ResearchCardEffect.PRODUCT_DEVELOPMENT:
       return 'The company has achieved a breakthrough in product development. Increase the supply permanently by 1.';
     case ResearchCardEffect.ECONOMIES_OF_SCALE:
-      return "The next time this company operates, it is considered to be the cheapest company regardless of it's unit price.";
+      return "When this company operates, it is considered to be the cheapest company regardless of it's unit price.";
     case ResearchCardEffect.AUTOMATION:
-      return `This company reduces it's operating costs by ${AUTOMATION_CARD_REDUCTION_AMOUNT}.`;
+      return `This company reduces it's operating costs by ${AUTOMATION_EFFECT_OPERATIONS_REDUCTION}.`;
+    case ResearchCardEffect.SPECIALIZATION:
+      return 'This company has specialized in a particular area. It receives two prestige.';
     case ResearchCardEffect.NO_DISCERNIBLE_FINDINGS:
       return 'This research yielded no discernible findings.';
     default:

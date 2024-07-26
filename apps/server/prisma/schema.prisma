@@ -150,6 +150,7 @@ model Company {
   insolvent                Boolean
   isFloated                Boolean                   @default(false)
   hasLoan                  Boolean                   @default(false)
+  hasEconomiesOfScale      Boolean                   @default(false)
   stockTier                StockTier                 @default(TIER_1)
   tierSharesFulfilled      Int                       @default(0)
   currentStockPrice        Int                       @default(0)
@@ -521,6 +522,9 @@ enum ResearchCardEffect {
   ECONOMIES_OF_SCALE
   MARKET_EXPANSION
   AUTOMATION
+  SPECIALIZATION
+  DIVERSIFICATION
+  INNOVATION
   NO_DISCERNIBLE_FINDINGS
 }
 

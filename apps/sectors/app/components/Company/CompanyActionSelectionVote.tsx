@@ -25,6 +25,7 @@ import {
   CompanyAction,
   CompanyStatus,
   OperatingRoundAction,
+  PhaseName,
 } from "@server/prisma/prisma.client";
 import {
   CompanyWithSector,
@@ -36,6 +37,7 @@ import PlayerAvatar from "../Player/PlayerAvatar";
 import CompanyInfo from "./CompanyInfo";
 import PrestigeRewards from "../Game/PrestigeRewards";
 import Button from "@sectors/app/components/General/DebounceButton";
+import DebounceButton from "@sectors/app/components/General/DebounceButton";
 
 const companyActions = [
   {
@@ -133,6 +135,11 @@ const CompanyActionSelectionVote = ({
   withResult?: boolean;
   companyAction?: CompanyAction;
 }) => {
+  const { currentPhase, authPlayer, gameId } = useGame();
+  const [submitComplete, setSubmitComplete] = useState(false);
+  const [selectedAction, setSelectedAction] = useState<OperatingRoundAction>();
+  const createOperatingRoundVote =
+    trpc.operatingRoundVote.createOperatingRoundVote.useMutation();
   if (!company) return <div>No company found</div>;
   const checkIfDisabled = (actionName: OperatingRoundAction) => {
     if (CompanyActionCosts[actionName] > company.cashOnHand) {
@@ -140,6 +147,32 @@ const CompanyActionSelectionVote = ({
     }
     if (actionName == OperatingRoundAction.LOAN && company.hasLoan) {
       return true;
+    }
+  };
+  const handleSelected = (action: OperatingRoundAction, companyId: string) => {
+    console.log("selected", action);
+    if (
+      currentPhase?.name == PhaseName.OPERATING_ACTION_COMPANY_VOTE &&
+      currentPhase?.companyId === companyId
+    ) {
+      console.log("setting selected");
+      setSelectedAction(action);
+    }
+  };
+  const handleSubmit = async (action: OperatingRoundAction) => {
+    if (currentPhase?.name == PhaseName.OPERATING_ACTION_COMPANY_VOTE) {
+      try {
+        await createOperatingRoundVote.mutate({
+          operatingRoundId: currentPhase?.operatingRoundId || 0,
+          playerId: authPlayer.id,
+          companyId: company.id,
+          actionVoted: action,
+          gameId,
+        });
+        setSubmitComplete(true);
+      } catch (error) {
+        console.error(error);
+      }
     }
   };
   return (
@@ -167,53 +200,70 @@ const CompanyActionSelectionVote = ({
         </div>
         <div className="grid grid-cols-3 gap-2">
           {companyActions.map((action) => (
-            <Card
+            <div
               key={action.id}
-              isDisabled={checkIfDisabled(action.name)}
-              className={`${
-                companyAction?.action == action.name ? "bg-blue-700" : ""
-              }`}
+              onClick={() => handleSelected(action.name, company.id)}
             >
-              <CardHeader>
-                <div className="flex flex-col">
-                  <div className="flex justify-between">
-                    <span className="font-bold mr-3">{action.title}</span>
-                    <span>${CompanyActionCosts[action.name]}</span>
+              <Card
+                isDisabled={checkIfDisabled(action.name)}
+                className={`${
+                  companyAction?.action == action.name ? "bg-blue-700" : ""
+                } ${
+                  selectedAction == action.name ? "ring-2 ring-blue-500" : ""
+                }`}
+              >
+                <CardHeader>
+                  <div className="flex flex-col">
+                    <div className="flex justify-between">
+                      <span className="font-bold mr-3">{action.title}</span>
+                      <span>${CompanyActionCosts[action.name]}</span>
+                    </div>
+                    {action.name == OperatingRoundAction.LOAN && (
+                      <span>One time only</span>
+                    )}
+                    {action.name == OperatingRoundAction.LOAN &&
+                      company.hasLoan && <span>Loan has been taken.</span>}
                   </div>
-                  {action.name == OperatingRoundAction.LOAN && (
-                    <span>One time only</span>
-                  )}
-                  {action.name == OperatingRoundAction.LOAN &&
-                    company.hasLoan && <span>Loan has been taken.</span>}
-                </div>
-              </CardHeader>
-              <CardBody>
-                <div className="flex flex-col">
-                  {action.message}
-                  {action.name == OperatingRoundAction.SPEND_PRESTIGE && (
-                    <PrestigeRewards layout="minimalist" />
-                  )}
-                </div>
-              </CardBody>
-              <CardFooter>
-                {actionVoteResults && (
-                  <div className="flex gap-2">
-                    {actionVoteResults
-                      .filter(
-                        (actionVoteResult) =>
-                          actionVoteResult.actionVoted == action.name
-                      )
-                      .map((action: OperatingRoundVoteWithPlayer) => (
-                        <PlayerAvatar
-                          key={action.id}
-                          badgeContent={action.weight}
-                          player={action.Player}
-                        />
-                      ))}
+                </CardHeader>
+                <CardBody>
+                  <div className="flex flex-col">
+                    {action.message}
+                    {action.name == OperatingRoundAction.SPEND_PRESTIGE && (
+                      <PrestigeRewards layout="minimalist" />
+                    )}
                   </div>
-                )}
-              </CardFooter>
-            </Card>
+                </CardBody>
+                <CardFooter>
+                  {currentPhase?.name ==
+                    PhaseName.OPERATING_ACTION_COMPANY_VOTE &&
+                    selectedAction == action.name &&
+                    currentPhase?.companyId === company.id && (
+                      <DebounceButton
+                        onClick={() => handleSubmit(action.name)}
+                        disabled={submitComplete}
+                      >
+                        Submit Vote
+                      </DebounceButton>
+                    )}
+                  {actionVoteResults && (
+                    <div className="flex gap-2">
+                      {actionVoteResults
+                        .filter(
+                          (actionVoteResult) =>
+                            actionVoteResult.actionVoted == action.name
+                        )
+                        .map((action: OperatingRoundVoteWithPlayer) => (
+                          <PlayerAvatar
+                            key={action.id}
+                            badgeContent={action.weight}
+                            player={action.Player}
+                          />
+                        ))}
+                    </div>
+                  )}
+                </CardFooter>
+              </Card>
+            </div>
           ))}
         </div>
       </div>
@@ -344,13 +394,6 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
               companyAction={currentCompanyAction}
               withResult={withResult}
             />
-            {!withResult && (
-              <CompanyActionVote
-                company={companies.find(
-                  (company) => company.id === currentCompany
-                )}
-              />
-            )}
           </div>
         </motion.div>
       </AnimatePresence>
