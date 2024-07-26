@@ -36,7 +36,7 @@ const OptionContract = ({
   isInteractive?: boolean;
   isExercisableByAuth?: boolean;
 }) => {
-  const { gameState, authPlayer, currentPhase } = useGame();
+  const { gameId, gameState, authPlayer, currentPhase } = useGame();
   const { data: company, isLoading } =
     trpc.company.getCompanyWithSector.useQuery({ id: contract.companyId });
   const useCreatePlayerOrderMutation =
@@ -53,6 +53,7 @@ const OptionContract = ({
         companyId: contract.companyId,
         optionContractId: contract.id,
       },
+      gameId,
     });
   const { data: playerOrderPurchased, isLoading: playerOrderPurchasedLoading } =
     trpc.player.getPlayer.useQuery(
