@@ -8,6 +8,7 @@ import {
   getRoomChannelId,
 } from '@server/pusher/pusher.types';
 import { RoomMessageWithUser } from '@server/prisma/prisma.types';
+import { checkIsUserAction } from '../trpc.middleware';
 
 type Context = {
   roomMessageService: RoomMessageService;
@@ -57,6 +58,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           timestamp: z.string(),
         }),
       )
+      .use(checkIsUserAction)
       .mutation(async ({ input }) => {
         const { roomId, userId, content, timestamp } = input;
 

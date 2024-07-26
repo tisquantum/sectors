@@ -56,6 +56,17 @@ export class RevenueDistributionVoteService {
   async createRevenueDistributionVote(
     data: Prisma.RevenueDistributionVoteCreateInput,
   ): Promise<RevenueDistributionVote> {
+    //ensure player has not already cast vote
+    const existingVote = await this.prisma.revenueDistributionVote.findFirst({
+      where: {
+        playerId: data.Player.connect?.id || '',
+        companyId: data.Company.connect?.id || '',
+        operatingRoundId: data.OperatingRound.connect?.id || 0,
+      },
+    });
+    if (existingVote) {
+      throw new Error('Player has already voted');
+    }
     //calculate vote weight
     let voteWeight = 1;
     //get shares owned by player

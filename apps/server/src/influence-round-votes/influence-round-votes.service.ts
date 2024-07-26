@@ -38,6 +38,16 @@ export class InfluenceRoundVotesService {
   async createInfluenceVote(
     data: Prisma.InfluenceVoteCreateInput,
   ): Promise<InfluenceVote> {
+    //ensure player has not already voted 
+    const existingVote = await this.prisma.influenceVote.findFirst({
+      where: {
+        playerId: data.Player?.connect?.id || '',
+        influenceRoundId: data.InfluenceRound?.connect?.id || 0,
+      },
+    });
+    if (existingVote) {
+      throw new Error('Player has already voted');
+    }
     return this.prisma.influenceVote.create({
       data,
     });

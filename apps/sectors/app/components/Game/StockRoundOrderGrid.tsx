@@ -66,6 +66,7 @@ const StockRoundOrderGrid = ({
     where: {
       stockRoundId: currentPhase?.stockRoundId,
     },
+    gameId,
   });
   const {
     data: phasesOfStockRound,

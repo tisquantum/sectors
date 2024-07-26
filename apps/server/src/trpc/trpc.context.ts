@@ -1,6 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, User } from '@supabase/supabase-js';
+import type * as express from 'express';
 import type { CreateNextContextOptions } from '@trpc/server/adapters/next';
 import { TRPCError } from '@trpc/server';
+import { NodeHTTPCreateContextFnOptions } from '@trpc/server/dist/adapters/node-http';
 
 // Ensure Supabase client is created once
 const supabaseUrl = process.env.SUPABASE_URL!;
@@ -8,8 +10,20 @@ const supabaseAnonKey = process.env.SUPABASE_ANON_KEY!;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 interface ContextOptions extends Partial<CreateNextContextOptions> {}
+export type CreateExpressContextOptions = NodeHTTPCreateContextFnOptions<
+  express.Request,
+  express.Response
+>;
 
-export const createContext = async (opts: ContextOptions) => {
+export interface Context {
+  req: express.Request;
+  res: express.Response;
+  user: User | null; // Use the User type from Supabase
+}
+
+export const createContext = async (
+  opts: CreateExpressContextOptions,
+): Promise<Context> => {
   const { req, res } = opts;
   if (!req) {
     throw new TRPCError({
@@ -44,7 +58,6 @@ export const createContext = async (opts: ContextOptions) => {
   }
 
   const user = data.user;
-
   return {
     req,
     res,
@@ -52,4 +65,4 @@ export const createContext = async (opts: ContextOptions) => {
   };
 };
 
-export type Context = Awaited<ReturnType<typeof createContext>>;
+//export type Context = Awaited<ReturnType<typeof createContext>>;

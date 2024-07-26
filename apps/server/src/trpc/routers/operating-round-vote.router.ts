@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { OperatingRoundVoteService } from '@server/operating-round-vote/operating-round-vote.service';
 import { TrpcService } from '../trpc.service';
 import { Prisma, OperatingRoundAction } from '@prisma/client';
+import { checkIsPlayerAction } from '../trpc.middleware';
 
 type Context = {
   operatingRoundVoteService: OperatingRoundVoteService;
@@ -42,6 +43,7 @@ export default (trpc: TrpcService, ctx: Context) =>
       }),
 
     createOperatingRoundVote: trpc.procedure
+      .use(checkIsPlayerAction)
       .input(
         z.object({
           operatingRoundId: z.number(),

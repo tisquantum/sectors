@@ -1,10 +1,13 @@
 import { z } from 'zod';
 import { TrpcService } from '../trpc.service';
-import { Prisma, RevenueDistribution } from '@prisma/client';
+import { PhaseName, Prisma, RevenueDistribution } from '@prisma/client';
 import { RevenueDistributionVoteService } from '@server/revenue-distribution-vote/revenue-distribution-vote.service';
+import { checkIsPlayerAction } from '../trpc.middleware';
+import { PhaseService } from '@server/phase/phase.service';
 
 type Context = {
   revenueDistributionVoteService: RevenueDistributionVoteService;
+  phaseService: PhaseService;
 };
 
 export default (trpc: TrpcService, ctx: Context) =>
@@ -52,20 +55,35 @@ export default (trpc: TrpcService, ctx: Context) =>
           cursor: z.number().optional(),
           where: z.any().optional(), // Define more specific validation if needed
           orderBy: z.any().optional(), // Define more specific validation if needed
+          gameId: z.string(),
         }),
       )
       .query(async ({ input }) => {
-        const { skip, take, cursor, where, orderBy } = input;
-        return ctx.revenueDistributionVoteService.revenueDistributionVotesWithRelations({
-          skip,
-          take,
-          cursor: cursor ? { id: cursor } : undefined,
-          where,
-          orderBy,
-        });
+        if (!input.gameId) {
+          throw new Error('Game ID is required');
+        }
+        const { skip, take, cursor, where, orderBy, gameId } = input;
+        //get phase to check if it is OPERATING_PRODUCTION_VOTE
+        const phase = await ctx.phaseService.currentPhase(gameId);
+        if (!phase) {
+          throw new Error('Phase not found');
+        }
+        if (phase.name === PhaseName.OPERATING_PRODUCTION_VOTE) {
+          throw new Error('Cannot retrieve votes during production vote phase');
+        }
+        return ctx.revenueDistributionVoteService.revenueDistributionVotesWithRelations(
+          {
+            skip,
+            take,
+            cursor: cursor ? { id: cursor } : undefined,
+            where,
+            orderBy,
+          },
+        );
       }),
 
     createRevenueDistributionVote: trpc.procedure
+      .use(checkIsPlayerAction)
       .input(
         z.object({
           operatingRoundId: z.number(),

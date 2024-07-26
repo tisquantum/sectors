@@ -4990,6 +4990,10 @@ export class GameManagementService {
     if (!shortOrder) {
       throw new Error('Short order not found');
     }
+    //ensure it has not already been covered
+    if (shortOrder.coverPrice) {
+      throw new Error('Short order already covered');
+    }
     //get the price of the stock
     const stockPrice = shortOrder.Company.currentStockPrice;
     //get the player
@@ -5055,10 +5059,18 @@ export class GameManagementService {
       steps,
       StockAction.SHORT,
     );
+    //update short with cover price
+    const updatedShortOrder =
+      await this.shortOrdersService.updateShortOrder({
+        where: { id: shortOrderId },
+        data: {
+          coverPrice: stockPrice,
+        },
+      });
     //game log
     await this.gameLogService.createGameLog({
       game: { connect: { id: player.gameId } },
-      content: `Player ${player.nickname} has covered a short order for ${
+      content: `Player ${player.nickname} has covered short order ${updatedShortOrder.id} for ${
         shortOrder.Company.name
       } at $${stockPrice.toFixed(2)}`,
     });

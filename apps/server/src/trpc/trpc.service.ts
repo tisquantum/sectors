@@ -10,16 +10,19 @@ const fixESM = require("fix-esm");
 // @ts-expect-error This is a type-only import, so won't get transformed to `require()`.
 import type SuperJSON from "superjson";
 import { CreateContextOptions } from 'vm';
-import { Context, createContext } from './trpc.context';
+import { createContext, Context } from './trpc.context';
+import { checkIsUserAction } from './trpc.middleware';
 // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
 const SuperJSON: SuperJSON = fixESM.require("superjson");
 
 @Injectable()
 export class TrpcService {
-  trpc = initTRPC.create({
+  trpc = initTRPC.context<Context>().create({
     transformer: SuperJSON,
   });
   procedure = this.trpc.procedure;
+  //keeping this for reference
+  //userSafeProcedure = this.trpc.procedure.use(checkIsUserAction);
   router = this.trpc.router;
   mergeRouters = this.trpc.mergeRouters;
 }

@@ -3,6 +3,7 @@ import { TrpcService } from '../trpc.service';
 import { InfluenceRoundVotesService } from '@server/influence-round-votes/influence-round-votes.service';
 import { PhaseService } from '@server/phase/phase.service';
 import { PhaseName } from '@prisma/client';
+import { checkIsPlayerAction } from '../trpc.middleware';
 
 type Context = {
   influenceRoundVotesService: InfluenceRoundVotesService;
@@ -45,6 +46,7 @@ export default (trpc: TrpcService, ctx: Context) =>
       }),
 
     createInfluenceVote: trpc.procedure
+      .use(checkIsPlayerAction)
       .input(
         z.object({
           influenceRoundId: z.number(),

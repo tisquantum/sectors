@@ -1,10 +1,12 @@
 import { z } from 'zod';
 import { OperatingRoundService } from '@server/operating-round/operating-round.service';
 import { TrpcService } from '../trpc.service';
-import { Prisma, OperatingRound } from '@prisma/client';
+import { Prisma, OperatingRound, PhaseName } from '@prisma/client';
+import { PhaseService } from '@server/phase/phase.service';
 
 type Context = {
   operatingRoundService: OperatingRoundService;
+  phaseService: PhaseService;
 };
 
 export default (trpc: TrpcService, ctx: Context) =>
@@ -35,13 +37,25 @@ export default (trpc: TrpcService, ctx: Context) =>
         return operatingRound;
       }),
     getOperatingRoundWithActionVotes: trpc.procedure
-      .input(z.object({ where: z.any() }))
+      .input(z.object({ where: z.any(), gameId: z.string() }))
       .query(async ({ input }) => {
-        const { where } = input;
+        if (!input.gameId) {
+          throw new Error('GameId is required');
+        }
+        const { where, gameId } = input;
+
         const operatingRound =
           await ctx.operatingRoundService.operatingRoundWithActionVotes(where);
         if (!operatingRound) {
           throw new Error('Operating round not found');
+        }
+        //get current phase
+        const phase = await ctx.phaseService.currentPhase(gameId);
+        if (!phase) {
+          throw new Error('Phase not found');
+        }
+        if (phase.name == PhaseName.OPERATING_ACTION_COMPANY_VOTE) {
+          throw new Error('Cannot view action votes during company vote phase');
         }
         return operatingRound;
       }),

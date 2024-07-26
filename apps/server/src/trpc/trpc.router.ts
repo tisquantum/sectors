@@ -56,6 +56,7 @@ import playerPriorityRouter from './routers/player-priority.router';
 import { PlayerPriorityService } from '@server/player-priority/player-priority.service';
 import optionContractRouter from './routers/option-contract.router';
 import { OptionContractService } from '@server/option-contract/option-contract.service';
+import { createContext } from './trpc.context';
 @Injectable()
 export class TrpcRouter {
   constructor(
@@ -143,6 +144,7 @@ export class TrpcRouter {
       playerService: this.playersService,
       pusherService: this.pusherService,
       gameLogService: this.gameLogService,
+      phaseService: this.phaseService,
     }),
     share: shareRouter(this.trpc, {
       shareService: this.shareService,
@@ -150,6 +152,7 @@ export class TrpcRouter {
     }),
     operatingRound: operatingRoundRouter(this.trpc, {
       operatingRoundService: this.operatingRoundService,
+      phaseService: this.phaseService,
     }),
     operatingRoundVote: operatingRoundVoteRouter(this.trpc, {
       operatingRoundVoteService: this.operatingRoundVoteService,
@@ -159,6 +162,7 @@ export class TrpcRouter {
     }),
     revenueDistributionVote: revenueDistributionVoteRouter(this.trpc, {
       revenueDistributionVoteService: this.revenueDistributionVoteService,
+      phaseService: this.phaseService,
     }),
     companyAction: companyActionRouter(this.trpc, {
       companyActionService: this.companyActionService,
@@ -196,6 +200,7 @@ export class TrpcRouter {
       `/trpc`,
       trpcExpress.createExpressMiddleware({
         router: this.appRouter,
+        createContext,
       }),
     );
   }

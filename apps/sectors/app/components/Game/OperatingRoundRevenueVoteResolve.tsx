@@ -15,7 +15,7 @@ import {
 } from "@server/prisma/prisma.client";
 
 const OperatingRoundRevenueVoteResolve = () => {
-  const { currentPhase, playersWithShares } = useGame();
+  const { currentPhase, playersWithShares, gameId } = useGame();
   const { data: productionResults, isLoading } =
     trpc.operatingRound.getOperatingRoundWithProductionResults.useQuery({
       where: {
@@ -31,6 +31,7 @@ const OperatingRoundRevenueVoteResolve = () => {
         where: {
           operatingRoundId: currentPhase?.operatingRoundId,
         },
+        gameId,
       }
     );
   if (isLoading) {

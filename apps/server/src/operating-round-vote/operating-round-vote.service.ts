@@ -34,9 +34,18 @@ export class OperatingRoundVoteService {
   async createOperatingRoundVote(
     data: Prisma.OperatingRoundVoteCreateInput,
   ): Promise<OperatingRoundVote> {
-    // Remove id
     const newData = { ...data };
-
+    //ensure vote has not already been cast by player
+    const existingVote = await this.prisma.operatingRoundVote.findFirst({
+      where: {
+        playerId: newData.Player.connect?.id || '',
+        companyId: newData.Company.connect?.id || '',
+        operatingRoundId: newData.OperatingRound.connect?.id || 0,
+      },
+    });
+    if (existingVote) {
+      throw new Error('Player has already voted');
+    }
     // Calculate vote weight
     const sharesOwned = await this.prisma.share.findMany({
       where: {
