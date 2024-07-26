@@ -239,6 +239,7 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
       where: {
         id: currentPhase?.operatingRoundId || "",
       },
+      gameId,
     },
     {
       enabled: withResult,

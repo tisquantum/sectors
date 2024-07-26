@@ -1,6 +1,12 @@
 import { z } from 'zod';
 import { TrpcService } from '../trpc.service';
-import { Prisma, ShareLocation, OrderType, OrderStatus } from '@prisma/client';
+import {
+  Prisma,
+  ShareLocation,
+  OrderType,
+  OrderStatus,
+  PhaseName,
+} from '@prisma/client';
 import { PlayerOrderService } from '@server/player-order/player-order.service';
 import { PusherService } from 'nestjs-pusher';
 import {
@@ -11,11 +17,14 @@ import {
 import { PlayersService } from '@server/players/players.service';
 import { TRPCError } from '@trpc/server';
 import { GameLogService } from '@server/game-log/game-log.service';
+import { checkIsPlayerAction, checkSubmissionTime } from '../trpc.middleware';
+import { PhaseService } from '@server/phase/phase.service';
 
 type Context = {
   playerOrdersService: PlayerOrderService;
   playerService: PlayersService;
   pusherService: PusherService;
+  phaseService: PhaseService;
   gameLogService: GameLogService;
 };
 
@@ -101,10 +110,35 @@ export default (trpc: TrpcService, ctx: Context) =>
           cursor: z.number().optional(),
           where: z.any().optional(),
           orderBy: z.any().optional(),
+          gameId: z.string(),
         }),
       )
       .query(async ({ input }) => {
-        const { skip, take, cursor, where, orderBy } = input;
+        if (!input.gameId) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Game ID is required',
+          });
+        }
+        const { skip, take, cursor, where, orderBy, gameId } = input;
+        //get phase
+        const phase = await ctx.phaseService.currentPhase(gameId);
+        if (!phase) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Phase not found',
+          });
+        }
+        if (
+          phase.name == PhaseName.STOCK_ACTION_ORDER ||
+          phase.name == PhaseName.STOCK_ACTION_RESULT
+        ) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message:
+              'Cannot view orders during stock action order or result phase',
+          });
+        }
         return ctx.playerOrdersService.playerOrdersWithPlayerRevealed({
           skip,
           take,
@@ -171,7 +205,9 @@ export default (trpc: TrpcService, ctx: Context) =>
           contractId: z.number().optional(),
         }),
       )
-      .mutation(async ({ input }) => {
+      .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
+      .use(async (opts) => checkSubmissionTime(opts, ctx.phaseService))
+      .mutation(async ({ input, ctx: ctxMiddleware }) => {
         //remove game id from input
         const {
           gameId,
@@ -196,6 +232,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           ...(contractId && {
             OptionContract: { connect: { id: contractId } },
           }),
+          submissionStamp: ctxMiddleware.submissionStamp,
         };
         let playerOrder;
         try {

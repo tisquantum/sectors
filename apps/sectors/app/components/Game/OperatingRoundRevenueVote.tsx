@@ -23,7 +23,7 @@ const DistributeSelection = ({
   productionResult: ProductionResult;
   operatingRoundId: number;
 }) => {
-  const { authPlayer } = useGame();
+  const { authPlayer, gameId } = useGame();
   const [isSubmit, setIsSubmit] = useState(false);
   const [selected, setSelected] = useState<RevenueDistribution>(
     RevenueDistribution.DIVIDEND_FULL
@@ -39,6 +39,7 @@ const DistributeSelection = ({
       playerId: authPlayer.id || "",
       companyId: company.id,
       revenueDistribution: selected,
+      gameId,
     });
     setIsSubmit(true);
   };

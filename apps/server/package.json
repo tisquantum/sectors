@@ -29,6 +29,7 @@
     "@nestjs/platform-express": "^10.0.0",
     "@nestjs/websockets": "^10.3.8",
     "@prisma/client": "5.14.0",
+    "@supabase/supabase-js": "^2.43.4",
     "@trpc/server": "11.0.0-rc.403",
     "devalue": "^5.0.0",
     "fix-esm": "^1.0.1",

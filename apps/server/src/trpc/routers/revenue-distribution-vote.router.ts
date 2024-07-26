@@ -1,10 +1,15 @@
 import { z } from 'zod';
 import { TrpcService } from '../trpc.service';
-import { Prisma, RevenueDistribution } from '@prisma/client';
+import { PhaseName, Prisma, RevenueDistribution } from '@prisma/client';
 import { RevenueDistributionVoteService } from '@server/revenue-distribution-vote/revenue-distribution-vote.service';
+import { checkIsPlayerAction, checkSubmissionTime } from '../trpc.middleware';
+import { PhaseService } from '@server/phase/phase.service';
+import { PlayersService } from '@server/players/players.service';
 
 type Context = {
   revenueDistributionVoteService: RevenueDistributionVoteService;
+  phaseService: PhaseService;
+  playerService: PlayersService;
 };
 
 export default (trpc: TrpcService, ctx: Context) =>
@@ -52,17 +57,31 @@ export default (trpc: TrpcService, ctx: Context) =>
           cursor: z.number().optional(),
           where: z.any().optional(), // Define more specific validation if needed
           orderBy: z.any().optional(), // Define more specific validation if needed
+          gameId: z.string(),
         }),
       )
       .query(async ({ input }) => {
-        const { skip, take, cursor, where, orderBy } = input;
-        return ctx.revenueDistributionVoteService.revenueDistributionVotesWithRelations({
-          skip,
-          take,
-          cursor: cursor ? { id: cursor } : undefined,
-          where,
-          orderBy,
-        });
+        if (!input.gameId) {
+          throw new Error('Game ID is required');
+        }
+        const { skip, take, cursor, where, orderBy, gameId } = input;
+        //get phase to check if it is OPERATING_PRODUCTION_VOTE
+        const phase = await ctx.phaseService.currentPhase(gameId);
+        if (!phase) {
+          throw new Error('Phase not found');
+        }
+        if (phase.name === PhaseName.OPERATING_PRODUCTION_VOTE) {
+          throw new Error('Cannot retrieve votes during production vote phase');
+        }
+        return ctx.revenueDistributionVoteService.revenueDistributionVotesWithRelations(
+          {
+            skip,
+            take,
+            cursor: cursor ? { id: cursor } : undefined,
+            where,
+            orderBy,
+          },
+        );
       }),
 
     createRevenueDistributionVote: trpc.procedure
@@ -73,14 +92,18 @@ export default (trpc: TrpcService, ctx: Context) =>
           playerId: z.string(),
           companyId: z.string(),
           revenueDistribution: z.nativeEnum(RevenueDistribution),
+          gameId: z.string(),
         }),
       )
-      .mutation(async ({ input }) => {
+      .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
+      .use(async (opts) => checkSubmissionTime(opts, ctx.phaseService))
+      .mutation(async ({ input, ctx: ctxMiddleware }) => {
         const {
           playerId,
           companyId,
           operatingRoundId,
           productionResultId,
+          gameId,
           ...rest
         } = input;
         const data: Prisma.RevenueDistributionVoteCreateInput = {
@@ -89,6 +112,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           Player: { connect: { id: playerId } },
           Company: { connect: { id: companyId } },
           ProductionResult: { connect: { id: productionResultId } },
+          submissionStamp: ctxMiddleware.submissionStamp,
         };
         return ctx.revenueDistributionVoteService.createRevenueDistributionVote(
           data,

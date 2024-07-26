@@ -3,10 +3,13 @@ import { TrpcService } from '../trpc.service';
 import { InfluenceRoundVotesService } from '@server/influence-round-votes/influence-round-votes.service';
 import { PhaseService } from '@server/phase/phase.service';
 import { PhaseName } from '@prisma/client';
+import { checkIsPlayerAction, checkSubmissionTime } from '../trpc.middleware';
+import { PlayersService } from '@server/players/players.service';
 
 type Context = {
   influenceRoundVotesService: InfluenceRoundVotesService;
   phaseService: PhaseService;
+  playerService: PlayersService;
 };
 
 export default (trpc: TrpcService, ctx: Context) =>
@@ -31,10 +34,22 @@ export default (trpc: TrpcService, ctx: Context) =>
           cursor: z.number().optional(),
           where: z.any().optional(),
           orderBy: z.any().optional(),
+          gameId: z.string(),
         }),
       )
       .query(async ({ input }) => {
-        const { skip, take, cursor, where, orderBy } = input;
+        if (!input.gameId) {
+          throw new Error('gameId is required');
+        }
+        const { skip, take, cursor, where, orderBy, gameId } = input;
+        //check phase
+        const currentPhase = await ctx.phaseService.currentPhase(gameId);
+        if (!currentPhase) {
+          throw new Error('No current phase found');
+        }
+        if (currentPhase.name == PhaseName.INFLUENCE_BID_ACTION) {
+          throw new Error('Cannot list influence votes on voting round');
+        }
         return ctx.influenceRoundVotesService.listInfluenceVotes({
           skip,
           take,
@@ -53,12 +68,15 @@ export default (trpc: TrpcService, ctx: Context) =>
           gameId: z.string(),
         }),
       )
-      .mutation(async ({ input }) => {
+      .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
+      .use(async (opts) => checkSubmissionTime(opts, ctx.phaseService))
+      .mutation(async ({ input, ctx: ctxMiddleware }) => {
         const { influenceRoundId, playerId, influence, gameId } = input;
         const data = {
           influence,
           InfluenceRound: { connect: { id: influenceRoundId } },
           Player: { connect: { id: playerId } },
+          submissionStamp: ctxMiddleware.submissionStamp,
         };
         // ensure current phase is influence voting round
         const currentPhase = await ctx.phaseService.currentPhase(gameId);

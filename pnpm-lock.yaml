@@ -137,6 +137,9 @@ importers:
       '@prisma/client':
         specifier: 5.14.0
         version: 5.14.0(prisma@5.14.0)
+      '@supabase/supabase-js':
+        specifier: ^2.43.4
+        version: 2.43.4
       '@trpc/server':
         specifier: 11.0.0-rc.403
         version: 11.0.0-rc.403
