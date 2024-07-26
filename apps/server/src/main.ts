@@ -7,7 +7,7 @@ import { NextFunction } from 'express';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.enableCors({
-    origin: '*',
+    origin: process.env.CORS_ORIGIN,
   });
   const trpc = app.get(TrpcRouter);
   trpc.applyMiddleware(app);
