@@ -108,8 +108,6 @@ const StockRoundOrderGrid = ({
     }
   }, [playerOrdersConcealed, currentPhase]);
   const [isOrderInputOpen, setIsOrderInputOpen] = useState<boolean>(false);
-  if (isLoadingPlayerOrdersRevealed) return <div>Loading...</div>;
-  if (playerOrdersRevealed == undefined) return null;
   if (isLoading) return null;
   if (isLoadingPhases) return null;
   if (companies == undefined) return notFound();
@@ -155,9 +153,9 @@ const StockRoundOrderGrid = ({
                     isInteractive={isInteractive}
                     focusedOrder={focusedOrder}
                     currentPhase={currentPhase}
-                    playerOrdersRevealed={playerOrdersRevealed.filter(
+                    playerOrdersRevealed={playerOrdersRevealed?.filter(
                       (order) => order.companyId === company.id
-                    )}
+                    ) || []}
                     phasesOfStockRound={phasesOfStockRound}
                     isOrderInputOpen={isOrderInputOpen}
                     handleButtonSelect={companyCardButtonClicked}

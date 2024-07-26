@@ -4,7 +4,7 @@ import PlayerAvatar from "../Player/PlayerAvatar";
 import { DEFAULT_INFLUENCE } from "@server/data/constants";
 import { Input } from "@nextui-org/react";
 import DebounceButton from "../General/DebounceButton";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const InfluenceBidAction = () => {
   const { currentPhase, authPlayer } = useGame();
@@ -54,7 +54,7 @@ const InfluenceBidAction = () => {
 };
 
 const InfluenceBid = ({ isRevealRound }: { isRevealRound?: boolean }) => {
-  const { currentPhase } = useGame();
+  const { gameId, currentPhase } = useGame();
   const {
     data: influenceRound,
     isLoading,
@@ -78,11 +78,18 @@ const InfluenceBid = ({ isRevealRound }: { isRevealRound?: boolean }) => {
       orderBy: {
         influence: "desc",
       },
+      gameId,
     },
     {
       enabled: isRevealRound,
     }
   );
+  useEffect(() => {
+    if (isRevealRound) {
+      revealRefetch();
+    }
+  }, [currentPhase?.name]);
+
   if (!currentPhase?.influenceRoundId) {
     return null;
   }

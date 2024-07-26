@@ -17,7 +17,7 @@ import {
 import { PlayersService } from '@server/players/players.service';
 import { TRPCError } from '@trpc/server';
 import { GameLogService } from '@server/game-log/game-log.service';
-import { checkIsPlayerAction } from '../trpc.middleware';
+import { checkIsPlayerAction, checkSubmissionTime } from '../trpc.middleware';
 import { PhaseService } from '@server/phase/phase.service';
 
 type Context = {
@@ -189,7 +189,6 @@ export default (trpc: TrpcService, ctx: Context) =>
         });
       }),
     createPlayerOrder: trpc.procedure
-      .use(checkIsPlayerAction)
       .input(
         z.object({
           gameId: z.string(),
@@ -206,7 +205,9 @@ export default (trpc: TrpcService, ctx: Context) =>
           contractId: z.number().optional(),
         }),
       )
-      .mutation(async ({ input }) => {
+      .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
+      .use(async (opts) => checkSubmissionTime(opts, ctx.phaseService))
+      .mutation(async ({ input, ctx: ctxMiddleware }) => {
         //remove game id from input
         const {
           gameId,
@@ -231,6 +232,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           ...(contractId && {
             OptionContract: { connect: { id: contractId } },
           }),
+          submissionStamp: ctxMiddleware.submissionStamp,
         };
         let playerOrder;
         try {

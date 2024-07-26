@@ -262,6 +262,7 @@ model PlayerOrder {
   Company          Company         @relation(fields: [companyId], references: [id])
   Phase            Phase           @relation(fields: [phaseId], references: [id])
   Sector           Sector          @relation(fields: [sectorId], references: [id])
+  submissionStamp  DateTime?
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 }
@@ -415,6 +416,7 @@ model RevenueDistributionVote {
   Player              Player              @relation(fields: [playerId], references: [id])
   Company             Company             @relation(fields: [companyId], references: [id])
   OperatingRound      OperatingRound      @relation(fields: [operatingRoundId], references: [id])
+  submissionStamp     DateTime?
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
 }
@@ -447,6 +449,7 @@ model OperatingRoundVote {
   Company          Company              @relation(fields: [companyId], references: [id])
   OperatingRound   OperatingRound       @relation(fields: [operatingRoundId], references: [id])
   Player           Player               @relation(fields: [playerId], references: [id])
+  submissionStamp  DateTime?
   createdAt        DateTime             @default(now())
   updatedAt        DateTime             @updatedAt
 }
@@ -712,6 +715,7 @@ model InfluenceVote {
   influence        Int
   InfluenceRound   InfluenceRound @relation(fields: [influenceRoundId], references: [id])
   Player           Player         @relation(fields: [playerId], references: [id])
+  submissionStamp  DateTime?
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 }

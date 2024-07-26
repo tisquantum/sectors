@@ -2,6 +2,8 @@ import { Phase } from '@prisma/client';
 import { PhaseService } from '@server/phase/phase.service';
 import { TRPCError } from '@trpc/server';
 import { Context } from './trpc.context';
+import { phaseTimes } from '@server/data/constants';
+import { PlayersService } from '@server/players/players.service';
 
 // Middleware to check phase restrictions
 // export const checkPhase = async ({
@@ -48,19 +50,62 @@ export const checkIsUserAction = async (opts: any) => {
 };
 
 //check if player action
-export const checkIsPlayerAction = async (opts: any) => {
+export const checkIsPlayerAction = async (opts: any, playerService: PlayersService) => {
   const { ctx, input, next } = opts;
+  console.log('input', input);
   //get user from player
-  const player = await ctx.prismaService.player.findUnique({
-    where: { id: input.playerId },
-  });
+  const player = await playerService.player({ id: input.playerId });
+  if(!player) {
+    console.error('Player not found');
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Player not found',
+    });
+  }
+  console.log('player', player.id);
   // Example: Check if the player is allowed to perform the mutation
   if(player.userId !== ctx.user.id) {
+    console.error(`Player ${player.id} is not allowed to perform this operation ${ctx.mutationName}`);
     throw new TRPCError({
       code: 'FORBIDDEN',
       message: 'You are not allowed to perform this operation',
     });
   }
+  return next();
+}
+
+export const checkSubmissionTime = async (opts: any, phaseService: PhaseService) => {
+  const { ctx, input, next } = opts;
+  const submissionStamp = Date.now();
+  if(!input.gameId) {
+    console.error('Game ID is required');
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Game ID is required',
+    });
+  }
+  //get current phase
+  const phase = await phaseService.currentPhase(input.gameId);
+  if(!phase) {
+    console.error('Phase not found');
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Phase not found',
+    });
+  }
+  //check if submission time is within the end time for the current phase
+  const phaseEndTime = phase.createdAt.getTime() + phase.phaseTime;
+  console.log('phaseEndTime', phaseEndTime);
+  console.log('submissionStamp', submissionStamp);
+  if(submissionStamp > phaseEndTime) {
+    console.error('Submission time has passed');
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'Submission time has passed',
+    });
+  }
+  //pass submissionStamp to the next middleware
+  ctx.submissionStamp = new Date(submissionStamp);
   return next();
 }
 

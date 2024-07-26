@@ -2,10 +2,14 @@ import { z } from 'zod';
 import { OperatingRoundVoteService } from '@server/operating-round-vote/operating-round-vote.service';
 import { TrpcService } from '../trpc.service';
 import { Prisma, OperatingRoundAction } from '@prisma/client';
-import { checkIsPlayerAction } from '../trpc.middleware';
+import { checkIsPlayerAction, checkSubmissionTime } from '../trpc.middleware';
+import { PhaseService } from '@server/phase/phase.service';
+import { PlayersService } from '@server/players/players.service';
 
 type Context = {
   operatingRoundVoteService: OperatingRoundVoteService;
+  playerService: PlayersService;
+  phaseService: PhaseService;
 };
 
 export default (trpc: TrpcService, ctx: Context) =>
@@ -14,7 +18,8 @@ export default (trpc: TrpcService, ctx: Context) =>
       .input(z.object({ where: z.any() }))
       .query(async ({ input }) => {
         const { where } = input;
-        const vote = await ctx.operatingRoundVoteService.operatingRoundVote(where);
+        const vote =
+          await ctx.operatingRoundVoteService.operatingRoundVote(where);
         if (!vote) {
           throw new Error('Operating round vote not found');
         }
@@ -43,7 +48,6 @@ export default (trpc: TrpcService, ctx: Context) =>
       }),
 
     createOperatingRoundVote: trpc.procedure
-      .use(checkIsPlayerAction)
       .input(
         z.object({
           operatingRoundId: z.number(),
@@ -52,35 +56,46 @@ export default (trpc: TrpcService, ctx: Context) =>
           actionVoted: z.nativeEnum(OperatingRoundAction),
         }),
       )
-      .mutation(async ({ input }) => {
+      .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
+      .use(async (opts) => checkSubmissionTime(opts, ctx.phaseService))
+      .mutation(async ({ input, ctx: ctxMiddleware }) => {
         const { operatingRoundId, playerId, companyId, ...rest } = input;
         const data: Prisma.OperatingRoundVoteCreateInput = {
           ...rest,
           OperatingRound: { connect: { id: operatingRoundId } },
           Player: { connect: { id: playerId } },
           Company: { connect: { id: companyId } },
+          submissionStamp: ctxMiddleware.submissionStamp,
         };
-        const vote = await ctx.operatingRoundVoteService.createOperatingRoundVote(data);
+        const vote =
+          await ctx.operatingRoundVoteService.createOperatingRoundVote(data);
         return vote;
       }),
 
     createManyOperatingRoundVotes: trpc.procedure
-      .input(z.array(
-        z.object({
-          operatingRoundId: z.number(),
-          playerId: z.string(),
-          companyId: z.string(),
-          actionVoted: z.nativeEnum(OperatingRoundAction),
-        })
-      ))
+      .input(
+        z.array(
+          z.object({
+            operatingRoundId: z.number(),
+            playerId: z.string(),
+            companyId: z.string(),
+            actionVoted: z.nativeEnum(OperatingRoundAction),
+          }),
+        ),
+      )
       .mutation(async ({ input }) => {
-        const data: Prisma.OperatingRoundVoteCreateManyInput[] = input.map(vote => ({
-          ...vote,
-          OperatingRound: { connect: { id: vote.operatingRoundId } },
-          Player: { connect: { id: vote.playerId } },
-          Company: { connect: { id: vote.companyId } },
-        }));
-        const batchPayload = await ctx.operatingRoundVoteService.createManyOperatingRoundVotes(data);
+        const data: Prisma.OperatingRoundVoteCreateManyInput[] = input.map(
+          (vote) => ({
+            ...vote,
+            OperatingRound: { connect: { id: vote.operatingRoundId } },
+            Player: { connect: { id: vote.playerId } },
+            Company: { connect: { id: vote.companyId } },
+          }),
+        );
+        const batchPayload =
+          await ctx.operatingRoundVoteService.createManyOperatingRoundVotes(
+            data,
+          );
         return batchPayload;
       }),
 
@@ -98,7 +113,10 @@ export default (trpc: TrpcService, ctx: Context) =>
       )
       .mutation(async ({ input }) => {
         const { id, data } = input;
-        return ctx.operatingRoundVoteService.updateOperatingRoundVote({ where: { id }, data });
+        return ctx.operatingRoundVoteService.updateOperatingRoundVote({
+          where: { id },
+          data,
+        });
       }),
 
     deleteOperatingRoundVote: trpc.procedure

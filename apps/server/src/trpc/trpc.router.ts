@@ -156,6 +156,8 @@ export class TrpcRouter {
     }),
     operatingRoundVote: operatingRoundVoteRouter(this.trpc, {
       operatingRoundVoteService: this.operatingRoundVoteService,
+      playerService: this.playersService,
+      phaseService: this.phaseService,
     }),
     stockRound: stockRoundRouter(this.trpc, {
       stockRoundService: this.stockRoundService,
@@ -163,6 +165,7 @@ export class TrpcRouter {
     revenueDistributionVote: revenueDistributionVoteRouter(this.trpc, {
       revenueDistributionVoteService: this.revenueDistributionVoteService,
       phaseService: this.phaseService,
+      playerService: this.playersService,
     }),
     companyAction: companyActionRouter(this.trpc, {
       companyActionService: this.companyActionService,
@@ -185,6 +188,7 @@ export class TrpcRouter {
     influenceRoundVotes: influenceRoundVotesRouter(this.trpc, {
       influenceRoundVotesService: this.influenceRoundVotesService,
       phaseService: this.phaseService,
+      playerService: this.playersService,
     }),
     playerPriority: playerPriorityRouter(this.trpc, {
       playerPriorityService: this.playerPriorityService,

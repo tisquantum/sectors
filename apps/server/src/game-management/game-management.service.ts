@@ -2808,6 +2808,12 @@ export class GameManagementService {
     return this.gamesService.getGameState(gameId);
   }
 
+  /**
+   * Arg data here stipulates data for the next phase with phaseName and companyId
+   *
+   * @param param0
+   * @returns
+   */
   public async determineIfNewRoundAndStartPhase({
     gameId,
     phaseName,
@@ -2832,6 +2838,7 @@ export class GameManagementService {
       operatingRoundId,
       influenceRoundId,
       roundType,
+      companyId,
     );
     const game = await this.gamesService.getGameState(gameId);
 
@@ -2967,6 +2974,7 @@ export class GameManagementService {
     console.log('start phase stock round id', stockRoundId);
     console.log('start phase operating round id', operatingRoundId);
     console.log('start phase influence round id', influenceRoundId);
+    console.log('start phase company id', companyId);
     const gameChannelId = getGameChannelId(gameId);
     //get game
     let game = await this.gamesService.getGameState(gameId);
@@ -3085,19 +3093,23 @@ export class GameManagementService {
         const currentPhase = await this.phaseService.phase({
           id: phase.id,
         });
-        const nameAndRoundType = await this.determineAndHandleNextPhase({
-          phase,
-          gameId,
-        });
+        const nameAndRoundTypeAndCompanyForNextPhase =
+          await this.determineAndHandleNextPhase({
+            phase,
+            gameId,
+          });
 
         const nextPhase = await this.determineIfNewRoundAndStartPhase({
           gameId,
-          phaseName: nameAndRoundType.phaseName,
-          roundType: nameAndRoundType.roundType,
+          phaseName: nameAndRoundTypeAndCompanyForNextPhase.phaseName,
+          roundType: nameAndRoundTypeAndCompanyForNextPhase.roundType,
           stockRoundId: phase.stockRoundId || undefined,
           operatingRoundId: phase.operatingRoundId || undefined,
           influenceRoundId: phase.influenceRoundId || undefined,
-          companyId: currentPhase?.companyId || '',
+          companyId:
+            nameAndRoundTypeAndCompanyForNextPhase.companyId ||
+            currentPhase?.companyId ||
+            '',
         });
         await this.startPhaseTimer({
           phase: nextPhase,
@@ -3130,6 +3142,7 @@ export class GameManagementService {
   }): Promise<{
     phaseName: PhaseName;
     roundType: RoundType;
+    companyId?: string;
   }> {
     const determinedNextPhase = determineNextGamePhase(phase.name, {
       stockActionSubRound: phase.stockRoundId
@@ -3168,6 +3181,7 @@ export class GameManagementService {
     return {
       phaseName: nextPhaseName,
       roundType: determinedNextPhase.roundType,
+      companyId,
     };
   }
 
@@ -5060,13 +5074,12 @@ export class GameManagementService {
       StockAction.SHORT,
     );
     //update short with cover price
-    const updatedShortOrder =
-      await this.shortOrdersService.updateShortOrder({
-        where: { id: shortOrderId },
-        data: {
-          coverPrice: stockPrice,
-        },
-      });
+    const updatedShortOrder = await this.shortOrdersService.updateShortOrder({
+      where: { id: shortOrderId },
+      data: {
+        coverPrice: stockPrice,
+      },
+    });
     //game log
     await this.gameLogService.createGameLog({
       game: { connect: { id: player.gameId } },

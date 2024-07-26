@@ -10,6 +10,7 @@ import PendingOrders from "./PendingOrders";
 import StockChart from "./StockChart";
 import CompanyActionSlider from "@sectors/app/components/Company/CompanyActionSelectionVote";
 import {
+  InfluenceRound,
   OperatingRound,
   Phase,
   PhaseName,
@@ -42,7 +43,7 @@ const determineGameRound = (
 ):
   | { operatingRound: OperatingRound; phase: Phase }
   | { stockRound: StockRound; phase: Phase }
-  | { influenceRound: InfluenceRoundWithVotes; phase: Phase }
+  | { influenceRound: InfluenceRound; phase: Phase }
   | { phase: Phase }
   | undefined => {
   const phase = game.Phase.find((phase) => phase.id === game.currentPhaseId);
@@ -81,7 +82,7 @@ const determineGameRound = (
 const TimesUp = () => (
   <div className="flex justify-center items-center relative">
     <motion.div
-      className="absolute bg-slate-600 p-4 rounded-lg h-40 w-40"
+      className="absolute bg-slate-600 p-4 rounded-lg h-48 w-48"
       animate={{
         scale: [1, 1.5, 1.5, 1, 1],
         rotate: [0, 0, 180, 180, 0],
@@ -95,9 +96,12 @@ const TimesUp = () => (
         repeatDelay: 1,
       }}
     />
-    <h1 className="text-slate-100 text-center font-bold	text-2xl z-10">
-      TIME&apos;S UP!
-    </h1>
+    <div className="flex flex-col">
+      <h1 className="text-slate-100 text-center font-bold	text-2xl z-10">
+        TIME&apos;S UP!
+      </h1>
+      <span className="text-lg z-10 max-w-40 text-center">Gathering Data For Next Phase</span>
+    </div>
   </div>
 );
 

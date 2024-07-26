@@ -2,12 +2,14 @@ import { z } from 'zod';
 import { TrpcService } from '../trpc.service';
 import { PhaseName, Prisma, RevenueDistribution } from '@prisma/client';
 import { RevenueDistributionVoteService } from '@server/revenue-distribution-vote/revenue-distribution-vote.service';
-import { checkIsPlayerAction } from '../trpc.middleware';
+import { checkIsPlayerAction, checkSubmissionTime } from '../trpc.middleware';
 import { PhaseService } from '@server/phase/phase.service';
+import { PlayersService } from '@server/players/players.service';
 
 type Context = {
   revenueDistributionVoteService: RevenueDistributionVoteService;
   phaseService: PhaseService;
+  playerService: PlayersService;
 };
 
 export default (trpc: TrpcService, ctx: Context) =>
@@ -83,7 +85,6 @@ export default (trpc: TrpcService, ctx: Context) =>
       }),
 
     createRevenueDistributionVote: trpc.procedure
-      .use(checkIsPlayerAction)
       .input(
         z.object({
           operatingRoundId: z.number(),
@@ -93,7 +94,9 @@ export default (trpc: TrpcService, ctx: Context) =>
           revenueDistribution: z.nativeEnum(RevenueDistribution),
         }),
       )
-      .mutation(async ({ input }) => {
+      .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
+      .use(async (opts) => checkSubmissionTime(opts, ctx.phaseService))
+      .mutation(async ({ input, ctx: ctxMiddleware }) => {
         const {
           playerId,
           companyId,
@@ -107,6 +110,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           Player: { connect: { id: playerId } },
           Company: { connect: { id: companyId } },
           ProductionResult: { connect: { id: productionResultId } },
+          submissionStamp: ctxMiddleware.submissionStamp,
         };
         return ctx.revenueDistributionVoteService.createRevenueDistributionVote(
           data,
