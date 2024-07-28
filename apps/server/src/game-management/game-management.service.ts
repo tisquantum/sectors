@@ -127,7 +127,7 @@ import { CardsService } from '@server/cards/cards.service';
 import { InfluenceRoundVotesService } from '@server/influence-round-votes/influence-round-votes.service';
 import { InfluenceRoundService } from '@server/influence-round/influence-round.service';
 import { PlayerPriorityService } from '@server/player-priority/player-priority.service';
-import { number } from 'zod';
+import { number, string } from 'zod';
 import { OptionContractService } from '@server/option-contract/option-contract.service';
 import { cp } from 'fs';
 import { ShortOrderService } from '@server/short-order/short-order.service';
@@ -141,6 +141,12 @@ type GroupedByPhase = {
     orders: PlayerOrderWithPlayerCompany[];
   };
 };
+
+interface ShareUpdate {
+  companyId: string;
+  where: { id: { in: string[] } };
+  data: { location: ShareLocation; playerId: string };
+}
 
 @Injectable()
 export class GameManagementService {
@@ -4302,9 +4308,11 @@ export class GameManagementService {
 
   getCurrentShareOrderFilledTotalPlayer(shareUpdates: any[]) {
     return shareUpdates.reduce((acc, update) => {
+      //if shares are coming into the player portfolio, we increase the total
       if (update.data.location === ShareLocation.PLAYER) {
         return acc + 1;
       }
+      //if previous orders have placed orders into open market, we reduce the total
       if (update.data.location === ShareLocation.OPEN_MARKET) {
         return acc - 1;
       }
@@ -4316,7 +4324,7 @@ export class GameManagementService {
     remainingShares: number,
     allAvailableShares: Share[],
     currentShareIndex: number,
-    shareUpdates: any[],
+    shareUpdates: ShareUpdate[],
     playerCashUpdates: { playerId: string; decrement: number }[],
     orderStatusUpdates: any[],
     gameLogEntries: any[],
@@ -4328,6 +4336,11 @@ export class GameManagementService {
           data: { orderStatus: OrderStatus.REJECTED },
         });
       } else {
+        const shareUpdatesForPlayerAndCompany = shareUpdates.filter(
+          (update) =>
+            update.data.playerId === order.playerId &&
+            update.companyId === order.companyId,
+        );
         //const player share total
         console.log('order playerShareTotal', order);
         const playerShareTotal = order.Company.Share.filter(
@@ -4337,12 +4350,16 @@ export class GameManagementService {
         ).length;
         console.log(
           'share order filled total',
-          this.getCurrentShareOrderFilledTotalPlayer(shareUpdates),
+          this.getCurrentShareOrderFilledTotalPlayer(
+            shareUpdatesForPlayerAndCompany,
+          ),
         );
         console.log('player share total', playerShareTotal);
         if (
           order.quantity +
-            this.getCurrentShareOrderFilledTotalPlayer(shareUpdates) +
+            this.getCurrentShareOrderFilledTotalPlayer(
+              shareUpdatesForPlayerAndCompany,
+            ) +
             playerShareTotal >
           (MAX_SHARE_PERCENTAGE * order.Company.Share.length) / 100
         ) {
@@ -4373,6 +4390,7 @@ export class GameManagementService {
             );
             currentShareIndex += sharesToGive;
             shareUpdates.push({
+              companyId: order.companyId,
               where: { id: { in: shares.map((share) => share.id) } },
               data: {
                 location: ShareLocation.PLAYER,
@@ -4427,7 +4445,7 @@ export class GameManagementService {
   ) {
     let currentShareIndex = 0;
 
-    const shareUpdates: any[] = [];
+    const shareUpdates: ShareUpdate[] = [];
     const playerCashUpdates: { playerId: string; decrement: number }[] = [];
     const orderStatusUpdates: any[] = [];
     const gameLogEntries: any[] = [];
@@ -4499,9 +4517,14 @@ export class GameManagementService {
       remainingShares = _remainingShares;
     }
 
+    //strip companyId from all shareUpdates
+    const _shareUpdates = shareUpdates.map((update) => {
+      const { companyId, ...rest } = update;
+      return rest;
+    });
     await this.executeDatabaseOperations(
       prisma,
-      shareUpdates,
+      _shareUpdates,
       playerCashUpdates,
       orderStatusUpdates,
       gameLogEntries,
@@ -4591,9 +4614,14 @@ export class GameManagementService {
       gameLogEntries,
     );
 
+    //strip companyId from all shareUpdates
+    const _shareUpdates = shareUpdates.map((update) => {
+      const { companyId, ...rest } = update;
+      return rest;
+    });
     await this.executeDatabaseOperations(
       prisma,
-      shareUpdates,
+      _shareUpdates,
       playerCashUpdates,
       orderStatusUpdates,
       gameLogEntries,
@@ -4648,6 +4676,19 @@ export class GameManagementService {
     );
   }
 
+  /**
+   * Divides shares proportionally for fair split strategy
+   *
+   * @param orders
+   * @param remainingShares
+   * @param allAvailableShares
+   * @param currentShareIndex
+   * @param shareUpdates
+   * @param playerCashUpdates
+   * @param orderStatusUpdates
+   * @param gameLogEntries
+   * @returns
+   */
   proportionalDistribution(
     orders: PlayerOrderWithPlayerCompany[],
     remainingShares: number,
@@ -4691,6 +4732,7 @@ export class GameManagementService {
       currentShareIndex += sharesToDistribute;
 
       shareUpdates.push({
+        companyId: order[0].companyId,
         where: { id: { in: shares.map((share) => share.id) } },
         data: {
           location: ShareLocation.PLAYER,
@@ -4751,6 +4793,7 @@ export class GameManagementService {
       currentShareIndex += 1;
 
       shareUpdates.push({
+        companyId: order.companyId,
         where: { id: { in: [shares[0].id] } },
         data: {
           location: ShareLocation.PLAYER,
@@ -4810,6 +4853,7 @@ export class GameManagementService {
       currentShareIndex += sharesToGive;
 
       shareUpdates.push({
+        companyId: order.companyId,
         where: { id: { in: shares.map((share) => share.id) } },
         data: {
           location: ShareLocation.PLAYER,
@@ -4838,6 +4882,17 @@ export class GameManagementService {
     }
   }
 
+  /**
+   * Distributing shares in fair split strategy
+   * @param sortedByPhaseCreatedAt
+   * @param allAvailableShares
+   * @param remainingShares
+   * @param currentShareIndex
+   * @param shareUpdates
+   * @param playerCashUpdates
+   * @param orderStatusUpdates
+   * @param gameLogEntries
+   */
   distributeWithinPhases(
     sortedByPhaseCreatedAt: any[],
     allAvailableShares: Share[],

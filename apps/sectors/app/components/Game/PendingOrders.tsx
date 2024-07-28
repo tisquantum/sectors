@@ -498,7 +498,7 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
             {gameState?.distributionStrategy ==
             DistributionStrategy.BID_PRIORITY ? (
               <div className="flex flex-col gap-2">
-                <span>Big Priority</span>
+                <span>Bid Priority</span>
                 <p>
                   Bids are placed in priority according to the highest ask price
                   of the market order. This ask price is quoted per share. If
