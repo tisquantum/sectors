@@ -10,24 +10,24 @@ import { useGame } from "./GameContext";
 const TabView = () => {
   const { gameState, gameId } = useGame();
   if (!gameState.roomId || !gameState.name) return null;
-
+  const tabStyle = "flex flex-col overflow-hidden";
   return (
     <Tabs aria-label="Options">
-      <Tab key="chat" title="Chat">
+      <Tab key="chat" title="Chat" className={tabStyle}>
         <GameChat roomId={gameState.roomId} gameName={gameState.name} />
       </Tab>
-      <Tab key="players" title="Players">
-        <Card>
+      <Tab key="players" title="Players" className={tabStyle}>
+        <Card className="overflow-y-auto">
           <PlayersOverview gameId={gameId} />
         </Card>
       </Tab>
-      <Tab key="sectors" title="Sectors">
-        <Card>
+      <Tab key="sectors" title="Sectors" className={tabStyle}>
+        <Card className="overflow-y-auto">
           <SectorComponent />
         </Card>
       </Tab>
-      <Tab key="game-log" title="GameLog">
-        <Card>
+      <Tab key="game-log" title="GameLog" className={tabStyle}>
+        <Card className="overflow-y-auto">
           <GameLog />
         </Card>
       </Tab>

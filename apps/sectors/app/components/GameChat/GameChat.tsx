@@ -99,10 +99,10 @@ const GameChat = ({
   };
 
   return (
-    <div className="grow flex flex-col flex-grow bg-gray-100 h-full">
+    <>
       {messages && <MessagePane messages={messages} />}
       <SendMessage onSendMessage={handleSendMessage} />
-    </div>
+    </>
   );
 };
 

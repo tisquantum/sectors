@@ -420,7 +420,7 @@ export class GameManagementService {
     const newCompany = await this.companyService.createCompany({
       Game: { connect: { id: phase.gameId } },
       Sector: { connect: { id: sectorId } },
-      status: CompanyStatus.ACTIVE,
+      status: CompanyStatus.INACTIVE,
       currentStockPrice: ipoPrice,
       companyTier: CompanyTier.ESTABLISHED,
       name: newCompanyInfo.name,
@@ -433,6 +433,17 @@ export class GameManagementService {
       insolvent: false,
       ipoAndFloatPrice: ipoPrice,
     });
+    //create shares for company
+    const shares = [];
+    for (let i = 0; i < DEFAULT_SHARE_DISTRIBUTION; i++) {
+      shares.push({
+        price: newCompany.ipoAndFloatPrice,
+        location: ShareLocation.IPO,
+        companyId: newCompany.id,
+        gameId: phase.gameId,
+      });
+    }
+    await this.shareService.createManyShares(shares);
     //game log
     await this.gameLogService.createGameLog({
       game: { connect: { id: phase.gameId } },

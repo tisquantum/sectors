@@ -645,36 +645,39 @@ export function isActivePhase(name: PhaseName) {
   }
 }
 
-export function calculateNetWorth(cashOnHand: number, shares: ShareWithCompany[]) {
+export function calculateNetWorth(
+  cashOnHand: number,
+  shares: ShareWithCompany[],
+) {
   return (
     cashOnHand +
     shares.reduce((acc, share) => acc + share.Company.currentStockPrice, 0)
   );
 }
 
-export function getRandomCompany(sector: SectorName): {
+export function getRandomCompany(sectorName: SectorName): {
   name: string;
   symbol: string;
 } {
-  switch (sector) {
+  switch (sectorName) {
     case SectorName.HEALTHCARE:
-      return healthcare[Math.floor(Math.random() * healthcare.length)];
+      return healthcare[Math.floor(Math.random() * (healthcare.length - 1))];
     case SectorName.TECHNOLOGY:
-      return technology[Math.floor(Math.random() * technology.length)];
+      return technology[Math.floor(Math.random() * (technology.length - 1))];
     case SectorName.ENERGY:
-      return energy[Math.floor(Math.random() * energy.length)];
+      return energy[Math.floor(Math.random() * (energy.length - 1))];
     case SectorName.CONSUMER_DEFENSIVE:
       return consumerDefensive[
-        Math.floor(Math.random() * consumerDefensive.length)
+        Math.floor(Math.random() * (consumerDefensive.length - 1))
       ];
     case SectorName.CONSUMER_CYCLICAL:
       return consumerCyclical[
-        Math.floor(Math.random() * consumerCyclical.length)
+        Math.floor(Math.random() * (consumerCyclical.length - 1))
       ];
     case SectorName.INDUSTRIALS:
-      return industrial[Math.floor(Math.random() * industrial.length)];
+      return industrial[Math.floor(Math.random() * (industrial.length - 1))];
     case SectorName.MATERIALS:
-      return materials[Math.floor(Math.random() * materials.length)];
+      return materials[Math.floor(Math.random() * (materials.length - 1))];
     default:
       return {
         name: 'Generic Company',

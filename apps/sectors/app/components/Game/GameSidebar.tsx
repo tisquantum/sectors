@@ -23,29 +23,27 @@ const GameSidebar = () => {
     return <div>Loading...</div>;
   }
   return (
-    <div className="w-1/4 bg-background text-white flex flex-col h-[100%]">
-      <div className="flex flex-col grow">
-        <div className="text-white p-4">
-          <h1 className="text-xl font-bold">{gameState.name}</h1>
-        </div>
-        <div className="flex gap-2 p-4">
-          {(playerPriorities?.length || 0) > 0
-            ? playerPriorities?.map((playerPriority) => (
-                <div key={playerPriority.player.id}>
-                  <PlayerAvatar
-                    player={playerPriority.player}
-                    badgeContent={playerPriority.priority}
-                  />
-                </div>
-              ))
-            : roomUsers?.map((roomUser) => (
-                <div key={roomUser.user.id}>
-                  <UserAvatar user={roomUser.user} />
-                </div>
-              ))}
-        </div>
-        <TabView />
+    <div className="w-1/4 bg-background text-white flex flex-col">
+      <div className="text-white p-4">
+        <h1 className="text-xl font-bold">{gameState.name}</h1>
       </div>
+      <div className="flex gap-2 p-4">
+        {(playerPriorities?.length || 0) > 0
+          ? playerPriorities?.map((playerPriority) => (
+              <div key={playerPriority.player.id}>
+                <PlayerAvatar
+                  player={playerPriority.player}
+                  badgeContent={playerPriority.priority}
+                />
+              </div>
+            ))
+          : roomUsers?.map((roomUser) => (
+              <div key={roomUser.user.id}>
+                <UserAvatar user={roomUser.user} />
+              </div>
+            ))}
+      </div>
+      <TabView />
     </div>
   );
 };
