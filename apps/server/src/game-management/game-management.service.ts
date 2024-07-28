@@ -33,6 +33,7 @@ import {
   SectorName,
   ContractState,
   OptionContract,
+  GameStatus,
 } from '@prisma/client';
 import { GamesService } from '@server/games/games.service';
 import { CompanyService } from '@server/company/company.service';
@@ -95,6 +96,7 @@ import { TimerService } from '@server/timer/timer.service';
 import {
   calculateCompanySupply,
   calculateMarginAccountMinimum,
+  calculateNetWorth,
   calculateStepsAndRemainder,
   companyPriorityOrderOperations,
   createPrestigeTrackBasedOnSeed,
@@ -129,6 +131,9 @@ import { number } from 'zod';
 import { OptionContractService } from '@server/option-contract/option-contract.service';
 import { cp } from 'fs';
 import { ShortOrderService } from '@server/short-order/short-order.service';
+import { GameRecordService } from '@server/game-record/game-record.service';
+import { PlayerResultService } from '@server/player-result/player-result.service';
+import { UsersService } from '@server/users/users.service';
 
 type GroupedByPhase = {
   [key: string]: {
@@ -166,6 +171,9 @@ export class GameManagementService {
     private influenceRoundVotes: InfluenceRoundVotesService,
     private optionContractService: OptionContractService,
     private shortOrdersService: ShortOrderService,
+    private gameRecordService: GameRecordService,
+    private playerResultService: PlayerResultService,
+    private usersService: UsersService,
   ) {}
 
   /**
@@ -244,11 +252,115 @@ export class GameManagementService {
         await this.resolveCompanyLoans(phase);
         await this.resolveBorrowInterestShorts(phase);
         await this.optionContractGenerate(phase);
-        await this.resolveEndTurn(phase);
+        const isEndGame = await this.checkAndTriggerEndGame(phase);
+        if (!isEndGame) {
+          await this.resolveEndTurn(phase);
+        }
         break;
       default:
         return;
     }
+  }
+
+  /**
+   * Check if the game has ended and trigger the end game logic.
+   * @param phase
+   * @returns
+   */
+  async checkAndTriggerEndGame(phase: Phase): Promise<boolean> {
+    const game = await this.gamesService.game({ id: phase.gameId });
+    if (!game) {
+      throw new Error('Game not found');
+    }
+    //check if bank is broken (less than or equal to 0)
+    const bank = game.bankPoolNumber;
+    if (bank <= 0) {
+      await this.endGame(game);
+      return true;
+    }
+    const gameTurn = await this.gameTurnService.getCurrentTurn(phase.gameId);
+    if (!gameTurn) {
+      throw new Error('Game turn not found');
+    }
+    const gameMaxTurns = game.gameMaxTurns;
+    if (gameMaxTurns) {
+      if (gameTurn.turn >= gameMaxTurns) {
+        await this.endGame(game);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * End the game, determine the winner and record the final scores.
+   * @param game
+   */
+  async endGame(game: Game) {
+    //get all players from the game
+    const players = await this.playersService.playersWithShares({
+      gameId: game.id,
+    });
+    //get the users from the players
+    const users = await this.usersService.users({
+      where: {
+        id: {
+          in: players.map((player) => player.userId),
+        },
+      },
+    });
+    //calculate networths for all players
+    const netWorths = players.map((player) => {
+      return calculateNetWorth(player.cashOnHand, player.Share);
+    });
+    //create a game record
+    const gameRecord = await this.gameRecordService.createGameRecord({
+      game: { connect: { id: game.id } },
+    });
+    //based on net worth, create an array of placements which is 1, 2, 3 etc. where the highest networth will get the highest placement
+    const placements = netWorths
+      .map((netWorth, index) => {
+        return { netWorth, index };
+      })
+      .sort((a, b) => b.netWorth - a.netWorth)
+      .map((player, index) => {
+        return { playerId: player.index, placement: index + 1 };
+      });
+
+    // Award ranking points based on placement and total players in the game
+    // First place always gets 50 ranking points PLUS a bonus based on the number of players in the game
+    // Each subsequent place gets half of the previous place's ranking points rounded up
+    const totalPlayers = placements.length;
+    const baseRankingPoints = 50;
+    const rankingPoints = placements.map((placement, index) => {
+      const bonus = totalPlayers - placement.placement; // Bonus based on number of players and placement
+      const points = Math.max(
+        Math.ceil(baseRankingPoints / 2 ** placement.placement) + bonus,
+        1,
+      );
+      return {
+        playerId: placement.playerId,
+        rankingPoints: points,
+      };
+    });
+    //create player results
+    const playerResults = players.map((player, index) => {
+      return {
+        gameRecordId: gameRecord.id,
+        playerId: player.id,
+        userId: player.userId,
+        netWorth: netWorths[index],
+        placement: placements[index].placement,
+        rankingPoints: rankingPoints[index].rankingPoints,
+      };
+    });
+    //create many player results
+    await this.playerResultService.createManyPlayerResults(playerResults);
+    //update game status to finished
+    await this.gamesService.updateGame({
+      where: { id: game.id },
+      data: { gameStatus: GameStatus.FINISHED },
+    });
   }
 
   /**
@@ -2658,6 +2770,7 @@ export class GameManagementService {
       consumerPoolNumber,
       bankPoolNumber,
       distributionStrategy,
+      gameMaxTurns,
     } = input;
 
     const gameData: Prisma.GameCreateInput = {
@@ -2668,9 +2781,10 @@ export class GameManagementService {
       bankPoolNumber,
       consumerPoolNumber,
       distributionStrategy,
-      gameStatus: 'started',
+      gameStatus: GameStatus.ACTIVE,
       gameStep: 0,
       currentPhaseId: 'initial',
+      gameMaxTurns,
       Room: { connect: { id: roomId } },
     };
 
@@ -3208,6 +3322,12 @@ export class GameManagementService {
             currentPhase?.companyId ||
             '',
         });
+        //get game
+        const game = await this.gamesService.game({ id: gameId });
+        //if game ended, stop the timer
+        if (game?.gameStatus === GameStatus.FINISHED) {
+          return;
+        }
         await this.startPhaseTimer({
           phase: nextPhase,
           gameId,

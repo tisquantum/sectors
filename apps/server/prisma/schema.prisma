@@ -14,14 +14,15 @@ datasource db {
 }
 
 model User {
-  id          String        @id @default(uuid())
-  authUserId  String        @unique @default(uuid())
-  name        String        @default("anon")
-  RoomMessage RoomMessage[]
-  RoomUser    RoomUser[]
-  player      Player[]
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id            String         @id @default(uuid())
+  authUserId    String         @unique @default(uuid())
+  name          String         @default("anon")
+  RoomMessage   RoomMessage[]
+  RoomUser      RoomUser[]
+  player        Player[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  PlayerResults PlayerResult[]
 }
 
 model Room {
@@ -85,6 +86,7 @@ model Player {
   RevenueDistributionVotes RevenueDistributionVote[]
   PlayerPriority           PlayerPriority[]
   InfluenceVote            InfluenceVote[]
+  PlayerResult             PlayerResult[]
 }
 
 enum AccountStatus {
@@ -578,11 +580,12 @@ model Game {
   currentActivePlayer     String?
   bankPoolNumber          Int
   consumerPoolNumber      Int
-  gameStatus              String
+  gameStatus              GameStatus           @default(PENDING)
   gameStep                Int
   roomId                  Int
   overdraft               Boolean              @default(true) //facilitates overdrafts for player accounts during stock purchase
   nextPrestigeReward      Int?
+  gameMaxTurns            Int?
   distributionStrategy    DistributionStrategy @default(FAIR_SPLIT)
   gameLogs                GameLog[]
   sectors                 Sector[]
@@ -607,6 +610,14 @@ model Game {
   currentOperatingRoundId Int?
   createdAt               DateTime             @default(now())
   updatedAt               DateTime             @updatedAt
+  GameRecord              GameRecord?
+}
+
+enum GameStatus {
+  PENDING
+  ACTIVE
+  PAUSED
+  FINISHED
 }
 
 model GameTurn {
@@ -746,4 +757,28 @@ model MeetingMessage {
 
   game   Game   @relation(fields: [gameId], references: [id])
   player Player @relation(fields: [playerId], references: [id])
+}
+
+model GameRecord {
+  id           String         @id @default(uuid())
+  gameId       String         @unique
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  PlayerResult PlayerResult[]
+  game         Game           @relation(fields: [gameId], references: [id])
+}
+
+model PlayerResult {
+  id            String     @id @default(uuid())
+  playerId      String
+  userId        String
+  netWorth      Int
+  placement     Int
+  rankingPoints Int //determined based on the placement and amount of players in the game
+  player        Player     @relation(fields: [playerId], references: [id])
+  user          User       @relation(fields: [userId], references: [id])
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  gameRecordId  String
+  GameRecord    GameRecord @relation(fields: [gameRecordId], references: [id])
 }

@@ -645,7 +645,7 @@ export function isActivePhase(name: PhaseName) {
   }
 }
 
-export function getNetWorth(cashOnHand: number, shares: ShareWithCompany[]) {
+export function calculateNetWorth(cashOnHand: number, shares: ShareWithCompany[]) {
   return (
     cashOnHand +
     shares.reduce((acc, share) => acc + share.Company.currentStockPrice, 0)

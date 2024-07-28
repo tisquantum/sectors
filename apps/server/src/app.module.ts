@@ -37,6 +37,8 @@ import { InfluenceRoundModule } from './influence-round/influence-round.module';
 import { InfluenceRoundVotesModule } from './influence-round-votes/influence-round-votes.module';
 import { OptionContractModule } from './option-contract/option-contract.module';
 import { ShortOrderModule } from './short-order/short-order.module';
+import { GameRecordModule } from './game-record/game-record.module';
+import { PlayerResultModule } from './player-result/player-result.module';
 
 const yourPusherOptions = {
   cluster: process.env.PUSHER_CLUSTER ?? 'CLUSTER',
@@ -88,6 +90,8 @@ const chunkingOptions = {
     InfluenceRoundVotesModule,
     OptionContractModule,
     ShortOrderModule,
+    GameRecordModule,
+    PlayerResultModule,
   ],
   controllers: [AppController],
   providers: [AppService],

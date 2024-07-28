@@ -7,6 +7,7 @@ type ValueMap = {
   startingCashOnHand: { [key: number]: number };
   consumerPoolNumber: { [key: number]: number };
   distributionStrategy: { [key: number]: DistributionStrategy };
+  gameMaxTurns: { [key: number]: number };
 };
 
 type GameOptionsKeys = keyof ValueMap;
@@ -16,6 +17,7 @@ interface GameOptionsProps {
   initialConsumerPoolNumber?: number;
   initialStartingCashOnHand?: number;
   initialDistributionStrategy?: DistributionStrategy;
+  initialGameMaxTurns: number;
   onOptionsChange?: (options: GameOptionsState) => void;
 }
 
@@ -24,6 +26,7 @@ interface GameOptionsState {
   consumerPoolNumber: number;
   startingCashOnHand: number;
   distributionStrategy: DistributionStrategy;
+  gameMaxTurns: number;
 }
 
 const GameOptions: React.FC<GameOptionsProps> = ({
@@ -31,6 +34,7 @@ const GameOptions: React.FC<GameOptionsProps> = ({
   initialConsumerPoolNumber = 0,
   initialStartingCashOnHand = 0,
   initialDistributionStrategy = DistributionStrategy.FAIR_SPLIT,
+  initialGameMaxTurns = 15,
   onOptionsChange,
 }) => {
   const [options, setOptions] = useState<GameOptionsState>({
@@ -38,6 +42,7 @@ const GameOptions: React.FC<GameOptionsProps> = ({
     consumerPoolNumber: initialConsumerPoolNumber,
     startingCashOnHand: initialStartingCashOnHand,
     distributionStrategy: initialDistributionStrategy,
+    gameMaxTurns: initialGameMaxTurns,
   });
 
   useEffect(() => {
@@ -65,6 +70,13 @@ const GameOptions: React.FC<GameOptionsProps> = ({
       1: DistributionStrategy.FAIR_SPLIT,
       2: DistributionStrategy.BID_PRIORITY,
       3: DistributionStrategy.PRIORITY,
+    },
+    gameMaxTurns: {
+      1: 8,
+      2: 11,
+      3: 15,
+      4: 19,
+      5: 23,
     },
   };
 
@@ -159,6 +171,32 @@ const GameOptions: React.FC<GameOptionsProps> = ({
           </SelectItem>
           <SelectItem key={3} value={3}>
             Priority
+          </SelectItem>
+        </Select>
+      </div>
+      <div className="mb-4">
+        <Select
+          label="Game Max Turns"
+          size="lg"
+          className="max-w-xs"
+          onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+            handleSelectChange("gameMaxTurns", Number(e.target.value))
+          }
+        >
+          <SelectItem key={1} value={1}>
+            8
+          </SelectItem>
+          <SelectItem key={2} value={2}>
+            11
+          </SelectItem>
+          <SelectItem key={3} value={3}>
+            15
+          </SelectItem>
+          <SelectItem key={4} value={4}>
+            19
+          </SelectItem>
+          <SelectItem key={5} value={5}>
+            23
           </SelectItem>
         </Select>
       </div>
