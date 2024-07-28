@@ -37,6 +37,8 @@ import Divestment from "./Divestment";
 import InfluenceBid from "./InfluenceBid";
 import ExerciseOptionOrders from "./ExerciseOptionOrders";
 import CoverShortOrders from "./CoverShortOrders";
+import { Spinner } from "@nextui-org/react";
+import { isActivePhase } from "@server/data/helpers";
 
 const determineGameRound = (
   game: GameState
@@ -100,7 +102,9 @@ const TimesUp = () => (
       <h1 className="text-slate-100 text-center font-bold	text-2xl z-10">
         TIME&apos;S UP!
       </h1>
-      <span className="text-lg z-10 max-w-40 text-center">Gathering Data For Next Phase</span>
+      <span className="text-lg z-10 max-w-40 text-center">
+        Gathering Data For Next Phase
+      </span>
     </div>
   </div>
 );
@@ -210,17 +214,23 @@ const Game = ({ gameId }: { gameId: string }) => {
         </motion.div>
       </motion.div>
       <div className="flex flex-col w-full">
-        <GameTopBar gameId={gameId} handleCurrentView={handleCurrentView} />
+        <GameTopBar
+          gameId={gameId}
+          handleCurrentView={handleCurrentView}
+          isTimerAtZero={isTimerAtZero}
+        />
         <div className="relative flex justify-between overflow-y-auto">
-          <div
-            className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${
-              isTimerAtZero
-                ? "opacity-100 z-20 bg-black bg-opacity-50"
-                : "opacity-0 z-0"
-            }`}
-          >
-            <TimesUp />
-          </div>
+          {currentPhase?.name && isActivePhase(currentPhase.name) && (
+            <div
+              className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${
+                isTimerAtZero
+                  ? "opacity-100 z-20 bg-black bg-opacity-50"
+                  : "opacity-0 z-0"
+              }`}
+            >
+              <TimesUp />
+            </div>
+          )}
           <div className="basis-10/12	active-panel flex flex-col h-full p-4">
             {currentView === "action" && renderCurrentPhase}
             {currentView === "chart" && <StockChart />}

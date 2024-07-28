@@ -105,6 +105,7 @@ import {
   getCurrentTierBySharePrice,
   getNextPrestigeInt,
   getNextTier,
+  getRandomCompany,
 } from '@server/data/helpers';
 import { PusherService } from 'nestjs-pusher';
 import { EVENT_NEW_PHASE, getGameChannelId } from '@server/pusher/pusher.types';
@@ -182,6 +183,7 @@ export class GameManagementService {
     switch (phase.name) {
       case PhaseName.START_TURN:
         await this.determinePriorityOrderBasedOnNetWorth(phase);
+        await this.handleOpeningNewCompany(phase);
         break;
       case PhaseName.INFLUENCE_BID_RESOLVE:
         await this.resolveInfluenceBid(phase);
@@ -249,6 +251,82 @@ export class GameManagementService {
     }
   }
 
+  /**
+   * Every third turn, look for the sector with the top two performing companies.
+   * Performance is measured based on the company's stock price.
+   *
+   * @param phase
+   */
+  async handleOpeningNewCompany(phase: Phase) {
+    //get all companies and group by sector
+    const companies = await this.companyService.companiesWithSector({
+      where: { gameId: phase.gameId },
+    });
+    if (!companies) {
+      throw new Error('Companies not found');
+    }
+    const groupedCompanies = companies.reduce(
+      (acc, company) => {
+        if (!acc[company.sectorId]) {
+          acc[company.sectorId] = [];
+        }
+        acc[company.sectorId].push(company);
+        return acc;
+      },
+      {} as { [key: string]: CompanyWithSector[] },
+    );
+    //combine the stock prices for the top two stock price companies per sector
+    const sectorTopCompanies = Object.values(groupedCompanies).map(
+      (companies) => {
+        const sortedCompanies = companies.sort(
+          (a, b) => b.currentStockPrice - a.currentStockPrice,
+        );
+        return sortedCompanies.slice(0, 2).reduce((acc, company) => {
+          return acc + company.currentStockPrice;
+        }, 0);
+      },
+    );
+    //get the sector with the highest combined stock price
+    const topSectorIndex = sectorTopCompanies.indexOf(
+      Math.max(...sectorTopCompanies),
+    );
+    //create a new company in this sector
+    const sectorId = Object.keys(groupedCompanies)[topSectorIndex];
+    const sectorCompanies = groupedCompanies[sectorId];
+    const sector = await this.sectorService.sector({ id: sectorId });
+    if (!sector) {
+      throw new Error('Sector not found');
+    }
+    const ipoPrice = Math.floor(
+      Math.random() *
+        (sectorCompanies[0].currentStockPrice -
+          sectorCompanies[1].currentStockPrice) +
+        sectorCompanies[1].currentStockPrice,
+    );
+    const newCompanyInfo = getRandomCompany(sector.sectorName);
+    //create a new company in the sector
+    const newCompany = await this.companyService.createCompany({
+      Game: { connect: { id: phase.gameId } },
+      Sector: { connect: { id: sectorId } },
+      status: CompanyStatus.ACTIVE,
+      currentStockPrice: ipoPrice,
+      companyTier: CompanyTier.ESTABLISHED,
+      name: newCompanyInfo.name,
+      stockSymbol: newCompanyInfo.symbol,
+      unitPrice: Math.floor(
+        Math.random() * (sector.unitPriceMax - sector.unitPriceMin + 1) +
+          sector.unitPriceMin,
+      ),
+      throughput: 0,
+      insolvent: false,
+      ipoAndFloatPrice: ipoPrice,
+    });
+    //game log
+    await this.gameLogService.createGameLog({
+      game: { connect: { id: phase.gameId } },
+      content: `A new company ${newCompany.name} has been established in the ${sector.sectorName} sector.`,
+    });
+  }
   /**
    * Any demand bonuses are set back to 0.
    * This is necessary for temporary bonuses given from the lobby action.
@@ -2063,14 +2141,13 @@ export class GameManagementService {
         (card) => card.effect === ResearchCardEffect.AUTOMATION,
       );
       let operatingCosts = CompanyTierData[company.companyTier].operatingCosts;
-      if(hasAutomationCard){
-        operatingCosts = operatingCosts - AUTOMATION_EFFECT_OPERATIONS_REDUCTION;
+      if (hasAutomationCard) {
+        operatingCosts =
+          operatingCosts - AUTOMATION_EFFECT_OPERATIONS_REDUCTION;
       }
       operatingCosts = Math.max(operatingCosts, 0);
       // If company cannot afford to pay operating costs, it goes insolvent
-      if (
-        company.cashOnHand < operatingCosts
-      ) {
+      if (company.cashOnHand < operatingCosts) {
         this.gameLogService.createGameLog({
           game: { connect: { id: phase.gameId } },
           content: `Company ${company.name} has gone bankrupt.`,
@@ -2087,9 +2164,7 @@ export class GameManagementService {
       });
       return {
         id: company.id,
-        cashOnHand:
-          company.cashOnHand -
-          operatingCosts,
+        cashOnHand: company.cashOnHand - operatingCosts,
         status: CompanyStatus.ACTIVE,
       };
     });

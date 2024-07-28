@@ -6,6 +6,7 @@ import DebounceButton from "../General/DebounceButton";
 import { useState } from "react";
 
 const CoverShortButton = ({ shortOrderId }: { shortOrderId: number }) => {
+  const { gameId } = useGame();
   const [isSubmitted, setIsSubmitted] = useState(false);
   const useCoverShortMutation = trpc.game.coverShort.useMutation();
   return (
@@ -13,6 +14,7 @@ const CoverShortButton = ({ shortOrderId }: { shortOrderId: number }) => {
       onClick={() => {
         useCoverShortMutation.mutate({
           shortId: shortOrderId,
+          gameId
         });
       }}
     >

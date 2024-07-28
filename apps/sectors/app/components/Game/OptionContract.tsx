@@ -239,7 +239,7 @@ const OptionContract = ({
             <DebounceButton
               className="bg-blue-500 text-white px-4 py-2 rounded-lg"
               onClick={() => {
-                useExerciseContract.mutate({ contractId: contract.id });
+                useExerciseContract.mutate({ contractId: contract.id, gameId });
                 setIsExercised(true);
               }}
             >

@@ -15,11 +15,16 @@ import {
   EVENT_GAME_STARTED,
   getRoomChannelId,
 } from '@server/pusher/pusher.types';
+import { PlayersService } from '@server/players/players.service';
+import { PhaseService } from '@server/phase/phase.service';
+import { checkIsPlayerAction, checkSubmissionTime } from '../trpc.middleware';
 
 type Context = {
   gamesService: GamesService;
   gameManagementService: GameManagementService;
   pusherService: PusherService;
+  playerService: PlayersService;
+  phaseService: PhaseService;
 };
 
 export default (trpc: TrpcService, ctx: Context) =>
@@ -234,7 +239,9 @@ export default (trpc: TrpcService, ctx: Context) =>
       }),
 
     coverShort: trpc.procedure
-      .input(z.object({ shortId: z.number() }))
+      .input(z.object({ shortId: z.number(), gameId: z.string() }))
+      .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
+      .use(async (opts) => checkSubmissionTime(opts, ctx.phaseService))
       .mutation(async ({ input }) => {
         return ctx.gameManagementService.coverShortOrder(input.shortId);
       }),

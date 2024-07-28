@@ -118,6 +118,8 @@ export class TrpcRouter {
       gamesService: this.gamesService,
       gameManagementService: this.gameManagementService,
       pusherService: this.pusherService,
+      playerService: this.playersService,
+      phaseService: this.phaseService,
     }),
     gameLog: gameLogRouter(this.trpc, {
       gameLogService: this.gameLogService,
@@ -196,6 +198,8 @@ export class TrpcRouter {
     optionContract: optionContractRouter(this.trpc, {
       optionContractService: this.optionContractService,
       gameManagementService: this.gameManagementService,
+      phaseService: this.phaseService,
+      playerService: this.playersService,
     }),
   });
 

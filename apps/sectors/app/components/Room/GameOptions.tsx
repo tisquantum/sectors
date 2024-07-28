@@ -48,9 +48,9 @@ const GameOptions: React.FC<GameOptionsProps> = ({
     bankPoolNumber: {
       1: 7500,
       2: 10000,
-      3: 15000,
-      4: 20000,
-      5: 30000,
+      3: 12000,
+      4: 15000,
+      5: 20000,
     },
     startingCashOnHand: {
       1: 500,
@@ -95,13 +95,13 @@ const GameOptions: React.FC<GameOptionsProps> = ({
             10,000 (Short Game)
           </SelectItem>
           <SelectItem key={3} value={3}>
-            15,000 (Normal Game)
+            12,000 (Standard Game)
           </SelectItem>
           <SelectItem key={4} value={4}>
-            20,000 (Long Game)
+            15,000 (Long Game)
           </SelectItem>
           <SelectItem key={5} value={5}>
-            30,000 (Marathon)
+            20,000 (Marathon)
           </SelectItem>
         </Select>
       </div>
