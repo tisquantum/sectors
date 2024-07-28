@@ -44,8 +44,8 @@ const GameGeneralInfo = () => {
                   className={tooltipStyle}
                   content={
                     <p>
-                      The potential maximum amount of money you&apos;ve queued for
-                      orders this stock round.
+                      The potential maximum amount of money you&apos;ve queued
+                      for orders this stock round.
                     </p>
                   }
                 >
@@ -53,10 +53,23 @@ const GameGeneralInfo = () => {
                 </Tooltip>
               )}
           </div>
-          <div className="flex items-center text-md">
-            <RiFunctionAddFill size={24} /> LO {authPlayer.limitOrderActions} MO{" "}
-            {authPlayer.marketOrderActions} SO {authPlayer.shortOrderActions}
-          </div>
+          <Tooltip
+            className={tooltipStyle}
+            content={
+              <p>
+                The remaining actions you have for order types in a stock round.
+                Limit Order and Short Order actions only replenish as existing
+                orders are filled or rejected. Market Orders replenish each
+                stock round.
+              </p>
+            }
+          >
+            <div className="flex items-center text-md">
+              <RiFunctionAddFill size={24} /> LO {authPlayer.limitOrderActions}{" "}
+              MO {authPlayer.marketOrderActions} SO{" "}
+              {authPlayer.shortOrderActions}
+            </div>
+          </Tooltip>
         </div>
       </div>
       <div>
@@ -103,10 +116,23 @@ const GameGeneralInfo = () => {
         <div className="text-lg font-bold">Round</div>
         <div>{gameState.currentRound ?? "0"}</div>
       </div>
-      <div>
-        <div className="text-lg font-bold">Turn</div>
-        <div>{currentTurn.turn ?? "0"}</div>
-      </div>
+      <Tooltip
+        className={tooltipStyle}
+        content={
+          <p>
+            The current turn out of the maximum turns in the game. The game ends
+            in one of two ways, either the bank pool is exhausted or the maximum
+            turns are reached.
+          </p>
+        }
+      >
+        <div>
+          <div className="text-lg font-bold">Turn</div>
+          <div>
+            {currentTurn.turn ?? "0"} / {gameState.gameMaxTurns}
+          </div>
+        </div>
+      </Tooltip>
     </div>
   );
 };

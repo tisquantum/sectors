@@ -201,7 +201,7 @@ const Game = ({ gameId }: { gameId: string }) => {
   return (
     <div className="relative flex flex-grow overflow-hidden">
       <GameSidebar />
-      <motion.div
+      {/* <motion.div
         className="absolute inset-0 z-10 pointer-events-none"
         ref={constraintsRef}
       >
@@ -212,7 +212,7 @@ const Game = ({ gameId }: { gameId: string }) => {
         >
           <TabView gameId={gameId} />
         </motion.div>
-      </motion.div>
+      </motion.div> */}
       <div className="flex flex-col w-full">
         <GameTopBar
           gameId={gameId}

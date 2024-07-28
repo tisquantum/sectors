@@ -99,6 +99,7 @@ const GameOptions: React.FC<GameOptionsProps> = ({
           onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
             handleSelectChange("bankPoolNumber", Number(e.target.value))
           }
+          defaultSelectedKeys={["3"]}
         >
           <SelectItem key={1} value={1}>
             7,500 (Quick Game)
@@ -125,6 +126,7 @@ const GameOptions: React.FC<GameOptionsProps> = ({
           onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
             handleSelectChange("startingCashOnHand", Number(e.target.value))
           }
+          defaultSelectedKeys={["1"]}
         >
           <SelectItem key={1} value={1}>
             500 (Standard)
@@ -142,6 +144,7 @@ const GameOptions: React.FC<GameOptionsProps> = ({
           onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
             handleSelectChange("consumerPoolNumber", Number(e.target.value))
           }
+          defaultSelectedKeys={["2"]}
         >
           <SelectItem key={1} value={1}>
             50 (Cut-throat)
@@ -162,16 +165,17 @@ const GameOptions: React.FC<GameOptionsProps> = ({
           onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
             handleSelectChange("distributionStrategy", Number(e.target.value))
           }
+          defaultSelectedKeys={["2"]}
         >
-          <SelectItem key={1} value={1}>
+          {/* <SelectItem key={1} value={1}>
             Fair Split
-          </SelectItem>
+          </SelectItem> */}
           <SelectItem key={2} value={2}>
             Bid Priority
           </SelectItem>
-          <SelectItem key={3} value={3}>
+          {/* <SelectItem key={3} value={3}>
             Priority
-          </SelectItem>
+          </SelectItem> */}
         </Select>
       </div>
       <div className="mb-4">
@@ -182,6 +186,7 @@ const GameOptions: React.FC<GameOptionsProps> = ({
           onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
             handleSelectChange("gameMaxTurns", Number(e.target.value))
           }
+          defaultSelectedKeys={["3"]}
         >
           <SelectItem key={1} value={1}>
             8

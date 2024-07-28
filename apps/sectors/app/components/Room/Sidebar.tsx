@@ -24,16 +24,18 @@ interface GameOptionsState {
   consumerPoolNumber: number;
   startingCashOnHand: number;
   distributionStrategy: DistributionStrategy;
+  gameMaxTurns: number;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
   const { user } = useAuthUser();
   const router = useRouter();
   const [gameOptions, setGameOptions] = useState<GameOptionsState>({
-    bankPoolNumber: 0,
-    consumerPoolNumber: 0,
-    startingCashOnHand: 0,
-    distributionStrategy: DistributionStrategy.FAIR_SPLIT,
+    bankPoolNumber: 12000,
+    consumerPoolNumber: 75,
+    startingCashOnHand: 500,
+    distributionStrategy: DistributionStrategy.BID_PRIORITY,
+    gameMaxTurns: 15,
   });
   const joinRoomMutation = trpc.roomUser.joinRoom.useMutation();
   const leaveRoomMutation = trpc.roomUser.leaveRoom.useMutation();
@@ -74,7 +76,8 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
     startingCashOnHand: number,
     consumerPoolNumber: number,
     bankPoolNumber: number,
-    distributionStrategy: DistributionStrategy
+    distributionStrategy: DistributionStrategy,
+    gameMaxTurns: number
   ) => {
     //response happens through pusher to all clients.
     startGameMutation.mutate({
@@ -84,6 +87,7 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
       consumerPoolNumber,
       bankPoolNumber,
       distributionStrategy,
+      gameMaxTurns,
     });
   };
 
@@ -103,7 +107,14 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
         </Button>
         {roomHostAuthUser?.roomHost && (
           <>
-            <GameOptions onOptionsChange={handleGameOptionsChange} />
+            <GameOptions
+              initialBankPoolNumber={12000}
+              initialConsumerPoolNumber={75}
+              initialStartingCashOnHand={500}
+              initialDistributionStrategy={DistributionStrategy.BID_PRIORITY}
+              initialGameMaxTurns={15}
+              onOptionsChange={handleGameOptionsChange}
+            />
             {room.game.length == 0 && (
               <Button
                 color="primary"
@@ -113,7 +124,8 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
                     gameOptions.startingCashOnHand,
                     gameOptions.consumerPoolNumber,
                     gameOptions.bankPoolNumber,
-                    gameOptions.distributionStrategy
+                    gameOptions.distributionStrategy,
+                    gameOptions.gameMaxTurns
                   )
                 }
                 radius="none"

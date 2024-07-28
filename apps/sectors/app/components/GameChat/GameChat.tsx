@@ -33,15 +33,6 @@ const GameChat = ({
   const { pusher } = usePusher();
   const utils = trpc.useContext();
 
-  const { data: roomUsers, isLoading: isLoadingRoomUsers } =
-    trpc.roomUser.listRoomUsers.useQuery({
-      where: { roomId },
-    });
-  const { data: playerPriorities, refetch: refetchPlayerPriority } =
-    trpc.playerPriority.listPlayerPriorities.useQuery({
-      where: { gameTurnId: currentPhase?.gameTurnId },
-    });
-
   const { data: messages, isLoading: isLoadingMessages } =
     trpc.roomMessage.listRoomMessages.useQuery({
       where: { roomId },
@@ -49,10 +40,6 @@ const GameChat = ({
 
   const createRoomMessageMutation =
     trpc.roomMessage.createRoomMessage.useMutation();
-
-  useEffect(() => {
-    refetchPlayerPriority();
-  }, [currentPhase?.name]);
 
   useEffect(() => {
     if (!pusher) return;
@@ -95,11 +82,9 @@ const GameChat = ({
       pusher.unsubscribe(getRoomChannelId(roomId));
     };
   }, [pusher, roomId, utils]);
-
-  if (isLoadingRoomUsers || isLoadingMessages) {
+  if (isLoadingMessages) {
     return <div>Loading...</div>;
   }
-
   if (!user) {
     return <div>Not authenticated</div>;
   }
@@ -114,30 +99,9 @@ const GameChat = ({
   };
 
   return (
-    <div className="grow flex flex-col">
-      <div className="text-white p-4">
-        <h1 className="text-xl font-bold">{gameName}</h1>
-      </div>
-      <div className="flex gap-2 p-4">
-        {(playerPriorities?.length || 0) > 0
-          ? playerPriorities?.map((playerPriority) => (
-              <div key={playerPriority.player.id}>
-                <PlayerAvatar
-                  player={playerPriority.player}
-                  badgeContent={playerPriority.priority}
-                />
-              </div>
-            ))
-          : roomUsers?.map((roomUser) => (
-              <div key={roomUser.user.id}>
-                <UserAvatar user={roomUser.user} />
-              </div>
-            ))}
-      </div>
-      <div className="grow flex flex-col flex-grow bg-gray-100">
-        {messages && <MessagePane messages={messages} />}
-        <SendMessage onSendMessage={handleSendMessage} />
-      </div>
+    <div className="grow flex flex-col flex-grow bg-gray-100 h-full">
+      {messages && <MessagePane messages={messages} />}
+      <SendMessage onSendMessage={handleSendMessage} />
     </div>
   );
 };

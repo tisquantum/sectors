@@ -7,8 +7,17 @@ import { RoomWithUsers } from "@server/prisma/prisma.types";
 import { notFound } from "next/navigation";
 import Button from "@sectors/app/components/General/DebounceButton";
 import CreateRoom from "./CreateRoom";
-import { ArrowPathIcon } from "@heroicons/react/24/solid";
+import { ArrowPathIcon, CheckCircleIcon } from "@heroicons/react/24/solid";
 import { useAuthUser } from "../AuthUser.context";
+import { Chip } from "@nextui-org/react";
+import { GameStatus } from "@server/prisma/prisma.client";
+import { renderGameStatusColor } from "@sectors/app/helpers";
+import {
+  RiCheckboxCircleFill,
+  RiCheckFill,
+  RiCloseCircleFill,
+} from "@remixicon/react";
+import DebounceButton from "@sectors/app/components/General/DebounceButton";
 
 export default function RoomBrowser() {
   const { user } = useAuthUser();
@@ -19,6 +28,9 @@ export default function RoomBrowser() {
     refetch,
   } = trpc.room.listRooms.useQuery({});
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState<GameStatus | null>(
+    GameStatus.ACTIVE
+  );
 
   if (isLoading) {
     return <div>Loading...</div>;
@@ -38,9 +50,23 @@ export default function RoomBrowser() {
     setSearchQuery(e.target.value);
   };
 
-  const filteredRooms = rooms.filter((room) =>
-    room.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleClearSearch = () => {
+    setSearchQuery("");
+  };
+
+  const handleChipClick = (status: GameStatus) => {
+    setSelectedStatus(status);
+  };
+
+  const filteredRooms = rooms.filter((room) => {
+    const matchesSearch = room.name
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase());
+    const matchesStatus = selectedStatus
+      ? room.game?.[0]?.gameStatus === selectedStatus
+      : true;
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <div className="container mx-auto">
@@ -50,7 +76,19 @@ export default function RoomBrowser() {
           <ArrowPathIcon className="size-4" />
         </Button>
       </div>
-      <div className="mb-4">
+      <div className="flex flex-wrap gap-2 mb-4">
+        {Object.values(GameStatus).map((status, index) => (
+          <Chip
+            startContent={selectedStatus === status && <RiCheckboxCircleFill />}
+            key={index}
+            color={renderGameStatusColor(status)}
+            onClick={() => handleChipClick(status)}
+          >
+            {status}
+          </Chip>
+        ))}
+      </div>
+      <div className="mb-4 relative">
         <input
           type="text"
           placeholder="Search rooms..."
@@ -58,6 +96,14 @@ export default function RoomBrowser() {
           onChange={handleSearchChange}
           className="w-full p-2 border border-gray-300 rounded text-slate-900"
         />
+        {searchQuery && (
+          <button
+            onClick={handleClearSearch}
+            className="absolute right-2 inset-y-0 m-auto text-gray-500 hover:text-gray-700"
+          >
+            <RiCloseCircleFill />
+          </button>
+        )}
       </div>
       <div className="grid grid-flow-row auto-rows-max">
         {filteredRooms.map((room) => (

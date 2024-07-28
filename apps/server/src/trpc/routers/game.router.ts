@@ -5,10 +5,9 @@ import { TrpcService } from '../trpc.service';
 import {
   DistributionStrategy,
   Game,
-  Phase,
   PhaseName,
-  Prisma,
   RoundType,
+  GameStatus,
 } from '@prisma/client';
 import { GameManagementService } from '@server/game-management/game-management.service';
 import {
@@ -71,6 +70,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           roomName: z.string(),
           startingCashOnHand: z.number(),
           distributionStrategy: z.nativeEnum(DistributionStrategy),
+          gameMaxTurns: z.number(),
           players: z.any().optional(),
           companies: z.any().optional(),
           Player: z.any().optional(),
@@ -91,6 +91,7 @@ export default (trpc: TrpcService, ctx: Context) =>
             consumerPoolNumber: input.consumerPoolNumber,
             bankPoolNumber: input.bankPoolNumber,
             distributionStrategy: input.distributionStrategy,
+            gameMaxTurns: input.gameMaxTurns,
           });
         } catch (error) {
           return {
@@ -127,7 +128,7 @@ export default (trpc: TrpcService, ctx: Context) =>
             currentActivePlayer: z.string().nullable().optional(),
             bankPoolNumber: z.number().optional(),
             consumerPoolNumber: z.number().optional(),
-            gameStatus: z.string().optional(),
+            gameStatus: z.nativeEnum(GameStatus).optional(),
             players: z.any().optional(),
             companies: z.any().optional(),
             Player: z.any().optional(),
