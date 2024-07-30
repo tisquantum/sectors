@@ -150,3 +150,5 @@ I'm thinking short orders can only be performed on a company you have no ownersh
 - Should prestige bonus be based on selling out of your inventory or hitting the expected target customers?  If a companies product is hard to get, does that make it prestigious?
 
 - TODO: Add hyperlinks to company and player names so that when you click it will automatically bring up that detailed accordion in the left panel.
+
+- TODO: Player cash is going to zero at the end of a turn?

@@ -5124,12 +5124,21 @@ export class GameManagementService {
   }
 
   async playerRemoveMoney(gameId: string, playerId: string, amount: number) {
+    //get player
+    const player = await this.prisma.player.findUnique({
+      where: { id: playerId },
+    });
+    if (!player) {
+      throw new Error('Player not found');
+    }
+    //the lowest player cash can go is 0
+    const cashToRemove = Math.min(player.cashOnHand, amount);
     //update bank pool for game
     await this.prisma.game.update({
       where: { id: gameId },
       data: {
         bankPoolNumber: {
-          increment: amount,
+          increment: cashToRemove,
         },
       },
     });
@@ -5137,7 +5146,7 @@ export class GameManagementService {
       where: { id: playerId },
       data: {
         cashOnHand: {
-          decrement: amount,
+          decrement: cashToRemove,
         },
       },
     });
