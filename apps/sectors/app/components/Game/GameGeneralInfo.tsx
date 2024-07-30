@@ -129,7 +129,7 @@ const GameGeneralInfo = () => {
         <div>
           <div className="text-lg font-bold">Turn</div>
           <div>
-            {currentTurn.turn ?? "0"} / {gameState.gameMaxTurns}
+            {currentTurn.turn ?? "0"} of {gameState.gameMaxTurns}
           </div>
         </div>
       </Tooltip>

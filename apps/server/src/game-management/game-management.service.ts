@@ -377,6 +377,15 @@ export class GameManagementService {
    * @param phase
    */
   async handleOpeningNewCompany(phase: Phase) {
+    //get the current game turn
+    const gameTurn = await this.gameTurnService.getCurrentTurn(phase.gameId);
+    if (!gameTurn) {
+      throw new Error('Game turn not found');
+    }
+    //check if the game turn is one of the third turns of the game
+    if (gameTurn.turn % 3 !== 0) {
+      return;
+    }
     //get all companies and group by sector
     const companies = await this.companyService.companiesWithSector({
       where: { gameId: phase.gameId },
@@ -422,6 +431,7 @@ export class GameManagementService {
           sectorCompanies[1].currentStockPrice) +
         sectorCompanies[1].currentStockPrice,
     );
+    console.log('chosen sector', sector.sectorName);
     const newCompanyInfo = getRandomCompany(sector.sectorName);
     //create a new company in the sector
     const newCompany = await this.companyService.createCompany({
@@ -2869,6 +2879,7 @@ export class GameManagementService {
       const sectorData = selectedSectors.map((sector) => ({
         id: sector.id,
         name: sector.name,
+        sectorName: sector.sectorName,
         supply: sector.supply,
         demand: sector.demand,
         consumers: 0,
@@ -4374,6 +4385,12 @@ export class GameManagementService {
         if (!player) {
           throw new Error(`Player from player order id:${order.id} not found.`);
         }
+
+        const playerSharesForOrderCompany = player.Share.filter(
+          (share) =>
+            share.companyId === order.companyId &&
+            share.location === ShareLocation.PLAYER,
+        );
         // console.log(
         //   'share order filled total',
         //   this.getCurrentShareOrderFilledTotalPlayer(
@@ -4381,7 +4398,7 @@ export class GameManagementService {
         //   ),
         // );
         if (
-          (order?.quantity || 0) + player.Share.length >
+          (order?.quantity || 0) + playerSharesForOrderCompany.length >
           (MAX_SHARE_PERCENTAGE * order.Company.Share.length) / 100
         ) {
           orderStatusUpdates.push({

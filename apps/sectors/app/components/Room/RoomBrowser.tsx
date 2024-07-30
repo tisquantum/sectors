@@ -29,7 +29,7 @@ export default function RoomBrowser() {
   } = trpc.room.listRooms.useQuery({});
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<GameStatus | null>(
-    GameStatus.ACTIVE
+    GameStatus.PENDING
   );
 
   if (isLoading) {
@@ -62,9 +62,8 @@ export default function RoomBrowser() {
     const matchesSearch = room.name
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
-    const matchesStatus = selectedStatus
-      ? room.game?.[0]?.gameStatus === selectedStatus
-      : true;
+    const gameStatus = room.game?.[0]?.gameStatus || "PENDING";
+    const matchesStatus = selectedStatus ? gameStatus === selectedStatus : true;
     return matchesSearch && matchesStatus;
   });
 

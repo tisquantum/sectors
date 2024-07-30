@@ -661,23 +661,23 @@ export function getRandomCompany(sectorName: SectorName): {
 } {
   switch (sectorName) {
     case SectorName.HEALTHCARE:
-      return healthcare[Math.floor(Math.random() * (healthcare.length - 1))];
+      return healthcare[Math.floor(Math.random() * healthcare.length)];
     case SectorName.TECHNOLOGY:
-      return technology[Math.floor(Math.random() * (technology.length - 1))];
+      return technology[Math.floor(Math.random() * technology.length)];
     case SectorName.ENERGY:
-      return energy[Math.floor(Math.random() * (energy.length - 1))];
+      return energy[Math.floor(Math.random() * energy.length)];
     case SectorName.CONSUMER_DEFENSIVE:
       return consumerDefensive[
-        Math.floor(Math.random() * (consumerDefensive.length - 1))
+        Math.floor(Math.random() * consumerDefensive.length)
       ];
     case SectorName.CONSUMER_CYCLICAL:
       return consumerCyclical[
-        Math.floor(Math.random() * (consumerCyclical.length - 1))
+        Math.floor(Math.random() * consumerCyclical.length)
       ];
     case SectorName.INDUSTRIALS:
-      return industrial[Math.floor(Math.random() * (industrial.length - 1))];
+      return industrial[Math.floor(Math.random() * industrial.length)];
     case SectorName.MATERIALS:
-      return materials[Math.floor(Math.random() * (materials.length - 1))];
+      return materials[Math.floor(Math.random() * materials.length)];
     default:
       return {
         name: 'Generic Company',
