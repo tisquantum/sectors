@@ -54,7 +54,7 @@ const InfluenceBidAction = () => {
 };
 
 const InfluenceBid = ({ isRevealRound }: { isRevealRound?: boolean }) => {
-  const { gameId, currentPhase } = useGame();
+  const { gameId, currentPhase, gameState } = useGame();
   const {
     data: influenceRound,
     isLoading,
@@ -99,6 +99,34 @@ const InfluenceBid = ({ isRevealRound }: { isRevealRound?: boolean }) => {
   if (error) {
     return <div>Error: {error.message}</div>;
   }
+  const players = gameState?.Player || [];
+  // Filter out players who have already voted
+  const playersWhoHaveNotVoted = players.filter(
+    (player) =>
+      !influenceRoundVotesReveal?.some((vote) => vote.playerId === player.id)
+  );
+
+  // Extend influenceRoundVotesReveal for players who have not voted
+  let influenceRoundVotesRevealExtended =
+    influenceRoundVotesReveal?.map((vote) => ({
+      id: vote.id,
+      influence: vote.influence,
+      Player: vote.Player,
+    })) || [];
+
+  // Use unique IDs for new votes
+  const nextId = influenceRoundVotesRevealExtended.length
+    ? Math.max(...influenceRoundVotesRevealExtended.map((vote) => vote.id)) + 1
+    : 0;
+
+  influenceRoundVotesRevealExtended = influenceRoundVotesRevealExtended.concat(
+    playersWhoHaveNotVoted.map((player, index) => ({
+      id: nextId + index,
+      influence: 0,
+      Player: player,
+    }))
+  );
+
   return (
     <div className="flex flex-col justify-center items-center content-center h-full justify-between">
       <div className="flex flex-col grow items-center content-center justify-center gap-2">
@@ -106,7 +134,7 @@ const InfluenceBid = ({ isRevealRound }: { isRevealRound?: boolean }) => {
         {isRevealRound ? (
           <div>
             <div className="flex gap-4">
-              {influenceRoundVotesReveal?.map((vote) => (
+              {influenceRoundVotesRevealExtended?.map((vote) => (
                 <div key={vote.id} className="flex flex-col gap-2">
                   <div className="flex flex-col gap-2 bg-slate-800 p-2 rounded-md items-center max-w-64">
                     <PlayerAvatar player={vote.Player} showNameLabel />

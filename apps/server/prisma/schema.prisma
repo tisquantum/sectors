@@ -440,6 +440,8 @@ model CompanyAction {
   OperatingRound   OperatingRound        @relation(fields: [operatingRoundId], references: [id])
   createdAt        DateTime              @default(now())
   updatedAt        DateTime              @updatedAt
+  GameTurn         GameTurn?             @relation(fields: [gameTurnId], references: [id])
+  gameTurnId       String?
 }
 
 model OperatingRoundVote {
@@ -635,6 +637,7 @@ model GameTurn {
   phases          Phase[]
   capitalGains    CapitalGains[]
   prestigeRewards PrestigeRewards[]
+  companyActions  CompanyAction[]
 }
 
 model PlayerPriority {

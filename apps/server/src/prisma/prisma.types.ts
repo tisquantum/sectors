@@ -213,3 +213,7 @@ export type ShortOrderWithRelations = ShortOrder & {
   PlayerOrder: PlayerOrder | null;
   Share: Share[];
 };
+
+export type GameTurnWithRelations = GameTurn & {
+  companyActions: CompanyAction[];
+}

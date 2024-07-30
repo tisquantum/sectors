@@ -330,13 +330,15 @@ export class PlayerOrderService {
         const playerShares = player.Share.filter(
           (share) => share.companyId === companyId,
         );
-        if (!playerShares || playerShares.length < data.quantity!) {
-          throw new Error('Player does not have enough shares to sell');
-        }
+        //TODO: Removing this rule from here for now, instead orders can be placed but will get reject upon resoltuion for this reason during resolveMarketOrders
+        // if (!playerShares || playerShares.length < data.quantity!) {
+        //   throw new Error('Player does not have enough shares to sell');
+        // }
       } else {
-        if (spend + orderValue > player.cashOnHand!) {
-          throw new Error('Player does not have enough cash to place order');
-        }
+        ////TODO: Removing this rule from here for now, instead orders can be placed but will get reject upon resoltuion for this reason during resolveMarketOrders
+        // if (spend + orderValue > player.cashOnHand!) {
+        //   throw new Error('Player does not have enough cash to place order');
+        // }
 
         //get company with shares TODO: Leaving this open for now, will reject during resolution instead so player can combo.
         // const company = await this.prisma.company.findUnique({

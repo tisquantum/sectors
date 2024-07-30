@@ -121,7 +121,7 @@ const companyActions = [
     title: "Veto",
     name: OperatingRoundAction.VETO,
     message:
-      "The company does nothing this turn. Pick this to ensure the company will not act on any other proposal.",
+      "The company does nothing this turn. Pick this to ensure the company will not act on any other proposal. Additionally, the next turn this company operating cost are 50% less.",
   },
 ];
 const CompanyActionSelectionVote = ({
