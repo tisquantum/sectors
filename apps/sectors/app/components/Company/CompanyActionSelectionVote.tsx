@@ -237,17 +237,18 @@ const CompanyActionSelectionVote = ({
                   {currentPhase?.name ==
                     PhaseName.OPERATING_ACTION_COMPANY_VOTE &&
                   selectedAction == action.name &&
-                  currentPhase?.companyId === company.id &&
-                  submitComplete ? (
-                    <div>Vote Submitted</div>
-                  ) : (
-                    <DebounceButton
-                      onClick={() => handleSubmit(action.name)}
-                      disabled={submitComplete}
-                    >
-                      Submit Vote
-                    </DebounceButton>
-                  )}
+                  currentPhase?.companyId === company.id ? (
+                    submitComplete ? (
+                      <div>Vote Submitted</div>
+                    ) : (
+                      <DebounceButton
+                        onClick={() => handleSubmit(action.name)}
+                        disabled={submitComplete}
+                      >
+                        Submit Vote
+                      </DebounceButton>
+                    )
+                  ) : null}
                   {actionVoteResults && (
                     <div className="flex gap-2">
                       {actionVoteResults

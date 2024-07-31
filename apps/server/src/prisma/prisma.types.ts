@@ -36,7 +36,7 @@ export type RoomUserWithUser = RoomUser & {
   user: User;
 };
 
-export type RoomWithUsers = Room & { users: { user: User }[]; };
+export type RoomWithUsers = Room & { users: { user: User }[] };
 
 export type ShareWithCompany = Share & { Company: Company };
 
@@ -216,4 +216,4 @@ export type ShortOrderWithRelations = ShortOrder & {
 
 export type GameTurnWithRelations = GameTurn & {
   companyActions: CompanyAction[];
-}
+};

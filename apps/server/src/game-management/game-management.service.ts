@@ -1043,12 +1043,9 @@ export class GameManagementService {
     }
 
     const netWorths = players.map((player) => {
-      const totalSharesValue = player.Share.reduce((acc, share) => {
-        return acc + share.Company.currentStockPrice;
-      }, 0);
       return {
         playerId: player.id,
-        netWorth: player.cashOnHand + totalSharesValue,
+        netWorth: calculateNetWorth(player.cashOnHand, player.Share),
       };
     });
 
@@ -1225,7 +1222,7 @@ export class GameManagementService {
         const companyShares = company.Share.filter(
           (share) => share.location === ShareLocation.IPO,
         );
-        const companyDividendTotal = dividend * companyShares.length;
+        const companyDividendTotal = Math.floor(dividend * companyShares.length);
         const updatedCompany = await this.companyService.updateCompany({
           where: { id: company.id },
           data: { cashOnHand: company.cashOnHand + companyDividendTotal },
