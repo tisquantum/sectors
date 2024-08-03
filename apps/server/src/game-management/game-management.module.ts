@@ -29,6 +29,7 @@ import { ShortOrderModule } from '@server/short-order/short-order.module';
 import { GameRecordModule } from '@server/game-record/game-record.module';
 import { PlayerResultModule } from '@server/player-result/player-result.module';
 import { UsersModule } from '@server/users/users.module';
+import { TransactionModule } from '@server/transaction/transaction.module';
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { UsersModule } from '@server/users/users.module';
     GameRecordModule,
     PlayerResultModule,
     UsersModule,
+    TransactionModule,
   ],
   providers: [GameManagementService],
   exports: [GameManagementService],

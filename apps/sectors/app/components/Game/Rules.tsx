@@ -59,7 +59,8 @@ const stockRoundRules = (
           <strong>Short Orders:</strong> Borrow shares from the market and sell
           them immediately. Cover these shares in a subsequent turn by
           purchasing the same quantity at the current market price. Short Orders
-          are placed against the OPEN MARKET.
+          are placed against the OPEN MARKET. Short orders have an on-going interest borrow rate.
+          Short order share dividends must be covered by the player.
         </li>
         <li>
           <strong>Options Contracts:</strong> Purchase the right to buy or sell

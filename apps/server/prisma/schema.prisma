@@ -87,6 +87,9 @@ model Player {
   PlayerPriority           PlayerPriority[]
   InfluenceVote            InfluenceVote[]
   PlayerResult             PlayerResult[]
+  //1:1 relation with Entity
+  Entity                   Entity?                   @relation(fields: [entityId], references: [id])
+  entityId                 String?                   @unique
 }
 
 enum AccountStatus {
@@ -104,7 +107,7 @@ enum OverdraftTier {
 }
 
 model Share {
-  id               String          @id @default(uuid())
+  id               String                 @id @default(uuid())
   price            Float
   companyId        String
   location         ShareLocation
@@ -112,13 +115,14 @@ model Share {
   playerId         String?
   shortOrderId     Int?
   optionContractId Int?
-  ShortOrder       ShortOrder?     @relation(fields: [shortOrderId], references: [id])
-  OptionContract   OptionContract? @relation(fields: [optionContractId], references: [id])
-  Company          Company         @relation(fields: [companyId], references: [id])
-  Player           Player?         @relation(fields: [playerId], references: [id])
-  Game             Game            @relation(fields: [gameId], references: [id])
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
+  ShortOrder       ShortOrder?            @relation(fields: [shortOrderId], references: [id])
+  OptionContract   OptionContract?        @relation(fields: [optionContractId], references: [id])
+  Company          Company                @relation(fields: [companyId], references: [id])
+  Player           Player?                @relation(fields: [playerId], references: [id])
+  Game             Game                   @relation(fields: [gameId], references: [id])
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  Transactions     TransactionsOnShares[]
 }
 
 enum ShareLocation {
@@ -178,6 +182,8 @@ model Company {
   Cards                    Card[]
   OptionContracts          OptionContract[]
   ShortOrders              ShortOrder[]
+  Entity                   Entity?                   @relation(fields: [entityId], references: [id])
+  entityId                 String?                   @unique
 }
 
 enum CompanyTier {
@@ -613,6 +619,8 @@ model Game {
   createdAt               DateTime             @default(now())
   updatedAt               DateTime             @updatedAt
   GameRecord              GameRecord?
+  Transactions            Transaction[]
+  Entities                Entity[]
 }
 
 enum GameStatus {
@@ -784,4 +792,57 @@ model PlayerResult {
   updatedAt     DateTime   @updatedAt
   gameRecordId  String
   GameRecord    GameRecord @relation(fields: [gameRecordId], references: [id])
+}
+
+enum EntityType {
+  PLAYER
+  PLAYER_MARGIN_ACCOUNT
+  COMPANY
+  BANK
+  OPEN_MARKET
+  DERIVATIVE_MARKET
+  IPO
+}
+
+enum TransactionType {
+  SHARE
+  CASH
+}
+
+model Entity {
+  id               String        @id @default(uuid())
+  gameId           String
+  entityType       EntityType
+  fromTransactions Transaction[] @relation("FromEntity")
+  toTransactions   Transaction[] @relation("ToEntity")
+  marginAccountId  String?
+  Player           Player?
+  Company          Company?
+  Game             Game          @relation(fields: [gameId], references: [id])
+}
+
+model Transaction {
+  id              String                 @id @default(uuid())
+  gameId          String
+  fromEntityId    String
+  toEntityId      String
+  transactionType TransactionType
+  amount          Int
+  Shares          TransactionsOnShares[]
+  fromEntity      Entity                 @relation("FromEntity", fields: [fromEntityId], references: [id])
+  toEntity        Entity                 @relation("ToEntity", fields: [toEntityId], references: [id])
+  timestamp       DateTime
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  Game            Game                   @relation(fields: [gameId], references: [id])
+}
+
+model TransactionsOnShares {
+  id            String      @id @default(uuid())
+  transactionId String
+  shareId       String
+  Transaction   Transaction @relation(fields: [transactionId], references: [id])
+  Share         Share       @relation(fields: [shareId], references: [id])
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 }

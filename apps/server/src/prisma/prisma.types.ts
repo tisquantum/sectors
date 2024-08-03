@@ -3,6 +3,7 @@ import {
   Card,
   Company,
   CompanyAction,
+  Entity,
   Game,
   GameLog,
   GameTurn,
@@ -27,6 +28,7 @@ import {
   ShortOrder,
   StockHistory,
   StockRound,
+  Transaction,
   User,
 } from '@prisma/client';
 
@@ -216,4 +218,9 @@ export type ShortOrderWithRelations = ShortOrder & {
 
 export type GameTurnWithRelations = GameTurn & {
   companyActions: CompanyAction[];
+};
+
+export type TransactionWithEntities = Transaction & {
+  fromEntity: Entity & { Player: Player | null; Company: Company | null };
+  toEntity: Entity & { Player: Player | null; Company: Company | null };
 };

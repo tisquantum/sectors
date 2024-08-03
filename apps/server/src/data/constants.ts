@@ -426,6 +426,8 @@ export const getPreviousCompanyTier = (
 
 export const STOCK_ACTION_SUB_ROUND_MAX = 2;
 
+export const MARGIN_ACCOUNT_ID_PREFIX = 'MA__';
+
 export const CapitalGainsTiers = [
   {
     minNetWorth: 0,

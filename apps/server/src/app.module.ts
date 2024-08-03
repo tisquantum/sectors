@@ -39,6 +39,7 @@ import { OptionContractModule } from './option-contract/option-contract.module';
 import { ShortOrderModule } from './short-order/short-order.module';
 import { GameRecordModule } from './game-record/game-record.module';
 import { PlayerResultModule } from './player-result/player-result.module';
+import { TransactionModule } from './transaction/transaction.module';
 
 const yourPusherOptions = {
   cluster: process.env.PUSHER_CLUSTER ?? 'CLUSTER',
@@ -92,6 +93,7 @@ const chunkingOptions = {
     ShortOrderModule,
     GameRecordModule,
     PlayerResultModule,
+    TransactionModule,
   ],
   controllers: [AppController],
   providers: [AppService],
