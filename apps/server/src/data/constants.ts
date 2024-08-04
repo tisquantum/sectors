@@ -41,7 +41,7 @@ export const GOVERNMENT_GRANT_AMOUNT = 500;
 
 export const MARKETING_CONSUMER_BONUS = 4;
 
-export const DEFAULT_INFLUENCE = 100;
+export const DEFAULT_INFLUENCE = process.env.INFLUENCE_MAX ?? 50;
 
 export const OPTION_CONTRACT_ACTIVE_COUNT = 3;
 export const OPTION_CONTRACT_MIN_TERM = 1;

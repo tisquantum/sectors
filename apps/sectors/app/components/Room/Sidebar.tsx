@@ -33,7 +33,7 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
   const [gameOptions, setGameOptions] = useState<GameOptionsState>({
     bankPoolNumber: 12000,
     consumerPoolNumber: 75,
-    startingCashOnHand: 500,
+    startingCashOnHand: 300,
     distributionStrategy: DistributionStrategy.BID_PRIORITY,
     gameMaxTurns: 15,
   });
@@ -110,7 +110,7 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
             <GameOptions
               initialBankPoolNumber={12000}
               initialConsumerPoolNumber={75}
-              initialStartingCashOnHand={500}
+              initialStartingCashOnHand={300}
               initialDistributionStrategy={DistributionStrategy.BID_PRIORITY}
               initialGameMaxTurns={15}
               onOptionsChange={handleGameOptionsChange}

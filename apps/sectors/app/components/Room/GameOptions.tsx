@@ -58,8 +58,9 @@ const GameOptions: React.FC<GameOptionsProps> = ({
       5: 20000,
     },
     startingCashOnHand: {
-      1: 500,
-      2: 750,
+      1: 300,
+      2: 500,
+      3: 750,
     },
     consumerPoolNumber: {
       1: 50,
@@ -128,6 +129,9 @@ const GameOptions: React.FC<GameOptionsProps> = ({
           }
           defaultSelectedKeys={["1"]}
         >
+          <SelectItem key={1} value={1}>
+            300 (Business Elite)
+          </SelectItem>
           <SelectItem key={1} value={1}>
             500 (Standard)
           </SelectItem>
