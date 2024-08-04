@@ -60,6 +60,58 @@ export class TransactionService {
     });
   }
 
+  async getTransactionsForEntity(
+    entityId: string,
+  ): Promise<TransactionWithEntities[]> {
+    return this.prisma.transaction.findMany({
+      where: {
+        OR: [{ fromEntityId: entityId }, { toEntityId: entityId }],
+      },
+      include: {
+        fromEntity: {
+          include: {
+            Player: true,
+            Company: true,
+          },
+        },
+        toEntity: {
+          include: {
+            Player: true,
+            Company: true,
+          },
+        },
+      },
+    });
+  }
+
+  async getTransactionsByEntityType(
+    entityType: EntityType,
+    gameId: string,
+  ): Promise<TransactionWithEntities[]> {
+    return this.prisma.transaction.findMany({
+      where: {
+        OR: [
+          { fromEntity: { entityType, gameId } },
+          { toEntity: { entityType, gameId } },
+        ],
+      },
+      include: {
+        fromEntity: {
+          include: {
+            Player: true,
+            Company: true,
+          },
+        },
+        toEntity: {
+          include: {
+            Player: true,
+            Company: true,
+          },
+        },
+      },
+    });
+  }
+
   async getEntityOrCreate(
     gameId: string,
     entityType: EntityType,

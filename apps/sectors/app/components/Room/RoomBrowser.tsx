@@ -9,7 +9,7 @@ import Button from "@sectors/app/components/General/DebounceButton";
 import CreateRoom from "./CreateRoom";
 import { ArrowPathIcon, CheckCircleIcon } from "@heroicons/react/24/solid";
 import { useAuthUser } from "../AuthUser.context";
-import { Chip } from "@nextui-org/react";
+import { Chip, Switch } from "@nextui-org/react";
 import { GameStatus } from "@server/prisma/prisma.client";
 import { renderGameStatusColor } from "@sectors/app/helpers";
 import {
@@ -31,7 +31,7 @@ export default function RoomBrowser() {
   const [selectedStatus, setSelectedStatus] = useState<GameStatus | null>(
     GameStatus.PENDING
   );
-
+  const [yourRoomsOnly, setYourRoomsOnly] = useState(false);
   if (isLoading) {
     return <div>Loading...</div>;
   }
@@ -58,13 +58,20 @@ export default function RoomBrowser() {
     setSelectedStatus(status);
   };
 
+  const handleYourRoomsClick = () => {
+    setYourRoomsOnly(!yourRoomsOnly);
+  };
+
   const filteredRooms = rooms.filter((room) => {
     const matchesSearch = room.name
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
     const gameStatus = room.game?.[0]?.gameStatus || "PENDING";
     const matchesStatus = selectedStatus ? gameStatus === selectedStatus : true;
-    return matchesSearch && matchesStatus;
+    const matchesUser = yourRoomsOnly
+      ? room.users.some((roomUser) => roomUser.user.id === user?.id)
+      : true;
+    return matchesSearch && matchesStatus && matchesUser;
   });
 
   return (
@@ -78,6 +85,7 @@ export default function RoomBrowser() {
       <div className="flex flex-wrap gap-2 mb-4">
         {Object.values(GameStatus).map((status, index) => (
           <Chip
+            className="cursor-pointer"
             startContent={selectedStatus === status && <RiCheckboxCircleFill />}
             key={index}
             color={renderGameStatusColor(status)}
@@ -86,6 +94,14 @@ export default function RoomBrowser() {
             {status}
           </Chip>
         ))}
+        <div className="flex items-center gap-2">
+          <Switch
+            isSelected={yourRoomsOnly}
+            onValueChange={handleYourRoomsClick}
+          >
+            Your Rooms
+          </Switch>
+        </div>
       </div>
       <div className="mb-4 relative">
         <input

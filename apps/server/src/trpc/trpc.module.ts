@@ -35,6 +35,7 @@ import { OptionContractService } from '@server/option-contract/option-contract.s
 import { ShortOrderService } from '@server/short-order/short-order.service';
 import { GameRecordService } from '@server/game-record/game-record.service';
 import { PlayerResultService } from '@server/player-result/player-result.service';
+import { TransactionService } from '@server/transaction/transaction.service';
 
 @Module({
   imports: [PrismaModule],
@@ -76,6 +77,7 @@ import { PlayerResultService } from '@server/player-result/player-result.service
     ShortOrderService,
     GameRecordService,
     PlayerResultService,
+    TransactionService,
   ],
 })
 export class TrpcModule {}

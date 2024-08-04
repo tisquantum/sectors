@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { TrpcService } from '../trpc.service';
 import { TransactionService } from '@server/transaction/transaction.service';
+import { EntityType } from '@prisma/client';
 
 type Context = {
   transactionService: TransactionService;
@@ -38,5 +39,29 @@ export default (trpc: TrpcService, ctx: Context) =>
           where,
           orderBy,
         });
+      }),
+    listTransactionsByEntityId: trpc.procedure
+      .input(
+        z.object({
+          entityId: z.string(),
+        }),
+      )
+      .query(async ({ input }) => {
+        const { entityId } = input;
+        return ctx.transactionService.getTransactionsForEntity(entityId);
+      }),
+    listTransactionsByEntityType: trpc.procedure
+      .input(
+        z.object({
+          entityType: z.nativeEnum(EntityType),
+          gameId: z.string(),
+        }),
+      )
+      .query(async ({ input }) => {
+        const { entityType, gameId } = input;
+        return ctx.transactionService.getTransactionsByEntityType(
+          entityType,
+          gameId,
+        );
       }),
   });

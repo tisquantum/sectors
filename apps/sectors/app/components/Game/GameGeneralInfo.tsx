@@ -16,11 +16,90 @@ import {
   RiBankFill,
   RiTicket2Fill,
 } from "@remixicon/react";
-import { Avatar, Tooltip } from "@nextui-org/react";
+import {
+  Avatar,
+  Button,
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  Tooltip,
+  useDisclosure,
+} from "@nextui-org/react";
 import PlayerAvatar from "../Player/PlayerAvatar";
-import { OrderType, PhaseName } from "@server/prisma/prisma.client";
+import { EntityType, OrderType, PhaseName } from "@server/prisma/prisma.client";
 import { DEFAULT_SHARE_LIMIT } from "@server/data/constants";
 import { tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
+import {
+  MoneyTransactionByEntityType,
+  MoneyTransactionHistoryByPlayer,
+} from "./MoneyTransactionHistory";
+
+const BankInfo = () => {
+  const { gameState, gameId } = useGame();
+  const { isOpen, onOpen, onOpenChange } = useDisclosure();
+  return (
+    <>
+      <div className="flex gap-1 items-center cursor-pointer" onClick={onOpen}>
+        <RiBankFill size={18} /> ${gameState.bankPoolNumber}
+      </div>
+      <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1">
+                Wallet Transaction History
+              </ModalHeader>
+              <ModalBody>
+                <MoneyTransactionByEntityType
+                  entityType={EntityType.BANK}
+                  gameId={gameId}
+                />
+              </ModalBody>
+              <ModalFooter>
+                <Button color="danger" variant="light" onPress={onClose}>
+                  Close
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+    </>
+  );
+};
+
+const WalletInfo = () => {
+  const { authPlayer } = useGame();
+  const { isOpen, onOpen, onOpenChange } = useDisclosure();
+  return (
+    <>
+      <div className="flex gap-1 items-center cursor-pointer" onClick={onOpen}>
+        <RiWalletFill size={18} /> ${authPlayer.cashOnHand}
+      </div>
+      <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1">
+                Wallet Transaction History
+              </ModalHeader>
+              <ModalBody>
+                <MoneyTransactionHistoryByPlayer player={authPlayer} />
+              </ModalBody>
+              <ModalFooter>
+                <Button color="danger" variant="light" onPress={onClose}>
+                  Close
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+    </>
+  );
+};
 
 const GameGeneralInfo = () => {
   const { gameState, currentTurn, authPlayer, currentPhase } = useGame();
@@ -36,7 +115,7 @@ const GameGeneralInfo = () => {
         <PlayerAvatar player={authPlayer} />
         <div className="flex flex-col">
           <div className="flex items-center text-md font-bold">
-            <RiWalletFill size={18} /> ${authPlayer.cashOnHand}{" "}
+            <WalletInfo />{" "}
             {(currentPhase?.name == PhaseName.STOCK_ACTION_ORDER ||
               currentPhase?.name == PhaseName.STOCK_ACTION_RESULT) &&
               pseudoSpend > 0 && (
@@ -92,9 +171,7 @@ const GameGeneralInfo = () => {
             </p>
           }
         >
-          <div className="flex gap-1 items-center">
-            <RiBankFill size={18} /> ${gameState.bankPoolNumber}
-          </div>
+          <BankInfo />
         </Tooltip>
       </div>
       <div>

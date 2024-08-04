@@ -4481,15 +4481,6 @@ export class GameManagementService {
               },
             });
 
-            this.transactionService.createTransactionEntityToEntity({
-              fromEntityId: order.playerId,
-              fromEntityType: EntityType.PLAYER,
-              toEntityType: EntityType.BANK,
-              amount: order.value! * sharesToGive,
-              transactionType: TransactionType.CASH,
-              gameId: order.gameId,
-            });
-
             playerCashUpdates.push({
               playerId: order.playerId,
               decrement: sharesToGive * order.value!,
