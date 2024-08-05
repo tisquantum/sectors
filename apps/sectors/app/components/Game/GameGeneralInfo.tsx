@@ -78,7 +78,10 @@ const GameGeneralInfo = () => {
     (order) =>
       order.stockRoundId === gameState.currentStockRoundId &&
       order.orderType == OrderType.MARKET
-  ).reduce((acc, order) => acc + (order.value || 0) * (order.quantity || 0), 0);
+  ).reduce((acc, order) => {
+    const orderValue = (order.value || 0) * (order.quantity || 0);
+    return order.isSell ? acc - orderValue : acc + orderValue;
+  }, 0);  
   return (
     <div className="flex space-x-4 items-center">
       <div className="flex items-center gap-2">
