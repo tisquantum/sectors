@@ -1752,9 +1752,43 @@ export class GameManagementService {
         this.resolveInvestorConfidence(prestigeReward);
         return;
       case PrestigeReward.MAGNET_EFFECT:
-      //TODO: Functionality to open a new company.
+        this.resolveMagnetEffect(prestigeReward);
+        return;
       default:
         return;
+    }
+  }
+
+  async resolveMagnetEffect(prestigeReward: PrestigeRewards) {
+    //get company
+    const company = await this.companyService.companyWithSector({
+      id: prestigeReward.companyId,
+    });
+    if (!company) {
+      throw new Error('Company not found');
+    }
+    //get all companies in sector except this one
+    const otherCompanies = await this.companyService.companies({
+      where: { sectorId: company.sectorId, id: { not: company.id } },
+    });
+    if (!otherCompanies) {
+      throw new Error('Other companies not found');
+    }
+    //increase otherCompanies stock price by 1
+    const stockPromises = otherCompanies.map((otherCompany) => {
+      return this.stockHistoryService.moveStockPriceUp(
+        otherCompany.gameId,
+        otherCompany.id,
+        prestigeReward.gameTurnId || '',
+        otherCompany.currentStockPrice,
+        1,
+        StockAction.PRESTIGE_REWARD,
+      );
+    });
+    try {
+      await Promise.all(stockPromises);
+    } catch (error) {
+      console.error('Error moving stock price up', error);
     }
   }
 
