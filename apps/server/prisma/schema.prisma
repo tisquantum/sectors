@@ -725,6 +725,7 @@ model InfluenceRound {
   gameId         String
   roundStep      Int
   gameTurnId     String
+  maxInfluence   Int             @default(0)
   phase          Phase[]
   InfluenceVotes InfluenceVote[]
   isRevealed     Boolean         @default(false)
@@ -828,6 +829,7 @@ model Transaction {
   toEntityId      String
   transactionType TransactionType
   amount          Int
+  description     String?
   Shares          TransactionsOnShares[]
   fromEntity      Entity                 @relation("FromEntity", fields: [fromEntityId], references: [id])
   toEntity        Entity                 @relation("ToEntity", fields: [toEntityId], references: [id])

@@ -201,6 +201,7 @@ export class TransactionService {
     transactionType,
     fromEntityId,
     toEntityId,
+    description
   }: {
     gameId: string;
     fromEntityType: EntityType;
@@ -209,6 +210,7 @@ export class TransactionService {
     transactionType: TransactionType;
     fromEntityId?: string;
     toEntityId?: string;
+    description?: string;
   }): Promise<Transaction> {
     const fromEntity = await this.getEntityOrCreate(
       gameId,
@@ -239,6 +241,7 @@ export class TransactionService {
         transactionType,
         amount,
         timestamp: new Date(),
+        description
       },
     });
   }

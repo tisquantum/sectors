@@ -126,7 +126,7 @@ const InfluenceBid = ({ isRevealRound }: { isRevealRound?: boolean }) => {
       Player: player,
     }))
   );
-
+  const maxInfluence = influenceRound?.[0]?.maxInfluence || DEFAULT_INFLUENCE;
   return (
     <div className="flex flex-col justify-center items-center content-center h-full justify-between">
       <div className="flex flex-col grow items-center content-center justify-center gap-2">
@@ -139,8 +139,8 @@ const InfluenceBid = ({ isRevealRound }: { isRevealRound?: boolean }) => {
                   <div className="flex flex-col gap-2 bg-slate-800 p-2 rounded-md items-center max-w-64">
                     <PlayerAvatar player={vote.Player} showNameLabel />
                     <div className="text-center">
-                      uses {vote.influence} influence of {DEFAULT_INFLUENCE},
-                      earning a bonus ${DEFAULT_INFLUENCE - vote.influence}.
+                      uses {vote.influence} influence of {maxInfluence},
+                      earning a bonus ${maxInfluence - vote.influence}.
                     </div>
                   </div>
                 </div>
@@ -151,6 +151,7 @@ const InfluenceBid = ({ isRevealRound }: { isRevealRound?: boolean }) => {
           <div>
             <h2>
               Place a bid of influence to determine starting player priority.
+              You have {maxInfluence} influence to spend.
               For every influence you don&apos;t spend, collect $1.
             </h2>
           </div>

@@ -35,6 +35,7 @@ import {
   MoneyTransactionByEntityType,
   MoneyTransactionHistoryByPlayer,
 } from "./MoneyTransactionHistory";
+import WalletInfo from "./WalletInfo";
 
 const BankInfo = () => {
   const { gameState, gameId } = useGame();
@@ -70,37 +71,6 @@ const BankInfo = () => {
   );
 };
 
-const WalletInfo = () => {
-  const { authPlayer } = useGame();
-  const { isOpen, onOpen, onOpenChange } = useDisclosure();
-  return (
-    <>
-      <div className="flex gap-1 items-center cursor-pointer" onClick={onOpen}>
-        <RiWalletFill size={18} /> ${authPlayer.cashOnHand}
-      </div>
-      <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
-        <ModalContent>
-          {(onClose) => (
-            <>
-              <ModalHeader className="flex flex-col gap-1">
-                Wallet Transaction History
-              </ModalHeader>
-              <ModalBody>
-                <MoneyTransactionHistoryByPlayer player={authPlayer} />
-              </ModalBody>
-              <ModalFooter>
-                <Button color="danger" variant="light" onPress={onClose}>
-                  Close
-                </Button>
-              </ModalFooter>
-            </>
-          )}
-        </ModalContent>
-      </Modal>
-    </>
-  );
-};
-
 const GameGeneralInfo = () => {
   const { gameState, currentTurn, authPlayer, currentPhase } = useGame();
   if (!gameState) return notFound();
@@ -115,7 +85,7 @@ const GameGeneralInfo = () => {
         <PlayerAvatar player={authPlayer} />
         <div className="flex flex-col">
           <div className="flex items-center text-md font-bold">
-            <WalletInfo />{" "}
+            <WalletInfo player={authPlayer} />{" "}
             {(currentPhase?.name == PhaseName.STOCK_ACTION_ORDER ||
               currentPhase?.name == PhaseName.STOCK_ACTION_RESULT) &&
               pseudoSpend > 0 && (

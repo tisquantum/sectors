@@ -19,6 +19,7 @@ import PlayerAvatar from "./PlayerAvatar";
 import { useGame } from "../Game/GameContext";
 import { tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
 import { calculateNetWorth } from "@server/data/helpers";
+import WalletInfo from "../Game/WalletInfo";
 
 export interface StockAggregation {
   totalShares: number;
@@ -68,7 +69,7 @@ const PlayersOverview = ({ gameId }: { gameId: string }) => {
                   content={<p>Cash on hand.</p>}
                 >
                   <span className="flex items-center content-center">
-                    <RiWallet3Fill size={18} /> ${playerWithShares.cashOnHand}
+                    <WalletInfo player={playerWithShares} />
                   </span>
                 </Tooltip>
                 <Tooltip

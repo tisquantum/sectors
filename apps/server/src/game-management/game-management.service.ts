@@ -519,7 +519,10 @@ export class GameManagementService {
       });
       await this.gameLogService.createGameLog({
         game: { connect: { id: phase.gameId } },
-        content: `Player ${shortOrder.Player.nickname} has been charged $${(shortOrder?.ShortOrder?.shortSalePrice || 0) * (shortOrder?.ShortOrder?.borrowRate || BORROW_RATE)} for interest on a short order.`,
+        content: `Player ${shortOrder.Player.nickname} has been charged $${
+          (shortOrder?.ShortOrder?.shortSalePrice || 0) *
+          (shortOrder?.ShortOrder?.borrowRate || BORROW_RATE)
+        } for interest on a short order.`,
       });
     });
     await Promise.all(shortOrderPromises);
@@ -896,7 +899,11 @@ export class GameManagementService {
       }
       gameLogMessages.push({
         gameId: phase.gameId,
-        content: `Player ${player.nickname} has a priority of ${priority.priority} with ${priority.influence} influence. They earned a total of $${DEFAULT_INFLUENCE - priority.influence} for unspent influence.`,
+        content: `Player ${player.nickname} has a priority of ${
+          priority.priority
+        } with ${priority.influence} influence. They earned a total of $${
+          influenceRoundWithVotes.maxInfluence - priority.influence
+        } for unspent influence.`,
       });
     });
     try {
@@ -919,12 +926,12 @@ export class GameManagementService {
     }
     //give players money for unspent priority
     const playerPriorityUnspent = allPlayerPriority.filter(
-      (priority) => priority.influence < DEFAULT_INFLUENCE,
+      (priority) => priority.influence < influenceRoundWithVotes.maxInfluence,
     );
     const playerPriorityUnspentMoney = playerPriorityUnspent.map((priority) => {
       return {
         playerId: priority.playerId,
-        amount: DEFAULT_INFLUENCE - priority.influence,
+        amount: influenceRoundWithVotes.maxInfluence - priority.influence,
         gameTurnId: phase.gameTurnId,
       };
     });
@@ -935,6 +942,7 @@ export class GameManagementService {
           money.playerId,
           money.amount,
           EntityType.BANK,
+          `Unspent influence.`,
         );
       },
     );
@@ -996,10 +1004,13 @@ export class GameManagementService {
           player.id,
           sharePrice,
           EntityType.BANK,
+          `Divestment of ${share.Company.name} share.`,
         );
         await this.gameLogService.createGameLog({
           game: { connect: { id: share.gameId } },
-          content: `Player ${player.nickname} has sold 1 share of ${share.Company.name} at $${sharePrice.toFixed(2)} due to DIVESTMENT`,
+          content: `Player ${player.nickname} has sold 1 share of ${
+            share.Company.name
+          } at $${sharePrice.toFixed(2)} due to DIVESTMENT`,
         });
       });
 
@@ -1019,7 +1030,11 @@ export class GameManagementService {
 
       await this.gameLogService.createGameLog({
         game: { connect: { id: phase.gameId } },
-        content: `Stock price for ${sharesToDivest[0].Company.name} has decreased to $${stockPrice.price.toFixed(2)} by ${netDifference} steps due to market sell orders during DIVESTMENT`,
+        content: `Stock price for ${
+          sharesToDivest[0].Company.name
+        } has decreased to $${stockPrice.price.toFixed(
+          2,
+        )} by ${netDifference} steps due to market sell orders during DIVESTMENT`,
       });
 
       await this.playerOrderService.triggerLimitOrdersFilled(
@@ -2341,7 +2356,9 @@ export class GameManagementService {
       }
       this.gameLogService.createGameLog({
         game: { connect: { id: phase.gameId } },
-        content: `Company ${company.name} has paid operating costs of ${CompanyTierData[company.companyTier].operatingCosts}.`,
+        content: `Company ${company.name} has paid operating costs of ${
+          CompanyTierData[company.companyTier].operatingCosts
+        }.`,
       });
       return {
         id: company.id,
@@ -2958,8 +2975,9 @@ export class GameManagementService {
             sectorId: sector.id,
           };
         });
-        companies =
-          await this.companyService.createManyCompanies(newCompanyData);
+        companies = await this.companyService.createManyCompanies(
+          newCompanyData,
+        );
         //iterate through companies and create ipo shares
         const shares: {
           companyId: string;
@@ -2985,6 +3003,7 @@ export class GameManagementService {
       let influenceRound: InfluenceRound | null;
       influenceRound = await this.influenceRoundService.createInfluenceRound({
         roundStep: 0,
+        maxInfluence: DEFAULT_INFLUENCE,
         Game: { connect: { id: game.id } },
         GameTurn: { connect: { id: newTurn.id } },
       });
@@ -3047,8 +3066,9 @@ export class GameManagementService {
       gameId,
       deckId: researchDeck.id,
     }));
-    const createdResearchCards =
-      await this.cardsService.createManyCards(researchCards);
+    const createdResearchCards = await this.cardsService.createManyCards(
+      researchCards,
+    );
     console.log('Created research cards:', createdResearchCards);
 
     return this.researchDeckService.updateResearchDeck({
@@ -3328,10 +3348,10 @@ export class GameManagementService {
       roundType: currentPhase.stockRoundId
         ? RoundType.STOCK
         : currentPhase.operatingRoundId
-          ? RoundType.OPERATING
-          : currentPhase.influenceRoundId
-            ? RoundType.INFLUENCE
-            : RoundType.GAME_UPKEEP,
+        ? RoundType.OPERATING
+        : currentPhase.influenceRoundId
+        ? RoundType.INFLUENCE
+        : RoundType.GAME_UPKEEP,
       stockRoundId: game.currentStockRoundId || 0,
       operatingRoundId: game.currentOperatingRoundId || 0,
       influenceRoundId: game.InfluenceRound?.[0].id || 0,
@@ -3528,8 +3548,9 @@ export class GameManagementService {
     if (!gameState) {
       throw new Error('Game not found');
     }
-    const allCompaniesVoted =
-      await this.haveAllCompaniesActionsResolved(gameId);
+    const allCompaniesVoted = await this.haveAllCompaniesActionsResolved(
+      gameId,
+    );
 
     if (allCompaniesVoted) {
       nextPhase = PhaseName.CAPITAL_GAINS;
@@ -3581,6 +3602,7 @@ export class GameManagementService {
           order.playerId,
           order.value || 0,
           EntityType.BANK,
+          `Limit order sell for ${order.Company.stockSymbol}`,
         );
 
         //remove one share from the player's portfolio
@@ -3607,6 +3629,7 @@ export class GameManagementService {
           order.playerId,
           order.value || 0,
           EntityType.BANK,
+          `Limit order buy for ${order.Company.stockSymbol}`,
         );
 
         //move share from open market to player portfolio
@@ -3741,6 +3764,7 @@ export class GameManagementService {
               playerOrderResolved.playerId,
               playerOrderResolved.value || 0,
               EntityType.BANK,
+              `Option contract purchased.`,
             );
           }
         }),
@@ -3861,6 +3885,7 @@ export class GameManagementService {
           order.playerId,
           Math.floor(shortOrder.shortSalePrice * (shortOrder.borrowRate / 100)),
           EntityType.BANK,
+          `Interest on short order for ${order.Company.stockSymbol}`,
         );
       }
     });
@@ -3970,6 +3995,7 @@ export class GameManagementService {
                 amount: newShortOrderMarginAccountMinimum,
                 transactionType: TransactionType.CASH,
                 gameId: order.gameId,
+                description: `Funding margin account for short order`,
               });
               await this.prisma.player.update({
                 where: { id: player.id },
@@ -4199,7 +4225,11 @@ export class GameManagementService {
           );
           await this.gameLogService.createGameLog({
             game: { connect: { id: orders[0].gameId } },
-            content: `Stock price for ${orders[0].Company.name} has increased to $${newStockPrice.price.toFixed(2)} due to market buy orders`,
+            content: `Stock price for ${
+              orders[0].Company.name
+            } has increased to $${newStockPrice.price.toFixed(
+              2,
+            )} due to market buy orders`,
           });
           await this.playerOrderService.triggerLimitOrdersFilled(
             orders[0].Company.currentStockPrice || 0,
@@ -4217,7 +4247,11 @@ export class GameManagementService {
           );
           await this.gameLogService.createGameLog({
             game: { connect: { id: orders[0].gameId } },
-            content: `Stock price for ${orders[0].Company.name} has decreased to $${stockPrice.price.toFixed(2)} by ${netDifference} steps due to market sell orders`,
+            content: `Stock price for ${
+              orders[0].Company.name
+            } has decreased to $${stockPrice.price.toFixed(
+              2,
+            )} by ${netDifference} steps due to market sell orders`,
           });
           await this.playerOrderService.triggerLimitOrdersFilled(
             orders[0].Company.currentStockPrice || 0,
@@ -4324,10 +4358,17 @@ export class GameManagementService {
         order.playerId,
         sharesToSell * sharePrice,
         EntityType.BANK,
+        `Player ${order.Player.nickname} has sold ${sharesToSell} shares of ${
+          order.Company.name
+        } at $${sharePrice.toFixed(2)}`,
       );
       await this.gameLogService.createGameLog({
         game: { connect: { id: order.gameId } },
-        content: `Player ${order.Player.nickname} has sold ${sharesToSell} shares of ${order.Company.name} at $${sharePrice.toFixed(2)}`,
+        content: `Player ${
+          order.Player.nickname
+        } has sold ${sharesToSell} shares of ${
+          order.Company.name
+        } at $${sharePrice.toFixed(2)}`,
       });
     } catch (error) {
       console.error('Error selling shares:', error);
@@ -4884,7 +4925,9 @@ export class GameManagementService {
 
       gameLogEntries.push({
         game: { connect: { id: order[0].gameId } },
-        content: `Player ${order[0].Player.nickname} has bought ${sharesToDistribute} shares of ${
+        content: `Player ${
+          order[0].Player.nickname
+        } has bought ${sharesToDistribute} shares of ${
           order[0].Company.name
         } at $${order[0].Company.currentStockPrice.toFixed(2)}`,
       });
@@ -4943,7 +4986,9 @@ export class GameManagementService {
 
       gameLogEntries.push({
         game: { connect: { id: order.gameId } },
-        content: `Player ${order.Player.nickname} has won a lottery for a share of ${
+        content: `Player ${
+          order.Player.nickname
+        } has won a lottery for a share of ${
           order.Company.name
         } at $${order.Company.currentStockPrice.toFixed(2)}`,
       });
@@ -5003,7 +5048,9 @@ export class GameManagementService {
 
       gameLogEntries.push({
         game: { connect: { id: order.gameId } },
-        content: `Player ${order.Player.nickname} has bought ${sharesToGive} shares of ${
+        content: `Player ${
+          order.Player.nickname
+        } has bought ${sharesToGive} shares of ${
           order.Company.name
         } at $${order.Company.currentStockPrice.toFixed(2)}`,
       });
@@ -5106,6 +5153,7 @@ export class GameManagementService {
                   update.playerId,
                   update.decrement,
                   EntityType.BANK,
+                  `Share purchase.`,
                 ),
               MAX_RETRIES,
             ),
@@ -5136,6 +5184,7 @@ export class GameManagementService {
     playerId: string,
     amount: number,
     fromEntity: EntityType,
+    description?: string,
   ) {
     //create transaction
     this.transactionService.createTransactionEntityToEntity({
@@ -5145,6 +5194,7 @@ export class GameManagementService {
       transactionType: TransactionType.CASH,
       toEntityId: playerId,
       toEntityType: EntityType.PLAYER,
+      description,
     });
     //update bank pool for game
     await this.prisma.game.update({
@@ -5176,6 +5226,7 @@ export class GameManagementService {
     playerId: string,
     amount: number,
     toEntity: EntityType,
+    description?: string,
   ) {
     //get player
     const player = await this.prisma.player.findUnique({
@@ -5194,6 +5245,7 @@ export class GameManagementService {
       fromEntityType: EntityType.PLAYER,
       transactionType: TransactionType.CASH,
       toEntityType: toEntity,
+      description,
     });
     //update bank pool for game
     await this.prisma.game.update({
@@ -5420,6 +5472,7 @@ export class GameManagementService {
         (optionContract.strikePrice || 0)) *
         optionContract.shareCount,
       EntityType.BANK,
+      `Option contract for ${optionContract.Company.name} exercised`,
     );
     //get player
     const player = await this.playersService.player({
@@ -5432,7 +5485,9 @@ export class GameManagementService {
     //game log
     await this.gameLogService.createGameLog({
       game: { connect: { id: optionContract.gameId } },
-      content: `Player ${player.nickname} has exercised an option contract for ${
+      content: `Player ${
+        player.nickname
+      } has exercised an option contract for ${
         optionContract.Company.name
       } at $${optionContract.Company.currentStockPrice.toFixed(2)}`,
     });
@@ -5482,6 +5537,7 @@ export class GameManagementService {
       amount: Math.floor(shortOrder.shortSalePrice / 2),
       transactionType: TransactionType.CASH,
       gameId: player.gameId,
+      description: 'Margin account funds released',
     });
     //release the margin account funds
     this.playersService.updatePlayer({
@@ -5501,6 +5557,7 @@ export class GameManagementService {
       player.id,
       shortOrder.Company.currentStockPrice * shortOrder.Share.length,
       EntityType.BANK,
+      `Cover short order ${shortOrder.id} for ${shortOrder.Company.name}`,
     );
     //put the shares back in the open market
     await this.shareService.updateManySharesUnchecked({
@@ -5545,9 +5602,9 @@ export class GameManagementService {
     //game log
     await this.gameLogService.createGameLog({
       game: { connect: { id: player.gameId } },
-      content: `Player ${player.nickname} has covered short order ${updatedShortOrder.id} for ${
-        shortOrder.Company.name
-      } at $${stockPrice.toFixed(2)}`,
+      content: `Player ${player.nickname} has covered short order ${
+        updatedShortOrder.id
+      } for ${shortOrder.Company.name} at $${stockPrice.toFixed(2)}`,
     });
   }
 }

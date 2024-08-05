@@ -56,7 +56,9 @@ const chunkingOptions = {
 @Module({
   imports: [
     TrpcModule,
-    ConfigModule.forRoot(),
+    ConfigModule.forRoot({
+      envFilePath: ['.env', '.env.local'],
+    }),
     PlayersModule,
     UsersModule,
     RoomsModule,
