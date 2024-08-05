@@ -95,6 +95,7 @@ import {
   PRESTIGE_EFFECT_INCREASE_AMOUNT,
   AUTOMATION_EFFECT_OPERATIONS_REDUCTION,
   MARGIN_ACCOUNT_ID_PREFIX,
+  CAPITAL_INJECTION_STARTER,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -1710,7 +1711,19 @@ export class GameManagementService {
           reward: reward.type,
         });
       //resolve Reward
-      this.resolvePrestigeReward(prestigeReward);
+      this.resolvePrestigeReward(prestigeReward, game.nextPrestigeReward || 0);
+    } else {
+      //skip the reward, if this reward is CAPITAL_INJECTION, double all CAPITAL_INJECTION REWARD totals
+      this.gamesService.updateGame({
+        where: {
+          id: game.id,
+        },
+        data: {
+          capitalInjectionRewards: game.capitalInjectionRewards.map(
+            (capitalInjectionReward) => Math.floor(capitalInjectionReward * 2),
+          ),
+        },
+      });
     }
     //move the track forward
     await this.gamesService.updateGameState({
@@ -1721,13 +1734,16 @@ export class GameManagementService {
     });
   }
 
-  async resolvePrestigeReward(prestigeReward: PrestigeRewards) {
+  async resolvePrestigeReward(
+    prestigeReward: PrestigeRewards,
+    nextPrestigeRewardIndex: number,
+  ) {
     switch (prestigeReward.reward) {
       case PrestigeReward.BULL_SIGNAL:
         this.resolveBullSignal(prestigeReward);
         return;
       case PrestigeReward.CAPITAL_INJECTION:
-        this.resolveCapitalInjection(prestigeReward);
+        this.resolveCapitalInjection(prestigeReward, nextPrestigeRewardIndex);
         return;
       case PrestigeReward.ELASTICITY:
         this.resolveElasticity(prestigeReward);
@@ -1742,7 +1758,15 @@ export class GameManagementService {
     }
   }
 
-  async resolveCapitalInjection(prestigeReward: PrestigeRewards) {
+  async resolveCapitalInjection(
+    prestigeReward: PrestigeRewards,
+    nextPrestigeRewardIndex: number,
+  ) {
+    //get game
+    const game = await this.gamesService.game({ id: prestigeReward.gameId });
+    if (!game) {
+      throw new Error('Game not found');
+    }
     //The company receives $400
     const company = await this.companyService.company({
       id: prestigeReward.companyId,
@@ -1750,10 +1774,46 @@ export class GameManagementService {
     if (!company) {
       throw new Error('Company not found');
     }
+    const prestigeTrack = createPrestigeTrackBasedOnSeed(game.id);
+
+    //get prestige reward value
+    const capitalRewards = game.capitalInjectionRewards || [];
+
+    // Filter out all rewards of type CAPITAL_INJECTION
+    const capitalInjectionRewards = prestigeTrack.filter(
+      (reward) => reward.type === PrestigeReward.CAPITAL_INJECTION,
+    );
+
+    // Find the relative index of the current reward in the filtered array
+    const relativeIndex = capitalInjectionRewards.findIndex(
+      (_, i) => i === nextPrestigeRewardIndex,
+    );
+
+    // Get the capital reward value at the relative index
+    const capitalReward = capitalRewards[relativeIndex];
+
     //update the company cash on hand
     await this.companyService.updateCompany({
       where: { id: company.id },
-      data: { cashOnHand: company.cashOnHand + 400 },
+      data: {
+        cashOnHand:
+          company.cashOnHand + (capitalReward || CAPITAL_INJECTION_STARTER),
+      },
+    });
+    //update that index back to base capital injection
+    this.gamesService.updateGame({
+      where: { id: game.id },
+      data: {
+        capitalInjectionRewards: game.capitalInjectionRewards.map(
+          (injectionReward, index) => {
+            if (index === relativeIndex) {
+              return CAPITAL_INJECTION_STARTER;
+            } else {
+              return injectionReward;
+            }
+          },
+        ),
+      },
     });
   }
 
@@ -3038,6 +3098,26 @@ export class GameManagementService {
         });
       });
       await this.stockHistoryService.createManyStockHistories(stockHistories);
+      const capitalInjections: number[] = [];
+      //create capital injection array if it exists
+      const prestigeTrack = createPrestigeTrackBasedOnSeed(game.id);
+      //look for capital injection spaces
+      prestigeTrack.forEach((trackItem) => {
+        if (trackItem.name == PrestigeReward.CAPITAL_INJECTION) {
+          capitalInjections.push(CAPITAL_INJECTION_STARTER);
+        }
+      });
+      if (capitalInjections.length > 0) {
+        //update game with capital injection values
+        this.gamesService.updateGame({
+          where: {
+            id: game.id,
+          },
+          data: {
+            capitalInjectionRewards: capitalInjections,
+          },
+        });
+      }
       // Start the timer for advancing to the next phase
       //TODO: Once the game is fully implemented, we can start the timer service again.  Something is wrong with it right now.
       await this.startPhaseTimer({

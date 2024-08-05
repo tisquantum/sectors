@@ -72,7 +72,7 @@ const OperatingRoundProduction = () => {
                     <span>
                       {throughputReward.type ===
                       ThroughputRewardType.SECTOR_REWARD
-                        ? "Sector Reward"
+                        ? "Share Steps + 1"
                         : `Share Steps ${
                             throughputReward.share_price_steps_down == 0
                               ? "0"

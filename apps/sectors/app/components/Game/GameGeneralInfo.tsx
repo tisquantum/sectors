@@ -81,7 +81,7 @@ const GameGeneralInfo = () => {
   ).reduce((acc, order) => {
     const orderValue = (order.value || 0) * (order.quantity || 0);
     return order.isSell ? acc - orderValue : acc + orderValue;
-  }, 0);  
+  }, 0);
   return (
     <div className="flex space-x-4 items-center">
       <div className="flex items-center gap-2">
@@ -90,20 +90,19 @@ const GameGeneralInfo = () => {
           <div className="flex items-center text-md font-bold">
             <WalletInfo player={authPlayer} />{" "}
             {(currentPhase?.name == PhaseName.STOCK_ACTION_ORDER ||
-              currentPhase?.name == PhaseName.STOCK_ACTION_RESULT) &&
-              pseudoSpend > 0 && (
-                <Tooltip
-                  className={tooltipStyle}
-                  content={
-                    <p>
-                      The potential maximum amount of money you&apos;ve queued
-                      for orders this stock round.
-                    </p>
-                  }
-                >
-                  {"($" + pseudoSpend + ")"}
-                </Tooltip>
-              )}
+              currentPhase?.name == PhaseName.STOCK_ACTION_RESULT) && (
+              <Tooltip
+                className={tooltipStyle}
+                content={
+                  <p>
+                    The potential maximum amount of money you&apos;ve queued for
+                    orders this stock round.
+                  </p>
+                }
+              >
+                {"($" + pseudoSpend + ")"}
+              </Tooltip>
+            )}
           </div>
           <Tooltip
             className={tooltipStyle}

@@ -152,7 +152,7 @@ const CompanyVoteResolve = () => {
           </div>
         );
       case OperatingRoundAction.VETO:
-        return <div>Action vetoed.</div>;
+        return <div>Action vetoed. The next turn this companies operating cost are 50% less</div>;
       default:
         return <div>Unknown action</div>;
     }

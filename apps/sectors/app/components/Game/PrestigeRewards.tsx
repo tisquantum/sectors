@@ -16,6 +16,27 @@ const PrestigeRewards: React.FC<PrestigeRewardsProps> = ({
 }) => {
   const { gameId, gameState } = useGame();
   const prestigeTrack = createPrestigeTrackBasedOnSeed(gameId);
+  const renderCapitalInjection = (index: number) => {
+    const capitalRewards = gameState.capitalInjectionRewards || [];
+
+    // Filter out all rewards of type CAPITAL_INJECTION
+    const capitalInjectionRewards = prestigeTrack.filter(
+      (reward) => reward.type === PrestigeReward.CAPITAL_INJECTION
+    );
+
+    // Find the relative index of the current reward in the filtered array
+    const relativeIndex = capitalInjectionRewards.findIndex(
+      (_, i) => i === index
+    );
+
+    // Get the capital reward value at the relative index
+    const capitalReward = capitalRewards[relativeIndex];
+
+    if (capitalReward > 0) {
+      return <div>${capitalReward}</div>;
+    }
+    return null;
+  };
 
   return (
     <div
@@ -55,6 +76,8 @@ const PrestigeRewards: React.FC<PrestigeRewardsProps> = ({
                 <RiSparkling2Fill className="ml-2 size-4 text-yellow-500" />{" "}
                 {reward.cost}
               </div>
+              {reward.name == PrestigeReward.CAPITAL_INJECTION &&
+                renderCapitalInjection(index)}
             </div>
             {layout === "grid" && (
               <div className="mt-2 text-center text-md">{reward.name}</div>

@@ -172,12 +172,14 @@ interface BuyOrSellProps {
   alsoCancel?: boolean;
   handleSelectionIsBuy?: (selection: boolean) => void;
   isIpo?: boolean;
+  showBuy?: boolean;
 }
 
 const BuyOrSell: React.FC<BuyOrSellProps> = ({
   alsoCancel,
   handleSelectionIsBuy,
   isIpo,
+  showBuy = true,
 }) => {
   const handleSelection = (event: ChangeEvent<HTMLInputElement>) => {
     if (handleSelectionIsBuy) {
@@ -189,11 +191,13 @@ const BuyOrSell: React.FC<BuyOrSellProps> = ({
     <RadioGroup
       onChange={handleSelection}
       orientation="horizontal"
-      defaultValue="buy"
+      defaultValue={showBuy ? "buy" : "sell"}
     >
-      <Radio defaultChecked value="buy">
-        Buy
-      </Radio>
+      {showBuy && (
+        <Radio defaultChecked value="buy">
+          Buy
+        </Radio>
+      )}
       {!isIpo && <Radio value="sell">Sell</Radio>}
       {alsoCancel && <Radio value="cancel">Cancel Order</Radio>}
     </RadioGroup>
@@ -240,9 +244,11 @@ const TabContentMO: React.FC<TabContentProps> = ({
         ordersRemaining={ordersRemaining}
         maxOrders={MAX_MARKET_ORDER_ACTIONS}
       />
-      {sharesInMarket > 0 && (
-        <BuyOrSell handleSelectionIsBuy={handleSelectionIsBuy} isIpo={isIpo} />
-      )}
+      <BuyOrSell
+        handleSelectionIsBuy={handleSelectionIsBuy}
+        isIpo={isIpo}
+        showBuy={sharesInMarket > 0}
+      />
       {gameState.distributionStrategy == DistributionStrategy.BID_PRIORITY &&
         isBuy &&
         sharesInMarket > 0 && (

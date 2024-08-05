@@ -214,8 +214,9 @@ const OperatingRoundRevenueVoteResolve = () => {
                         </Badge>
                       </>
                     )}
-                    {productionResult?.revenueDistribution ===
-                      RevenueDistribution.RETAINED && (
+                    {(productionResult?.revenueDistribution ===
+                      RevenueDistribution.RETAINED ||
+                      !productionResult?.revenueDistribution) && (
                       <Badge content={"$" + revenue}>
                         <Avatar name={productionResult.Company.stockSymbol} />
                       </Badge>
