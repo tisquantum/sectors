@@ -210,6 +210,7 @@ interface TabContentProps {
   minValue: number;
   defaultValue?: number;
   isBuy?: boolean;
+  sharesInMarket: number;
 }
 
 const TabContentMO: React.FC<TabContentProps> = ({
@@ -222,6 +223,7 @@ const TabContentMO: React.FC<TabContentProps> = ({
   minValue,
   defaultValue,
   isBuy,
+  sharesInMarket,
 }) => {
   const { gameState } = useGame();
   const [shareValue, setShareValue] = useState<number>(1);
@@ -238,9 +240,12 @@ const TabContentMO: React.FC<TabContentProps> = ({
         ordersRemaining={ordersRemaining}
         maxOrders={MAX_MARKET_ORDER_ACTIONS}
       />
-      <BuyOrSell handleSelectionIsBuy={handleSelectionIsBuy} isIpo={isIpo} />
+      {sharesInMarket > 0 && (
+        <BuyOrSell handleSelectionIsBuy={handleSelectionIsBuy} isIpo={isIpo} />
+      )}
       {gameState.distributionStrategy == DistributionStrategy.BID_PRIORITY &&
-        isBuy && (
+        isBuy &&
+        sharesInMarket > 0 && (
           <Input
             id="moAmount"
             type="number"
@@ -608,7 +613,26 @@ const PlayerOrderInput = ({
                     maxValue={maxValue}
                     minValue={minValue}
                     defaultValue={currentOrder.currentStockPrice}
-                    isBuy={isBuy}
+                    isBuy={
+                      (company?.Share.filter(
+                        (share) =>
+                          share.location ===
+                          (isIpo
+                            ? ShareLocation.IPO
+                            : ShareLocation.OPEN_MARKET)
+                      ).length || 0) > 0
+                        ? isBuy
+                        : false
+                    }
+                    sharesInMarket={
+                      company?.Share.filter(
+                        (share) =>
+                          share.location ===
+                          (isIpo
+                            ? ShareLocation.IPO
+                            : ShareLocation.OPEN_MARKET)
+                      ).length || 0
+                    }
                   />
                 </CardBody>
               </Card>

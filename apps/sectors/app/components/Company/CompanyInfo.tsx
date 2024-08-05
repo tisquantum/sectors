@@ -90,7 +90,8 @@ const CompanyMoreInfo = ({
         content={
           <p>
             Prestige tokens. While held, they prioritize the company for
-            production. Can be spent for a bonus.
+            production. Can be spent for a bonus. Sell all of your companies
+            supply during an operating round to earn a prestige token.
           </p>
         }
       >
@@ -135,7 +136,7 @@ const CompanyMoreInfo = ({
           <p>
             Throughput. The base sector demand plus the companies demand minus
             it&apos;s supply. The closer to zero, the more efficient the company
-            is operating. Companies that score 0 receive a prestige bonus.
+            is operating.
           </p>
         }
       >

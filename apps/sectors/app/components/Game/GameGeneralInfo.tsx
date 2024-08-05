@@ -16,11 +16,60 @@ import {
   RiBankFill,
   RiTicket2Fill,
 } from "@remixicon/react";
-import { Avatar, Tooltip } from "@nextui-org/react";
+import {
+  Avatar,
+  Button,
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  Tooltip,
+  useDisclosure,
+} from "@nextui-org/react";
 import PlayerAvatar from "../Player/PlayerAvatar";
-import { OrderType, PhaseName } from "@server/prisma/prisma.client";
+import { EntityType, OrderType, PhaseName } from "@server/prisma/prisma.client";
 import { DEFAULT_SHARE_LIMIT } from "@server/data/constants";
 import { tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
+import {
+  MoneyTransactionByEntityType,
+  MoneyTransactionHistoryByPlayer,
+} from "./MoneyTransactionHistory";
+import WalletInfo from "./WalletInfo";
+
+const BankInfo = () => {
+  const { gameState, gameId } = useGame();
+  const { isOpen, onOpen, onOpenChange } = useDisclosure();
+  return (
+    <>
+      <div className="flex gap-1 items-center cursor-pointer" onClick={onOpen}>
+        <RiBankFill size={18} /> ${gameState.bankPoolNumber}
+      </div>
+      <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1">
+                Wallet Transaction History
+              </ModalHeader>
+              <ModalBody>
+                <MoneyTransactionByEntityType
+                  entityType={EntityType.BANK}
+                  gameId={gameId}
+                />
+              </ModalBody>
+              <ModalFooter>
+                <Button color="danger" variant="light" onPress={onClose}>
+                  Close
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+    </>
+  );
+};
 
 const GameGeneralInfo = () => {
   const { gameState, currentTurn, authPlayer, currentPhase } = useGame();
@@ -36,7 +85,7 @@ const GameGeneralInfo = () => {
         <PlayerAvatar player={authPlayer} />
         <div className="flex flex-col">
           <div className="flex items-center text-md font-bold">
-            <RiWalletFill size={18} /> ${authPlayer.cashOnHand}{" "}
+            <WalletInfo player={authPlayer} />{" "}
             {(currentPhase?.name == PhaseName.STOCK_ACTION_ORDER ||
               currentPhase?.name == PhaseName.STOCK_ACTION_RESULT) &&
               pseudoSpend > 0 && (
@@ -44,8 +93,8 @@ const GameGeneralInfo = () => {
                   className={tooltipStyle}
                   content={
                     <p>
-                      The potential maximum amount of money you&apos;ve queued for
-                      orders this stock round.
+                      The potential maximum amount of money you&apos;ve queued
+                      for orders this stock round.
                     </p>
                   }
                 >
@@ -53,10 +102,23 @@ const GameGeneralInfo = () => {
                 </Tooltip>
               )}
           </div>
-          <div className="flex items-center text-md">
-            <RiFunctionAddFill size={24} /> LO {authPlayer.limitOrderActions} MO{" "}
-            {authPlayer.marketOrderActions} SO {authPlayer.shortOrderActions}
-          </div>
+          <Tooltip
+            className={tooltipStyle}
+            content={
+              <p>
+                The remaining actions you have for order types in a stock round.
+                Limit Order and Short Order actions only replenish as existing
+                orders are filled or rejected. Market Orders replenish each
+                stock round.
+              </p>
+            }
+          >
+            <div className="flex items-center text-md">
+              <RiFunctionAddFill size={24} /> LO {authPlayer.limitOrderActions}{" "}
+              MO {authPlayer.marketOrderActions} SO{" "}
+              {authPlayer.shortOrderActions}
+            </div>
+          </Tooltip>
         </div>
       </div>
       <div>
@@ -79,9 +141,7 @@ const GameGeneralInfo = () => {
             </p>
           }
         >
-          <div className="flex gap-1 items-center">
-            <RiBankFill size={18} /> ${gameState.bankPoolNumber}
-          </div>
+          <BankInfo />
         </Tooltip>
       </div>
       <div>
@@ -103,10 +163,23 @@ const GameGeneralInfo = () => {
         <div className="text-lg font-bold">Round</div>
         <div>{gameState.currentRound ?? "0"}</div>
       </div>
-      <div>
-        <div className="text-lg font-bold">Turn</div>
-        <div>{currentTurn.turn ?? "0"}</div>
-      </div>
+      <Tooltip
+        className={tooltipStyle}
+        content={
+          <p>
+            The current turn out of the maximum turns in the game. The game ends
+            in one of two ways, either the bank pool is exhausted or the maximum
+            turns are reached.
+          </p>
+        }
+      >
+        <div>
+          <div className="text-lg font-bold">Turn</div>
+          <div>
+            {currentTurn.turn ?? "0"} of {gameState.gameMaxTurns}
+          </div>
+        </div>
+      </Tooltip>
     </div>
   );
 };

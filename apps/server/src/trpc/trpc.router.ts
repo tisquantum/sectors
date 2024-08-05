@@ -57,6 +57,8 @@ import { PlayerPriorityService } from '@server/player-priority/player-priority.s
 import optionContractRouter from './routers/option-contract.router';
 import { OptionContractService } from '@server/option-contract/option-contract.service';
 import { createContext } from './trpc.context';
+import transactionRouter from './routers/transaction.router';
+import { TransactionService } from '@server/transaction/transaction.service';
 @Injectable()
 export class TrpcRouter {
   constructor(
@@ -89,6 +91,7 @@ export class TrpcRouter {
     private readonly influenceRoundVotesService: InfluenceRoundVotesService,
     private readonly playerPriorityService: PlayerPriorityService,
     private readonly optionContractService: OptionContractService,
+    private readonly transactionService: TransactionService,
   ) {}
 
   appRouter = this.trpc.router({
@@ -118,6 +121,8 @@ export class TrpcRouter {
       gamesService: this.gamesService,
       gameManagementService: this.gameManagementService,
       pusherService: this.pusherService,
+      playerService: this.playersService,
+      phaseService: this.phaseService,
     }),
     gameLog: gameLogRouter(this.trpc, {
       gameLogService: this.gameLogService,
@@ -196,6 +201,11 @@ export class TrpcRouter {
     optionContract: optionContractRouter(this.trpc, {
       optionContractService: this.optionContractService,
       gameManagementService: this.gameManagementService,
+      phaseService: this.phaseService,
+      playerService: this.playersService,
+    }),
+    transactions: transactionRouter(this.trpc, {
+      transactionService: this.transactionService,
     }),
   });
 

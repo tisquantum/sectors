@@ -43,7 +43,7 @@ const OperatingRoundProduction = () => {
     <div className="p-6 rounded-lg shadow-md">
       <h1 className="text-2xl font-bold mb-4">Operating Round Production</h1>
       <div className="flex gap-8">
-        <div className="bg-slate-800 p-4 rounded-lg shadow-md w-1/4 flex gap-4">
+        <div className="bg-slate-800 p-4 rounded-lg shadow-md flex gap-4">
           <div>
             <h2 className="text-lg font-semibold mb-2">Operations Priority</h2>
             {companyPriorityOrderOperations(companiesWithSector).map(
@@ -85,52 +85,49 @@ const OperatingRoundProduction = () => {
             }
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-6 w-3/4">
-          {operatingRound.productionResults.map((productionResult) => (
-            <div
-              className="flex flex-col bg-slate-800 text-white p-4 rounded-lg shadow-md"
-              key={productionResult.id}
-            >
-              <CompanyInfo
-                company={productionResult.Company}
-                showingProductionResults
-              />
-              <div className="flex flex-col m-2 rounded-md bg-gray-950 p-2">
-                <span className="text-lg">Production Results</span>
-                <span className="flex gap-1 items-center">
-                  <RiIncreaseDecreaseFill size={18} />{" "}
-                  {productionResult.throughputResult}
+        {operatingRound.productionResults.map((productionResult) => (
+          <div
+            className="flex flex-col bg-slate-800 text-white p-4 rounded-lg shadow-md"
+            key={productionResult.id}
+          >
+            <CompanyInfo
+              company={productionResult.Company}
+              showingProductionResults
+            />
+            <div className="flex flex-col m-2 rounded-md bg-gray-950 p-2">
+              <span className="text-lg">Production Results</span>
+              <span className="flex gap-1 items-center">
+                <RiIncreaseDecreaseFill size={18} />{" "}
+                {productionResult.throughputResult}
+              </span>
+              {throughputRewardOrPenalty(productionResult.throughputResult)
+                .type === ThroughputRewardType.SECTOR_REWARD ? (
+                <span>Share Steps: +1</span>
+              ) : (
+                <span>
+                  Share Steps:{" "}
+                  {productionResult.steps == 0
+                    ? "0"
+                    : `-${productionResult.steps}`}
                 </span>
-                {throughputRewardOrPenalty(productionResult.throughputResult)
-                  .type === ThroughputRewardType.SECTOR_REWARD ? (
-                  <span>Share Steps: +1</span>
-                ) : (
-                  <span>
-                    Share Steps:{" "}
-                    {productionResult.steps == 0
-                      ? "0"
-                      : `-${productionResult.steps}`}
-                  </span>
-                )}
-                <Tooltip
-                  className={tooltipStyle}
-                  content={
-                    <p>
-                      Revenue is calculated by multiplying the unit price times
-                      units sold. The units sold is whatever is less, the
-                      customers wanting product from the company or the supply
-                      of the company. The amount of customers who visit the
-                      company is equal to the sector demand plus the company
-                      demand.
-                    </p>
-                  }
-                >
-                  <span>Revenue: ${productionResult.revenue}</span>
-                </Tooltip>
-              </div>
+              )}
+              <Tooltip
+                className={tooltipStyle}
+                content={
+                  <p>
+                    Revenue is calculated by multiplying the unit price times
+                    units sold. The units sold is whatever is less, the
+                    customers wanting product from the company or the supply of
+                    the company. The amount of customers who visit the company
+                    is equal to the sector demand plus the company demand.
+                  </p>
+                }
+              >
+                <span>Revenue: ${productionResult.revenue}</span>
+              </Tooltip>
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
     </div>
   );

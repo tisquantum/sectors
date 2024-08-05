@@ -1,4 +1,10 @@
-import { Company, OrderType, PhaseName, Sector } from "@server/prisma/prisma.client";
+import {
+  Company,
+  GameStatus,
+  OrderType,
+  PhaseName,
+  Sector,
+} from "@server/prisma/prisma.client";
 import { CompanyWithSector } from "@server/prisma/prisma.types";
 
 type CompaniesBySector = Record<
@@ -108,7 +114,10 @@ export const isCurrentPhaseInteractive = (
   );
 };
 
-export const determineColorByOrderType = (orderType: OrderType, isSell: boolean | null) => {
+export const determineColorByOrderType = (
+  orderType: OrderType,
+  isSell: boolean | null
+) => {
   switch (orderType) {
     case OrderType.LIMIT:
       return isSell ? "danger" : "secondary";
@@ -118,5 +127,18 @@ export const determineColorByOrderType = (orderType: OrderType, isSell: boolean 
       return "warning";
     default:
       return "default";
+  }
+};
+
+export const renderGameStatusColor = (status?: GameStatus) => {
+  switch (status) {
+    case GameStatus.PENDING:
+      return "warning";
+    case GameStatus.ACTIVE:
+      return "success";
+    case GameStatus.FINISHED:
+      return "secondary";
+    default:
+      return "warning";
   }
 };

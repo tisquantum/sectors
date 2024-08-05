@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { Prisma, InfluenceVote } from '@prisma/client';
 import { InfluenceVoteWithPlayer } from '@server/prisma/prisma.types';
+import { DEFAULT_INFLUENCE } from '@server/data/constants';
 
 @Injectable()
 export class InfluenceRoundVotesService {
@@ -38,7 +39,7 @@ export class InfluenceRoundVotesService {
   async createInfluenceVote(
     data: Prisma.InfluenceVoteCreateInput,
   ): Promise<InfluenceVote> {
-    //ensure player has not already voted 
+    //ensure player has not already voted
     const existingVote = await this.prisma.influenceVote.findFirst({
       where: {
         playerId: data.Player?.connect?.id || '',
@@ -47,6 +48,10 @@ export class InfluenceRoundVotesService {
     });
     if (existingVote) {
       throw new Error('Player has already voted');
+    }
+    //if vote is higher than maximum, reject
+    if (data.influence > DEFAULT_INFLUENCE) {
+      throw new Error(`Influence cannot be greater than ${DEFAULT_INFLUENCE}`);
     }
     return this.prisma.influenceVote.create({
       data,

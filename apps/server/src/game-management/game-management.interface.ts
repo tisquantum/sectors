@@ -7,4 +7,5 @@ export interface StartGameInput {
   consumerPoolNumber: number;
   bankPoolNumber: number;
   distributionStrategy: DistributionStrategy;
+  gameMaxTurns?: number;
 }

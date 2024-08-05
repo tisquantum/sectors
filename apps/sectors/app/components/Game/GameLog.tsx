@@ -19,7 +19,7 @@ const GameLog = () => {
   if (error) return <div>Error: {error.message}</div>;
   if (!gameLog) return <div>No game log found</div>;
   return (
-    <div className="flex flex-col gap-4 overflow-auto h-96 p-4 rounded-lg shadow-md">
+    <div className="flex flex-col gap-4 p-4 rounded-lg shadow-md">
       {gameLog.map((log) => (
         <div
           key={log.id}

@@ -168,7 +168,7 @@ const CompaniesAccordion = ({
             }
             isCompact
           >
-            <div className="flex">
+            <div className="flex flex-col">
               <div className="flex flex-col">
                 <span>General Information</span>
                 <div className="p-2 grid grid-cols-2 gap-1">

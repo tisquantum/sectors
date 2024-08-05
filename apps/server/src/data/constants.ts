@@ -39,28 +39,29 @@ export const DEFAULT_RESEARCH_DECK_SIZE = 12;
 
 export const GOVERNMENT_GRANT_AMOUNT = 500;
 
-export const AUTOMATION_CARD_REDUCTION_AMOUNT = 20;
-
 export const MARKETING_CONSUMER_BONUS = 4;
 
-export const DEFAULT_INFLUENCE = 100;
+export const DEFAULT_INFLUENCE = process.env.INFLUENCE_MAX
+  ? (process.env.INFLUENCE_MAX as unknown as number)
+  : 50;
 
 export const OPTION_CONTRACT_ACTIVE_COUNT = 3;
 export const OPTION_CONTRACT_MIN_TERM = 1;
 export const OPTION_CONTRACT_MAX_TERM = 4;
 export const LOAN_AMOUNT = 250;
 export const LOAN_INTEREST_RATE = 0.1;
-
+export const PRESTIGE_EFFECT_INCREASE_AMOUNT = 2;
+export const AUTOMATION_EFFECT_OPERATIONS_REDUCTION = 20;
 /**
  * Phase times in milliseconds
  */
 export const phaseTimes = {
-  [PhaseName.INFLUENCE_BID_ACTION]: 60 * 1000,
+  [PhaseName.INFLUENCE_BID_ACTION]: 40 * 1000,
   [PhaseName.INFLUENCE_BID_REVEAL]: 10 * 1000,
   [PhaseName.INFLUENCE_BID_RESOLVE]: 15 * 1000,
   [PhaseName.STOCK_RESOLVE_LIMIT_ORDER]: 15 * 1000,
   [PhaseName.STOCK_MEET]: 30 * 1000,
-  [PhaseName.STOCK_ACTION_ORDER]: 30 * 1000,
+  [PhaseName.STOCK_ACTION_ORDER]: 40 * 1000,
   [PhaseName.STOCK_ACTION_RESULT]: 10 * 1000,
   [PhaseName.STOCK_ACTION_REVEAL]: 12 * 1000,
   [PhaseName.STOCK_RESOLVE_MARKET_ORDER]: 12 * 1000,
@@ -77,14 +78,14 @@ export const phaseTimes = {
   [PhaseName.OPERATING_PRODUCTION_VOTE_RESOLVE]: 10 * 1000,
   [PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT]: 15 * 1000,
   [PhaseName.OPERATING_MEET]: 30 * 1000,
-  [PhaseName.OPERATING_ACTION_COMPANY_VOTE]: 20 * 1000,
+  [PhaseName.OPERATING_ACTION_COMPANY_VOTE]: 25 * 1000,
   [PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT]: 12 * 1000,
   [PhaseName.OPERATING_COMPANY_VOTE_RESOLVE]: 10 * 1000,
   [PhaseName.CAPITAL_GAINS]: 15 * 1000,
   [PhaseName.DIVESTMENT]: 15 * 1000,
   [PhaseName.SECTOR_NEW_COMPANY]: 10 * 1000,
-  [PhaseName.START_TURN]: 10 * 1000,
-  [PhaseName.END_TURN]: 15 * 1000,
+  [PhaseName.START_TURN]: 30 * 1000,
+  [PhaseName.END_TURN]: 20 * 1000,
 };
 
 //Stock Grid Prices
@@ -426,6 +427,8 @@ export const getPreviousCompanyTier = (
 };
 
 export const STOCK_ACTION_SUB_ROUND_MAX = 2;
+
+export const MARGIN_ACCOUNT_ID_PREFIX = 'MA__';
 
 export const CapitalGainsTiers = [
   {

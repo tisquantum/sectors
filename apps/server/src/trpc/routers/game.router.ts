@@ -5,21 +5,25 @@ import { TrpcService } from '../trpc.service';
 import {
   DistributionStrategy,
   Game,
-  Phase,
   PhaseName,
-  Prisma,
   RoundType,
+  GameStatus,
 } from '@prisma/client';
 import { GameManagementService } from '@server/game-management/game-management.service';
 import {
   EVENT_GAME_STARTED,
   getRoomChannelId,
 } from '@server/pusher/pusher.types';
+import { PlayersService } from '@server/players/players.service';
+import { PhaseService } from '@server/phase/phase.service';
+import { checkIsPlayerAction, checkSubmissionTime } from '../trpc.middleware';
 
 type Context = {
   gamesService: GamesService;
   gameManagementService: GameManagementService;
   pusherService: PusherService;
+  playerService: PlayersService;
+  phaseService: PhaseService;
 };
 
 export default (trpc: TrpcService, ctx: Context) =>
@@ -66,6 +70,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           roomName: z.string(),
           startingCashOnHand: z.number(),
           distributionStrategy: z.nativeEnum(DistributionStrategy),
+          gameMaxTurns: z.number(),
           players: z.any().optional(),
           companies: z.any().optional(),
           Player: z.any().optional(),
@@ -86,6 +91,7 @@ export default (trpc: TrpcService, ctx: Context) =>
             consumerPoolNumber: input.consumerPoolNumber,
             bankPoolNumber: input.bankPoolNumber,
             distributionStrategy: input.distributionStrategy,
+            gameMaxTurns: input.gameMaxTurns,
           });
         } catch (error) {
           return {
@@ -122,7 +128,7 @@ export default (trpc: TrpcService, ctx: Context) =>
             currentActivePlayer: z.string().nullable().optional(),
             bankPoolNumber: z.number().optional(),
             consumerPoolNumber: z.number().optional(),
-            gameStatus: z.string().optional(),
+            gameStatus: z.nativeEnum(GameStatus).optional(),
             players: z.any().optional(),
             companies: z.any().optional(),
             Player: z.any().optional(),
@@ -234,7 +240,9 @@ export default (trpc: TrpcService, ctx: Context) =>
       }),
 
     coverShort: trpc.procedure
-      .input(z.object({ shortId: z.number() }))
+      .input(z.object({ shortId: z.number(), gameId: z.string() }))
+      .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
+      .use(async (opts) => checkSubmissionTime(opts, ctx.phaseService))
       .mutation(async ({ input }) => {
         return ctx.gameManagementService.coverShortOrder(input.shortId);
       }),

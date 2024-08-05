@@ -37,6 +37,9 @@ import { InfluenceRoundModule } from './influence-round/influence-round.module';
 import { InfluenceRoundVotesModule } from './influence-round-votes/influence-round-votes.module';
 import { OptionContractModule } from './option-contract/option-contract.module';
 import { ShortOrderModule } from './short-order/short-order.module';
+import { GameRecordModule } from './game-record/game-record.module';
+import { PlayerResultModule } from './player-result/player-result.module';
+import { TransactionModule } from './transaction/transaction.module';
 
 const yourPusherOptions = {
   cluster: process.env.PUSHER_CLUSTER ?? 'CLUSTER',
@@ -53,7 +56,9 @@ const chunkingOptions = {
 @Module({
   imports: [
     TrpcModule,
-    ConfigModule.forRoot(),
+    ConfigModule.forRoot({
+      envFilePath: ['.env', '.env.local'],
+    }),
     PlayersModule,
     UsersModule,
     RoomsModule,
@@ -88,6 +93,9 @@ const chunkingOptions = {
     InfluenceRoundVotesModule,
     OptionContractModule,
     ShortOrderModule,
+    GameRecordModule,
+    PlayerResultModule,
+    TransactionModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -14,10 +14,12 @@ import { trpc } from "@sectors/app/trpc";
 import { notFound } from "next/navigation";
 import { PlayerWithShares } from "@server/prisma/prisma.types";
 import { Company } from "@server/prisma/prisma.client";
-import { RiSafe2Fill, RiWallet3Fill } from "@remixicon/react";
+import { RiCurrencyFill, RiSafe2Fill, RiWallet3Fill } from "@remixicon/react";
 import PlayerAvatar from "./PlayerAvatar";
 import { useGame } from "../Game/GameContext";
 import { tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
+import { calculateNetWorth } from "@server/data/helpers";
+import WalletInfo from "../Game/WalletInfo";
 
 export interface StockAggregation {
   totalShares: number;
@@ -67,7 +69,24 @@ const PlayersOverview = ({ gameId }: { gameId: string }) => {
                   content={<p>Cash on hand.</p>}
                 >
                   <span className="flex items-center content-center">
-                    <RiWallet3Fill size={18} /> ${playerWithShares.cashOnHand}
+                    <WalletInfo player={playerWithShares} />
+                  </span>
+                </Tooltip>
+                <Tooltip
+                  className={tooltipStyle}
+                  content={
+                    <p>
+                      Networth: the total value of all shares owned plus cash on
+                      hand.
+                    </p>
+                  }
+                >
+                  <span className="flex items-center content-center">
+                    <RiCurrencyFill className="h-6 w-6" /> $
+                    {calculateNetWorth(
+                      playerWithShares.cashOnHand,
+                      playerWithShares.Share
+                    )}
                   </span>
                 </Tooltip>
                 {playerWithShares.marginAccount > 0 && (
