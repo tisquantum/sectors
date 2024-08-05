@@ -244,6 +244,20 @@ export default (trpc: TrpcService, ctx: Context) =>
       .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
       .use(async (opts) => checkSubmissionTime(opts, ctx.phaseService))
       .mutation(async ({ input }) => {
-        return ctx.gameManagementService.coverShortOrder(input.shortId);
+        try {
+          ctx.gameManagementService.coverShortOrder(input.shortId);
+        } catch (error) {
+          throw new Error('Error covering short order');
+        }
+      }),
+    pauseGame: trpc.procedure
+      .input(z.object({ gameId: z.string() }))
+      .mutation(async ({ input }) => {
+        return ctx.gameManagementService.pauseGame(input.gameId);
+      }),
+    resumeGame: trpc.procedure
+      .input(z.object({ gameId: z.string() }))
+      .mutation(async ({ input }) => {
+        return ctx.gameManagementService.resumeGame(input.gameId);
       }),
   });

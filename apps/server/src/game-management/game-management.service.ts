@@ -232,7 +232,7 @@ export class GameManagementService {
         await this.resolveExpiredOptionContracts(phase);
         break;
       case PhaseName.STOCK_SHORT_ORDER_INTEREST:
-        await this.resolveShortOrdersInterest(phase);
+        await this.resolveBorrowInterestShorts(phase);
         break;
       case PhaseName.STOCK_RESOLVE_PENDING_SHORT_ORDER:
         await this.resolvePendingShortOrders(phase);
@@ -263,7 +263,6 @@ export class GameManagementService {
         break;
       case PhaseName.END_TURN:
         await this.resolveCompanyLoans(phase);
-        await this.resolveBorrowInterestShorts(phase);
         await this.optionContractGenerate(phase);
         const isEndGame = await this.checkAndTriggerEndGame(phase);
         if (!isEndGame) {
@@ -508,22 +507,28 @@ export class GameManagementService {
       });
     //charge interest to players cash on hand (cannot go below 0) by mutltiplying borrowRate by the short order amount
     const shortOrderPromises = shortOrders.map(async (shortOrder) => {
+      const borrowTax = Math.floor(
+        (shortOrder?.ShortOrder?.shortSalePrice || 0) *
+          ((shortOrder?.ShortOrder?.borrowRate || BORROW_RATE) / 100),
+      );
       const newCashOnHand = Math.max(
-        shortOrder.Player.cashOnHand -
-          (shortOrder?.ShortOrder?.shortSalePrice || 0) *
-            ((shortOrder?.ShortOrder?.borrowRate || BORROW_RATE) / 100),
+        shortOrder.Player.cashOnHand - borrowTax,
         0,
       );
       await this.playersService.updatePlayer({
         where: { id: shortOrder.playerId },
         data: { cashOnHand: newCashOnHand },
       });
+      await this.playerRemoveMoney(
+        shortOrder.gameId,
+        shortOrder.playerId,
+        borrowTax,
+        EntityType.BANK,
+        `Interest on short order.`,
+      );
       await this.gameLogService.createGameLog({
         game: { connect: { id: phase.gameId } },
-        content: `Player ${shortOrder.Player.nickname} has been charged $${
-          (shortOrder?.ShortOrder?.shortSalePrice || 0) *
-          (shortOrder?.ShortOrder?.borrowRate || BORROW_RATE)
-        } for interest on a short order.`,
+        content: `Player ${shortOrder.Player.nickname} has been charged $${borrowTax} for interest on a short order.`,
       });
     });
     await Promise.all(shortOrderPromises);
@@ -981,7 +986,9 @@ export class GameManagementService {
     }
 
     const sharePromises = playersToDivest.map((player) => async () => {
-      const shares = player.Share;
+      let shares = player.Share;
+      //filter out all shares that have a shortOrderId
+      shares = shares.filter((share) => !share.shortOrderId);
       const shuffledShares = this.shuffleArray([
         ...shares,
       ]) as ShareWithCompany[];
@@ -1250,27 +1257,28 @@ export class GameManagementService {
 
       if (dividend > 0) {
         //filter shares by location IPO
-        const companyShares = company.Share.filter(
-          (share) => share.location === ShareLocation.IPO,
-        );
-        const companyDividendTotal = Math.floor(
-          dividend * companyShares.length,
-        );
-        const updatedCompany = await this.companyService.updateCompany({
-          where: { id: company.id },
-          data: { cashOnHand: company.cashOnHand + companyDividendTotal },
-        });
+        // TODO: After some thought, I don't believe it makes sense to pay the company any dividends for shares in IPO or OM
+        // const companyShares = company.Share.filter(
+        //   (share) => share.location === ShareLocation.IPO,
+        // );
+        // const companyDividendTotal = Math.floor(
+        //   dividend * companyShares.length,
+        // );
+        // const updatedCompany = await this.companyService.updateCompany({
+        //   where: { id: company.id },
+        //   data: { cashOnHand: company.cashOnHand + companyDividendTotal },
+        // });
         //if company has positive cash on hand, make sure it's active
-        if (updatedCompany.cashOnHand > 0) {
-          await this.companyService.updateCompany({
-            where: { id: company.id },
-            data: { status: CompanyStatus.ACTIVE },
-          });
-        }
-        this.gameLogService.createGameLog({
-          game: { connect: { id: phase.gameId } },
-          content: `Company ${company.name} has received dividends of ${companyDividendTotal}.`,
-        });
+        // if (updatedCompany.cashOnHand > 0) {
+        //   await this.companyService.updateCompany({
+        //     where: { id: company.id },
+        //     data: { status: CompanyStatus.ACTIVE },
+        //   });
+        // }
+        // this.gameLogService.createGameLog({
+        //   game: { connect: { id: phase.gameId } },
+        //   content: `Company ${company.name} has received dividends of ${companyDividendTotal}.`,
+        // });
         //group shares by player id
         const groupedShares = company.Share.filter(
           (share) => share.location === ShareLocation.PLAYER,
@@ -1298,7 +1306,7 @@ export class GameManagementService {
               console.error('Player not found');
               return;
             }
-            const dividendTotal = dividend * shares.length;
+            const dividendTotal = Math.floor(dividend * shares.length);
             await this.playersService.updatePlayer({
               where: { id: player.id },
               data: { cashOnHand: player.cashOnHand + dividendTotal },
@@ -3967,44 +3975,6 @@ export class GameManagementService {
     }
   }
 
-  async resolveShortOrdersInterest(phase: Phase) {
-    const shortOrdersOpen: PlayerOrderWithPlayerCompanySectorShortOrder[] =
-      await this.prisma.playerOrder.findMany({
-        where: {
-          orderStatus: OrderStatus.OPEN,
-          orderType: OrderType.SHORT,
-        },
-        include: {
-          Company: true,
-          Player: true,
-          Sector: true,
-          ShortOrder: {
-            include: {
-              Share: true,
-            },
-          },
-        },
-      });
-    if (!shortOrdersOpen) {
-      throw new Error('Stock round not found');
-    }
-    //collect interest from the players who have short orders by multiplying the interest rate by the "principal", which is the price of the share at the time it was issued.
-    shortOrdersOpen.forEach(async (order) => {
-      if (order.ShortOrder) {
-        //after the first turn, short orders begin to accrue interest
-        const shortOrder: ShortOrderWithShares = order.ShortOrder;
-        //subtract this from the players cash on hand
-        this.playerRemoveMoney(
-          order.gameId,
-          order.playerId,
-          Math.floor(shortOrder.shortSalePrice * (shortOrder.borrowRate / 100)),
-          EntityType.BANK,
-          `Interest on short order for ${order.Company.stockSymbol}`,
-        );
-      }
-    });
-  }
-
   async resolvePendingShortOrders(phase: Phase) {
     if (phase.stockRoundId) {
       const shortOrders: PlayerOrderWithPlayerCompanySectorShortOrder[] =
@@ -5719,6 +5689,54 @@ export class GameManagementService {
       content: `Player ${player.nickname} has covered short order ${
         updatedShortOrder.id
       } for ${shortOrder.Company.name} at $${stockPrice.toFixed(2)}`,
+    });
+  }
+  /**
+   * Pause the current game.
+   */
+  public async pauseGame(gameId: string) {
+    // Logic to pause the game, e.g., set a paused flag in the game model
+    await this.prisma.game.update({
+      where: { id: gameId },
+      data: { isPaused: true },
+    });
+  }
+
+  /**
+   * Resume the current game.
+   */
+  public async resumeGame(gameId: string) {
+    // Logic to resume the game, e.g., clear the paused flag in the game model
+    await this.prisma.game.update({
+      where: { id: gameId },
+      data: { isPaused: false },
+    });
+    // Resume the timers
+    await this.resumeTimerForGame(gameId);
+  }
+
+  /**
+   * Resume the timer for a specific game.
+   *
+   * @param gameId - The ID of the game to resume the timer for.
+   */
+  public async resumeTimerForGame(gameId: string) {
+    //get game
+    const game = await this.gamesService.game({ id: gameId });
+    if (!game) {
+      throw new Error('Game not found');
+    }
+    //get current phase
+    const phase = await this.phaseService.currentPhase(gameId);
+    if (!phase) {
+      throw new Error('Phase not found');
+    }
+    await this.startPhaseTimer({
+      phase,
+      gameId: gameId,
+      stockRoundId: game.currentStockRoundId || undefined,
+      operatingRoundId: game.currentOperatingRoundId || undefined,
+      influenceRoundId: undefined,
     });
   }
 }

@@ -30,6 +30,23 @@ export class CardsService {
     return this.prisma.card.findMany();
   }
 
+  async listCards(params: {
+    skip?: number;
+    take?: number;
+    cursor?: Prisma.CardWhereUniqueInput;
+    where?: Prisma.CardWhereInput;
+    orderBy?: Prisma.CardOrderByWithRelationInput;
+  }): Promise<Card[]> {
+    const { skip, take, cursor, where, orderBy } = params;
+    return this.prisma.card.findMany({
+      skip,
+      take,
+      cursor,
+      where,
+      orderBy,
+    });
+  }
+
   async updateCard(id: number, data: Prisma.CardUpdateInput): Promise<Card> {
     return this.prisma.card.update({
       where: { id },

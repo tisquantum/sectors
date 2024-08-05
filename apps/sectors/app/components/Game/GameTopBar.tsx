@@ -17,18 +17,18 @@ import Button from "@sectors/app/components/General/DebounceButton";
 const PassiveLoading = () => <Spinner color="secondary" />;
 
 const GameTopBar = ({
-  gameId,
   handleCurrentView,
   isTimerAtZero,
 }: {
-  gameId: string;
   handleCurrentView: (view: string) => void;
   isTimerAtZero?: boolean;
 }) => {
   const [currentView, setCurrentView] = useState<string>("action");
   const useNextPhaseMutation = trpc.game.forceNextPhase.useMutation();
   const useRetryPhaseMutation = trpc.game.retryPhase.useMutation();
-  const { currentPhase, gameState } = useGame();
+  const usePauseGameMutation = trpc.game.pauseGame.useMutation();
+  const useResumeGameMutation = trpc.game.resumeGame.useMutation();
+  const { currentPhase, gameState, gameId } = useGame();
 
   const handleViewChange = (view: string) => {
     setCurrentView(view);
@@ -141,6 +141,12 @@ const GameTopBar = ({
       gameId,
     });
   };
+  const pauseGame = () => {
+    const pauseGameMutation = usePauseGameMutation.mutate({ gameId });
+  };
+  const resumeGame = () => {
+    const resumeGameMutation = useResumeGameMutation.mutate({ gameId });
+  };
   return (
     <div className="flex justify-between p-2">
       <ButtonGroup>
@@ -171,6 +177,8 @@ const GameTopBar = ({
       </ButtonGroup>
       {/* <Button onClick={handleNextPhase}>Next Phase</Button>
       <Button onClick={handleRetryPhase}>Retry Phase</Button> */}
+      <Button onClick={pauseGame}>Pause Game</Button>
+      <Button onClick={resumeGame}>Resume Game</Button>
       {currentPhase?.name && !isActivePhase(currentPhase.name) && (
         <div
           className={`flex flex-col justify-center items-center ${

@@ -1,6 +1,7 @@
 "use client";
 
 import { FC } from "react";
+import ThroughputLegend from "./ThroughputLegend";
 
 const overviewRules = (
   <>
@@ -59,8 +60,9 @@ const stockRoundRules = (
           <strong>Short Orders:</strong> Borrow shares from the market and sell
           them immediately. Cover these shares in a subsequent turn by
           purchasing the same quantity at the current market price. Short Orders
-          are placed against the OPEN MARKET. Short orders have an on-going interest borrow rate.
-          Short order share dividends must be covered by the player.
+          are placed against the OPEN MARKET. Short orders have an on-going
+          interest borrow rate. Short order share dividends must be covered by
+          the player.
         </li>
         <li>
           <strong>Options Contracts:</strong> Purchase the right to buy or sell
@@ -128,6 +130,22 @@ const operatingRoundRules = (
       shareholders determine company actions.
     </p>
     <p>
+      <strong>Throughput:</strong> Measures company efficiency.
+      <ul className="list-disc pl-5">
+        <li>Calculated by subtracting total demand from supply.</li>
+        <li>The closer to 0, the more efficient the company is operating.</li>
+        <li>
+          If a company reaches zero efficiency, it is awarded one increment
+          forward in share price.
+        </li>
+      </ul>
+      <ThroughputLegend />
+    </p>
+    <p>
+      <strong>Sales Bonus:</strong> Companies who sell all of their produced
+      units of the operating round receive a prestige token.
+    </p>
+    <p>
       <strong>Production:</strong> Calculates revenue and operational
       efficiency.
       <ul className="list-disc pl-5">
@@ -143,15 +161,42 @@ const operatingRoundRules = (
       </ul>
     </p>
     <p>
-      <strong>Throughput:</strong> Measures company efficiency.
+      <strong>Revenue Distribution Vote</strong>
+      <p>
+        Players will vote on how company revenue should be distributed. The vote
+        is weighted based on share ownership. One of three options can be
+        chosen, Full Dividends, Half Dividends or Retain.
+      </p>
+    </p>
+    <p>
+      <strong>Revenue Distribution</strong>
       <ul className="list-disc pl-5">
-        <li>Calculated by subtracting total demand from supply.</li>
-        <li>The closer to 0, the more efficient the company is operating.</li>
+        <li>
+          <strong>Full Dividends:</strong> All revenue is distributed to
+          shareholders.
+        </li>
+        <li>
+          <strong>Half Dividends:</strong> Half of the revenue is distributed to
+          shareholders. Half of the revenue is retained for the company.
+        </li>
+        <li>
+          <strong>Retain:</strong> All revenue is retained by the company.
+        </li>
       </ul>
     </p>
     <p>
-      <strong>Sales Bonus:</strong> Companies who sell all of their produced
-      units of the operating round receive a prestige token.
+      <strong>Stock Price Adjustment</strong>
+      <p>
+        The companies share price will be adjusted by one step by the total
+        amount of revenue distributed to shareholders divided by it's current
+        stock price, rounded down. For example, if a company has a stock price
+        of $10 and distributes $100 of revenue to shareholders, the stock price
+        will move up 10 steps.
+      </p>
+      <p>
+        If the company elects to retain revenue, it automatically moves down 1
+        step in stock price.
+      </p>
     </p>
   </>
 );
@@ -169,8 +214,8 @@ const customerMovement = (
   <>
     <p>
       Each stock sector has customers that move to it from the global consumer
-      pool every turn, based on the sector&apos;s demand. Various events can trigger
-      customer movement to a sector.
+      pool every turn, based on the sector&apos;s demand. Various events can
+      trigger customer movement to a sector.
     </p>
   </>
 );

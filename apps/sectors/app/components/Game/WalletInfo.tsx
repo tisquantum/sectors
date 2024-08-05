@@ -20,7 +20,7 @@ const WalletInfo = ({ player }: { player: Player }) => {
       <div className="flex gap-1 items-center cursor-pointer" onClick={onOpen}>
         <RiWalletFill size={18} /> ${player.cashOnHand}
       </div>
-      <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
+      <Modal isOpen={isOpen} onOpenChange={onOpenChange} className="h-full">
         <ModalContent>
           {(onClose) => (
             <>
@@ -30,7 +30,7 @@ const WalletInfo = ({ player }: { player: Player }) => {
                   <div>{player.nickname} Transaction History</div>
                 </div>
               </ModalHeader>
-              <ModalBody>
+              <ModalBody className="overflow-auto">
                 <MoneyTransactionHistoryByPlayer player={player} />
               </ModalBody>
               <ModalFooter>

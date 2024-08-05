@@ -10,16 +10,23 @@ const CoverShortButton = ({ shortOrderId }: { shortOrderId: number }) => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const useCoverShortMutation = trpc.game.coverShort.useMutation();
   return (
-    <DebounceButton
-      onClick={() => {
-        useCoverShortMutation.mutate({
-          shortId: shortOrderId,
-          gameId
-        });
-      }}
-    >
-      Cover Short Order
-    </DebounceButton>
+    <>
+      {isSubmitted ? (
+        <div>Covering short order...</div>
+      ) : (
+        <DebounceButton
+          onClick={() => {
+            useCoverShortMutation.mutate({
+              shortId: shortOrderId,
+              gameId,
+            });
+            setIsSubmitted(true);
+          }}
+        >
+          Cover Short Order
+        </DebounceButton>
+      )}
+    </>
   );
 };
 const CoverShortOrders = () => {

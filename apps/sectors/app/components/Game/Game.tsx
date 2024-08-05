@@ -215,7 +215,6 @@ const Game = ({ gameId }: { gameId: string }) => {
       </motion.div> */}
       <div className="flex flex-col w-full">
         <GameTopBar
-          gameId={gameId}
           handleCurrentView={handleCurrentView}
           isTimerAtZero={isTimerAtZero}
         />

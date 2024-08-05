@@ -40,6 +40,7 @@ import {
 import { CompanyTierData } from "@server/data/constants";
 import CompanyInfo from "./CompanyInfo";
 import { calculateCompanySupply } from "@server/data/helpers";
+import CompanyResearchCards from "./CompanyResearchCards";
 
 type ShareGroupedByPlayer = {
   [key: string]: ShareWithPlayer[];
@@ -236,6 +237,10 @@ const CompaniesAccordion = ({
                   )}
                   {renderPlayerShares(company.Share || [])}
                 </div>
+              </div>
+              <div className="flex flex-col">
+                <span>Research Cards</span>
+                <CompanyResearchCards companyId={company.id} />
               </div>
             </div>
           </AccordionItem>

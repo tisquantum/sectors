@@ -7,10 +7,12 @@ import {
   ModalFooter,
   Button,
   useDisclosure,
+  Tooltip,
 } from "@nextui-org/react";
 import { Card } from "@server/prisma/prisma.client";
 import { useGame } from "../Game/GameContext";
 import { motion } from "framer-motion";
+import { tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
 
 const ResearchDeck = () => {
   //TODO: Add descript state for companies
@@ -51,12 +53,18 @@ const ResearchDeck = () => {
             </h2>
             <div className="flex gap-2">
               {cards.map((card) => (
-                <div
+                <Tooltip
                   key={card.id}
-                  className="p-2 bg-gray-700 rounded-md text-white"
+                  className={tooltipStyle}
+                  content={<p>{card.description}</p>}
                 >
-                  {card.name}
-                </div>
+                  <div
+                    key={card.id}
+                    className="p-2 bg-gray-700 rounded-md text-white"
+                  >
+                    {card.name}
+                  </div>
+                </Tooltip>
               ))}
             </div>
           </motion.div>

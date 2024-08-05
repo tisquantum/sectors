@@ -45,14 +45,14 @@ const BankInfo = () => {
       <div className="flex gap-1 items-center cursor-pointer" onClick={onOpen}>
         <RiBankFill size={18} /> ${gameState.bankPoolNumber}
       </div>
-      <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
+      <Modal isOpen={isOpen} onOpenChange={onOpenChange} className="h-full">
         <ModalContent>
           {(onClose) => (
             <>
               <ModalHeader className="flex flex-col gap-1">
                 Wallet Transaction History
               </ModalHeader>
-              <ModalBody>
+              <ModalBody className="overflow-auto">
                 <MoneyTransactionByEntityType
                   entityType={EntityType.BANK}
                   gameId={gameId}

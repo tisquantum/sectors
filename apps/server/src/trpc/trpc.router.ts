@@ -59,6 +59,8 @@ import { OptionContractService } from '@server/option-contract/option-contract.s
 import { createContext } from './trpc.context';
 import transactionRouter from './routers/transaction.router';
 import { TransactionService } from '@server/transaction/transaction.service';
+import cardsRouter from './routers/cards.router';
+import { CardsService } from '@server/cards/cards.service';
 @Injectable()
 export class TrpcRouter {
   constructor(
@@ -92,6 +94,7 @@ export class TrpcRouter {
     private readonly playerPriorityService: PlayerPriorityService,
     private readonly optionContractService: OptionContractService,
     private readonly transactionService: TransactionService,
+    private readonly cardsService: CardsService,
   ) {}
 
   appRouter = this.trpc.router({
@@ -206,6 +209,9 @@ export class TrpcRouter {
     }),
     transactions: transactionRouter(this.trpc, {
       transactionService: this.transactionService,
+    }),
+    cards: cardsRouter(this.trpc, {
+      cardsService: this.cardsService,
     }),
   });
 

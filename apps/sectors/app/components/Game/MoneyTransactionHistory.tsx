@@ -91,7 +91,7 @@ export const MoneyTransactionHistoryByPlayer = ({
   }
 
   return (
-    <div className="container mx-auto p-4 overflow-y-auto">
+    <div className="container mx-auto p-4 flex flex-col h-full overflow-y-auto">
       <TransactionHistory transactions={transactions} />
     </div>
   );
@@ -123,7 +123,7 @@ export const MoneyTransactionByEntityType = ({
   }
 
   return (
-    <div className="container mx-auto p-4 overflow-y-auto">
+    <div className="container mx-auto p-4 flex flex-col h-full overflow-y-auto">
       <TransactionHistory transactions={transactions} />
     </div>
   );

@@ -22,6 +22,8 @@ import { calculateCompanySupply } from "@server/data/helpers";
 import { CompanyStatus, Share } from "@server/prisma/prisma.client";
 import { CompanyWithSector } from "@server/prisma/prisma.types";
 import { BarList } from "@tremor/react";
+import ThroughputLegend from "../Game/ThroughputLegend";
+import { trpc } from "@sectors/app/trpc";
 
 const buildBarChart = (share: Share[]) => {
   //group shares by location and sum the quantity
@@ -45,7 +47,8 @@ const CompanyMoreInfo = ({
 }: {
   company: CompanyWithSector;
   showingProductionResults?: boolean;
-}) => (
+}) => {
+  return (
   <div className="flex gap-1 justify-start my-2">
     <div
       className="flex flex-col px-2 rounded-md"
@@ -133,11 +136,16 @@ const CompanyMoreInfo = ({
       <Tooltip
         className={tooltipStyle}
         content={
-          <p>
-            Throughput. The base sector demand plus the companies demand minus
-            it&apos;s supply. The closer to zero, the more efficient the company
-            is operating.
-          </p>
+          <div className="flex flex-col gap-2">
+            <p>
+              Throughput. The base sector demand plus the companies demand minus
+              it&apos;s supply. The closer to zero, the more efficient the
+              company is operating.
+            </p>
+            <div className="flex flex-col gap-2">
+              <ThroughputLegend />
+            </div>
+          </div>
         }
       >
         <div className="flex items-center">
@@ -187,7 +195,8 @@ const CompanyMoreInfo = ({
       )}
     </div>
   </div>
-);
+  );
+};
 
 const CompanyInfo = ({
   company,

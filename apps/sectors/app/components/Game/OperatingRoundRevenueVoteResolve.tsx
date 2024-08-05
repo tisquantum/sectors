@@ -169,7 +169,7 @@ const OperatingRoundRevenueVoteResolve = () => {
                             />
                           );
                         })}
-                        <Badge
+                        {/* <Badge
                           content={
                             "$" +
                             calculateDividendFullRetainedRevenue(
@@ -178,7 +178,7 @@ const OperatingRoundRevenueVoteResolve = () => {
                           }
                         >
                           <Avatar name={productionResult.Company.stockSymbol} />
-                        </Badge>
+                        </Badge> */}
                       </>
                     )}
                     {productionResult?.revenueDistribution ===
