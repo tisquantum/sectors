@@ -478,7 +478,7 @@ export const PrestigeTrack = [
     type: PrestigeReward.ELASTICITY,
     name: 'Sector Elasticity',
     description: 'The sector receives +1 base demand.',
-    probability: 0.08,
+    probability: 0.07,
     cost: 3,
   },
   {
@@ -486,7 +486,7 @@ export const PrestigeTrack = [
     name: 'Magnet Effect',
     description:
       'All other companies in the stock sector receive +1 stock price.',
-    probability: 0.05,
+    probability: 0.06,
     cost: 2,
   },
   {
@@ -501,7 +501,7 @@ export const PrestigeTrack = [
     name: 'Capital Injection',
     description:
       'The company receives the money on this space of the track. If you pass over this, the money across all capital injections doubles.',
-    probability: 0.1,
+    probability: 0.15,
     cost: 3,
   },
   {
@@ -510,5 +510,13 @@ export const PrestigeTrack = [
     description: 'The company receives a +1 stock price adjustment.',
     probability: 0.12,
     cost: 1,
+  },
+  {
+    type: PrestigeReward.INFLUENCER,
+    name: 'Influencer',
+    description:
+      'The company receives +1 permanent demand.',
+    probability: 0.08,
+    cost: 4,
   },
 ];

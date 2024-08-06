@@ -100,6 +100,7 @@ import {
 import { TimerService } from '@server/timer/timer.service';
 import {
   calculateCompanySupply,
+  calculateDemand,
   calculateMarginAccountMinimum,
   calculateNetWorth,
   calculateStepsAndRemainder,
@@ -1133,7 +1134,7 @@ export class GameManagementService {
         gameLogPromises.push(
           this.gameLogService.createGameLog({
             game: { connect: { id: phase.gameId } },
-            content: `Player ${player.nickname} has paid capital gains tax of ${taxAmount}.`,
+            content: `Player ${player.nickname} has paid capital gains tax of $${taxAmount}.`,
           }),
         );
       }
@@ -1313,7 +1314,7 @@ export class GameManagementService {
             });
             this.gameLogService.createGameLog({
               game: { connect: { id: phase.gameId } },
-              content: `Player ${player.nickname} has received dividends of ${dividendTotal}.`,
+              content: `Player ${player.nickname} has received dividends of $${dividendTotal}.`,
             });
           },
         );
@@ -1762,11 +1763,31 @@ export class GameManagementService {
       case PrestigeReward.MAGNET_EFFECT:
         this.resolveMagnetEffect(prestigeReward);
         return;
+      case PrestigeReward.INFLUENCER:
+        this.resolveInfluencer(prestigeReward);
       default:
         return;
     }
   }
 
+  async resolveInfluencer(prestigeReward: PrestigeRewards) {
+    //get company
+    const company = await this.companyService.companyWithSector({
+      id: prestigeReward.companyId,
+    });
+    if (!company) {
+      throw new Error('Company not found');
+    }
+    //increase base demand
+    await this.companyService.updateCompany({
+      where: {
+        id: company.id,
+      },
+      data: {
+        baseDemand: company.baseDemand + 1,
+      },
+    });
+  }
   async resolveMagnetEffect(prestigeReward: PrestigeRewards) {
     //get company
     const company = await this.companyService.companyWithSector({
@@ -2359,6 +2380,7 @@ export class GameManagementService {
    */
   calculateThroughputByTheoreticalDemand(company: {
     demandScore: number;
+    baseDemand: number;
     Sector: {
       demand: number;
       demandBonus?: number;
@@ -2372,7 +2394,10 @@ export class GameManagementService {
       company.supplyBase,
       company.supplyMax,
     );
-    const throughput = company.demandScore + totalSectorDemand - companySupply;
+    const throughput =
+      calculateDemand(company.demandScore, company.baseDemand) +
+      totalSectorDemand -
+      companySupply;
     return throughput;
   }
 
@@ -2458,7 +2483,7 @@ export class GameManagementService {
       }
       this.gameLogService.createGameLog({
         game: { connect: { id: phase.gameId } },
-        content: `Company ${company.name} has paid operating costs of ${
+        content: `Company ${company.name} has paid operating costs of $${
           CompanyTierData[company.companyTier].operatingCosts
         }.`,
       });
@@ -2500,6 +2525,7 @@ export class GameManagementService {
       id: string;
       prestigeTokens?: number;
       demandScore?: number;
+      baseDemand?: number;
     }[] = [];
     const productionResults: Prisma.ProductionResultCreateManyInput[] = [];
     const stockPenalties: {
@@ -2541,7 +2567,7 @@ export class GameManagementService {
           company.supplyMax,
         );
         const maxCustomersAttracted =
-          company.demandScore +
+          calculateDemand(company.demandScore, company.baseDemand) +
           company.Sector.demand +
           (company.Sector.demandBonus || 0);
         let unitsSold = Math.min(
@@ -3047,6 +3073,7 @@ export class GameManagementService {
           throughput: company.throughput,
           companyTier: company.companyTier,
           demandScore: 0,
+          baseDemand: 0,
           supplyCurrent: 0,
           supplyMax:
             CompanyTierData[company.companyTier as CompanyTier].supplyMax,
@@ -5681,6 +5708,18 @@ export class GameManagementService {
       where: { id: shortOrderId },
       data: {
         coverPrice: stockPrice,
+      },
+    });
+    if (!updatedShortOrder.playerOrderId) {
+      throw new Error('No player order id found.');
+    }
+    //update player order to filled
+    const playerOrder = await this.playerOrderService.updatePlayerOrder({
+      where: {
+        id: updatedShortOrder.playerOrderId,
+      },
+      data: {
+        orderStatus: OrderStatus.FILLED,
       },
     });
     //game log

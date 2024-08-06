@@ -69,9 +69,10 @@ const CoverShortOrders = () => {
               Shares Price At Purchase:{" "}
               {shortOrder.ShortOrder?.shortStockPriceAtPurchase}
             </div>
-            {authPlayer.id == shortOrder.Player.id && (
-              <CoverShortButton shortOrderId={shortOrder.id} />
-            )}
+            {authPlayer.id == shortOrder.Player.id &&
+              shortOrder.ShortOrder?.id && (
+                <CoverShortButton shortOrderId={shortOrder.ShortOrder.id} />
+              )}
           </div>
         ))}
       </div>

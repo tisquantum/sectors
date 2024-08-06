@@ -245,6 +245,7 @@ export default (trpc: TrpcService, ctx: Context) =>
       .use(async (opts) => checkSubmissionTime(opts, ctx.phaseService))
       .mutation(async ({ input }) => {
         try {
+          console.log('input short id', input);
           ctx.gameManagementService.coverShortOrder(input.shortId);
         } catch (error) {
           throw new Error('Error covering short order');

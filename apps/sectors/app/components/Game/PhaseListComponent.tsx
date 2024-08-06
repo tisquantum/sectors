@@ -89,7 +89,7 @@ const PhaseListComponent = () => {
     );
   }
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2 overflow-y-auto max-h-full scrollbar">
       {_phasesInOrder.map((phase) => (
         <div key={phase}>
           {phase === PhaseName.STOCK_ACTION_ORDER && (

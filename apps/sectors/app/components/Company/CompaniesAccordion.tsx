@@ -39,7 +39,7 @@ import {
 } from "@remixicon/react";
 import { CompanyTierData } from "@server/data/constants";
 import CompanyInfo from "./CompanyInfo";
-import { calculateCompanySupply } from "@server/data/helpers";
+import { calculateCompanySupply, calculateDemand } from "@server/data/helpers";
 import CompanyResearchCards from "./CompanyResearchCards";
 
 type ShareGroupedByPlayer = {
@@ -184,7 +184,7 @@ const CompaniesAccordion = ({
                     ) || 0}
                   </p>
                   <p>
-                    <strong>Company Demand:</strong> {company.demandScore || 0}
+                    <strong>Company Demand:</strong> {calculateDemand(company.demandScore, company.baseDemand) || 0}
                   </p>
                   <p>
                     <strong>Sector Demand:</strong>{" "}
@@ -193,7 +193,7 @@ const CompaniesAccordion = ({
                   </p>
                   <p>
                     <strong>Demand Score:</strong>{" "}
-                    {company.demandScore ||
+                    {calculateDemand(company.demandScore, company.baseDemand) ||
                       0 +
                         company.Sector.demand +
                         (company.Sector.demandBonus || 0) ||
@@ -201,7 +201,7 @@ const CompaniesAccordion = ({
                   </p>
                   <p>
                     <strong>Throughput:</strong>{" "}
-                    {company.demandScore ||
+                    {calculateDemand(company.demandScore, company.baseDemand) ||
                       0 +
                         company.Sector.demand +
                         (company.Sector.demandBonus || 0) ||

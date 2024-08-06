@@ -394,7 +394,10 @@ export function companyPriorityOrderOperations(companies: CompanyWithSector[]) {
     } else if (a.unitPrice !== b.unitPrice) {
       return a.unitPrice - b.unitPrice;
     } else {
-      return b.demandScore - a.demandScore;
+      return (
+        calculateDemand(b.demandScore, b.baseDemand) -
+        calculateDemand(a.demandScore, a.baseDemand)
+      );
     }
   });
 }
@@ -684,4 +687,8 @@ export function getRandomCompany(sectorName: SectorName): {
         symbol: 'GEN',
       };
   }
+}
+
+export function calculateDemand(demandScore: number, baseDemand: number) {
+  return demandScore + baseDemand;
 }

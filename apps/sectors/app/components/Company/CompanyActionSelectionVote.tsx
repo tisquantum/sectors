@@ -209,7 +209,10 @@ const CompanyActionSelectionVote = ({
                 className={`${
                   companyAction?.action == action.name ? "bg-blue-700" : ""
                 } ${
-                  selectedAction == action.name ? "ring-2 ring-blue-500" : ""
+                  selectedAction == action.name &&
+                  currentPhase?.name === PhaseName.OPERATING_ACTION_COMPANY_VOTE
+                    ? "ring-2 ring-blue-500"
+                    : ""
                 }`}
               >
                 <CardHeader>
