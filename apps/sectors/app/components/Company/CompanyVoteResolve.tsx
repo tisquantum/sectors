@@ -7,8 +7,10 @@ import {
 import CompanyInfo from "./CompanyInfo";
 import PrestigeRewardComponent from "../Game/PrestigeReward";
 import {
+  LARGE_MARKETING_CAMPAIGN_DEMAND,
   MARKETING_CONSUMER_BONUS,
   PrestigeTrack,
+  SMALL_MARKETING_CAMPAIGN_DEMAND,
 } from "@server/data/constants";
 import PrestigeRewards from "../Game/PrestigeRewards";
 
@@ -86,7 +88,8 @@ const CompanyVoteResolve = () => {
             <div>
               <p>
                 The sector receives {MARKETING_CONSUMER_BONUS} additional
-                consumers. Your company receives +3 demand that decays 1 per
+                consumers. Your company receives +
+                {LARGE_MARKETING_CAMPAIGN_DEMAND} demand that decays 1 per
                 production phase.
               </p>
             </div>
@@ -98,8 +101,8 @@ const CompanyVoteResolve = () => {
             <span>Small Marketing Campaign</span>
             <div>
               <p>
-                The company receives +2 demand that decays 1 per production
-                phase.
+                The company receives +{SMALL_MARKETING_CAMPAIGN_DEMAND} demand
+                that decays 1 per production phase.
               </p>
             </div>
           </div>
@@ -152,7 +155,12 @@ const CompanyVoteResolve = () => {
           </div>
         );
       case OperatingRoundAction.VETO:
-        return <div>Action vetoed. The next turn this companies operating cost are 50% less</div>;
+        return (
+          <div>
+            Action vetoed. The next turn this companies operating cost are 50%
+            less
+          </div>
+        );
       default:
         return <div>Unknown action</div>;
     }

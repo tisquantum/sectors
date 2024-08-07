@@ -15,10 +15,12 @@ import {
   DEFAULT_DECREASE_UNIT_PRICE,
   DEFAULT_INCREASE_UNIT_PRICE,
   getCompanyOperatingRoundTurnOrder,
+  LARGE_MARKETING_CAMPAIGN_DEMAND,
   LOAN_AMOUNT,
   LOAN_INTEREST_RATE,
   MARKETING_CONSUMER_BONUS,
   PRESTIGE_ACTION_TOKEN_COST,
+  SMALL_MARKETING_CAMPAIGN_DEMAND,
 } from "@server/data/constants";
 import {
   Company,
@@ -44,13 +46,13 @@ const companyActions = [
     id: 1,
     title: "Large Marketing Campaign",
     name: OperatingRoundAction.MARKETING,
-    message: `The sector receives an additional ${MARKETING_CONSUMER_BONUS} consumers. Your company receives +3 demand that decays 1 per production phase.`,
+    message: `The sector receives an additional ${MARKETING_CONSUMER_BONUS} consumers. Your company receives +${LARGE_MARKETING_CAMPAIGN_DEMAND} demand that decays 1 per production phase.`,
   },
   {
     id: 2,
     title: "Small Marketing Campaign",
     name: OperatingRoundAction.MARKETING_SMALL_CAMPAIGN,
-    message: `The company receives +2 demand that decays 1 per production phase.`,
+    message: `The company receives +${SMALL_MARKETING_CAMPAIGN_DEMAND} demand that decays 1 per production phase.`,
   },
   {
     id: 3,
@@ -121,7 +123,7 @@ const companyActions = [
     title: "Veto",
     name: OperatingRoundAction.VETO,
     message:
-      "The company does nothing this turn. Pick this to ensure the company will not act on any other proposal. Additionally, the next turn this company operating cost are 50% less.",
+      "The company does nothing this turn. Pick this to ensure the company will not act on any other proposal. Additionally, the next turn this companies operating costs are 50% less.",
   },
 ];
 const CompanyActionSelectionVote = ({

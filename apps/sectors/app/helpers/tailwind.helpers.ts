@@ -1,1 +1,1 @@
-export const tooltipStyle = "ring-2 ring-pink-500 max-w-64 p-4 text-lg";
+export const tooltipStyle = "ring-2 ring-pink-500 max-w-96 p-4 text-lg";

@@ -26,6 +26,7 @@ import { CompanyWithSector } from "@server/prisma/prisma.types";
 import { BarList } from "@tremor/react";
 import ThroughputLegend from "../Game/ThroughputLegend";
 import { trpc } from "@sectors/app/trpc";
+import CompanyTiers from "./CompanyTiers";
 
 const buildBarChart = (share: Share[]) => {
   //group shares by location and sum the quantity
@@ -236,10 +237,13 @@ const CompanyInfo = ({
             <Tooltip
               className={tooltipStyle}
               content={
-                <p>
-                  The company tier, this determines the operational costs and
-                  supply.
-                </p>
+                <div className="flex flex-col gap-2 w-full">
+                  <p>
+                    The company tier, this determines the operational costs and
+                    supply.
+                  </p>
+                  <CompanyTiers company={company} />
+                </div>
               }
             >
               <span>{company.companyTier}</span>

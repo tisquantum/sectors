@@ -2,6 +2,7 @@ import {
   RiArrowUpCircleFill,
   RiCalendar2Fill,
   RiCalendarScheduleFill,
+  RiFundsFill,
   RiPriceTag2Fill,
   RiStrikethrough,
   RiTeamFill,
@@ -18,9 +19,34 @@ export const OptionContractMinimal = ({
 }) => {
   return (
     <div className="flex flex-col gap-1 p-2 rounded-md bg-slate-700">
-      <div className="flex gap-1">
+      <div className="flex gap-1 items-center">
+        <Tooltip
+          className={tooltipStyle}
+          content={
+            <p>
+              Shares: The number of shares the option contract represents. Note
+              that shares in the derivative market have no impact on the
+              calculations made for spot market.
+            </p>
+          }
+        >
+          <div>
+            <ShareComponent
+              name={contract.Company.stockSymbol}
+              quantity={contract.shareCount}
+            />
+          </div>
+        </Tooltip>
         <div className="flex items-center gap-1">
-          {contract.Company.stockSymbol}
+          <Tooltip
+            className={tooltipStyle}
+            content={<p>The current stock price</p>}
+          >
+            <div className="flex items-center">
+              <RiFundsFill size={20} />
+              <span>${contract.Company.currentStockPrice}</span>
+            </div>
+          </Tooltip>
         </div>
         <div className="flex items-center bg-primary p-1 rounded-md">
           <span>{contract.contractState}</span>
@@ -86,23 +112,6 @@ export const OptionContractMinimal = ({
         >
           <div className="flex gap-1 justify-center items-center">
             <RiArrowUpCircleFill /> {contract.stepBonus}
-          </div>
-        </Tooltip>
-        <Tooltip
-          className={tooltipStyle}
-          content={
-            <p>
-              Shares: The number of shares the option contract represents. Note
-              that shares in the derivative market have no impact on the
-              calculations made for spot market.
-            </p>
-          }
-        >
-          <div>
-            <ShareComponent
-              name={contract.Company.stockSymbol}
-              quantity={contract.shareCount}
-            />
           </div>
         </Tooltip>
       </div>

@@ -40,6 +40,8 @@ export const DEFAULT_RESEARCH_DECK_SIZE = 12;
 export const GOVERNMENT_GRANT_AMOUNT = 500;
 
 export const MARKETING_CONSUMER_BONUS = 4;
+export const LARGE_MARKETING_CAMPAIGN_DEMAND = 4;
+export const SMALL_MARKETING_CAMPAIGN_DEMAND = 3;
 
 export const DEFAULT_INFLUENCE = process.env.INFLUENCE_MAX
   ? (process.env.INFLUENCE_MAX as unknown as number)

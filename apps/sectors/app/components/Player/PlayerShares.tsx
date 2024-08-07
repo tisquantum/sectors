@@ -37,8 +37,10 @@ const playerCompanies = [
 
 const PlayerShares = ({
   playerWithShares,
+  withAdvancedOrderTypes = true,
 }: {
   playerWithShares: PlayerWithShares;
+  withAdvancedOrderTypes?: boolean;
 }) => {
   const {
     data: optionsOrders,
@@ -125,41 +127,45 @@ const PlayerShares = ({
       ) : (
         <div>No shares owned.</div>
       )}
-      <div className="w-full border-t border-gray-300 my-4"></div>
-      <div className="flex flex-col gap-2">
-        <div className="text-lg">Short Orders</div>
-        {shortSharesAggregation &&
-          Object.entries(shortSharesAggregation).map(
-            ([shortOrderId, aggregation]) => (
-              <div key={shortOrderId} className="flex flex-col gap-2">
-                <ShareComponent
-                  name={aggregation.company?.stockSymbol || ""}
-                  quantity={aggregation.totalShares}
-                  price={aggregation.totalValue / aggregation.totalShares}
-                />
-              </div>
-            )
-          )}
-      </div>
-      <div className="flex flex-col gap-2">
-        <div className="text-lg">Options Orders</div>
-        {optionsOrders &&
-          optionsOrders.map((order) => {
-            console.log("order", order);
-            return (
-              <div key={order.id} className="flex flex-col gap-2">
-                {order.OptionContract && order.Company && (
-                  <OptionContractMinimal
-                    contract={{
-                      ...order.OptionContract,
-                      Company: order.Company,
-                    }}
-                  />
-                )}
-              </div>
-            );
-          })}
-      </div>
+      {withAdvancedOrderTypes && (
+        <>
+          <div className="w-full border-t border-gray-300 my-4"></div>
+          <div className="flex flex-col gap-2">
+            <div className="text-lg">Short Orders</div>
+            {shortSharesAggregation &&
+              Object.entries(shortSharesAggregation).map(
+                ([shortOrderId, aggregation]) => (
+                  <div key={shortOrderId} className="flex flex-col gap-2">
+                    <ShareComponent
+                      name={aggregation.company?.stockSymbol || ""}
+                      quantity={aggregation.totalShares}
+                      price={aggregation.totalValue / aggregation.totalShares}
+                    />
+                  </div>
+                )
+              )}
+          </div>
+          <div className="flex flex-col gap-2">
+            <div className="text-lg">Options Orders</div>
+            {optionsOrders &&
+              optionsOrders.map((order) => {
+                console.log("order", order);
+                return (
+                  <div key={order.id} className="flex flex-col gap-2">
+                    {order.OptionContract && order.Company && (
+                      <OptionContractMinimal
+                        contract={{
+                          ...order.OptionContract,
+                          Company: order.Company,
+                        }}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+          </div>
+        </>
+      )}
     </div>
   );
 };

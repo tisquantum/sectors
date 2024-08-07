@@ -96,6 +96,8 @@ import {
   AUTOMATION_EFFECT_OPERATIONS_REDUCTION,
   MARGIN_ACCOUNT_ID_PREFIX,
   CAPITAL_INJECTION_STARTER,
+  LARGE_MARKETING_CAMPAIGN_DEMAND,
+  SMALL_MARKETING_CAMPAIGN_DEMAND,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -104,6 +106,7 @@ import {
   calculateMarginAccountMinimum,
   calculateNetWorth,
   calculateStepsAndRemainder,
+  calculateStepsToNewTier,
   companyPriorityOrderOperations,
   createPrestigeTrackBasedOnSeed,
   createSeededResearchCards,
@@ -733,7 +736,7 @@ export class GameManagementService {
   //contracts are placed on a tableau, one card is on top is queued, the middle cards are "for sale" and the bottom card is discarded.
   async optionContractGenerate(phase: Phase) {
     const companies = await this.companyService.companiesWithSector({
-      where: { gameId: phase.gameId },
+      where: { gameId: phase.gameId, isFloated: true },
     });
 
     // Fetch existing option contracts in play
@@ -1517,7 +1520,9 @@ export class GameManagementService {
     //increase demand for the company by 2
     await this.companyService.updateCompany({
       where: { id: company.id },
-      data: { demandScore: company.demandScore + 2 },
+      data: {
+        demandScore: company.demandScore + SMALL_MARKETING_CAMPAIGN_DEMAND,
+      },
     });
   }
 
@@ -2077,7 +2082,10 @@ export class GameManagementService {
       //give the company 3 demand
       await this.companyService.updateCompany({
         where: { id: companyAction.companyId },
-        data: { demandScore: companyAction.Company.demandScore + 3 },
+        data: {
+          demandScore:
+            companyAction.Company.demandScore + LARGE_MARKETING_CAMPAIGN_DEMAND,
+        },
       });
       //get the sector
       const sector = await this.sectorService.sector({
@@ -2171,15 +2179,16 @@ export class GameManagementService {
 
       switch (revenueDistribution) {
         case RevenueDistribution.DIVIDEND_FULL:
-          steps = Math.floor(revenue / company.currentStockPrice);
+          steps = calculateStepsToNewTier(revenue, company.currentStockPrice);
           newStockPrice = getStockPriceStepsUp(
             company.currentStockPrice,
             steps,
           );
           break;
         case RevenueDistribution.DIVIDEND_FIFTY_FIFTY:
-          steps = Math.floor(
-            Math.floor(revenue / 2) / company.currentStockPrice,
+          steps = calculateStepsToNewTier(
+            Math.floor(revenue / 2),
+            company.currentStockPrice,
           );
           newStockPrice = getStockPriceStepsUp(
             company.currentStockPrice,

@@ -103,6 +103,15 @@ const stockRoundRules = (
           REJECTED.
         </li>
       </ul>
+      <strong>Market Order Price Stock Price Adjustments</strong>
+      <p>
+        Given the net difference between BUYS and SELLS for market order
+        quantities of a given company, that companies stock price will adjust
+        steps down equivalent to the net negative or move up as many steps as it
+        can fill "price slots" on the stock chart. Different stock tiers require
+        different amounts of slots to be filled before an order can move up in
+        price.
+      </p>
     </p>
     <p>
       <strong>Profits from Options Contracts:</strong> The profit is the
@@ -128,6 +137,15 @@ const operatingRoundRules = (
     <p>
       <strong>Operating Rounds</strong> are where companies run production and
       shareholders determine company actions.
+    </p>
+    <p>
+      <strong>Floating Companies</strong>
+      <p>
+        Each sector requires companies to sell some percentage of shares from
+        it's IPO before it is floated. Companies that are floated are eligible
+        to operate. Companies eligible for operation conduct company actions
+        during company vote phase.
+      </p>
     </p>
     <p>
       <strong>Throughput:</strong> Measures company efficiency.
@@ -189,9 +207,12 @@ const operatingRoundRules = (
       <p>
         The companies share price will be adjusted by one step by the total
         amount of revenue distributed to shareholders divided by it's current
-        stock price, rounded down. For example, if a company has a stock price
-        of $10 and distributes $100 of revenue to shareholders, the stock price
-        will move up 10 steps.
+        stock price, rounded down. If however this price change would bring the
+        companies stock price into a new stock tier, it stops at the beginning
+        of that tier. For example, if a company has a stock price of $10 and
+        distributes $100 of revenue to shareholders, the stock price will move
+        up 10 steps, but because the next stock tier starts at $21 this increase
+        is halted at that price in at the beginning of the new tier.
       </p>
       <p>
         If the company elects to retain revenue, it automatically moves down 1

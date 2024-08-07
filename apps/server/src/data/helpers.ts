@@ -278,6 +278,33 @@ export function determineFloatPrice(sector: Sector) {
   return closest;
 }
 
+export function calculateStepsToNewTier(
+  currentStockPrice: number,
+  revenue: number,
+): number {
+  let remainingSteps = Math.floor(revenue / currentStockPrice);
+  let newStockPrice = currentStockPrice;
+  let totalSteps = 0;
+
+  while (remainingSteps > 0) {
+    const currentTier = getCurrentTierBySharePrice(newStockPrice);
+    const tierMaxValue = getTierMaxValue(currentTier);
+
+    const stepsToTierMax = stockGridPrices.indexOf(tierMaxValue) - stockGridPrices.indexOf(newStockPrice);
+
+    if (remainingSteps <= stepsToTierMax) {
+      totalSteps += remainingSteps;
+      remainingSteps = 0;
+    } else {
+      totalSteps += stepsToTierMax + 1;
+      newStockPrice = tierMaxValue;
+      remainingSteps -= stepsToTierMax + 1;
+    }
+  }
+
+  return totalSteps;
+}
+
 export function determineStockTier(stockPrice: number): StockTier {
   return stockTierChartRanges.find(
     (range) => stockPrice <= range.chartMaxValue,

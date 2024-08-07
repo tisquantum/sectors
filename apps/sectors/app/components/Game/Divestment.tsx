@@ -21,7 +21,10 @@ const Divestment = () => {
           >
             <div className="flex flex-col items-center gap-2">
               <PlayerAvatar player={player} showNameLabel />
-              <PlayerShares playerWithShares={player} />
+              <PlayerShares
+                playerWithShares={player}
+                withAdvancedOrderTypes={false}
+              />
             </div>
           </div>
         ))}

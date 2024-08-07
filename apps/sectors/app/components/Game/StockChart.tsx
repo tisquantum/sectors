@@ -96,6 +96,11 @@ const Legend = () => {
         they can advance one step on the stock chart. A sell always moves the
         stock one step down.
       </p>
+      <p>
+        Operations revenue distributed to shareholders will also increase the
+        stock price by a given number of steps. Should these steps push the
+        price into a new tier, that stock price movement is halted.
+      </p>
     </div>
   );
 };
@@ -223,74 +228,77 @@ const StockChart = () => {
 
   return (
     <div className="flex flex-col">
-      <Legend />
       <Tabs>
         <Tab key="stock-grid" title="Stock Grid">
-          <div className="grid grid-cols-10 gap-3 p-4">
-            {stockGridPrices.map((value, index) => {
-              const companiesOnCell = companies.filter(
-                (company) => company.currentStockPrice === value
-              );
-              const tier = getTierForStockPrice(value)?.tier;
-              const backgroundColor = tier ? tierColors[tier] : "";
+          <>
+            <Legend />
+            <div className="grid grid-cols-10 gap-3 p-4">
+              {stockGridPrices.map((value, index) => {
+                const companiesOnCell = companies.filter(
+                  (company) => company.currentStockPrice === value
+                );
+                const tier = getTierForStockPrice(value)?.tier;
+                const backgroundColor = tier ? tierColors[tier] : "";
 
-              return (
-                <div
-                  key={index}
-                  className={`relative ring-1 p-2 text-center min-h-[81px] ${backgroundColor} ${
-                    value === 0 ? "text-red-500 font-bold" : ""
-                  }`}
-                >
-                  {value === 0 ? "INSOLVENT" : value}
-                  <Divider />
-                  {companiesOnCell.length > 0 && (
-                    <div className="flex flex-col mt-2 gap-2">
-                      {companiesOnCell.map((company) => (
-                        <div
-                          key={company.id}
-                          className={`flex flex-col items-center shadow-md rounded-md p-1 cursor-pointer border-2 border-slate-700 ${
-                            company.status === CompanyStatus.INACTIVE
-                              ? "red-stripes"
-                              : ""
-                          }`}
-                          style={{
-                            backgroundColor: sectorColors[company.Sector.name],
-                          }}
-                          onClick={() => handleCompanySelect(company.id)}
-                        >
-                          {company.status === CompanyStatus.INACTIVE ? (
-                            <div className="ml-2 p-1 rounded-md text-small text-slate-800 flex bg-yellow-500">
-                              <RiSailboatFill
-                                size={18}
-                                className="ml-2 text-slate-800"
-                              />
-                              <span className="ml-1">
-                                %{company.Sector.sharePercentageToFloat}
-                              </span>
-                            </div>
-                          ) : (
-                            <div className="ml-2 p-1 rounded-md text-small text-green-800 flex bg-green-500">
-                              <RiSailboatFill size={18} className="ml-2" />
-                              <span className="ml-1">
-                                %{company.Sector.sharePercentageToFloat}
-                              </span>
-                            </div>
-                          )}
-                          <span className="subpixel-antialiased text-slate-100">
-                            {company.name}
-                          </span>
-                          <TierSharesFulfilled
-                            tierSharesFulfilled={company.tierSharesFulfilled}
-                            tier={tier}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                return (
+                  <div
+                    key={index}
+                    className={`relative ring-1 p-2 text-center min-h-[81px] ${backgroundColor} ${
+                      value === 0 ? "text-red-500 font-bold" : ""
+                    }`}
+                  >
+                    {value === 0 ? "INSOLVENT" : value}
+                    <Divider />
+                    {companiesOnCell.length > 0 && (
+                      <div className="flex flex-col mt-2 gap-2">
+                        {companiesOnCell.map((company) => (
+                          <div
+                            key={company.id}
+                            className={`flex flex-col items-center shadow-md rounded-md p-1 cursor-pointer border-2 border-slate-700 ${
+                              company.status === CompanyStatus.INACTIVE
+                                ? "red-stripes"
+                                : ""
+                            }`}
+                            style={{
+                              backgroundColor:
+                                sectorColors[company.Sector.name],
+                            }}
+                            onClick={() => handleCompanySelect(company.id)}
+                          >
+                            {company.status === CompanyStatus.INACTIVE ? (
+                              <div className="ml-2 p-1 rounded-md text-small text-slate-800 flex bg-yellow-500">
+                                <RiSailboatFill
+                                  size={18}
+                                  className="ml-2 text-slate-800"
+                                />
+                                <span className="ml-1">
+                                  %{company.Sector.sharePercentageToFloat}
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="ml-2 p-1 rounded-md text-small text-green-800 flex bg-green-500">
+                                <RiSailboatFill size={18} className="ml-2" />
+                                <span className="ml-1">
+                                  %{company.Sector.sharePercentageToFloat}
+                                </span>
+                              </div>
+                            )}
+                            <span className="subpixel-antialiased text-slate-100">
+                              {company.name}
+                            </span>
+                            <TierSharesFulfilled
+                              tierSharesFulfilled={company.tierSharesFulfilled}
+                              tier={tier}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>
         </Tab>
         <Tab key="stock-chart" title="Stock Chart">
           <div className="flex flex-col justify-center items-center h-[800px]">
