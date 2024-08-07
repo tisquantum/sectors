@@ -94,10 +94,12 @@ const GameGeneralInfo = () => {
               <Tooltip
                 className={tooltipStyle}
                 content={
-                  <p>
-                    The potential maximum amount of money you&apos;ve queued for
-                    orders this stock round.
-                  </p>
+                  <div>
+                    <p>
+                      The potential maximum amount of money you&apos;ve queued
+                      for orders this stock round.
+                    </p>
+                  </div>
                 }
               >
                 {"($" + pseudoSpend + ")"}
@@ -107,12 +109,14 @@ const GameGeneralInfo = () => {
           <Tooltip
             className={tooltipStyle}
             content={
-              <p>
-                The remaining actions you have for order types in a stock round.
-                Limit Order and Short Order actions only replenish as existing
-                orders are filled or rejected. Market Orders replenish each
-                stock round.
-              </p>
+              <div>
+                <p>
+                  The remaining actions you have for order types in a stock
+                  round. Limit Order and Short Order actions only replenish as
+                  existing orders are filled or rejected. Market Orders
+                  replenish each stock round.
+                </p>
+              </div>
             }
           >
             <div className="flex items-center text-md">
@@ -138,9 +142,11 @@ const GameGeneralInfo = () => {
         <Tooltip
           className={tooltipStyle}
           content={
-            <p>
-              The bank pool. Once the bank pool is exhausted, the game ends.
-            </p>
+            <div>
+              <p>
+                The bank pool. Once the bank pool is exhausted, the game ends.
+              </p>
+            </div>
           }
         >
           <BankInfo />
@@ -150,10 +156,12 @@ const GameGeneralInfo = () => {
         <Tooltip
           className={tooltipStyle}
           content={
-            <p>
-              The share limit. If a player exceeds this limit, they must divest
-              down to the limit.
-            </p>
+            <div>
+              <p>
+                The share limit. If a player exceeds this limit, they must
+                divest down to the limit.
+              </p>
+            </div>
           }
         >
           <div className="flex gap-1 items-center">
@@ -168,11 +176,13 @@ const GameGeneralInfo = () => {
       <Tooltip
         className={tooltipStyle}
         content={
-          <p>
-            The current turn out of the maximum turns in the game. The game ends
-            in one of two ways, either the bank pool is exhausted or the maximum
-            turns are reached.
-          </p>
+          <div>
+            <p>
+              The current turn out of the maximum turns in the game. The game
+              ends in one of two ways, either the bank pool is exhausted or the
+              maximum turns are reached.
+            </p>
+          </div>
         }
       >
         <div>
