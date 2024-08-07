@@ -1765,6 +1765,7 @@ export class GameManagementService {
         return;
       case PrestigeReward.INFLUENCER:
         this.resolveInfluencer(prestigeReward);
+        return;
       default:
         return;
     }

@@ -26,6 +26,7 @@ import { set } from "lodash";
 import { useState } from "react";
 import PlayerAvatar from "../Player/PlayerAvatar";
 import { tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
+import { OptionContractMinimal } from "./OptionContractMinimal";
 
 const OptionContract = ({
   contract,
@@ -91,86 +92,7 @@ const OptionContract = ({
           <CompanyInfo company={company} isMinimal />
         </div>
         <div className="border-b border-gray-200 my-2"></div>
-        <div className="flex gap-3 text-gray-200 justify-between text-xl">
-          <Tooltip
-            className={tooltipStyle}
-            content={<p>Premium: The price of the options contract.</p>}
-          >
-            <div className="flex gap-1 justify-center items-center">
-              <RiPriceTag2Fill /> ${contract.premium}
-            </div>
-          </Tooltip>
-          <Tooltip
-            className={tooltipStyle}
-            content={
-              <p>
-                Strike Price: The price at which the options contract can be
-                exercised
-              </p>
-            }
-          >
-            <div className="flex gap-1 justify-center items-center">
-              <RiStrikethrough />${contract.strikePrice}
-            </div>
-          </Tooltip>
-          <Tooltip
-            className={tooltipStyle}
-            content={
-              <p>Term: The number of turns the options contract is valid for</p>
-            }
-          >
-            <div className="flex gap-1 justify-center items-center">
-              <RiCalendarScheduleFill />
-              {contract.term}
-            </div>
-          </Tooltip>
-          {contract.currentTerm > 0 && (
-            <Tooltip
-              className={tooltipStyle}
-              content={
-                <p>
-                  Current Term: The number of turns the options contract has
-                  been active for
-                </p>
-              }
-            >
-              <div className="flex gap-1 justify-center items-center">
-                <RiCalendar2Fill />
-                {contract.currentTerm}
-              </div>
-            </Tooltip>
-          )}
-          <Tooltip
-            className={tooltipStyle}
-            content={
-              <p>
-                Step Bonus: The amount the stock price will increase should the
-                option be exercised.
-              </p>
-            }
-          >
-            <div className="flex gap-1 justify-center items-center">
-              <RiArrowUpCircleFill /> {contract.stepBonus}
-            </div>
-          </Tooltip>
-          <Tooltip
-            className={tooltipStyle}
-            content={
-              <p>
-                Shares: The number of shares the option contract represents.
-                Note that shares in the derivative market have no impact on the
-                calculations made for spot market.
-              </p>
-            }
-          >
-            <div>
-              <ShareComponent
-                name={contract.Company.stockSymbol}
-                quantity={contract.shareCount}
-              />
-            </div>
-          </Tooltip>
-        </div>
+        <OptionContractMinimal contract={contract} />
       </div>
       <div>
         {isInteractive &&

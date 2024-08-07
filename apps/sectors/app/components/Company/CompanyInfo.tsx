@@ -3,6 +3,8 @@ import {
   RiBankCard2Fill,
   RiBox2Fill,
   RiExpandUpDownFill,
+  RiFundsBoxFill,
+  RiFundsFill,
   RiHandCoinFill,
   RiIncreaseDecreaseFill,
   RiPriceTag3Fill,
@@ -49,152 +51,152 @@ const CompanyMoreInfo = ({
   showingProductionResults?: boolean;
 }) => {
   return (
-  <div className="flex gap-1 justify-start my-2">
-    <div
-      className="flex flex-col px-2 rounded-md"
-      style={{ backgroundColor: sectorColors[company.Sector.name] }}
-    >
-      <span>{company.Sector.name}</span>
-      <div className="flex items-center gap-1">
+    <div className="flex gap-1 justify-start my-2">
+      <div
+        className="flex flex-col px-2 rounded-md"
+        style={{ backgroundColor: sectorColors[company.Sector.name] }}
+      >
+        <span>{company.Sector.name}</span>
+        <div className="flex items-center gap-1">
+          <Tooltip
+            className={tooltipStyle}
+            content={
+              <p>
+                Base sector demand, every company in the sector receives this
+                base bonus.
+              </p>
+            }
+          >
+            <div className="flex items-center">
+              <RiHandCoinFill size={18} className="ml-2" />
+              <span className="ml-1">
+                {company.Sector.demand + (company.Sector.demandBonus || 0)}
+              </span>
+            </div>
+          </Tooltip>
+          <Tooltip
+            className={tooltipStyle}
+            content={
+              <p>
+                The amount of consumers currently looking to buy in this sector.
+              </p>
+            }
+          >
+            <div className="flex items-center">
+              <RiTeamFill size={18} className="ml-2" />
+              <span className="ml-1">{company.Sector.consumers}</span>
+            </div>
+          </Tooltip>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 items-center">
         <Tooltip
           className={tooltipStyle}
           content={
             <p>
-              Base sector demand, every company in the sector receives this base
-              bonus.
+              Prestige tokens. While held, they prioritize the company for
+              production. Can be spent for a bonus. Sell all of your companies
+              supply during an operating round to earn a prestige token.
+            </p>
+          }
+        >
+          <div className="flex items-center">
+            <RiSparkling2Fill className="ml-2 size-4 text-yellow-500" />
+            <span className="ml-1">{company.prestigeTokens}</span>
+          </div>
+        </Tooltip>
+        <Tooltip
+          className={tooltipStyle}
+          content={
+            <p>
+              The companies demand score. The maximum amount of customers that
+              will visit your company before spending somewhere else.
             </p>
           }
         >
           <div className="flex items-center">
             <RiHandCoinFill size={18} className="ml-2" />
-            <span className="ml-1">
-              {company.Sector.demand + (company.Sector.demandBonus || 0)}
-            </span>
+            <span className="ml-1">{company.demandScore}</span>
+            {showingProductionResults && (
+              <span className="text-red-500"> -1</span>
+            )}
           </div>
         </Tooltip>
         <Tooltip
           className={tooltipStyle}
           content={
-            <p>
-              The amount of consumers currently looking to buy in this sector.
-            </p>
+            <p>The amount of goods the company produces per operating round.</p>
           }
         >
           <div className="flex items-center">
-            <RiTeamFill size={18} className="ml-2" />
-            <span className="ml-1">{company.Sector.consumers}</span>
-          </div>
-        </Tooltip>
-      </div>
-    </div>
-    <div className="grid grid-cols-2 items-center">
-      <Tooltip
-        className={tooltipStyle}
-        content={
-          <p>
-            Prestige tokens. While held, they prioritize the company for
-            production. Can be spent for a bonus. Sell all of your companies
-            supply during an operating round to earn a prestige token.
-          </p>
-        }
-      >
-        <div className="flex items-center">
-          <RiSparkling2Fill className="ml-2 size-4 text-yellow-500" />
-          <span className="ml-1">{company.prestigeTokens}</span>
-        </div>
-      </Tooltip>
-      <Tooltip
-        className={tooltipStyle}
-        content={
-          <p>
-            The companies demand score. The maximum amount of customers that
-            will visit your company before spending somewhere else.
-          </p>
-        }
-      >
-        <div className="flex items-center">
-          <RiHandCoinFill size={18} className="ml-2" />
-          <span className="ml-1">{company.demandScore}</span>
-          {showingProductionResults && (
-            <span className="text-red-500"> -1</span>
-          )}
-        </div>
-      </Tooltip>
-      <Tooltip
-        className={tooltipStyle}
-        content={
-          <p>The amount of goods the company produces per operating round.</p>
-        }
-      >
-        <div className="flex items-center">
-          <RiBox2Fill size={18} className="ml-2" />
-          <span className="ml-1">
-            {calculateCompanySupply(company.supplyMax, company.supplyBase)}
-          </span>
-        </div>
-      </Tooltip>
-      <Tooltip
-        className={tooltipStyle}
-        content={
-          <div className="flex flex-col gap-2">
-            <p>
-              Throughput. The base sector demand plus the companies demand minus
-              it&apos;s supply. The closer to zero, the more efficient the
-              company is operating.
-            </p>
-            <div className="flex flex-col gap-2">
-              <ThroughputLegend />
-            </div>
-          </div>
-        }
-      >
-        <div className="flex items-center">
-          <RiIncreaseDecreaseFill size={18} className="ml-2" />
-          <div className="ml-1 flex">
-            <span>
-              {company.demandScore +
-                company.Sector.demand +
-                (company.Sector.demandBonus || 0) -
-                calculateCompanySupply(company.supplyMax, company.supplyBase)}
+            <RiBox2Fill size={18} className="ml-2" />
+            <span className="ml-1">
+              {calculateCompanySupply(company.supplyMax, company.supplyBase)}
             </span>
           </div>
-        </div>
-      </Tooltip>
-      <Tooltip
-        className={tooltipStyle}
-        content={
-          <p>
-            The cost to operate the company per operating round. This cost is
-            tied to your company tier.
-          </p>
-        }
-      >
-        <div className="flex items-center col-span-2">
-          <RiExpandUpDownFill size={18} className="ml-2" />
-          <span className="ml-1">
-            ${CompanyTierData[company.companyTier].operatingCosts}
-          </span>
-        </div>
-      </Tooltip>
-      {company.hasLoan && (
+        </Tooltip>
+        <Tooltip
+          className={tooltipStyle}
+          content={
+            <div className="flex flex-col gap-2">
+              <p>
+                Throughput. The base sector demand plus the companies demand
+                minus it&apos;s supply. The closer to zero, the more efficient
+                the company is operating.
+              </p>
+              <div className="flex flex-col gap-2">
+                <ThroughputLegend />
+              </div>
+            </div>
+          }
+        >
+          <div className="flex items-center">
+            <RiIncreaseDecreaseFill size={18} className="ml-2" />
+            <div className="ml-1 flex">
+              <span>
+                {company.demandScore +
+                  company.Sector.demand +
+                  (company.Sector.demandBonus || 0) -
+                  calculateCompanySupply(company.supplyMax, company.supplyBase)}
+              </span>
+            </div>
+          </div>
+        </Tooltip>
         <Tooltip
           className={tooltipStyle}
           content={
             <p>
-              This company has taken a loan. The company must pay back the loan
-              in interest at a fixed rate of ${LOAN_AMOUNT * LOAN_INTEREST_RATE}{" "}
-              per turn.
+              The cost to operate the company per operating round. This cost is
+              tied to your company tier.
             </p>
           }
         >
           <div className="flex items-center col-span-2">
-            <RiBankCard2Fill size={18} className="ml-2" />
-            <span className="ml-1">${LOAN_AMOUNT * LOAN_INTEREST_RATE}</span>
+            <RiExpandUpDownFill size={18} className="ml-2" />
+            <span className="ml-1">
+              ${CompanyTierData[company.companyTier].operatingCosts}
+            </span>
           </div>
         </Tooltip>
-      )}
+        {company.hasLoan && (
+          <Tooltip
+            className={tooltipStyle}
+            content={
+              <p>
+                This company has taken a loan. The company must pay back the
+                loan in interest at a fixed rate of $
+                {LOAN_AMOUNT * LOAN_INTEREST_RATE} per turn.
+              </p>
+            }
+          >
+            <div className="flex items-center col-span-2">
+              <RiBankCard2Fill size={18} className="ml-2" />
+              <span className="ml-1">${LOAN_AMOUNT * LOAN_INTEREST_RATE}</span>
+            </div>
+          </Tooltip>
+        )}
+      </div>
     </div>
-  </div>
   );
 };
 
@@ -224,7 +226,10 @@ const CompanyInfo = ({
               className={tooltipStyle}
               content={<p>The current stock price</p>}
             >
-              <span>${company.currentStockPrice}</span>
+              <div className="flex items-center">
+                <RiFundsFill size={20} />
+                <span>${company.currentStockPrice}</span>
+              </div>
             </Tooltip>
           </div>
           <div className="flex gap-1">

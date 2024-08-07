@@ -33,6 +33,7 @@ import {
   RiCheckboxBlankCircleFill,
   RiCheckboxCircleFill,
   RiExpandUpDownFill,
+  RiFundsFill,
   RiHandCoinFill,
   RiIncreaseDecreaseFill,
   RiPriceTag3Fill,
@@ -76,7 +77,10 @@ const friendlyTierName = (tier: StockTier) => {
 const Legend = () => {
   return (
     <div className="flex flex-col">
-      <h3 className="text-lg">Stock Chart Legend</h3>
+      <div className="flex items-center space-x-2">
+        <RiFundsFill />
+        <h3 className="text-lg"> Stock Chart Legend</h3>
+      </div>
       <div className="flex space-x-4 p-4">
         {stockTierChartRanges.map((range) => (
           <div key={range.tier} className="flex items-center space-x-2">
@@ -134,8 +138,8 @@ const StockChart = () => {
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
   useEffect(() => {
     if (selectedCompany) {
-      const data = selectedCompany.StockHistory.map((stockHistory) => ({
-        phaseId: stockHistory.phaseId,
+      const data = selectedCompany.StockHistory.map((stockHistory, index) => ({
+        phaseId: `${index + 1} ${stockHistory.Phase.name}`,
         stockPrice: stockHistory.price,
         stockAction: stockHistory.action,
         steps: stockHistory.stepsMoved,
