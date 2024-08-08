@@ -130,10 +130,20 @@ const OrderCounter: React.FC<{
 const LimitOrderInput = ({
   handleLimitOrder,
   handleSelectionIsBuy,
+  handleShares,
+  handleValueChange,
   isBuy,
+  maxValue,
+  minValue,
+  defaultValue,
 }: {
   handleLimitOrder: (limitOrderValue: number) => void;
   handleSelectionIsBuy: (selection: boolean) => void;
+  handleShares: (event: number) => void;
+  handleValueChange: (event: number) => void;
+  maxValue: number;
+  minValue: number;
+  defaultValue?: number;
   isBuy?: boolean;
 }) => {
   const { authPlayer } = useGame();
@@ -147,11 +157,6 @@ const LimitOrderInput = ({
   return (
     <>
       <BuyOrSell handleSelectionIsBuy={handleSelectionIsBuy} />
-      {!!!isBuy && (
-        <div>
-          <span>Shares Owned x {shares?.length}</span>
-        </div>
-      )}
       <Input
         id="loAmount"
         type="number"
@@ -165,6 +170,25 @@ const LimitOrderInput = ({
           </div>
         }
       />
+      {!!!isBuy && (
+        <Slider
+          size="md"
+          step={1}
+          color="foreground"
+          label="Shares"
+          showSteps={true}
+          maxValue={maxValue}
+          minValue={minValue}
+          onChange={(value) => {
+            if (Array.isArray(value)) {
+              value = value[0];
+            }
+            handleShares(value);
+          }}
+          defaultValue={minValue}
+          className="max-w-md"
+        />
+      )}
     </>
   );
 };
@@ -337,6 +361,11 @@ interface TabContentPropsLO {
   handleSelectionIsBuy: (selection: boolean) => void;
   ordersRemaining: number;
   isBuy?: boolean;
+  maxValue: number;
+  minValue: number;
+  defaultValue?: number;
+  handleShares: (event: number) => void;
+  handleValueChange: (event: number) => void;
 }
 
 const TabContentLO: React.FC<TabContentPropsLO> = ({
@@ -344,6 +373,11 @@ const TabContentLO: React.FC<TabContentPropsLO> = ({
   handleSelectionIsBuy,
   ordersRemaining,
   isBuy,
+  handleShares,
+  handleValueChange,
+  maxValue,
+  minValue,
+  defaultValue,
 }) => {
   return (
     <div className="flex flex-col text-center items-center center-content justify-center gap-2">
@@ -355,6 +389,11 @@ const TabContentLO: React.FC<TabContentPropsLO> = ({
         handleLimitOrder={handleLimitOrderChange}
         handleSelectionIsBuy={handleSelectionIsBuy}
         isBuy={isBuy}
+        handleShares={handleShares}
+        handleValueChange={handleValueChange}
+        maxValue={maxValue}
+        minValue={minValue}
+        defaultValue={defaultValue}
       />
     </div>
   );
@@ -521,30 +560,36 @@ const PlayerOrderInput = ({
     setIsSubmit(false);
   }, [currentPhase?.name]);
   useEffect(() => {
-    if (isBuy) {
-      if (isIpo) {
-        setMaxValue(
-          company?.Share.filter((share) => share.location === ShareLocation.IPO)
-            .length || 0
-        );
-        setMinValue(1);
+    if (orderType === OrderType.MARKET) {
+      if (isBuy) {
+        if (isIpo) {
+          setMaxValue(
+            company?.Share.filter(
+              (share) => share.location === ShareLocation.IPO
+            ).length || 0
+          );
+          setMinValue(1);
+        } else {
+          setMaxValue(
+            company?.Share.filter(
+              (share) => share.location === ShareLocation.OPEN_MARKET
+            ).length || 0
+          );
+          setMinValue(1);
+        }
       } else {
-        setMaxValue(
-          company?.Share.filter(
-            (share) => share.location === ShareLocation.OPEN_MARKET
-          ).length || 0
+        const playerShares = company?.Share.filter(
+          (share) => share.location === ShareLocation.PLAYER
         );
+        const authPlayerShares = playerShares?.filter(
+          (share) => share.playerId === authPlayer.id
+        ).length;
+        setMaxValue(authPlayerShares || 0);
         setMinValue(1);
       }
     } else {
-      const playerShares = company?.Share.filter(
-        (share) => share.location === ShareLocation.PLAYER
-      );
-      const authPlayerShares = playerShares?.filter(
-        (share) => share.playerId === authPlayer.id
-      ).length;
-      setMaxValue(authPlayerShares || 0);
       setMinValue(1);
+      setMaxValue(company?.Share.length || 0);
     }
   }, [isBuy, isIpo, company?.Share]);
 
@@ -652,6 +697,11 @@ const PlayerOrderInput = ({
                       handleLimitOrderChange={setOrderValue}
                       handleSelectionIsBuy={setIsBuy}
                       ordersRemaining={authPlayer.limitOrderActions}
+                      maxValue={maxValue}
+                      minValue={minValue}
+                      handleShares={setShare}
+                      handleValueChange={setOrderValue}
+                      defaultValue={1}
                     />
                   </CardBody>
                 </Card>

@@ -1853,15 +1853,10 @@ export class GameManagementService {
     //get prestige reward value
     const capitalRewards = game.capitalInjectionRewards || [];
 
-    // Filter out all rewards of type CAPITAL_INJECTION
-    const capitalInjectionRewards = prestigeTrack.filter(
-      (reward) => reward.type === PrestigeReward.CAPITAL_INJECTION,
-    );
-
-    // Find the relative index of the current reward in the filtered array
-    const relativeIndex = capitalInjectionRewards.findIndex(
-      (_, i) => i === nextPrestigeRewardIndex,
-    );
+    //find what instance of CAPITAL_INJECTION this is in the prestige track
+    const relativeIndex = prestigeTrack
+      .slice(0, nextPrestigeRewardIndex)
+      .filter((item) => item.type === PrestigeReward.CAPITAL_INJECTION).length;
 
     // Get the capital reward value at the relative index
     const capitalReward = capitalRewards[relativeIndex];
@@ -3187,19 +3182,15 @@ export class GameManagementService {
       const prestigeTrack = createPrestigeTrackBasedOnSeed(game.id);
       //look for capital injection spaces
       prestigeTrack.forEach((trackItem) => {
-        if (trackItem.name == PrestigeReward.CAPITAL_INJECTION) {
+        if (trackItem.type == PrestigeReward.CAPITAL_INJECTION) {
           capitalInjections.push(CAPITAL_INJECTION_STARTER);
         }
       });
       if (capitalInjections.length > 0) {
         //update game with capital injection values
-        this.gamesService.updateGame({
-          where: {
-            id: game.id,
-          },
-          data: {
-            capitalInjectionRewards: capitalInjections,
-          },
+        await this.gamesService.updateGame({
+          where: { id: game.id },
+          data: { capitalInjectionRewards: capitalInjections },
         });
       }
       // Start the timer for advancing to the next phase
@@ -3760,61 +3751,114 @@ export class GameManagementService {
       if (!order.Company) {
         throw new Error('Company not found');
       }
-      if (order.isSell) {
-        await this.playerAddMoney(
-          order.gameId,
-          order.playerId,
-          order.value || 0,
-          EntityType.BANK,
-          `Limit order sell for ${order.Company.stockSymbol}`,
-        );
+      //restore limit order action
+      this.playersService.addActionCounter(order.playerId, order.orderType);
 
+      if (order.isSell) {
         //remove one share from the player's portfolio
-        const share = await this.prisma.share.findFirst({
+        // Note: We are instead allowing for as many shares as you like to be sold via limit order
+        // const share = await this.prisma.share.findFirst({
+        //   where: {
+        //     playerId: order.playerId,
+        //     companyId: order.companyId,
+        //     location: ShareLocation.PLAYER,
+        //   },
+        // });
+        // await this.shareService.updateManySharesUnchecked({
+        //   where: { id: share.id },
+        //   data: { playerId: null, location: ShareLocation.OPEN_MARKET },
+        // });
+
+        const shares = await this.shareService.shares({
           where: {
             playerId: order.playerId,
             companyId: order.companyId,
             location: ShareLocation.PLAYER,
           },
+          take: order.quantity || 0,
         });
-
-        if (!share) {
-          throw new Error('Share not found');
+        if (!shares || shares.length < (order.quantity || 0)) {
+          //reject the order
+          await this.prisma.playerOrder.update({
+            where: { id: order.id },
+            data: {
+              orderStatus: OrderStatus.REJECTED,
+            },
+          });
+          //game log
+          await this.gameLogService.createGameLog({
+            content: `Limit order sell for ${order.Company.stockSymbol} rejected due to insufficient shares`,
+            game: { connect: { id: order.gameId } },
+          });
+        } else {
+          await this.playerAddMoney(
+            order.gameId,
+            order.playerId,
+            (order.value || 0) * (order.quantity || 0),
+            EntityType.BANK,
+            `Limit order sell for ${order.Company.stockSymbol}`,
+          );
+          //update share location to open market
+          await this.shareService.updateManySharesUnchecked({
+            where: { id: { in: shares.map((share) => share.id) } },
+            data: { playerId: null, location: ShareLocation.OPEN_MARKET },
+          });
+          //game log
+          await this.gameLogService.createGameLog({
+            content: `Limit order sell for ${order.Company.stockSymbol} completed`,
+            game: { connect: { id: order.gameId } },
+          });
         }
-        //update share location to open market
-        await this.shareService.updateManySharesUnchecked({
-          where: { id: share.id },
-          data: { playerId: null, location: ShareLocation.OPEN_MARKET },
-        });
       } else {
-        //buy order
-        this.playerRemoveMoney(
-          order.gameId,
-          order.playerId,
-          order.value || 0,
-          EntityType.BANK,
-          `Limit order buy for ${order.Company.stockSymbol}`,
-        );
+        //if player does not have enough money, reject the order
+        if ((order.value || 0) > order.Player.cashOnHand) {
+          await this.prisma.playerOrder.update({
+            where: { id: order.id },
+            data: {
+              orderStatus: OrderStatus.REJECTED,
+            },
+          });
+          //game log
+          await this.gameLogService.createGameLog({
+            content: `Limit order buy for ${order.Company.stockSymbol} rejected due to insufficient funds`,
+            game: { connect: { id: order.gameId } },
+          });
+          return;
+        } else {
+          //buy order
+          this.playerRemoveMoney(
+            order.gameId,
+            order.playerId,
+            order.value || 0,
+            EntityType.BANK,
+            `Limit order buy for ${order.Company.stockSymbol}`,
+          );
 
-        //move share from open market to player portfolio
-        const share = await this.prisma.share.findFirst({
-          where: {
-            playerId: null,
-            companyId: order.companyId,
-            location: ShareLocation.OPEN_MARKET,
-          },
-        });
-        if (!share) {
-          throw new Error('Share not found');
+          //move share from open market to player portfolio
+          const share = await this.prisma.share.findFirst({
+            where: {
+              playerId: null,
+              companyId: order.companyId,
+              location: ShareLocation.OPEN_MARKET,
+            },
+          });
+          if (!share) {
+            throw new Error('Share not found');
+          }
+          //update share location to player
+          await this.shareService.updateShare({
+            where: { id: share.id },
+            data: {
+              location: ShareLocation.PLAYER,
+              Player: { connect: { id: order.playerId } },
+            },
+          });
+          //game log
+          await this.gameLogService.createGameLog({
+            content: `Limit order buy for ${order.Company.stockSymbol} completed`,
+            game: { connect: { id: order.gameId } },
+          });
         }
-        //update share location to player
-        await this.shareService.updateShare({
-          where: { id: share.id },
-          data: {
-            location: ShareLocation.PLAYER,
-            Player: { connect: { id: order.playerId } },
-          },
-        });
       }
     });
   }
@@ -5737,6 +5781,11 @@ export class GameManagementService {
         orderStatus: OrderStatus.FILLED,
       },
     });
+    //increase the action counter for the short order
+    await this.playersService.addActionCounter(
+      player.id,
+      playerOrder.orderType,
+    );
     //game log
     await this.gameLogService.createGameLog({
       game: { connect: { id: player.gameId } },

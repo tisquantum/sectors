@@ -429,6 +429,13 @@ export class PlayerOrderService {
     });
   }
 
+  /**
+   * Trigger limit orders to fill if they are between two prices.
+   * @param prevPrice 
+   * @param currentPrice 
+   * @param companyId 
+   * @returns 
+   */
   async triggerLimitOrdersFilled(
     prevPrice: number,
     currentPrice: number,
@@ -464,7 +471,7 @@ export class PlayerOrderService {
       },
     });
 
-    //update limit orders to market orders
+    //update limit orders
     const updatedOrders = await Promise.all(
       limitOrders.map((order) => {
         this.gameLogService.createGameLog({

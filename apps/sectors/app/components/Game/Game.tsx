@@ -220,18 +220,20 @@ const Game = ({ gameId }: { gameId: string }) => {
         </motion.div>
       </motion.div> */}
       <div className="flex flex-col w-full">
-        <Button
-          color="primary"
-          className="h-32 w-[90%] bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg transform transition-transform duration-300 hover:scale-90 hover:shadow-2xl"
-          onPress={onOpen}
-        >
-          <div className="flex flex-col gap-2 items-center">
-            <span className="text-2xl font-bold animate-pulse">
-              Game Is Finished!
-            </span>
-            <span className="text-xl font-medium">View Game Results</span>
-          </div>
-        </Button>
+        {gameState.gameStatus == GameStatus.FINISHED && (
+          <Button
+            color="primary"
+            className="h-32 w-[90%] bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg transform transition-transform duration-300 hover:scale-90 hover:shadow-2xl"
+            onPress={onOpen}
+          >
+            <div className="flex flex-col gap-2 items-center">
+              <span className="text-2xl font-bold animate-pulse">
+                Game Is Finished!
+              </span>
+              <span className="text-xl font-medium">View Game Results</span>
+            </div>
+          </Button>
+        )}
 
         <GameTopBar
           handleCurrentView={handleCurrentView}

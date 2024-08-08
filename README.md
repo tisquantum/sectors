@@ -152,3 +152,9 @@ I'm thinking short orders can only be performed on a company you have no ownersh
 - TODO: Add hyperlinks to company and player names so that when you click it will automatically bring up that detailed accordion in the left panel.
 
 - TODO: Player cash is going to zero at the end of a turn?
+
+- TODO: Limit order functionality, unlimited sells, 1 buy?
+
+- TODO: Extend pending order component to include dropdowns for all order statuses
+
+- TODO: Option Order action limit?

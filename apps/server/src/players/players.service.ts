@@ -109,6 +109,31 @@ export class PlayersService {
     });
   }
 
+  async addActionCounter(
+    playerId: string,
+    orderType: OrderType,
+  ): Promise<Player> {
+    const player = await this.prisma.player.findUnique({
+      where: { id: playerId },
+    });
+    if (!player) {
+      throw new Error('Player not found');
+    }
+    if (orderType === OrderType.MARKET) {
+      player.marketOrderActions += 1;
+    }
+    if (orderType === OrderType.LIMIT) {
+      player.limitOrderActions += 1;
+    }
+    if (orderType === OrderType.SHORT) {
+      player.shortOrderActions += 1;
+    }
+    return this.prisma.player.update({
+      where: { id: playerId },
+      data: player,
+    });
+  }
+
   async subtractActionCounter(
     playerId: string,
     orderType: OrderType,
