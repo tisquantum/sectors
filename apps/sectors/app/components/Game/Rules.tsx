@@ -2,6 +2,7 @@
 
 import { FC } from "react";
 import ThroughputLegend from "./ThroughputLegend";
+import CompanyTiers from "../Company/CompanyTiers";
 
 const overviewRules = (
   <>
@@ -214,6 +215,7 @@ const operatingRoundRules = (
         up 10 steps, but because the next stock tier starts at $21 this increase
         is halted at that price in at the beginning of the new tier.
       </p>
+      <CompanyTiers />
       <p>
         If the company elects to retain revenue, it automatically moves down 1
         step in stock price.

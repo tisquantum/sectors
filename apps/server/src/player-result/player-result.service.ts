@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service'; // Adjust the path as necessary
-import { Prisma, PlayerResult } from '@prisma/client';
+import { Prisma, PlayerResult, Player } from '@prisma/client';
+import { PlayerResultWithRelations } from '@server/prisma/prisma.types';
 
 @Injectable()
 export class PlayerResultService {
@@ -51,5 +52,29 @@ export class PlayerResultService {
   // Get all player results
   async getAllPlayerResults(): Promise<PlayerResult[]> {
     return this.prisma.playerResult.findMany();
+  }
+
+  async listPlayerResults(params: {
+    skip?: number;
+    take?: number;
+    cursor?: Prisma.PlayerResultWhereUniqueInput;
+    where?: Prisma.PlayerResultWhereInput;
+    orderBy?: Prisma.PlayerResultOrderByWithRelationInput;
+  }): Promise<PlayerResultWithRelations[]> {
+    const { skip, take, cursor, where, orderBy } = params;
+    return this.prisma.playerResult.findMany({
+      skip,
+      take,
+      cursor,
+      where,
+      orderBy,
+      include: {
+        player: {
+          include: {
+            Share: true,
+          },
+        },
+      },
+    });
   }
 }

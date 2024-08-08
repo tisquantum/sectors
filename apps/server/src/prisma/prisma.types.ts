@@ -6,6 +6,7 @@ import {
   Entity,
   Game,
   GameLog,
+  GameRecord,
   GameTurn,
   InfluenceRound,
   InfluenceVote,
@@ -17,6 +18,7 @@ import {
   Player,
   PlayerOrder,
   PlayerPriority,
+  PlayerResult,
   ProductionResult,
   ResearchDeck,
   RevenueDistributionVote,
@@ -75,6 +77,7 @@ export type GameState = Game & {
   StockRound: StockRound[];
   InfluenceRound: InfluenceRound[];
   Phase: Phase[];
+  GameRecord: GameRecord | null;
 };
 
 export type RoomWithUsersAndGames = Room & {
@@ -223,4 +226,8 @@ export type GameTurnWithRelations = GameTurn & {
 export type TransactionWithEntities = Transaction & {
   fromEntity: Entity & { Player: Player | null; Company: Company | null };
   toEntity: Entity & { Player: Player | null; Company: Company | null };
+};
+
+export type PlayerResultWithRelations = PlayerResult & {
+  player: Player & { Share: Share[] };
 };

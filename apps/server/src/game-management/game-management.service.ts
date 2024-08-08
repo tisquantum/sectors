@@ -119,7 +119,11 @@ import {
   getRandomCompany,
 } from '@server/data/helpers';
 import { PusherService } from 'nestjs-pusher';
-import { EVENT_NEW_PHASE, getGameChannelId } from '@server/pusher/pusher.types';
+import {
+  EVENT_GAME_ENDED,
+  EVENT_NEW_PHASE,
+  getGameChannelId,
+} from '@server/pusher/pusher.types';
 import { OperatingRoundService } from '@server/operating-round/operating-round.service';
 import { ShareService } from '@server/share/share.service';
 import { PlayerOrderService } from '@server/player-order/player-order.service';
@@ -377,6 +381,7 @@ export class GameManagementService {
       where: { id: game.id },
       data: { gameStatus: GameStatus.FINISHED },
     });
+    this.pusherService.trigger(getGameChannelId(game.id), EVENT_GAME_ENDED);
   }
 
   /**

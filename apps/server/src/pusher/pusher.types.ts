@@ -7,6 +7,7 @@ export const EVENT_PLAYER_LEFT = 'player-left';
 export const EVENT_GAME_JOINED = 'game-joined';
 export const EVENT_GAME_LEFT = 'game-left';
 export const EVENT_GAME_STARTED = 'game-started';
+export const EVENT_GAME_ENDED = 'game-ended';
 export const EVENT_MEETING_MESSAGE_CREATED = 'meeting-message-created';
 export const EVENT_NEW_PHASE = 'new-phase';
 export const EVENT_NEW_PLAYER_ORDER = 'new-player-order';

@@ -10,6 +10,7 @@ import PendingOrders from "./PendingOrders";
 import StockChart from "./StockChart";
 import CompanyActionSlider from "@sectors/app/components/Company/CompanyActionSelectionVote";
 import {
+  GameStatus,
   InfluenceRound,
   OperatingRound,
   Phase,
@@ -37,8 +38,9 @@ import Divestment from "./Divestment";
 import InfluenceBid from "./InfluenceBid";
 import ExerciseOptionOrders from "./ExerciseOptionOrders";
 import CoverShortOrders from "./CoverShortOrders";
-import { Spinner } from "@nextui-org/react";
+import { Button, Spinner, useDisclosure } from "@nextui-org/react";
 import { isActivePhase } from "@server/data/helpers";
+import GameResults from "./GameResults";
 
 const determineGameRound = (
   game: GameState
@@ -115,6 +117,10 @@ const Game = ({ gameId }: { gameId: string }) => {
   const [currentView, setCurrentView] = useState<string>("action");
   const constraintsRef = useRef(null);
   const [isTimerAtZero, setIsTimerAtZero] = useState(false);
+  const { isOpen, onOpen, onClose, onOpenChange } = useDisclosure();
+  useEffect(() => {
+    onOpen();
+  }, [onOpen]);
   useEffect(() => {
     const timer = setInterval(() => {
       if (currentPhase) {
@@ -214,6 +220,19 @@ const Game = ({ gameId }: { gameId: string }) => {
         </motion.div>
       </motion.div> */}
       <div className="flex flex-col w-full">
+        <Button
+          color="primary"
+          className="h-32 w-[90%] bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg transform transition-transform duration-300 hover:scale-90 hover:shadow-2xl"
+          onPress={onOpen}
+        >
+          <div className="flex flex-col gap-2 items-center">
+            <span className="text-2xl font-bold animate-pulse">
+              Game Is Finished!
+            </span>
+            <span className="text-xl font-medium">View Game Results</span>
+          </div>
+        </Button>
+
         <GameTopBar
           handleCurrentView={handleCurrentView}
           isTimerAtZero={isTimerAtZero}
@@ -231,6 +250,14 @@ const Game = ({ gameId }: { gameId: string }) => {
             {currentView === "chart" && <StockChart />}
             {currentView === "pending" && <PendingOrders />}
             {currentView == "economy" && <EndTurnEconomy />}
+            {gameState.gameStatus == GameStatus.FINISHED && (
+              <GameResults
+                isOpen={isOpen}
+                onOpen={onOpen}
+                onClose={onClose}
+                onOpenChange={onOpenChange}
+              />
+            )}
           </div>
           <PhaseListComponent />
         </div>
