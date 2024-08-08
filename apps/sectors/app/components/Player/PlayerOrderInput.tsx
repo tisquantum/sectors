@@ -253,6 +253,7 @@ const TabContentMO: React.FC<TabContentProps> = ({
   isBuy,
   sharesInMarket,
 }) => {
+  console.log("mo values", isBuy, maxValue, minValue, defaultValue);
   const { gameState } = useGame();
   const [shareValue, setShareValue] = useState<number>(1);
   const [marketOrderBidValue, setMarketOrderBidValue] = useState<number>(
@@ -561,6 +562,7 @@ const PlayerOrderInput = ({
   }, [currentPhase?.name]);
   useEffect(() => {
     if (orderType === OrderType.MARKET) {
+      console.log("order mo", isBuy, isIpo);
       if (isBuy) {
         if (isIpo) {
           setMaxValue(
@@ -578,13 +580,7 @@ const PlayerOrderInput = ({
           setMinValue(1);
         }
       } else {
-        const playerShares = company?.Share.filter(
-          (share) => share.location === ShareLocation.PLAYER
-        );
-        const authPlayerShares = playerShares?.filter(
-          (share) => share.playerId === authPlayer.id
-        ).length;
-        setMaxValue(authPlayerShares || 0);
+        setMaxValue(company?.Share.length || 1);
         setMinValue(1);
       }
     } else {
@@ -622,6 +618,15 @@ const PlayerOrderInput = ({
   const handleSelectionChange = (key: React.Key) => {
     switch (key) {
       case "mo":
+        if (isIpo) {
+          setIsBuy(true);
+        } else {
+          setIsBuy(
+            (company?.Share.filter(
+              (share) => share.location === ShareLocation.OPEN_MARKET
+            ).length || 0) > 0
+          );
+        }
         setOrderType(OrderType.MARKET);
         break;
       case "lo":
@@ -664,17 +669,7 @@ const PlayerOrderInput = ({
                     maxValue={maxValue}
                     minValue={minValue}
                     defaultValue={currentOrder.currentStockPrice}
-                    isBuy={
-                      (company?.Share.filter(
-                        (share) =>
-                          share.location ===
-                          (isIpo
-                            ? ShareLocation.IPO
-                            : ShareLocation.OPEN_MARKET)
-                      ).length || 0) > 0
-                        ? isBuy
-                        : false
-                    }
+                    isBuy={isBuy}
                     sharesInMarket={
                       company?.Share.filter(
                         (share) =>

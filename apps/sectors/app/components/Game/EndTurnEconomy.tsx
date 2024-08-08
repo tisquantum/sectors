@@ -1,13 +1,15 @@
 import { useGame } from "./GameContext";
 import "./EndTurnEconomy.css";
 import { sectorColors } from "@server/data/gameData";
-import { Sector } from "@server/prisma/prisma.client";
+import { CompanyStatus, Sector } from "@server/prisma/prisma.client";
 import { RiTeamFill } from "@remixicon/react";
 import PrestigeRewards from "./PrestigeRewards";
 import ResearchDeck from "../ResearchDeck/ResearchDeck";
 import { STABLE_ECONOMY_SCORE } from "@server/data/constants";
 import { Tooltip } from "@nextui-org/react";
 import { tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
+import CompanyPriorityList from "../Company/CompanyPriorityOperatingRound";
+import { trpc } from "@sectors/app/trpc";
 
 const SectorComponent = ({
   sector,
@@ -37,9 +39,22 @@ const SectorComponent = ({
 };
 
 const EndTurnEconomy = () => {
-  const { currentPhase, gameState } = useGame();
+  const { currentPhase, gameState, gameId } = useGame();
+  const { data: companiesWithSector, isLoading: isLoadingCompanies } =
+    trpc.company.listCompaniesWithSector.useQuery({
+      where: {
+        gameId: gameId,
+        status: CompanyStatus.ACTIVE,
+      },
+    });
   //get sectors
   const sectors = gameState?.sectors;
+  if (isLoadingCompanies) {
+    return <div>Loading companies...</div>;
+  }
+  if (!companiesWithSector) {
+    return <div>No companies found</div>;
+  }
   return (
     <div className="flex flex-col justify-center items-center content-center">
       <h1 className="text-2xl">Economy</h1>
@@ -85,6 +100,9 @@ const EndTurnEconomy = () => {
           <div className="flex gap-2 text-xl">
             <ResearchDeck />
           </div>
+        </div>
+        <div>
+          <CompanyPriorityList companies={companiesWithSector} />
         </div>
       </div>
     </div>

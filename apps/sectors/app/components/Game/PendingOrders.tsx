@@ -134,7 +134,7 @@ const PendingMarketOrders = ({
   // Render the orders in an accordion
   return (
     <Accordion
-      defaultExpandedKeys={[OrderStatus.PENDING]}
+      defaultExpandedKeys={[OrderStatus.PENDING, OrderStatus.FILLED]}
       className="space-y-4"
     >
       {Object.entries(groupedOrders).map(([status, companies], index) => (
@@ -289,7 +289,11 @@ const PendingLimitOrders = ({
   // Render the orders in an accordion
   return (
     <Accordion
-      defaultExpandedKeys={[OrderStatus.PENDING]}
+      defaultExpandedKeys={[
+        OrderStatus.OPEN,
+        OrderStatus.PENDING,
+        OrderStatus.FILLED_PENDING_SETTLEMENT,
+      ]}
       className="space-y-4"
     >
       {Object.entries(groupedOrders).map(([status, companies], index) => (

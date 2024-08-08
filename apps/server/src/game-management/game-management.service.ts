@@ -1916,11 +1916,18 @@ export class GameManagementService {
     if (!company) {
       throw new Error('Company not found');
     }
+    //get game
+    const game = await this.gamesService.game({
+      id: prestigeReward.gameId
+    });
+    if (!game) {
+      throw new Error('Game not found');
+    }
     //increase the company stock price
     await this.stockHistoryService.moveStockPriceUp(
       company.gameId,
       company.id,
-      prestigeReward.gameTurnId || '',
+      game.currentPhaseId || '',
       company.currentStockPrice,
       1,
       StockAction.PRESTIGE_REWARD,
@@ -4304,32 +4311,6 @@ export class GameManagementService {
           marketOrdersNoIpoBuyOrders,
         );
 
-        const netDifferences = Object.entries(
-          groupedMarketOrdersNoIpoBuyOrdersByCompany,
-        ).map(([companyId, orders]) => {
-          const buys = orders.filter((order) => !order.isSell);
-          const sells = orders.filter((order) => order.isSell);
-          const buyQuantity = buys.reduce(
-            (acc, order) => acc + (order.quantity || 0),
-            0,
-          );
-          const sellQuantity = sells.reduce(
-            (acc, order) => acc + (order.quantity || 0),
-            0,
-          );
-          return {
-            companyId,
-            netDifference: buyQuantity - sellQuantity,
-            orders,
-          };
-        });
-
-        try {
-          await this.processNetDifferences(netDifferences, phase);
-        } catch (error) {
-          console.error('Error resolving netDifferences iteration:', error);
-        }
-
         const groupedMarketOrders = this.groupByCompany(marketOrders);
 
         try {
@@ -4356,6 +4337,45 @@ export class GameManagementService {
           );
         } catch (error) {
           console.error('Error setting market order actions:', error);
+        }
+        
+        //get all orders for the current round that are FILLED and in the OPEN_MARKET,
+        //when calculating net differences we should only take the net for successful orders.
+        const openMarketOrders = await this.playerOrderService.playerOrdersWithPlayerCompany({
+          where: {
+            stockRoundId: phase.stockRoundId,
+            location: ShareLocation.OPEN_MARKET,
+            orderStatus: OrderStatus.FILLED,
+          },
+        });
+
+        //group these orders by company
+        const groupedOpenMarketOrders = this.groupByCompany(openMarketOrders);
+
+        const netDifferences = Object.entries(
+          groupedOpenMarketOrders,
+        ).map(([companyId, orders]) => {
+          const buys = orders.filter((order) => !order.isSell);
+          const sells = orders.filter((order) => order.isSell);
+          const buyQuantity = buys.reduce(
+            (acc, order) => acc + (order.quantity || 0),
+            0,
+          );
+          const sellQuantity = sells.reduce(
+            (acc, order) => acc + (order.quantity || 0),
+            0,
+          );
+          return {
+            companyId,
+            netDifference: buyQuantity - sellQuantity,
+            orders,
+          };
+        });
+
+        try {
+          await this.processNetDifferences(netDifferences, phase);
+        } catch (error) {
+          console.error('Error resolving netDifferences iteration:', error);
         }
       }
     }
@@ -4519,7 +4539,20 @@ export class GameManagementService {
       },
     });
     if (playerActualSharesOwned.length < order.quantity!) {
-      throw new Error('Player does not have enough shares to sell');
+      //reject the order
+      await this.prisma.playerOrder.update({
+        where: { id: order.id },
+        data: {
+          orderStatus: OrderStatus.REJECTED,
+        },
+      });
+      //game log
+      await this.gameLogService.createGameLog({
+        game: { connect: { id: order.gameId } },
+        content: `Player ${order.Player.nickname} does not have enough shares to sell`,
+      });
+      //throw
+      throw new Error('Not enough shares to sell');
     }
     const sharesToSell = Math.min(playerActualSharesOwned.length, sellAmount);
     try {

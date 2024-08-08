@@ -12,6 +12,7 @@ import { RiIncreaseDecreaseFill } from "@remixicon/react";
 import { Tooltip } from "@nextui-org/react";
 import { tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
 import ThroughputLegend from "./ThroughputLegend";
+import CompanyPriorityList from "../Company/CompanyPriorityOperatingRound";
 
 const OperatingRoundProduction = () => {
   const { currentPhase } = useGame();
@@ -47,14 +48,7 @@ const OperatingRoundProduction = () => {
         <div className="bg-slate-800 p-4 rounded-lg shadow-md flex gap-4">
           <div>
             <h2 className="text-lg font-semibold mb-2">Operations Priority</h2>
-            {companyPriorityOrderOperations(companiesWithSector).map(
-              (company, index) => (
-                <div key={company.id} className="flex items-center gap-2 mb-1">
-                  <span className="font-medium">{index + 1}.</span>
-                  <span>{company.name}</span>
-                </div>
-              )
-            )}
+            <CompanyPriorityList companies={companiesWithSector} />
           </div>
           <div>
             <ThroughputLegend />
