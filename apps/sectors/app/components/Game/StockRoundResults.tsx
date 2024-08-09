@@ -80,6 +80,9 @@ const StockRoundResults = () => {
                 (playerOrder.isSell ? "SELL" : "BUY")}
             </span>
             <span>Order Status: {playerOrder.orderStatus}</span>
+            <span>Quantity: {playerOrder.quantity}</span>
+            <span>Bid Price: ${playerOrder.value}</span>
+            <span>Location: {playerOrder.location}</span>
           </div>
         ))}
       </div>

@@ -1330,9 +1330,9 @@ export class GameManagementService {
           },
         );
         await Promise.all(sharePromises);
-      } 
-      
-      if(moneyToCompany > 0) {
+      }
+
+      if (moneyToCompany > 0) {
         const companyUpdated = await this.companyService.updateCompany({
           where: { id: company.id },
           data: { cashOnHand: company.cashOnHand + moneyToCompany },
@@ -3914,12 +3914,12 @@ export class GameManagementService {
       if (!playerOrders) {
         throw new Error('Stock round not found');
       }
-      //get game
+      // Get game
       const game = await this.gamesService.getGameState(phase.gameId);
       if (!game) {
         throw new Error('Game not found');
       }
-      //group player options order by contract id
+      // Group player options order by contract id
       const groupedOrders: { [key: number]: PlayerOrderWithPlayerCompany[] } =
         playerOrders.reduce(
           (acc, order) => {
@@ -3936,41 +3936,62 @@ export class GameManagementService {
           {} as { [key: number]: PlayerOrderWithPlayerCompany[] },
         );
 
-      //iterate over grouped orders and resolve them
+      // Iterate over grouped orders and resolve them
       await Promise.all(
         Object.values(groupedOrders).map(async (orders) => {
-          //if distribution strategy is bid, prioritize conflicting orders by value
-          if (game.distributionStrategy === DistributionStrategy.BID_PRIORITY) {
-            const playerIds = orders.map((order) => order.playerId);
-            // Get player priorities
-            const playerPriorities = await this.fetchPlayerPriorities(
-              playerIds,
-              this.prisma,
-            );
-            const sortedByBidValue = this.sortByBidValue(
-              orders,
-              playerPriorities,
-            );
-            //reject all orders except the first
-            await Promise.all(
-              sortedByBidValue.slice(1).map(async (order) => {
-                await this.prisma.playerOrder.update({
-                  where: { id: order.id },
-                  data: {
-                    orderStatus: OrderStatus.REJECTED,
-                  },
-                });
-              }),
-            );
-            //update the first order to be FILLED
-            const playerOrderResolved = await this.prisma.playerOrder.update({
-              where: { id: sortedByBidValue[0].id },
-              data: {
-                orderStatus: OrderStatus.OPEN,
-              },
-            });
-            //update the contract
-            const optionContractPurchased =
+          // Group orders by phaseId
+          const groupedByPhase = orders.reduce(
+            (acc, order) => {
+              const phaseId = order.phaseId;
+              if (!acc[phaseId]) {
+                acc[phaseId] = [];
+              }
+              acc[phaseId].push(order);
+              return acc;
+            },
+            {} as { [key: string]: PlayerOrderWithPlayerCompany[] },
+          );
+          // TODO: Is this a safe assumption?
+          // Sort phases by phase creation time
+          const sortedPhases = Object.entries(groupedByPhase).sort(
+            ([phaseIdA], [phaseIdB]) =>
+              new Date(groupedByPhase[phaseIdA][0].createdAt).getTime() -
+              new Date(groupedByPhase[phaseIdB][0].createdAt).getTime(),
+          );
+
+          // Iterate over sorted phases and resolve orders
+          for (const [, phaseOrders] of sortedPhases) {
+            if (phaseOrders.length > 1) {
+              // If multiple orders in the same phase, resolve by bid value
+              const playerIds = phaseOrders.map((order) => order.playerId);
+              // Get player priorities
+              const playerPriorities = await this.fetchPlayerPriorities(
+                playerIds,
+                this.prisma,
+              );
+              const sortedByBidValue = this.sortByBidValue(
+                phaseOrders,
+                playerPriorities,
+              );
+              // Reject all orders except the first
+              await Promise.all(
+                sortedByBidValue.slice(1).map(async (order) => {
+                  await this.prisma.playerOrder.update({
+                    where: { id: order.id },
+                    data: {
+                      orderStatus: OrderStatus.REJECTED,
+                    },
+                  });
+                }),
+              );
+              // Update the first order to be FILLED
+              const playerOrderResolved = await this.prisma.playerOrder.update({
+                where: { id: sortedByBidValue[0].id },
+                data: {
+                  orderStatus: OrderStatus.OPEN,
+                },
+              });
+              // Update the contract
               await this.optionContractService.updateOptionContract({
                 where: { id: sortedByBidValue[0].optionContractId || 0 },
                 data: {
@@ -3978,14 +3999,39 @@ export class GameManagementService {
                   currentPremium: sortedByBidValue[0].value || 0,
                 },
               });
-            //remove premium from players cash on hand
-            this.playerRemoveMoney(
-              phase.gameId,
-              playerOrderResolved.playerId,
-              playerOrderResolved.value || 0,
-              EntityType.BANK,
-              `Option contract purchased.`,
-            );
+              // Remove premium from players' cash on hand
+              await this.playerRemoveMoney(
+                phase.gameId,
+                playerOrderResolved.playerId,
+                playerOrderResolved.value || 0,
+                EntityType.BANK,
+                `Option contract purchased.`,
+              );
+            } else {
+              // If only one order in this phase, fulfill it directly
+              const playerOrderResolved = await this.prisma.playerOrder.update({
+                where: { id: phaseOrders[0].id },
+                data: {
+                  orderStatus: OrderStatus.OPEN,
+                },
+              });
+              // Update the contract
+              await this.optionContractService.updateOptionContract({
+                where: { id: phaseOrders[0].optionContractId || 0 },
+                data: {
+                  contractState: ContractState.PURCHASED,
+                  currentPremium: phaseOrders[0].value || 0,
+                },
+              });
+              // Remove premium from players' cash on hand
+              await this.playerRemoveMoney(
+                phase.gameId,
+                playerOrderResolved.playerId,
+                playerOrderResolved.value || 0,
+                EntityType.BANK,
+                `Option contract purchased.`,
+              );
+            }
           }
         }),
       );

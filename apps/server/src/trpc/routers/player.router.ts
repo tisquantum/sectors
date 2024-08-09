@@ -43,7 +43,16 @@ export default (trpc: TrpcService, ctx: Context) =>
           orderBy,
         });
       }),
-
+    playerWithShares: trpc.procedure
+      .input(z.object({ where: z.any().optional() }))
+      .query(async ({ input }) => {
+        const { where } = input;
+        const player = await ctx.playersService.playerWithShares(where);
+        if (!player) {
+          throw new Error('Player not found');
+        }
+        return player;
+      }),
     createPlayer: trpc.procedure
       .input(
         z.object({
