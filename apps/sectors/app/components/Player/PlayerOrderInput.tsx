@@ -38,6 +38,7 @@ import { PlayerOrderWithCompany } from "@server/prisma/prisma.types";
 import { getPseudoSpend } from "@server/data/helpers";
 import Button from "@sectors/app/components/General/DebounceButton";
 import { set } from "lodash";
+import PlayerShares from "./PlayerShares";
 
 const RiskAssessment = () => {
   return (
@@ -541,6 +542,10 @@ const PlayerOrderInput = ({
         playerId: authPlayer?.id,
       },
     });
+  const { data: playerWithShares, isLoading: isLoadingPlayerWithShares } =
+    trpc.player.listPlayerWithShares.useQuery({
+      id: authPlayer.id,
+    });
   const { data: company, isLoading: companyLoading } =
     trpc.company.getCompanyWithShares.useQuery({
       id: currentOrder.id,
@@ -637,6 +642,7 @@ const PlayerOrderInput = ({
         break;
     }
   };
+  if (isLoadingPlayerWithShares || companyLoading) return null;
   return (
     <div className="flex flex-col justify-center items-center gap-1 min-w-80 max-w-96">
       <PseudoBalance
@@ -652,6 +658,7 @@ const PlayerOrderInput = ({
         <>
           {currentOrder && <h2>{currentOrder.name}</h2>}
           <span>{isIpo ? "IPO" : "OPEN MARKET"}</span>
+          <PlayerShares playerWithShares={playerWithShares} />
           <Tabs
             aria-label="Dynamic tabs"
             items={tabs}
