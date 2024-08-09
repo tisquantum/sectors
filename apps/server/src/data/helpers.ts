@@ -279,8 +279,8 @@ export function determineFloatPrice(sector: Sector) {
 }
 
 export function calculateStepsToNewTier(
-  currentStockPrice: number,
   revenue: number,
+  currentStockPrice: number,
 ): number {
   let remainingSteps = Math.floor(revenue / currentStockPrice);
   let newStockPrice = currentStockPrice;

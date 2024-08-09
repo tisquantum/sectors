@@ -32,7 +32,7 @@ interface GameOptionsState {
 const GameOptions: React.FC<GameOptionsProps> = ({
   initialBankPoolNumber = 0,
   initialConsumerPoolNumber = 0,
-  initialStartingCashOnHand = 0,
+  initialStartingCashOnHand = 300,
   initialDistributionStrategy = DistributionStrategy.FAIR_SPLIT,
   initialGameMaxTurns = 15,
   onOptionsChange,
@@ -58,9 +58,9 @@ const GameOptions: React.FC<GameOptionsProps> = ({
       5: 20000,
     },
     startingCashOnHand: {
-      1: 300,
-      2: 500,
-      3: 750,
+      1: 200,
+      2: 300,
+      3: 400,
     },
     consumerPoolNumber: {
       1: 50,
@@ -127,16 +127,16 @@ const GameOptions: React.FC<GameOptionsProps> = ({
           onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
             handleSelectChange("startingCashOnHand", Number(e.target.value))
           }
-          defaultSelectedKeys={["1"]}
+          defaultSelectedKeys={["2"]}
         >
           <SelectItem key={1} value={1}>
-            300 (Business Elite)
-          </SelectItem>
-          <SelectItem key={1} value={1}>
-            500 (Standard)
+            200 (Business Elite)
           </SelectItem>
           <SelectItem key={2} value={2}>
-            750 (Beginner Friendly)
+            300 (Standard)
+          </SelectItem>
+          <SelectItem key={3} value={3}>
+            400 (Beginner Friendly)
           </SelectItem>
         </Select>
       </div>

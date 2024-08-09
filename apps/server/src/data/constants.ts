@@ -44,7 +44,7 @@ export const LARGE_MARKETING_CAMPAIGN_DEMAND = 4;
 export const SMALL_MARKETING_CAMPAIGN_DEMAND = 3;
 
 export const DEFAULT_INFLUENCE = process.env.INFLUENCE_MAX
-  ? (process.env.INFLUENCE_MAX as unknown as number)
+  ? parseInt(process.env.INFLUENCE_MAX)
   : 50;
 
 export const OPTION_CONTRACT_ACTIVE_COUNT = 3;

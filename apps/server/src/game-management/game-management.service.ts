@@ -1247,6 +1247,7 @@ export class GameManagementService {
       }
 
       let dividend = 0;
+      let moneyToCompany = 0;
       let moneyFromBank;
 
       switch (revenueDistribution) {
@@ -1255,8 +1256,10 @@ export class GameManagementService {
           break;
         case RevenueDistribution.DIVIDEND_FIFTY_FIFTY:
           dividend = Math.floor(revenue / 2) / company.Share.length;
+          moneyToCompany = Math.floor(revenue / 2);
           break;
         case RevenueDistribution.RETAINED:
+          moneyToCompany = revenue;
           break;
         default:
           continue;
@@ -1327,10 +1330,12 @@ export class GameManagementService {
           },
         );
         await Promise.all(sharePromises);
-      } else {
+      } 
+      
+      if(moneyToCompany > 0) {
         const companyUpdated = await this.companyService.updateCompany({
           where: { id: company.id },
-          data: { cashOnHand: company.cashOnHand + moneyFromBank },
+          data: { cashOnHand: company.cashOnHand + moneyToCompany },
         });
         //if companyUpdated has positive cash on hand, make sure it's active
         if (companyUpdated.cashOnHand > 0) {
@@ -1341,7 +1346,7 @@ export class GameManagementService {
         }
         this.gameLogService.createGameLog({
           game: { connect: { id: phase.gameId } },
-          content: `Company ${company.name} has retained $${moneyFromBank}.`,
+          content: `Company ${company.name} has retained $${moneyToCompany}.`,
         });
       }
 
