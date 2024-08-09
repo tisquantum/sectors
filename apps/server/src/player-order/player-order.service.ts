@@ -8,6 +8,7 @@ import {
   ShareLocation,
   OrderStatus,
   DistributionStrategy,
+  CompanyStatus,
 } from '@prisma/client';
 import {
   PlayerOrderConcealed,
@@ -278,37 +279,46 @@ export class PlayerOrderService {
       throw new Error('Cannot sell into IPO');
     }
 
+    const playerId = data.Player.connect?.id;
+    const companyId = data.Company.connect?.id;
+    const stockRoundId = data.StockRound.connect?.id;
+
+    if (!playerId || !companyId || !stockRoundId) {
+      throw new Error('Invalid data input');
+    }
+
+    const [player, company, playerOrders] = await this.prisma.$transaction([
+      this.prisma.player.findUnique({
+        where: { id: playerId },
+        include: { Share: true },
+      }),
+      this.prisma.company.findUnique({
+        where: { id: companyId },
+      }),
+      this.prisma.playerOrder.findMany({
+        where: {
+          playerId,
+          stockRoundId,
+        },
+        include: { Company: true },
+      }),
+    ]);
+
+    if (!player || !company) {
+      throw new Error('Player or Company not found');
+    }
+
+    if (
+      data.location === ShareLocation.OPEN_MARKET &&
+      company.status != CompanyStatus.ACTIVE
+    ) {
+      throw new Error(
+        'Cannot place an order into the open market on a company that is not active',
+      );
+    }
+
     // Filter out fields based on order type
     if (data.orderType === OrderType.MARKET) {
-      const playerId = data.Player.connect?.id;
-      const companyId = data.Company.connect?.id;
-      const stockRoundId = data.StockRound.connect?.id;
-
-      if (!playerId || !companyId || !stockRoundId) {
-        throw new Error('Invalid data input');
-      }
-
-      const [player, company, playerOrders] = await this.prisma.$transaction([
-        this.prisma.player.findUnique({
-          where: { id: playerId },
-          include: { Share: true },
-        }),
-        this.prisma.company.findUnique({
-          where: { id: companyId },
-        }),
-        this.prisma.playerOrder.findMany({
-          where: {
-            playerId,
-            stockRoundId,
-          },
-          include: { Company: true },
-        }),
-      ]);
-
-      if (!player || !company) {
-        throw new Error('Player or Company not found');
-      }
-
       if (player.marketOrderActions <= 0) {
         throw new Error('Player has no more market order actions');
       }
@@ -326,7 +336,8 @@ export class PlayerOrderService {
         orderValue = data.quantity! * company.currentStockPrice!;
       }
 
-      if (data.isSell) {
+      /**
+       * if (data.isSell) {
         const playerShares = player.Share.filter(
           (share) => share.companyId === companyId,
         );
@@ -356,22 +367,9 @@ export class PlayerOrderService {
         //     'This buy would exceed the maximum share percentage.',
         //   );
         // }
-      }
+      }*/
     }
-
     if (data.orderType === OrderType.LIMIT) {
-      delete data.quantity;
-      //get player
-      const playerId = data.Player.connect?.id;
-      if (!playerId) {
-        throw new Error('Invalid data input');
-      }
-      const player = await this.prisma.player.findUnique({
-        where: { id: playerId },
-      });
-      if (!player) {
-        throw new Error('Player not found');
-      }
       //check if player has limit order actions
       if (player.limitOrderActions <= 0) {
         throw new Error('Player has no more limit order actions');
@@ -431,10 +429,10 @@ export class PlayerOrderService {
 
   /**
    * Trigger limit orders to fill if they are between two prices.
-   * @param prevPrice 
-   * @param currentPrice 
-   * @param companyId 
-   * @returns 
+   * @param prevPrice
+   * @param currentPrice
+   * @param companyId
+   * @returns
    */
   async triggerLimitOrdersFilled(
     prevPrice: number,
@@ -476,7 +474,9 @@ export class PlayerOrderService {
       limitOrders.map((order) => {
         this.gameLogService.createGameLog({
           game: { connect: { id: order.gameId } },
-          content: `Player ${order.Player.nickname} limit order ${order.isSell ? 'SELL' : 'BUY'} @${order.value} for company ${companyId} filled`,
+          content: `Player ${order.Player.nickname} limit order ${
+            order.isSell ? 'SELL' : 'BUY'
+          } @${order.value} for company ${companyId} filled`,
         });
         return this.prisma.playerOrder.update({
           where: { id: order.id },

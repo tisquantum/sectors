@@ -1918,7 +1918,7 @@ export class GameManagementService {
     }
     //get game
     const game = await this.gamesService.game({
-      id: prestigeReward.gameId
+      id: prestigeReward.gameId,
     });
     if (!game) {
       throw new Error('Game not found');
@@ -4338,39 +4338,40 @@ export class GameManagementService {
         } catch (error) {
           console.error('Error setting market order actions:', error);
         }
-        
+
         //get all orders for the current round that are FILLED and in the OPEN_MARKET,
         //when calculating net differences we should only take the net for successful orders.
-        const openMarketOrders = await this.playerOrderService.playerOrdersWithPlayerCompany({
-          where: {
-            stockRoundId: phase.stockRoundId,
-            location: ShareLocation.OPEN_MARKET,
-            orderStatus: OrderStatus.FILLED,
-          },
-        });
+        const openMarketOrders =
+          await this.playerOrderService.playerOrdersWithPlayerCompany({
+            where: {
+              stockRoundId: phase.stockRoundId,
+              location: ShareLocation.OPEN_MARKET,
+              orderStatus: OrderStatus.FILLED,
+            },
+          });
 
         //group these orders by company
         const groupedOpenMarketOrders = this.groupByCompany(openMarketOrders);
 
-        const netDifferences = Object.entries(
-          groupedOpenMarketOrders,
-        ).map(([companyId, orders]) => {
-          const buys = orders.filter((order) => !order.isSell);
-          const sells = orders.filter((order) => order.isSell);
-          const buyQuantity = buys.reduce(
-            (acc, order) => acc + (order.quantity || 0),
-            0,
-          );
-          const sellQuantity = sells.reduce(
-            (acc, order) => acc + (order.quantity || 0),
-            0,
-          );
-          return {
-            companyId,
-            netDifference: buyQuantity - sellQuantity,
-            orders,
-          };
-        });
+        const netDifferences = Object.entries(groupedOpenMarketOrders).map(
+          ([companyId, orders]) => {
+            const buys = orders.filter((order) => !order.isSell);
+            const sells = orders.filter((order) => order.isSell);
+            const buyQuantity = buys.reduce(
+              (acc, order) => acc + (order.quantity || 0),
+              0,
+            );
+            const sellQuantity = sells.reduce(
+              (acc, order) => acc + (order.quantity || 0),
+              0,
+            );
+            return {
+              companyId,
+              netDifference: buyQuantity - sellQuantity,
+              orders,
+            };
+          },
+        );
 
         try {
           await this.processNetDifferences(netDifferences, phase);

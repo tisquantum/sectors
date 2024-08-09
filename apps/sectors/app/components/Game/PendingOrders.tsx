@@ -198,7 +198,7 @@ const PendingMarketOrders = ({
                     <ArrowTrendingUpIcon className="size-4" /> $
                     {orders[0].Company.currentStockPrice}
                     <span>
-                      {company} {netDifference}
+                      {company}
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-2">

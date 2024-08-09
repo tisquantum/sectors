@@ -42,6 +42,27 @@ const stockRoundRules = (
       are permanent until resolved.
     </p>
     <p>
+      <strong>Share Locations</strong>
+      <ul className="list-disc pl-5">
+        <li>
+          <strong>IPO:</strong> Initial Public Offering. Shares are purchased
+          from the company.
+        </li>
+        <li>
+          <strong>OPEN MARKET:</strong> Shares are purchased from the open
+          market. Shares bought are sold in the open market impact the companies
+          stock price. For each share sold, the stock price moves down 1 step.
+          For each share bought, the stock price moves up 1 slot on the stock
+          tier track. Different stock tiers require different amounts of slots
+          to be filled before an order can move up in price.
+        </li>
+        <li>
+          <strong>DERIVATIVES MARKET:</strong> Options contracts are purchased
+          from the bank.
+        </li>
+      </ul>
+    </p>
+    <p>
       <strong>Order Mechanisms:</strong>
       <ul className="list-disc pl-5">
         <li>
@@ -145,7 +166,8 @@ const operatingRoundRules = (
         Each sector requires companies to sell some percentage of shares from
         it's IPO before it is floated. Companies that are floated are eligible
         to operate. Companies eligible for operation conduct company actions
-        during company vote phase.
+        during company vote phase. Companies that are not floated may not have
+        open market orders placed against them.
       </p>
     </p>
     <p>
