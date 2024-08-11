@@ -19,7 +19,7 @@ import {
 } from "@server/data/constants";
 import { trpc } from "@sectors/app/trpc";
 import { useGame } from "./GameContext";
-import { sectorColors } from "@server/data/gameData";
+import { sectorColors, sectorColorVariants } from "@server/data/gameData";
 import { CompanyWithSectorAndStockHistory } from "@server/prisma/prisma.types";
 import { LineChart } from "@tremor/react";
 import {
@@ -164,13 +164,17 @@ const StockChart = () => {
   const valueFormatter = function (number: number) {
     return "$ " + new Intl.NumberFormat("us").format(number).toString();
   };
-  const companyColorsMap = companies.reduce(
-    (acc, company) => ({
+  const companyColorsMap = companies.reduce((acc, company, index) => {
+    const sector = company.Sector.name;
+    const colorVariantIndex = index % 10; // Cycle through the 10 color variants
+    const colorVariant = sectorColorVariants[sector][colorVariantIndex];
+  
+    return {
       ...acc,
-      [company.id]: sectorColors[company.Sector.name],
-    }),
-    {}
-  );
+      [company.id]: colorVariant,
+    };
+  }, {});
+  
   const colorsArray: string[] = Object.values(companyColorsMap) || [];
   const groupedData =
     companies?.flatMap((company) =>
@@ -225,7 +229,7 @@ const StockChart = () => {
   allChartData.forEach((entry, index) => {
     entry.phaseId = `${index + 1} ${entry.phaseName}`;
   });
-
+  console.log('colors array', colorsArray);
   return (
     <div className="flex flex-col">
       <Tabs>

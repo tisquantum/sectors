@@ -29,7 +29,6 @@ import {
 } from "@nextui-org/react";
 import PlayerAvatar from "../Player/PlayerAvatar";
 import { EntityType, OrderType, PhaseName } from "@server/prisma/prisma.client";
-import { DEFAULT_SHARE_LIMIT } from "@server/data/constants";
 import { tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
 import {
   MoneyTransactionByEntityType,
@@ -165,7 +164,7 @@ const GameGeneralInfo = () => {
           }
         >
           <div className="flex gap-1 items-center">
-            <RiTicket2Fill size={18} /> {DEFAULT_SHARE_LIMIT}
+            <RiTicket2Fill size={18} /> {gameState.certificateLimit}
           </div>
         </Tooltip>
       </div>

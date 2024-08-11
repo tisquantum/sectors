@@ -891,6 +891,37 @@ export const sectorColors: { [key: string]: string } = {
   Materials: '#154360',
 };
 
+export const sectorColorVariants: { [key: string]: string[] } = {
+  'Consumer Cyclical': [
+    "#FFD700", "#FFC300", "#FFB000", "#FF9C00", "#FF8800",
+    "#FF7400", "#FF6000", "#FF4C00", "#FF3800", "#FF2400",
+  ],
+  'Consumer Defensive': [
+    "#FF4500", "#FF3300", "#FF2200", "#FF1100", "#FF0000",
+    "#E60000", "#CC0000", "#B30000", "#990000", "#800000",
+  ],
+  Industrial: [
+    "#FF1493", "#FF0066", "#E60060", "#CC005C", "#B30058",
+    "#990054", "#800050", "#66004C", "#4C0048", "#330044",
+  ],
+  Technology: [
+    "#4B0082", "#6A0DAD", "#7F00FF", "#8A2BE2", "#9932CC",
+    "#BA55D3", "#DA70D6", "#EE82EE", "#D8BFD8", "#DDA0DD",
+  ],
+  Healthcare: [
+    "#00CED1", "#20B2AA", "#40E0D0", "#48D1CC", "#5F9EA0",
+    "#66CDAA", "#7FFFD4", "#76EEC6", "#70DBDB", "#AFEEEE",
+  ],
+  Energy: [
+    "#228B22", "#32CD32", "#00FF00", "#7CFC00", "#00FA9A",
+    "#ADFF2F", "#9ACD32", "#8FBC8F", "#556B2F", "#6B8E23",
+  ],
+  Materials: [
+    "#4682B4", "#4169E1", "#0000FF", "#0000CD", "#00008B",
+    "#191970", "#6495ED", "#1E90FF", "#00BFFF", "#87CEFA",
+  ],
+};
+
 export const consumerCyclical = [
   { name: 'TesLoop Motors', symbol: 'TLM' },
   { name: 'ToyAuto', symbol: 'TA' },

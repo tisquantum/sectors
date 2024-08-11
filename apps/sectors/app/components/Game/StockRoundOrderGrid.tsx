@@ -153,9 +153,11 @@ const StockRoundOrderGrid = ({
                     isInteractive={isInteractive}
                     focusedOrder={focusedOrder}
                     currentPhase={currentPhase}
-                    playerOrdersRevealed={playerOrdersRevealed?.filter(
-                      (order) => order.companyId === company.id
-                    ) || []}
+                    playerOrdersRevealed={
+                      playerOrdersRevealed?.filter(
+                        (order) => order.companyId === company.id
+                      ) || []
+                    }
                     phasesOfStockRound={phasesOfStockRound}
                     isOrderInputOpen={isOrderInputOpen}
                     handleButtonSelect={companyCardButtonClicked}
@@ -167,7 +169,7 @@ const StockRoundOrderGrid = ({
         </div>
       </Tab>
       <Tab key="derivatives" title="Derivatives">
-        <Derivatives />
+        <Derivatives isInteractive={isInteractive} />
       </Tab>
     </Tabs>
   );

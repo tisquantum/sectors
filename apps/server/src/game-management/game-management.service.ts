@@ -389,27 +389,31 @@ export class GameManagementService {
 
   /**
    * Every third turn, look for the sector with the top two performing companies.
-   * Performance is measured based on the company's stock price.
+   * Performance is measured based on the company's stock price.  If there are no sectors with at least
+   * two active companies, we instead look for the top performing company.  If there are zero companies active, we skip this.
    *
    * @param phase
    */
   async handleOpeningNewCompany(phase: Phase) {
-    //get the current game turn
+    // Get the current game turn
     const gameTurn = await this.gameTurnService.getCurrentTurn(phase.gameId);
     if (!gameTurn) {
       throw new Error('Game turn not found');
     }
-    //check if the game turn is one of the third turns of the game
+
+    // Check if the game turn is one of the third turns of the game
     if (gameTurn.turn % 3 !== 0) {
       return;
     }
-    //get all companies and group by sector
+
+    // Get all active companies and group by sector
     const companies = await this.companyService.companiesWithSector({
-      where: { gameId: phase.gameId },
+      where: { gameId: phase.gameId, status: CompanyStatus.ACTIVE },
     });
-    if (!companies) {
-      throw new Error('Companies not found');
+    if (!companies || companies.length === 0) {
+      throw new Error('No active companies found');
     }
+
     const groupedCompanies = companies.reduce(
       (acc, company) => {
         if (!acc[company.sectorId]) {
@@ -420,37 +424,99 @@ export class GameManagementService {
       },
       {} as { [key: string]: CompanyWithSector[] },
     );
-    //combine the stock prices for the top two stock price companies per sector
-    const sectorTopCompanies = Object.values(groupedCompanies).map(
-      (companies) => {
+
+    // Filter out sectors with fewer than 2 companies
+    const sectorsWithAtLeastTwoCompanies = Object.entries(
+      groupedCompanies,
+    ).filter(([, companies]) => companies.length >= 2);
+
+    // If no sector has two companies, prioritize sectors with one company
+    if (sectorsWithAtLeastTwoCompanies.length === 0) {
+      const sectorsWithOneCompany = Object.entries(groupedCompanies).filter(
+        ([, companies]) => companies.length === 1,
+      );
+
+      if (sectorsWithOneCompany.length === 0) {
+        return; // No eligible sectors for new company creation
+      }
+
+      // Find the sector with the highest stock price among the single-company sectors
+      const highestSingleCompanySector = sectorsWithOneCompany.reduce(
+        (highest, [sectorId, companies]) => {
+          const company = companies[0];
+          if (
+            !highest ||
+            company.currentStockPrice > highest.company.currentStockPrice
+          ) {
+            return { sectorId, company };
+          }
+          return highest;
+        },
+        null as { sectorId: string; company: CompanyWithSector } | null,
+      );
+
+      if (highestSingleCompanySector) {
+        return this.createCompanyInSector(
+          phase,
+          highestSingleCompanySector.sectorId,
+          [highestSingleCompanySector.company],
+        );
+      }
+
+      return;
+    }
+
+    // Combine the stock prices for the top two stock price companies per sector
+    const sectorTopCompanies = sectorsWithAtLeastTwoCompanies.map(
+      ([sectorId, companies]) => {
         const sortedCompanies = companies.sort(
           (a, b) => b.currentStockPrice - a.currentStockPrice,
         );
-        return sortedCompanies.slice(0, 2).reduce((acc, company) => {
-          return acc + company.currentStockPrice;
-        }, 0);
+        return {
+          sectorId,
+          combinedStockPrice:
+            sortedCompanies[0].currentStockPrice +
+            sortedCompanies[1].currentStockPrice,
+          topCompanies: sortedCompanies.slice(0, 2),
+        };
       },
     );
-    //get the sector with the highest combined stock price
-    const topSectorIndex = sectorTopCompanies.indexOf(
-      Math.max(...sectorTopCompanies),
+
+    // Get the sector with the highest combined stock price
+    const topSector = sectorTopCompanies.reduce((prev, curr) => {
+      return curr.combinedStockPrice > prev.combinedStockPrice ? curr : prev;
+    });
+
+    // Create a new company in this sector
+    return this.createCompanyInSector(
+      phase,
+      topSector.sectorId,
+      topSector.topCompanies,
     );
-    //create a new company in this sector
-    const sectorId = Object.keys(groupedCompanies)[topSectorIndex];
-    const sectorCompanies = groupedCompanies[sectorId];
+  }
+
+  /**
+   * Helper function to create a company in a specific sector
+   */
+  private async createCompanyInSector(
+    phase: Phase,
+    sectorId: string,
+    sectorCompanies: CompanyWithSector[],
+  ) {
     const sector = await this.sectorService.sector({ id: sectorId });
     if (!sector) {
       throw new Error('Sector not found');
     }
+
     const ipoPrice = Math.floor(
       Math.random() *
         (sectorCompanies[0].currentStockPrice -
-          sectorCompanies[1].currentStockPrice) +
-        sectorCompanies[1].currentStockPrice,
+          sectorCompanies[1]?.currentStockPrice || 0) +
+        (sectorCompanies[1]?.currentStockPrice ||
+          sectorCompanies[0].currentStockPrice),
     );
-    console.log('chosen sector', sector.sectorName);
+
     const newCompanyInfo = getRandomCompany(sector.sectorName);
-    //create a new company in the sector
     const newCompany = await this.companyService.createCompany({
       Game: { connect: { id: phase.gameId } },
       Sector: { connect: { id: sectorId } },
@@ -467,7 +533,7 @@ export class GameManagementService {
       insolvent: false,
       ipoAndFloatPrice: ipoPrice,
     });
-    //create shares for company
+
     const shares = [];
     for (let i = 0; i < DEFAULT_SHARE_DISTRIBUTION; i++) {
       shares.push({
@@ -478,7 +544,7 @@ export class GameManagementService {
       });
     }
     await this.shareService.createManyShares(shares);
-    //game log
+
     await this.gameLogService.createGameLog({
       game: { connect: { id: phase.gameId } },
       content: `A new company ${newCompany.name} has been established in the ${sector.sectorName} sector.`,
@@ -993,9 +1059,17 @@ export class GameManagementService {
       throw new Error('Players not found');
     }
 
+    const game = await this.gamesService.game({
+      id: phase.gameId,
+    });
+
+    if (!game) {
+      throw new Error('Game not found');
+    }
+
     // Iterate over players and collect any that have greater shares than game Share Limit and divest them
     const playersToDivest = players.filter(
-      (player) => player.Share.length > DEFAULT_SHARE_LIMIT,
+      (player) => player.Share.length > game.certificateLimit,
     );
     if (playersToDivest.length === 0) {
       return;
@@ -1008,7 +1082,7 @@ export class GameManagementService {
       const shuffledShares = this.shuffleArray([
         ...shares,
       ]) as ShareWithCompany[];
-      const sharesToDivest = shuffledShares.slice(DEFAULT_SHARE_LIMIT);
+      const sharesToDivest = shuffledShares.slice(game.certificateLimit);
       const companyId = sharesToDivest[0].companyId;
 
       const shareUpdates = sharesToDivest.map((share) => async () => {
@@ -3071,12 +3145,16 @@ export class GameManagementService {
       await this.createResearchDeck(game.id);
 
       // Add players to the game
-      const players = await this.addPlayersToGame(game.id, roomId, startingCashOnHand);
-      
+      const players = await this.addPlayersToGame(
+        game.id,
+        roomId,
+        startingCashOnHand,
+      );
+
       //calculate dynamic cert limit for game
       const certificateLimit = calculateCertLimitForPlayerCount(players.length);
 
-      //update the game 
+      //update the game
       await this.gamesService.updateGame({
         where: { id: game.id },
         data: { certificateLimit },
