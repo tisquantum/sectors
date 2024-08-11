@@ -55,6 +55,7 @@ export const LOAN_INTEREST_RATE = 0.1;
 export const PRESTIGE_EFFECT_INCREASE_AMOUNT = 2;
 export const AUTOMATION_EFFECT_OPERATIONS_REDUCTION = 20;
 export const CAPITAL_INJECTION_STARTER = 200;
+export const CAPITAL_INJECTION_BOOSTER = 200;
 
 /**
  * Phase times in milliseconds
@@ -502,7 +503,7 @@ export const PrestigeTrack = [
     type: PrestigeReward.CAPITAL_INJECTION,
     name: 'Capital Injection',
     description:
-      'The company receives the money on this space of the track. If you pass over this, the money across all capital injections doubles.',
+      `The company receives the money on this space of the track. If you pass over this, the money across all capital injections receive another $${CAPITAL_INJECTION_BOOSTER}.`,
     probability: 0.15,
     cost: 3,
   },

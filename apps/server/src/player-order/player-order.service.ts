@@ -174,6 +174,7 @@ export class PlayerOrderService {
             StockRound: true,
           },
         },
+        GameTurn: true,
       },
     });
   }

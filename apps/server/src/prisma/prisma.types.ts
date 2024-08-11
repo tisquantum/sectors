@@ -121,6 +121,7 @@ export type PlayerOrderWithPlayerRevealed = PlayerOrder & {
   Player: Player;
   Sector: Sector;
   Phase: PhaseWithStockRound;
+  GameTurn: GameTurn;
 };
 export type SectorWithCompanyRelations = Sector & {
   Company: CompanyWithRelations[];

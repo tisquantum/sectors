@@ -268,14 +268,16 @@ const TabContentMO: React.FC<TabContentProps> = ({
   }, []);
   return (
     <div className="flex flex-col text-center items-center center-content justify-center gap-2">
+      {/* 
+      No need for this in market orders, gonna take this order counter out of market orders for now.
       <OrderCounter
         ordersRemaining={ordersRemaining}
         maxOrders={MAX_MARKET_ORDER_ACTIONS}
-      />
+      /> */}
       <BuyOrSell
         handleSelectionIsBuy={handleSelectionIsBuy}
         isIpo={isIpo}
-        showBuy={sharesInMarket > 0}
+        showBuy={sharesInMarket > 0 || true}
       />
       {gameState.distributionStrategy == DistributionStrategy.BID_PRIORITY &&
         isBuy &&

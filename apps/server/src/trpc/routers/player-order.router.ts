@@ -193,7 +193,6 @@ export default (trpc: TrpcService, ctx: Context) =>
     createPlayerOrder: trpc.procedure
       .input(
         z.object({
-          gameId: z.string(),
           playerId: z.string(),
           companyId: z.string(),
           quantity: z.number().optional(),
@@ -207,16 +206,9 @@ export default (trpc: TrpcService, ctx: Context) =>
       .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
       .use(async (opts) => checkSubmissionTime(opts, ctx.phaseService))
       .mutation(async ({ input, ctx: ctxMiddleware }) => {
-        //remove game id from input
-        const {
-          gameId,
-          companyId,
-          playerId,
-          contractId,
-          ...playerOrderInput
-        } = input;
-        console.log('playerOrderInput', playerOrderInput);
-        if(!ctxMiddleware.gameId) {
+        console.log('playerOrderInput', input);
+        const { playerId, ...rest } = input;
+        if (!ctxMiddleware.gameId) {
           //throw
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
@@ -226,12 +218,9 @@ export default (trpc: TrpcService, ctx: Context) =>
         let playerOrder;
         try {
           playerOrder = await ctx.gameManagementService.createPlayerOrder({
-            ...playerOrderInput,
+            ...input,
             orderStatus: OrderStatus.PENDING,
             gameId: ctxMiddleware.gameId,
-            companyId,
-            playerId,
-            contractId,
             submissionStamp: ctxMiddleware.submissionStamp,
           });
           //subtract one from related player action counter
@@ -242,12 +231,12 @@ export default (trpc: TrpcService, ctx: Context) =>
           //get player
           const player = await ctx.playerService.player({ id: playerId });
           await ctx.gameLogService.createGameLog({
-            game: { connect: { id: gameId } },
+            game: { connect: { id: ctxMiddleware.gameId } },
             content: `Player ${player?.nickname} created an order.`,
           });
           //Use for "ready up" and updating the authPlayerState
           ctx.pusherService.trigger(
-            getGameChannelId(gameId),
+            getGameChannelId(ctxMiddleware.gameId),
             EVENT_NEW_PLAYER_ORDER_PLAYER_ID,
             {
               playerId: playerOrder.playerId,

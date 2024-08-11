@@ -99,9 +99,11 @@ import {
   CAPITAL_INJECTION_STARTER,
   LARGE_MARKETING_CAMPAIGN_DEMAND,
   SMALL_MARKETING_CAMPAIGN_DEMAND,
+  CAPITAL_INJECTION_BOOSTER,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
+  calculateCertLimitForPlayerCount,
   calculateCompanySupply,
   calculateDemand,
   calculateMarginAccountMinimum,
@@ -1764,7 +1766,8 @@ export class GameManagementService {
         },
         data: {
           capitalInjectionRewards: game.capitalInjectionRewards.map(
-            (capitalInjectionReward) => Math.floor(capitalInjectionReward * 2),
+            (capitalInjectionReward) =>
+              Math.floor(capitalInjectionReward + CAPITAL_INJECTION_BOOSTER),
           ),
         },
       });
@@ -3068,8 +3071,16 @@ export class GameManagementService {
       await this.createResearchDeck(game.id);
 
       // Add players to the game
-      await this.addPlayersToGame(game.id, roomId, startingCashOnHand);
+      const players = await this.addPlayersToGame(game.id, roomId, startingCashOnHand);
+      
+      //calculate dynamic cert limit for game
+      const certificateLimit = calculateCertLimitForPlayerCount(players.length);
 
+      //update the game 
+      await this.gamesService.updateGame({
+        where: { id: game.id },
+        data: { certificateLimit },
+      });
       // Randomly select 3 sectors
       const selectedSectors = this.getRandomElements(
         jsonData.sectors,

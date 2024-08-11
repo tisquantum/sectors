@@ -719,3 +719,27 @@ export function getRandomCompany(sectorName: SectorName): {
 export function calculateDemand(demandScore: number, baseDemand: number) {
   return demandScore + baseDemand;
 }
+
+export function calculateCertLimitForPlayerCount(playerCount: number): number {
+  // Define the extremes
+  const minPlayerCount = 2;
+  const maxPlayerCount = 20;
+  const maxCertLimit = 20;
+  const minCertLimit = 6;
+
+  // Ensure the player count is within the defined range
+  if (playerCount < minPlayerCount) {
+    return maxCertLimit;
+  }
+  if (playerCount > maxPlayerCount) {
+    return minCertLimit;
+  }
+
+  // Calculate the cert limit using linear interpolation
+  const certLimit =
+    maxCertLimit -
+    ((maxCertLimit - minCertLimit) / (maxPlayerCount - minPlayerCount)) *
+      (playerCount - minPlayerCount);
+
+  return Math.round(certLimit);
+}

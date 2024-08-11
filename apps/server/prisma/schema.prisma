@@ -599,6 +599,7 @@ model Game {
   roomId                  Int
   overdraft               Boolean              @default(true) //facilitates overdrafts for player accounts during stock purchase
   isPaused                Boolean              @default(false)
+  certificateLimit        Int                  @default(12)
   nextPrestigeReward      Int?
   gameMaxTurns            Int?
   capitalInjectionRewards Int[] //track Capital Injection rewards, should we instate prestige rewards on game creation instead and put this there?

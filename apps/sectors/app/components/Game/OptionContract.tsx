@@ -119,13 +119,9 @@ const OptionContract = ({
                     companyId: contract.companyId,
                     orderType: OrderType.OPTION,
                     quantity: contract.shareCount,
-                    gameId: gameState.id,
                     value: parseInt(bidAmount),
-                    stockRoundId: gameState.currentStockRoundId || 0,
                     playerId: authPlayer.id,
                     location: ShareLocation.DERIVATIVE_MARKET,
-                    sectorId: company.sectorId,
-                    phaseId: currentPhase?.id || "",
                     contractId: contract.id,
                   });
                   setIsSubmitted(true);

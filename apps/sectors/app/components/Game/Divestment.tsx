@@ -54,9 +54,9 @@ const Divestment = () => {
                 className="p-4 border rounded-lg shadow-md w-full max-w-sm"
               >
                 <div className="flex flex-col items-center gap-2">
+                  <PlayerAvatar player={player} showNameLabel />
                   {playerTransactions.length > 0 ? (
                     <>
-                      <PlayerAvatar player={player} showNameLabel />
                       {playerTransactions.map((transaction) => (
                         <ShareComponent
                           key={transaction.id}
