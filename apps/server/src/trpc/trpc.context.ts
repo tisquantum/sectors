@@ -21,6 +21,7 @@ export interface Context {
   res: express.Response;
   user: User | null; // Use the User type from Supabase
   submissionStamp?: Date;
+  gameId?: string;
 }
 
 export const createContext = async (

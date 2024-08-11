@@ -5,6 +5,7 @@ import {
   OrderType,
   PlayerOrder,
   Player,
+  GameTurn,
 } from "@server/prisma/prisma.client";
 import {
   PlayerOrderWithPlayerCompany,
@@ -12,13 +13,14 @@ import {
 } from "@server/prisma/prisma.types";
 import React, { useMemo } from "react";
 import PlayerAvatar from "../Player/PlayerAvatar";
+import { RiText } from "@remixicon/react";
 
 const OrderChipWithPlayer = ({
   order,
   status,
   endContent,
 }: {
-  order: PlayerOrder & { Player: Player };
+  order: PlayerOrder & { Player: Player } & { GameTurn: GameTurn };
   status?: OrderStatus;
   endContent?: React.ReactNode;
 }) => {
@@ -32,6 +34,7 @@ const OrderChipWithPlayer = ({
       className="my-2"
     >
       <div className="flex items-center text-gray-100">
+        <div className="flex items-center"><RiText />{order.GameTurn.turn}</div>
         <span>{order.orderType}</span>
         {order.orderType === OrderType.MARKET && <span>@${order.value}</span>}
         <span>&nbsp;|&nbsp;{order.location}&nbsp;</span>
@@ -43,6 +46,7 @@ const OrderChipWithPlayer = ({
         )}
         {order.orderType === OrderType.LIMIT && <span>@${order.value}</span>}
         {(order.orderType === OrderType.MARKET ||
+          order.orderType === OrderType.LIMIT ||
           order.orderType === OrderType.SHORT) && <span>{order.quantity}</span>}
         {order.orderType === OrderType.SHORT && <span>@${order.value}</span>}
         &nbsp;| {status && status}

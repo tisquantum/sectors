@@ -159,6 +159,7 @@ export class TrpcRouter {
       pusherService: this.pusherService,
       gameLogService: this.gameLogService,
       phaseService: this.phaseService,
+      gameManagementService: this.gameManagementService,
     }),
     share: shareRouter(this.trpc, {
       shareService: this.shareService,

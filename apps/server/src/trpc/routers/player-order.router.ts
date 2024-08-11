@@ -19,12 +19,14 @@ import { TRPCError } from '@trpc/server';
 import { GameLogService } from '@server/game-log/game-log.service';
 import { checkIsPlayerAction, checkSubmissionTime } from '../trpc.middleware';
 import { PhaseService } from '@server/phase/phase.service';
+import { GameManagementService } from '@server/game-management/game-management.service';
 
 type Context = {
   playerOrdersService: PlayerOrderService;
   playerService: PlayersService;
   pusherService: PusherService;
   phaseService: PhaseService;
+  gameManagementService: GameManagementService;
   gameLogService: GameLogService;
 };
 
@@ -192,11 +194,8 @@ export default (trpc: TrpcService, ctx: Context) =>
       .input(
         z.object({
           gameId: z.string(),
-          stockRoundId: z.number(),
-          phaseId: z.string(),
           playerId: z.string(),
           companyId: z.string(),
-          sectorId: z.string(),
           quantity: z.number().optional(),
           value: z.number().optional(),
           isSell: z.boolean().optional(),
@@ -211,32 +210,30 @@ export default (trpc: TrpcService, ctx: Context) =>
         //remove game id from input
         const {
           gameId,
-          stockRoundId,
           companyId,
           playerId,
-          phaseId,
-          sectorId,
           contractId,
           ...playerOrderInput
         } = input;
         console.log('playerOrderInput', playerOrderInput);
-        const data: Prisma.PlayerOrderCreateInput = {
-          ...playerOrderInput,
-          orderStatus: OrderStatus.PENDING,
-          Game: { connect: { id: gameId } },
-          StockRound: { connect: { id: stockRoundId } },
-          Company: { connect: { id: companyId } },
-          Player: { connect: { id: playerId } },
-          Phase: { connect: { id: phaseId } },
-          Sector: { connect: { id: sectorId } },
-          ...(contractId && {
-            OptionContract: { connect: { id: contractId } },
-          }),
-          submissionStamp: ctxMiddleware.submissionStamp,
-        };
+        if(!ctxMiddleware.gameId) {
+          //throw
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Game ID was not found for this player.',
+          });
+        }
         let playerOrder;
         try {
-          playerOrder = await ctx.playerOrdersService.createPlayerOrder(data);
+          playerOrder = await ctx.gameManagementService.createPlayerOrder({
+            ...playerOrderInput,
+            orderStatus: OrderStatus.PENDING,
+            gameId: ctxMiddleware.gameId,
+            companyId,
+            playerId,
+            contractId,
+            submissionStamp: ctxMiddleware.submissionStamp,
+          });
           //subtract one from related player action counter
           await ctx.playerService.subtractActionCounter(
             playerOrder.playerId,

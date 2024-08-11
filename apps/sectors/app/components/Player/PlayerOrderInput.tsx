@@ -606,12 +606,8 @@ const PlayerOrderInput = ({
   });
   const handleConfirm = () => {
     createPlayerOrder.mutate({
-      gameId,
-      stockRoundId: gameState.currentStockRoundId ?? 0,
       playerId: authPlayer.id,
       companyId: currentOrder.id,
-      phaseId: gameState.currentPhaseId ?? "",
-      sectorId: currentOrder.sectorId,
       quantity: share,
       value: orderValue ?? company?.currentStockPrice,
       isSell: !!!isBuy,

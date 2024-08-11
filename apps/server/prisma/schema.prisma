@@ -183,6 +183,7 @@ model Company {
   Cards                    Card[]
   OptionContracts          OptionContract[]
   ShortOrders              ShortOrder[]
+  TransactionsPerformedOn  Transaction[]
   Entity                   Entity?                   @relation(fields: [entityId], references: [id])
   entityId                 String?                   @unique
 }
@@ -262,6 +263,7 @@ model PlayerOrder {
   isSell           Boolean?
   isConcealed      Boolean?        @default(true)
   optionContractId Int?
+  gameTurnCreated  String
   location         ShareLocation
   orderType        OrderType
   ShortOrder       ShortOrder?
@@ -272,6 +274,7 @@ model PlayerOrder {
   Company          Company         @relation(fields: [companyId], references: [id])
   Phase            Phase           @relation(fields: [phaseId], references: [id])
   Sector           Sector          @relation(fields: [sectorId], references: [id])
+  GameTurn         GameTurn        @relation(fields: [gameTurnCreated], references: [id])
   submissionStamp  DateTime?
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
@@ -651,6 +654,8 @@ model GameTurn {
   capitalGains    CapitalGains[]
   prestigeRewards PrestigeRewards[]
   companyActions  CompanyAction[]
+  playerOrders    PlayerOrder[]
+  transactions    Transaction[]
 }
 
 model PlayerPriority {
@@ -688,6 +693,7 @@ model Phase {
   GameTurn         GameTurn        @relation(fields: [gameTurnId], references: [id])
   PlayerOrder      PlayerOrder[]
   StockHistory     StockHistory[]
+  Transactions     Transaction[]
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 }
@@ -815,6 +821,17 @@ enum TransactionType {
   CASH
 }
 
+enum TransactionSubType {
+  DEFAULT
+  SHORT
+  OPTION_CALL
+  LIMIT_BUY
+  LIMIT_SELL
+  MARKET_BUY
+  MARKET_SELL
+  DIVESTMENT
+}
+
 model Entity {
   id               String        @id @default(uuid())
   gameId           String
@@ -828,20 +845,27 @@ model Entity {
 }
 
 model Transaction {
-  id              String                 @id @default(uuid())
-  gameId          String
-  fromEntityId    String
-  toEntityId      String
-  transactionType TransactionType
-  amount          Int
-  description     String?
-  Shares          TransactionsOnShares[]
-  fromEntity      Entity                 @relation("FromEntity", fields: [fromEntityId], references: [id])
-  toEntity        Entity                 @relation("ToEntity", fields: [toEntityId], references: [id])
-  timestamp       DateTime
-  createdAt       DateTime               @default(now())
-  updatedAt       DateTime               @updatedAt
-  Game            Game                   @relation(fields: [gameId], references: [id])
+  id                 String                 @id @default(uuid())
+  gameId             String
+  phaseId            String
+  gameTurnId         String
+  fromEntityId       String
+  toEntityId         String
+  transactionType    TransactionType
+  transactionSubType TransactionSubType
+  amount             Int
+  description        String?
+  companyInvolvedId  String?
+  Shares             TransactionsOnShares[]
+  fromEntity         Entity                 @relation("FromEntity", fields: [fromEntityId], references: [id])
+  toEntity           Entity                 @relation("ToEntity", fields: [toEntityId], references: [id])
+  timestamp          DateTime
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+  Company            Company?               @relation(fields: [companyInvolvedId], references: [id])
+  Game               Game                   @relation(fields: [gameId], references: [id])
+  GameTurn           GameTurn               @relation(fields: [gameTurnId], references: [id])
+  Phase              Phase                  @relation(fields: [phaseId], references: [id])
 }
 
 model TransactionsOnShares {

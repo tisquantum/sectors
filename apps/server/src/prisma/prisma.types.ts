@@ -31,6 +31,7 @@ import {
   StockHistory,
   StockRound,
   Transaction,
+  TransactionsOnShares,
   User,
 } from '@prisma/client';
 
@@ -113,6 +114,7 @@ export type PlayerOrderWithPlayerCompany = PlayerOrder & {
   Player: Player;
   Sector: Sector;
   Phase: Phase;
+  GameTurn: GameTurn;
 };
 export type PlayerOrderWithPlayerRevealed = PlayerOrder & {
   Company: CompanyWithShare;
@@ -135,6 +137,7 @@ export type PlayerOrderAllRelations = PlayerOrder & {
   Company: Company;
   Player: Player;
   Sector: Sector;
+  GameTurn: GameTurn;
   ShortOrder: ShortOrder | null;
   OptionContract: OptionContract | null;
 };
@@ -226,6 +229,7 @@ export type GameTurnWithRelations = GameTurn & {
 export type TransactionWithEntities = Transaction & {
   fromEntity: Entity & { Player: Player | null; Company: Company | null };
   toEntity: Entity & { Player: Player | null; Company: Company | null };
+  Shares: TransactionsOnShares[];
 };
 
 export type PlayerResultWithRelations = PlayerResult & {

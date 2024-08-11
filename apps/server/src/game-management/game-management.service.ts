@@ -36,6 +36,7 @@ import {
   GameStatus,
   TransactionType,
   EntityType,
+  TransactionSubType,
 } from '@prisma/client';
 import { GamesService } from '@server/games/games.service';
 import { CompanyService } from '@server/company/company.service';
@@ -530,6 +531,8 @@ export class GameManagementService {
       });
       await this.playerRemoveMoney(
         shortOrder.gameId,
+        shortOrder.gameTurnCreated,
+        shortOrder.phaseId,
         shortOrder.playerId,
         borrowTax,
         EntityType.BANK,
@@ -954,6 +957,8 @@ export class GameManagementService {
       async (money) => {
         await this.playerAddMoney(
           phase.gameId,
+          phase.gameTurnId,
+          phase.id,
           money.playerId,
           money.amount,
           EntityType.BANK,
@@ -1012,12 +1017,27 @@ export class GameManagementService {
             Player: { disconnect: true },
           },
         });
+        //create share transaction
+        await this.transactionService.createTransactionEntityToEntity({
+          fromEntityId: player.id,
+          fromEntityType: EntityType.PLAYER,
+          toEntityType: EntityType.OPEN_MARKET,
+          amount: sharesToDivest.length,
+          gameId: phase.gameId,
+          gameTurnId: phase.gameTurnId,
+          phaseId: phase.id,
+          transactionType: TransactionType.SHARE,
+          transactionSubType: TransactionSubType.DIVESTMENT,
+          companyInvolvedId: companyId,
+        });
       });
 
       const sellPromises = sharesToDivest.map((share) => async () => {
         const sharePrice = share.Company.currentStockPrice || 0;
         await this.playerAddMoney(
           share.gameId,
+          phase.gameTurnId,
+          phase.id,
           player.id,
           sharePrice,
           EntityType.BANK,
@@ -3805,6 +3825,8 @@ export class GameManagementService {
         } else {
           await this.playerAddMoney(
             order.gameId,
+            phase.gameTurnId,
+            phase.id,
             order.playerId,
             (order.value || 0) * (order.quantity || 0),
             EntityType.BANK,
@@ -3840,6 +3862,8 @@ export class GameManagementService {
           //buy order
           this.playerRemoveMoney(
             order.gameId,
+            order.gameTurnCreated,
+            order.phaseId,
             order.playerId,
             order.value || 0,
             EntityType.BANK,
@@ -4002,6 +4026,8 @@ export class GameManagementService {
               // Remove premium from players' cash on hand
               await this.playerRemoveMoney(
                 phase.gameId,
+                phase.gameTurnId,
+                phase.id,
                 playerOrderResolved.playerId,
                 playerOrderResolved.value || 0,
                 EntityType.BANK,
@@ -4026,6 +4052,8 @@ export class GameManagementService {
               // Remove premium from players' cash on hand
               await this.playerRemoveMoney(
                 phase.gameId,
+                phase.gameTurnId,
+                phase.id,
                 playerOrderResolved.playerId,
                 playerOrderResolved.value || 0,
                 EntityType.BANK,
@@ -4223,6 +4251,8 @@ export class GameManagementService {
                 amount: newShortOrderMarginAccountMinimum,
                 transactionType: TransactionType.CASH,
                 gameId: order.gameId,
+                gameTurnId: phase.gameTurnId,
+                phaseId: phase.id,
                 description: `Funding margin account for short order`,
               });
               await this.prisma.player.update({
@@ -4610,6 +4640,8 @@ export class GameManagementService {
     try {
       await this.playerAddMoney(
         order.gameId,
+        order.gameTurnCreated,
+        order.phaseId,
         order.playerId,
         sharesToSell * sharePrice,
         EntityType.BANK,
@@ -4896,6 +4928,8 @@ export class GameManagementService {
       orderStatusUpdates,
       gameLogEntries,
       game.id,
+      game.currentTurn || '',
+      game.currentPhaseId || '',
     );
   }
 
@@ -4988,7 +5022,9 @@ export class GameManagementService {
       playerCashUpdates,
       orderStatusUpdates,
       gameLogEntries,
-      company.gameId,
+      phaseOrders?.[0].gameId || '',
+      phaseOrders?.[0].gameTurnCreated || '',
+      phaseOrders?.[0].phaseId || '',
     );
   }
 
@@ -5386,6 +5422,8 @@ export class GameManagementService {
     orderStatusUpdates: any[],
     gameLogEntries: any[],
     gameId: string,
+    gameTurnId: string,
+    phaseId: string,
   ) {
     try {
       const BATCH_SIZE = 4;
@@ -5405,6 +5443,8 @@ export class GameManagementService {
               () =>
                 this.playerRemoveMoney(
                   gameId,
+                  gameTurnId,
+                  phaseId,
                   update.playerId,
                   update.decrement,
                   EntityType.BANK,
@@ -5436,6 +5476,8 @@ export class GameManagementService {
 
   async playerAddMoney(
     gameId: string,
+    gameTurnId: string,
+    phaseId: string,
     playerId: string,
     amount: number,
     fromEntity: EntityType,
@@ -5444,6 +5486,8 @@ export class GameManagementService {
     //create transaction
     this.transactionService.createTransactionEntityToEntity({
       gameId,
+      gameTurnId,
+      phaseId,
       amount,
       fromEntityType: fromEntity,
       transactionType: TransactionType.CASH,
@@ -5478,6 +5522,8 @@ export class GameManagementService {
 
   async playerRemoveMoney(
     gameId: string,
+    gameTurnId: string,
+    phaseId: string,
     playerId: string,
     amount: number,
     toEntity: EntityType,
@@ -5495,6 +5541,8 @@ export class GameManagementService {
     //create transaction
     this.transactionService.createTransactionEntityToEntity({
       gameId,
+      gameTurnId,
+      phaseId,
       amount: cashToRemove,
       fromEntityId: playerId,
       fromEntityType: EntityType.PLAYER,
@@ -5722,6 +5770,8 @@ export class GameManagementService {
     //give the player the money from the option contract which is the difference between the current stock price and the strike price
     await this.playerAddMoney(
       optionContract.gameId,
+      game.currentTurn || '',
+      game.currentPhaseId || '',
       playerOrder.playerId,
       (optionContract.Company.currentStockPrice -
         (optionContract.strikePrice || 0)) *
@@ -5792,6 +5842,8 @@ export class GameManagementService {
       amount: Math.floor(shortOrder.shortSalePrice / 2),
       transactionType: TransactionType.CASH,
       gameId: player.gameId,
+      gameTurnId: game.currentTurn || '',
+      phaseId: game.currentPhaseId || '',
       description: 'Margin account funds released',
     });
     //release the margin account funds
@@ -5809,6 +5861,8 @@ export class GameManagementService {
     //cover the short by "buying back" the shares
     await this.playerRemoveMoney(
       player.gameId,
+      game.currentTurn || '',
+      game.currentPhaseId || '',
       player.id,
       shortOrder.Company.currentStockPrice * shortOrder.Share.length,
       EntityType.BANK,
@@ -5925,6 +5979,60 @@ export class GameManagementService {
       stockRoundId: game.currentStockRoundId || undefined,
       operatingRoundId: game.currentOperatingRoundId || undefined,
       influenceRoundId: undefined,
+    });
+  }
+
+  public async createPlayerOrder({
+    orderType,
+    location,
+    quantity,
+    value,
+    isSell,
+    orderStatus,
+    gameId,
+    companyId,
+    playerId,
+    contractId,
+    submissionStamp,
+  }: {
+    orderType: 'MARKET' | 'SHORT' | 'LIMIT' | 'OPTION';
+    location: 'OPEN_MARKET' | 'IPO' | 'PLAYER' | 'DERIVATIVE_MARKET';
+    quantity?: number;
+    value?: number;
+    isSell?: boolean;
+    orderStatus: OrderStatus;
+    gameId: string;
+    companyId: string;
+    playerId: string;
+    contractId?: number;
+    submissionStamp: Date | undefined;
+  }) {
+    //get game
+    const game = await this.gamesService.game({ id: gameId });
+    if (!game) {
+      throw new Error('Game not found');
+    }
+    //get company associated with order
+    const company = await this.companyService.company({ id: companyId });
+    if (!company) {
+      throw new Error('Company not found');
+    }
+    return this.playerOrderService.createPlayerOrder({
+      orderType,
+      location,
+      quantity,
+      value,
+      isSell,
+      orderStatus,
+      Game: { connect: { id: gameId } },
+      Company: { connect: { id: companyId } },
+      Player: { connect: { id: playerId } },
+      OptionContract: contractId ? { connect: { id: contractId } } : undefined,
+      submissionStamp,
+      StockRound: { connect: { id: game.currentStockRoundId || 0 } },
+      Phase: { connect: { id: game.currentPhaseId || '' } },
+      Sector: { connect: { id: company.sectorId } },
+      GameTurn: { connect: { id: game.currentTurn || '' } },
     });
   }
 }

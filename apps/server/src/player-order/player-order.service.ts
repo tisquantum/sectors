@@ -142,6 +142,7 @@ export class PlayerOrderService {
         Player: true,
         Sector: true,
         Phase: true,
+        GameTurn: true,
       },
     });
   }
@@ -238,6 +239,7 @@ export class PlayerOrderService {
         Sector: true,
         ShortOrder: true,
         OptionContract: true,
+        GameTurn: true,
       },
     });
   }

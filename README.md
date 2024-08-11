@@ -158,3 +158,17 @@ I'm thinking short orders can only be performed on a company you have no ownersh
 - TODO: Extend pending order component to include dropdowns for all order statuses
 
 - TODO: Option Order action limit?
+
+- TODO: Bank breaks x amount, 10K? Give two company actions per OR
+
+- TODO: Market notifications for orders placed, so players don't need to monitor both tabs to see if something popped up
+
+- TODO: Because companies start with 10 shares, make floats divisble by 10 (done)
+
+- TODO: Turn order on company carousel is not accurate
+
+- TODO: Better illustrate divestment stocks being lost, not the stocks you own
+
+- TODO: Better illustrate how consumers move to each sector
+
+- TODO: A table showing company demand more clearly during revenue

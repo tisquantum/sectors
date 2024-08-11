@@ -120,6 +120,12 @@ const PendingMarketOrders = ({
     },
     {} as Record<string, Record<string, PlayerOrderAllRelations[]>>
   );
+  //sort grouped orders by game turn in DESCENDING order
+  Object.entries(groupedOrders).forEach(([status, companies]) => {
+    Object.entries(companies).forEach(([company, orders]) => {
+      orders.sort((a, b) => b.GameTurn.turn - a.GameTurn.turn);
+    });
+  });
 
   const checkmarkVariants = {
     hidden: { scale: 0 },
@@ -197,9 +203,7 @@ const PendingMarketOrders = ({
                   <div className="text-lg font-bold flex gap-2 bg-stone-600 p-2 content-center items-center">
                     <ArrowTrendingUpIcon className="size-4" /> $
                     {orders[0].Company.currentStockPrice}
-                    <span>
-                      {company}
-                    </span>
+                    <span>{company}</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {Object.entries(groupedOrdersByPhase).map(
@@ -285,6 +289,12 @@ const PendingLimitOrders = ({
       {} as Record<string, GroupedOrders>
     );
   }, [limitOrders]);
+  //sort grouped orders by game turn in DESCENDING order
+  Object.entries(groupedOrders).forEach(([status, companies]) => {
+    Object.entries(companies).forEach(([company, orders]) => {
+      orders.sort((a, b) => b.GameTurn.turn - a.GameTurn.turn);
+    });
+  });
 
   // Render the orders in an accordion
   return (
@@ -293,6 +303,7 @@ const PendingLimitOrders = ({
         OrderStatus.OPEN,
         OrderStatus.PENDING,
         OrderStatus.FILLED_PENDING_SETTLEMENT,
+        OrderStatus.FILLED,
       ]}
       className="space-y-4"
     >
@@ -351,6 +362,8 @@ const PendingShortOrders = ({
 }: {
   shortOrders: PlayerOrderAllRelations[];
 }) => {
+  // sort short orders by game turn in DESCENDING order
+  shortOrders.sort((a, b) => b.GameTurn.turn - a.GameTurn.turn);
   return (
     <div className="space-y-2">
       {shortOrders.map((order, index) => (

@@ -5,6 +5,7 @@ import {
   EntityType,
   Prisma,
   Transaction,
+  TransactionSubType,
   TransactionType,
 } from '@prisma/client';
 import { TransactionWithEntities } from '@server/prisma/prisma.types';
@@ -48,6 +49,7 @@ export class TransactionService {
             Company: true,
           },
         },
+        Shares: true,
       },
     });
   }
@@ -80,6 +82,7 @@ export class TransactionService {
             Company: true,
           },
         },
+        Shares: true,
       },
     });
   }
@@ -108,6 +111,11 @@ export class TransactionService {
             Company: true,
           },
         },
+        Shares: {
+          include: {
+            Share: true,
+          },
+        }
       },
     });
   }
@@ -195,22 +203,32 @@ export class TransactionService {
 
   async createTransactionEntityToEntity({
     gameId,
+    gameTurnId,
+    phaseId,
     fromEntityType,
     toEntityType,
     amount,
-    transactionType,
     fromEntityId,
     toEntityId,
-    description
+    description,
+    shares,
+    transactionType,
+    transactionSubType,
+    companyInvolvedId,
   }: {
     gameId: string;
+    gameTurnId: string;
+    phaseId: string;
     fromEntityType: EntityType;
     toEntityType: EntityType;
-    amount: number;
     transactionType: TransactionType;
+    transactionSubType?: TransactionSubType;
+    amount: number;
     fromEntityId?: string;
     toEntityId?: string;
     description?: string;
+    shares?: string[];
+    companyInvolvedId?: string;
   }): Promise<Transaction> {
     const fromEntity = await this.getEntityOrCreate(
       gameId,
@@ -231,19 +249,32 @@ export class TransactionService {
     if (!toEntity) {
       throw new Error('Invalid to entity');
     }
-
     // Create the transaction
-    return this.prisma.transaction.create({
+    const transaction = await this.prisma.transaction.create({
       data: {
         gameId,
+        phaseId,
+        gameTurnId,
         fromEntityId: fromEntity.id,
         toEntityId: toEntity.id,
         transactionType,
+        transactionSubType: transactionSubType || TransactionSubType.DEFAULT,
         amount,
         timestamp: new Date(),
-        description
+        description,
+        companyInvolvedId: companyInvolvedId || null,
       },
     });
+    // If the transaction is a share transfer, create the share transfers
+    if (shares) {
+      await this.prisma.transactionsOnShares.createMany({
+        data: shares.map((share) => ({
+          transactionId: transaction.id,
+          shareId: share,
+        })),
+      });
+    }
+    return transaction;
   }
 
   async createManyTransactions(

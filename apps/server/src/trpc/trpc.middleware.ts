@@ -71,6 +71,8 @@ export const checkIsPlayerAction = async (opts: any, playerService: PlayersServi
       message: 'You are not allowed to perform this operation',
     });
   }
+  //include game id in ctx
+  ctx.gameId = player.gameId;
   return next();
 }
 

@@ -48,6 +48,7 @@ export class StockRoundService {
             },
             Sector: true,
             Phase: true,
+            GameTurn: true,
           },
         },
       },
