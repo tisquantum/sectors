@@ -502,8 +502,7 @@ export const PrestigeTrack = [
   {
     type: PrestigeReward.CAPITAL_INJECTION,
     name: 'Capital Injection',
-    description:
-      `The company receives the money on this space of the track. If you pass over this, the money across all capital injections receive another $${CAPITAL_INJECTION_BOOSTER}.`,
+    description: `The company receives the money on this space of the track. If you pass over this, the money across all capital injections receive another $${CAPITAL_INJECTION_BOOSTER}.`,
     probability: 0.15,
     cost: 3,
   },
@@ -517,9 +516,51 @@ export const PrestigeTrack = [
   {
     type: PrestigeReward.INFLUENCER,
     name: 'Influencer',
-    description:
-      'The company receives +1 permanent demand.',
+    description: 'The company receives +1 permanent demand.',
     probability: 0.08,
     cost: 4,
   },
 ];
+
+export const StartingTier = {
+  [SectorName.CONSUMER_CYCLICAL]: {
+    sector: 'Consumer Cyclical',
+    tier: CompanyTier.STARTUP,
+  },
+  [SectorName.CONSUMER_DEFENSIVE]: {
+    sector: 'Consumer Defensive',
+    tier: CompanyTier.GROWTH,
+  },
+  [SectorName.INDUSTRIALS]: {
+    sector: 'Industrial',
+    tier: CompanyTier.STARTUP,
+  },
+  [SectorName.TECHNOLOGY]: {
+    sector: 'Technology',
+    tier: CompanyTier.INCUBATOR,
+  },
+  [SectorName.HEALTHCARE]: {
+    sector: 'Healthcare',
+    tier: CompanyTier.GROWTH,
+  },
+  [SectorName.ENERGY]: {
+    sector: 'Energy',
+    tier: CompanyTier.INCUBATOR,
+  },
+  [SectorName.MATERIALS]: {
+    sector: 'Materials',
+    tier: CompanyTier.STARTUP,
+  },
+  [SectorName.CONSUMER_DISCRETIONARY]: {
+    sector: 'nothing',
+    tier: CompanyTier.STARTUP,
+  },
+  [SectorName.CONSUMER_STAPLES]: {
+    sector: 'nothing',
+    tier: CompanyTier.STARTUP,
+  },
+  [SectorName.GENERAL]: {
+    sector: 'nothing',
+    tier: CompanyTier.STARTUP,
+  },
+};

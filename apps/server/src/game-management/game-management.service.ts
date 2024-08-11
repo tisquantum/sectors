@@ -100,6 +100,7 @@ import {
   LARGE_MARKETING_CAMPAIGN_DEMAND,
   SMALL_MARKETING_CAMPAIGN_DEMAND,
   CAPITAL_INJECTION_BOOSTER,
+  StartingTier,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -508,15 +509,9 @@ export class GameManagementService {
       throw new Error('Sector not found');
     }
 
-    const ipoPrice = Math.floor(
-      Math.random() *
-        (sectorCompanies[0].currentStockPrice -
-          sectorCompanies[1]?.currentStockPrice || 0) +
-        (sectorCompanies[1]?.currentStockPrice ||
-          sectorCompanies[0].currentStockPrice),
-    );
-
     const newCompanyInfo = getRandomCompany(sector.sectorName);
+    const ipoPrice = determineFloatPrice(sector);
+    const stockTier = determineStockTier(ipoPrice);
     const newCompany = await this.companyService.createCompany({
       Game: { connect: { id: phase.gameId } },
       Sector: { connect: { id: sectorId } },
@@ -532,6 +527,11 @@ export class GameManagementService {
       throughput: 0,
       insolvent: false,
       ipoAndFloatPrice: ipoPrice,
+      stockTier,
+      demandScore: 0,
+      baseDemand: 0,
+      supplyCurrent: 0,
+      supplyMax: CompanyTierData[CompanyTier.ESTABLISHED].supplyMax,
     });
 
     const shares = [];
@@ -3202,12 +3202,15 @@ export class GameManagementService {
               sector.unitPriceMin,
           ),
           throughput: company.throughput,
-          companyTier: company.companyTier,
+          companyTier: StartingTier[sector.sectorName as SectorName]
+            .tier as CompanyTier,
           demandScore: 0,
           baseDemand: 0,
           supplyCurrent: 0,
           supplyMax:
-            CompanyTierData[company.companyTier as CompanyTier].supplyMax,
+            CompanyTierData[
+              StartingTier[sector.sectorName as SectorName].tier as CompanyTier
+            ].supplyMax,
           sectorId: sector.name, //map to name at first then match to supabase for id
           gameId: game.id,
           insolvent: company.insolvent,
