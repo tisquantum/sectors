@@ -42,6 +42,16 @@ import { flushAllTraces } from "next/dist/trace";
 import PlayerAvatar from "../Player/PlayerAvatar";
 import OptionContract from "./OptionContract";
 import { useEffect, useMemo } from "react";
+
+const containerVariants = {
+  hidden: { opacity: 0, y: -20 }, // Defines the initial state of the component: invisible and slightly shifted upward
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { delay: 0.5, duration: 0.5 }, // The component fades in and moves to its original position with a delay and duration
+  },
+};
+
 interface GroupedOrders {
   [key: string]: PlayerOrderAllRelations[];
 }
@@ -147,25 +157,25 @@ const PendingMarketOrders = ({
         <AccordionItem key={status} aria-label={status} title={status}>
           <div className="space-y-4 max-h-96 overflow-y-auto scrollbar">
             {Object.entries(companies).map(([company, orders]) => {
-              let netDifference: string | number = orders.reduce(
-                (acc, order) => {
-                  if (order.location === ShareLocation.IPO) {
-                    return acc;
-                  }
-                  return (
-                    acc +
-                    (!order.isSell
-                      ? order.quantity || 0
-                      : -(order.quantity || 0))
-                  );
-                },
-                0
-              );
-              netDifference =
-                netDifference > 0 ? `+${netDifference}` : netDifference;
-              if (netDifference === 0) {
-                netDifference = "+0";
-              }
+              // let netDifference: string | number = orders.reduce(
+              //   (acc, order) => {
+              //     if (order.location === ShareLocation.IPO) {
+              //       return acc;
+              //     }
+              //     return (
+              //       acc +
+              //       (!order.isSell
+              //         ? order.quantity || 0
+              //         : -(order.quantity || 0))
+              //     );
+              //   },
+              //   0
+              // );
+              // netDifference =
+              //   netDifference > 0 ? +${netDifference} : netDifference;
+              // if (netDifference === 0) {
+              //   netDifference = "+0";
+              // }
 
               const groupedOrdersByPhase = orders.reduce(
                 (
@@ -215,39 +225,30 @@ const PendingMarketOrders = ({
                             </div>
                           )}
                           <div>
-                            {orders.map((order, index) =>
-                              isResolving ? (
-                                <motion.div
-                                  key={index}
-                                  initial="hidden"
-                                  animate="visible"
-                                  variants={containerVariants}
-                                  className="flex"
-                                >
-                                  <OrderChipWithPlayer
-                                    order={order}
-                                    status={order.orderStatus}
-                                    endContent={
-                                      order.orderStatus ==
-                                      OrderStatus.FILLED ? (
-                                        <CheckCircleIcon className="size-5 text-green-500" />
-                                      ) : order.orderStatus ==
-                                        OrderStatus.REJECTED ? (
-                                        <RiCloseCircleFill className="size-5 text-red-500" />
-                                      ) : (
-                                        <ClockIcon className="size-5 text-yellow-500" />
-                                      )
-                                    }
-                                  />
-                                </motion.div>
-                              ) : (
+                            {orders.map((order, index) => (
+                              <motion.div
+                                key={index}
+                                initial="hidden"
+                                animate="visible"
+                                variants={containerVariants}
+                                className="flex"
+                              >
                                 <OrderChipWithPlayer
                                   order={order}
                                   status={order.orderStatus}
-                                  key={index}
+                                  endContent={
+                                    order.orderStatus == OrderStatus.FILLED ? (
+                                      <CheckCircleIcon className="size-5 text-green-500" />
+                                    ) : order.orderStatus ==
+                                      OrderStatus.REJECTED ? (
+                                      <RiCloseCircleFill className="size-5 text-red-500" />
+                                    ) : (
+                                      <ClockIcon className="size-5 text-yellow-500" />
+                                    )
+                                  }
                                 />
-                              )
-                            )}
+                              </motion.div>
+                            ))}
                           </div>
                         </div>
                       )
@@ -432,7 +433,7 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
   }, [currentPhase?.name]);
   if (isLoading) return <div>Loading...</div>;
   if (!playerOrders) return <div>No pending orders.</div>;
-
+  console.log('playerOrders', playerOrders);
   const limitOrdersPendingSettlement = playerOrders.filter(
     (order) =>
       order.orderType === OrderType.LIMIT &&

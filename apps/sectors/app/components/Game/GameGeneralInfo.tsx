@@ -15,6 +15,7 @@ import {
   RiTeamFill,
   RiBankFill,
   RiTicket2Fill,
+  RiDiscountPercentFill,
 } from "@remixicon/react";
 import {
   Avatar,
@@ -35,6 +36,7 @@ import {
   MoneyTransactionHistoryByPlayer,
 } from "./MoneyTransactionHistory";
 import WalletInfo from "./WalletInfo";
+import { DEFAULT_SHARE_DISTRIBUTION, DEFAULT_SHARE_LIMIT, MAX_SHARE_PERCENTAGE } from "@server/data/constants";
 
 const BankInfo = () => {
   const { gameState, gameId } = useGame();
@@ -151,22 +153,43 @@ const GameGeneralInfo = () => {
           <BankInfo />
         </Tooltip>
       </div>
-      <div>
-        <Tooltip
-          className={tooltipStyle}
-          content={
-            <div>
-              <p>
-                The share limit. If a player exceeds this limit, they must
-                divest down to the limit.
-              </p>
+      <div className="flex flex-col gap-1 items-start">
+        <div>
+          <Tooltip
+            className={tooltipStyle}
+            content={
+              <div>
+                <p>
+                  The share limit. If a player exceeds this limit, they must
+                  divest down to the limit.
+                </p>
+              </div>
+            }
+          >
+            <div className="flex gap-1 items-center">
+              <RiTicket2Fill size={18} /> {gameState.certificateLimit}
             </div>
-          }
-        >
-          <div className="flex gap-1 items-center">
-            <RiTicket2Fill size={18} /> {gameState.certificateLimit}
-          </div>
-        </Tooltip>
+          </Tooltip>
+        </div>
+        <div>
+          <Tooltip
+            className={tooltipStyle}
+            content={
+              <div>
+                <p>
+                  The company ownership limit percentage. A player may never own
+                  more shares than this percentage of a company unless they
+                  incidentally fall above this percentage due to a issues or
+                  buybacks.
+                </p>
+              </div>
+            }
+          >
+            <div className="flex gap-1 items-center">
+              <RiDiscountPercentFill size={18} /> {MAX_SHARE_PERCENTAGE}
+            </div>
+          </Tooltip>
+        </div>
       </div>
       <div>
         <div className="text-lg font-bold">Round</div>

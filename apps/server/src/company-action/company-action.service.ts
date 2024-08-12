@@ -85,7 +85,10 @@ export class CompanyActionService {
       acc[sectorId] += 1;
       return acc;
     }, {});
-    console.log('marketingOrdersGroupedBySectorId', marketingOrdersGroupedBySectorId);
+    console.log(
+      'marketingOrdersGroupedBySectorId',
+      marketingOrdersGroupedBySectorId,
+    );
     //convert to array
     return Object.entries(marketingOrdersGroupedBySectorId).map(
       ([sectorId, count]) => ({
@@ -97,9 +100,12 @@ export class CompanyActionService {
 
   async createCompanyAction(
     data: Prisma.CompanyActionCreateInput,
-  ): Promise<CompanyAction> {
+  ): Promise<CompanyActionWithCompany> {
     return this.prisma.companyAction.create({
       data,
+      include: {
+        Company: true,
+      },
     });
   }
 

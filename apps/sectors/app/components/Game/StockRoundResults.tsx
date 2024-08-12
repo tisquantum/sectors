@@ -65,11 +65,11 @@ const StockRoundResults = () => {
   return (
     <div>
       <h1 className="text-2xl">Stock Round Results</h1>
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-2">
         {stockRound.playerOrders.map((playerOrder) => (
           <div
             key={playerOrder.id}
-            className="flex flex-col bg-slate-700 p-4 rounded-md"
+            className="flex flex-col bg-slate-700 p-4 rounded-md min-w-96"
           >
             <PlayerAvatar player={playerOrder.Player} showNameLabel />
             <span>Company: {playerOrder.Company.name}</span>

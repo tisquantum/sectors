@@ -61,6 +61,7 @@ export default (trpc: TrpcService, ctx: Context) =>
       .use(async (opts) => checkSubmissionTime(opts, ctx.phaseService))
       .mutation(async ({ input, ctx: ctxMiddleware }) => {
         const { operatingRoundId, playerId, companyId, gameId, ...rest } = input;
+        //TODO: Remove operating round reference from args
         const data: Prisma.OperatingRoundVoteCreateInput = {
           ...rest,
           OperatingRound: { connect: { id: operatingRoundId } },

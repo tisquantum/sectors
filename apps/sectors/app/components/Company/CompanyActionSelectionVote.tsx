@@ -12,6 +12,7 @@ import { trpc } from "@sectors/app/trpc";
 import { useGame } from "../Game/GameContext";
 import {
   CompanyActionCosts,
+  CompanyTierData,
   DEFAULT_DECREASE_UNIT_PRICE,
   DEFAULT_INCREASE_UNIT_PRICE,
   getCompanyOperatingRoundTurnOrder,
@@ -41,7 +42,7 @@ import PrestigeRewards from "../Game/PrestigeRewards";
 import Button from "@sectors/app/components/General/DebounceButton";
 import DebounceButton from "@sectors/app/components/General/DebounceButton";
 
-const companyActions = [
+const companyActionsDescription = [
   {
     id: 1,
     title: "Large Marketing Campaign",
@@ -129,54 +130,86 @@ const companyActions = [
 const CompanyActionSelectionVote = ({
   company,
   actionVoteResults,
-  companyAction,
+  companyActions,
   withResult,
 }: {
   company?: CompanyWithSector;
   actionVoteResults?: OperatingRoundVoteWithPlayer[];
   withResult?: boolean;
-  companyAction?: CompanyAction;
+  companyActions?: CompanyAction[];
 }) => {
   const { currentPhase, authPlayer, gameId } = useGame();
   const [submitComplete, setSubmitComplete] = useState(false);
-  const [selectedAction, setSelectedAction] = useState<OperatingRoundAction>();
+  const [selectedActions, setSelectedActions] = useState<
+    OperatingRoundAction[]
+  >([]);
   const createOperatingRoundVote =
     trpc.operatingRoundVote.createOperatingRoundVote.useMutation();
+
   if (!company) return <div>No company found</div>;
+
+  const companyAllowedActions =
+    CompanyTierData[company.companyTier].companyActions;
+
   const checkIfDisabled = (actionName: OperatingRoundAction) => {
     if (CompanyActionCosts[actionName] > company.cashOnHand) {
       return true;
     }
-    if (actionName == OperatingRoundAction.LOAN && company.hasLoan) {
+    if (actionName === OperatingRoundAction.LOAN && company.hasLoan) {
       return true;
     }
+    return false;
   };
+
   const handleSelected = (action: OperatingRoundAction, companyId: string) => {
-    console.log("selected", action);
     if (
-      currentPhase?.name == PhaseName.OPERATING_ACTION_COMPANY_VOTE &&
+      currentPhase?.name === PhaseName.OPERATING_ACTION_COMPANY_VOTE &&
       currentPhase?.companyId === companyId
     ) {
-      console.log("setting selected");
-      setSelectedAction(action);
+      setSelectedActions((prevSelected) => {
+        if (prevSelected.includes(action)) {
+          // Remove the action if it's already selected
+          return prevSelected.filter((selected) => selected !== action);
+        } else if (prevSelected.length < companyAllowedActions) {
+          // Add new action if the limit isn't reached
+          return [...prevSelected, action];
+        } else if (companyAllowedActions === 1) {
+          // Replace the only allowed action if the limit is 1
+          return [action];
+        } else {
+          return prevSelected;
+        }
+      });
     }
   };
-  const handleSubmit = async (action: OperatingRoundAction) => {
-    if (currentPhase?.name == PhaseName.OPERATING_ACTION_COMPANY_VOTE) {
+
+  const handleRemoveSelection = (action: OperatingRoundAction) => {
+    setSelectedActions((prevSelected) =>
+      prevSelected.filter((selected) => selected !== action)
+    );
+  };
+
+  const handleSubmit = async () => {
+    if (currentPhase?.name === PhaseName.OPERATING_ACTION_COMPANY_VOTE) {
       try {
-        await createOperatingRoundVote.mutate({
-          operatingRoundId: currentPhase?.operatingRoundId || 0,
-          playerId: authPlayer.id,
-          companyId: company.id,
-          actionVoted: action,
-          gameId,
-        });
+        await Promise.all(
+          selectedActions.map(async (action) => {
+            await createOperatingRoundVote.mutate({
+              operatingRoundId: currentPhase?.operatingRoundId || 0,
+              playerId: authPlayer.id,
+              companyId: company.id,
+              actionVoted: action,
+              gameId,
+            });
+          })
+        );
         setSubmitComplete(true);
       } catch (error) {
         console.error(error);
       }
     }
   };
+
   return (
     <div className="flex flex-col gap-3 p-5">
       <h1 className="text-2xl">{company.name} Shareholder Meeting</h1>
@@ -194,14 +227,14 @@ const CompanyActionSelectionVote = ({
       <div className="flex flex-col gap-3">
         <div>
           <h3>Company Action Selection Vote</h3>
-
           <p>
             The company is considering the following actions. Please vote for
-            the action you believe will benefit the company the most.
+            the action(s) you believe will benefit the company the most. You can
+            select up to {companyAllowedActions} actions.
           </p>
         </div>
         <div className="grid grid-cols-3 gap-2">
-          {companyActions.map((action) => (
+          {companyActionsDescription.map((action) => (
             <div
               key={action.id}
               onClick={() => handleSelected(action.name, company.id)}
@@ -209,9 +242,11 @@ const CompanyActionSelectionVote = ({
               <Card
                 isDisabled={checkIfDisabled(action.name)}
                 className={`${
-                  companyAction?.action == action.name ? "bg-blue-700" : ""
+                  companyActions?.some((ca) => ca.action === action.name)
+                    ? "bg-blue-700"
+                    : ""
                 } ${
-                  selectedAction == action.name &&
+                  selectedActions.includes(action.name) &&
                   currentPhase?.name === PhaseName.OPERATING_ACTION_COMPANY_VOTE
                     ? "ring-2 ring-blue-500"
                     : ""
@@ -223,31 +258,31 @@ const CompanyActionSelectionVote = ({
                       <span className="font-bold mr-3">{action.title}</span>
                       <span>${CompanyActionCosts[action.name]}</span>
                     </div>
-                    {action.name == OperatingRoundAction.LOAN && (
+                    {action.name === OperatingRoundAction.LOAN && (
                       <span>One time only</span>
                     )}
-                    {action.name == OperatingRoundAction.LOAN &&
+                    {action.name === OperatingRoundAction.LOAN &&
                       company.hasLoan && <span>Loan has been taken.</span>}
                   </div>
                 </CardHeader>
                 <CardBody>
                   <div className="flex flex-col">
                     {action.message}
-                    {action.name == OperatingRoundAction.SPEND_PRESTIGE && (
+                    {action.name === OperatingRoundAction.SPEND_PRESTIGE && (
                       <PrestigeRewards layout="minimalist" />
                     )}
                   </div>
                 </CardBody>
                 <CardFooter>
-                  {currentPhase?.name ==
+                  {currentPhase?.name ===
                     PhaseName.OPERATING_ACTION_COMPANY_VOTE &&
-                  selectedAction == action.name &&
+                  selectedActions.includes(action.name) &&
                   currentPhase?.companyId === company.id ? (
                     submitComplete ? (
                       <div>Vote Submitted</div>
                     ) : (
                       <DebounceButton
-                        onClick={() => handleSubmit(action.name)}
+                        onClick={handleSubmit}
                         disabled={submitComplete}
                       >
                         Submit Vote
@@ -259,7 +294,7 @@ const CompanyActionSelectionVote = ({
                       {actionVoteResults
                         .filter(
                           (actionVoteResult) =>
-                            actionVoteResult.actionVoted == action.name
+                            actionVoteResult.actionVoted === action.name
                         )
                         .map((action: OperatingRoundVoteWithPlayer) => (
                           <PlayerAvatar
@@ -270,6 +305,15 @@ const CompanyActionSelectionVote = ({
                         ))}
                     </div>
                   )}
+                  {selectedActions.includes(action.name) &&
+                    companyAllowedActions > 1 && (
+                      <button
+                        className="text-red-500"
+                        onClick={() => handleRemoveSelection(action.name)}
+                      >
+                        X
+                      </button>
+                    )}
                 </CardFooter>
               </Card>
             </div>
@@ -363,7 +407,7 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
       return companies[currentIndex - 1].id;
     });
   };
-  const currentCompanyAction = companyActions?.find(
+  const currentCompanyActions = companyActions?.filter(
     (companyAction) => companyAction.companyId === currentCompany
   );
   return (
@@ -400,7 +444,7 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
               actionVoteResults={companyVoteResults?.operatingRoundVote.filter(
                 (vote) => vote.companyId === currentCompany
               )}
-              companyAction={currentCompanyAction}
+              companyActions={currentCompanyActions}
               withResult={withResult}
             />
           </div>

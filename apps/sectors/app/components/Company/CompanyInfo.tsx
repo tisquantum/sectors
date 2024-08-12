@@ -13,7 +13,7 @@ import {
   RiTeamFill,
   RiWallet3Fill,
 } from "@remixicon/react";
-import { tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
+import { tooltipParagraphStyle, tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
 import {
   CompanyTierData,
   LOAN_AMOUNT,
@@ -225,7 +225,7 @@ const CompanyInfo = ({
             <span>{company.stockSymbol}</span>
             <Tooltip
               className={tooltipStyle}
-              content={<p>The current stock price</p>}
+              content={<p className={tooltipParagraphStyle}>The current stock price</p>}
             >
               <div className="flex items-center">
                 <RiFundsFill size={20} />

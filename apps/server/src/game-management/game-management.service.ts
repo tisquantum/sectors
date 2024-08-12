@@ -261,7 +261,8 @@ export class GameManagementService {
       case PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT:
         console.log('Adjusting stock prices', phase);
         await this.adjustStockPrices(phase);
-        await this.createOperatingRoundCompanyActions(phase);
+        //TODO: Why is this necessary?
+        //await this.createOperatingRoundCompanyActions(phase);
         await this.decrementSectorDemandBonus(phase);
         break;
       case PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT:
@@ -1619,8 +1620,15 @@ export class GameManagementService {
    * @param phase
    */
   async resolveCompanyAction(phase: Phase) {
-    //get the company action
-    let companyAction = await this.prisma.companyAction.findFirst({
+    //get the company
+    const company = await this.companyService.company({
+      id: phase.companyId || '',
+    });
+    if (!company) {
+      throw new Error('Company not found');
+    }
+    // Get the company action(s)
+    let companyActions = await this.prisma.companyAction.findMany({
       where: {
         operatingRoundId: phase.operatingRoundId || 0,
         companyId: phase.companyId || '',
@@ -1629,94 +1637,94 @@ export class GameManagementService {
         Company: true,
       },
     });
-    if (!companyAction) {
-      //if no company action, create a veto action
-      await this.companyActionService.createCompanyAction({
+    // If no company actions exist, create a VETO action
+    if (companyActions.length === 0) {
+      const newCompanyAction = await this.companyActionService.createCompanyAction({
         Company: { connect: { id: phase.companyId || '' } },
         OperatingRound: { connect: { id: phase.operatingRoundId || 0 } },
         action: OperatingRoundAction.VETO,
         resolved: true,
       });
-      companyAction = await this.prisma.companyAction.findFirst({
-        where: {
-          operatingRoundId: phase.operatingRoundId || 0,
-          companyId: phase.companyId || '',
-        },
-        include: {
-          Company: true,
-        },
+  
+      companyActions.push(newCompanyAction);
+    }
+  
+    console.log('companyActions', companyActions);
+  
+    for (let companyAction of companyActions) {
+      if (!companyAction.action) {
+        console.log('Company action has no action, setting to VETO');
+        companyAction = await this.companyActionService.updateCompanyAction({
+          where: { id: companyAction.id },
+          data: { action: OperatingRoundAction.VETO },
+        });
+      }
+  
+      // Pay for the company action
+      try {
+        await this.payForCompanyAction(companyAction);
+      } catch (error) {
+        console.error('Error paying for company action, vetoing action:', error);
+        companyAction = await this.companyActionService.updateCompanyAction({
+          where: { id: companyAction.id },
+          data: { action: OperatingRoundAction.VETO },
+        });
+      }
+  
+      // Mark the company action as resolved
+      await this.companyActionService.updateCompanyAction({
+        where: { id: companyAction.id },
+        data: { resolved: true },
       });
-      if (!companyAction) {
-        throw new Error('Company action not created or found');
+  
+      // Handle the specific company action
+      switch (companyAction.action) {
+        case OperatingRoundAction.SHARE_ISSUE:
+          await this.resolveIssueShares(companyAction);
+          break;
+        case OperatingRoundAction.MARKETING:
+          await this.resolveMarketingAction(companyAction);
+          break;
+        case OperatingRoundAction.MARKETING_SMALL_CAMPAIGN:
+          await this.resolveMarketingSmallCampaignAction(companyAction);
+          break;
+        case OperatingRoundAction.SHARE_BUYBACK:
+          await this.resolveShareBuyback(companyAction);
+          break;
+        case OperatingRoundAction.EXPANSION:
+          await this.expandCompany(companyAction);
+          break;
+        case OperatingRoundAction.DOWNSIZE:
+          await this.downsizeCompany(companyAction);
+          break;
+        case OperatingRoundAction.SPEND_PRESTIGE:
+          await this.spendPrestige(companyAction);
+          break;
+        case OperatingRoundAction.INCREASE_PRICE:
+          await this.increasePrice(companyAction);
+          break;
+        case OperatingRoundAction.DECREASE_PRICE:
+          await this.decreasePrice(companyAction);
+          break;
+        case OperatingRoundAction.RESEARCH:
+          await this.research(companyAction);
+          break;
+        case OperatingRoundAction.LOAN:
+          await this.companyLoan(companyAction);
+          break;
+        case OperatingRoundAction.LOBBY:
+          await this.lobbyCompany(companyAction);
+          break;
+        case OperatingRoundAction.VETO:
+          console.log('VETO action encountered');
+          break;
+        default:
+          console.warn(`Unknown action encountered: ${companyAction.action}`);
+          break;
       }
     }
-    console.log('companyAction', companyAction.action);
-    if (!companyAction.action) {
-      console.log('Company action has no action');
-      //update company action to veto
-      companyAction = await this.companyActionService.updateCompanyAction({
-        where: { id: companyAction.id },
-        data: { action: OperatingRoundAction.VETO },
-      });
-    }
-    //pay for company action
-    try {
-      await this.payForCompanyAction(companyAction);
-    } catch (error) {
-      console.error('Error paying for company action', error);
-      companyAction.action = OperatingRoundAction.VETO;
-    }
-    //resolve company action
-    await this.companyActionService.updateCompanyAction({
-      where: { id: companyAction.id },
-      data: { resolved: true },
-    });
-    switch (companyAction.action) {
-      case OperatingRoundAction.SHARE_ISSUE:
-        await this.resolveIssueShares(companyAction);
-        break;
-      case OperatingRoundAction.MARKETING:
-        await this.resolveMarketingAction(companyAction);
-        break;
-      case OperatingRoundAction.MARKETING_SMALL_CAMPAIGN:
-        await this.resolveMarketingSmallCampaignAction(companyAction);
-        break;
-      case OperatingRoundAction.SHARE_BUYBACK:
-        await this.resolveShareBuyback(companyAction);
-        break;
-      case OperatingRoundAction.SHARE_ISSUE:
-        await this.resolveIssueShare(companyAction);
-        break;
-      case OperatingRoundAction.EXPANSION:
-        await this.expandCompany(companyAction);
-        break;
-      case OperatingRoundAction.DOWNSIZE:
-        await this.downsizeCompany(companyAction);
-        break;
-      case OperatingRoundAction.SPEND_PRESTIGE:
-        await this.spendPrestige(companyAction);
-        break;
-      case OperatingRoundAction.INCREASE_PRICE:
-        await this.increasePrice(companyAction);
-        break;
-      case OperatingRoundAction.DECREASE_PRICE:
-        await this.decreasePrice(companyAction);
-        break;
-      case OperatingRoundAction.RESEARCH:
-        await this.research(companyAction);
-        break;
-      case OperatingRoundAction.LOAN:
-        await this.companyLoan(companyAction);
-        break;
-      case OperatingRoundAction.LOBBY:
-        await this.lobbyCompany(companyAction);
-        break;
-      case OperatingRoundAction.VETO:
-        break;
-      default:
-        return;
-    }
   }
+  
 
   async lobbyCompany(companyAction: CompanyAction) {
     //get the company
@@ -3007,7 +3015,7 @@ export class GameManagementService {
    * @param phase
    */
   async resolveCompanyVotes(phase: Phase) {
-    //get company from phase
+    // Get the company from the phase
     const company = await this.companyService.company({
       id: phase.companyId || '',
     });
@@ -3017,7 +3025,13 @@ export class GameManagementService {
     if (company.status !== CompanyStatus.ACTIVE) {
       throw new Error('Company is not active');
     }
-    //Collect votes
+    const companyTier = CompanyTierData[company.companyTier];
+    if (!companyTier) {
+      throw new Error('Company tier not found');
+    }
+    const companyActionCount: number = companyTier.companyActions;
+
+    // Collect votes
     const votes = await this.prisma.operatingRoundVote.findMany({
       where: {
         companyId: company.id,
@@ -3031,62 +3045,60 @@ export class GameManagementService {
         },
       },
     });
-    //get most voted action weighted by shares
+
+    // Calculate the vote weights for each action
     type ActionVotesAccumulator = {
       [key in OperatingRoundAction]?: number;
     };
 
-    // Assuming votes is properly typed
     const actionVotes = votes.reduce<ActionVotesAccumulator>((acc, vote) => {
-      if (vote.actionVoted in acc) {
-        acc[vote.actionVoted] = (acc[vote.actionVoted] || 0) + vote.weight;
-      } else {
-        acc[vote.actionVoted] = vote.weight;
-      }
+      acc[vote.actionVoted] = (acc[vote.actionVoted] || 0) + vote.weight;
       return acc;
     }, {} as ActionVotesAccumulator);
 
     console.log('Action votes:', actionVotes);
 
-    // Find the maximum number of votes
-    const maxVotes = Math.max(...Object.values(actionVotes));
-    console.log('Max votes:', maxVotes);
-    // Get all actions with the maximum votes
-    const actionsWithMaxVotes = Object.keys(actionVotes).filter(
-      (key) => actionVotes[key as OperatingRoundAction] === maxVotes,
-    ) as OperatingRoundAction[];
-    console.log('Actions with max votes:', actionsWithMaxVotes);
-    const resolvedAction = companyVoteActionPriority(actionsWithMaxVotes);
-    console.log('Resolved action:', resolvedAction);
-    let companyAction;
-    try {
-      companyAction = await this.companyActionService.companyActionFirst({
-        where: {
-          companyId: company.id,
-          operatingRoundId: phase.operatingRoundId || 0,
-        },
-      });
-      if (!companyAction) {
-        //create the company action
-        await this.companyActionService.createCompanyAction({
-          action: resolvedAction,
-          Company: { connect: { id: company.id } },
-          OperatingRound: { connect: { id: phase.operatingRoundId || 0 } },
-        });
-      } else {
-        //create new operating round action
-        await this.companyActionService.updateCompanyAction({
+    // Sort actions by their vote count in descending order and take the top `companyActionCount` actions
+    const sortedActions = Object.entries(actionVotes)
+      .sort(([, aVotes], [, bVotes]) => (bVotes || 0) - (aVotes || 0))
+      .slice(0, companyActionCount)
+      .map(([action]) => action as OperatingRoundAction);
+
+    console.log('Resolved actions:', sortedActions);
+
+    // Iterate through the resolved actions and create or update the corresponding company actions
+    for (const resolvedAction of sortedActions) {
+      try {
+        let companyAction = await this.companyActionService.companyActionFirst({
           where: {
-            id: companyAction.id,
-          },
-          data: {
+            companyId: company.id,
+            operatingRoundId: phase.operatingRoundId || 0,
             action: resolvedAction,
           },
         });
+
+        if (!companyAction) {
+          // Create the company action
+          await this.companyActionService.createCompanyAction({
+            action: resolvedAction,
+            Company: { connect: { id: company.id } },
+            OperatingRound: { connect: { id: phase.operatingRoundId || 0 } },
+          });
+        } else {
+          // Update the existing company action
+          await this.companyActionService.updateCompanyAction({
+            where: {
+              id: companyAction.id,
+            },
+            data: {
+              action: resolvedAction,
+            },
+          });
+        }
+      } catch (error) {
+        console.error('Error creating or updating company action', error);
+        throw new Error('Company action cannot be created or updated');
       }
-    } catch (error) {
-      console.error('Error creating company action', error);
-      throw new Error('Company action cannot be created');
     }
   }
 
@@ -3105,7 +3117,10 @@ export class GameManagementService {
     ]);
 
     sectors.sort((a, b) => {
-      return sectorPriority.indexOf(a.sectorName) - sectorPriority.indexOf(b.sectorName);
+      return (
+        sectorPriority.indexOf(a.sectorName) -
+        sectorPriority.indexOf(b.sectorName)
+      );
     });
     console.log('Sectors:', sectors);
     console.log('Game:', game);
@@ -3207,6 +3222,8 @@ export class GameManagementService {
         data: {
           currentTurn: newTurn.id,
           consumerPoolNumber: game.consumerPoolNumber,
+          currentOperatingRoundId: null,
+          currentStockRoundId: null,
         },
       });
     } catch (error) {
@@ -3387,9 +3404,8 @@ export class GameManagementService {
             sectorId: sector.id,
           };
         });
-        companies = await this.companyService.createManyCompanies(
-          newCompanyData,
-        );
+        companies =
+          await this.companyService.createManyCompanies(newCompanyData);
         //iterate through companies and create ipo shares
         const shares: {
           companyId: string;
@@ -3494,9 +3510,8 @@ export class GameManagementService {
       gameId,
       deckId: researchDeck.id,
     }));
-    const createdResearchCards = await this.cardsService.createManyCards(
-      researchCards,
-    );
+    const createdResearchCards =
+      await this.cardsService.createManyCards(researchCards);
     console.log('Created research cards:', createdResearchCards);
 
     return this.researchDeckService.updateResearchDeck({
@@ -3597,8 +3612,6 @@ export class GameManagementService {
           where: { id: gameId },
           data: {
             currentRound: RoundType.GAME_UPKEEP,
-            currentOperatingRoundId: null,
-            currentStockRoundId: null,
           },
         });
       }
@@ -3728,8 +3741,9 @@ export class GameManagementService {
       where: { id: gameId },
       data: {
         currentPhaseId: phase.id,
-        currentStockRoundId: stockRoundId,
-        currentOperatingRoundId: operatingRoundId,
+        //TODO: is this necessary?
+        // currentStockRoundId: stockRoundId,
+        // currentOperatingRoundId: operatingRoundId,
       },
     });
 
@@ -3776,10 +3790,10 @@ export class GameManagementService {
       roundType: currentPhase.stockRoundId
         ? RoundType.STOCK
         : currentPhase.operatingRoundId
-        ? RoundType.OPERATING
-        : currentPhase.influenceRoundId
-        ? RoundType.INFLUENCE
-        : RoundType.GAME_UPKEEP,
+          ? RoundType.OPERATING
+          : currentPhase.influenceRoundId
+            ? RoundType.INFLUENCE
+            : RoundType.GAME_UPKEEP,
       stockRoundId: game.currentStockRoundId || 0,
       operatingRoundId: game.currentOperatingRoundId || 0,
       influenceRoundId: game.InfluenceRound?.[0].id || 0,
@@ -3888,7 +3902,7 @@ export class GameManagementService {
           )?.stockActionSubRound
         : undefined,
     });
-
+    console.log('determined next phase', determinedNextPhase);
     let nextPhaseName = await this.adjustPhaseBasedOnGameState(
       determinedNextPhase.phaseName,
       phase,
@@ -3941,6 +3955,7 @@ export class GameManagementService {
       nextPhaseName,
       currentPhase,
     );
+    console.log('doesNextPhaseNeedToBePlayed next phase name', nextPhaseName, doesNextPhaseNeedToBePlayed);
     while (!doesNextPhaseNeedToBePlayed) {
       nextPhaseName = determineNextGamePhase(nextPhaseName, {
         stockActionSubRound: gameState.StockRound.find(
@@ -3951,6 +3966,7 @@ export class GameManagementService {
         nextPhaseName,
         currentPhase,
       );
+      console.log('doesNextPhaseNeedToBePlayed next phase name', nextPhaseName, doesNextPhaseNeedToBePlayed);
     }
     if (!nextPhaseName) {
       nextPhaseName = nextPhaseName;
@@ -3976,9 +3992,8 @@ export class GameManagementService {
     if (!gameState) {
       throw new Error('Game not found');
     }
-    const allCompaniesVoted = await this.haveAllCompaniesActionsResolved(
-      gameId,
-    );
+    const allCompaniesVoted =
+      await this.haveAllCompaniesActionsResolved(gameId);
 
     if (allCompaniesVoted) {
       nextPhase = PhaseName.CAPITAL_GAINS;
@@ -4433,9 +4448,6 @@ export class GameManagementService {
               game: { connect: { id: order.gameId } },
               content: `Player ${order.Player.nickname} does not have enough cash to fund margin account to place short order`,
             });
-            throw new Error(
-              'Player does not have enough cash to fund margin account to place order',
-            );
           } else {
             //ensure there are enough shares to short
             const shares = await this.shareService.shares({

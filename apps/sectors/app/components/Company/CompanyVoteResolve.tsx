@@ -37,15 +37,20 @@ const ShareIssue = ({ companyAction }: { companyAction: CompanyAction }) => {
 
 const CompanyVoteResolve = () => {
   const { currentPhase, currentTurn } = useGame();
-  const { data: companyAction, isLoading } =
-    trpc.companyAction.getCompanyAction.useQuery({
-      operatingRoundId: currentPhase?.operatingRoundId || 0,
-      companyId: currentPhase?.companyId || "",
+
+  const { data: companyActions, isLoading } =
+    trpc.companyAction.listCompanyActions.useQuery({
+      where: {
+        operatingRoundId: currentPhase?.operatingRoundId || 0,
+        companyId: currentPhase?.companyId || "",
+      },
     });
+
   const { data: company, isLoading: companyLoading } =
     trpc.company.getCompanyWithRelations.useQuery({
       id: currentPhase?.companyId || "",
     });
+
   const { data: prestigeRewards, isLoading: prestigeRewardsLoading } =
     trpc.prestigeReward.listPrestigeRewards.useQuery({
       where: {
@@ -56,30 +61,27 @@ const CompanyVoteResolve = () => {
         createdAt: "desc",
       },
     });
-  if (isLoading) {
+
+  if (isLoading || companyLoading || prestigeRewardsLoading) {
     return <div>Loading...</div>;
   }
-  if (!companyAction) {
+
+  if (!companyActions?.length) {
     return <div>No company actions found</div>;
   }
 
-  if (companyLoading) {
-    return <div>Loading...</div>;
-  }
   if (!company) {
     return <div>No company found</div>;
   }
-  if (prestigeRewardsLoading) {
-    return <div>Loading...</div>;
-  }
-  const researchCardDrawn =
-    companyAction.action === OperatingRoundAction.RESEARCH
-      ? company.Cards.sort(
-          (a, b) => a.createdAt.getTime() - b.createdAt.getTime()
-        )[0]
-      : null;
 
-  const renderAction = () => {
+  const renderAction = (companyAction: CompanyAction) => {
+    const researchCardDrawn =
+      companyAction.action === OperatingRoundAction.RESEARCH
+        ? company.Cards.sort(
+            (a, b) => a.createdAt.getTime() - b.createdAt.getTime()
+          )[0]
+        : null;
+
     switch (companyAction.action) {
       case OperatingRoundAction.MARKETING:
         return (
@@ -157,19 +159,24 @@ const CompanyVoteResolve = () => {
       case OperatingRoundAction.VETO:
         return (
           <div>
-            Action vetoed. The next turn this companies operating cost are 50%
-            less
+            Action vetoed. The next turn this company's operating costs are 50%
+            less.
           </div>
         );
       default:
         return <div>Unknown action</div>;
     }
   };
+
   return (
     <div>
       <CompanyInfo company={company} showBarChart />
       <div className="border-b-2 border-gray-200 my-4"></div>
-      {renderAction()}
+      {companyActions.map((companyAction) => (
+        <div key={companyAction.id} className="mb-4">
+          {renderAction(companyAction)}
+        </div>
+      ))}
     </div>
   );
 };

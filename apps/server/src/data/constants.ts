@@ -388,30 +388,37 @@ export const CompanyTierData = {
   [CompanyTier.INCUBATOR]: {
     operatingCosts: 10,
     supplyMax: 2,
+    companyActions: 1,
   },
   [CompanyTier.STARTUP]: {
     operatingCosts: 15,
     supplyMax: 3,
+    companyActions: 1,
   },
   [CompanyTier.GROWTH]: {
     operatingCosts: 20,
     supplyMax: 4,
+    companyActions: 1,
   },
   [CompanyTier.ESTABLISHED]: {
     operatingCosts: 40,
     supplyMax: 5,
+    companyActions: 2,
   },
   [CompanyTier.ENTERPRISE]: {
     operatingCosts: 60,
     supplyMax: 6,
+    companyActions: 2,
   },
   [CompanyTier.CONGLOMERATE]: {
     operatingCosts: 90,
     supplyMax: 8,
+    companyActions: 2,
   },
   [CompanyTier.TITAN]: {
     operatingCosts: 150,
     supplyMax: 10,
+    companyActions: 3,
   },
 };
 

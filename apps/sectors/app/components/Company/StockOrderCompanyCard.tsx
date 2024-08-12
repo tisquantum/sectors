@@ -201,7 +201,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
                   "bg-slate-950 rounded-md p-2"
                 }`}
               >
-                <div className="flex gap-4 w-full">
+                <div className="flex flex-col gap-4 w-full">
                   {Object.keys(groupedIpoOrdersByPhase).map(
                     (index, indexInt) => (
                       <div className="flex flex-col" key={index}>
@@ -233,7 +233,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
                   "bg-slate-950 rounded-md p-2"
                 }`}
               >
-                <div className="flex gap-4 w-full">
+                <div className="flex flex-col gap-4 w-full">
                   {Object.keys(groupedIpoOrdersByPhase).map(
                     (index, indexInt) => (
                       <div className="flex flex-col" key={index}>
@@ -300,7 +300,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
                   "bg-slate-950 rounded-md p-2"
                 }`}
               >
-                <div className="flex gap-4 w-full">
+                <div className="flex flex-col gap-4 w-full">
                   {Object.keys(groupedOpenMarketOrdersByPhase).map(
                     (index, indexInt) => (
                       <div className="flex flex-col" key={index}>
@@ -332,7 +332,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
                   "bg-slate-950 rounded-md p-2"
                 }`}
               >
-                <div className="flex gap-4 w-full">
+                <div className="flex flex-col gap-4 w-full">
                   {Object.keys(groupedOpenMarketOrdersByPhase).map(
                     (index, indexInt) => (
                       <div className="flex flex-col" key={index}>
