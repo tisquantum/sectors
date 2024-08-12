@@ -290,7 +290,9 @@ export function calculateStepsToNewTier(
     const currentTier = getCurrentTierBySharePrice(newStockPrice);
     const tierMaxValue = getTierMaxValue(currentTier);
 
-    const stepsToTierMax = stockGridPrices.indexOf(tierMaxValue) - stockGridPrices.indexOf(newStockPrice);
+    const stepsToTierMax =
+      stockGridPrices.indexOf(tierMaxValue) -
+      stockGridPrices.indexOf(newStockPrice);
 
     if (remainingSteps <= stepsToTierMax) {
       totalSteps += remainingSteps;
@@ -645,6 +647,8 @@ function descriptionForEffect(effect: ResearchCardEffect): string {
       return 'The company has achieved a breakthrough in product development. Increase the supply permanently by 1.';
     case ResearchCardEffect.ECONOMIES_OF_SCALE:
       return "When this company operates, it is considered to be the cheapest company regardless of it's unit price.";
+    case ResearchCardEffect.CORPORATE_ESPIONAGE:
+      return 'Reduce all other companies prestige tokens in the sector by 2.';
     case ResearchCardEffect.AUTOMATION:
       return `This company reduces it's operating costs by ${AUTOMATION_EFFECT_OPERATIONS_REDUCTION}.`;
     case ResearchCardEffect.SPECIALIZATION:
@@ -742,4 +746,21 @@ export function calculateCertLimitForPlayerCount(playerCount: number): number {
       (playerCount - minPlayerCount);
 
   return Math.round(certLimit);
+}
+
+/**
+ * Helper function to group an array of objects by a specific key.
+ */
+export function groupBy<T>(array: T[], key: keyof T) {
+  return array.reduce(
+    (acc, obj) => {
+      const group = String(obj[key]); // Convert the key to a string
+      if (!acc[group]) {
+        acc[group] = [];
+      }
+      acc[group].push(obj);
+      return acc;
+    },
+    {} as Record<string, T[]>,
+  );
 }

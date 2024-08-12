@@ -53,6 +53,7 @@ import {
   PlayerOrderWithPlayerCompany,
   PlayerOrderWithPlayerCompanySectorShortOrder,
   PlayerWithShares,
+  ProductionResultWithCompany,
   ShareWithCompany,
   ShortOrderWithShares,
 } from '@server/prisma/prisma.types';
@@ -101,6 +102,8 @@ import {
   SMALL_MARKETING_CAMPAIGN_DEMAND,
   CAPITAL_INJECTION_BOOSTER,
   StartingTier,
+  CORPORATE_ESPIONAGE_PRESTIGE_REDUCTION,
+  sectorPriority,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -274,6 +277,7 @@ export class GameManagementService {
         await this.resolveDivestment(phase);
         break;
       case PhaseName.END_TURN:
+        await this.adjustEconomyScore(phase);
         await this.resolveCompanyLoans(phase);
         await this.optionContractGenerate(phase);
         const isEndGame = await this.checkAndTriggerEndGame(phase);
@@ -286,6 +290,126 @@ export class GameManagementService {
     }
   }
 
+  /**
+   * Once each sector has floated a company, the economy is
+   * eligible to begin moving. If at least one company in each
+   * sector pay dividends, the economy will move up by 1. If at
+   * least one company retains, the economy will move down by 1. If
+   * both of these are true, the economy will remain the same.
+   * @param phase
+   */
+  async adjustEconomyScore(phase: Phase) {
+    //get game
+    const game = await this.gamesService.game({ id: phase.gameId });
+    if (!game) {
+      throw new Error('Game not found');
+    }
+    if (!game.currentOperatingRoundId) {
+      throw new Error('Operating round not found');
+    }
+    //get sectors in game
+    const sectors = await this.sectorService.sectors({
+      where: { gameId: phase.gameId },
+    });
+    if (!sectors) {
+      throw new Error('Sectors not found');
+    }
+    const companies = await this.companyService.companiesWithSector({
+      where: { gameId: phase.gameId, isFloated: true },
+    });
+    //group companies by sector
+    const groupedCompanies = companies.reduce(
+      (acc, company) => {
+        if (!acc[company.sectorId]) {
+          acc[company.sectorId] = [];
+        }
+        acc[company.sectorId].push(company);
+        return acc;
+      },
+      {} as { [key: string]: CompanyWithSector[] },
+    );
+    //if all sectors have at least one floated company, proceed, otherwise, throw
+    const sectorIds = Object.keys(groupedCompanies);
+    if (sectorIds.length < sectors.length) {
+      //game log
+      await this.gameLogService.createGameLog({
+        game: { connect: { id: phase.gameId } },
+        content: `Not all sectors have floated a company, the economy score remains the same.`,
+      });
+      return;
+    }
+    //get all production results for companies of this past operating round
+    const productionResults =
+      await this.productionResultService.productionResults({
+        where: {
+          operatingRoundId: game.currentOperatingRoundId,
+        },
+      });
+    //group production results by sector
+    const groupedProductionResults = productionResults.reduce(
+      (acc, result) => {
+        if (!acc[result.Company.sectorId]) {
+          acc[result.Company.sectorId] = [];
+        }
+        acc[result.Company.sectorId].push(result);
+        return acc;
+      },
+      {} as { [key: string]: ProductionResultWithCompany[] },
+    );
+    //check if each sector has at least one company that pays dividends
+    const dividendSectors = Object.entries(groupedProductionResults).filter(
+      ([sectorId, results]) => {
+        return results.some(
+          (result) =>
+            result.revenueDistribution ==
+              RevenueDistribution.DIVIDEND_FIFTY_FIFTY ||
+            result.revenueDistribution == RevenueDistribution.DIVIDEND_FULL,
+        );
+      },
+    );
+    //check if each sector has at least one company that retains
+    const retainSectors = Object.entries(groupedProductionResults).filter(
+      ([sectorId, results]) => {
+        return results.some(
+          (result) =>
+            result.revenueDistribution == RevenueDistribution.RETAINED,
+        );
+      },
+    );
+    //if both conditions are met, economy score remains the same
+    if (dividendSectors.length > 0 && retainSectors.length > 0) {
+      //game log
+      await this.gameLogService.createGameLog({
+        game: { connect: { id: phase.gameId } },
+        content: `All sectors have one company that has retained and one company that has paid dividends, the economy score remains the same.`,
+      });
+      return;
+    }
+    //if there is at least one sector with a company that pays dividends, economy score goes up
+    if (dividendSectors.length > 0) {
+      await this.gamesService.updateGame({
+        where: { id: phase.gameId },
+        data: { economyScore: game.economyScore + 1 },
+      });
+      await this.gameLogService.createGameLog({
+        game: { connect: { id: phase.gameId } },
+        content: `At least one sector has one company that has paid dividends, the economy score has increased by 1.`,
+      });
+      return;
+    }
+    //if there is at least one sector with a company that retains, economy score goes down
+    if (retainSectors.length > 0) {
+      await this.gamesService.updateGame({
+        where: { id: phase.gameId },
+        data: { economyScore: game.economyScore - 1 },
+      });
+      await this.gameLogService.createGameLog({
+        game: { connect: { id: phase.gameId } },
+        content: `At least one sector has one company that has retained, the economy score has decreased by 1.`,
+      });
+      return;
+    }
+  }
   /**
    * Check if the game has ended and trigger the end game logic.
    * @param phase
@@ -1693,8 +1817,10 @@ export class GameManagementService {
         this.companySupplyIncreaseEffect(company);
         return;
       case ResearchCardEffect.AUTOMATION:
-        //reduce the operational costs by some amount
-        //TODO: Implement
+        //reduce the operational costs by some amount, implemented elsewhere
+        break;
+      case ResearchCardEffect.CORPORATE_ESPIONAGE:
+        this.corporateEspionageEffect(company);
         break;
       case ResearchCardEffect.ECONOMIES_OF_SCALE:
         //When this company operates, it is considered to be the cheapest company regardless of it's unit price.
@@ -1714,7 +1840,26 @@ export class GameManagementService {
         return;
     }
   }
-
+  //reduces all other companies in the sector prestige by 2, to a minimum of 0
+  async corporateEspionageEffect(company: Company) {
+    //get all companies in the sector except the acting company
+    const companies = await this.companyService.companies({
+      where: { sectorId: company.sectorId, id: { not: company.id } },
+    });
+    //update all companies in the sector
+    companies.map(async (sectorCompany) => {
+      await this.companyService.updateCompany({
+        where: { id: sectorCompany.id },
+        data: {
+          prestigeTokens: Math.max(
+            sectorCompany.prestigeTokens -
+              CORPORATE_ESPIONAGE_PRESTIGE_REDUCTION,
+            0,
+          ),
+        },
+      });
+    });
+  }
   async economiesOfScaleEffect(company: Company) {
     await this.companyService.updateCompany({
       where: { id: company.id },
@@ -2959,6 +3104,9 @@ export class GameManagementService {
       this.gamesService.game({ id: phase.gameId }),
     ]);
 
+    sectors.sort((a, b) => {
+      return sectorPriority.indexOf(a.sectorName) - sectorPriority.indexOf(b.sectorName);
+    });
     console.log('Sectors:', sectors);
     console.log('Game:', game);
 
@@ -2986,7 +3134,7 @@ export class GameManagementService {
       where: { id: string };
       data: { consumers: number };
     }[] = [];
-    const economyScore = STABLE_ECONOMY_SCORE;
+    const economyScore = game.economyScore;
     let consumersMovedCounter = 0;
 
     // Distribute remaining economy score to sectors
@@ -3118,6 +3266,7 @@ export class GameManagementService {
       gameStep: 0,
       currentPhaseId: 'initial',
       gameMaxTurns,
+      economyScore: STABLE_ECONOMY_SCORE,
       Room: { connect: { id: roomId } },
     };
 

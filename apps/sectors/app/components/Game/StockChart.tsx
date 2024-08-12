@@ -168,13 +168,13 @@ const StockChart = () => {
     const sector = company.Sector.name;
     const colorVariantIndex = index % 10; // Cycle through the 10 color variants
     const colorVariant = sectorColorVariants[sector][colorVariantIndex];
-  
+
     return {
       ...acc,
       [company.id]: colorVariant,
     };
   }, {});
-  
+
   const colorsArray: string[] = Object.values(companyColorsMap) || [];
   const groupedData =
     companies?.flatMap((company) =>
@@ -229,7 +229,6 @@ const StockChart = () => {
   allChartData.forEach((entry, index) => {
     entry.phaseId = `${index + 1} ${entry.phaseName}`;
   });
-  console.log('colors array', colorsArray);
   return (
     <div className="flex flex-col">
       <Tabs>

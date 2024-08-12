@@ -5,6 +5,7 @@ import {
   OperatingRoundAction,
   PhaseName,
   PrestigeReward,
+  Sector,
   SectorName,
   StockTier,
 } from '@prisma/client';
@@ -56,7 +57,7 @@ export const PRESTIGE_EFFECT_INCREASE_AMOUNT = 2;
 export const AUTOMATION_EFFECT_OPERATIONS_REDUCTION = 20;
 export const CAPITAL_INJECTION_STARTER = 200;
 export const CAPITAL_INJECTION_BOOSTER = 200;
-
+export const CORPORATE_ESPIONAGE_PRESTIGE_REDUCTION = 2;
 /**
  * Phase times in milliseconds
  */
@@ -262,6 +263,19 @@ export const companyVoteActionPriority = (
     (a, b) => actionPriority.indexOf(a) - actionPriority.indexOf(b),
   )[0];
 };
+
+export const sectorPriority = [
+  SectorName.CONSUMER_DEFENSIVE,
+  SectorName.HEALTHCARE,
+  SectorName.MATERIALS,
+  SectorName.ENERGY,
+  SectorName.INDUSTRIALS,
+  SectorName.CONSUMER_CYCLICAL,
+  SectorName.TECHNOLOGY,
+  SectorName.CONSUMER_DISCRETIONARY,
+  SectorName.CONSUMER_STAPLES,
+  SectorName.GENERAL,
+];
 
 export const getCompanyOperatingRoundTurnOrder = (
   companies: Company[],
@@ -502,8 +516,8 @@ export const PrestigeTrack = [
   {
     type: PrestigeReward.CAPITAL_INJECTION,
     name: 'Capital Injection',
-    description: `The company receives the money on this space of the track. If you pass over this, the money across all capital injections receive another $${CAPITAL_INJECTION_BOOSTER}.`,
-    probability: 0.15,
+    description: `The company receives the money on this space of the track. If you pass over this, all capital injections rewards receive another $${CAPITAL_INJECTION_BOOSTER}.`,
+    probability: 0.12,
     cost: 3,
   },
   {
