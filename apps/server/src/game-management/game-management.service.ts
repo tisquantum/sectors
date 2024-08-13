@@ -1639,18 +1639,19 @@ export class GameManagementService {
     });
     // If no company actions exist, create a VETO action
     if (companyActions.length === 0) {
-      const newCompanyAction = await this.companyActionService.createCompanyAction({
-        Company: { connect: { id: phase.companyId || '' } },
-        OperatingRound: { connect: { id: phase.operatingRoundId || 0 } },
-        action: OperatingRoundAction.VETO,
-        resolved: true,
-      });
-  
+      const newCompanyAction =
+        await this.companyActionService.createCompanyAction({
+          Company: { connect: { id: phase.companyId || '' } },
+          OperatingRound: { connect: { id: phase.operatingRoundId || 0 } },
+          action: OperatingRoundAction.VETO,
+          resolved: true,
+        });
+
       companyActions.push(newCompanyAction);
     }
-  
+
     console.log('companyActions', companyActions);
-  
+
     for (let companyAction of companyActions) {
       if (!companyAction.action) {
         console.log('Company action has no action, setting to VETO');
@@ -1659,24 +1660,27 @@ export class GameManagementService {
           data: { action: OperatingRoundAction.VETO },
         });
       }
-  
+
       // Pay for the company action
       try {
         await this.payForCompanyAction(companyAction);
       } catch (error) {
-        console.error('Error paying for company action, vetoing action:', error);
+        console.error(
+          'Error paying for company action, vetoing action:',
+          error,
+        );
         companyAction = await this.companyActionService.updateCompanyAction({
           where: { id: companyAction.id },
           data: { action: OperatingRoundAction.VETO },
         });
       }
-  
+
       // Mark the company action as resolved
       await this.companyActionService.updateCompanyAction({
         where: { id: companyAction.id },
         data: { resolved: true },
       });
-  
+
       // Handle the specific company action
       switch (companyAction.action) {
         case OperatingRoundAction.SHARE_ISSUE:
@@ -1724,7 +1728,6 @@ export class GameManagementService {
       }
     }
   }
-  
 
   async lobbyCompany(companyAction: CompanyAction) {
     //get the company
@@ -2349,6 +2352,11 @@ export class GameManagementService {
             companyAction.Company.demandScore + LARGE_MARKETING_CAMPAIGN_DEMAND,
         },
       });
+      //game log
+      this.gameLogService.createGameLog({
+        game: { connect: { id: companyAction.Company.gameId } },
+        content: `Company ${companyAction.Company.name} has received a marketing campaign demand bonus of ${LARGE_MARKETING_CAMPAIGN_DEMAND}.`,
+      });
       //get the sector
       const sector = await this.sectorService.sector({
         id: companyAction.Company.sectorId,
@@ -2831,8 +2839,15 @@ export class GameManagementService {
       let consumers = sector.consumers;
       const sectorCompaniesSorted =
         companyPriorityOrderOperations(sectorCompanies);
+      //map sectorCompanies to match sectorCompaniesSorted
+      const sectorCompaniesSortedFull = sectorCompanies.sort((a, b) => {
+        return (
+          sectorCompaniesSorted.findIndex((company) => company.id === a.id) -
+          sectorCompaniesSorted.findIndex((company) => company.id === b.id)
+        );
+      })
       // Iterate over companies in sector
-      for (const company of sectorCompaniesSorted) {
+      for (const company of sectorCompaniesSortedFull) {
         // Calculate the revenue for the company units sold
         let unitsManufactured = calculateCompanySupply(
           company.supplyBase,
@@ -3066,6 +3081,13 @@ export class GameManagementService {
 
     console.log('Resolved actions:', sortedActions);
 
+    //if sorted actions is less than companyActionCount, we need to fill the rest with a VETO action
+    if (sortedActions.length < companyActionCount) {
+      const vetoCount = companyActionCount - sortedActions.length;
+      for (let i = 0; i < vetoCount; i++) {
+        sortedActions.push(OperatingRoundAction.VETO);
+      }
+    }
     // Iterate through the resolved actions and create or update the corresponding company actions
     for (const resolvedAction of sortedActions) {
       try {
@@ -3955,7 +3977,11 @@ export class GameManagementService {
       nextPhaseName,
       currentPhase,
     );
-    console.log('doesNextPhaseNeedToBePlayed next phase name', nextPhaseName, doesNextPhaseNeedToBePlayed);
+    console.log(
+      'doesNextPhaseNeedToBePlayed next phase name',
+      nextPhaseName,
+      doesNextPhaseNeedToBePlayed,
+    );
     while (!doesNextPhaseNeedToBePlayed) {
       nextPhaseName = determineNextGamePhase(nextPhaseName, {
         stockActionSubRound: gameState.StockRound.find(
@@ -3966,7 +3992,11 @@ export class GameManagementService {
         nextPhaseName,
         currentPhase,
       );
-      console.log('doesNextPhaseNeedToBePlayed next phase name', nextPhaseName, doesNextPhaseNeedToBePlayed);
+      console.log(
+        'doesNextPhaseNeedToBePlayed next phase name',
+        nextPhaseName,
+        doesNextPhaseNeedToBePlayed,
+      );
     }
     if (!nextPhaseName) {
       nextPhaseName = nextPhaseName;
@@ -3994,7 +4024,7 @@ export class GameManagementService {
     }
     const allCompaniesVoted =
       await this.haveAllCompaniesActionsResolved(gameId);
-
+    console.log('allCompaniesVoted', allCompaniesVoted);
     if (allCompaniesVoted) {
       nextPhase = PhaseName.CAPITAL_GAINS;
       return undefined;
@@ -5835,6 +5865,10 @@ export class GameManagementService {
     if (!game) {
       throw new Error('Game not found');
     }
+    //get all active companies in the game
+    const companies = await this.companyService.companies({
+      where: { gameId, status: CompanyStatus.ACTIVE },
+    });
     const currentOperatingRound =
       await this.operatingRoundService.operatingRoundWithCompanyActions({
         id: game.currentOperatingRoundId || 0,
@@ -5842,23 +5876,58 @@ export class GameManagementService {
     if (!currentOperatingRound) {
       throw new Error('Operating round not found');
     }
-    //if there are no company actions, return true
-    if (currentOperatingRound.companyActions.length === 0) {
-      return true;
+    console.log('companies length', companies.length);
+    console.log(
+      'currentOperatingRound companyActions number',
+      currentOperatingRound.companyActions.length,
+    );
+    if (companies.length > currentOperatingRound.companyActions.length) {
+      return false;
     }
-    //filter company actions by company status active
-    currentOperatingRound.companyActions =
-      currentOperatingRound.companyActions.filter(
-        (action) => action.Company.status === CompanyStatus.ACTIVE,
+    //if any company action was EXPANSION or DOWNSIZE, adjust the company tier back to it's previous tier in a shallow copy
+    //because tiers are changed upon resolution, we need to look at the tier before the action was taken when making this check.
+    const companiesWithAdjustedTier = companies.map((company) => {
+      const companyAction = currentOperatingRound.companyActions.find(
+        (action) => action.companyId === company.id,
       );
-    //if there are no company actions, return true
-    if (currentOperatingRound.companyActions.length === 0) {
-      return true;
-    }
+      if (companyAction?.action === OperatingRoundAction.EXPANSION) {
+        return {
+          ...company,
+          companyTier: getPreviousCompanyTier(company.companyTier),
+        };
+      }
+      if (companyAction?.action === OperatingRoundAction.DOWNSIZE) {
+        return {
+          ...company,
+          companyTier: getNextCompanyTier(company.companyTier),
+        };
+      }
+      return company;
+    });
+    //get total company actions based on company tier
+    const totalCompanyActions = companiesWithAdjustedTier.reduce(
+      (acc, company) =>
+        acc + CompanyTierData[company.companyTier].companyActions,
+      0,
+    );
     //check if all CompanyAction.resolved
-    return currentOperatingRound.companyActions.every(
+    const resolvedCompanyActions = currentOperatingRound.companyActions.filter(
       (action) => action.resolved,
     );
+    //check if all companies have at least one voted action
+    const companiesWithVotedActions = companiesWithAdjustedTier.filter(
+      (company) =>
+        currentOperatingRound.companyActions.find(
+          (action) => action.companyId === company.id,
+        ),
+    );
+    return (
+      companiesWithVotedActions.length === companies.length
+    );
+
+    // console.log('resolvedCompanyActions', resolvedCompanyActions.length);
+    // console.log('totalCompanyActions', totalCompanyActions);
+    // return resolvedCompanyActions.length >= totalCompanyActions;
   }
 
   async doesNextPhaseNeedToBePlayed(phaseName: PhaseName, currentPhase: Phase) {

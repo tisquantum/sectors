@@ -69,7 +69,7 @@ const StockRoundResults = () => {
         {stockRound.playerOrders.map((playerOrder) => (
           <div
             key={playerOrder.id}
-            className="flex flex-col bg-slate-700 p-4 rounded-md min-w-96"
+            className="flex flex-col bg-slate-700 p-4 rounded-md min-w-64"
           >
             <PlayerAvatar player={playerOrder.Player} showNameLabel />
             <span>Company: {playerOrder.Company.name}</span>

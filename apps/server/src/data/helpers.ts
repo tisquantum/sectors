@@ -16,7 +16,9 @@ import {
   StockTier,
 } from '@prisma/client';
 import {
+  CompanyOperationOrderPartial,
   CompanyWithSector,
+  CompanyWithSectorPartial,
   PlayerOrderWithCompany,
   ShareWithCompany,
 } from '@server/prisma/prisma.types';
@@ -409,7 +411,9 @@ export function calculateMarginAccountMinimum(shortOrderValue: number): number {
   return Math.ceil(shortOrderValue / 2);
 }
 
-export function companyPriorityOrderOperations(companies: CompanyWithSector[]) {
+export function companyPriorityOrderOperations(
+  companies: CompanyOperationOrderPartial[],
+) {
   // PRIORITY for production and consumption of goods
   // 0: If company has ECONOMIES_OF_SCALE, it is considered to be the cheapest company regardless of it's unit price.
   // 1: Sort companies by prestige tokens DESC

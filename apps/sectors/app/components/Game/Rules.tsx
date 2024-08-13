@@ -3,6 +3,10 @@
 import { FC } from "react";
 import ThroughputLegend from "./ThroughputLegend";
 import CompanyTiers from "../Company/CompanyTiers";
+import CompanyPriorityList from "../Company/CompanyPriorityOperatingRound";
+import { useGame } from "./GameContext";
+import { CompanyStatus } from "@server/prisma/prisma.client";
+import { trpc } from "@sectors/app/trpc";
 
 const overviewRules = (
   <>
@@ -154,11 +158,16 @@ const stockRoundRules = (
   </>
 );
 
-const operatingRoundRules = (
+const OperatingRoundRules = () => (
   <>
     <p>
       <strong>Operating Rounds</strong> are where companies run production and
       shareholders determine company actions.
+    </p>
+    <p>
+      <strong>Operating Round Priority Order</strong>
+      <p>Companies operate in priority given a myriad of factors.</p>
+      <CompanyPriorityList isRuleExplanation />
     </p>
     <p>
       <strong>Floating Companies</strong>
@@ -278,7 +287,9 @@ const Rules: FC = () => {
       </div>
       <div className="mb-8">
         <h2 className="text-2xl font-semibold mb-2">Operating Round Rules</h2>
-        <div className="text-base space-y-4">{operatingRoundRules}</div>
+        <div className="text-base space-y-4">
+          <OperatingRoundRules />
+        </div>
       </div>
       <div className="mb-8">
         <h2 className="text-2xl font-semibold mb-2">Prestige Tokens</h2>

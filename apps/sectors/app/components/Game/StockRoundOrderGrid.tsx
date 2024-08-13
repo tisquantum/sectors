@@ -1,6 +1,6 @@
 "use client";
 
-import { Tab, Tabs } from "@nextui-org/react";
+import { Button, Tab, Tabs } from "@nextui-org/react";
 import React, { useEffect, useState } from "react";
 import {
   isCurrentPhaseInteractive,
@@ -16,6 +16,7 @@ import {
   Player,
 } from "@server/prisma/prisma.client";
 import {
+  CompanyWithRelations,
   CompanyWithSector,
   PlayerOrderConcealed,
 } from "@server/prisma/prisma.types";
@@ -23,6 +24,10 @@ import { sectorColors } from "@server/data/gameData";
 import "./StockRoundOrderGrid.css";
 import CompanyCard from "../Company/StockOrderCompanyCard";
 import Derivatives from "./Derivatives";
+import { Drawer } from "vaul";
+import PlayerOrderInput from "../Player/PlayerOrderInput";
+import CompanyInfo from "../Company/CompanyInfo";
+import { LineChart } from "@tremor/react";
 
 function isOrderInputOpenPlayerOrderCounter(
   playerOrdersConcealed: PlayerOrderConcealed[],
@@ -44,7 +49,7 @@ const StockRoundOrderGrid = ({
 }) => {
   const { gameId, currentPhase, gameState, authPlayer } = useGame();
   const { data: companies, isLoading } =
-    trpc.company.listCompaniesWithSector.useQuery({
+    trpc.company.listCompaniesWithRelations.useQuery({
       where: { gameId },
     });
   const {
@@ -108,6 +113,9 @@ const StockRoundOrderGrid = ({
     }
   }, [playerOrdersConcealed, currentPhase]);
   const [isOrderInputOpen, setIsOrderInputOpen] = useState<boolean>(false);
+  const [selectedCompanyOrder, setSelectedCompanyOrder] = useState<
+    { company: CompanyWithRelations; isIpo: boolean } | undefined
+  >(undefined);
   if (isLoading) return null;
   if (isLoadingPhases) return null;
   if (companies == undefined) return notFound();
@@ -130,48 +138,108 @@ const StockRoundOrderGrid = ({
   const companyCardButtonClicked = () => {
     setIsOrderInputOpen(false);
   };
+  const handleCompanySelect = (
+    company: CompanyWithRelations,
+    isIpo: boolean
+  ) => {
+    setSelectedCompanyOrder({ company, isIpo });
+  };
+  const valueFormatter = function (number: number) {
+    return "$ " + new Intl.NumberFormat("us").format(number).toString();
+  };
   return (
-    <Tabs>
-      <Tab key="spot-market" title="Spot Market">
-        <div className="flex flex-wrap">
-          {Object.keys(companiesBySector).flatMap((sectorId) =>
-            companiesBySector[sectorId].companies.map(
-              (company: CompanyWithSector) => (
-                <div
-                  key={company.id}
-                  className={`z-0 p-4 flex`}
-                  style={{
-                    backgroundColor: sectorColors[company.Sector.name],
-                  }}
-                >
-                  <CompanyCard
-                    company={company}
-                    orders={orders.filter(
-                      (order) => order.companyId === company.id
-                    )}
-                    isRevealRound={isRevealRound}
-                    isInteractive={isInteractive}
-                    focusedOrder={focusedOrder}
-                    currentPhase={currentPhase}
-                    playerOrdersRevealed={
-                      playerOrdersRevealed?.filter(
+    <>
+      <Tabs>
+        <Tab key="spot-market" title="Spot Market">
+          <div className="flex flex-wrap">
+            {Object.keys(companiesBySector).flatMap((sectorId) =>
+              companiesBySector[sectorId].companies.map(
+                (company: CompanyWithRelations) => (
+                  <div
+                    key={company.id}
+                    className={`z-0 p-4 flex`}
+                    style={{
+                      backgroundColor: sectorColors[company.Sector.name],
+                    }}
+                  >
+                    <CompanyCard
+                      company={company}
+                      orders={orders.filter(
                         (order) => order.companyId === company.id
-                      ) || []
-                    }
-                    phasesOfStockRound={phasesOfStockRound}
-                    isOrderInputOpen={isOrderInputOpen}
-                    handleButtonSelect={companyCardButtonClicked}
-                  />
-                </div>
+                      )}
+                      isRevealRound={isRevealRound}
+                      isInteractive={isInteractive}
+                      focusedOrder={focusedOrder}
+                      currentPhase={currentPhase}
+                      playerOrdersRevealed={
+                        playerOrdersRevealed?.filter(
+                          (order) => order.companyId === company.id
+                        ) || []
+                      }
+                      phasesOfStockRound={phasesOfStockRound}
+                      isOrderInputOpen={isOrderInputOpen}
+                      handleButtonSelect={companyCardButtonClicked}
+                      handleCompanySelect={handleCompanySelect}
+                    />
+                  </div>
+                )
               )
-            )
+            )}
+          </div>
+        </Tab>
+        <Tab key="derivatives" title="Derivatives">
+          <Derivatives isInteractive={isInteractive} />
+        </Tab>
+      </Tabs>
+      <Drawer.Portal>
+        <Drawer.Overlay className="fixed inset-0 bg-black/40" />
+        <Drawer.Content className="bg-slate-900 flex flex-col rounded-t-[10px] h-full w-96 fixed top-[64.9px] right-0">
+          {selectedCompanyOrder && (
+            <div className="flex flex-col justify-center items-center bg-slate-900 p-4">
+              <h2 className="text-white text-2xl font-bold mb-2">
+                {selectedCompanyOrder.isIpo ? "IPO Order" : "Open Market Order"}
+              </h2>
+              <PlayerOrderInput
+                currentOrder={selectedCompanyOrder.company}
+                handleCancel={() => {}}
+                isIpo={selectedCompanyOrder.isIpo} // Pass IPO state here
+                handlePlayerInputConfirmed={() => {
+                  companyCardButtonClicked();
+                }} // Callback on input confirmed
+              />
+              <div className="h-96">
+                <CompanyInfo
+                  company={selectedCompanyOrder.company}
+                  showBarChart
+                />
+              </div>
+              <LineChart
+                className="w-full"
+                data={selectedCompanyOrder.company.StockHistory.map(
+                  (stockHistory, index) => ({
+                    phaseId: `${index + 1} ${stockHistory.Phase.name}`,
+                    stockPrice: stockHistory.price,
+                    stockAction: stockHistory.action,
+                    steps: stockHistory.stepsMoved,
+                  })
+                )}
+                index="phaseId"
+                categories={["stockPrice"]}
+                yAxisLabel="Stock Price"
+                xAxisLabel="Stock Price Updated"
+                colors={[
+                  sectorColors[selectedCompanyOrder.company.Sector.name],
+                ]}
+                valueFormatter={valueFormatter}
+              />
+            </div>
           )}
-        </div>
-      </Tab>
-      <Tab key="derivatives" title="Derivatives">
-        <Derivatives isInteractive={isInteractive} />
-      </Tab>
-    </Tabs>
+          <Drawer.Close asChild>
+            <Button>Close drawer</Button>
+          </Drawer.Close>
+        </Drawer.Content>
+      </Drawer.Portal>
+    </>
   );
 };
 

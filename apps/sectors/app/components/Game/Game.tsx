@@ -41,6 +41,8 @@ import CoverShortOrders from "./CoverShortOrders";
 import { Button, Spinner, useDisclosure } from "@nextui-org/react";
 import { isActivePhase } from "@server/data/helpers";
 import GameResults from "./GameResults";
+import { Drawer } from "vaul";
+import { useDrawer } from "../Drawer.context";
 
 const determineGameRound = (
   game: GameState
@@ -113,7 +115,7 @@ const TimesUp = () => (
 
 const Game = ({ gameId }: { gameId: string }) => {
   const { gameState, currentPhase } = useGame();
-
+  const { isOpen: drawerIsOpen, openDrawer, closeDrawer, toggleDrawer } = useDrawer();
   const [currentView, setCurrentView] = useState<string>("action");
   const constraintsRef = useRef(null);
   const [isTimerAtZero, setIsTimerAtZero] = useState(false);
@@ -205,9 +207,11 @@ const Game = ({ gameId }: { gameId: string }) => {
     ) : null;
 
   return (
-    <div className="relative flex flex-grow overflow-hidden">
-      <GameSidebar />
-      {/* <motion.div
+    <>
+        <Drawer.Root open={drawerIsOpen} onOpenChange={toggleDrawer} direction="right">
+          <div className="relative flex flex-grow overflow-hidden">
+            <GameSidebar />
+            {/* <motion.div
         className="absolute inset-0 z-10 pointer-events-none"
         ref={constraintsRef}
       >
@@ -219,53 +223,57 @@ const Game = ({ gameId }: { gameId: string }) => {
           <TabView gameId={gameId} />
         </motion.div>
       </motion.div> */}
-      <div className="flex flex-col w-full">
-        {gameState.gameStatus == GameStatus.FINISHED && (
-          <Button
-            color="primary"
-            className="h-32 w-[90%] bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg transform transition-transform duration-300 hover:scale-90 hover:shadow-2xl"
-            onPress={onOpen}
-          >
-            <div className="flex flex-col gap-2 items-center">
-              <span className="text-2xl font-bold animate-pulse">
-                Game Is Finished!
-              </span>
-              <span className="text-xl font-medium">View Game Results</span>
-            </div>
-          </Button>
-        )}
+            <div className="flex flex-col w-full">
+              {gameState.gameStatus == GameStatus.FINISHED && (
+                <Button
+                  color="primary"
+                  className="h-32 w-[90%] bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg transform transition-transform duration-300 hover:scale-90 hover:shadow-2xl"
+                  onPress={onOpen}
+                >
+                  <div className="flex flex-col gap-2 items-center">
+                    <span className="text-2xl font-bold animate-pulse">
+                      Game Is Finished!
+                    </span>
+                    <span className="text-xl font-medium">
+                      View Game Results
+                    </span>
+                  </div>
+                </Button>
+              )}
 
-        <GameTopBar
-          handleCurrentView={handleCurrentView}
-          isTimerAtZero={isTimerAtZero}
-        />
-        <div className="relative flex justify-between overflow-y-auto scrollbar">
-          {currentPhase?.name &&
-            isActivePhase(currentPhase.name) &&
-            isTimerAtZero && (
-              <div className="absolute inset-0 flex items-center justify-center transition-opacity duration-300 opacity-100 z-20 bg-black bg-opacity-50">
-                <TimesUp />
-              </div>
-            )}
-          <div className="basis-10/12	active-panel flex flex-col h-full p-4 overflow-y-auto scrollbar max-h-full">
-            {currentView === "action" && renderCurrentPhase}
-            {currentView === "chart" && <StockChart />}
-            {currentView === "pending" && <PendingOrders />}
-            {currentView == "economy" && <EndTurnEconomy />}
-            {currentView == "companies" && <StockRoundOrderGrid />}
-            {gameState.gameStatus == GameStatus.FINISHED && (
-              <GameResults
-                isOpen={isOpen}
-                onOpen={onOpen}
-                onClose={onClose}
-                onOpenChange={onOpenChange}
+              <GameTopBar
+                handleCurrentView={handleCurrentView}
+                isTimerAtZero={isTimerAtZero}
               />
-            )}
+              <div className="relative flex justify-between overflow-y-auto scrollbar">
+                {/* {currentPhase?.name &&
+                  isActivePhase(currentPhase.name) &&
+                  isTimerAtZero && (
+                    <div className="absolute inset-0 flex items-center justify-center transition-opacity duration-300 opacity-100 z-20 bg-black bg-opacity-50">
+                      <TimesUp />
+                    </div>
+                  )} */}
+                <div className="basis-10/12	active-panel flex flex-col h-full p-4 overflow-y-auto scrollbar max-h-full">
+                  {currentView === "action" && renderCurrentPhase}
+                  {currentView === "chart" && <StockChart />}
+                  {currentView === "pending" && <PendingOrders />}
+                  {currentView == "economy" && <EndTurnEconomy />}
+                  {currentView == "companies" && <StockRoundOrderGrid />}
+                  {gameState.gameStatus == GameStatus.FINISHED && (
+                    <GameResults
+                      isOpen={isOpen}
+                      onOpen={onOpen}
+                      onClose={onClose}
+                      onOpenChange={onOpenChange}
+                    />
+                  )}
+                </div>
+                <PhaseListComponent />
+              </div>
+            </div>
           </div>
-          <PhaseListComponent />
-        </div>
-      </div>
-    </div>
+        </Drawer.Root>
+    </>
   );
 };
 

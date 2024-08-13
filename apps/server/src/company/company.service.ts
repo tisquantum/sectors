@@ -106,7 +106,11 @@ export class CompanyService {
             Player: true,
           },
         },
-        StockHistory: true,
+        StockHistory: {
+          include: {
+            Phase: true,
+          },
+        },
         Cards: true,
       },
     });
@@ -133,7 +137,11 @@ export class CompanyService {
             Player: true,
           },
         },
-        StockHistory: true,
+        StockHistory: {
+          include: {
+            Phase: true,
+          },
+        },
         Cards: true,
       },
     });

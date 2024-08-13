@@ -57,7 +57,11 @@ export class SectorService {
                 Player: true,
               },
             },
-            StockHistory: true,
+            StockHistory: {
+              include: {
+                Phase: true,
+              },
+            },
             Sector: true,
             Cards: true,
           },

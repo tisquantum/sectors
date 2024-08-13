@@ -329,9 +329,14 @@ export class PlayerOrderService {
       const spend = getPseudoSpend(playerOrders);
       let orderValue = 0;
       if (game.distributionStrategy === DistributionStrategy.BID_PRIORITY) {
-        if (data.value! < company.currentStockPrice!) {
+        if (data.location === ShareLocation.IPO && data.value! < company.ipoAndFloatPrice!) {
           throw new Error(
-            'Bid value must be greater than or equal to current stock price',
+            'Bid value must be greater than or equal to the float price.',
+          );
+        }
+        if(data.location === ShareLocation.OPEN_MARKET && data.value! < company.currentStockPrice!) {
+          throw new Error(
+            'Bid value must be greater than or equal to current stock price.',
           );
         }
         orderValue = data.quantity! * data.value!;

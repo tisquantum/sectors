@@ -215,7 +215,7 @@ const PendingMarketOrders = ({
                     {orders[0].Company.currentStockPrice}
                     <span>{company}</span>
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-col gap-2">
                     {Object.entries(groupedOrdersByPhase).map(
                       ([phaseId, { orders, subRound }], index) => (
                         <div className="flex flex-col" key={index}>
@@ -224,7 +224,7 @@ const PendingMarketOrders = ({
                               <span> Stock Round {subRound} </span>
                             </div>
                           )}
-                          <div>
+                          <div className="flex flex-col">
                             {orders.map((order, index) => (
                               <motion.div
                                 key={index}

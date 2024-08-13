@@ -9,6 +9,7 @@ import {
   SectorName,
   StockTier,
 } from '@prisma/client';
+import { companyPriorityOrderOperations } from './helpers';
 
 export const USER_NAME_MAX_LENGTH = 20;
 
@@ -280,9 +281,11 @@ export const sectorPriority = [
 export const getCompanyOperatingRoundTurnOrder = (
   companies: Company[],
 ): Company[] => {
+  //get companies with sector
+  const companiesSortedPartial = companyPriorityOrderOperations(companies);
+  //copy companies in same order
   return companies.sort(
-    (a: Company, b: Company) =>
-      (a.currentStockPrice || 0) - (b.currentStockPrice || 0),
+    (a, b) => companiesSortedPartial.indexOf(a) - companiesSortedPartial.indexOf(b),
   );
 };
 

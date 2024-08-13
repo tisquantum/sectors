@@ -9,6 +9,7 @@ import {
   StockRound,
 } from "@server/prisma/prisma.client";
 import {
+  CompanyWithRelations,
   CompanyWithSector,
   PlayerOrderConcealedWithPlayer,
   PlayerOrderWithPlayerCompany,
@@ -19,18 +20,20 @@ import PlayerOrder from "../Player/PlayerOrder";
 import PlayerOrderInput from "../Player/PlayerOrderInput";
 import { set } from "lodash";
 import { motion, AnimatePresence } from "framer-motion";
+import { Drawer } from "vaul";
 
 type CompanyCardProps = {
-  company: CompanyWithSector;
+  company: CompanyWithRelations;
   orders: PlayerOrderConcealedWithPlayer[]; // Replace with the actual type
   isRevealRound: boolean;
   isInteractive: boolean;
-  focusedOrder: CompanyWithSector; // Replace with the actual type
+  focusedOrder: CompanyWithRelations; // Replace with the actual type
   currentPhase?: Phase;
   playerOrdersRevealed: PlayerOrderWithPlayerCompany[]; // Replace with the actual type
   phasesOfStockRound: Phase[];
   isOrderInputOpen?: boolean;
   handleButtonSelect: () => void;
+  handleCompanySelect: (company: CompanyWithRelations, isIpo: boolean) => void;
 };
 
 const CompanyCard: React.FC<CompanyCardProps> = ({
@@ -44,17 +47,18 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
   phasesOfStockRound,
   isOrderInputOpen,
   handleButtonSelect,
+  handleCompanySelect,
 }) => {
   const [showButton, setShowButton] = useState<boolean | undefined>(
     isOrderInputOpen
   );
   const [isIpo, setIsIpo] = useState<boolean>(false);
-  const [showPlayerInput, setShowPlayerInput] = useState<boolean>(false);
-  useEffect(() => {
-    if (currentPhase?.name == PhaseName.STOCK_ACTION_RESULT) {
-      setShowPlayerInput(false);
-    }
-  }, [currentPhase?.name]);
+  // const [showPlayerInput, setShowPlayerInput] = useState<boolean>(false);
+  // useEffect(() => {
+  //   if (currentPhase?.name == PhaseName.STOCK_ACTION_RESULT) {
+  //     setShowPlayerInput(false);
+  //   }
+  // }, [currentPhase?.name]);
   useEffect(() => {
     setShowButton(isOrderInputOpen);
   }, [isOrderInputOpen]);
@@ -152,9 +156,13 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
     sortedGroupedOpenMarketOrdersByPhaseEntries
   );
 
-  const handleDisplayOrderInput = (company: Company, isIpo?: boolean) => {
+  const handleDisplayOrderInput = (
+    company: CompanyWithRelations,
+    isIpo?: boolean
+  ) => {
     setIsIpo(isIpo || false);
-    setShowPlayerInput(true);
+    //setShowPlayerInput(true);
+    handleCompanySelect(company, isIpo || false);
   };
 
   return (
@@ -262,16 +270,18 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
               company.Share.filter(
                 (share: Share) => share.location == ShareLocation.IPO
               ).length > 0 && (
-                <Button
-                  className={
-                    focusedOrder?.id == company.id
-                      ? "my-3 bg-gradient-to-tr from-pink-500 to-yellow-500 text-white shadow-lg"
-                      : "my-3 ring-2 ring-gray-950"
-                  }
-                  onClick={() => handleDisplayOrderInput(company, true)}
-                >
-                  Place Order IPO
-                </Button>
+                <Drawer.Trigger asChild>
+                  <Button
+                    className={
+                      focusedOrder?.id == company.id
+                        ? "my-3 bg-gradient-to-tr from-pink-500 to-yellow-500 text-white shadow-lg"
+                        : "my-3 ring-2 ring-gray-950"
+                    }
+                    onClick={() => handleDisplayOrderInput(company, true)}
+                  >
+                    Place Order IPO
+                  </Button>
+                </Drawer.Trigger>
               )}
             <div>
               <div
@@ -364,21 +374,23 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
                 company.Share.filter(
                   (share: Share) => share.location == ShareLocation.PLAYER
                 ).length > 0) && (
-                <Button
-                  className={
-                    focusedOrder?.id == company.id
-                      ? "my-3 bg-gradient-to-tr from-pink-500 to-yellow-500 text-white shadow-lg"
-                      : "my-3 ring-2 ring-gray-950"
-                  }
-                  onClick={() => handleDisplayOrderInput(company, false)}
-                >
-                  Place Order OPEN MARKET
-                </Button>
+                <Drawer.Trigger asChild>
+                  <Button
+                    className={
+                      focusedOrder?.id == company.id
+                        ? "my-3 bg-gradient-to-tr from-pink-500 to-yellow-500 text-white shadow-lg"
+                        : "my-3 ring-2 ring-gray-950"
+                    }
+                    onClick={() => handleDisplayOrderInput(company, false)}
+                  >
+                    Place Order OPEN MARKET
+                  </Button>
+                </Drawer.Trigger>
               )}
           </div>
         </CardBody>
       </Card>
-      <AnimatePresence>
+      {/* <AnimatePresence>
         {showPlayerInput && (
           <motion.div
             className="z-0 h-full"
@@ -404,7 +416,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
             </Card>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence> */}
     </div>
   );
 };

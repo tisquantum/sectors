@@ -5,7 +5,6 @@ import {
   throughputRewardOrPenalty,
   ThroughputRewardType,
 } from "@server/data/constants";
-import { companyPriorityOrderOperations } from "@server/data/helpers";
 import CompanyInfo from "../Company/CompanyInfo";
 import { CompanyStatus } from "@server/prisma/prisma.client";
 import { RiIncreaseDecreaseFill } from "@remixicon/react";

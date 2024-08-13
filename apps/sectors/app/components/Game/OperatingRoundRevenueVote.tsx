@@ -10,7 +10,6 @@ import { Radio, RadioGroup } from "@nextui-org/react";
 import { useState } from "react";
 import { CompanyTierData } from "@server/data/constants";
 import CompanyInfo from "../Company/CompanyInfo";
-import { companyPriorityOrderOperations } from "@server/data/helpers";
 import ShareHolders from "../Company/ShareHolders";
 import Button from "@sectors/app/components/General/DebounceButton";
 

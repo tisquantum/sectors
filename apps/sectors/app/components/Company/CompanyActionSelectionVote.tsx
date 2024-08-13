@@ -4,6 +4,7 @@ import {
   CardBody,
   CardFooter,
   CardHeader,
+  Tooltip,
 } from "@nextui-org/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
@@ -41,6 +42,10 @@ import CompanyInfo from "./CompanyInfo";
 import PrestigeRewards from "../Game/PrestigeRewards";
 import Button from "@sectors/app/components/General/DebounceButton";
 import DebounceButton from "@sectors/app/components/General/DebounceButton";
+import { RiCloseCircleFill } from "@remixicon/react";
+import { companyPriorityOrderOperations } from "@server/data/helpers";
+import { tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
+import CompanyPriorityList from "./CompanyPriorityOperatingRound";
 
 const companyActionsDescription = [
   {
@@ -152,12 +157,9 @@ const CompanyActionSelectionVote = ({
     CompanyTierData[company.companyTier].companyActions;
 
   const checkIfDisabled = (actionName: OperatingRoundAction) => {
-    if (CompanyActionCosts[actionName] > company.cashOnHand) {
+    if (CompanyActionCosts[actionName] > company.cashOnHand) return true;
+    if (actionName === OperatingRoundAction.LOAN && company.hasLoan)
       return true;
-    }
-    if (actionName === OperatingRoundAction.LOAN && company.hasLoan) {
-      return true;
-    }
     return false;
   };
 
@@ -168,10 +170,10 @@ const CompanyActionSelectionVote = ({
     ) {
       setSelectedActions((prevSelected) => {
         if (prevSelected.includes(action)) {
-          // Remove the action if it's already selected
+          // Deselect the action if it's already selected
           return prevSelected.filter((selected) => selected !== action);
         } else if (prevSelected.length < companyAllowedActions) {
-          // Add new action if the limit isn't reached
+          // Add the new action if the limit isn't reached
           return [...prevSelected, action];
         } else if (companyAllowedActions === 1) {
           // Replace the only allowed action if the limit is 1
@@ -274,21 +276,6 @@ const CompanyActionSelectionVote = ({
                   </div>
                 </CardBody>
                 <CardFooter>
-                  {currentPhase?.name ===
-                    PhaseName.OPERATING_ACTION_COMPANY_VOTE &&
-                  selectedActions.includes(action.name) &&
-                  currentPhase?.companyId === company.id ? (
-                    submitComplete ? (
-                      <div>Vote Submitted</div>
-                    ) : (
-                      <DebounceButton
-                        onClick={handleSubmit}
-                        disabled={submitComplete}
-                      >
-                        Submit Vote
-                      </DebounceButton>
-                    )
-                  ) : null}
                   {actionVoteResults && (
                     <div className="flex gap-2">
                       {actionVoteResults
@@ -306,18 +293,33 @@ const CompanyActionSelectionVote = ({
                     </div>
                   )}
                   {selectedActions.includes(action.name) &&
-                    companyAllowedActions > 1 && (
-                      <button
+                    companyAllowedActions > 1 &&
+                    currentPhase?.name ===
+                      PhaseName.OPERATING_ACTION_COMPANY_VOTE &&
+                    currentPhase?.companyId === company.id && (
+                      <Button
                         className="text-red-500"
                         onClick={() => handleRemoveSelection(action.name)}
                       >
-                        X
-                      </button>
+                        <RiCloseCircleFill />
+                      </Button>
                     )}
                 </CardFooter>
               </Card>
             </div>
           ))}
+        </div>
+        <div className="flex justify-center">
+          {submitComplete ? (
+            <div>
+              <span>Vote(s) Submitted</span>
+            </div>
+          ) : currentPhase?.name === PhaseName.OPERATING_ACTION_COMPANY_VOTE &&
+            currentPhase?.companyId === company.id ? (
+            <DebounceButton onClick={handleSubmit} disabled={submitComplete}>
+              Submit All Votes
+            </DebounceButton>
+          ) : null}
         </div>
       </div>
     </div>
@@ -381,8 +383,7 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
   if (error) return <div>Error: {error.message}</div>;
   if (withResult && isLoadingCompanyVoteResults) return <div>Loading...</div>;
   if (withResult && !companyVoteResults) return <div>No results found</div>;
-  const companiesSortedForTurnOrder =
-    getCompanyOperatingRoundTurnOrder(companies);
+  const companiesSortedForTurnOrder = companyPriorityOrderOperations(companies);
   //I thought originally I'd get rid of this, but now I'm thinking
   //of preserving this behavior so players can flip through orders to review votes of other companies if they want.
   const handleNext = () => {
@@ -413,7 +414,12 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
   return (
     <div className="flex flex-col flex-grow relative">
       <div className="flex flex-col gap-2 justify-center items-center">
-        <h2>Turn Order</h2>
+        <Tooltip
+          className={tooltipStyle}
+          content={<CompanyPriorityList companies={companies} />}
+        >
+          <h2>Turn Order</h2>
+        </Tooltip>
         <div className="flex gap-2">
           {companiesSortedForTurnOrder.map((company, index) => (
             <Avatar

@@ -11,7 +11,7 @@ type CompaniesBySector = Record<
   string,
   {
     sector: Sector;
-    companies: CompanyWithSector[];
+    companies: any[];
   }
 >;
 

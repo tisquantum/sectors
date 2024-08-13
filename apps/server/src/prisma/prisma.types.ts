@@ -57,7 +57,7 @@ export type CompanyWithSector = Company & {
 export type CompanyWithRelations = Company & {
   Sector: Sector;
   Share: ShareWithPlayer[];
-  StockHistory: StockHistory[];
+  StockHistory: StockHistoryWithPhase[];
   Cards: Card[];
 };
 export type StockHistoryWithPhase = StockHistory & { Phase: Phase };
@@ -236,3 +236,26 @@ export type TransactionWithEntities = Transaction & {
 export type PlayerResultWithRelations = PlayerResult & {
   player: Player & { Share: Share[] };
 };
+
+export type CompanyWithSectorPartial = {
+  id: string;
+  name: string;
+  unitPrice: number;
+  prestigeTokens: number;
+  demandScore: number;
+  baseDemand: number;
+  hasEconomiesOfScale: boolean;
+  Sector: {
+    name: string;
+  };
+};
+
+export type CompanyOperationOrderPartial = {
+  id: string;
+  name: string;
+  unitPrice: number;
+  prestigeTokens: number;
+  demandScore: number;
+  baseDemand: number;
+  hasEconomiesOfScale: boolean;
+}
