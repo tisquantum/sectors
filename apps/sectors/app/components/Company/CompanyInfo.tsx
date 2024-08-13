@@ -5,6 +5,7 @@ import {
   RiExpandUpDownFill,
   RiFundsBoxFill,
   RiFundsFill,
+  RiGovernmentFill,
   RiHandCoinFill,
   RiIncreaseDecreaseFill,
   RiPriceTag3Fill,
@@ -13,7 +14,10 @@ import {
   RiTeamFill,
   RiWallet3Fill,
 } from "@remixicon/react";
-import { tooltipParagraphStyle, tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
+import {
+  tooltipParagraphStyle,
+  tooltipStyle,
+} from "@sectors/app/helpers/tailwind.helpers";
 import {
   CompanyTierData,
   LOAN_AMOUNT,
@@ -179,6 +183,17 @@ const CompanyMoreInfo = ({
             </span>
           </div>
         </Tooltip>
+        <Tooltip
+          className={tooltipStyle}
+          content={
+            <p>The amount of actions a company may take per operating round.</p>
+          }
+        >
+          <div className="flex items-center gap-1">
+            <RiGovernmentFill size={18} className="ml-2" />
+            <span>{CompanyTierData[company.companyTier].companyActions}</span>
+          </div>
+        </Tooltip>
         {company.hasLoan && (
           <Tooltip
             className={tooltipStyle}
@@ -225,7 +240,9 @@ const CompanyInfo = ({
             <span>{company.stockSymbol}</span>
             <Tooltip
               className={tooltipStyle}
-              content={<p className={tooltipParagraphStyle}>The current stock price</p>}
+              content={
+                <p className={tooltipParagraphStyle}>The current stock price</p>
+              }
             >
               <div className="flex items-center">
                 <RiFundsFill size={20} />
