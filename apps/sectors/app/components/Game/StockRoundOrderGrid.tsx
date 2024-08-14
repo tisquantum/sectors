@@ -28,7 +28,7 @@ import { Drawer } from "vaul";
 import PlayerOrderInput from "../Player/PlayerOrderInput";
 import CompanyInfo from "../Company/CompanyInfo";
 import { LineChart } from "@tremor/react";
-import PlayerOrderTable from "./PlayerOrdersTable";
+import SpotMarketTable from "./SpotMarketTable";
 import DerivativesTable from "./DerivativesTable";
 
 function isOrderInputOpenPlayerOrderCounter(
@@ -195,7 +195,7 @@ const StockRoundOrderGrid = ({
         <Tab key="table-view" title="Table View">
           <div className="p-4 max-w-full scrollbar">
             <h2 className="text-xl font-bold mb-4">Spot Market</h2>
-            <PlayerOrderTable
+            <SpotMarketTable
               companies={companies}
               orders={orders}
               handleDisplayOrderInput={handleDisplayOrderInput}

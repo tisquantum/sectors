@@ -130,7 +130,7 @@ const CompanyInfoTable = ({
       case "Company Tier":
         return (
           <>
-            <RiExpandUpDownFill size={20} /> {company.companyTier}
+            {company.companyTier}
           </>
         );
       case "Company Status":
@@ -201,6 +201,20 @@ const CompanyInfoTable = ({
         return (
           <>
             <RiTeamFill size={20} /> {company.Sector.demand}
+          </>
+        );
+      case "Operational Cost":
+        return (
+          <>
+            <RiExpandUpDownFill size={20} /> $
+            {CompanyTierData[company.companyTier].operatingCosts}
+          </>
+        );
+      case "Actions / OR":
+        return (
+          <>
+            <RiGovernmentFill size={20} />{" "}
+            {CompanyTierData[company.companyTier].companyActions}
           </>
         );
       default:

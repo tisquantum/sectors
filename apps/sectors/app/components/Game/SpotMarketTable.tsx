@@ -14,8 +14,9 @@ import {
   TableHeader,
   TableRow,
 } from "@nextui-org/react";
+import { sectorColors } from "@server/data/gameData";
 
-const PlayerOrderTable = ({
+const SpotMarketTable = ({
   companies,
   orders,
   handleDisplayOrderInput,
@@ -41,8 +42,10 @@ const PlayerOrderTable = ({
     "Orders",
     "Unit Price",
     "Cash on Hand",
-    "Company Tier",
     "Company Status",
+    "Company Tier",
+    "Operational Cost",
+    "Actions / OR",
     "Float %",
     "Prestige",
     "Demand",
@@ -71,19 +74,26 @@ const PlayerOrderTable = ({
               <TableCell
                 key={column}
                 className={`${
-                  colIndex === 0 ? "sticky left-0 z-10 bg-slate-800" : ""
+                  colIndex === 0 ? `sticky left-0 z-10 bg-gray-900` : ""
                 }`}
               >
-                <CompanyInfoTable
-                  company={company}
-                  orders={orders?.filter(
-                    (order) => order.companyId === company.id
-                  )}
-                  column={column}
-                  handleDisplayOrderInput={handleDisplayOrderInput}
-                  handleButtonSelect={handleButtonSelect}
-                  handleCompanySelect={handleCompanySelect}
-                />
+                <div
+                  className={`flex items-center gap-2 ${
+                    colIndex === 0  && `p-2 rounded-md bg-[${
+                    sectorColors[company.Sector.name]
+                  }]`}`}
+                >
+                  <CompanyInfoTable
+                    company={company}
+                    orders={orders?.filter(
+                      (order) => order.companyId === company.id
+                    )}
+                    column={column}
+                    handleDisplayOrderInput={handleDisplayOrderInput}
+                    handleButtonSelect={handleButtonSelect}
+                    handleCompanySelect={handleCompanySelect}
+                  />
+                </div>
               </TableCell>
             ))}
           </TableRow>
@@ -93,4 +103,4 @@ const PlayerOrderTable = ({
   );
 };
 
-export default PlayerOrderTable;
+export default SpotMarketTable;
