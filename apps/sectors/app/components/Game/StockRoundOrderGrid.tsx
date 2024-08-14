@@ -28,6 +28,8 @@ import { Drawer } from "vaul";
 import PlayerOrderInput from "../Player/PlayerOrderInput";
 import CompanyInfo from "../Company/CompanyInfo";
 import { LineChart } from "@tremor/react";
+import PlayerOrderTable from "./PlayerOrdersTable";
+import DerivativesTable from "./DerivativesTable";
 
 function isOrderInputOpenPlayerOrderCounter(
   playerOrdersConcealed: PlayerOrderConcealed[],
@@ -189,6 +191,20 @@ const StockRoundOrderGrid = ({
         </Tab>
         <Tab key="derivatives" title="Derivatives">
           <Derivatives isInteractive={isInteractive} />
+        </Tab>
+        <Tab key="table-view" title="Table View">
+          <div className="p-4 max-w-full scrollbar">
+            <h2 className="text-xl font-bold mb-4">Spot Market</h2>
+            <PlayerOrderTable
+              companies={companies}
+              orders={orders}
+              handleDisplayOrderInput={handleDisplayOrderInput}
+              handleCompanySelect={handleCompanySelect}
+              handleButtonSelect={companyCardButtonClicked}
+            />
+            <h2 className="text-xl font-bold mt-8 mb-4">Derivatives</h2>
+            <DerivativesTable />
+          </div>
         </Tab>
       </Tabs>
       <Drawer.Portal>

@@ -209,7 +209,7 @@ const Game = ({ gameId }: { gameId: string }) => {
   return (
     <>
         <Drawer.Root open={drawerIsOpen} onOpenChange={toggleDrawer} direction="right">
-          <div className="relative flex flex-grow overflow-hidden">
+          <div className="relative flex flex-grow overflow-hidden w-full">
             <GameSidebar />
             {/* <motion.div
         className="absolute inset-0 z-10 pointer-events-none"
@@ -223,7 +223,7 @@ const Game = ({ gameId }: { gameId: string }) => {
           <TabView gameId={gameId} />
         </motion.div>
       </motion.div> */}
-            <div className="flex flex-col w-full">
+            <div className="flex flex-col relative w-3/4">
               {gameState.gameStatus == GameStatus.FINISHED && (
                 <Button
                   color="primary"
@@ -253,7 +253,7 @@ const Game = ({ gameId }: { gameId: string }) => {
                       <TimesUp />
                     </div>
                   )} */}
-                <div className="basis-10/12	active-panel flex flex-col h-full p-4 overflow-y-auto scrollbar max-h-full">
+                <div className="max-w-[100%] basis-10/12	active-panel flex flex-col h-full p-4 overflow-y-auto scrollbar max-h-full">
                   {currentView === "action" && renderCurrentPhase}
                   {currentView === "chart" && <StockChart />}
                   {currentView === "pending" && <PendingOrders />}

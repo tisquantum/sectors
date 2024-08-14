@@ -25,8 +25,8 @@ const StockRoundAction = () => {
     setNewOrderCount((prev) => prev + 1);
   };
   return (
-    <div className="flex flex-col items-center h-full">
-      <div className="basis-3/4 justify-center items-center content-center">
+    <div className="flex flex-col items-center h-full relative">
+      <div className="justify-center items-center content-center max-w-full">
         <StockRoundOrderGrid handleOrder={handleOrder} />
       </div>
       <div className="flex justify-center items-center gap-10 basis-1/4">

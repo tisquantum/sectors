@@ -44,7 +44,7 @@ const DebounceButton = ({
   }, [debouncedClick, throttleDelay]);
 
   return (
-    <Button {...props} onClick={throttledClick} disabled={isLoading}>
+    <Button {...props} onPress={throttledClick} disabled={isLoading}>
       {isLoading ? <Spinner /> : props.children}
     </Button>
   );

@@ -148,7 +148,7 @@ const GameTopBar = ({
     const resumeGameMutation = useResumeGameMutation.mutate({ gameId });
   };
   return (
-    <div className="flex justify-between p-2">
+    <div className="flex justify-between p-2 flex-wrap">
       <ButtonGroup>
         <Button
           className={getButtonClass("action")}
