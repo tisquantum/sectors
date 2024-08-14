@@ -169,10 +169,10 @@ const GameTopBar = ({
           Stock Chart
         </Button>
         <Button
-          className={getButtonClass("companies")}
-          onClick={() => handleViewChange("companies")}
+          className={getButtonClass("markets")}
+          onClick={() => handleViewChange("markets")}
         >
-          Companies
+          Markets
         </Button>
         <Button
           className={getButtonClass("economy")}

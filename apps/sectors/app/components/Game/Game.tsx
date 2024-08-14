@@ -265,7 +265,7 @@ const Game = ({ gameId }: { gameId: string }) => {
                 {currentView === "chart" && <StockChart />}
                 {currentView === "pending" && <PendingOrders />}
                 {currentView == "economy" && <EndTurnEconomy />}
-                {currentView == "companies" && <StockRoundOrderGrid />}
+                {currentView == "markets" && <StockRoundOrderGrid />}
                 {gameState.gameStatus == GameStatus.FINISHED && (
                   <GameResults
                     isOpen={isOpen}
