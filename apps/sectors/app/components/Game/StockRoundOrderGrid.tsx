@@ -30,6 +30,7 @@ import CompanyInfo from "../Company/CompanyInfo";
 import { LineChart } from "@tremor/react";
 import SpotMarketTable from "./SpotMarketTable";
 import DerivativesTable from "./DerivativesTable";
+import OrderResults from "./OrderResults";
 
 function isOrderInputOpenPlayerOrderCounter(
   playerOrdersConcealed: PlayerOrderConcealed[],
@@ -223,31 +224,57 @@ const StockRoundOrderGrid = ({
                   companyCardButtonClicked();
                 }} // Callback on input confirmed
               />
-              <div className="h-96">
-                <CompanyInfo
-                  company={selectedCompanyOrder.company}
-                  showBarChart
+
+              <div>
+                <OrderResults
+                  playerOrdersConcealed={orders.filter(
+                    (order) =>
+                      order.companyId === selectedCompanyOrder.company.id
+                  )}
+                  playerOrdersRevealed={
+                    playerOrdersRevealed?.filter(
+                      (order) =>
+                        order.companyId === selectedCompanyOrder.company.id
+                    ) || []
+                  }
+                  currentPhase={currentPhase}
+                  phasesOfStockRound={phasesOfStockRound}
+                  isRevealRound={isRevealRound}
                 />
               </div>
-              <LineChart
-                className="w-full"
-                data={selectedCompanyOrder.company.StockHistory.map(
-                  (stockHistory, index) => ({
-                    phaseId: `${index + 1} ${stockHistory.Phase.name}`,
-                    stockPrice: stockHistory.price,
-                    stockAction: stockHistory.action,
-                    steps: stockHistory.stepsMoved,
-                  })
-                )}
-                index="phaseId"
-                categories={["stockPrice"]}
-                yAxisLabel="Stock Price"
-                xAxisLabel="Stock Price Updated"
-                colors={[
-                  sectorColors[selectedCompanyOrder.company.Sector.name],
-                ]}
-                valueFormatter={valueFormatter}
-              />
+              <Tabs>
+                <Tab key="drawer-company-info" title="Company Info">
+                  <div className="h-96">
+                    <CompanyInfo
+                      company={selectedCompanyOrder.company}
+                      showBarChart
+                    />
+                  </div>
+                </Tab>
+                <Tab key="drawer-stock-chart" title="Stock Chart">
+                  <div className="h-96 w-80">
+                    <LineChart
+                      className="w-full"
+                      data={selectedCompanyOrder.company.StockHistory.map(
+                        (stockHistory, index) => ({
+                          phaseId: `${index + 1} ${stockHistory.Phase.name}`,
+                          stockPrice: stockHistory.price,
+                          stockAction: stockHistory.action,
+                          steps: stockHistory.stepsMoved,
+                        })
+                      )}
+                      index="phaseId"
+                      categories={["stockPrice"]}
+                      yAxisLabel="Stock Price"
+                      xAxisLabel="Stock Price Updated"
+                      colors={[
+                        sectorColors[selectedCompanyOrder.company.Sector.name],
+                      ]}
+                      valueFormatter={valueFormatter}
+                    />
+                  </div>
+                </Tab>
+              </Tabs>
             </div>
           )}
           <Drawer.Close asChild>
