@@ -9,6 +9,7 @@ import {
   TransactionType,
 } from '@prisma/client';
 import { TransactionWithEntities } from '@server/prisma/prisma.types';
+import { from } from 'rxjs';
 
 @Injectable()
 export class TransactionService {
@@ -115,7 +116,7 @@ export class TransactionService {
           include: {
             Share: true,
           },
-        }
+        },
       },
     });
   }
@@ -124,10 +125,23 @@ export class TransactionService {
     gameId: string,
     entityType: EntityType,
     entityId?: string,
+    playerId?: string,
+    companyId?: string,
   ): Promise<Entity> {
-    let entity = await this.prisma.entity.findFirst({
-      where: { entityType, gameId: gameId },
-    });
+    let entity;
+    if (entityId && entityType === EntityType.PLAYER) {
+      entity = await this.prisma.entity.findUnique({
+        where: { id: entityId },
+      });
+    } else if (entityId && entityType === EntityType.COMPANY) {
+      entity = await this.prisma.entity.findUnique({
+        where: { id: entityId },
+      });
+    } else {
+      entity = await this.prisma.entity.findFirst({
+        where: { entityType, gameId: gameId },
+      });
+    }
 
     if (!entity) {
       switch (entityType) {
@@ -145,7 +159,7 @@ export class TransactionService {
               entityType,
               gameId,
               Player: {
-                connect: { id: entityId },
+                connect: { id: playerId },
               },
             },
           });
@@ -165,7 +179,7 @@ export class TransactionService {
               entityType,
               gameId,
               Company: {
-                connect: { id: entityId },
+                connect: { id: companyId },
               },
             },
           });
@@ -215,6 +229,10 @@ export class TransactionService {
     transactionType,
     transactionSubType,
     companyInvolvedId,
+    fromPlayerId,
+    toPlayerId,
+    fromCompanyId,
+    toCompanyId,
   }: {
     gameId: string;
     gameTurnId: string;
@@ -229,11 +247,17 @@ export class TransactionService {
     description?: string;
     shares?: string[];
     companyInvolvedId?: string;
+    fromPlayerId?: string;
+    toPlayerId?: string;
+    fromCompanyId?: string;
+    toCompanyId?: string;
   }): Promise<Transaction> {
     const fromEntity = await this.getEntityOrCreate(
       gameId,
       fromEntityType,
       fromEntityId,
+      fromPlayerId,
+      fromCompanyId,
     );
 
     if (!fromEntity) {
@@ -244,6 +268,8 @@ export class TransactionService {
       gameId,
       toEntityType,
       toEntityId,
+      toPlayerId,
+      toCompanyId,
     );
 
     if (!toEntity) {

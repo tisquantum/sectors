@@ -38,7 +38,7 @@ const ResearchDeck = () => {
         <Button onPress={onOpen}>Show Deck</Button>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         {Object.entries(cardsGroupedByCompany).map(([companyId, cards]) => (
           <motion.div
             key={companyId}
@@ -48,10 +48,10 @@ const ResearchDeck = () => {
             onClick={() => setSelectedCompany(companyId)}
           >
             <h2 className="text-lg font-semibold mb-2">
-              Company{" "}
-              {companies.find((company) => company.id === companyId)?.name}
+              {companies.find((company) => company.id === companyId)?.name ||
+                "Company"}
             </h2>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-1">
               {cards.map((card) => (
                 <Tooltip
                   key={card.id}
@@ -110,10 +110,12 @@ const ResearchDeck = () => {
             {(onClose) => (
               <>
                 <ModalHeader className="flex flex-col gap-1">
-                  Company {selectedCompany} Cards
+                  {companies.find((company) => company.id == selectedCompany)
+                    ?.name || "Company"}{" "}
+                  Cards
                 </ModalHeader>
                 <ModalBody>
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="flex flex-wrap gap-4">
                     {cardsGroupedByCompany[selectedCompany]?.map((card) => (
                       <div
                         key={card.id}

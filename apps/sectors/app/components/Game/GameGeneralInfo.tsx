@@ -36,7 +36,11 @@ import {
   MoneyTransactionHistoryByPlayer,
 } from "./MoneyTransactionHistory";
 import WalletInfo from "./WalletInfo";
-import { DEFAULT_SHARE_DISTRIBUTION, DEFAULT_SHARE_LIMIT, MAX_SHARE_PERCENTAGE } from "@server/data/constants";
+import {
+  DEFAULT_SHARE_DISTRIBUTION,
+  DEFAULT_SHARE_LIMIT,
+  MAX_SHARE_PERCENTAGE,
+} from "@server/data/constants";
 
 const BankInfo = () => {
   const { gameState, gameId } = useGame();
@@ -179,8 +183,8 @@ const GameGeneralInfo = () => {
                 <p>
                   The company ownership limit percentage. A player may never own
                   more shares than this percentage of a company unless they
-                  incidentally fall above this percentage due to a issues or
-                  buybacks.
+                  incidentally fall above this percentage due to company share
+                  issues or share buybacks.
                 </p>
               </div>
             }

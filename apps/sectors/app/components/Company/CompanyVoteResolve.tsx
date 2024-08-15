@@ -7,6 +7,7 @@ import {
 import CompanyInfo from "./CompanyInfo";
 import PrestigeRewardComponent from "../Game/PrestigeReward";
 import {
+  ACTION_ISSUE_SHARE_AMOUNT,
   LARGE_MARKETING_CAMPAIGN_DEMAND,
   MARKETING_CONSUMER_BONUS,
   PrestigeTrack,
@@ -29,7 +30,7 @@ const ShareIssue = ({ companyAction }: { companyAction: CompanyAction }) => {
   }
   return (
     <div className="flex flex-col">
-      <span>Previous Share Count: {company.Share.length - 1}</span>
+      <span>Previous Share Count: {company.Share.length - ACTION_ISSUE_SHARE_AMOUNT}</span>
       <span>New Share Count: {company.Share.length}</span>
     </div>
   );

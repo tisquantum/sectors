@@ -38,6 +38,7 @@ const SpotMarketTable = ({
     "Company Name",
     "Stock Symbol",
     "Stock Price",
+    "Your Shares",
     "OM Shares",
     "IPO Price",
     "IPO Shares",

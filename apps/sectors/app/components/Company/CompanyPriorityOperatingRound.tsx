@@ -1,10 +1,19 @@
 import React, { useMemo } from "react";
-import { companyPriorityOrderOperations } from "@server/data/helpers";
+import { calculateDemand, companyPriorityOrderOperations } from "@server/data/helpers";
 import { SectorName } from "@server/prisma/prisma.client";
 import {
   CompanyWithSector,
   CompanyWithSectorPartial,
 } from "@server/prisma/prisma.types";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableColumn,
+  TableHeader,
+  TableRow,
+} from "@nextui-org/react";
+import { RiHandCoinFill, RiSparkling2Fill } from "@remixicon/react";
 
 const exampleCompanyData: CompanyWithSectorPartial[] = [
   {
@@ -61,49 +70,56 @@ const CompanyPriorityList = ({
     () => companyPriorityOrderOperations(companyData),
     [companyData]
   );
-
+  // Create a new sorted array of companyData based on the sortedCompanies order
+  const sortedCompanyData = sortedCompanies.map((sortedCompany) => {
+    return companyData.find((company) => company.id === sortedCompany.id)!;
+  });
   return (
     <div className="container mx-auto px-4">
       {!isRuleExplanation && (
         <>
           <h2 className="text-2xl font-bold mb-4">Company Priority List</h2>
-
-          <table className="min-w-full border-collapse border">
-            <thead>
-              <tr>
-                <th className="py-2 px-4 border">Rank</th>
-                <th className="py-2 px-4 border">Company Name</th>
-                <th className="py-2 px-4 border">Sector</th>
-                <th className="py-2 px-4 border">Unit Price</th>
-                <th className="py-2 px-4 border">Prestige Tokens</th>
-                <th className="py-2 px-4 border">Demand Score</th>
-                <th className="py-2 px-4 border">Base Demand</th>
-                <th className="py-2 px-4 border">Has Economies of Scale</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedCompanies.map(
+          <Table>
+            <TableHeader>
+              <TableColumn>Rank</TableColumn>
+              <TableColumn>Company Name</TableColumn>
+              <TableColumn>Sector</TableColumn>
+              <TableColumn>Unit Price</TableColumn>
+              <TableColumn>Prestige Tokens</TableColumn>
+              <TableColumn>Demand Score</TableColumn>
+              <TableColumn>Has Economies of Scale</TableColumn>
+            </TableHeader>
+            <TableBody>
+              {sortedCompanyData.map(
                 (company: CompanyWithSectorPartial, index) => (
-                  <tr key={company.id} className="p-4 border rounded shadow">
-                    <td className="py-2 px-4 border">{index + 1}</td>
-                    <td className="py-2 px-4 border">{company.name}</td>
-                    <td className="py-2 px-4 border">{company.Sector.name}</td>
-                    <td className="py-2 px-4 border">
-                      ${company.unitPrice.toFixed(2)}
-                    </td>
-                    <td className="py-2 px-4 border">
-                      {company.prestigeTokens}
-                    </td>
-                    <td className="py-2 px-4 border">{company.demandScore}</td>
-                    <td className="py-2 px-4 border">{company.baseDemand}</td>
-                    <td className="py-2 px-4 border">
+                  <TableRow key={company.id}>
+                    <TableCell>{index + 1}</TableCell>
+                    <TableCell>{company.name}</TableCell>
+                    <TableCell>{company.Sector.name}</TableCell>
+                    <TableCell>${company.unitPrice.toFixed(2)}</TableCell>
+                    <TableCell>
+                      <span className="flex items-center content-center justify-center gap-1">
+                        <RiSparkling2Fill
+                          size={18}
+                          className="text-yellow-500"
+                        />
+                        {company.prestigeTokens}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="flex items-center content-center justify-center gap-1">
+                        <RiHandCoinFill size={18} />
+                        {calculateDemand(company.demandScore, company.baseDemand)}
+                      </span>
+                    </TableCell>
+                    <TableCell>
                       {company.hasEconomiesOfScale ? "Yes" : "No"}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 )
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </>
       )}
       <div className="mt-6 p-4 border-t">

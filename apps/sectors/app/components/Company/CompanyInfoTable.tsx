@@ -27,10 +27,11 @@ import {
 import { calculateCompanySupply, calculateDemand } from "@server/data/helpers";
 import { sectorColors } from "@server/data/gameData";
 import DebounceButton from "../General/DebounceButton";
-import { AvatarGroup, TableCell } from "@nextui-org/react";
+import { AvatarGroup, Button, TableCell } from "@nextui-org/react";
 import { Drawer } from "vaul";
 import { CompanyStatus } from "@server/prisma/prisma.client";
 import PlayerAvatar from "../Player/PlayerAvatar";
+import { useGame } from "../Game/GameContext";
 
 const CompanyInfoTable = ({
   company,
@@ -52,6 +53,7 @@ const CompanyInfoTable = ({
   handleCompanySelect: (company: CompanyWithRelations, isIpo: boolean) => void;
   isInteractive: boolean;
 }) => {
+  const { authPlayer } = useGame();
   console.log("orders", orders);
   const renderCellContent = () => {
     switch (column) {
@@ -82,7 +84,7 @@ const CompanyInfoTable = ({
           <>
             {isInteractive ? (
               <Drawer.Trigger asChild>
-                <DebounceButton
+                <Button
                   onClick={() => {
                     handleCompanySelect(company, false);
                     handleDisplayOrderInput(company, false);
@@ -95,7 +97,7 @@ const CompanyInfoTable = ({
                     ).length
                   }
                   )
-                </DebounceButton>
+                </Button>
               </Drawer.Trigger>
             ) : (
               <div>
@@ -108,6 +110,7 @@ const CompanyInfoTable = ({
             )}
           </>
         );
+
       case "IPO Price":
         return (
           <>
@@ -119,7 +122,7 @@ const CompanyInfoTable = ({
           <>
             {isInteractive ? (
               <Drawer.Trigger asChild>
-                <DebounceButton
+                <Button
                   onPress={() => {
                     handleCompanySelect(company, true);
                     handleDisplayOrderInput(company, true);
@@ -131,7 +134,7 @@ const CompanyInfoTable = ({
                       .length
                   }
                   )
-                </DebounceButton>
+                </Button>
               </Drawer.Trigger>
             ) : (
               <div>
@@ -142,6 +145,16 @@ const CompanyInfoTable = ({
               </div>
             )}
           </>
+        );
+      case "Your Shares":
+        return (
+          <span>
+            {
+              company.Share.filter(
+                (share) => share.Player?.id === authPlayer.id
+              ).length
+            }
+          </span>
         );
       case "Unit Price":
         return (

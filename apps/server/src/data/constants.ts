@@ -57,9 +57,10 @@ export const LOAN_INTEREST_RATE = 0.1;
 export const PRESTIGE_EFFECT_INCREASE_AMOUNT = 2;
 export const AUTOMATION_EFFECT_OPERATIONS_REDUCTION = 20;
 export const CAPITAL_INJECTION_STARTER = 200;
-export const CAPITAL_INJECTION_BOOSTER = 200;
+export const CAPITAL_INJECTION_BOOSTER = 100;
 export const CORPORATE_ESPIONAGE_PRESTIGE_REDUCTION = 2;
 export const LOBBY_DEMAND_BOOST = 3;
+export const ACTION_ISSUE_SHARE_AMOUNT = 2;
 /**
  * Phase times in milliseconds
  */
@@ -469,27 +470,27 @@ export const CapitalGainsTiers = [
   {
     minNetWorth: 1001,
     maxNetWorth: 2000,
-    taxPercentage: 5,
+    taxPercentage: 2,
   },
   {
     minNetWorth: 2000,
     maxNetWorth: 3000,
-    taxPercentage: 7,
+    taxPercentage: 3,
   },
   {
     minNetWorth: 3000,
     maxNetWorth: 4000,
-    taxPercentage: 8,
+    taxPercentage: 4,
   },
   {
     minNetWorth: 4000,
     maxNetWorth: 5000,
-    taxPercentage: 10,
+    taxPercentage: 5,
   },
   {
     minNetWorth: 5000,
     maxNetWorth: Number.MAX_SAFE_INTEGER,
-    taxPercentage: 12,
+    taxPercentage: 7,
   },
 ];
 

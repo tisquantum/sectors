@@ -105,6 +105,7 @@ import {
   CORPORATE_ESPIONAGE_PRESTIGE_REDUCTION,
   sectorPriority,
   LOBBY_DEMAND_BOOST,
+  ACTION_ISSUE_SHARE_AMOUNT,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -1221,7 +1222,7 @@ export class GameManagementService {
         });
         //create share transaction
         await this.transactionService.createTransactionEntityToEntity({
-          fromEntityId: player.id,
+          fromEntityId: player.entityId || undefined,
           fromEntityType: EntityType.PLAYER,
           toEntityType: EntityType.OPEN_MARKET,
           amount: sharesToDivest.length,
@@ -1342,8 +1343,6 @@ export class GameManagementService {
         continue;
       }
 
-      const newCashOnHand = Math.max(player.cashOnHand - taxAmount, 0);
-
       if (taxAmount > 0) {
         // Update player cash on hand
         capitalGainsUpdates.push({
@@ -1355,10 +1354,15 @@ export class GameManagementService {
         });
 
         playerUpdatePromises.push(
-          this.playersService.updatePlayer({
-            where: { id: playerId },
-            data: { cashOnHand: newCashOnHand },
-          }),
+          this.playerRemoveMoney(
+            phase.gameId,
+            phase.gameTurnId,
+            phase.id,
+            playerId,
+            taxAmount,
+            EntityType.BANK,
+            `Capital gains tax.`,
+          ),
         );
 
         gameLogPromises.push(
@@ -2403,13 +2407,15 @@ export class GameManagementService {
     if (!company) {
       throw new Error('Company not found');
     }
-    //create new share for company
-    return await this.shareService.createShare({
-      Company: { connect: { id: companyAction.companyId } },
-      location: ShareLocation.OPEN_MARKET,
-      price: company.currentStockPrice,
-      Game: { connect: { id: company.gameId } },
-    });
+    const sharesToIssue = ACTION_ISSUE_SHARE_AMOUNT;
+    await this.shareService.createManyShares(
+      Array.from({ length: sharesToIssue }).map(() => ({
+        companyId: company.id,
+        location: ShareLocation.OPEN_MARKET,
+        price: company.currentStockPrice,
+        gameId: company.gameId,
+      })),
+    );
   }
 
   /**
@@ -2776,6 +2782,19 @@ export class GameManagementService {
         content: `Company ${company.name} has paid operating costs of $${
           CompanyTierData[company.companyTier].operatingCosts
         }.`,
+      });
+      //create transaction
+      this.transactionService.createTransactionEntityToEntity({
+        fromEntityType: EntityType.COMPANY,
+        fromEntityId: company.entityId || undefined,
+        fromCompanyId: company.id,
+        toEntityType: EntityType.BANK,
+        amount: operatingCosts,
+        phaseId: phase.id,
+        gameId: phase.gameId,
+        gameTurnId: game.currentTurn,
+        transactionType: TransactionType.CASH,
+        description: `Operating costs.`,
       });
       return {
         id: company.id,
@@ -4538,7 +4557,8 @@ export class GameManagementService {
 
               //create transaction
               this.transactionService.createTransactionEntityToEntity({
-                fromEntityId: player.id,
+                fromEntityId: player.entityId || undefined,
+                fromPlayerId: player.id,
                 fromEntityType: EntityType.PLAYER,
                 toEntityType: EntityType.PLAYER_MARGIN_ACCOUNT,
                 toEntityId: MARGIN_ACCOUNT_ID_PREFIX + player.id,
@@ -5794,6 +5814,7 @@ export class GameManagementService {
       transactionType: TransactionType.CASH,
       toEntityId: player.entityId || undefined,
       toEntityType: EntityType.PLAYER,
+      toPlayerId: playerId,
       description,
     });
     //update bank pool for game
@@ -5813,11 +5834,7 @@ export class GameManagementService {
         },
       },
     });
-    //create game log
-    await this.gameLogService.createGameLog({
-      game: { connect: { id: gameId } },
-      content: `Player ${updatedPlayer.nickname} has received $${amount} in cash`,
-    });
+
     return updatedPlayer;
   }
 
@@ -5847,6 +5864,7 @@ export class GameManagementService {
       amount: cashToRemove,
       fromEntityId: player.entityId || undefined,
       fromEntityType: EntityType.PLAYER,
+      fromPlayerId: playerId,
       transactionType: TransactionType.CASH,
       toEntityType: toEntity,
       description,
@@ -5869,11 +5887,6 @@ export class GameManagementService {
       },
     });
 
-    ///create game log
-    await this.gameLogService.createGameLog({
-      game: { connect: { id: gameId } },
-      content: `Player ${updatedPlayer.nickname} has spent $${amount} in cash`,
-    });
     return updatedPlayer;
   }
 
@@ -6176,7 +6189,8 @@ export class GameManagementService {
       fromEntityId: MARGIN_ACCOUNT_ID_PREFIX + player.id,
       fromEntityType: EntityType.PLAYER_MARGIN_ACCOUNT,
       toEntityType: EntityType.PLAYER,
-      toEntityId: player.id,
+      toEntityId: player.entityId || undefined,
+      toPlayerId: player.id,
       amount: Math.floor(shortOrder.shortSalePrice / 2),
       transactionType: TransactionType.CASH,
       gameId: player.gameId,

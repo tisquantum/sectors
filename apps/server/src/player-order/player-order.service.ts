@@ -419,17 +419,16 @@ export class PlayerOrderService {
       if (!data.OptionContract) {
         throw new Error('Invalid option contract');
       }
-      if (
-        data.OptionContract.connect?.contractState != ContractState.FOR_SALE
-      ) {
-        throw new Error('Option contract not for sale');
-      }
       //get option contract
       const optionContract = await this.prisma.optionContract.findUnique({
         where: { id: data.OptionContract.connect?.id },
       });
       if (!optionContract) {
         throw new Error('Option contract not found');
+      }
+      //if option contract not for sale, throw error
+      if (optionContract.contractState !== ContractState.FOR_SALE) {
+        throw new Error('Option contract not for sale');
       }
       if (game.distributionStrategy === DistributionStrategy.BID_PRIORITY) {
         if (data.value! < optionContract.premium!) {

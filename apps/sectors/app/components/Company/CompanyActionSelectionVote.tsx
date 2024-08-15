@@ -12,6 +12,7 @@ import CompanyActionVote from "./CompanyActionVote";
 import { trpc } from "@sectors/app/trpc";
 import { useGame } from "../Game/GameContext";
 import {
+  ACTION_ISSUE_SHARE_AMOUNT,
   CompanyActionCosts,
   CompanyTierData,
   DEFAULT_DECREASE_UNIT_PRICE,
@@ -93,7 +94,7 @@ const companyActionsDescription = [
     id: 7,
     title: "Share Issue",
     name: OperatingRoundAction.SHARE_ISSUE,
-    message: "Issue a share to the open market.",
+    message: `Issue ${ACTION_ISSUE_SHARE_AMOUNT} share(s) to the open market.`,
   },
   {
     id: 8,
