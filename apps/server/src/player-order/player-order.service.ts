@@ -9,6 +9,7 @@ import {
   OrderStatus,
   DistributionStrategy,
   CompanyStatus,
+  ContractState,
 } from '@prisma/client';
 import {
   PlayerOrderConcealed,
@@ -329,12 +330,18 @@ export class PlayerOrderService {
       const spend = getPseudoSpend(playerOrders);
       let orderValue = 0;
       if (game.distributionStrategy === DistributionStrategy.BID_PRIORITY) {
-        if (data.location === ShareLocation.IPO && data.value! < company.ipoAndFloatPrice!) {
+        if (
+          data.location === ShareLocation.IPO &&
+          data.value! < company.ipoAndFloatPrice!
+        ) {
           throw new Error(
             'Bid value must be greater than or equal to the float price.',
           );
         }
-        if(data.location === ShareLocation.OPEN_MARKET && data.value! < company.currentStockPrice!) {
+        if (
+          data.location === ShareLocation.OPEN_MARKET &&
+          data.value! < company.currentStockPrice!
+        ) {
           throw new Error(
             'Bid value must be greater than or equal to current stock price.',
           );
@@ -399,6 +406,40 @@ export class PlayerOrderService {
       //check if player has short order actions
       if (player.shortOrderActions <= 0) {
         throw new Error('Player has no more short order actions');
+      }
+    }
+
+    if (data.orderType === OrderType.OPTION) {
+      if (data.location != ShareLocation.DERIVATIVE_MARKET) {
+        throw new Error('Invalid location for option contract');
+      }
+      if (data.isSell) {
+        throw new Error('Cannot sell option contracts');
+      }
+      if (!data.OptionContract) {
+        throw new Error('Invalid option contract');
+      }
+      if (
+        data.OptionContract.connect?.contractState != ContractState.FOR_SALE
+      ) {
+        throw new Error('Option contract not for sale');
+      }
+      //get option contract
+      const optionContract = await this.prisma.optionContract.findUnique({
+        where: { id: data.OptionContract.connect?.id },
+      });
+      if (!optionContract) {
+        throw new Error('Option contract not found');
+      }
+      if (game.distributionStrategy === DistributionStrategy.BID_PRIORITY) {
+        if (data.value! < optionContract.premium!) {
+          throw new Error('Bid value must be greater than or equal to premium');
+        }
+        if (data.value! > player.cashOnHand!) {
+          throw new Error('Player does not have enough cash to place order');
+        }
+      } else if (player.cashOnHand! < optionContract.premium!) {
+        throw new Error('Player does not have enough cash to place order');
       }
     }
 

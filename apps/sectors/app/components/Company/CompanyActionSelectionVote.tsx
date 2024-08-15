@@ -20,6 +20,7 @@ import {
   LARGE_MARKETING_CAMPAIGN_DEMAND,
   LOAN_AMOUNT,
   LOAN_INTEREST_RATE,
+  LOBBY_DEMAND_BOOST,
   MARKETING_CONSUMER_BONUS,
   PRESTIGE_ACTION_TOKEN_COST,
   SMALL_MARKETING_CAMPAIGN_DEMAND,
@@ -122,7 +123,7 @@ const companyActionsDescription = [
     id: 12,
     title: "Lobby",
     name: OperatingRoundAction.LOBBY,
-    message: `Lobby the government to force demand in your favor. Boost the entire sectors demand by 1 for the next operating round.`,
+    message: `Lobby the government to force demand in your favor. Boost the entire sectors demand by ${LOBBY_DEMAND_BOOST}. This demand will decay 1 per stock price adjustment phase.`,
   },
   {
     id: 13,

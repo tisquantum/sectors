@@ -59,6 +59,7 @@ export const AUTOMATION_EFFECT_OPERATIONS_REDUCTION = 20;
 export const CAPITAL_INJECTION_STARTER = 200;
 export const CAPITAL_INJECTION_BOOSTER = 200;
 export const CORPORATE_ESPIONAGE_PRESTIGE_REDUCTION = 2;
+export const LOBBY_DEMAND_BOOST = 3;
 /**
  * Phase times in milliseconds
  */

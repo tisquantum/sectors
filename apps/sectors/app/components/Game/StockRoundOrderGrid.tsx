@@ -202,9 +202,10 @@ const StockRoundOrderGrid = ({
               handleDisplayOrderInput={handleDisplayOrderInput}
               handleCompanySelect={handleCompanySelect}
               handleButtonSelect={companyCardButtonClicked}
+              isInteractive={isInteractive}
             />
             <h2 className="text-xl font-bold mt-8 mb-4">Derivatives</h2>
-            <DerivativesTable />
+            <DerivativesTable isInteractive={isInteractive} />
           </div>
         </Tab>
       </Tabs>

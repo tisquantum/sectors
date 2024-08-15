@@ -39,6 +39,7 @@ const CompanyInfoTable = ({
   handleDisplayOrderInput,
   handleButtonSelect,
   handleCompanySelect,
+  isInteractive,
 }: {
   company: CompanyWithRelations;
   column: string;
@@ -49,6 +50,7 @@ const CompanyInfoTable = ({
   ) => void;
   handleButtonSelect: () => void;
   handleCompanySelect: (company: CompanyWithRelations, isIpo: boolean) => void;
+  isInteractive: boolean;
 }) => {
   console.log("orders", orders);
   const renderCellContent = () => {
@@ -75,24 +77,36 @@ const CompanyInfoTable = ({
             )}
           </>
         );
-      case "Open Market Shares":
+      case "OM Shares":
         return (
-          <Drawer.Trigger asChild>
-            <DebounceButton
-              onClick={() => {
-                handleCompanySelect(company, false);
-                handleDisplayOrderInput(company, false);
-              }}
-            >
-              Place Order (
-              {
-                company.Share.filter(
-                  (share) => share.location === "OPEN_MARKET"
-                ).length
-              }
-              )
-            </DebounceButton>
-          </Drawer.Trigger>
+          <>
+            {isInteractive ? (
+              <Drawer.Trigger asChild>
+                <DebounceButton
+                  onClick={() => {
+                    handleCompanySelect(company, false);
+                    handleDisplayOrderInput(company, false);
+                  }}
+                >
+                  Place Order (
+                  {
+                    company.Share.filter(
+                      (share) => share.location === "OPEN_MARKET"
+                    ).length
+                  }
+                  )
+                </DebounceButton>
+              </Drawer.Trigger>
+            ) : (
+              <div>
+                {
+                  company.Share.filter(
+                    (share) => share.location === "OPEN_MARKET"
+                  ).length
+                }
+              </div>
+            )}
+          </>
         );
       case "IPO Price":
         return (
@@ -102,18 +116,32 @@ const CompanyInfoTable = ({
         );
       case "IPO Shares":
         return (
-          <Drawer.Trigger asChild>
-            <DebounceButton
-              onPress={() => {
-                handleCompanySelect(company, true);
-                handleDisplayOrderInput(company, true);
-              }}
-            >
-              Place Order (
-              {company.Share.filter((share) => share.location === "IPO").length}
-              )
-            </DebounceButton>
-          </Drawer.Trigger>
+          <>
+            {isInteractive ? (
+              <Drawer.Trigger asChild>
+                <DebounceButton
+                  onPress={() => {
+                    handleCompanySelect(company, true);
+                    handleDisplayOrderInput(company, true);
+                  }}
+                >
+                  Place Order (
+                  {
+                    company.Share.filter((share) => share.location === "IPO")
+                      .length
+                  }
+                  )
+                </DebounceButton>
+              </Drawer.Trigger>
+            ) : (
+              <div>
+                {
+                  company.Share.filter((share) => share.location === "IPO")
+                    .length
+                }
+              </div>
+            )}
+          </>
         );
       case "Unit Price":
         return (
@@ -128,11 +156,7 @@ const CompanyInfoTable = ({
           </>
         );
       case "Company Tier":
-        return (
-          <>
-            {company.companyTier}
-          </>
-        );
+        return <>{company.companyTier}</>;
       case "Company Status":
         return (
           <span

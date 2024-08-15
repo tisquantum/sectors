@@ -22,6 +22,7 @@ const SpotMarketTable = ({
   handleDisplayOrderInput,
   handleButtonSelect,
   handleCompanySelect,
+  isInteractive
 }: {
   companies: CompanyWithRelations[];
   orders: PlayerOrderConcealedWithPlayer[] | undefined;
@@ -31,12 +32,13 @@ const SpotMarketTable = ({
   ) => void;
   handleButtonSelect: () => void;
   handleCompanySelect: (company: CompanyWithRelations, isIpo: boolean) => void;
+  isInteractive: boolean;
 }) => {
   const columns = [
     "Company Name",
     "Stock Symbol",
     "Stock Price",
-    "Open Market Shares",
+    "OM Shares",
     "IPO Price",
     "IPO Shares",
     "Orders",
@@ -92,6 +94,7 @@ const SpotMarketTable = ({
                     handleDisplayOrderInput={handleDisplayOrderInput}
                     handleButtonSelect={handleButtonSelect}
                     handleCompanySelect={handleCompanySelect}
+                    isInteractive={isInteractive}
                   />
                 </div>
               </TableCell>

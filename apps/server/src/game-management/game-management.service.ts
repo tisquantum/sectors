@@ -104,6 +104,7 @@ import {
   StartingTier,
   CORPORATE_ESPIONAGE_PRESTIGE_REDUCTION,
   sectorPriority,
+  LOBBY_DEMAND_BOOST,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -676,7 +677,7 @@ export class GameManagementService {
     });
   }
   /**
-   * Any demand bonuses are set back to 0.
+   * Any demand bonuses are subtracted by 1.
    * This is necessary for temporary bonuses given from the lobby action.
    *
    * @param phase
@@ -692,7 +693,7 @@ export class GameManagementService {
     const sectorPromises = sectors.map(async (sector) => {
       await this.sectorService.updateSector({
         where: { id: sector.id },
-        data: { demandBonus: 0 },
+        data: { demandBonus: Math.max((sector.demandBonus || 0) - 1, 0) },
       });
     });
     await Promise.all(sectorPromises);
@@ -1729,6 +1730,11 @@ export class GameManagementService {
     }
   }
 
+  /**
+   * Lobby the government to increase demand for the sector.
+   * This demand decays once per turn.
+   * @param companyAction
+   */
   async lobbyCompany(companyAction: CompanyAction) {
     //get the company
     const company = await this.companyService.company({
@@ -1743,10 +1749,10 @@ export class GameManagementService {
     if (!sector) {
       throw new Error('Sector not found');
     }
-    //increase demand for the sector by 1
+    //increase demand for the sector
     await this.sectorService.updateSector({
       where: { id: sector.id },
-      data: { demandBonus: (sector.demandBonus || 0) + 1 },
+      data: { demandBonus: (sector.demandBonus || 0) + LOBBY_DEMAND_BOOST },
     });
   }
 
@@ -2576,6 +2582,10 @@ export class GameManagementService {
         if (!voteCount[vote.revenueDistribution]) {
           voteCount[vote.revenueDistribution] = 0;
         }
+        //ignore vote weights of 0
+        if (vote.weight === 0) {
+          return;
+        }
         voteCount[vote.revenueDistribution] += vote.weight;
       });
 
@@ -2845,7 +2855,7 @@ export class GameManagementService {
           sectorCompaniesSorted.findIndex((company) => company.id === a.id) -
           sectorCompaniesSorted.findIndex((company) => company.id === b.id)
         );
-      })
+      });
       // Iterate over companies in sector
       for (const company of sectorCompaniesSortedFull) {
         // Calculate the revenue for the company units sold
@@ -3051,6 +3061,7 @@ export class GameManagementService {
       where: {
         companyId: company.id,
         operatingRoundId: phase.operatingRoundId || 0,
+        weight: { gt: 0 },
       },
       include: {
         Player: {
@@ -5766,6 +5777,13 @@ export class GameManagementService {
     fromEntity: EntityType,
     description?: string,
   ) {
+    //get player fromm id
+    const player = await this.prisma.player.findUnique({
+      where: { id: playerId },
+    });
+    if (!player) {
+      throw new Error('Player not found');
+    }
     //create transaction
     this.transactionService.createTransactionEntityToEntity({
       gameId,
@@ -5774,7 +5792,7 @@ export class GameManagementService {
       amount,
       fromEntityType: fromEntity,
       transactionType: TransactionType.CASH,
-      toEntityId: playerId,
+      toEntityId: player.entityId || undefined,
       toEntityType: EntityType.PLAYER,
       description,
     });
@@ -5827,7 +5845,7 @@ export class GameManagementService {
       gameTurnId,
       phaseId,
       amount: cashToRemove,
-      fromEntityId: playerId,
+      fromEntityId: player.entityId || undefined,
       fromEntityType: EntityType.PLAYER,
       transactionType: TransactionType.CASH,
       toEntityType: toEntity,
@@ -5921,9 +5939,7 @@ export class GameManagementService {
           (action) => action.companyId === company.id,
         ),
     );
-    return (
-      companiesWithVotedActions.length === companies.length
-    );
+    return companiesWithVotedActions.length === companies.length;
 
     // console.log('resolvedCompanyActions', resolvedCompanyActions.length);
     // console.log('totalCompanyActions', totalCompanyActions);

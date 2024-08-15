@@ -2,12 +2,15 @@ import { trpc } from "@sectors/app/trpc";
 import { useGame } from "./GameContext";
 import {
   ContractState,
+  DistributionStrategy,
   OrderStatus,
   OrderType,
+  ShareLocation,
 } from "@server/prisma/prisma.client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   AvatarGroup,
+  Input,
   Table,
   TableBody,
   TableCell,
@@ -24,9 +27,14 @@ import {
   RiPriceTag2Fill,
   RiStrikethrough,
 } from "@remixicon/react";
+import DebounceButton from "../General/DebounceButton";
 
-const DerivativesTable = () => {
-  const { gameId, currentPhase } = useGame();
+const DerivativesTable = ({ isInteractive }: { isInteractive: boolean }) => {
+  const { gameId, gameState, currentPhase, authPlayer } = useGame();
+  const useCreatePlayerOrderMutation =
+    trpc.playerOrder.createPlayerOrder.useMutation();
+  const useExerciseContract =
+    trpc.optionContract.exerciseOptionContract.useMutation();
   const { data: optionsContracts, isLoading } =
     trpc.optionContract.listOptionContracts.useQuery({
       where: { gameId, contractState: ContractState.FOR_SALE },
@@ -47,12 +55,14 @@ const DerivativesTable = () => {
   useEffect(() => {
     refetch();
   }, [currentPhase?.name]);
-
+  const [bidAmounts, setBidAmounts] = useState<{ [key: string]: string }>({});
+  const [isSubmitted, setIsSubmitted] = useState(false);
   if (isLoading) return <div>Loading...</div>;
   if (!optionsContracts) return <div>No options contracts found</div>;
 
   const columns = [
     "Option State",
+    "Place Order",
     "Orders",
     "Company Name",
     "Company Stock Symbol",
@@ -118,6 +128,55 @@ const DerivativesTable = () => {
             <RiArrowUpCircleFill />
             {contract.stepBonus}
           </span>
+        );
+      case "Place Order":
+        return (
+          <>
+            {isInteractive &&
+              (!isSubmitted ? (
+                <div className="flex flex items-center justify-center content-center
+                 gap-1">
+                  {gameState.distributionStrategy ==
+                    DistributionStrategy.BID_PRIORITY && (
+                    <Input
+                      className="w-24"
+                      type="number"
+                      placeholder="Enter bid amount"
+                      label="Bid"
+                      min={contract.premium}
+                      max={authPlayer.cashOnHand}
+                      defaultValue={contract.premium}
+                      value={bidAmounts[contract.id] || contract.premium}
+                      onChange={(e) => {
+                        setBidAmounts({
+                          ...bidAmounts,
+                          [contract.id]: e.target.value,
+                        });
+                      }}
+                    />
+                  )}
+                  <DebounceButton
+                    className="bg-blue-500 text-white px-4 py-2 rounded-lg"
+                    onClick={() => {
+                      useCreatePlayerOrderMutation.mutate({
+                        companyId: contract.companyId,
+                        orderType: OrderType.OPTION,
+                        quantity: contract.shareCount,
+                        value: parseInt(bidAmounts[contract.id]),
+                        playerId: authPlayer.id,
+                        location: ShareLocation.DERIVATIVE_MARKET,
+                        contractId: contract.id,
+                      });
+                      setIsSubmitted(true);
+                    }}
+                  >
+                    Call
+                  </DebounceButton>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">Submitted</div>
+              ))}
+          </>
         );
       default:
         return null;
