@@ -4059,7 +4059,12 @@ export class GameManagementService {
       nextPhase = PhaseName.CAPITAL_GAINS;
       return undefined;
     } else {
-      if (currentPhase?.companyId) {
+      if (
+        currentPhase?.companyId &&
+        (currentPhase?.name == PhaseName.OPERATING_COMPANY_VOTE_RESOLVE ||
+          currentPhase?.name == PhaseName.OPERATING_ACTION_COMPANY_VOTE ||
+          currentPhase?.name == PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT)
+      ) {
         return getNextCompanyOperatingRoundTurn(
           gameState.Company.filter(
             (company) => company.status == CompanyStatus.ACTIVE,
@@ -4067,6 +4072,7 @@ export class GameManagementService {
           currentPhase?.companyId,
         )?.id;
       } else {
+        //this should be the first company in the operating round
         return getNextCompanyOperatingRoundTurn(
           gameState.Company.filter(
             (company) => company.status == CompanyStatus.ACTIVE,

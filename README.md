@@ -172,3 +172,10 @@ I'm thinking short orders can only be performed on a company you have no ownersh
 - TODO: Better illustrate how consumers move to each sector
 
 - TODO: A table showing company demand more clearly during revenue
+
+- TODO: Game results not correct? Net worth doesn't match placement
+- TODO: Production OR revenue results breaking db, too much write data?
+- TODO: Dropdown for player share ownership on table per row
+- TODO: Increase timer for company action decisions
+- TODO: How do we handle bankruptcy? (replace actions with bankruptcy gameplay)
+- TODO: Sector demand, should we give options for increasing?

@@ -1,6 +1,6 @@
 import { RiExchangeBoxFill } from "@remixicon/react";
 import { trpc } from "@sectors/app/trpc";
-import { EntityType, Player, Transaction } from "@server/prisma/prisma.client";
+import { EntityType, Player, Transaction, TransactionType } from "@server/prisma/prisma.client";
 import PlayerAvatar from "../Player/PlayerAvatar";
 import { TransactionWithEntities } from "@server/prisma/prisma.types";
 import { useState } from "react";
@@ -120,6 +120,7 @@ export const MoneyTransactionHistoryByPlayer = ({
     isError,
   } = trpc.transactions.listTransactionsByEntityId.useQuery({
     entityId: player.entityId || "",
+    transactionType: TransactionType.CASH,
   });
   if (isLoading) {
     return <div>Loading...</div>;

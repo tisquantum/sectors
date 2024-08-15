@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { TrpcService } from '../trpc.service';
 import { TransactionService } from '@server/transaction/transaction.service';
-import { EntityType } from '@prisma/client';
+import { EntityType, TransactionType } from '@prisma/client';
 
 type Context = {
   transactionService: TransactionService;
@@ -44,11 +44,15 @@ export default (trpc: TrpcService, ctx: Context) =>
       .input(
         z.object({
           entityId: z.string(),
+          transactionType: z.nativeEnum(TransactionType),
         }),
       )
       .query(async ({ input }) => {
-        const { entityId } = input;
-        return ctx.transactionService.getTransactionsForEntity(entityId);
+        const { entityId, transactionType } = input;
+        return ctx.transactionService.getTransactionsForEntity(
+          entityId,
+          transactionType,
+        );
       }),
     listTransactionsByEntityType: trpc.procedure
       .input(
