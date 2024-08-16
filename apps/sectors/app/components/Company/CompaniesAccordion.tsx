@@ -213,10 +213,6 @@ const CompaniesAccordion = ({
                       0}
                   </p>
                   <p>
-                    <strong>Insolvent:</strong>{" "}
-                    {company.insolvent ? "Yes" : "No"}
-                  </p>
-                  <p>
                     <strong>IPO Price (Float Price):</strong> $
                     {company.ipoAndFloatPrice}
                   </p>

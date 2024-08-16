@@ -40,6 +40,7 @@ import { ShortOrderModule } from './short-order/short-order.module';
 import { GameRecordModule } from './game-record/game-record.module';
 import { PlayerResultModule } from './player-result/player-result.module';
 import { TransactionModule } from './transaction/transaction.module';
+import { InsolvencyContributionModule } from './insolvency-contribution/insolvency-contribution.module';
 
 const yourPusherOptions = {
   cluster: process.env.PUSHER_CLUSTER ?? 'CLUSTER',
@@ -96,6 +97,7 @@ const chunkingOptions = {
     GameRecordModule,
     PlayerResultModule,
     TransactionModule,
+    InsolvencyContributionModule,
   ],
   controllers: [AppController],
   providers: [AppService],

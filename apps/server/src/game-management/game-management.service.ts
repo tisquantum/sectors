@@ -157,6 +157,7 @@ import { GameRecordService } from '@server/game-record/game-record.service';
 import { PlayerResultService } from '@server/player-result/player-result.service';
 import { UsersService } from '@server/users/users.service';
 import { TransactionService } from '@server/transaction/transaction.service';
+import { InsolvencyContributionService } from '@server/insolvency-contribution/insolvency-contribution.service';
 
 type GroupedByPhase = {
   [key: string]: {
@@ -204,6 +205,7 @@ export class GameManagementService {
     private playerResultService: PlayerResultService,
     private usersService: UsersService,
     private transactionService: TransactionService,
+    private insolvencyContributionService: InsolvencyContributionService,
   ) {}
 
   /**
@@ -448,70 +450,78 @@ export class GameManagementService {
    * @param game
    */
   async endGame(game: Game) {
-    //get all players from the game
+    // Get all players from the game
     const players = await this.playersService.playersWithShares({
       gameId: game.id,
     });
-    //get the users from the players
-    const users = await this.usersService.users({
-      where: {
-        id: {
-          in: players.map((player) => player.userId),
-        },
-      },
-    });
-    //calculate networths for all players
+
+    // Calculate net worths for all players
     const netWorths = players.map((player) => {
       return calculateNetWorth(player.cashOnHand, player.Share);
     });
-    //create a game record
+
+    // Create a game record
     const gameRecord = await this.gameRecordService.createGameRecord({
       game: { connect: { id: game.id } },
     });
-    //based on net worth, create an array of placements which is 1, 2, 3 etc. where the highest networth will get the highest placement
+
+    // Calculate placements with proper handling of ties
     const placements = netWorths
       .map((netWorth, index) => {
-        return { netWorth, index };
+        return { netWorth, index, placement: 0 }; // Add a placement property here
       })
       .sort((a, b) => b.netWorth - a.netWorth)
-      .map((player, index) => {
-        return { playerId: player.index, placement: index + 1 };
+      .map((player, index, sortedArray) => {
+        if (index > 0 && player.netWorth === sortedArray[index - 1].netWorth) {
+          return {
+            ...player,
+            placement: sortedArray[index - 1].placement,
+          };
+        } else {
+          return { ...player, placement: index + 1 };
+        }
       });
 
     // Award ranking points based on placement and total players in the game
-    // First place always gets 50 ranking points PLUS a bonus based on the number of players in the game
-    // Each subsequent place gets half of the previous place's ranking points rounded up
     const totalPlayers = placements.length;
     const baseRankingPoints = 50;
-    const rankingPoints = placements.map((placement, index) => {
-      const bonus = totalPlayers - placement.placement; // Bonus based on number of players and placement
+    const rankingPoints = placements.map((placementData) => {
+      const bonus = totalPlayers - placementData.placement; // Bonus based on number of players and placement
       const points = Math.max(
-        Math.ceil(baseRankingPoints / 2 ** placement.placement) + bonus,
+        Math.ceil(baseRankingPoints / 2 ** (placementData.placement - 1)) +
+          bonus,
         1,
       );
       return {
-        playerId: placement.playerId,
+        playerId: placementData.index,
         rankingPoints: points,
       };
     });
-    //create player results
+
+    // Create player results
     const playerResults = players.map((player, index) => {
+      const placementData = placements.find((p) => p.index === index)!;
       return {
         gameRecordId: gameRecord.id,
         playerId: player.id,
         userId: player.userId,
         netWorth: netWorths[index],
-        placement: placements[index].placement,
-        rankingPoints: rankingPoints[index].rankingPoints,
+        placement: placementData.placement, // Ensure correct placement for each player
+        rankingPoints: rankingPoints.find((p) => p.playerId === index)!
+          .rankingPoints,
       };
     });
-    //create many player results
+
+    // Create many player results
     await this.playerResultService.createManyPlayerResults(playerResults);
-    //update game status to finished
+
+    // Update game status to finished
     await this.gamesService.updateGame({
       where: { id: game.id },
       data: { gameStatus: GameStatus.FINISHED },
     });
+
+    // Trigger game ended event
     this.pusherService.trigger(getGameChannelId(game.id), EVENT_GAME_ENDED);
   }
 
@@ -652,7 +662,6 @@ export class GameManagementService {
           sector.unitPriceMin,
       ),
       throughput: 0,
-      insolvent: false,
       ipoAndFloatPrice: ipoPrice,
       stockTier,
       demandScore: 0,
@@ -826,12 +835,9 @@ export class GameManagementService {
     }
 
     const netWorths = players.map((player) => {
-      const totalSharesValue = player.Share.reduce((acc, share) => {
-        return acc + share.price;
-      }, 0);
       return {
         playerId: player.id,
-        netWorth: player.cashOnHand + totalSharesValue,
+        netWorth: calculateNetWorth(player.cashOnHand, player.Share),
       };
     });
 
@@ -2769,12 +2775,12 @@ export class GameManagementService {
       if (company.cashOnHand < operatingCosts) {
         this.gameLogService.createGameLog({
           game: { connect: { id: phase.gameId } },
-          content: `Company ${company.name} has gone bankrupt.`,
+          content: `Company ${company.name} has gone insolvent.`,
         });
         return {
           id: company.id,
           cashOnHand: 0,
-          status: CompanyStatus.BANKRUPT,
+          status: CompanyStatus.INSOLVENT,
         };
       }
       this.gameLogService.createGameLog({
@@ -3055,6 +3061,7 @@ export class GameManagementService {
 
   /**
    * Resolve the company votes, if there is a tie, we take priority in the vote priority order.
+   * If the company is insolvent, we instead resolve cash contributions.
    *
    * @param phase
    */
@@ -3066,90 +3073,223 @@ export class GameManagementService {
     if (!company) {
       throw new Error('Company not found');
     }
-    if (company.status !== CompanyStatus.ACTIVE) {
-      throw new Error('Company is not active');
-    }
-    const companyTier = CompanyTierData[company.companyTier];
-    if (!companyTier) {
-      throw new Error('Company tier not found');
-    }
-    const companyActionCount: number = companyTier.companyActions;
+    if (company.status == CompanyStatus.INSOLVENT) {
+      //collect all insolvency contributions for the current turn
+      const insolvencyContributions =
+        await this.insolvencyContributionService.listInsolvencyContributions({
+          where: { gameTurnId: phase.gameTurnId, companyId: company.id },
+        });
+      //dillute the insolvency contributions to the BANK
+      //filter all contributions with a cashContribution of greater than 0
+      const cashContributions = insolvencyContributions.filter(
+        (contribution) => contribution.cashContribution > 0,
+      );
+      //remove this money from those players
+      const cashContributionsPromises = cashContributions.map((contribution) =>
+        this.playerRemoveMoney(
+          phase.gameId,
+          phase.gameTurnId,
+          phase.id,
+          contribution.playerId,
+          contribution.cashContribution,
+          EntityType.COMPANY,
+          'Insolvency cash contribution',
+          company.entityId || undefined,
+        ),
+      );
+      await cashContributionsPromises;
+      //filter all contributions with a shareContribution of greater than 0
+      const shareContributions = insolvencyContributions.filter(
+        (contribution) => contribution.shareContribution > 0,
+      );
 
-    // Collect votes
-    const votes = await this.prisma.operatingRoundVote.findMany({
-      where: {
-        companyId: company.id,
-        operatingRoundId: phase.operatingRoundId || 0,
-        weight: { gt: 0 },
-      },
-      include: {
-        Player: {
-          include: {
-            Share: true,
+      //remove shares from those players
+      const shareContributionsPromises = shareContributions.map(
+        async (contribution) => {
+          const player = await this.playersService.player({
+            id: contribution.playerId,
+          });
+          if (!player) {
+            throw new Error('Player not found');
+          }
+          this.playerRemoveMoney(
+            phase.gameId,
+            phase.gameTurnId,
+            phase.id,
+            player.id,
+            contribution.shareContribution * company.currentStockPrice,
+            EntityType.BANK,
+            'Insolvency share contribution',
+          );
+          return this.playerRemoveShares({
+            gameId: phase.gameId,
+            gameTurnId: phase.gameTurnId,
+            phaseId: phase.id,
+            playerId: contribution.playerId,
+            companyId: contribution.companyId,
+            amount: contribution.shareContribution,
+            toLocation: ShareLocation.OPEN_MARKET,
+            fromLocation: ShareLocation.PLAYER,
+            description: 'Insolvency share contribution',
+            fromEntityType: EntityType.PLAYER,
+            fromEntityId: player.entityId || undefined,
+            toEntityType: EntityType.BANK,
+          });
+        },
+      );
+
+      await shareContributionsPromises;
+
+      //get the total amount of cash and shares contributed
+      const totalCashContributed = cashContributions.reduce(
+        (acc, contribution) => acc + contribution.cashContribution,
+        0,
+      );
+      const totalShareValueContributed = shareContributions.reduce(
+        (acc, contribution) =>
+          acc + contribution.shareContribution * company.currentStockPrice,
+        0,
+      );
+      //if the company has met or exceeded the shortFall for it's company tier, move it back to active.
+      const companyTier = CompanyTierData[company.companyTier];
+      if (!companyTier) {
+        throw new Error('Company tier not found');
+      }
+      const shortFall = companyTier.insolvencyShortFall;
+      if (
+        company.cashOnHand +
+          totalCashContributed +
+          totalShareValueContributed >=
+        shortFall
+      ) {
+        await this.companyService.updateCompany({
+          where: { id: company.id },
+          data: { status: CompanyStatus.ACTIVE },
+        });
+        //game log
+        this.gameLogService.createGameLog({
+          game: { connect: { id: phase.gameId } },
+          content: `Company ${company.name} has recovered from insolvency.`,
+        });
+      }
+      //update the company cash on hand
+      await this.companyService.updateCompany({
+        where: { id: company.id },
+        data: {
+          cashOnHand:
+            company.cashOnHand +
+            totalCashContributed +
+            totalShareValueContributed,
+        },
+      });
+
+      //game log
+      this.gameLogService.createGameLog({
+        game: { connect: { id: phase.gameId } },
+        content: `Company ${company.name} has received a total of $${
+          totalCashContributed + totalShareValueContributed
+        } from insolvency contributions.`,
+      });
+
+      //decrease the stock price of the company
+      await this.stockHistoryService.moveStockPriceDown(
+        company.gameId,
+        company.id,
+        phase.id,
+        company.currentStockPrice || 0,
+        shareContributions.reduce(
+          (acc, contribution) => acc + contribution.shareContribution,
+          0,
+        ),
+        StockAction.MARKET_SELL,
+      );
+    } else {
+      if (company.status !== CompanyStatus.ACTIVE) {
+        throw new Error('Company is not active');
+      }
+      const companyTier = CompanyTierData[company.companyTier];
+      if (!companyTier) {
+        throw new Error('Company tier not found');
+      }
+      const companyActionCount: number = companyTier.companyActions;
+
+      // Collect votes
+      const votes = await this.prisma.operatingRoundVote.findMany({
+        where: {
+          companyId: company.id,
+          operatingRoundId: phase.operatingRoundId || 0,
+          weight: { gt: 0 },
+        },
+        include: {
+          Player: {
+            include: {
+              Share: true,
+            },
           },
         },
-      },
-    });
+      });
 
-    // Calculate the vote weights for each action
-    type ActionVotesAccumulator = {
-      [key in OperatingRoundAction]?: number;
-    };
+      // Calculate the vote weights for each action
+      type ActionVotesAccumulator = {
+        [key in OperatingRoundAction]?: number;
+      };
 
-    const actionVotes = votes.reduce<ActionVotesAccumulator>((acc, vote) => {
-      acc[vote.actionVoted] = (acc[vote.actionVoted] || 0) + vote.weight;
-      return acc;
-    }, {} as ActionVotesAccumulator);
+      const actionVotes = votes.reduce<ActionVotesAccumulator>((acc, vote) => {
+        acc[vote.actionVoted] = (acc[vote.actionVoted] || 0) + vote.weight;
+        return acc;
+      }, {} as ActionVotesAccumulator);
 
-    console.log('Action votes:', actionVotes);
+      console.log('Action votes:', actionVotes);
 
-    // Sort actions by their vote count in descending order and take the top `companyActionCount` actions
-    const sortedActions = Object.entries(actionVotes)
-      .sort(([, aVotes], [, bVotes]) => (bVotes || 0) - (aVotes || 0))
-      .slice(0, companyActionCount)
-      .map(([action]) => action as OperatingRoundAction);
+      // Sort actions by their vote count in descending order and take the top `companyActionCount` actions
+      const sortedActions = Object.entries(actionVotes)
+        .sort(([, aVotes], [, bVotes]) => (bVotes || 0) - (aVotes || 0))
+        .slice(0, companyActionCount)
+        .map(([action]) => action as OperatingRoundAction);
 
-    console.log('Resolved actions:', sortedActions);
+      console.log('Resolved actions:', sortedActions);
 
-    //if sorted actions is less than companyActionCount, we need to fill the rest with a VETO action
-    if (sortedActions.length < companyActionCount) {
-      const vetoCount = companyActionCount - sortedActions.length;
-      for (let i = 0; i < vetoCount; i++) {
-        sortedActions.push(OperatingRoundAction.VETO);
-      }
-    }
-    // Iterate through the resolved actions and create or update the corresponding company actions
-    for (const resolvedAction of sortedActions) {
-      try {
-        let companyAction = await this.companyActionService.companyActionFirst({
-          where: {
-            companyId: company.id,
-            operatingRoundId: phase.operatingRoundId || 0,
-            action: resolvedAction,
-          },
-        });
-
-        if (!companyAction) {
-          // Create the company action
-          await this.companyActionService.createCompanyAction({
-            action: resolvedAction,
-            Company: { connect: { id: company.id } },
-            OperatingRound: { connect: { id: phase.operatingRoundId || 0 } },
-          });
-        } else {
-          // Update the existing company action
-          await this.companyActionService.updateCompanyAction({
-            where: {
-              id: companyAction.id,
-            },
-            data: {
-              action: resolvedAction,
-            },
-          });
+      //if sorted actions is less than companyActionCount, we need to fill the rest with a VETO action
+      if (sortedActions.length < companyActionCount) {
+        const vetoCount = companyActionCount - sortedActions.length;
+        for (let i = 0; i < vetoCount; i++) {
+          sortedActions.push(OperatingRoundAction.VETO);
         }
-      } catch (error) {
-        console.error('Error creating or updating company action', error);
-        throw new Error('Company action cannot be created or updated');
+      }
+      // Iterate through the resolved actions and create or update the corresponding company actions
+      for (const resolvedAction of sortedActions) {
+        try {
+          let companyAction =
+            await this.companyActionService.companyActionFirst({
+              where: {
+                companyId: company.id,
+                operatingRoundId: phase.operatingRoundId || 0,
+                action: resolvedAction,
+              },
+            });
+
+          if (!companyAction) {
+            // Create the company action
+            await this.companyActionService.createCompanyAction({
+              action: resolvedAction,
+              Company: { connect: { id: company.id } },
+              OperatingRound: { connect: { id: phase.operatingRoundId || 0 } },
+            });
+          } else {
+            // Update the existing company action
+            await this.companyActionService.updateCompanyAction({
+              where: {
+                id: companyAction.id,
+              },
+              data: {
+                action: resolvedAction,
+              },
+            });
+          }
+        } catch (error) {
+          console.error('Error creating or updating company action', error);
+          throw new Error('Company action cannot be created or updated');
+        }
       }
     }
   }
@@ -3431,7 +3571,6 @@ export class GameManagementService {
             ].supplyMax,
           sectorId: sector.name, //map to name at first then match to supabase for id
           gameId: game.id,
-          insolvent: company.insolvent,
         }));
       });
       let companies;
@@ -5852,6 +5991,7 @@ export class GameManagementService {
     amount: number,
     toEntity: EntityType,
     description?: string,
+    toEntityId?: string,
   ) {
     //get player
     const player = await this.prisma.player.findUnique({
@@ -5873,6 +6013,7 @@ export class GameManagementService {
       fromPlayerId: playerId,
       transactionType: TransactionType.CASH,
       toEntityType: toEntity,
+      toEntityId,
       description,
     });
     //update bank pool for game
@@ -5894,6 +6035,90 @@ export class GameManagementService {
     });
 
     return updatedPlayer;
+  }
+
+  async playerRemoveShares({
+    gameId,
+    gameTurnId,
+    phaseId,
+    playerId,
+    companyId,
+    amount,
+    fromLocation,
+    toLocation,
+    toEntityType,
+    fromEntityId,
+    fromEntityType,
+    fromPlayerId,
+    description,
+  }: {
+    gameId: string;
+    gameTurnId: string;
+    phaseId: string;
+    playerId: string;
+    companyId: string;
+    amount: number;
+    fromLocation: ShareLocation;
+    toLocation: ShareLocation;
+    toEntityType: EntityType;
+    fromEntityId?: string;
+    fromEntityType: EntityType;
+    fromPlayerId?: string;
+    description?: string;
+  }) {
+    //get player
+    const player = await this.playersService.player({
+      id: playerId,
+    });
+    if (!player) {
+      throw new Error('Player not found');
+    }
+    //get company
+    const company = await this.companyService.company({
+      id: companyId,
+    });
+    if (!company) {
+      throw new Error('Company not found');
+    }
+    //get shares
+    const shares = await this.prisma.share.findMany({
+      where: {
+        playerId,
+        companyId,
+        location: fromLocation,
+      },
+      take: amount,
+    });
+    //if player does not have enough shares, throw error
+    if (shares.length < amount) {
+      throw new Error(
+        'Player does not have enough shares to complete playerRemoveShares',
+      );
+    }
+    //create transaction
+    this.transactionService.createTransactionEntityToEntity({
+      gameId,
+      gameTurnId,
+      phaseId,
+      amount: shares.length,
+      fromEntityId,
+      fromEntityType,
+      fromPlayerId,
+      transactionType: TransactionType.SHARE,
+      toEntityType,
+      description,
+    });
+    //update shares
+    await this.prisma.share.updateMany({
+      where: {
+        id: { in: shares.map((share) => share.id) },
+      },
+      data: {
+        location: toLocation,
+        playerId: null,
+      },
+    });
+    return shares;
   }
 
   async haveAllCompaniesActionsResolved(gameId: string) {

@@ -10,6 +10,7 @@ import {
   GameTurn,
   InfluenceRound,
   InfluenceVote,
+  InsolvencyContribution,
   MeetingMessage,
   OperatingRound,
   OperatingRoundVote,
@@ -27,6 +28,7 @@ import {
   RoomUser,
   Sector,
   Share,
+  ShareContribution,
   ShortOrder,
   StockHistory,
   StockRound,
@@ -258,4 +260,12 @@ export type CompanyOperationOrderPartial = {
   demandScore: number;
   baseDemand: number;
   hasEconomiesOfScale: boolean;
-}
+};
+
+export type InsolvencyContributionWithRelations = InsolvencyContribution & {
+  Player: Player;
+  Company: Company;
+  GameTurn: GameTurn;
+};
+
+export type ShareContributionWithShare = ShareContribution & { Share: Share };

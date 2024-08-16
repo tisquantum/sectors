@@ -30,6 +30,7 @@ import { GameRecordModule } from '@server/game-record/game-record.module';
 import { PlayerResultModule } from '@server/player-result/player-result.module';
 import { UsersModule } from '@server/users/users.module';
 import { TransactionModule } from '@server/transaction/transaction.module';
+import { InsolvencyContributionModule } from '@server/insolvency-contribution/insolvency-contribution.module';
 
 @Module({
   imports: [
@@ -63,6 +64,7 @@ import { TransactionModule } from '@server/transaction/transaction.module';
     PlayerResultModule,
     UsersModule,
     TransactionModule,
+    InsolvencyContributionModule,
   ],
   providers: [GameManagementService],
   exports: [GameManagementService],

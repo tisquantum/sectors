@@ -2,6 +2,7 @@ import { trpc } from "@sectors/app/trpc";
 import { useGame } from "./GameContext";
 import PlayerAvatar from "../Player/PlayerAvatar";
 import { CapitalGainsTiers } from "@server/data/constants";
+import { calculateNetWorth } from "@server/data/helpers";
 
 const CapitalGains = () => {
   const { currentTurn } = useGame();
@@ -44,12 +45,10 @@ const CapitalGains = () => {
       </div>
       <div className="flex flex-col gap-4 justify-center items-center">
         {capitalGains.map((capitalGain) => {
-          const netWorth =
-            (capitalGain.Player?.cashOnHand || 0) +
-            (capitalGain.Player?.Share?.reduce((acc, share) => {
-              if (!share?.Company) return acc; // If Company is undefined, return the accumulator
-              return acc + (share.Company.currentStockPrice || 0);
-            }, 0) || 0); // If Share is undefined, return 0
+          const netWorth = calculateNetWorth(
+            capitalGain.Player?.cashOnHand || 0,
+            capitalGain.Player?.Share || []
+          );
 
           return (
             <div
