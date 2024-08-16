@@ -65,6 +65,8 @@ import playerResultRouter from './routers/player-result.router';
 import { PlayerResultService } from '@server/player-result/player-result.service';
 import productionResultRouter from './routers/production-result.router';
 import { ProductionResultService } from '@server/production-result/production-result.service';
+import insolvencyContributionRouter from './routers/insolvency-contribution.router';
+import { InsolvencyContributionService } from '@server/insolvency-contribution/insolvency-contribution.service';
 @Injectable()
 export class TrpcRouter {
   constructor(
@@ -101,6 +103,7 @@ export class TrpcRouter {
     private readonly cardsService: CardsService,
     private readonly playerResultService: PlayerResultService,
     private readonly productionResultService: ProductionResultService,
+    private readonly insolvencyContributionService: InsolvencyContributionService,
   ) {}
 
   appRouter = this.trpc.router({
@@ -225,6 +228,12 @@ export class TrpcRouter {
     }),
     productionResult: productionResultRouter(this.trpc, {
       productionResultService: this.productionResultService,
+    }),
+    insolvencyContributions: insolvencyContributionRouter(this.trpc, {
+      insolvencyContributionService: this.insolvencyContributionService,
+      phaseService: this.phaseService,
+      playerService: this.playersService,
+      pusherService: this.pusherService,
     }),
   });
 

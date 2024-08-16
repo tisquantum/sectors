@@ -42,7 +42,7 @@ export class InsolvencyContributionService {
   // Create a new insolvency contribution
   async createInsolvencyContribution(
     data: Prisma.InsolvencyContributionCreateInput,
-  ): Promise<InsolvencyContribution> {
+  ): Promise<InsolvencyContributionWithRelations> {
     // Ensure no duplicate contributions exist for the same player, company, and game turn
     const existingContribution =
       await this.prisma.insolvencyContribution.findFirst({
@@ -50,6 +50,11 @@ export class InsolvencyContributionService {
           playerId: data.Player.connect?.id,
           companyId: data.Company.connect?.id,
           gameTurnId: data.GameTurn.connect?.id,
+        },
+        include: {
+          Player: true,
+          Company: true,
+          GameTurn: true,
         },
       });
 
@@ -61,6 +66,11 @@ export class InsolvencyContributionService {
 
     return this.prisma.insolvencyContribution.create({
       data,
+      include: {
+        Player: true,
+        Company: true,
+        GameTurn: true,
+      },
     });
   }
 

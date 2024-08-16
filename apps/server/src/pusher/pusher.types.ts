@@ -12,6 +12,7 @@ export const EVENT_MEETING_MESSAGE_CREATED = 'meeting-message-created';
 export const EVENT_NEW_PHASE = 'new-phase';
 export const EVENT_NEW_PLAYER_ORDER = 'new-player-order';
 export const EVENT_NEW_PLAYER_ORDER_PLAYER_ID = 'new-player-order-player-id';
+export const EVENT_NEW_INVOLVENCY_CONTRIBUTION = 'new-insolvency-contribution';
 export interface EVENT_NEW_PLAYER_ORDER_PLAYER_ID__PAYLOAD {
     playerId: string;
 }

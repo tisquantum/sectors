@@ -6,11 +6,17 @@ import { checkIsPlayerAction, checkSubmissionTime } from '../trpc.middleware';
 import { PlayersService } from '@server/players/players.service';
 import { PhaseService } from '@server/phase/phase.service';
 import { TRPCError } from '@trpc/server';
+import { PusherService } from 'nestjs-pusher';
+import {
+  EVENT_NEW_INVOLVENCY_CONTRIBUTION,
+  getGameChannelId,
+} from '@server/pusher/pusher.types';
 
 type Context = {
   insolvencyContributionService: InsolvencyContributionService;
   playerService: PlayersService;
   phaseService: PhaseService;
+  pusherService: PusherService;
 };
 
 export default (trpc: TrpcService, ctx: Context) =>
@@ -65,12 +71,12 @@ export default (trpc: TrpcService, ctx: Context) =>
       .use(async (opts) => checkSubmissionTime(opts, ctx.phaseService))
       .mutation(async ({ input, ctx: ctxMiddleware }) => {
         if (!ctxMiddleware.gameId) {
-            //throw
-            throw new TRPCError({
-              code: 'INTERNAL_SERVER_ERROR',
-              message: 'Game ID was not found for this player.',
-            });
-          }
+          //throw
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Game ID was not found for this player.',
+          });
+        }
         const { playerId, companyId, gameTurnId, ...rest } = input;
         const data: Prisma.InsolvencyContributionCreateInput = {
           ...rest,
@@ -80,9 +86,19 @@ export default (trpc: TrpcService, ctx: Context) =>
           Player: { connect: { id: playerId } },
         };
 
-        return ctx.insolvencyContributionService.createInsolvencyContribution(
-          data,
+        const insolvencyContribution =
+          await ctx.insolvencyContributionService.createInsolvencyContribution(
+            data,
+          );
+        //pusher service
+        ctx.pusherService.trigger(
+          getGameChannelId(ctxMiddleware.gameId),
+          EVENT_NEW_INVOLVENCY_CONTRIBUTION,
+          {
+            insolvencyContribution,
+          },
         );
+        return insolvencyContribution;
       }),
 
     createManyInsolvencyContributions: trpc.procedure

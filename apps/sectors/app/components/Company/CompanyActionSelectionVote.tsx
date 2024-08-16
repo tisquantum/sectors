@@ -48,6 +48,7 @@ import { RiCloseCircleFill } from "@remixicon/react";
 import { companyPriorityOrderOperations } from "@server/data/helpers";
 import { tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
 import CompanyPriorityList from "./CompanyPriorityOperatingRound";
+import InsolvencyContributionComponent from "./InsolvencyContribution";
 
 const companyActionsDescription = [
   {
@@ -222,108 +223,120 @@ const CompanyActionSelectionVote = ({
           {company.Sector.name}
         </span>
       </div>
-      <div className="flex gap-2 items-center">
-        <CompanyInfo company={company} />
-        <div className="max-w-80">
-          <ShareHolders companyId={company.id} />
-        </div>
-      </div>
-      <div className="flex flex-col gap-3">
-        <div>
-          <h3>Company Action Selection Vote</h3>
-          <p>
-            The company is considering the following actions. Please vote for
-            the action(s) you believe will benefit the company the most. You can
-            select up to {companyAllowedActions} actions.
-          </p>
-        </div>
-        <div className="grid grid-cols-3 gap-2">
-          {companyActionsDescription.map((action) => (
-            <div
-              key={action.id}
-              onClick={() => handleSelected(action.name, company.id)}
-            >
-              <Card
-                isDisabled={checkIfDisabled(action.name)}
-                className={`${
-                  companyActions?.some((ca) => ca.action === action.name)
-                    ? "bg-blue-700"
-                    : ""
-                } ${
-                  selectedActions.includes(action.name) &&
-                  currentPhase?.name === PhaseName.OPERATING_ACTION_COMPANY_VOTE
-                    ? "ring-2 ring-blue-500"
-                    : ""
-                }`}
-              >
-                <CardHeader>
-                  <div className="flex flex-col">
-                    <div className="flex justify-between">
-                      <span className="font-bold mr-3">{action.title}</span>
-                      <span>${CompanyActionCosts[action.name]}</span>
-                    </div>
-                    {action.name === OperatingRoundAction.LOAN && (
-                      <span>One time only</span>
-                    )}
-                    {action.name === OperatingRoundAction.LOAN &&
-                      company.hasLoan && <span>Loan has been taken.</span>}
-                  </div>
-                </CardHeader>
-                <CardBody>
-                  <div className="flex flex-col">
-                    {action.message}
-                    {action.name === OperatingRoundAction.SPEND_PRESTIGE && (
-                      <PrestigeRewards layout="minimalist" />
-                    )}
-                  </div>
-                </CardBody>
-                <CardFooter>
-                  {actionVoteResults && (
-                    <div className="flex gap-2">
-                      {actionVoteResults
-                        .filter(
-                          (actionVoteResult) =>
-                            actionVoteResult.actionVoted === action.name
-                        )
-                        .map((action: OperatingRoundVoteWithPlayer) => (
-                          <PlayerAvatar
-                            key={action.id}
-                            badgeContent={action.weight}
-                            player={action.Player}
-                          />
-                        ))}
-                    </div>
-                  )}
-                  {selectedActions.includes(action.name) &&
-                    companyAllowedActions > 1 &&
-                    currentPhase?.name ===
-                      PhaseName.OPERATING_ACTION_COMPANY_VOTE &&
-                    currentPhase?.companyId === company.id && (
-                      <Button
-                        className="text-red-500"
-                        onClick={() => handleRemoveSelection(action.name)}
-                      >
-                        <RiCloseCircleFill />
-                      </Button>
-                    )}
-                </CardFooter>
-              </Card>
+      {company.status === CompanyStatus.INSOLVENT ? (
+        <InsolvencyContributionComponent company={company} />
+      ) : (
+        <>
+          <div className="flex gap-2 items-center">
+            <CompanyInfo company={company} />
+            <div className="max-w-80">
+              <ShareHolders companyId={company.id} />
             </div>
-          ))}
-        </div>
-        <div className="flex justify-center">
-          {submitComplete ? (
+          </div>
+          <div className="flex flex-col gap-3">
             <div>
-              <span>Vote(s) Submitted</span>
+              <h3>Company Action Selection Vote</h3>
+              <p>
+                The company is considering the following actions. Please vote
+                for the action(s) you believe will benefit the company the most.
+                You can select up to {companyAllowedActions} actions.
+              </p>
             </div>
-          ) : currentPhase?.name === PhaseName.OPERATING_ACTION_COMPANY_VOTE &&
-            currentPhase?.companyId === company.id ? (
-            <DebounceButton onClick={handleSubmit} disabled={submitComplete}>
-              Submit All Votes
-            </DebounceButton>
-          ) : null}
-        </div>
-      </div>
+            <div className="grid grid-cols-3 gap-2">
+              {companyActionsDescription.map((action) => (
+                <div
+                  key={action.id}
+                  onClick={() => handleSelected(action.name, company.id)}
+                >
+                  <Card
+                    isDisabled={checkIfDisabled(action.name)}
+                    className={`${
+                      companyActions?.some((ca) => ca.action === action.name)
+                        ? "bg-blue-700"
+                        : ""
+                    } ${
+                      selectedActions.includes(action.name) &&
+                      currentPhase?.name ===
+                        PhaseName.OPERATING_ACTION_COMPANY_VOTE
+                        ? "ring-2 ring-blue-500"
+                        : ""
+                    }`}
+                  >
+                    <CardHeader>
+                      <div className="flex flex-col">
+                        <div className="flex justify-between">
+                          <span className="font-bold mr-3">{action.title}</span>
+                          <span>${CompanyActionCosts[action.name]}</span>
+                        </div>
+                        {action.name === OperatingRoundAction.LOAN && (
+                          <span>One time only</span>
+                        )}
+                        {action.name === OperatingRoundAction.LOAN &&
+                          company.hasLoan && <span>Loan has been taken.</span>}
+                      </div>
+                    </CardHeader>
+                    <CardBody>
+                      <div className="flex flex-col">
+                        {action.message}
+                        {action.name ===
+                          OperatingRoundAction.SPEND_PRESTIGE && (
+                          <PrestigeRewards layout="minimalist" />
+                        )}
+                      </div>
+                    </CardBody>
+                    <CardFooter>
+                      {actionVoteResults && (
+                        <div className="flex gap-2">
+                          {actionVoteResults
+                            .filter(
+                              (actionVoteResult) =>
+                                actionVoteResult.actionVoted === action.name
+                            )
+                            .map((action: OperatingRoundVoteWithPlayer) => (
+                              <PlayerAvatar
+                                key={action.id}
+                                badgeContent={action.weight}
+                                player={action.Player}
+                              />
+                            ))}
+                        </div>
+                      )}
+                      {selectedActions.includes(action.name) &&
+                        companyAllowedActions > 1 &&
+                        currentPhase?.name ===
+                          PhaseName.OPERATING_ACTION_COMPANY_VOTE &&
+                        currentPhase?.companyId === company.id && (
+                          <Button
+                            className="text-red-500"
+                            onClick={() => handleRemoveSelection(action.name)}
+                          >
+                            <RiCloseCircleFill />
+                          </Button>
+                        )}
+                    </CardFooter>
+                  </Card>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-center">
+              {submitComplete ? (
+                <div>
+                  <span>Vote(s) Submitted</span>
+                </div>
+              ) : currentPhase?.name ===
+                  PhaseName.OPERATING_ACTION_COMPANY_VOTE &&
+                currentPhase?.companyId === company.id ? (
+                <DebounceButton
+                  onClick={handleSubmit}
+                  disabled={submitComplete}
+                >
+                  Submit All Votes
+                </DebounceButton>
+              ) : null}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };
