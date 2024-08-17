@@ -4,6 +4,7 @@ import {
   CardBody,
   CardFooter,
   CardHeader,
+  Chip,
   Tooltip,
 } from "@nextui-org/react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -218,21 +219,31 @@ const CompanyActionSelectionVote = ({
   return (
     <div className="flex flex-col gap-3 p-5">
       <h1 className="text-2xl">{company.name} Shareholder Meeting</h1>
-      <div>
+      <div className="flex gap-1">
         <span className={`text-lg text-[${sectorColors[company.Sector.name]}]`}>
           {company.Sector.name}
         </span>
+        {company.status === CompanyStatus.INSOLVENT && (
+          <Chip color="danger">
+            <span className="text-lg">Insolvent</span>
+          </Chip>
+        )}
+        {company.status === CompanyStatus.ACTIVE && (
+          <Chip color="success">
+            <span className="text-lg">Active</span>
+          </Chip>
+        )}
+      </div>
+      <div className="flex gap-2 items-center">
+        <CompanyInfo company={company} />
+        <div className="max-w-80">
+          <ShareHolders companyId={company.id} />
+        </div>
       </div>
       {company.status === CompanyStatus.INSOLVENT ? (
         <InsolvencyContributionComponent company={company} />
       ) : (
         <>
-          <div className="flex gap-2 items-center">
-            <CompanyInfo company={company} />
-            <div className="max-w-80">
-              <ShareHolders companyId={company.id} />
-            </div>
-          </div>
           <div className="flex flex-col gap-3">
             <div>
               <h3>Company Action Selection Vote</h3>
@@ -241,6 +252,22 @@ const CompanyActionSelectionVote = ({
                 for the action(s) you believe will benefit the company the most.
                 You can select up to {companyAllowedActions} actions.
               </p>
+            </div>
+            <div className="flex justify-center">
+              {submitComplete ? (
+                <div>
+                  <span>Vote(s) Submitted</span>
+                </div>
+              ) : currentPhase?.name ===
+                  PhaseName.OPERATING_ACTION_COMPANY_VOTE &&
+                currentPhase?.companyId === company.id ? (
+                <DebounceButton
+                  onClick={handleSubmit}
+                  disabled={submitComplete}
+                >
+                  Submit All Votes
+                </DebounceButton>
+              ) : null}
             </div>
             <div className="grid grid-cols-3 gap-2">
               {companyActionsDescription.map((action) => (
@@ -318,22 +345,6 @@ const CompanyActionSelectionVote = ({
                 </div>
               ))}
             </div>
-            <div className="flex justify-center">
-              {submitComplete ? (
-                <div>
-                  <span>Vote(s) Submitted</span>
-                </div>
-              ) : currentPhase?.name ===
-                  PhaseName.OPERATING_ACTION_COMPANY_VOTE &&
-                currentPhase?.companyId === company.id ? (
-                <DebounceButton
-                  onClick={handleSubmit}
-                  disabled={submitComplete}
-                >
-                  Submit All Votes
-                </DebounceButton>
-              ) : null}
-            </div>
           </div>
         </>
       )}
@@ -348,7 +359,13 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
     isLoading: isLoadingCompanies,
     error,
   } = trpc.company.listCompaniesWithSector.useQuery({
-    where: { gameId, status: CompanyStatus.ACTIVE },
+    where: {
+      gameId,
+      OR: [
+        { status: CompanyStatus.ACTIVE },
+        { status: CompanyStatus.INSOLVENT },
+      ],
+    },
   });
   const {
     data: companyVoteResults,
@@ -398,29 +415,43 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
   if (error) return <div>Error: {error.message}</div>;
   if (withResult && isLoadingCompanyVoteResults) return <div>Loading...</div>;
   if (withResult && !companyVoteResults) return <div>No results found</div>;
-  const companiesSortedForTurnOrder = companyPriorityOrderOperations(companies);
+  const activeCompanies = companies.filter(
+    (company) => company.status === CompanyStatus.ACTIVE
+  );
+  const insolventCompanies = companies.filter(
+    (company) => company.status === CompanyStatus.INSOLVENT
+  );
+  const companiesSortedForTurnOrder =
+    companyPriorityOrderOperations(activeCompanies);
+  //sort companies by turn order
+  const activeCompaniesSorted = activeCompanies.sort(
+    (a, b) =>
+      companiesSortedForTurnOrder.findIndex((c) => c.id === a.id) -
+      companiesSortedForTurnOrder.findIndex((c) => c.id === b.id)
+  );
+  const collectedCompanies = [...insolventCompanies, ...activeCompaniesSorted];
   //I thought originally I'd get rid of this, but now I'm thinking
   //of preserving this behavior so players can flip through orders to review votes of other companies if they want.
   const handleNext = () => {
     setCurrentCompany((prev) => {
-      if (!prev) return companiesSortedForTurnOrder[0].id;
-      const currentIndex = companies.findIndex(
+      if (!prev) return collectedCompanies[0].id;
+      const currentIndex = collectedCompanies.findIndex(
         (company) => company.id === prev
       );
-      if (currentIndex === companies.length - 1)
-        return companiesSortedForTurnOrder[0].id;
-      return companies[currentIndex + 1].id;
+      if (currentIndex === collectedCompanies.length - 1)
+        return collectedCompanies[0].id;
+      return collectedCompanies[currentIndex + 1].id;
     });
   };
   const handlePrevious = () => {
     setCurrentCompany((prev) => {
-      if (!prev) return companiesSortedForTurnOrder[0].id;
-      const currentIndex = companies.findIndex(
+      if (!prev) return collectedCompanies[0].id;
+      const currentIndex = collectedCompanies.findIndex(
         (company) => company.id === prev
       );
       if (currentIndex === 0)
-        return companiesSortedForTurnOrder[companies.length - 1].id;
-      return companies[currentIndex - 1].id;
+        return collectedCompanies[collectedCompanies.length - 1].id;
+      return collectedCompanies[currentIndex - 1].id;
     });
   };
   const currentCompanyActions = companyActions?.filter(
@@ -436,12 +467,18 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
           <h2>Turn Order</h2>
         </Tooltip>
         <div className="flex gap-2">
-          {companiesSortedForTurnOrder.map((company, index) => (
+          {collectedCompanies.map((company, index) => (
             <Avatar
               key={company.id}
               name={company.name}
               className={
-                currentCompany === company.id ? "ring-2 ring-blue-500" : ""
+                currentCompany === company.id
+                  ? `ring-2 ring-blue-500 ${
+                      company.status == CompanyStatus.INSOLVENT && "bg-rose-500"
+                    }`
+                  : `${
+                      company.status == CompanyStatus.INSOLVENT && "bg-rose-500"
+                    }`
               }
             />
           ))}

@@ -23,7 +23,7 @@ const GameSidebar = () => {
     return <div>Loading...</div>;
   }
   return (
-    <div className="w-1/4 bg-background text-white flex flex-col">
+    <div className="w-full lg:w-1/4 bg-background text-white flex flex-col">
       <div className="text-white p-4">
         <h1 className="text-xl font-bold">{gameState.name}</h1>
       </div>

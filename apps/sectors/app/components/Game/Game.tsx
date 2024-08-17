@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import GameSidebar from "./GameSidebar";
 import GameTopBar from "./GameTopBar";
 import StockRoundOrderGrid from "./StockRoundOrderGrid";
@@ -122,6 +122,7 @@ const Game = ({ gameId }: { gameId: string }) => {
     toggleDrawer,
   } = useDrawer();
   const [currentView, setCurrentView] = useState<string>("action");
+  const [showPhaseList, setShowPhaseList] = useState<boolean>(true);
   const constraintsRef = useRef(null);
   const [isTimerAtZero, setIsTimerAtZero] = useState(false);
   const { isOpen, onOpen, onClose, onOpenChange } = useDisclosure();
@@ -218,7 +219,7 @@ const Game = ({ gameId }: { gameId: string }) => {
         onOpenChange={toggleDrawer}
         direction="right"
       >
-        <div className="relative flex flex-grow overflow-hidden w-full">
+        <div className="relative flex flex-col lg:flex-row flex-grow w-full overflow-y scrollbar lg:overflow-hidden">
           <GameSidebar />
           {/* <motion.div
         className="absolute inset-0 z-10 pointer-events-none"
@@ -232,7 +233,7 @@ const Game = ({ gameId }: { gameId: string }) => {
           <TabView gameId={gameId} />
         </motion.div>
       </motion.div> */}
-          <div className="flex flex-col relative w-3/4">
+          <div className="flex flex-col relative w-full lg:w-3/4">
             {gameState.gameStatus == GameStatus.FINISHED && (
               <Button
                 color="primary"
@@ -250,6 +251,7 @@ const Game = ({ gameId }: { gameId: string }) => {
 
             <GameTopBar
               handleCurrentView={handleCurrentView}
+              handleTogglePhaseList={() => setShowPhaseList((prev) => !prev)}
               isTimerAtZero={isTimerAtZero}
             />
             <div className="relative flex justify-between overflow-y-auto scrollbar">
@@ -260,7 +262,7 @@ const Game = ({ gameId }: { gameId: string }) => {
                     <TimesUp />
                   </div>
                 )}
-              <div className="max-w-[100%] basis-10/12	active-panel flex flex-col h-full p-4 overflow-y-auto scrollbar max-h-full">
+              <div className="max-w-[100%] active-panel flex flex-col h-full p-4 overflow-y-auto scrollbar max-h-full">
                 {currentView === "action" && renderCurrentPhase}
                 {currentView === "chart" && <StockChart />}
                 {currentView === "pending" && <PendingOrders />}
@@ -275,7 +277,19 @@ const Game = ({ gameId }: { gameId: string }) => {
                   />
                 )}
               </div>
-              <PhaseListComponent />
+              <AnimatePresence>
+                {showPhaseList && (
+                  <motion.div
+                    className="overflow-y-auto max-h-full scrollbar w-[100px] lg:w-[200px]"
+                    initial={{ x: 300 }}
+                    animate={{ x: 0 }}
+                    exit={{ x: 300 }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    <PhaseListComponent />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </div>

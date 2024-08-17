@@ -1,4 +1,4 @@
-import { ButtonGroup, Spinner } from "@nextui-org/react";
+import { ButtonGroup, Navbar, Spinner } from "@nextui-org/react";
 import GameGeneralInfo from "./GameGeneralInfo";
 import Timer from "./Timer";
 import { useGame } from "./GameContext";
@@ -18,8 +18,10 @@ const PassiveLoading = () => <Spinner color="secondary" />;
 
 const GameTopBar = ({
   handleCurrentView,
+  handleTogglePhaseList,
   isTimerAtZero,
 }: {
+  handleTogglePhaseList: () => void;
   handleCurrentView: (view: string) => void;
   isTimerAtZero?: boolean;
 }) => {
@@ -148,63 +150,66 @@ const GameTopBar = ({
     const resumeGameMutation = useResumeGameMutation.mutate({ gameId });
   };
   return (
-    <div className="flex justify-between p-2 flex-wrap">
-      <ButtonGroup>
-        <Button
-          className={getButtonClass("action")}
-          onClick={() => handleViewChange("action")}
-        >
-          Action
-        </Button>
-        <Button
-          className={getButtonClass("pending")}
-          onClick={() => handleViewChange("pending")}
-        >
-          Pending Orders
-        </Button>
-        <Button
-          className={getButtonClass("chart")}
-          onClick={() => handleViewChange("chart")}
-        >
-          Stock Chart
-        </Button>
-        <Button
-          className={getButtonClass("markets")}
-          onClick={() => handleViewChange("markets")}
-        >
-          Markets
-        </Button>
-        <Button
-          className={getButtonClass("economy")}
-          onClick={() => handleViewChange("economy")}
-        >
-          Economy
-        </Button>
-      </ButtonGroup>
-      {/* <Button onClick={handleNextPhase}>Next Phase</Button>
+    <Navbar height="100%">
+      <div className="flex justify-between p-2 flex-wrap">
+        <ButtonGroup>
+          <Button
+            className={getButtonClass("action")}
+            onClick={() => handleViewChange("action")}
+          >
+            Action
+          </Button>
+          <Button
+            className={getButtonClass("pending")}
+            onClick={() => handleViewChange("pending")}
+          >
+            Pending Orders
+          </Button>
+          <Button
+            className={getButtonClass("chart")}
+            onClick={() => handleViewChange("chart")}
+          >
+            Stock Chart
+          </Button>
+          <Button
+            className={getButtonClass("markets")}
+            onClick={() => handleViewChange("markets")}
+          >
+            Markets
+          </Button>
+          <Button
+            className={getButtonClass("economy")}
+            onClick={() => handleViewChange("economy")}
+          >
+            Economy
+          </Button>
+        </ButtonGroup>
+        {/* <Button onClick={handleNextPhase}>Next Phase</Button>
       <Button onClick={handleRetryPhase}>Retry Phase</Button> */}
-      <Button onClick={pauseGame}>Pause Game</Button>
-      <Button onClick={resumeGame}>Resume Game</Button>
-      {currentPhase?.name && !isActivePhase(currentPhase.name) && (
-        <div
-          className={`flex flex-col justify-center items-center ${
-            isTimerAtZero ? "opacity-100 z-20" : "opacity-0 z-0"
-          }`}
-        >
-          <PassiveLoading />
-        </div>
-      )}
-      {currentPhase && (
-        <Timer
-          countdownTime={currentPhase.phaseTime / 1000} //convert from seconds to milliseconds
-          startDate={new Date(currentPhase.createdAt)} // attempt to cast to Date
-          size={16}
-          textSize={1}
-          onEnd={() => {}}
-        />
-      )}
-      <GameGeneralInfo />
-    </div>
+        <Button onClick={pauseGame}>Pause Game</Button>
+        <Button onClick={resumeGame}>Resume Game</Button>
+        {currentPhase?.name && !isActivePhase(currentPhase.name) && (
+          <div
+            className={`flex flex-col justify-center items-center ${
+              isTimerAtZero ? "opacity-100 z-20" : "opacity-0 z-0"
+            }`}
+          >
+            <PassiveLoading />
+          </div>
+        )}
+        {currentPhase && (
+          <Timer
+            countdownTime={currentPhase.phaseTime / 1000} //convert from seconds to milliseconds
+            startDate={new Date(currentPhase.createdAt)} // attempt to cast to Date
+            size={16}
+            textSize={1}
+            onEnd={() => {}}
+          />
+        )}
+        <Button onClick={handleTogglePhaseList}>Phases</Button>
+        <GameGeneralInfo />
+      </div>
+    </Navbar>
   );
 };
 

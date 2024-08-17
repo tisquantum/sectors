@@ -255,6 +255,73 @@ const OperatingRoundRules = () => (
   </>
 );
 
+export const insolvencyAndBankruptcy = (
+  <>
+    <p>
+      <strong>Insolvency Contributions:</strong>
+    </p>
+    <ul className="list-disc pl-5">
+      <li>
+        Players can contribute <strong>cash</strong> or <strong>shares</strong>{" "}
+        to help the company avoid bankruptcy.
+        <ul className="list-disc pl-5">
+          <li>All contributions provide the company with liquidity.</li>
+          <li>
+            Shares handed over are sold at market rates, which will{" "}
+            <strong>lower the share price</strong> after all contributions are
+            completed.
+          </li>
+          <li>The proceeds from these sales go directly to the company.</li>
+        </ul>
+      </li>
+    </ul>
+
+    <p>
+      <strong>Reactivating the Company</strong>
+    </p>
+    <ul className="list-disc pl-5">
+      <li>
+        For the company to become <strong>active</strong> again, the total
+        liquidity generated from contributions must meet or exceed the companies
+        &nbsp;<strong>shortfall</strong> cash value for its tier.
+      </li>
+    </ul>
+    <p>
+      <strong>Transparency of Contributions:</strong>
+    </p>
+    <ul className="list-disc pl-5">
+      <li>
+        All contributions made during insolvency are <strong>public</strong> and
+        take effect <strong>immediately</strong> as soon as they are made.
+      </li>
+    </ul>
+    <p>
+      <strong>If the Company Fails to Meet Its Shortfall:</strong>
+    </p>
+    <ul className="list-disc pl-5">
+      <li>
+        Following the opportunity for insolvency actions, the company will{" "}
+        <strong>permanently close</strong> if it cannot meet or exceed it's
+        shortfall cash value.
+        <ul className="list-disc pl-5">
+          <li>
+            Players holding shares will receive <strong>20%</strong> of the
+            market value for their shares.
+          </li>
+          <li>
+            The company will be <strong>delisted</strong> from the stock market.
+          </li>
+          <li>The company will no longer be able to perform actions.</li>
+          <li>
+            The company will be removed from any considerations made in the
+            stock sector.
+          </li>
+        </ul>
+      </li>
+    </ul>
+  </>
+);
+
 const prestigeTokens = (
   <>
     <p>
@@ -290,6 +357,12 @@ const Rules: FC = () => {
         <div className="text-base space-y-4">
           <OperatingRoundRules />
         </div>
+      </div>
+      <div className="mb-8">
+        <h2 className="text-2xl font-semibold mb-2">
+          Insolvency and Bankruptcy
+        </h2>
+        <div className="text-base space-y-4">{insolvencyAndBankruptcy}</div>
       </div>
       <div className="mb-8">
         <h2 className="text-2xl font-semibold mb-2">Prestige Tokens</h2>

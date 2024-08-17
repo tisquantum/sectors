@@ -37,7 +37,7 @@ const TopBar = () => {
     router.push("/login");
   };
   return (
-    <Navbar isBordered>
+    <Navbar isBordered shouldHideOnScroll>
       <NavbarBrand>
         <Link href="#">Sectors</Link>
       </NavbarBrand>

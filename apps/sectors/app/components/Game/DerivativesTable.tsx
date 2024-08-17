@@ -81,9 +81,13 @@ const DerivativesTable = ({ isInteractive }: { isInteractive: boolean }) => {
       case "Orders":
         return (
           <AvatarGroup>
-            {playerOrders?.map((playerOrder) => (
-              <PlayerAvatar player={playerOrder.Player} />
-            ))}
+            {playerOrders
+              ?.filter(
+                (playerOrder) => playerOrder.optionContractId === contract.id
+              )
+              ?.map((playerOrder) => (
+                <PlayerAvatar player={playerOrder.Player} />
+              ))}
           </AvatarGroup>
         );
       case "Company Name":
@@ -134,8 +138,10 @@ const DerivativesTable = ({ isInteractive }: { isInteractive: boolean }) => {
           <>
             {isInteractive &&
               (!isSubmitted ? (
-                <div className="flex flex items-center justify-center content-center
-                 gap-1">
+                <div
+                  className="flex flex items-center justify-center content-center
+                 gap-1"
+                >
                   {gameState.distributionStrategy ==
                     DistributionStrategy.BID_PRIORITY && (
                     <Input

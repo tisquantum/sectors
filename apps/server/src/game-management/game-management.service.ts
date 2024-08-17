@@ -37,6 +37,7 @@ import {
   TransactionType,
   EntityType,
   TransactionSubType,
+  InsolvencyContribution,
 } from '@prisma/client';
 import { GamesService } from '@server/games/games.service';
 import { CompanyService } from '@server/company/company.service';
@@ -2591,13 +2592,11 @@ export class GameManagementService {
     for (const [companyId, votes] of Object.entries(groupedVotes)) {
       // Iterate over votes and calculate the total votes for each option
       const voteCount: { [key: string]: number } = {};
-      votes.forEach((vote) => {
+      //filter out votes that have weight of 0
+      const validVotes = votes.filter((vote) => vote.weight > 0);
+      validVotes.forEach((vote) => {
         if (!voteCount[vote.revenueDistribution]) {
           voteCount[vote.revenueDistribution] = 0;
-        }
-        //ignore vote weights of 0
-        if (vote.weight === 0) {
-          return;
         }
         voteCount[vote.revenueDistribution] += vote.weight;
       });
@@ -2620,9 +2619,9 @@ export class GameManagementService {
       playerPriorities.sort((a, b) => a.priority - b.priority);
 
       // Find the vote option with the highest player priority
-      let maxVote: string | null = null;
+      let maxVote: RevenueDistribution | null = null;
       for (const player of playerPriorities) {
-        const playerVote = votes.find(
+        const playerVote = validVotes.find(
           (vote) =>
             vote.playerId === player.playerId &&
             maxVoteOptions.includes(vote.revenueDistribution),
@@ -2636,7 +2635,7 @@ export class GameManagementService {
       if (maxVote) {
         productionResultsUpdates.push({
           where: {
-            id: votes[0].productionResultId,
+            id: validVotes[0].productionResultId,
             operatingRoundId: phase.operatingRoundId || 0,
           },
           data: {
@@ -2962,7 +2961,7 @@ export class GameManagementService {
       productionResults,
     );
     await this.processStockChanges(stockPenalties, stockRewards);
-    await this.prisma.sector.updateMany({ data: sectorConsumersUpdates });
+    await this.sectorService.updateMany(sectorConsumersUpdates);
     await this.gamesService.updateGame({
       where: { id: phase.gameId },
       data: { consumerPoolNumber: globalConsumers },
@@ -3034,6 +3033,65 @@ export class GameManagementService {
     });
   }
 
+  async resolveInsolvencyContribution(
+    gameId: string,
+    contribution: InsolvencyContribution,
+  ) {
+    //get game
+    const game = await this.gamesService.game({ id: gameId });
+    if (!game) {
+      throw new Error('Game not found');
+    }
+    const company = await this.companyService.company({
+      id: contribution.companyId,
+    });
+    const player = await this.playersService.player({
+      id: contribution.playerId,
+    });
+    if (!player) {
+      throw new Error('Player not found');
+    }
+    if (!company) {
+      throw new Error('Company not found');
+    }
+    if (contribution.cashContribution > 0) {
+      await this.playerRemoveMoney(
+        game.id,
+        game.currentTurn,
+        game.currentPhaseId || '',
+        contribution.playerId,
+        contribution.cashContribution,
+        EntityType.COMPANY,
+        'Insolvency cash contribution',
+        company.entityId || undefined,
+      );
+    }
+    if (contribution.shareContribution > 0) {
+      await this.playerRemoveMoney(
+        game.id,
+        game.currentTurn,
+        game.currentPhaseId || '',
+        contribution.playerId,
+        contribution.shareContribution * company.currentStockPrice,
+        EntityType.BANK,
+        'Insolvency share contribution',
+      );
+      await this.playerRemoveShares({
+        gameId: game.id,
+        gameTurnId: game.currentTurn,
+        phaseId: game.currentPhaseId || '',
+        playerId: contribution.playerId,
+        companyId: contribution.companyId,
+        amount: contribution.shareContribution,
+        toLocation: ShareLocation.OPEN_MARKET,
+        fromLocation: ShareLocation.PLAYER,
+        description: 'Insolvency share contribution',
+        fromEntityType: EntityType.PLAYER,
+        fromEntityId: player.entityId || undefined,
+        toEntityType: EntityType.BANK,
+      });
+    }
+  }
   /**
    * Resolve the company votes, if there is a tie, we take priority in the vote priority order.
    * If the company is insolvent, we instead resolve cash contributions.
@@ -3063,70 +3121,6 @@ export class GameManagementService {
       const shareContributions = insolvencyContributions.filter(
         (contribution) => contribution.shareContribution > 0,
       );
-
-      // Remove cash from players in a single batch operation
-      if (cashContributions.length > 0) {
-        const cashContributionsPromises = cashContributions.map(
-          (contribution) =>
-            this.playerRemoveMoney(
-              phase.gameId,
-              phase.gameTurnId,
-              phase.id,
-              contribution.playerId,
-              contribution.cashContribution,
-              EntityType.COMPANY,
-              'Insolvency cash contribution',
-              company.entityId || undefined,
-            ),
-        );
-        await Promise.all(cashContributionsPromises);
-      }
-
-      // Remove shares from players and handle share contributions
-      if (shareContributions.length > 0) {
-        // Batch fetch all players needed for share contributions
-        const playerIds = shareContributions.map(
-          (contribution) => contribution.playerId,
-        );
-        const players = await this.playersService.players({
-          where: { id: { in: playerIds } },
-        });
-        const playerMap = new Map(players.map((player) => [player.id, player]));
-
-        const shareContributionsPromises = shareContributions.map(
-          async (contribution) => {
-            const player = playerMap.get(contribution.playerId);
-            if (!player) {
-              throw new Error('Player not found');
-            }
-            await this.playerRemoveMoney(
-              phase.gameId,
-              phase.gameTurnId,
-              phase.id,
-              player.id,
-              contribution.shareContribution * company.currentStockPrice,
-              EntityType.BANK,
-              'Insolvency share contribution',
-            );
-            return this.playerRemoveShares({
-              gameId: phase.gameId,
-              gameTurnId: phase.gameTurnId,
-              phaseId: phase.id,
-              playerId: contribution.playerId,
-              companyId: contribution.companyId,
-              amount: contribution.shareContribution,
-              toLocation: ShareLocation.OPEN_MARKET,
-              fromLocation: ShareLocation.PLAYER,
-              description: 'Insolvency share contribution',
-              fromEntityType: EntityType.PLAYER,
-              fromEntityId: player.entityId || undefined,
-              toEntityType: EntityType.BANK,
-            });
-          },
-        );
-
-        await Promise.all(shareContributionsPromises);
-      }
 
       // Calculate total contributions without additional database calls
       const totalCashContributed = cashContributions.reduce(
@@ -3180,19 +3174,18 @@ export class GameManagementService {
             const shareLiquidationValue = Math.floor(
               updatedCompany.currentStockPrice * 0.2,
             );
-            await this.shareService.deleteShare({ id: share.id });
-            if (!share.playerId) {
-              throw new Error('Player not found');
+            this.shareService.deleteShare({ id: share.id });
+            if (share.playerId) {
+              return this.playerAddMoney(
+                phase.gameId,
+                phase.gameTurnId,
+                phase.id,
+                share.playerId,
+                shareLiquidationValue,
+                EntityType.BANK,
+                'Company liquidation',
+              );
             }
-            return this.playerAddMoney(
-              phase.gameId,
-              phase.gameTurnId,
-              phase.id,
-              share.playerId,
-              shareLiquidationValue,
-              EntityType.BANK,
-              'Company liquidation',
-            );
           });
 
           await Promise.all(shareLiquidationPromises);
@@ -4202,6 +4195,16 @@ export class GameManagementService {
     const gameState = await this.gamesService.getGameState(gameId);
     if (!gameState) {
       throw new Error('Game not found');
+    }
+    //get any companies that are insolvent
+    const insolventCompanies = gameState.Company.filter(
+      (company) => company.status === CompanyStatus.INSOLVENT,
+    );
+    //if there are insolvent companies, resolve the first one
+    //as companies that are insolvent ultimately resolve into one of two states, bankrupt or active, we should
+    //be able to safely assume that this check will ultimately pass and continue onto active companies
+    if (insolventCompanies.length > 0) {
+      return insolventCompanies[0].id;
     }
     const allCompaniesVoted =
       await this.haveAllCompaniesActionsResolved(gameId);
@@ -6141,7 +6144,9 @@ export class GameManagementService {
     }
     //get all active companies in the game
     const companies = await this.companyService.companies({
-      where: { gameId, status: CompanyStatus.ACTIVE },
+      where: {
+        gameId,
+      },
     });
     const currentOperatingRound =
       await this.operatingRoundService.operatingRoundWithCompanyActions({

@@ -5,12 +5,15 @@ import {
 } from "@server/prisma/prisma.types";
 import PlayerAvatar from "../Player/PlayerAvatar";
 import { RiMoneyDollarBoxFill, RiTicket2Fill } from "@remixicon/react";
-import { Input, Progress } from "@nextui-org/react";
+import { Button, Input, Progress } from "@nextui-org/react";
 import DebounceButton from "../General/DebounceButton";
 import { useEffect, useState } from "react";
 import { useGame } from "../Game/GameContext";
 import { EVENT_NEW_INVOLVENCY_CONTRIBUTION } from "@server/pusher/pusher.types";
 import { InsolvencyContribution } from "@server/prisma/prisma.client";
+import { CompanyTierData } from "@server/data/constants";
+import ShareComponent from "./Share";
+import { insolvencyAndBankruptcy } from "../Game/Rules";
 
 const InsolvencyGauge = ({
   insolvencyContributions,
@@ -32,14 +35,19 @@ const InsolvencyGauge = ({
   const totalShareValue = totalShares * company.currentStockPrice;
   const totalValue = totalCash + totalShareValue;
   return (
-    <Progress
-      aria-label="Insolvency Contributions"
-      size="md"
-      value={totalValue}
-      color="success"
-      showValueLabel={true}
-      className="max-w-md"
-    />
+    <div className="flex flex-col gap-2">
+      <span>
+        ${totalValue} of $
+        {CompanyTierData[company.companyTier].insolvencyShortFall}
+      </span>
+      <Progress
+        aria-label="Insolvency Contributions"
+        size="md"
+        value={totalValue}
+        color="success"
+        className="max-w-md"
+      />
+    </div>
   );
 };
 
@@ -48,8 +56,21 @@ const InsolvencyContributionComponent = ({
 }: {
   company: CompanyWithSector;
 }) => {
-  const { gameId, authPlayer, currentTurn, socketChannel: channel } = useGame();
+  const {
+    gameId,
+    authPlayer,
+    currentTurn,
+    socketChannel: channel,
+    refetchAuthPlayer,
+  } = useGame();
   const utils = trpc.useUtils();
+  const {
+    data: playerWithShares,
+    isLoading: isLoadingPlayerWithShares,
+    refetch: refetchPlayerWithShares,
+  } = trpc.player.playerWithShares.useQuery({
+    where: { id: authPlayer.id },
+  });
   const {
     data: insolvencyContributions,
     isLoading,
@@ -61,10 +82,6 @@ const InsolvencyContributionComponent = ({
     trpc.insolvencyContributions.createInsolvencyContribution.useMutation();
   const [shareContribution, setShareContribution] = useState(0);
   const [cashContribution, setCashContribution] = useState(0);
-  const [isShareContributionSubmitted, setIsShareContributionSubmitted] =
-    useState(false);
-  const [isCashContributionSubmitted, setIsCashContributionSubmitted] =
-    useState(false);
   useEffect(() => {
     if (!channel) return;
     channel.bind(
@@ -77,6 +94,8 @@ const InsolvencyContributionComponent = ({
             data,
           ]
         );
+        refetchAuthPlayer();
+        refetchPlayerWithShares();
       }
     );
 
@@ -92,35 +111,16 @@ const InsolvencyContributionComponent = ({
     return <div>Error loading insolvency contributions</div>;
   }
 
+  if (isLoadingPlayerWithShares) {
+    return <div>Loading...</div>;
+  }
+  if (!playerWithShares) {
+    return <div>Player not found</div>;
+  }
+  console.log("insolvency contributions", insolvencyContributions);
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col justify-center items-center">
       <h2>Insolvency Contributions</h2>
-      <div>
-        <p>
-          Players can make cash or share contributions to help the company avoid
-          bankruptcy. All contributions are handed over to the company for
-          liquidity. All shares handed over are traded in at market rates which
-          will drop the share price by the equivalent of shares sold after the
-          contributions are concluded. All profits generated from these sales
-          are given to the company.
-        </p>
-        <p>
-          In order for the company to become active again, the sum of all this
-          liquidity must be greater or equal to the company tiers shortfall.
-        </p>
-        <p>
-          Should the company fail to meet it's shortfall, the company will be
-          liquidated the next turn if it cannot pay its debts. All players with
-          shares in the company will receive 20% of the market value from these
-          shares should the company go bankrupt. The company will no longer be
-          traded on the stock market and be removed from any considerations made
-          in the stock sector.
-        </p>
-        <p>
-          During insolvency contributions, contributions are public the moment
-          they are made.
-        </p>
-      </div>
       <InsolvencyGauge
         insolvencyContributions={insolvencyContributions}
         company={company}
@@ -130,97 +130,110 @@ const InsolvencyContributionComponent = ({
           <div>No insolvency contributions</div>
         ) : (
           insolvencyContributions.map((insolvencyContribution) => (
-            <div
-              key={insolvencyContribution.id}
-              className="p-2 bg-gray-100 rounded"
-            >
-              <div>
-                <PlayerAvatar player={insolvencyContribution.Player} />
-              </div>
-              <div className="flex gap-1">
-                <RiMoneyDollarBoxFill /> $
-                {insolvencyContribution.cashContribution}
-              </div>
-              <div className="flex gap-1">
-                <RiTicket2Fill /> {insolvencyContribution.shareContribution}{" "}
-                shares
-              </div>
-            </div>
+            <>
+              {insolvencyContribution.Player ? (
+                <div key={insolvencyContribution.id} className="p-2 rounded">
+                  <div>
+                    <PlayerAvatar player={insolvencyContribution.Player} />
+                  </div>
+                  {insolvencyContribution.cashContribution > 0 && (
+                    <div className="flex gap-1">
+                      <RiMoneyDollarBoxFill /> $
+                      {insolvencyContribution.cashContribution}
+                    </div>
+                  )}
+                  {insolvencyContribution.shareContribution > 0 && (
+                    <div className="flex gap-1">
+                      <RiTicket2Fill />{" "}
+                      {insolvencyContribution.shareContribution} shares
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div>Player not found</div>
+              )}
+            </>
           ))
         )}
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex justify-center items-center flex-col gap-2">
         <h2>Make a Contribution</h2>
-        <div className="flex gap-1">
-          {isShareContributionSubmitted ? (
-            <div>Cash Contribution Submitted</div>
-          ) : (
-            <>
-              <Input
-                label="Cash Contribution"
-                type="number"
-                onChange={(e) => {
-                  setCashContribution(parseInt(e.target.value));
-                }}
-                value={cashContribution.toString()}
-                min={0}
-                max={authPlayer.cashOnHand}
-              />
-              <DebounceButton
-                onClick={() => {
-                  useInsolvencyContributionMutation.mutate({
-                    gameId,
-                    playerId: authPlayer.id,
-                    companyId: company.id,
-                    gameTurnId: currentTurn.id,
-                    cashContribution,
-                    shareContribution,
-                  });
-                  setIsCashContributionSubmitted(true);
-                }}
+        <div className="flex justify-center gap-1">
+          <div className="flex flex-col gap-2">
+            <div className="grid grid-cols-2 gap-2 flex-wrap">
+              {/* Denomination Buttons */}
+              {[25, 50, 75, 100, 150, 200, 300, 500].map((amount) =>
+                amount > authPlayer.cashOnHand ? null : (
+                  <Button
+                    key={amount}
+                    className={`px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 ${
+                      cashContribution === amount ? "bg-green-700" : ""
+                    }`}
+                    onClick={() => setCashContribution(amount)}
+                    disabled={amount > authPlayer.cashOnHand} // Disable button if the denomination exceeds the player's cash on hand
+                  >
+                    ${amount}
+                  </Button>
+                )
+              )}
+
+              {/* All in Button */}
+              <Button
+                className={`px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 ${
+                  cashContribution === authPlayer.cashOnHand ? "bg-red-700" : ""
+                }`}
+                onClick={() => setCashContribution(authPlayer.cashOnHand)}
               >
-                Submit Cash Contribution
-              </DebounceButton>
-            </>
-          )}
+                All In ($
+                {Math.max(
+                  authPlayer.cashOnHand,
+                  CompanyTierData[company.companyTier].insolvencyShortFall
+                )}
+                )
+              </Button>
+            </div>
+          </div>
+          <div className="flex flex-col gap-1">
+            <ShareComponent
+              name={company.stockSymbol}
+              quantity={playerWithShares.Share.length}
+            />
+            <Input
+              label="Share Contribution"
+              type="number"
+              onChange={(e) => {
+                setShareContribution(parseInt(e.target.value));
+              }}
+              value={shareContribution.toString()}
+              min={0}
+              max={
+                company.Share.filter((s) => s.playerId === authPlayer.id).length
+              }
+            />
+          </div>
         </div>
-        <div className="flex gap-1">
-          {isCashContributionSubmitted ? (
-            <div>Share Contribution Submitted</div>
-          ) : (
-            <>
-              <Input
-                label="Share Contribution"
-                type="number"
-                onChange={(e) => {
-                  setShareContribution(parseInt(e.target.value));
-                }}
-                value={shareContribution.toString()}
-                min={0}
-                max={
-                  company.Share.filter((s) => s.playerId === authPlayer.id)
-                    .length
-                }
-              />
-              <DebounceButton
-                onClick={() => {
-                  useInsolvencyContributionMutation.mutate({
-                    gameId: gameId,
-                    playerId: authPlayer.id,
-                    companyId: company.id,
-                    gameTurnId: currentTurn.id,
-                    cashContribution,
-                    shareContribution,
-                  });
-                  setIsShareContributionSubmitted(true);
-                }}
-              >
-                Submit Share Contribution
-              </DebounceButton>
-            </>
-          )}
-        </div>
+        {/* Submit Button */}
+        <DebounceButton
+          onClick={() => {
+            useInsolvencyContributionMutation.mutate({
+              gameId,
+              playerId: authPlayer.id,
+              companyId: company.id,
+              gameTurnId: currentTurn.id,
+              cashContribution,
+              shareContribution,
+            });
+            setCashContribution(0);
+            setShareContribution(0);
+          }}
+          disabled={
+            cashContribution <= 0 || cashContribution > authPlayer.cashOnHand
+          } // Ensure valid contribution
+        >
+          Submit Contributions
+        </DebounceButton>
       </div>
+      <div className="text-base space-y-4">{insolvencyAndBankruptcy}</div>
     </div>
   );
 };

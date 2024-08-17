@@ -43,31 +43,6 @@ export class InsolvencyContributionService {
   async createInsolvencyContribution(
     data: Prisma.InsolvencyContributionCreateInput,
   ): Promise<InsolvencyContributionWithRelations> {
-    // Ensure no duplicate contributions exist for the same player, company, and game turn
-    const existingContribution =
-      await this.prisma.insolvencyContribution.findFirst({
-        where: {
-          playerId: data.Player.connect?.id,
-          companyId: data.Company.connect?.id,
-          gameTurnId: data.GameTurn.connect?.id,
-        },
-        include: {
-          Player: true,
-          Company: true,
-          GameTurn: true,
-        },
-      });
-
-    if (existingContribution?.cashContribution && data.cashContribution > 0) {
-      throw new Error(
-        'Cash contribution already exists for this player, company, and game turn',
-      );
-    }
-    if (existingContribution?.shareContribution && data.shareContribution > 0) {
-      throw new Error(
-        'Share contribution already exists for this player, company, and game turn',
-      );
-    }
     //get player with shares
     const playerWithShares = await this.prisma.player.findUnique({
       where: {
@@ -81,13 +56,13 @@ export class InsolvencyContributionService {
     if (!playerWithShares) {
       throw new Error('Player not found');
     }
-    if(data.shareContribution) {
+    if (data.shareContribution) {
       //if player doesn't have enough shares, throw error
       if (playerWithShares.Share.length < data.shareContribution) {
         throw new Error('Player does not have enough shares');
       }
     }
-    if(data.cashContribution) {
+    if (data.cashContribution) {
       //if player doesn't have enough cash, throw error
       if (playerWithShares.cashOnHand < data.cashContribution) {
         throw new Error('Player does not have enough cash');

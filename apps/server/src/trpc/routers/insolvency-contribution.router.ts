@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { TrpcService } from '../trpc.service';
 import { InsolvencyContributionService } from '@server/insolvency-contribution/insolvency-contribution.service';
-import { Prisma } from '@prisma/client';
+import { InsolvencyContribution, Prisma } from '@prisma/client';
 import { checkIsPlayerAction, checkSubmissionTime } from '../trpc.middleware';
 import { PlayersService } from '@server/players/players.service';
 import { PhaseService } from '@server/phase/phase.service';
@@ -11,12 +11,15 @@ import {
   EVENT_NEW_INVOLVENCY_CONTRIBUTION,
   getGameChannelId,
 } from '@server/pusher/pusher.types';
+import { GamesService } from '@server/games/games.service';
+import { GameManagementService } from '@server/game-management/game-management.service';
 
 type Context = {
   insolvencyContributionService: InsolvencyContributionService;
   playerService: PlayersService;
   phaseService: PhaseService;
   pusherService: PusherService;
+  gameManagementService: GameManagementService;
 };
 
 export default (trpc: TrpcService, ctx: Context) =>
@@ -68,7 +71,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         }),
       )
       .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
-      .use(async (opts) => checkSubmissionTime(opts, ctx.phaseService))
+      // .use(async (opts) => checkSubmissionTime(opts, ctx.phaseService))
       .mutation(async ({ input, ctx: ctxMiddleware }) => {
         if (!ctxMiddleware.gameId) {
           //throw
@@ -77,7 +80,7 @@ export default (trpc: TrpcService, ctx: Context) =>
             message: 'Game ID was not found for this player.',
           });
         }
-        const { playerId, companyId, gameTurnId, ...rest } = input;
+        const { playerId, companyId, gameTurnId, gameId, ...rest } = input;
         const data: Prisma.InsolvencyContributionCreateInput = {
           ...rest,
           Game: { connect: { id: ctxMiddleware.gameId } },
@@ -86,17 +89,39 @@ export default (trpc: TrpcService, ctx: Context) =>
           Player: { connect: { id: playerId } },
         };
 
-        const insolvencyContribution =
-          await ctx.insolvencyContributionService.createInsolvencyContribution(
-            data,
+        let insolvencyContribution: InsolvencyContribution;
+        try {
+          insolvencyContribution =
+            await ctx.insolvencyContributionService.createInsolvencyContribution(
+              data,
+            );
+        } catch (error) {
+          console.error('Error creating insolvency contribution', error);
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Error creating insolvency contribution',
+          });
+        }
+        if (!insolvencyContribution) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Error creating insolvency contribution',
+          });
+        }
+        try {
+          //resolve insolvency contribution
+          await ctx.gameManagementService.resolveInsolvencyContribution(
+            ctxMiddleware.gameId,
+            insolvencyContribution,
           );
+        } catch (error) {
+          console.error('Error resolving insolvency contribution', error);
+        }
         //pusher service
         ctx.pusherService.trigger(
           getGameChannelId(ctxMiddleware.gameId),
           EVENT_NEW_INVOLVENCY_CONTRIBUTION,
-          {
-            insolvencyContribution,
-          },
+          insolvencyContribution,
         );
         return insolvencyContribution;
       }),

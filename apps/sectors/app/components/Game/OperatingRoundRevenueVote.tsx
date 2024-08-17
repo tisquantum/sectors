@@ -84,62 +84,60 @@ const OperatingRoundRevenueVote = () => {
       <h1 className="text-2xl font-bold mb-4">
         Operating Round Production Vote
       </h1>
-      <div className="flex gap-8">
-        <div className="grid grid-cols-2 gap-6 w-3/4">
-          {operatingRound.productionResults.map((productionResult) => {
-            const operatingCosts =
-              CompanyTierData[productionResult.Company.companyTier]
-                .operatingCosts;
-            const revenue = productionResult.revenue;
-            const shareCount = productionResult.Company.Share.length;
+      <div className="flex flex-wrap gap-1">
+        {operatingRound.productionResults.map((productionResult) => {
+          const operatingCosts =
+            CompanyTierData[productionResult.Company.companyTier]
+              .operatingCosts;
+          const revenue = productionResult.revenue;
+          const shareCount = productionResult.Company.Share.length;
 
-            const dividendFull =
-              shareCount > 0 ? Math.floor(revenue / shareCount) : 0;
-            const dividendHalf =
-              shareCount > 0 ? Math.floor(revenue / 2 / shareCount) : 0;
-            const retainedRevenueHalf = Math.floor(revenue / 2);
+          const dividendFull =
+            shareCount > 0 ? Math.floor(revenue / shareCount) : 0;
+          const dividendHalf =
+            shareCount > 0 ? Math.floor(revenue / 2 / shareCount) : 0;
+          const retainedRevenueHalf = Math.floor(revenue / 2);
 
-            return (
-              <div
-                className="flex flex-col bg-slate-800 p-4 rounded-lg shadow-md"
-                key={productionResult.id}
-              >
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-2">
-                    <CompanyInfo company={productionResult.Company} />
-                    <ShareHolders companyId={productionResult.Company.id} />
-                  </div>
-                  <div className="flex flex-col gap-2 rounded-md bg-gray-950 m-2 p-2">
-                    <span className="text-lg">Production Results</span>
-                    <span>Revenue: ${revenue}</span>
-                    <span className="text-md my-2">
-                      Operating Costs: ${operatingCosts}
-                    </span>
-                    <div className="flex flex-col gap-1">
-                      <span className="text-lg font-semibold">Dividends</span>
-                      <span>Full Per Share: ${dividendFull}</span>
-                      <span>Half Per Share: ${dividendHalf}</span>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <span className="text-lg font-semibold">
-                        Retained Revenue
-                      </span>
-                      <span>To Company (Half): ${retainedRevenueHalf}</span>
-                      <span>To Company (Retains): ${revenue}</span>
-                    </div>
-                  </div>
-                  {productionResult.Company && (
-                    <DistributeSelection
-                      company={productionResult.Company}
-                      productionResult={productionResult}
-                      operatingRoundId={productionResult.operatingRoundId}
-                    />
-                  )}
+          return (
+            <div
+              className="flex flex-col bg-slate-800 p-4 rounded-lg shadow-md"
+              key={productionResult.id}
+            >
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2">
+                  <CompanyInfo company={productionResult.Company} />
+                  <ShareHolders companyId={productionResult.Company.id} />
                 </div>
+                <div className="flex flex-col gap-2 rounded-md bg-gray-950 m-2 p-2">
+                  <span className="text-lg">Production Results</span>
+                  <span>Revenue: ${revenue}</span>
+                  <span className="text-md my-2">
+                    Operating Costs: ${operatingCosts}
+                  </span>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-lg font-semibold">Dividends</span>
+                    <span>Full Per Share: ${dividendFull}</span>
+                    <span>Half Per Share: ${dividendHalf}</span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-lg font-semibold">
+                      Retained Revenue
+                    </span>
+                    <span>To Company (Half): ${retainedRevenueHalf}</span>
+                    <span>To Company (Retains): ${revenue}</span>
+                  </div>
+                </div>
+                {productionResult.Company && (
+                  <DistributeSelection
+                    company={productionResult.Company}
+                    productionResult={productionResult}
+                    operatingRoundId={productionResult.operatingRoundId}
+                  />
+                )}
               </div>
-            );
-          })}
-        </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

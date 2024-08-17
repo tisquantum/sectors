@@ -234,6 +234,7 @@ export class TrpcRouter {
       phaseService: this.phaseService,
       playerService: this.playersService,
       pusherService: this.pusherService,
+      gameManagementService: this.gameManagementService,
     }),
   });
 
