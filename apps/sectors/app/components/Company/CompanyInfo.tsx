@@ -136,7 +136,11 @@ const CompanyMoreInfo = ({
           <div className="flex items-center">
             <RiBox2Fill size={18} className="ml-2" />
             <span className="ml-1">
-              {calculateCompanySupply(company.supplyMax, company.supplyBase)}
+              {calculateCompanySupply(
+                company.supplyMax,
+                company.supplyBase,
+                company.supplyCurrent
+              )}
             </span>
           </div>
         </Tooltip>
@@ -162,7 +166,11 @@ const CompanyMoreInfo = ({
                 {company.demandScore +
                   company.Sector.demand +
                   (company.Sector.demandBonus || 0) -
-                  calculateCompanySupply(company.supplyMax, company.supplyBase)}
+                  calculateCompanySupply(
+                    company.supplyMax,
+                    company.supplyBase,
+                    company.supplyCurrent
+                  )}
               </span>
             </div>
           </div>

@@ -667,8 +667,9 @@ function descriptionForEffect(effect: ResearchCardEffect): string {
 export function calculateCompanySupply(
   supplyBase: number,
   supplyScore: number,
+  supplyTemporary: number,
 ) {
-  return supplyBase + supplyScore;
+  return supplyBase + supplyScore + supplyTemporary;
 }
 
 export function isActivePhase(name: PhaseName) {

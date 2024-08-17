@@ -180,7 +180,8 @@ const CompaniesAccordion = ({
                     <strong>Supply:</strong>{" "}
                     {calculateCompanySupply(
                       company.supplyMax,
-                      company.supplyBase
+                      company.supplyBase,
+                      company.supplyCurrent
                     ) || 0}
                   </p>
                   <p>
@@ -208,7 +209,8 @@ const CompaniesAccordion = ({
                       0 -
                         calculateCompanySupply(
                           company.supplyMax,
-                          company.supplyBase
+                          company.supplyBase,
+                          company.supplyCurrent
                         ) ||
                       0}
                   </p>

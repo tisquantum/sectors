@@ -36,18 +36,21 @@ const DerivativesTable = ({ isInteractive }: { isInteractive: boolean }) => {
     trpc.playerOrder.createPlayerOrder.useMutation();
   const useExerciseContract =
     trpc.optionContract.exerciseOptionContract.useMutation();
-  const { data: optionsContracts, isLoading } =
-    trpc.optionContract.listOptionContracts.useQuery({
-      where: {
-        gameId,
-        contractState: {
-          not: ContractState.DISCARDED,
-        },
+  const {
+    data: optionsContracts,
+    isLoading,
+    refetch: refetchOptionsContracts,
+  } = trpc.optionContract.listOptionContracts.useQuery({
+    where: {
+      gameId,
+      contractState: {
+        not: ContractState.DISCARDED,
       },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
   const {
     data: playerOrders,
     isLoading: playerOrdersLoading,
@@ -63,6 +66,7 @@ const DerivativesTable = ({ isInteractive }: { isInteractive: boolean }) => {
 
   useEffect(() => {
     refetch();
+    refetchOptionsContracts();
   }, [currentPhase?.name]);
   const [bidAmounts, setBidAmounts] = useState<{ [key: string]: string }>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -202,15 +206,20 @@ const DerivativesTable = ({ isInteractive }: { isInteractive: boolean }) => {
                   <DebounceButton
                     className="bg-blue-500 text-white px-4 py-2 rounded-lg"
                     onClick={() => {
-                      useCreatePlayerOrderMutation.mutate({
-                        companyId: contract.companyId,
-                        orderType: OrderType.OPTION,
-                        quantity: contract.shareCount,
-                        value: parseInt(bidAmounts[contract.id]),
-                        playerId: authPlayer.id,
-                        location: ShareLocation.DERIVATIVE_MARKET,
-                        contractId: contract.id,
-                      });
+                      console.log('parseInt(bidAmounts[contract.id])', parseInt(bidAmounts[contract.id]));
+                      try {
+                        useCreatePlayerOrderMutation.mutate({
+                          companyId: contract.companyId,
+                          orderType: OrderType.OPTION,
+                          quantity: contract.shareCount,
+                          value: parseInt(bidAmounts[contract.id]),
+                          playerId: authPlayer.id,
+                          location: ShareLocation.DERIVATIVE_MARKET,
+                          contractId: contract.id,
+                        });
+                      } catch (e) {
+                        console.error("player order mutation error", e);
+                      }
                       setIsSubmitted(true);
                     }}
                   >

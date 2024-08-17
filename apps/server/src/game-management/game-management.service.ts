@@ -1583,10 +1583,15 @@ export class GameManagementService {
               return;
             }
             const dividendTotal = Math.floor(dividend * shares.length);
-            await this.playersService.updatePlayer({
-              where: { id: player.id },
-              data: { cashOnHand: player.cashOnHand + dividendTotal },
-            });
+            await this.playerAddMoney(
+              phase.gameId,
+              phase.gameTurnId,
+              phase.id,
+              player.id,
+              dividendTotal,
+              EntityType.BANK,
+              'Dividends.',
+            );
             this.gameLogService.createGameLog({
               game: { connect: { id: phase.gameId } },
               content: `Player ${player.nickname} has received dividends of $${dividendTotal}.`,
@@ -2745,12 +2750,14 @@ export class GameManagementService {
     };
     supplyBase: number;
     supplyMax: number;
+    supplyCurrent: number;
   }): number {
     const totalSectorDemand =
       company.Sector.demand + (company.Sector.demandBonus || 0);
     const companySupply = calculateCompanySupply(
       company.supplyBase,
       company.supplyMax,
+      company.supplyCurrent,
     );
     const throughput =
       calculateDemand(company.demandScore, company.baseDemand) +
@@ -2935,6 +2942,7 @@ export class GameManagementService {
         let unitsManufactured = calculateCompanySupply(
           company.supplyBase,
           company.supplyMax,
+          company.supplyCurrent,
         );
         const maxCustomersAttracted =
           calculateDemand(company.demandScore, company.baseDemand) +
@@ -6021,19 +6029,6 @@ export class GameManagementService {
     if (!player) {
       throw new Error('Player not found');
     }
-    //create transaction
-    this.transactionService.createTransactionEntityToEntity({
-      gameId,
-      gameTurnId,
-      phaseId,
-      amount,
-      fromEntityType: fromEntity,
-      transactionType: TransactionType.CASH,
-      toEntityId: player.entityId || undefined,
-      toEntityType: EntityType.PLAYER,
-      toPlayerId: playerId,
-      description,
-    });
     //update bank pool for game
     await this.prisma.game.update({
       where: { id: gameId },
@@ -6051,7 +6046,23 @@ export class GameManagementService {
         },
       },
     });
-
+    try {
+      //create transaction
+      this.transactionService.createTransactionEntityToEntity({
+        gameId,
+        gameTurnId,
+        phaseId,
+        amount,
+        fromEntityType: fromEntity,
+        transactionType: TransactionType.CASH,
+        toEntityId: player.entityId || undefined,
+        toEntityType: EntityType.PLAYER,
+        toPlayerId: playerId,
+        description,
+      });
+    } catch (e) {
+      console.error('transaction service failed', e);
+    }
     return updatedPlayer;
   }
 
