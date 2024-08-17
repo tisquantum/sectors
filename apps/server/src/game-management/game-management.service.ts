@@ -158,6 +158,7 @@ import { PlayerResultService } from '@server/player-result/player-result.service
 import { UsersService } from '@server/users/users.service';
 import { TransactionService } from '@server/transaction/transaction.service';
 import { InsolvencyContributionService } from '@server/insolvency-contribution/insolvency-contribution.service';
+import { time } from 'console';
 
 type GroupedByPhase = {
   [key: string]: {
@@ -2746,80 +2747,86 @@ export class GameManagementService {
     if (!companies) {
       throw new Error('Companies not found');
     }
+
     const previousTurn = await this.getPreviousTurn(game);
+
+    const companyCashOnHandUpdates = [];
+    const gameLogs = [];
+    const transactionDataCollection = [];
     // Reduce company cash on hand by operating fees
-    const companyCashOnHandUpdates = companies.map((company) => {
-      //check if company owns the AUTOMATION card
+    for (const company of companies) {
       const hasAutomationCard = company.Cards.some(
         (card) => card.effect === ResearchCardEffect.AUTOMATION,
       );
       let operatingCosts = CompanyTierData[company.companyTier].operatingCosts;
-      //check if on the previous turn the company used veto action
+
       if (previousTurn) {
-        previousTurn.companyActions.find((action) => {
-          return (
+        const vetoed = previousTurn.companyActions.some(
+          (action) =>
             action.companyId === company.id &&
-            action.action === OperatingRoundAction.VETO
-          );
-        });
-        if (previousTurn.companyActions) {
+            action.action === OperatingRoundAction.VETO,
+        );
+        if (vetoed) {
           operatingCosts = Math.floor(operatingCosts / 2);
         }
       }
+
       if (hasAutomationCard) {
         operatingCosts =
           operatingCosts - AUTOMATION_EFFECT_OPERATIONS_REDUCTION;
       }
       operatingCosts = Math.max(operatingCosts, 0);
-      // If company cannot afford to pay operating costs, it goes insolvent
+
       if (company.cashOnHand < operatingCosts) {
-        this.gameLogService.createGameLog({
-          game: { connect: { id: phase.gameId } },
-          content: `Company ${company.name} has gone insolvent.`,
-        });
-        return {
+        companyCashOnHandUpdates.push({
           id: company.id,
           cashOnHand: 0,
           status: CompanyStatus.INSOLVENT,
-        };
+        });
+        gameLogs.push({
+          gameId: phase.gameId,
+          content: `Company ${company.name} has gone insolvent.`,
+        });
+      } else {
+        companyCashOnHandUpdates.push({
+          id: company.id,
+          cashOnHand: company.cashOnHand - operatingCosts,
+          status: CompanyStatus.ACTIVE,
+        });
+        gameLogs.push({
+          gameId: phase.gameId,
+          content: `Company ${company.name} has paid operating costs of $${
+            CompanyTierData[company.companyTier].operatingCosts
+          }.`,
+        });
+        const transactionData =
+          await this.transactionService.collectTransactionData({
+            fromEntityType: EntityType.COMPANY,
+            fromCompanyId: company.id,
+            toEntityType: EntityType.BANK,
+            transactionSubType: TransactionSubType.OPERATING_COST,
+            amount: operatingCosts,
+            phaseId: phase.id,
+            gameId: phase.gameId,
+            gameTurnId: game.currentTurn,
+            transactionType: TransactionType.CASH,
+            description: `Operating costs.`,
+          });
+        transactionDataCollection.push(transactionData);
       }
-      this.gameLogService.createGameLog({
-        game: { connect: { id: phase.gameId } },
-        content: `Company ${company.name} has paid operating costs of $${
-          CompanyTierData[company.companyTier].operatingCosts
-        }.`,
-      });
-      //create transaction
-      this.transactionService.createTransactionEntityToEntity({
-        fromEntityType: EntityType.COMPANY,
-        fromEntityId: company.entityId || undefined,
-        fromCompanyId: company.id,
-        toEntityType: EntityType.BANK,
-        amount: operatingCosts,
-        phaseId: phase.id,
-        gameId: phase.gameId,
-        gameTurnId: game.currentTurn,
-        transactionType: TransactionType.CASH,
-        description: `Operating costs.`,
-      });
-      return {
-        id: company.id,
-        cashOnHand: company.cashOnHand - operatingCosts,
-        status: CompanyStatus.ACTIVE,
-      };
-    });
+    }
 
-    // Update companies
-    await Promise.all(
-      companyCashOnHandUpdates.map((update) =>
-        this.companyService.updateCompany({
-          where: { id: update.id },
-          data: { cashOnHand: update.cashOnHand, status: update.status },
-        }),
-      ),
+    await this.transactionService.createManyTransactionsFromCollectedData(
+      transactionDataCollection,
     );
 
-    // Filter out bankrupt companies
+    // Batch update companies' cashOnHand and statuses
+    await this.companyService.updateManyCompanies(companyCashOnHandUpdates);
+
+    // Log all game events in bulk
+    await this.gameLogService.createManyGameLogs(gameLogs);
+
+    // Filter out insolvent companies
     companies = companies.filter(
       (company) => company.status === CompanyStatus.ACTIVE,
     );
@@ -2836,35 +2843,17 @@ export class GameManagementService {
     }, {});
 
     const sectorRewards: { [sectorId: string]: number } = {};
-    const companyUpdates: {
-      id: string;
-      prestigeTokens?: number;
-      demandScore?: number;
-      baseDemand?: number;
-    }[] = [];
-    const productionResults: Prisma.ProductionResultCreateManyInput[] = [];
-    const stockPenalties: {
-      gameId: string;
-      companyId: string;
-      phaseId: string;
-      currentStockPrice: number;
-      steps: number;
-    }[] = [];
-    const stockRewards: {
-      gameId: string;
-      companyId: string;
-      phaseId: string;
-      currentStockPrice: number;
-      steps: number;
-    }[] = [];
-    const sectorConsumersUpdates: { id: string; consumers: number }[] = [];
+    const companyUpdates = [];
+    const productionResults = [];
+    const stockPenalties = [];
+    const stockRewards = [];
+    const sectorConsumersUpdates = [];
 
     let globalConsumers = game.consumerPoolNumber;
-    // Iterate through each sector and the companies inside them
+
     for (const [sectorId, sectorCompanies] of Object.entries(
       groupedCompanies,
     )) {
-      // Get sector
       const sector = await this.sectorService.sector({ id: sectorId });
       if (!sector) {
         console.error('Sector not found');
@@ -2874,76 +2863,60 @@ export class GameManagementService {
       let consumers = sector.consumers;
       const sectorCompaniesSorted =
         companyPriorityOrderOperations(sectorCompanies);
-      //map sectorCompanies to match sectorCompaniesSorted
-      const sectorCompaniesSortedFull = sectorCompanies.sort((a, b) => {
-        return (
-          sectorCompaniesSorted.findIndex((company) => company.id === a.id) -
-          sectorCompaniesSorted.findIndex((company) => company.id === b.id)
-        );
+      //match the sectorCompanies to the same order as sectorCompaniesSorted
+      // Create a map for easy lookup of the sorted order
+      const sectorCompanyOrderMap = new Map(
+        sectorCompaniesSorted.map((company, index) => [company.id, index]),
+      );
+
+      // Sort sectorCompanies based on the order in sectorCompanyOrderMap
+      const reorderedSectorCompanies = sectorCompanies.sort((a, b) => {
+        const indexA = sectorCompanyOrderMap.get(a.id) || 0;
+        const indexB = sectorCompanyOrderMap.get(b.id) || 0;
+        return indexA - indexB;
       });
-      // Iterate over companies in sector
-      for (const company of sectorCompaniesSortedFull) {
-        // Calculate the revenue for the company units sold
+
+      for (const company of reorderedSectorCompanies) {
         let unitsManufactured = calculateCompanySupply(
           company.supplyBase,
           company.supplyMax,
         );
         const maxCustomersAttracted =
           calculateDemand(company.demandScore, company.baseDemand) +
-          company.Sector.demand +
-          (company.Sector.demandBonus || 0);
-        let unitsSold = Math.min(
-          calculateCompanySupply(company.supplyBase, company.supplyMax),
-          maxCustomersAttracted,
-        );
-        // Is there enough consumers to buy all the supply?
-        // Consumers are 1:1 with units sold, TODO: We may want to allow
-        // this ratio to be different at some point, perhaps even by sector
+          sector.demand +
+          (sector.demandBonus || 0);
+
+        let unitsSold = Math.min(unitsManufactured, maxCustomersAttracted);
         if (unitsSold > consumers) {
           unitsSold = consumers;
         }
+
         const revenue = company.unitPrice * unitsSold;
-        // Update consumers
         consumers -= unitsSold;
         globalConsumers += unitsSold;
-        // Update sector consumers
+
         sectorConsumersUpdates.push({
           id: sectorId,
           consumers,
         });
 
-        // Calculate throughput
-        // const throughput = this.calculateThroughputByTheoreticalDemand({
-        //   demandScore: company.demandScore,
-        //   Sector: {
-        //     demand: sector.demand,
-        //     demandBonus: sector.demandBonus || 0,
-        //   },
-        //   supplyBase: company.supplyBase,
-        //   supplyMax: company.supplyMax,
-        // });
         const throughput = this.calculateThroughputByUnitsSold(
           unitsManufactured,
           maxCustomersAttracted,
         );
-        console.log('Throughput:', throughput, company.name, company);
-        // Consult throughput score to see reward or penalty.
         const throughputOutcome = throughputRewardOrPenalty(throughput);
-        // Subtract one from demand score of company
+
         const companyUpdate = {
           id: company.id,
           demandScore: Math.max(company.demandScore - 1, 0),
           prestigeTokens: company.prestigeTokens || 0,
         };
-        //if the company has sold all of it's inventory, give it a prestige token
+
         if (unitsSold >= unitsManufactured) {
-          // Award prestige token
           companyUpdate.prestigeTokens = (company.prestigeTokens || 0) + 1;
         }
-        // Award or penalize the company
+
         if (throughputOutcome.type === ThroughputRewardType.SECTOR_REWARD) {
-          // sectorRewards[sectorId] = (sectorRewards[sectorId] || 0) + 1; // TODO: Implement sector-wide rewards if needed.
-          // Move the stock price up
           stockRewards.push({
             gameId: phase.gameId,
             companyId: company.id,
@@ -2951,14 +2924,13 @@ export class GameManagementService {
             currentStockPrice: company.currentStockPrice || 0,
             steps: 1,
           });
-          this.gameLogService.createGameLog({
-            game: { connect: { id: phase.gameId } },
+          gameLogs.push({
+            gameId: phase.gameId,
             content: `Company ${company.name} has met optimal efficiency and has moved +1 on the stock chart.`,
           });
         } else if (
           throughputOutcome.type === ThroughputRewardType.STOCK_PENALTY
         ) {
-          // Penalize the company
           stockPenalties.push({
             gameId: phase.gameId,
             companyId: company.id,
@@ -2966,12 +2938,12 @@ export class GameManagementService {
             currentStockPrice: company.currentStockPrice || 0,
             steps: throughputOutcome.share_price_steps_down || 0,
           });
-          this.gameLogService.createGameLog({
-            game: { connect: { id: phase.gameId } },
+          gameLogs.push({
+            gameId: phase.gameId,
             content: `Company ${company.name} has not met optimal efficiency and has been penalized ${throughputOutcome.share_price_steps_down} share price steps down.`,
           });
         }
-        // Create a production result
+
         productionResults.push({
           revenue,
           companyId: company.id,
@@ -2979,74 +2951,77 @@ export class GameManagementService {
           throughputResult: throughput,
           steps: throughputOutcome.share_price_steps_down || 0,
         });
+
         companyUpdates.push(companyUpdate);
       }
     }
 
-    const allUpdates = [
-      ...companyUpdates.map(
-        (update) => () =>
-          this.prisma.company.update({
-            where: { id: update.id },
-            data: {
-              prestigeTokens: update.prestigeTokens,
-              demandScore: update.demandScore,
-            },
-          }),
-      ),
-      () =>
-        this.productionResultService.createManyProductionResults(
-          productionResults,
-        ),
-      ...stockPenalties.map((penalty) => async () => {
-        const newHistory = await this.stockHistoryService.moveStockPriceDown(
-          penalty.gameId,
-          penalty.companyId,
-          penalty.phaseId,
-          penalty.currentStockPrice,
-          penalty.steps,
-          StockAction.PRODUCTION,
-        );
-        return this.playerOrderService.triggerLimitOrdersFilled(
-          penalty.currentStockPrice,
-          newHistory.price,
-          penalty.companyId,
-        );
-      }),
-      ...stockRewards.map((reward) => async () => {
-        const newHistory = await this.stockHistoryService.moveStockPriceUp(
-          reward.gameId,
-          reward.companyId,
-          reward.phaseId,
-          reward.currentStockPrice,
-          reward.steps,
-          StockAction.PRODUCTION,
-        );
-        return this.playerOrderService.triggerLimitOrdersFilled(
-          reward.currentStockPrice,
-          newHistory.price,
-          reward.companyId,
-        );
-      }),
-      ...sectorConsumersUpdates.map(
-        (update) => () =>
-          this.prisma.sector.update({
-            where: { id: update.id },
-            data: { consumers: update.consumers },
-          }),
-      ),
-      () =>
-        this.gamesService.updateGame({
-          where: { id: phase.gameId },
-          data: { consumerPoolNumber: globalConsumers },
-        }),
-    ].filter(Boolean);
+    // Batch update companies, production results, stock changes, and sectors
+    await this.companyService.updateManyCompanies(companyUpdates);
+    await this.productionResultService.createManyProductionResults(
+      productionResults,
+    );
+    await this.processStockChanges(stockPenalties, stockRewards);
+    await this.prisma.sector.updateMany({ data: sectorConsumersUpdates });
+    await this.gamesService.updateGame({
+      where: { id: phase.gameId },
+      data: { consumerPoolNumber: globalConsumers },
+    });
 
-    const BATCH_SIZE = 4;
+    // Log all game events
+    await this.gameLogService.createManyGameLogs(gameLogs);
+  }
 
-    for (let i = 0; i < allUpdates.length; i += BATCH_SIZE) {
-      const batch = allUpdates.slice(i, i + BATCH_SIZE);
-      await this.processBatch(batch);
+  async processStockChanges(
+    stockPenalties: {
+      gameId: string;
+      companyId: string;
+      phaseId: string;
+      currentStockPrice: number;
+      steps: number;
+    }[],
+    stockRewards: {
+      gameId: string;
+      companyId: string;
+      phaseId: string;
+      currentStockPrice: number;
+      steps: number;
+    }[],
+  ) {
+    // Process stock penalties
+    for (const penalty of stockPenalties) {
+      const newHistory = await this.stockHistoryService.moveStockPriceDown(
+        penalty.gameId,
+        penalty.companyId,
+        penalty.phaseId,
+        penalty.currentStockPrice,
+        penalty.steps,
+        StockAction.PRODUCTION,
+      );
+      // Trigger any additional actions such as fulfilling orders
+      await this.playerOrderService.triggerLimitOrdersFilled(
+        penalty.currentStockPrice,
+        newHistory.price,
+        penalty.companyId,
+      );
+    }
+
+    // Process stock rewards
+    for (const reward of stockRewards) {
+      const newHistory = await this.stockHistoryService.moveStockPriceUp(
+        reward.gameId,
+        reward.companyId,
+        reward.phaseId,
+        reward.currentStockPrice,
+        reward.steps,
+        StockAction.PRODUCTION,
+      );
+      // Trigger any additional actions such as fulfilling orders
+      await this.playerOrderService.triggerLimitOrdersFilled(
+        reward.currentStockPrice,
+        newHistory.price,
+        reward.companyId,
+      );
     }
   }
 
@@ -3073,74 +3048,87 @@ export class GameManagementService {
     if (!company) {
       throw new Error('Company not found');
     }
+
     if (company.status == CompanyStatus.INSOLVENT) {
-      //collect all insolvency contributions for the current turn
+      // Collect all insolvency contributions for the current turn
       const insolvencyContributions =
         await this.insolvencyContributionService.listInsolvencyContributions({
           where: { gameTurnId: phase.gameTurnId, companyId: company.id },
         });
-      //dillute the insolvency contributions to the BANK
-      //filter all contributions with a cashContribution of greater than 0
+
+      // Filter contributions once and reuse the results
       const cashContributions = insolvencyContributions.filter(
         (contribution) => contribution.cashContribution > 0,
       );
-      //remove this money from those players
-      const cashContributionsPromises = cashContributions.map((contribution) =>
-        this.playerRemoveMoney(
-          phase.gameId,
-          phase.gameTurnId,
-          phase.id,
-          contribution.playerId,
-          contribution.cashContribution,
-          EntityType.COMPANY,
-          'Insolvency cash contribution',
-          company.entityId || undefined,
-        ),
-      );
-      await cashContributionsPromises;
-      //filter all contributions with a shareContribution of greater than 0
       const shareContributions = insolvencyContributions.filter(
         (contribution) => contribution.shareContribution > 0,
       );
 
-      //remove shares from those players
-      const shareContributionsPromises = shareContributions.map(
-        async (contribution) => {
-          const player = await this.playersService.player({
-            id: contribution.playerId,
-          });
-          if (!player) {
-            throw new Error('Player not found');
-          }
-          this.playerRemoveMoney(
-            phase.gameId,
-            phase.gameTurnId,
-            phase.id,
-            player.id,
-            contribution.shareContribution * company.currentStockPrice,
-            EntityType.BANK,
-            'Insolvency share contribution',
-          );
-          return this.playerRemoveShares({
-            gameId: phase.gameId,
-            gameTurnId: phase.gameTurnId,
-            phaseId: phase.id,
-            playerId: contribution.playerId,
-            companyId: contribution.companyId,
-            amount: contribution.shareContribution,
-            toLocation: ShareLocation.OPEN_MARKET,
-            fromLocation: ShareLocation.PLAYER,
-            description: 'Insolvency share contribution',
-            fromEntityType: EntityType.PLAYER,
-            fromEntityId: player.entityId || undefined,
-            toEntityType: EntityType.BANK,
-          });
-        },
-      );
+      // Remove cash from players in a single batch operation
+      if (cashContributions.length > 0) {
+        const cashContributionsPromises = cashContributions.map(
+          (contribution) =>
+            this.playerRemoveMoney(
+              phase.gameId,
+              phase.gameTurnId,
+              phase.id,
+              contribution.playerId,
+              contribution.cashContribution,
+              EntityType.COMPANY,
+              'Insolvency cash contribution',
+              company.entityId || undefined,
+            ),
+        );
+        await Promise.all(cashContributionsPromises);
+      }
 
-      await shareContributionsPromises;
+      // Remove shares from players and handle share contributions
+      if (shareContributions.length > 0) {
+        // Batch fetch all players needed for share contributions
+        const playerIds = shareContributions.map(
+          (contribution) => contribution.playerId,
+        );
+        const players = await this.playersService.players({
+          where: { id: { in: playerIds } },
+        });
+        const playerMap = new Map(players.map((player) => [player.id, player]));
 
-      //get the total amount of cash and shares contributed
+        const shareContributionsPromises = shareContributions.map(
+          async (contribution) => {
+            const player = playerMap.get(contribution.playerId);
+            if (!player) {
+              throw new Error('Player not found');
+            }
+            await this.playerRemoveMoney(
+              phase.gameId,
+              phase.gameTurnId,
+              phase.id,
+              player.id,
+              contribution.shareContribution * company.currentStockPrice,
+              EntityType.BANK,
+              'Insolvency share contribution',
+            );
+            return this.playerRemoveShares({
+              gameId: phase.gameId,
+              gameTurnId: phase.gameTurnId,
+              phaseId: phase.id,
+              playerId: contribution.playerId,
+              companyId: contribution.companyId,
+              amount: contribution.shareContribution,
+              toLocation: ShareLocation.OPEN_MARKET,
+              fromLocation: ShareLocation.PLAYER,
+              description: 'Insolvency share contribution',
+              fromEntityType: EntityType.PLAYER,
+              fromEntityId: player.entityId || undefined,
+              toEntityType: EntityType.BANK,
+            });
+          },
+        );
+
+        await Promise.all(shareContributionsPromises);
+      }
+
+      // Calculate total contributions without additional database calls
       const totalCashContributed = cashContributions.reduce(
         (acc, contribution) => acc + contribution.cashContribution,
         0,
@@ -3150,12 +3138,13 @@ export class GameManagementService {
           acc + contribution.shareContribution * company.currentStockPrice,
         0,
       );
-      //if the company has met or exceeded the shortFall for it's company tier, move it back to active.
+
       const companyTier = CompanyTierData[company.companyTier];
       if (!companyTier) {
         throw new Error('Company tier not found');
       }
       const shortFall = companyTier.insolvencyShortFall;
+
       if (
         company.cashOnHand +
           totalCashContributed +
@@ -3166,13 +3155,51 @@ export class GameManagementService {
           where: { id: company.id },
           data: { status: CompanyStatus.ACTIVE },
         });
-        //game log
-        this.gameLogService.createGameLog({
+        await this.gameLogService.createGameLog({
           game: { connect: { id: phase.gameId } },
           content: `Company ${company.name} has recovered from insolvency.`,
         });
+      } else {
+        await this.gameLogService.createGameLog({
+          game: { connect: { id: phase.gameId } },
+          content: `Company ${company.name} has not recovered from insolvency and will now bankrupt.`,
+        });
+
+        // Bankrupt the company and handle liquidation
+        const updatedCompany = await this.companyService.updateCompany({
+          where: { id: company.id },
+          data: { status: CompanyStatus.BANKRUPT },
+        });
+
+        const shares = await this.shareService.shares({
+          where: { companyId: updatedCompany.id },
+        });
+
+        if (shares.length > 0) {
+          const shareLiquidationPromises = shares.map(async (share) => {
+            const shareLiquidationValue = Math.floor(
+              updatedCompany.currentStockPrice * 0.2,
+            );
+            await this.shareService.deleteShare({ id: share.id });
+            if (!share.playerId) {
+              throw new Error('Player not found');
+            }
+            return this.playerAddMoney(
+              phase.gameId,
+              phase.gameTurnId,
+              phase.id,
+              share.playerId,
+              shareLiquidationValue,
+              EntityType.BANK,
+              'Company liquidation',
+            );
+          });
+
+          await Promise.all(shareLiquidationPromises);
+        }
       }
-      //update the company cash on hand
+
+      // Update company cash and create game log
       await this.companyService.updateCompany({
         where: { id: company.id },
         data: {
@@ -3183,37 +3210,39 @@ export class GameManagementService {
         },
       });
 
-      //game log
-      this.gameLogService.createGameLog({
+      await this.gameLogService.createGameLog({
         game: { connect: { id: phase.gameId } },
         content: `Company ${company.name} has received a total of $${
           totalCashContributed + totalShareValueContributed
         } from insolvency contributions.`,
       });
 
-      //decrease the stock price of the company
+      // Adjust stock price in one operation
+      const totalSharesContributed = shareContributions.reduce(
+        (acc, contribution) => acc + contribution.shareContribution,
+        0,
+      );
+
       await this.stockHistoryService.moveStockPriceDown(
         company.gameId,
         company.id,
         phase.id,
         company.currentStockPrice || 0,
-        shareContributions.reduce(
-          (acc, contribution) => acc + contribution.shareContribution,
-          0,
-        ),
+        totalSharesContributed,
         StockAction.MARKET_SELL,
       );
     } else {
       if (company.status !== CompanyStatus.ACTIVE) {
         throw new Error('Company is not active');
       }
+
       const companyTier = CompanyTierData[company.companyTier];
       if (!companyTier) {
         throw new Error('Company tier not found');
       }
       const companyActionCount: number = companyTier.companyActions;
 
-      // Collect votes
+      // Collect votes in one query
       const votes = await this.prisma.operatingRoundVote.findMany({
         where: {
           companyId: company.id,
@@ -3229,66 +3258,49 @@ export class GameManagementService {
         },
       });
 
-      // Calculate the vote weights for each action
-      type ActionVotesAccumulator = {
-        [key in OperatingRoundAction]?: number;
-      };
+      // Calculate vote weights
+      const actionVotes: { [key in OperatingRoundAction]?: number } = {};
+      for (const vote of votes) {
+        actionVotes[vote.actionVoted] =
+          (actionVotes[vote.actionVoted] || 0) + vote.weight;
+      }
 
-      const actionVotes = votes.reduce<ActionVotesAccumulator>((acc, vote) => {
-        acc[vote.actionVoted] = (acc[vote.actionVoted] || 0) + vote.weight;
-        return acc;
-      }, {} as ActionVotesAccumulator);
-
-      console.log('Action votes:', actionVotes);
-
-      // Sort actions by their vote count in descending order and take the top `companyActionCount` actions
       const sortedActions = Object.entries(actionVotes)
         .sort(([, aVotes], [, bVotes]) => (bVotes || 0) - (aVotes || 0))
         .slice(0, companyActionCount)
         .map(([action]) => action as OperatingRoundAction);
 
-      console.log('Resolved actions:', sortedActions);
-
-      //if sorted actions is less than companyActionCount, we need to fill the rest with a VETO action
-      if (sortedActions.length < companyActionCount) {
-        const vetoCount = companyActionCount - sortedActions.length;
-        for (let i = 0; i < vetoCount; i++) {
-          sortedActions.push(OperatingRoundAction.VETO);
-        }
+      // Fill remaining actions with VETO if needed
+      while (sortedActions.length < companyActionCount) {
+        sortedActions.push(OperatingRoundAction.VETO);
       }
-      // Iterate through the resolved actions and create or update the corresponding company actions
-      for (const resolvedAction of sortedActions) {
-        try {
-          let companyAction =
-            await this.companyActionService.companyActionFirst({
-              where: {
-                companyId: company.id,
-                operatingRoundId: phase.operatingRoundId || 0,
-                action: resolvedAction,
-              },
-            });
 
-          if (!companyAction) {
-            // Create the company action
-            await this.companyActionService.createCompanyAction({
-              action: resolvedAction,
-              Company: { connect: { id: company.id } },
-              OperatingRound: { connect: { id: phase.operatingRoundId || 0 } },
-            });
-          } else {
-            // Update the existing company action
-            await this.companyActionService.updateCompanyAction({
-              where: {
-                id: companyAction.id,
-              },
-              data: {
-                action: resolvedAction,
-              },
-            });
-          }
-        } catch (error) {
-          console.error('Error creating or updating company action', error);
-          throw new Error('Company action cannot be created or updated');
+      // Handle company actions in a batch manner
+      const existingActions = await this.companyActionService.companyActions({
+        where: {
+          companyId: company.id,
+          operatingRoundId: phase.operatingRoundId || 0,
+        },
+      });
+
+      const existingActionMap = new Map(
+        existingActions.map((action) => [action.action, action]),
+      );
+
+      for (const resolvedAction of sortedActions) {
+        const existingAction = existingActionMap.get(resolvedAction);
+
+        if (!existingAction) {
+          await this.companyActionService.createCompanyAction({
+            action: resolvedAction,
+            Company: { connect: { id: company.id } },
+            OperatingRound: { connect: { id: phase.operatingRoundId || 0 } },
+          });
+        } else {
+          await this.companyActionService.updateCompanyAction({
+            where: { id: existingAction.id },
+            data: { action: resolvedAction },
+          });
         }
       }
     }

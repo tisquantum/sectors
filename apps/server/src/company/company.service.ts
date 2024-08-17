@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
-import { Prisma, Company, Sector } from '@prisma/client';
+import { Prisma, Company, Sector, CompanyStatus } from '@prisma/client';
 import {
   CompanyWithCards,
   CompanyWithRelations,
@@ -233,6 +233,47 @@ export class CompanyService {
       data,
       where,
     });
+  }
+
+  async updateManyCompanies(
+    updates: {
+      id: string;
+      cashOnHand?: number;
+      status?: CompanyStatus;
+      prestigeTokens?: number;
+      demandScore?: number;
+    }[],
+  ) {
+    // Convert the updates array into the format required by Prisma's updateMany operation
+    const updatePromises = updates.map((update) => {
+      const data: {
+        cashOnHand?: number;
+        status?: CompanyStatus;
+        prestigeTokens?: number;
+        demandScore?: number;
+      } = {};
+
+      if (update.cashOnHand !== undefined) {
+        data.cashOnHand = update.cashOnHand;
+      }
+      if (update.status !== undefined) {
+        data.status = update.status;
+      }
+      if (update.prestigeTokens !== undefined) {
+        data.prestigeTokens = update.prestigeTokens;
+      }
+      if (update.demandScore !== undefined) {
+        data.demandScore = update.demandScore;
+      }
+
+      return this.prisma.company.update({
+        where: { id: update.id },
+        data,
+      });
+    });
+
+    // Execute all update promises in parallel
+    await Promise.all(updatePromises);
   }
 
   async deleteCompany(where: Prisma.CompanyWhereUniqueInput): Promise<Company> {

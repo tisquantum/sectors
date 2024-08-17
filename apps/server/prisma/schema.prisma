@@ -216,6 +216,7 @@ model StockHistory {
   phaseId           String
   stepsMoved        Int
   action            StockAction
+  Game              Game        @relation(fields: [gameId], references: [id])
   Phase             Phase       @relation(fields: [phaseId], references: [id])
   Company           Company     @relation(fields: [companyId], references: [id])
   createdAt         DateTime    @default(now())
@@ -660,6 +661,7 @@ model Game {
   Transactions            Transaction[]
   Entities                Entity[]
   InsolvencyContribution  InsolvencyContribution[]
+  StockHistory            StockHistory[]
 }
 
 enum GameStatus {
@@ -862,6 +864,7 @@ enum TransactionSubType {
   MARKET_BUY
   MARKET_SELL
   DIVESTMENT
+  OPERATING_COST
 }
 
 model Entity {

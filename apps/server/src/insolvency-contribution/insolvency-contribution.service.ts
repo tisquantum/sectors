@@ -58,12 +58,41 @@ export class InsolvencyContributionService {
         },
       });
 
-    if (existingContribution) {
+    if (existingContribution?.cashContribution && data.cashContribution > 0) {
       throw new Error(
-        'Contribution already exists for this player, company, and game turn',
+        'Cash contribution already exists for this player, company, and game turn',
       );
     }
-
+    if (existingContribution?.shareContribution && data.shareContribution > 0) {
+      throw new Error(
+        'Share contribution already exists for this player, company, and game turn',
+      );
+    }
+    //get player with shares
+    const playerWithShares = await this.prisma.player.findUnique({
+      where: {
+        id: data.Player.connect?.id,
+      },
+      include: {
+        Share: true,
+      },
+    });
+    //if no player
+    if (!playerWithShares) {
+      throw new Error('Player not found');
+    }
+    if(data.shareContribution) {
+      //if player doesn't have enough shares, throw error
+      if (playerWithShares.Share.length < data.shareContribution) {
+        throw new Error('Player does not have enough shares');
+      }
+    }
+    if(data.cashContribution) {
+      //if player doesn't have enough cash, throw error
+      if (playerWithShares.cashOnHand < data.cashContribution) {
+        throw new Error('Player does not have enough cash');
+      }
+    }
     return this.prisma.insolvencyContribution.create({
       data,
       include: {

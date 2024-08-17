@@ -97,7 +97,6 @@ export class StockHistoryService {
     });
     //create new stock history
     return this.createStockHistory({
-      gameId: gameId,
       price: newPrice,
       stepsMoved: steps,
       action: action,
@@ -109,6 +108,11 @@ export class StockHistoryService {
       Company: {
         connect: {
           id: companyId,
+        },
+      },
+      Game: {
+        connect: {
+          id: gameId,
         },
       },
     });
@@ -139,7 +143,6 @@ export class StockHistoryService {
     });
     //create new stock history
     return this.createStockHistory({
-      gameId: gameId,
       price: newPrice,
       stepsMoved: steps,
       action: action,
@@ -151,6 +154,11 @@ export class StockHistoryService {
       Company: {
         connect: {
           id: companyId,
+        },
+      },
+      Game: {
+        connect: {
+          id: gameId,
         },
       },
     });

@@ -332,4 +332,138 @@ export class TransactionService {
       where,
     });
   }
+  async collectTransactionData({
+    gameId,
+    gameTurnId,
+    phaseId,
+    fromEntityType,
+    toEntityType,
+    amount,
+    fromEntityId,
+    toEntityId,
+    description,
+    shares,
+    transactionType,
+    transactionSubType,
+    fromPlayerId,
+    toPlayerId,
+    fromCompanyId,
+    toCompanyId,
+  }: {
+    gameId: string;
+    gameTurnId: string;
+    phaseId: string;
+    fromEntityType: EntityType;
+    toEntityType: EntityType;
+    transactionType: TransactionType;
+    transactionSubType?: TransactionSubType;
+    amount: number;
+    fromEntityId?: string;
+    toEntityId?: string;
+    description?: string;
+    shares?: string[];
+    fromPlayerId?: string;
+    toPlayerId?: string;
+    fromCompanyId?: string;
+    toCompanyId?: string;
+  }): Promise<{
+    gameId: string;
+    phaseId: string;
+    gameTurnId: string;
+    fromEntityId: string;
+    toEntityId: string;
+    transactionType: TransactionType;
+    transactionSubType: TransactionSubType;
+    amount: number;
+    description?: string;
+    shares?: string[];
+  }> {
+    const fromEntity = await this.getEntityOrCreate(
+      gameId,
+      fromEntityType,
+      fromEntityId,
+      fromPlayerId,
+      fromCompanyId,
+    );
+  
+    if (!fromEntity) {
+      throw new Error('Invalid from entity');
+    }
+  
+    const toEntity = await this.getEntityOrCreate(
+      gameId,
+      toEntityType,
+      toEntityId,
+      toPlayerId,
+      toCompanyId,
+    );
+  
+    if (!toEntity) {
+      throw new Error('Invalid to entity');
+    }
+  
+    // Return the collected transaction data instead of creating it immediately
+    return {
+      gameId,
+      phaseId,
+      gameTurnId,
+      fromEntityId: fromEntity.id,
+      toEntityId: toEntity.id,
+      transactionType,
+      transactionSubType: transactionSubType || TransactionSubType.DEFAULT,
+      amount,
+      description,
+      shares,
+    };
+  }
+  async createManyTransactionsFromCollectedData(
+    transactionsData: {
+      gameId: string;
+      phaseId: string;
+      gameTurnId: string;
+      fromEntityId: string;
+      toEntityId: string;
+      transactionType: TransactionType;
+      transactionSubType: TransactionSubType;
+      amount: number;
+      description?: string;
+      shares?: string[];
+    }[]
+  ) {
+    // First, create all transactions in bulk
+    const transactions = await this.prisma.transaction.createManyAndReturn({
+      data: transactionsData.map((tx) => ({
+        gameId: tx.gameId,
+        phaseId: tx.phaseId,
+        gameTurnId: tx.gameTurnId,
+        fromEntityId: tx.fromEntityId,
+        toEntityId: tx.toEntityId,
+        transactionType: tx.transactionType,
+        transactionSubType: tx.transactionSubType,
+        amount: tx.amount,
+        timestamp: new Date(),
+        description: tx.description,
+      })),
+      skipDuplicates: true,
+    });
+  
+    // Then, handle any associated share transfers in bulk
+    const shareTransferData = transactionsData
+      .filter((tx) => tx.shares && tx.shares.length > 0)
+      .flatMap((tx, index) => 
+        tx.shares!.map((shareId) => ({
+          transactionId: transactions[index].id,
+          shareId,
+        }))
+      );
+  
+    if (shareTransferData.length > 0) {
+      await this.prisma.transactionsOnShares.createMany({
+        data: shareTransferData,
+      });
+    }
+  
+    return transactions;
+  }
+  
 }
