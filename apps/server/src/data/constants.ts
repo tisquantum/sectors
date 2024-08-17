@@ -61,6 +61,7 @@ export const CAPITAL_INJECTION_BOOSTER = 100;
 export const CORPORATE_ESPIONAGE_PRESTIGE_REDUCTION = 2;
 export const LOBBY_DEMAND_BOOST = 3;
 export const ACTION_ISSUE_SHARE_AMOUNT = 2;
+export const BANKRUPTCY_SHARE_PERCENTAGE_RETAINED = 10;
 /**
  * Phase times in milliseconds
  */

@@ -7,6 +7,7 @@ import CompanyPriorityList from "../Company/CompanyPriorityOperatingRound";
 import { useGame } from "./GameContext";
 import { CompanyStatus } from "@server/prisma/prisma.client";
 import { trpc } from "@sectors/app/trpc";
+import { BANKRUPTCY_SHARE_PERCENTAGE_RETAINED } from "@server/data/constants";
 
 const overviewRules = (
   <>
@@ -305,7 +306,8 @@ export const insolvencyAndBankruptcy = (
         shortfall cash value.
         <ul className="list-disc pl-5">
           <li>
-            Players holding shares will receive <strong>20%</strong> of the
+            Players holding shares will receive{" "}
+            <strong>{BANKRUPTCY_SHARE_PERCENTAGE_RETAINED}%</strong> of the
             market value for their shares.
           </li>
           <li>

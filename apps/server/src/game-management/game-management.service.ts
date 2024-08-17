@@ -107,6 +107,7 @@ import {
   sectorPriority,
   LOBBY_DEMAND_BOOST,
   ACTION_ISSUE_SHARE_AMOUNT,
+  BANKRUPTCY_SHARE_PERCENTAGE_RETAINED,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -3172,7 +3173,8 @@ export class GameManagementService {
         if (shares.length > 0) {
           const shareLiquidationPromises = shares.map(async (share) => {
             const shareLiquidationValue = Math.floor(
-              updatedCompany.currentStockPrice * 0.2,
+              updatedCompany.currentStockPrice *
+                (BANKRUPTCY_SHARE_PERCENTAGE_RETAINED / 100),
             );
             this.shareService.deleteShare({ id: share.id });
             if (share.playerId) {
