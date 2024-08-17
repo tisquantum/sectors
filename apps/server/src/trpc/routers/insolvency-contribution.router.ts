@@ -71,7 +71,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         }),
       )
       .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
-      // .use(async (opts) => checkSubmissionTime(opts, ctx.phaseService))
+      .use(async (opts) => checkSubmissionTime(opts, ctx.phaseService))
       .mutation(async ({ input, ctx: ctxMiddleware }) => {
         if (!ctxMiddleware.gameId) {
           //throw

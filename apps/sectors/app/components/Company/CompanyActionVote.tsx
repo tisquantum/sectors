@@ -46,6 +46,7 @@ const CompanyActionVote = ({ company }: { company?: Company }) => {
     { name: OperatingRoundAction.SPEND_PRESTIGE, label: "Prestige" },
     { name: OperatingRoundAction.LOAN, label: "Loan" },
     { name: OperatingRoundAction.LOBBY, label: "Lobby" },
+    { name: OperatingRoundAction.OUTSOURCE, label: "Outsource" },
     { name: OperatingRoundAction.VETO, label: "Veto" },
   ];
   //if company hasLoan, remove the loan option

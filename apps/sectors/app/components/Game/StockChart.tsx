@@ -127,7 +127,7 @@ const TierSharesFulfilled = ({
     }
   }
 
-  return <div className="flex items-center space-x-1">{circles}</div>;
+  return <div className="flex flex-wrap items-center space-x-1">{circles}</div>;
 };
 
 const StockChart = () => {
@@ -235,7 +235,7 @@ const StockChart = () => {
         <Tab key="stock-grid" title="Stock Grid">
           <>
             <Legend />
-            <div className="grid grid-cols-10 gap-3 p-4">
+            <div className="grid grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 2xl:grid-cols-10 gap-3 p-4">
               {stockGridPrices.map((value, index) => {
                 const companiesOnCell = companies.filter(
                   (company) => company.currentStockPrice === value

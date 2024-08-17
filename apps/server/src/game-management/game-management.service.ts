@@ -108,6 +108,7 @@ import {
   LOBBY_DEMAND_BOOST,
   ACTION_ISSUE_SHARE_AMOUNT,
   BANKRUPTCY_SHARE_PERCENTAGE_RETAINED,
+  OURSOURCE_SUPPLY_BONUS,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -271,6 +272,7 @@ export class GameManagementService {
         //TODO: Why is this necessary?
         //await this.createOperatingRoundCompanyActions(phase);
         await this.decrementSectorDemandBonus(phase);
+        await this.decrementCompanyTemporarySupplyBonus(phase);
         break;
       case PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT:
         await this.resolveCompanyVotes(phase);
@@ -296,6 +298,29 @@ export class GameManagementService {
       default:
         return;
     }
+  }
+
+  /**
+   * Decrement company supplyCurrent by 1 to a minimum of zero
+   * @param phase
+   * @returns
+   */
+  async decrementCompanyTemporarySupplyBonus(phase: Phase) {
+    const companies = await this.companyService.companies({
+      where: { gameId: phase.gameId },
+    });
+    if (!companies) {
+      return;
+    }
+    const updatedCompanies = companies.map((company) => {
+      return this.companyService.updateCompany({
+        where: { id: company.id },
+        data: {
+          supplyCurrent: Math.max(0, company.supplyCurrent - 1),
+        },
+      });
+    });
+    await Promise.all(updatedCompanies);
   }
 
   /**
@@ -948,7 +973,11 @@ export class GameManagementService {
   //contracts are placed on a tableau, one card is on top is queued, the middle cards are "for sale" and the bottom card is discarded.
   async optionContractGenerate(phase: Phase) {
     const companies = await this.companyService.companiesWithSector({
-      where: { gameId: phase.gameId, isFloated: true },
+      where: {
+        gameId: phase.gameId,
+        isFloated: true,
+        status: CompanyStatus.ACTIVE,
+      },
     });
 
     // Fetch existing option contracts in play
@@ -1733,6 +1762,9 @@ export class GameManagementService {
         case OperatingRoundAction.LOBBY:
           await this.lobbyCompany(companyAction);
           break;
+        case OperatingRoundAction.OUTSOURCE:
+          await this.outsourceCompany(companyAction);
+          break;
         case OperatingRoundAction.VETO:
           console.log('VETO action encountered');
           break;
@@ -1741,6 +1773,29 @@ export class GameManagementService {
           break;
       }
     }
+  }
+
+  /** Increase company currentSupply */
+  async outsourceCompany(companyAction: CompanyAction) {
+    //get the company
+    const company = await this.companyService.company({
+      id: companyAction.companyId,
+    });
+    if (!company) {
+      throw new Error('Company not found');
+    }
+    const companyTierMaxSupply = CompanyTierData[company.companyTier].supplyMax;
+    //increase the company temporary supply and set prestige tokens to zero
+    await this.companyService.updateCompany({
+      where: { id: company.id },
+      data: {
+        supplyCurrent: Math.min(
+          company.supplyCurrent + OURSOURCE_SUPPLY_BONUS,
+          companyTierMaxSupply * 2,
+        ),
+        prestigeTokens: 0,
+      },
+    });
   }
 
   /**
@@ -1914,7 +1969,7 @@ export class GameManagementService {
   }
 
   async companySupplyIncreaseEffect(company: Company) {
-    //increate the company supply max by 1
+    //increase the company supply max by 1
     await this.companyService.updateCompany({
       where: { id: company.id },
       data: { supplyBase: company.supplyBase + 1 },
@@ -4208,10 +4263,10 @@ export class GameManagementService {
     if (insolventCompanies.length > 0) {
       return insolventCompanies[0].id;
     }
-    const allCompaniesVoted =
-      await this.haveAllCompaniesActionsResolved(gameId);
-    console.log('allCompaniesVoted', allCompaniesVoted);
-    if (allCompaniesVoted) {
+    const allActiveCompaniesVoted =
+      await this.haveAllActiveCompaniesActionsResolved(gameId);
+    console.log('allCompaniesVoted', allActiveCompaniesVoted);
+    if (allActiveCompaniesVoted) {
       nextPhase = PhaseName.CAPITAL_GAINS;
       return undefined;
     } else {
@@ -6138,7 +6193,7 @@ export class GameManagementService {
     return shares;
   }
 
-  async haveAllCompaniesActionsResolved(gameId: string) {
+  async haveAllActiveCompaniesActionsResolved(gameId: string) {
     //get current operating round
     const game = await this.gamesService.getGameState(gameId);
     if (!game) {
@@ -6148,6 +6203,7 @@ export class GameManagementService {
     const companies = await this.companyService.companies({
       where: {
         gameId,
+        status: CompanyStatus.ACTIVE,
       },
     });
     const currentOperatingRound =

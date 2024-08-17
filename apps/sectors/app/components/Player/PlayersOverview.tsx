@@ -14,7 +14,7 @@ import { trpc } from "@sectors/app/trpc";
 import { notFound } from "next/navigation";
 import { PlayerWithShares } from "@server/prisma/prisma.types";
 import { Company } from "@server/prisma/prisma.client";
-import { RiCurrencyFill, RiSafe2Fill, RiWallet3Fill } from "@remixicon/react";
+import { RiCurrencyFill, RiOpenArmFill, RiSafe2Fill, RiScales2Fill, RiScalesFill, RiWallet3Fill } from "@remixicon/react";
 import PlayerAvatar from "./PlayerAvatar";
 import { useGame } from "../Game/GameContext";
 import { tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
@@ -76,13 +76,28 @@ const PlayersOverview = ({ gameId }: { gameId: string }) => {
                   className={tooltipStyle}
                   content={
                     <p>
-                      Networth: the total value of all shares owned plus cash on
-                      hand.
+                      Share value total: the total value of all shares owned.
                     </p>
                   }
                 >
                   <span className="flex items-center content-center">
                     <RiCurrencyFill className="h-6 w-6" /> $
+                    {calculateNetWorth(
+                      0,
+                      playerWithShares.Share
+                    )}
+                  </span>
+                </Tooltip>
+                <Tooltip
+                  className={tooltipStyle}
+                  content={
+                    <p>
+                      Networth: The total value of all shares owned plus cash on hand.
+                    </p>
+                  }
+                >
+                  <span className="flex items-center content-center">
+                    <RiScalesFill className="h-6 w-6" /> $
                     {calculateNetWorth(
                       playerWithShares.cashOnHand,
                       playerWithShares.Share

@@ -237,7 +237,7 @@ const Game = ({ gameId }: { gameId: string }) => {
             {gameState.gameStatus == GameStatus.FINISHED && (
               <Button
                 color="primary"
-                className="h-32 w-[90%] bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg transform transition-transform duration-300 hover:scale-90 hover:shadow-2xl"
+                className="h-44 w-[90%] bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg transform transition-transform duration-300 hover:scale-90 hover:shadow-2xl"
                 onPress={onOpen}
               >
                 <div className="flex flex-col gap-2 items-center">
@@ -262,7 +262,11 @@ const Game = ({ gameId }: { gameId: string }) => {
                     <TimesUp />
                   </div>
                 )}
-              <div className="max-w-[100%] active-panel flex flex-col h-full p-4 overflow-y-auto scrollbar max-h-full">
+              <div
+                className={`active-panel flex flex-col h-full p-4 overflow-y-auto scrollbar max-h-full ${
+                  showPhaseList && "basis-10/12"
+                }`}
+              >
                 {currentView === "action" && renderCurrentPhase}
                 {currentView === "chart" && <StockChart />}
                 {currentView === "pending" && <PendingOrders />}
@@ -280,7 +284,7 @@ const Game = ({ gameId }: { gameId: string }) => {
               <AnimatePresence>
                 {showPhaseList && (
                   <motion.div
-                    className="overflow-y-auto max-h-full scrollbar w-[100px] lg:w-[200px]"
+                    className="overflow-y-auto max-h-full scrollbar"
                     initial={{ x: 300 }}
                     animate={{ x: 0 }}
                     exit={{ x: 300 }}

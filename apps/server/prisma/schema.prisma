@@ -516,6 +516,7 @@ enum OperatingRoundAction {
   DECREASE_PRICE
   LOBBY
   LOAN
+  OUTSOURCE
 }
 
 model ResearchDeck {

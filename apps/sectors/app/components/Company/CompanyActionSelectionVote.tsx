@@ -24,6 +24,7 @@ import {
   LOAN_INTEREST_RATE,
   LOBBY_DEMAND_BOOST,
   MARKETING_CONSUMER_BONUS,
+  OURSOURCE_SUPPLY_BONUS,
   PRESTIGE_ACTION_TOKEN_COST,
   SMALL_MARKETING_CAMPAIGN_DEMAND,
 } from "@server/data/constants";
@@ -130,6 +131,12 @@ const companyActionsDescription = [
   },
   {
     id: 13,
+    title: "Outsource",
+    name: OperatingRoundAction.OUTSOURCE,
+    message: `The company outsources production.  Increase supply by ${OURSOURCE_SUPPLY_BONUS} that decays once per turn.  Lose all prestige tokens. A company may only ever have up to twice of the maximum supply it's company tier allows.`,
+  },
+  {
+    id: 14,
     title: "Veto",
     name: OperatingRoundAction.VETO,
     message:

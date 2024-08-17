@@ -76,7 +76,7 @@ const InsolvencyContributionComponent = ({
     isLoading,
     isError,
   } = trpc.insolvencyContributions.listInsolvencyContributions.useQuery({
-    where: { companyId: company.id },
+    where: { companyId: company.id, gameTurnId: currentTurn.id },
   });
   const useInsolvencyContributionMutation =
     trpc.insolvencyContributions.createInsolvencyContribution.useMutation();

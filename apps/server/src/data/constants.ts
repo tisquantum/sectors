@@ -62,6 +62,7 @@ export const CORPORATE_ESPIONAGE_PRESTIGE_REDUCTION = 2;
 export const LOBBY_DEMAND_BOOST = 3;
 export const ACTION_ISSUE_SHARE_AMOUNT = 2;
 export const BANKRUPTCY_SHARE_PERCENTAGE_RETAINED = 10;
+export const OURSOURCE_SUPPLY_BONUS = 3;
 /**
  * Phase times in milliseconds
  */
@@ -261,6 +262,7 @@ export const companyVoteActionPriority = (
     OperatingRoundAction.INCREASE_PRICE,
     OperatingRoundAction.DECREASE_PRICE,
     OperatingRoundAction.LOBBY,
+    OperatingRoundAction.OUTSOURCE,
     OperatingRoundAction.LOAN,
   ];
   return actions.sort(
@@ -373,8 +375,8 @@ export const throughputRewardOrPenalty = (
 };
 
 export const CompanyActionCosts = {
-  [OperatingRoundAction.DOWNSIZE]: 200,
-  [OperatingRoundAction.EXPANSION]: 350,
+  [OperatingRoundAction.DOWNSIZE]: 50,
+  [OperatingRoundAction.EXPANSION]: 300,
   [OperatingRoundAction.MARKETING]: 220,
   [OperatingRoundAction.MARKETING_SMALL_CAMPAIGN]: 100,
   [OperatingRoundAction.MERGE]: 1000,
@@ -387,6 +389,7 @@ export const CompanyActionCosts = {
   [OperatingRoundAction.LOBBY]: 120,
   [OperatingRoundAction.INCREASE_PRICE]: 0,
   [OperatingRoundAction.DECREASE_PRICE]: 0,
+  [OperatingRoundAction.OUTSOURCE]: 200,
   [OperatingRoundAction.LOAN]: 0,
 };
 

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   CompanyWithRelations,
   CompanyWithSector,
@@ -18,6 +18,7 @@ import {
   RiBankCard2Fill,
   RiSailboatFill,
   RiTeamFill,
+  RiFundsBoxFill,
 } from "@remixicon/react";
 import {
   CompanyTierData,
@@ -32,6 +33,7 @@ import { Drawer } from "vaul";
 import { CompanyStatus } from "@server/prisma/prisma.client";
 import PlayerAvatar from "../Player/PlayerAvatar";
 import { useGame } from "../Game/GameContext";
+import ShareOwnershipTable from "./ShareOwnershipTable";
 
 const CompanyInfoTable = ({
   company,
@@ -54,8 +56,12 @@ const CompanyInfoTable = ({
   isInteractive: boolean;
 }) => {
   const { authPlayer } = useGame();
-  console.log("orders", orders);
-  const renderCellContent = () => {
+  const [showOrderDetail, setShowOrderDetail] = useState(false);
+  const renderCellContent = ({
+    handleShowOrderDetail,
+  }: {
+    handleShowOrderDetail: () => void;
+  }) => {
     switch (column) {
       case "Company Name":
         return <span>{company.name}</span>;
@@ -65,6 +71,12 @@ const CompanyInfoTable = ({
         return (
           <>
             <RiFundsFill size={20} /> ${company.currentStockPrice}
+          </>
+        );
+      case "Ownership":
+        return (
+          <>
+            <ShareOwnershipTable company={company} />
           </>
         );
       case "Orders":
@@ -114,7 +126,7 @@ const CompanyInfoTable = ({
       case "IPO Price":
         return (
           <>
-            <RiPriceTag3Fill size={20} /> ${company.ipoAndFloatPrice}
+            <RiFundsBoxFill size={20} /> ${company.ipoAndFloatPrice}
           </>
         );
       case "IPO Shares":
@@ -258,8 +270,14 @@ const CompanyInfoTable = ({
         return null;
     }
   };
-
-  return <div className="flex gap-1">{renderCellContent()}</div>;
+  const handleShowOrderDetail = () => {
+    setShowOrderDetail((prev) => !prev);
+  };
+  return (
+    <div className="flex gap-1">
+      {renderCellContent({ handleShowOrderDetail })}
+    </div>
+  );
 };
 
 export default CompanyInfoTable;

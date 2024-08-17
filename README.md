@@ -179,3 +179,6 @@ I'm thinking short orders can only be performed on a company you have no ownersh
 - TODO: Increase timer for company action decisions
 - TODO: How do we handle bankruptcy? (replace actions with bankruptcy gameplay)
 - TODO: Sector demand, should we give options for increasing?
+- TODO: Generated Options should be for active companies only
+- TODO: Insolvency should only be allowed in company action vote round
+- TODO: Insolvency actions should only be rendered for the current turn

@@ -15,6 +15,7 @@ import {
   TableRow,
 } from "@nextui-org/react";
 import { sectorColors } from "@server/data/gameData";
+import ShareOwnershipTable from "../Company/ShareOwnershipTable";
 
 const SpotMarketTable = ({
   companies,
@@ -22,7 +23,7 @@ const SpotMarketTable = ({
   handleDisplayOrderInput,
   handleButtonSelect,
   handleCompanySelect,
-  isInteractive
+  isInteractive,
 }: {
   companies: CompanyWithRelations[];
   orders: PlayerOrderConcealedWithPlayer[] | undefined;
@@ -36,9 +37,9 @@ const SpotMarketTable = ({
 }) => {
   const columns = [
     "Company Name",
+    "Ownership",
     "Stock Symbol",
     "Stock Price",
-    "Your Shares",
     "OM Shares",
     "IPO Price",
     "IPO Shares",
@@ -64,7 +65,7 @@ const SpotMarketTable = ({
         {columns.map((column, index) => (
           <TableColumn
             key={column}
-            className={`${index === 0 ? "sticky left-0 z-10" : ""}`}
+            className={`${index === 0 ? "sticky left-0 z-10" : "min-w-auto"}`}
           >
             {column}
           </TableColumn>
@@ -82,9 +83,9 @@ const SpotMarketTable = ({
               >
                 <div
                   className={`flex items-center gap-2 ${
-                    colIndex === 0  && `p-2 rounded-md bg-[${
-                    sectorColors[company.Sector.name]
-                  }]`}`}
+                    colIndex === 0 &&
+                    `p-2 rounded-md bg-[${sectorColors[company.Sector.name]}]`
+                  }`}
                 >
                   <CompanyInfoTable
                     company={company}

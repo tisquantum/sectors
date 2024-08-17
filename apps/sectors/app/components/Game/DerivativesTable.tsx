@@ -28,6 +28,7 @@ import {
   RiStrikethrough,
 } from "@remixicon/react";
 import DebounceButton from "../General/DebounceButton";
+import { OptionContractWithRelations } from "@server/prisma/prisma.types";
 
 const DerivativesTable = ({ isInteractive }: { isInteractive: boolean }) => {
   const { gameId, gameState, currentPhase, authPlayer } = useGame();
@@ -37,7 +38,15 @@ const DerivativesTable = ({ isInteractive }: { isInteractive: boolean }) => {
     trpc.optionContract.exerciseOptionContract.useMutation();
   const { data: optionsContracts, isLoading } =
     trpc.optionContract.listOptionContracts.useQuery({
-      where: { gameId, contractState: ContractState.FOR_SALE },
+      where: {
+        gameId,
+        contractState: {
+          not: ContractState.DISCARDED,
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
     });
   const {
     data: playerOrders,
@@ -60,12 +69,13 @@ const DerivativesTable = ({ isInteractive }: { isInteractive: boolean }) => {
   if (isLoading) return <div>Loading...</div>;
   if (!optionsContracts) return <div>No options contracts found</div>;
 
-  const columns = [
+  let columns = [
     "Option State",
     "Place Order",
     "Orders",
+    "Owner",
     "Company Name",
-    "Company Stock Symbol",
+    "Stock Symbol",
     "Stock Price",
     "Strike Price",
     "Premium",
@@ -73,8 +83,16 @@ const DerivativesTable = ({ isInteractive }: { isInteractive: boolean }) => {
     "Current Term",
     "Step Bonus",
   ];
+  //if not isInteractive, remove Place Order
+  columns = columns.filter((column) => {
+    if (!isInteractive && column === "Place Order") return false;
+    return true;
+  });
 
-  const renderTableCellContent = (contract: any, column: string) => {
+  const renderTableCellContent = (
+    contract: OptionContractWithRelations,
+    column: string
+  ) => {
     switch (column) {
       case "Option State":
         return contract.contractState;
@@ -90,9 +108,25 @@ const DerivativesTable = ({ isInteractive }: { isInteractive: boolean }) => {
               ))}
           </AvatarGroup>
         );
+      case "Owner":
+        console.log("contract PlayerOrders", contract);
+        const owner = contract.PlayerOrders?.find(
+          (playerOrder) =>
+            playerOrder.orderStatus === OrderStatus.OPEN ||
+            playerOrder.orderStatus === OrderStatus.FILLED ||
+            playerOrder.orderStatus === OrderStatus.REJECTED
+        );
+        const ownerPlayer = gameState.Player.find(
+          (player) => player.id === owner?.playerId
+        );
+        return ownerPlayer ? (
+          <PlayerAvatar player={ownerPlayer} />
+        ) : (
+          <span>n/a</span>
+        );
       case "Company Name":
         return contract.Company.name;
-      case "Company Stock Symbol":
+      case "Stock Symbol":
         return contract.Company.stockSymbol;
       case "Stock Price":
         return (
@@ -137,6 +171,7 @@ const DerivativesTable = ({ isInteractive }: { isInteractive: boolean }) => {
         return (
           <>
             {isInteractive &&
+              contract.contractState == ContractState.FOR_SALE &&
               (!isSubmitted ? (
                 <div
                   className="flex flex items-center justify-center content-center
@@ -151,8 +186,11 @@ const DerivativesTable = ({ isInteractive }: { isInteractive: boolean }) => {
                       label="Bid"
                       min={contract.premium}
                       max={authPlayer.cashOnHand}
-                      defaultValue={contract.premium}
-                      value={bidAmounts[contract.id] || contract.premium}
+                      defaultValue={contract.premium.toString()}
+                      value={
+                        bidAmounts[contract.id]?.toString() ||
+                        contract.premium?.toString()
+                      }
                       onChange={(e) => {
                         setBidAmounts({
                           ...bidAmounts,

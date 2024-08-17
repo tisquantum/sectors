@@ -5,6 +5,12 @@ import {
   ModalContent,
   ModalFooter,
   ModalHeader,
+  Table,
+  TableBody,
+  TableCell,
+  TableColumn,
+  TableHeader,
+  TableRow,
   useDisclosure,
 } from "@nextui-org/react";
 import { useGame } from "./GameContext";
@@ -36,41 +42,37 @@ const PlayerResultsOverview = () => {
   }
   return (
     <div className="container mx-auto px-4">
-      <table className="min-w-full border">
-        <thead>
-          <tr>
-            <th className="py-2 px-4 border">#</th>
-            <th className="py-2 px-4 border">Player</th>
-            <th className="py-2 px-4 border">Net Worth</th>
-            <th className="py-2 px-4 border">Ranking Points</th>
-            <th className="py-2 px-4 border">Total Shares</th>
-            <th className="py-2 px-4 border">Cash On Hand</th>
-          </tr>
-        </thead>
-        <tbody>
+      <Table className="min-w-full">
+        <TableHeader>
+          <TableColumn>#</TableColumn>
+          <TableColumn>Player</TableColumn>
+          <TableColumn>Net Worth</TableColumn>
+          <TableColumn>Ranking Points</TableColumn>
+          <TableColumn>Total Shares</TableColumn>
+          <TableColumn>Cash On Hand</TableColumn>
+        </TableHeader>
+        <TableBody>
           {playerResults.map((result) => (
-            <tr key={result.id}>
-              <td className="py-2 px-4 border">
+            <TableRow key={result.id}>
+              <TableCell>
                 <div className="flex items-center text-center justify-center gap-2">
                   <span>{result.placement}</span>
                 </div>
-              </td>
-              <td className="py-2 px-4 border">
+              </TableCell>
+              <TableCell>
                 <div className="flex items-center gap-2">
                   <PlayerAvatar player={result.player} />
                   <span>{result.player?.nickname || "Unknown"}</span>
                 </div>
-              </td>
-              <td className="py-2 px-4 border">
-                ${result.netWorth.toLocaleString()}
-              </td>
-              <td className="py-2 px-4 border">{result.rankingPoints}</td>
-              <td className="py-2 px-4 border">{result.player.Share.length}</td>
-              <td className="py-2 px-4 border">${result.player.cashOnHand}</td>
-            </tr>
+              </TableCell>
+              <TableCell>${result.netWorth.toLocaleString()}</TableCell>
+              <TableCell>{result.rankingPoints}</TableCell>
+              <TableCell>{result.player.Share.length}</TableCell>
+              <TableCell>${result.player.cashOnHand}</TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 };
@@ -140,48 +142,48 @@ const GameResultsOverview = () => {
   return (
     <div className="container mx-auto px-4">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div className="p-4 border rounded shadow">
+        <div className="p-4 bg-zinc-800 rounded shadow">
           <h2 className="text-lg font-bold">Total Companies Opened</h2>
           <p>{totalCompaniesOpened}</p>
         </div>
-        <div className="p-4 border rounded shadow">
+        <div className="p-4 bg-zinc-800 rounded shadow">
           <h2 className="text-lg font-bold">Total Companies Floated</h2>
           <p>{totalCompaniesFloated}</p>
         </div>
-        <div className="p-4 border rounded shadow">
+        <div className="p-4 bg-zinc-800 rounded shadow">
           <h2 className="text-lg font-bold">Total Companies Bankrupted</h2>
           <p>{totalCompaniesBankrupted}</p>
         </div>
-        <div className="p-4 border rounded shadow">
+        <div className="p-4 bg-zinc-800 rounded shadow">
           <h2 className="text-lg font-bold">Remaining Bank Total</h2>
-          <p>{remainingBankTotal}</p>
+          <p>${remainingBankTotal}</p>
         </div>
-        <div className="p-4 border rounded shadow">
+        <div className="p-4 bg-zinc-800 rounded shadow">
           <h2 className="text-lg font-bold">Highest Stock Price Company</h2>
           <p>
             {highestStockPriceCompany?.name || "N/A"} - $
             {highestStockPriceCompany?.currentStockPrice || "N/A"}
           </p>
         </div>
-        <div className="p-4 border rounded shadow">
+        <div className="p-4 bg-zinc-800 rounded shadow">
           <h2 className="text-lg font-bold">Lowest Stock Price Company</h2>
           <p>
             {lowestStockPriceCompany?.name || "N/A"} - $
             {lowestStockPriceCompany?.currentStockPrice || "N/A"}
           </p>
         </div>
-        <div className="p-4 border rounded shadow">
+        <div className="p-4 bg-zinc-800 rounded shadow">
           <h2 className="text-lg font-bold">Median Production Result</h2>
           <p>${medianProductionResult}</p>
         </div>
-        <div className="p-4 border rounded shadow">
+        <div className="p-4 bg-zinc-800 rounded shadow">
           <h2 className="text-lg font-bold">Highest Production Result</h2>
           <p>
             {highestProductionResult?.Company.name || "N/A"} - $
             {highestProductionResult?.revenue.toLocaleString() || "N/A"}
           </p>
         </div>
-        <div className="p-4 border rounded shadow">
+        <div className="p-4 bg-zinc-800 rounded shadow">
           <h2 className="text-lg font-bold">Lowest Production Result</h2>
           <p>
             {lowestProductionResult?.Company.name || "N/A"} - $

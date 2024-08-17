@@ -10,6 +10,7 @@ import {
   ACTION_ISSUE_SHARE_AMOUNT,
   LARGE_MARKETING_CAMPAIGN_DEMAND,
   MARKETING_CONSUMER_BONUS,
+  OURSOURCE_SUPPLY_BONUS,
   PrestigeTrack,
   SMALL_MARKETING_CAMPAIGN_DEMAND,
 } from "@server/data/constants";
@@ -30,7 +31,9 @@ const ShareIssue = ({ companyAction }: { companyAction: CompanyAction }) => {
   }
   return (
     <div className="flex flex-col">
-      <span>Previous Share Count: {company.Share.length - ACTION_ISSUE_SHARE_AMOUNT}</span>
+      <span>
+        Previous Share Count: {company.Share.length - ACTION_ISSUE_SHARE_AMOUNT}
+      </span>
       <span>New Share Count: {company.Share.length}</span>
     </div>
   );
@@ -155,6 +158,14 @@ const CompanyVoteResolve = () => {
                 </div>
               ))}
             </div>
+          </div>
+        );
+      case OperatingRoundAction.OUTSOURCE:
+        return (
+          <div>
+            Outsource. The company outsources production. Increase supply by{" "}
+            {OURSOURCE_SUPPLY_BONUS} that decays once per turn. Lose all
+            prestige tokens.
           </div>
         );
       case OperatingRoundAction.VETO:

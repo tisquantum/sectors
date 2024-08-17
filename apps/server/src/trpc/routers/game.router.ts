@@ -208,7 +208,7 @@ export default (trpc: TrpcService, ctx: Context) =>
       .input(z.object({ gameId: z.string() }))
       .query(async ({ input }) => {
         const { gameId } = input;
-        return ctx.gameManagementService.haveAllCompaniesActionsResolved(
+        return ctx.gameManagementService.haveAllActiveCompaniesActionsResolved(
           gameId,
         );
       }),
