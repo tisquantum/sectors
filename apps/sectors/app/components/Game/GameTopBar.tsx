@@ -206,7 +206,7 @@ const GameTopBar = ({
             onEnd={() => {}}
           />
         )}
-        <Button onClick={handleTogglePhaseList}>Phases</Button>
+        <Button onClick={handleTogglePhaseList}>Phases | {currentPhase?.name}</Button>
         <GameGeneralInfo />
       </div>
     </Navbar>

@@ -30,6 +30,9 @@ const PlayerResultsOverview = () => {
     where: {
       gameRecordId: gameState.GameRecord?.id,
     },
+    orderBy: {
+      placement: "asc",
+    },
   });
   if (isLoading) {
     return <div>Loading...</div>;

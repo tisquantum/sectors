@@ -691,6 +691,7 @@ export class GameManagementService {
       ),
       throughput: 0,
       ipoAndFloatPrice: ipoPrice,
+      cashOnHand: ipoPrice * DEFAULT_SHARE_DISTRIBUTION,
       stockTier,
       demandScore: 0,
       baseDemand: 0,

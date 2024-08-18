@@ -186,6 +186,8 @@ const StockChart = () => {
       }))
     ) ?? [];
 
+  console.log("groupedData", groupedData);
+
   interface PhaseEntry {
     phaseId: string;
     phaseName: string;
@@ -214,6 +216,7 @@ const StockChart = () => {
     lastKnownPrices[companyName] = stockPrice;
   });
 
+  console.log('allChartData', allChartData);
   // Ensure every phase entry contains the price for every company
   const companyNames = companies.map((company) => company.name);
   allChartData.forEach((entry) => {

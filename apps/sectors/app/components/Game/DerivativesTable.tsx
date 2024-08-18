@@ -206,13 +206,18 @@ const DerivativesTable = ({ isInteractive }: { isInteractive: boolean }) => {
                   <DebounceButton
                     className="bg-blue-500 text-white px-4 py-2 rounded-lg"
                     onClick={() => {
-                      console.log('parseInt(bidAmounts[contract.id])', parseInt(bidAmounts[contract.id]));
+                      console.log(
+                        "parseInt(bidAmounts[contract.id])",
+                        parseInt(bidAmounts[contract.id])
+                      );
                       try {
                         useCreatePlayerOrderMutation.mutate({
                           companyId: contract.companyId,
                           orderType: OrderType.OPTION,
                           quantity: contract.shareCount,
-                          value: parseInt(bidAmounts[contract.id]),
+                          value:
+                            parseInt(bidAmounts[contract.id]) ||
+                            contract.premium,
                           playerId: authPlayer.id,
                           location: ShareLocation.DERIVATIVE_MARKET,
                           contractId: contract.id,
