@@ -143,12 +143,15 @@ const StockChart = () => {
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
   useEffect(() => {
     if (selectedCompany) {
-      const data = selectedCompany.StockHistory.map((stockHistory, index) => ({
-        phaseId: `${index + 1} ${stockHistory.Phase.name}`,
-        stockPrice: stockHistory.price,
-        stockAction: stockHistory.action,
-        steps: stockHistory.stepsMoved,
-      }));
+      const stockHistory = selectedCompany.StockHistory;
+      const data = stockHistory
+        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+        .map((stockHistory, index) => ({
+          phaseId: `${index + 1} ${stockHistory.Phase.name}`,
+          stockPrice: stockHistory.price,
+          stockAction: stockHistory.action,
+          steps: stockHistory.stepsMoved,
+        }));
       setChartData(data);
     }
   }, [selectedCompany]);
@@ -177,61 +180,98 @@ const StockChart = () => {
 
   const colorsArray: string[] = Object.values(companyColorsMap) || [];
   const groupedData =
-    companies?.flatMap((company) =>
-      company.StockHistory.map((stockHistory) => ({
-        phaseId: stockHistory.phaseId,
-        phaseName: stockHistory.Phase.name,
-        companyName: company.name,
-        stockPrice: stockHistory.price,
-      }))
-    ) ?? [];
+    companies
+      ?.flatMap((company) => {
+        return company.StockHistory.sort(
+          (a, b) => a.createdAt.getTime() - b.createdAt.getTime()
+        ) // Sort by createdAt
+          .map((stockHistory, index) => ({
+            indexer: `${index + 1} ${stockHistory.Phase.name}`,
+            phaseId: stockHistory.phaseId, // Generate consistent phaseId
+            phaseName: stockHistory.Phase.name,
+            companyName: company.name,
+            stockPrice: stockHistory.price,
+            createdAt: stockHistory.createdAt, // Ensure createdAt is included for consistency
+          }));
+      })
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()) ?? []; // Final sort to ensure order across companies
 
-  console.log("groupedData", groupedData);
+  // Filter for the specific company for comparison
+  const filteredDataForComparison = groupedData.filter(
+    (item) => item.companyName === "PharmaTech Co." // Change to the company you are comparing
+  );
 
   interface PhaseEntry {
+    indexer: string;
     phaseId: string;
     phaseName: string;
     [key: string]: string | number; // Allows dynamic company names as keys with stock prices as values
   }
 
   interface LastKnownPrices {
-    [key: string]: number; // Company names as keys with last known stock prices as values
+    [phaseId: string]: {
+      [companyName: string]: number; // Company names as keys with last known stock prices as values
+    };
   }
 
   const allChartData: PhaseEntry[] = [];
   const lastKnownPrices: LastKnownPrices = {}; // Keeps track of the last known price for each company
+  // Process groupedData into allChartData
+  groupedData.forEach(
+    ({ indexer, phaseId, phaseName, companyName, stockPrice }) => {
+      let phaseEntry = allChartData.find(
+        (entry) => entry.phaseId === phaseId && entry.phaseName === phaseName
+      );
+      if (!phaseEntry) {
+        phaseEntry = { indexer, phaseId, phaseName };
+        allChartData.push({
+          indexer,
+          phaseId,
+          phaseName,
+          [companyName]: stockPrice,
+        });
+      }
 
-  groupedData.forEach(({ phaseId, phaseName, companyName, stockPrice }) => {
-    // Find or create a phase entry
-    let phaseEntry = allChartData.find((entry) => entry.phaseId === phaseId);
-    if (!phaseEntry) {
-      phaseEntry = { phaseId, phaseName };
-      allChartData.push(phaseEntry);
+      phaseEntry[companyName] = stockPrice;
+      // Initialize lastKnownPrices for the phaseId if it doesn't exist
+      if (!lastKnownPrices[phaseId]) {
+        lastKnownPrices[phaseId] = {};
+      }
+      // Update the last known price for the company at the current phase
+      lastKnownPrices[phaseId][companyName] = stockPrice;
     }
-
-    // Update the phase entry with the current stock price
-    phaseEntry[companyName] = stockPrice;
-
-    // Update the last known price for the company
-    lastKnownPrices[companyName] = stockPrice;
-  });
-
-  console.log('allChartData', allChartData);
+  );
+  console.log("lastKnownPrices", lastKnownPrices);
   // Ensure every phase entry contains the price for every company
   const companyNames = companies.map((company) => company.name);
+
   allChartData.forEach((entry) => {
     companyNames.forEach((companyName) => {
       if (!(companyName in entry)) {
-        // If the company doesn't have a price in the current phase, use the last known price
-        entry[companyName] = lastKnownPrices[companyName];
+        //get the last phase with a known price for this company by iterating over
+        //all chart data phases in reverse order from the current phase
+        let lastKnownPrice = null;
+        for (let i = allChartData.indexOf(entry) - 1; i >= 0; i--) {
+          if (companyName in allChartData[i]) {
+            if (
+              lastKnownPrices[allChartData[i].phaseId][companyName] &&
+              lastKnownPrices[allChartData[i].phaseId][companyName] !== null
+            ) {
+              lastKnownPrice =
+                lastKnownPrices[allChartData[i].phaseId][companyName];
+            }
+            break;
+          }
+        }
+        if (companyName === "Wellness Inc.") {
+          console.log("current phase", entry.phaseId);
+          console.log("lastKnownPrice", lastKnownPrice);
+        }
+        entry[companyName] = lastKnownPrice || 0;
       }
     });
   });
 
-  //iterate through all chart data and update phase id to be the phase name with a unique number
-  allChartData.forEach((entry, index) => {
-    entry.phaseId = `${index + 1} ${entry.phaseName}`;
-  });
   return (
     <div className="flex flex-col">
       <Tabs>
@@ -239,7 +279,7 @@ const StockChart = () => {
           <>
             <Legend />
             <div className="grid grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 2xl:grid-cols-10 gap-3 p-4">
-              {stockGridPrices.map((value, index) => {
+              {[0, ...stockGridPrices].map((value, index) => {
                 const companiesOnCell = companies.filter(
                   (company) => company.currentStockPrice === value
                 );
@@ -253,14 +293,14 @@ const StockChart = () => {
                       value === 0 ? "text-red-500 font-bold" : ""
                     }`}
                   >
-                    {value === 0 ? "INSOLVENT" : value}
+                    {value === 0 ? "BANKRUPT" : value}
                     <Divider />
                     {companiesOnCell.length > 0 && (
                       <div className="flex flex-col mt-2 gap-2">
                         {companiesOnCell.map((company) => (
                           <div
                             key={company.id}
-                            className={`flex flex-col items-center shadow-md rounded-md p-1 cursor-pointer border-2 border-slate-700 ${
+                            className={`relative flex flex-col items-center shadow-md rounded-md p-1 cursor-pointer border-2 border-slate-700 ${
                               company.status === CompanyStatus.INACTIVE
                                 ? "red-stripes"
                                 : ""
@@ -268,6 +308,10 @@ const StockChart = () => {
                             style={{
                               backgroundColor:
                                 sectorColors[company.Sector.name],
+                              opacity:
+                                company.status === CompanyStatus.BANKRUPT
+                                  ? 0.7
+                                  : 1, // Reduce opacity if BANKRUPT
                             }}
                             onClick={() => handleCompanySelect(company.id)}
                           >
@@ -296,6 +340,25 @@ const StockChart = () => {
                               tierSharesFulfilled={company.tierSharesFulfilled}
                               tier={tier}
                             />
+
+                            {company.status === CompanyStatus.BANKRUPT && (
+                              <div className="absolute inset-0 bg-gray-600 bg-opacity-30 flex items-center justify-center rounded-md">
+                                <div className="flex flex-col">
+                                  <span
+                                    className="text-black text-sm font-bold transform rotate-40"
+                                    style={{
+                                      display: "inline-block",
+                                      color: "black", // Adjust the color if needed to match a stamped look
+                                      border: "2px solid black", // Optional: add a border to enhance the stamped effect
+                                      padding: "2px 6px", // Optional: add padding to create some space around the text
+                                      transform: "rotate(40deg)", // Rotate the text 45 degrees clockwise
+                                    }}
+                                  >
+                                    BANKRUPT
+                                  </span>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -311,7 +374,7 @@ const StockChart = () => {
             <LineChart
               className="h-full"
               data={allChartData}
-              index="phaseId"
+              index="indexer"
               categories={companies.map((company) => company.name)}
               yAxisLabel="Stock Price"
               xAxisLabel="Stock Price Updated"
