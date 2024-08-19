@@ -1,6 +1,12 @@
 import { RiExchangeBoxFill } from "@remixicon/react";
 import { trpc } from "@sectors/app/trpc";
-import { EntityType, Player, Transaction, TransactionType } from "@server/prisma/prisma.client";
+import {
+  Company,
+  EntityType,
+  Player,
+  Transaction,
+  TransactionType,
+} from "@server/prisma/prisma.client";
 import PlayerAvatar from "../Player/PlayerAvatar";
 import { TransactionWithEntities } from "@server/prisma/prisma.types";
 import { useState } from "react";
@@ -11,7 +17,7 @@ const TransactionHistory = ({
   transactions: TransactionWithEntities[];
 }) => {
   const [sortBy, setSortBy] = useState<"timestamp" | "value">("timestamp");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   const handleSortChange = (sortKey: "timestamp" | "value") => {
     if (sortBy === sortKey) {
@@ -120,6 +126,36 @@ export const MoneyTransactionHistoryByPlayer = ({
     isError,
   } = trpc.transactions.listTransactionsByEntityId.useQuery({
     entityId: player.entityId || "",
+    transactionType: TransactionType.CASH,
+  });
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+  if (isError) {
+    return <div>Error.</div>;
+  }
+  if (!transactions) {
+    return <div>No transactions found</div>;
+  }
+
+  return (
+    <div className="container mx-auto p-4 flex flex-col h-full overflow-y-auto scrollbar">
+      <TransactionHistory transactions={transactions} />
+    </div>
+  );
+};
+
+export const MoneyTransactionHistoryByCompany = ({
+  company,
+}: {
+  company: Company;
+}) => {
+  const {
+    data: transactions,
+    isLoading,
+    isError,
+  } = trpc.transactions.listTransactionsByEntityId.useQuery({
+    entityId: company.entityId || "",
     transactionType: TransactionType.CASH,
   });
   if (isLoading) {

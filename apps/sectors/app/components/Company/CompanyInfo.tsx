@@ -1,4 +1,16 @@
-import { Accordion, AccordionItem, Divider, Tooltip } from "@nextui-org/react";
+import {
+  Accordion,
+  AccordionItem,
+  Button,
+  Divider,
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  Tooltip,
+  useDisclosure,
+} from "@nextui-org/react";
 import {
   RiBankCard2Fill,
   RiBox2Fill,
@@ -31,6 +43,7 @@ import { BarList } from "@tremor/react";
 import ThroughputLegend from "../Game/ThroughputLegend";
 import { trpc } from "@sectors/app/trpc";
 import CompanyTiers from "./CompanyTiers";
+import { MoneyTransactionHistoryByCompany } from "../Game/MoneyTransactionHistory";
 
 const buildBarChart = (share: Share[]) => {
   //group shares by location and sum the quantity
@@ -234,138 +247,165 @@ const CompanyInfo = ({
   showBarChart?: boolean;
   showingProductionResults?: boolean;
   isMinimal?: boolean;
-}) => (
-  <>
-    <div className="flex flex-row gap-1 items-center h-full">
-      <div className="flex flex-col gap-1">
+}) => {
+  const { isOpen, onOpen, onOpenChange } = useDisclosure();
+  return (
+    <>
+      <div className="flex flex-row gap-1 items-center h-full">
         <div className="flex flex-col gap-1">
-          <div className="flex flex-start gap-1 items-center justify-between">
-            <div className="flex gap-1 text-lg font-bold">
-              <span>{company.name} </span>
+          <div className="flex flex-col gap-1">
+            <div className="flex flex-start gap-1 items-center justify-between">
+              <div className="flex gap-1 text-lg font-bold">
+                <span>{company.name} </span>
+              </div>
+            </div>
+            <div className="flex gap-1">
+              <span>{company.stockSymbol}</span>
+              <Tooltip
+                className={tooltipStyle}
+                content={
+                  <p className={tooltipParagraphStyle}>
+                    The current stock price
+                  </p>
+                }
+              >
+                <div className="flex items-center">
+                  <RiFundsFill size={20} />
+                  <span>${company.currentStockPrice}</span>
+                </div>
+              </Tooltip>
+            </div>
+            <div className="flex gap-1">
+              <Tooltip
+                className={tooltipStyle}
+                content={
+                  <div className="flex flex-col gap-2 w-full">
+                    <p>
+                      The company tier, this determines the operational costs
+                      and supply.
+                    </p>
+                    <CompanyTiers company={company} />
+                  </div>
+                }
+              >
+                <span>{company.companyTier}</span>
+              </Tooltip>
+              |
+              <Tooltip
+                className={tooltipStyle}
+                content={
+                  <p>
+                    The company status. INACTIVE companies have not yet floated.
+                  </p>
+                }
+              >
+                <span>{company.status}</span>
+              </Tooltip>
+            </div>
+            <div className="flex gap-3">
+              <Tooltip
+                className={tooltipStyle}
+                content={
+                  <p>
+                    Unit Price of goods. Each consumer consumes one good per
+                    operating round given the company meets supply and demand.
+                  </p>
+                }
+              >
+                <span className="flex items-center">
+                  <RiPriceTag3Fill size={20} /> ${company.unitPrice}
+                </span>
+              </Tooltip>
+              <Tooltip
+                className={tooltipStyle}
+                content={<p>Corporate treasury or cash on hand.</p>}
+              >
+                <span className="flex items-center" onClick={onOpen}>
+                  <RiWallet3Fill size={20} /> ${company.cashOnHand}
+                </span>
+              </Tooltip>
+              <Tooltip
+                className={tooltipStyle}
+                content={
+                  <p>
+                    Company status, inactive companies have not yet been
+                    floated.
+                  </p>
+                }
+              >
+                <span
+                  className={`flex items-center ${
+                    company.status == CompanyStatus.ACTIVE
+                      ? "text-green-500"
+                      : company.status == CompanyStatus.INACTIVE
+                      ? "text-yellow-500"
+                      : "text-red-500"
+                  }`}
+                >
+                  {(company.status == CompanyStatus.INACTIVE ||
+                    company.status == CompanyStatus.ACTIVE) && (
+                    <>
+                      <RiSailboatFill size={20} />{" "}
+                      {company.Sector.sharePercentageToFloat}%
+                    </>
+                  )}
+                </span>
+              </Tooltip>
             </div>
           </div>
-          <div className="flex gap-1">
-            <span>{company.stockSymbol}</span>
-            <Tooltip
-              className={tooltipStyle}
-              content={
-                <p className={tooltipParagraphStyle}>The current stock price</p>
-              }
-            >
-              <div className="flex items-center">
-                <RiFundsFill size={20} />
-                <span>${company.currentStockPrice}</span>
-              </div>
-            </Tooltip>
-          </div>
-          <div className="flex gap-1">
-            <Tooltip
-              className={tooltipStyle}
-              content={
-                <div className="flex flex-col gap-2 w-full">
-                  <p>
-                    The company tier, this determines the operational costs and
-                    supply.
-                  </p>
-                  <CompanyTiers company={company} />
-                </div>
-              }
-            >
-              <span>{company.companyTier}</span>
-            </Tooltip>
-            |
-            <Tooltip
-              className={tooltipStyle}
-              content={
-                <p>
-                  The company status. INACTIVE companies have not yet floated.
-                </p>
-              }
-            >
-              <span>{company.status}</span>
-            </Tooltip>
-          </div>
-          <div className="flex gap-3">
-            <Tooltip
-              className={tooltipStyle}
-              content={
-                <p>
-                  Unit Price of goods. Each consumer consumes one good per
-                  operating round given the company meets supply and demand.
-                </p>
-              }
-            >
-              <span className="flex items-center">
-                <RiPriceTag3Fill size={20} /> ${company.unitPrice}
-              </span>
-            </Tooltip>
-            <Tooltip
-              className={tooltipStyle}
-              content={<p>Corporate treasury or cash on hand.</p>}
-            >
-              <span className="flex items-center">
-                <RiWallet3Fill size={20} /> ${company.cashOnHand}
-              </span>
-            </Tooltip>
-            <Tooltip
-              className={tooltipStyle}
-              content={
-                <p>
-                  Company status, inactive companies have not yet been floated.
-                </p>
-              }
-            >
-              <span
-                className={`flex items-center ${
-                  company.status == CompanyStatus.ACTIVE
-                    ? "text-green-500"
-                    : company.status == CompanyStatus.INACTIVE
-                    ? "text-yellow-500"
-                    : "text-red-500"
-                }`}
+          {isMinimal ? (
+            <Accordion>
+              <AccordionItem
+                key="more-info"
+                aria-label="More Information"
+                title="More Information"
               >
-                {(company.status == CompanyStatus.INACTIVE ||
-                  company.status == CompanyStatus.ACTIVE) && (
-                  <>
-                    <RiSailboatFill size={20} />{" "}
-                    {company.Sector.sharePercentageToFloat}%
-                  </>
-                )}
-              </span>
-            </Tooltip>
-          </div>
+                <CompanyMoreInfo
+                  company={company}
+                  showingProductionResults={showingProductionResults}
+                />
+              </AccordionItem>
+            </Accordion>
+          ) : (
+            <CompanyMoreInfo
+              company={company}
+              showingProductionResults={showingProductionResults}
+            />
+          )}
         </div>
-        {isMinimal ? (
-          <Accordion>
-            <AccordionItem
-              key="more-info"
-              aria-label="More Information"
-              title="More Information"
-            >
-              <CompanyMoreInfo
-                company={company}
-                showingProductionResults={showingProductionResults}
-              />
-            </AccordionItem>
-          </Accordion>
-        ) : (
-          <CompanyMoreInfo
-            company={company}
-            showingProductionResults={showingProductionResults}
-          />
-        )}
+        <div className="flex flex-col">
+          {showBarChart && (
+            <BarList
+              data={buildBarChart(company.Share || [])}
+              color="red"
+              className="mx-auto max-w-sm px-2 w-32"
+            />
+          )}
+        </div>
       </div>
-      <div className="flex flex-col">
-        {showBarChart && (
-          <BarList
-            data={buildBarChart(company.Share || [])}
-            color="red"
-            className="mx-auto max-w-sm px-2 w-32"
-          />
-        )}
-      </div>
-    </div>
-  </>
-);
+      <Modal isOpen={isOpen} onOpenChange={onOpenChange} className="h-full">
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1">
+                <div className="flex flex-col gap-2 justify-center text-center">
+                  <div>{company.name} Transaction History</div>
+                </div>
+              </ModalHeader>
+              <ModalBody className="overflow-auto">
+                <MoneyTransactionHistoryByCompany company={company} />
+              </ModalBody>
+              <ModalFooter>
+                <Button color="danger" variant="light" onPress={onClose}>
+                  Close
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+    </>
+  );
+};
 
 export default CompanyInfo;

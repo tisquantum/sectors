@@ -2392,6 +2392,10 @@ export class GameManagementService {
     if (!company) {
       throw new Error('Company not found');
     }
+    const game = await this.gamesService.game({ id: company.gameId });
+    if (!game) {
+      throw new Error('Game not found');
+    }
     console.log('companyAction', companyAction);
     if (!companyAction.action) {
       throw new Error('Action not found');
@@ -2411,6 +2415,20 @@ export class GameManagementService {
     await this.companyService.updateCompany({
       where: { id: company.id },
       data: { cashOnHand: company.cashOnHand - cost },
+    });
+
+    //create entity transaction
+    await this.transactionService.createTransactionEntityToEntity({
+      fromEntityId: company.entityId || undefined,
+      fromCompanyId: company.id,
+      fromEntityType: EntityType.COMPANY,
+      toEntityType: EntityType.BANK,
+      amount: cost,
+      transactionType: TransactionType.CASH,
+      gameId: game.id,
+      gameTurnId: game.currentTurn,
+      phaseId: game.currentPhaseId || '',
+      description: `Funding margin account for short order`,
     });
   }
 
@@ -5292,12 +5310,6 @@ export class GameManagementService {
             share.companyId === order.companyId &&
             share.location === ShareLocation.PLAYER,
         );
-        // console.log(
-        //   'share order filled total',
-        //   this.getCurrentShareOrderFilledTotalPlayer(
-        //     shareUpdatesForPlayerAndCompany,
-        //   ),
-        // );
         if (
           (order?.quantity || 0) + playerSharesForOrderCompany.length >
           (MAX_SHARE_PERCENTAGE * order.Company.Share.length) / 100

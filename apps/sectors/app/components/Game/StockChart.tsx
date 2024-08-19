@@ -196,11 +196,6 @@ const StockChart = () => {
       })
       .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()) ?? []; // Final sort to ensure order across companies
 
-  // Filter for the specific company for comparison
-  const filteredDataForComparison = groupedData.filter(
-    (item) => item.companyName === "PharmaTech Co." // Change to the company you are comparing
-  );
-
   interface PhaseEntry {
     indexer: string;
     phaseId: string;
@@ -222,6 +217,7 @@ const StockChart = () => {
       let phaseEntry = allChartData.find(
         (entry) => entry.phaseId === phaseId && entry.phaseName === phaseName
       );
+      console.log('phaseEntry found', phaseEntry);
       if (!phaseEntry) {
         phaseEntry = { indexer, phaseId, phaseName };
         allChartData.push({
@@ -241,10 +237,8 @@ const StockChart = () => {
       lastKnownPrices[phaseId][companyName] = stockPrice;
     }
   );
-  console.log("lastKnownPrices", lastKnownPrices);
   // Ensure every phase entry contains the price for every company
   const companyNames = companies.map((company) => company.name);
-
   allChartData.forEach((entry) => {
     companyNames.forEach((companyName) => {
       if (!(companyName in entry)) {
@@ -259,19 +253,14 @@ const StockChart = () => {
             ) {
               lastKnownPrice =
                 lastKnownPrices[allChartData[i].phaseId][companyName];
+              break;
             }
-            break;
           }
-        }
-        if (companyName === "Wellness Inc.") {
-          console.log("current phase", entry.phaseId);
-          console.log("lastKnownPrice", lastKnownPrice);
         }
         entry[companyName] = lastKnownPrice || 0;
       }
     });
   });
-
   return (
     <div className="flex flex-col">
       <Tabs>
@@ -279,7 +268,7 @@ const StockChart = () => {
           <>
             <Legend />
             <div className="grid grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 2xl:grid-cols-10 gap-3 p-4">
-              {[0, ...stockGridPrices].map((value, index) => {
+              {stockGridPrices.map((value, index) => {
                 const companiesOnCell = companies.filter(
                   (company) => company.currentStockPrice === value
                 );
