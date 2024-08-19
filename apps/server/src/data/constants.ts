@@ -63,6 +63,7 @@ export const LOBBY_DEMAND_BOOST = 3;
 export const ACTION_ISSUE_SHARE_AMOUNT = 2;
 export const BANKRUPTCY_SHARE_PERCENTAGE_RETAINED = 10;
 export const OURSOURCE_SUPPLY_BONUS = 3;
+export const PRETIGE_REWARD_OPERATION_COST_PERCENTAGE_REDUCTION = 50;
 /**
  * Phase times in milliseconds
  */
@@ -72,7 +73,7 @@ export const phaseTimes = {
   [PhaseName.INFLUENCE_BID_RESOLVE]: 15 * 1000,
   [PhaseName.STOCK_RESOLVE_LIMIT_ORDER]: 15 * 1000,
   [PhaseName.STOCK_MEET]: 30 * 1000,
-  [PhaseName.STOCK_ACTION_ORDER]: 40 * 1000,
+  [PhaseName.STOCK_ACTION_ORDER]: 45 * 1000,
   [PhaseName.STOCK_ACTION_RESULT]: 10 * 1000,
   [PhaseName.STOCK_ACTION_REVEAL]: 12 * 1000,
   [PhaseName.STOCK_RESOLVE_MARKET_ORDER]: 12 * 1000,
@@ -290,7 +291,8 @@ export const getCompanyOperatingRoundTurnOrder = (
   const companiesSortedPartial = companyPriorityOrderOperations(companies);
   //copy companies in same order
   return companies.sort(
-    (a, b) => companiesSortedPartial.indexOf(a) - companiesSortedPartial.indexOf(b),
+    (a, b) =>
+      companiesSortedPartial.indexOf(a) - companiesSortedPartial.indexOf(b),
   );
 };
 

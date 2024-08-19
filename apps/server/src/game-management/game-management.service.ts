@@ -109,6 +109,7 @@ import {
   ACTION_ISSUE_SHARE_AMOUNT,
   BANKRUPTCY_SHARE_PERCENTAGE_RETAINED,
   OURSOURCE_SUPPLY_BONUS,
+  PRETIGE_REWARD_OPERATION_COST_PERCENTAGE_REDUCTION,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -2834,7 +2835,138 @@ export class GameManagementService {
     const companyCashOnHandUpdates = [];
     const gameLogs = [];
     const transactionDataCollection = [];
-    // Reduce company cash on hand by operating fees
+
+    // Filter out insolvent companies
+    companies = companies.filter(
+      (company) => company.status === CompanyStatus.ACTIVE,
+    );
+
+    // Group companies by sector
+    const groupedCompanies = companies.reduce<{
+      [key: string]: CompanyWithSector[];
+    }>((acc, company) => {
+      if (!acc[company.sectorId]) {
+        acc[company.sectorId] = [];
+      }
+      acc[company.sectorId].push(company);
+      return acc;
+    }, {});
+
+    const sectorRewards: { [sectorId: string]: number } = {};
+    const companyUpdates = [];
+    const productionResults = [];
+    const stockPenalties = [];
+    const sectorConsumersUpdates = [];
+
+    let globalConsumers = game.consumerPoolNumber;
+
+    for (const [sectorId, sectorCompanies] of Object.entries(
+      groupedCompanies,
+    )) {
+      const sector = await this.sectorService.sector({ id: sectorId });
+      if (!sector) {
+        console.error('Sector not found');
+        continue;
+      }
+
+      let consumers = sector.consumers;
+      const sectorCompaniesSorted =
+        companyPriorityOrderOperations(sectorCompanies);
+      //match the sectorCompanies to the same order as sectorCompaniesSorted
+      // Create a map for easy lookup of the sorted order
+      const sectorCompanyOrderMap = new Map(
+        sectorCompaniesSorted.map((company, index) => [company.id, index]),
+      );
+
+      // Sort sectorCompanies based on the order in sectorCompanyOrderMap
+      const reorderedSectorCompanies = sectorCompanies.sort((a, b) => {
+        const indexA = sectorCompanyOrderMap.get(a.id) || 0;
+        const indexB = sectorCompanyOrderMap.get(b.id) || 0;
+        return indexA - indexB;
+      });
+
+      for (const company of reorderedSectorCompanies) {
+        let unitsManufactured = calculateCompanySupply(
+          company.supplyBase,
+          company.supplyMax,
+          company.supplyCurrent,
+        );
+        const maxCustomersAttracted =
+          calculateDemand(company.demandScore, company.baseDemand) +
+          sector.demand +
+          (sector.demandBonus || 0);
+
+        let unitsSold = Math.min(unitsManufactured, maxCustomersAttracted);
+        if (unitsSold > consumers) {
+          unitsSold = consumers;
+        }
+
+        const revenue = company.unitPrice * unitsSold;
+        consumers -= unitsSold;
+        globalConsumers += unitsSold;
+
+        sectorConsumersUpdates.push({
+          id: sectorId,
+          consumers,
+        });
+
+        const throughput = this.calculateThroughputByUnitsSold(
+          unitsManufactured,
+          maxCustomersAttracted,
+        );
+        const throughputOutcome = throughputRewardOrPenalty(throughput);
+
+        const companyUpdate = {
+          id: company.id,
+          demandScore: Math.max(company.demandScore - 1, 0),
+          prestigeTokens: company.prestigeTokens || 0,
+        };
+
+        if (unitsSold >= unitsManufactured) {
+          companyUpdate.prestigeTokens = (company.prestigeTokens || 0) + 1;
+        }
+
+        if (throughputOutcome.type === ThroughputRewardType.SECTOR_REWARD) {
+          // stockRewards.push({
+          //   gameId: phase.gameId,
+          //   companyId: company.id,
+          //   phaseId: String(phase.id),
+          //   currentStockPrice: company.currentStockPrice || 0,
+          //   steps: 1,
+          // });
+          gameLogs.push({
+            gameId: phase.gameId,
+            content: `Company ${company.name} has met optimal efficiency and it's operating costs have been reduced by %${PRETIGE_REWARD_OPERATION_COST_PERCENTAGE_REDUCTION} for the next turn.`,
+          });
+        } else if (
+          throughputOutcome.type === ThroughputRewardType.STOCK_PENALTY
+        ) {
+          stockPenalties.push({
+            gameId: phase.gameId,
+            companyId: company.id,
+            phaseId: String(phase.id),
+            currentStockPrice: company.currentStockPrice || 0,
+            steps: throughputOutcome.share_price_steps_down || 0,
+          });
+          gameLogs.push({
+            gameId: phase.gameId,
+            content: `Company ${company.name} has not met optimal efficiency and has been penalized ${throughputOutcome.share_price_steps_down} share price steps down.`,
+          });
+        }
+
+        productionResults.push({
+          revenue,
+          companyId: company.id,
+          operatingRoundId: phase.operatingRoundId || 0,
+          throughputResult: throughput,
+          steps: throughputOutcome.share_price_steps_down || 0,
+        });
+
+        companyUpdates.push(companyUpdate);
+      }
+    }
+
+    // Process all company operational costs
     for (const company of companies) {
       const hasAutomationCard = company.Cards.some(
         (card) => card.effect === ResearchCardEffect.AUTOMATION,
@@ -2907,143 +3039,12 @@ export class GameManagementService {
     // Log all game events in bulk
     await this.gameLogService.createManyGameLogs(gameLogs);
 
-    // Filter out insolvent companies
-    companies = companies.filter(
-      (company) => company.status === CompanyStatus.ACTIVE,
-    );
-
-    // Group companies by sector
-    const groupedCompanies = companies.reduce<{
-      [key: string]: CompanyWithSector[];
-    }>((acc, company) => {
-      if (!acc[company.sectorId]) {
-        acc[company.sectorId] = [];
-      }
-      acc[company.sectorId].push(company);
-      return acc;
-    }, {});
-
-    const sectorRewards: { [sectorId: string]: number } = {};
-    const companyUpdates = [];
-    const productionResults = [];
-    const stockPenalties = [];
-    const stockRewards = [];
-    const sectorConsumersUpdates = [];
-
-    let globalConsumers = game.consumerPoolNumber;
-
-    for (const [sectorId, sectorCompanies] of Object.entries(
-      groupedCompanies,
-    )) {
-      const sector = await this.sectorService.sector({ id: sectorId });
-      if (!sector) {
-        console.error('Sector not found');
-        continue;
-      }
-
-      let consumers = sector.consumers;
-      const sectorCompaniesSorted =
-        companyPriorityOrderOperations(sectorCompanies);
-      //match the sectorCompanies to the same order as sectorCompaniesSorted
-      // Create a map for easy lookup of the sorted order
-      const sectorCompanyOrderMap = new Map(
-        sectorCompaniesSorted.map((company, index) => [company.id, index]),
-      );
-
-      // Sort sectorCompanies based on the order in sectorCompanyOrderMap
-      const reorderedSectorCompanies = sectorCompanies.sort((a, b) => {
-        const indexA = sectorCompanyOrderMap.get(a.id) || 0;
-        const indexB = sectorCompanyOrderMap.get(b.id) || 0;
-        return indexA - indexB;
-      });
-
-      for (const company of reorderedSectorCompanies) {
-        let unitsManufactured = calculateCompanySupply(
-          company.supplyBase,
-          company.supplyMax,
-          company.supplyCurrent,
-        );
-        const maxCustomersAttracted =
-          calculateDemand(company.demandScore, company.baseDemand) +
-          sector.demand +
-          (sector.demandBonus || 0);
-
-        let unitsSold = Math.min(unitsManufactured, maxCustomersAttracted);
-        if (unitsSold > consumers) {
-          unitsSold = consumers;
-        }
-
-        const revenue = company.unitPrice * unitsSold;
-        consumers -= unitsSold;
-        globalConsumers += unitsSold;
-
-        sectorConsumersUpdates.push({
-          id: sectorId,
-          consumers,
-        });
-
-        const throughput = this.calculateThroughputByUnitsSold(
-          unitsManufactured,
-          maxCustomersAttracted,
-        );
-        const throughputOutcome = throughputRewardOrPenalty(throughput);
-
-        const companyUpdate = {
-          id: company.id,
-          demandScore: Math.max(company.demandScore - 1, 0),
-          prestigeTokens: company.prestigeTokens || 0,
-        };
-
-        if (unitsSold >= unitsManufactured) {
-          companyUpdate.prestigeTokens = (company.prestigeTokens || 0) + 1;
-        }
-
-        if (throughputOutcome.type === ThroughputRewardType.SECTOR_REWARD) {
-          stockRewards.push({
-            gameId: phase.gameId,
-            companyId: company.id,
-            phaseId: String(phase.id),
-            currentStockPrice: company.currentStockPrice || 0,
-            steps: 1,
-          });
-          gameLogs.push({
-            gameId: phase.gameId,
-            content: `Company ${company.name} has met optimal efficiency and has moved +1 on the stock chart.`,
-          });
-        } else if (
-          throughputOutcome.type === ThroughputRewardType.STOCK_PENALTY
-        ) {
-          stockPenalties.push({
-            gameId: phase.gameId,
-            companyId: company.id,
-            phaseId: String(phase.id),
-            currentStockPrice: company.currentStockPrice || 0,
-            steps: throughputOutcome.share_price_steps_down || 0,
-          });
-          gameLogs.push({
-            gameId: phase.gameId,
-            content: `Company ${company.name} has not met optimal efficiency and has been penalized ${throughputOutcome.share_price_steps_down} share price steps down.`,
-          });
-        }
-
-        productionResults.push({
-          revenue,
-          companyId: company.id,
-          operatingRoundId: phase.operatingRoundId || 0,
-          throughputResult: throughput,
-          steps: throughputOutcome.share_price_steps_down || 0,
-        });
-
-        companyUpdates.push(companyUpdate);
-      }
-    }
-
     // Batch update companies, production results, stock changes, and sectors
     await this.companyService.updateManyCompanies(companyUpdates);
     await this.productionResultService.createManyProductionResults(
       productionResults,
     );
-    await this.processStockChanges(stockPenalties, stockRewards);
+    await this.processStockChanges(stockPenalties, []);
     await this.sectorService.updateMany(sectorConsumersUpdates);
     await this.gamesService.updateGame({
       where: { id: phase.gameId },
