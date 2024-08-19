@@ -518,6 +518,22 @@ enum OperatingRoundAction {
   LOBBY
   LOAN
   OUTSOURCE
+  //sector specific active actions
+  VISIONARY
+  STRATEGIC_RESERVE
+  RAPID_EXPANSION
+  FASTTRACK_APPROVAL
+  PRICE_FREEZE
+  REBRAND
+  SURGE_PRICING
+  //passive effect actions
+  INNOVATION_SURGE
+  REGULATORY_SHIELD
+  SUPPLY_CHAIN
+  ROBOTICS
+  STEADY_DEMAND
+  BOOM_CYCLE
+  CARBON_CREDIT
 }
 
 model ResearchDeck {

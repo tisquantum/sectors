@@ -142,6 +142,120 @@ const companyActionsDescription = [
     message:
       "The company does nothing this turn. Pick this to ensure the company will not act on any other proposal. Additionally, the next turn this companies operating costs are 50% less.",
   },
+  //sector specific actions active effects
+  //technology
+  {
+    id: 15,
+    title: "Visionary",
+    name: OperatingRoundAction.VISIONARY,
+    message:
+      "Draw 2 research cards and the company gains +1 demand permanently.",
+  },
+  //materials
+  {
+    id: 16,
+    title: "Strategic Reserve",
+    name: OperatingRoundAction.STRATEGIC_RESERVE,
+    message:
+      "The company has no production cost next turn and revenue is increased 10%.",
+  },
+  //industrial
+  {
+    id: 17,
+    title: "Rapid Expansion",
+    name: OperatingRoundAction.RAPID_EXPANSION,
+    message:
+      "The company expands two levels.",
+  },
+  //Healthcare
+  {
+    id: 18,
+    title: "Fast-track Approval",
+    name: OperatingRoundAction.FASTTRACK_APPROVAL,
+    message:
+      "The company gains +5 demand that decays 1 per turn.",
+  }
+  //consumer defensive
+  {
+    id: 19,
+    title: "Price Freeze",
+    name: OperatingRoundAction.PRICE_FREEZE,
+    message:
+      "The company stock price will move a maximum of 2 spaces next turn.",
+  },
+  //consumer cyclical
+  {
+    id: 20,
+    title: "Re-Brand",
+    name: OperatingRoundAction.REBRAND,
+    message:
+      "The company gains +1 temporary demand, +1 permanent demand and a $40 increase in price.",
+  },
+  //energy
+  {
+    id: 21,
+    title: "Surge Pricing",
+    name: OperatingRoundAction.SURGE_PRICING,
+    message:
+      "Next turn, company revenue is increased 25%.",
+  },
+  //passive effect badges
+  //technology
+  {
+    id: 21,
+    title: "Innovation Surge",
+    name: OperatingRoundAction.INNOVATION_SURGE,
+    message:
+      "Should the company draw a research card, draw 2 cards instead.",
+  },
+  //healthcare
+  {
+    id: 22,
+    title: "Regulatory Shield",
+    name: OperatingRoundAction.REGULATORY_SHIELD,
+    message:
+      "Should the company stock price decrease, it will stop at the top of the next stock price tier should it drop any further.",
+  },
+  //materials
+  {
+    id: 23,
+    title: "Supply Chain",
+    name: OperatingRoundAction.SUPPLY_CHAIN,
+    message:
+      "The company gains +1 permanent supply.",
+  },
+  //industrial
+  {
+    id: 24,
+    title: "Operating Round Action",
+    name: OperatingRoundAction.ROBOTICS,
+    message:
+      "This company is charged the operational cost of the tier underneath it, with a minimum of 0.",
+  },
+  //consumer defensive
+  {
+    id: 25,
+    title: "Steady Demand",
+    name: OperatingRoundAction.STEADY_DEMAND,
+    message:
+      "Should the company have remaining demand but no consumers are available, sell up to 2 demand anyway.",
+  },
+  //consumer cyclical
+  {
+    id: 26,
+    title: "Boom Cycle",
+    name: OperatingRoundAction.BOOM_CYCLE,
+    message:
+      "Would the companies stock price be stopped by a new price tier, allow it to move up at least 3 spaces further.",
+  },
+  //energy
+  {
+    id: 27,
+    title: "Carbon Credit",
+    name: OperatingRoundAction.CARBON_CREDIT,
+    message:
+      "This companies throughput can never be less than 1.",
+  }
 ];
 const CompanyActionSelectionVote = ({
   company,
