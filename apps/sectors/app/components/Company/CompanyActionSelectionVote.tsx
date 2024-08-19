@@ -174,7 +174,7 @@ const companyActionsDescription = [
     name: OperatingRoundAction.FASTTRACK_APPROVAL,
     message:
       "The company gains +5 demand that decays 1 per turn.",
-  }
+  },
   //consumer defensive
   {
     id: 19,
