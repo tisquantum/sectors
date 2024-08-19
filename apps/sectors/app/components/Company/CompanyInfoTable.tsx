@@ -19,6 +19,7 @@ import {
   RiSailboatFill,
   RiTeamFill,
   RiFundsBoxFill,
+  RiCurrencyFill,
 } from "@remixicon/react";
 import {
   CompanyTierData,
@@ -101,23 +102,29 @@ const CompanyInfoTable = ({
                     handleCompanySelect(company, false);
                     handleDisplayOrderInput(company, false);
                   }}
+                  className="flex items-center gap-1"
                 >
-                  Place Order (
+                  <span>Place Order</span>
+                  <RiCurrencyFill />
+                  <span>
+                    {
+                      company.Share.filter(
+                        (share) => share.location === "OPEN_MARKET"
+                      ).length
+                    }
+                  </span>
+                </Button>
+              </Drawer.Trigger>
+            ) : (
+              <div className="flex gap-1">
+                <RiCurrencyFill />
+                <span>
                   {
                     company.Share.filter(
                       (share) => share.location === "OPEN_MARKET"
                     ).length
                   }
-                  )
-                </Button>
-              </Drawer.Trigger>
-            ) : (
-              <div>
-                {
-                  company.Share.filter(
-                    (share) => share.location === "OPEN_MARKET"
-                  ).length
-                }
+                </span>
               </div>
             )}
           </>
@@ -140,20 +147,25 @@ const CompanyInfoTable = ({
                     handleDisplayOrderInput(company, true);
                   }}
                 >
-                  Place Order (
+                  <span>Place Order</span>
+                  <RiCurrencyFill />
+                  <span>
+                    {
+                      company.Share.filter((share) => share.location === "IPO")
+                        .length
+                    }
+                  </span>
+                </Button>
+              </Drawer.Trigger>
+            ) : (
+              <div className="flex gap-1">
+                <RiCurrencyFill />
+                <span>
                   {
                     company.Share.filter((share) => share.location === "IPO")
                       .length
                   }
-                  )
-                </Button>
-              </Drawer.Trigger>
-            ) : (
-              <div>
-                {
-                  company.Share.filter((share) => share.location === "IPO")
-                    .length
-                }
+                </span>
               </div>
             )}
           </>

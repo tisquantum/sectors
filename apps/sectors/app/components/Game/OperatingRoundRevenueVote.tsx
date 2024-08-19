@@ -84,7 +84,7 @@ const OperatingRoundRevenueVote = () => {
       <h1 className="text-2xl font-bold mb-4">
         Operating Round Production Vote
       </h1>
-      <div className="flex flex-wrap gap-1">
+      <div className="grid 2xl:flex flex-wrap sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-1">
         {operatingRound.productionResults.map((productionResult) => {
           const operatingCosts =
             CompanyTierData[productionResult.Company.companyTier]

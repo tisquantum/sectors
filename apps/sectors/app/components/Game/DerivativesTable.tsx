@@ -23,6 +23,7 @@ import {
   RiArrowUpCircleFill,
   RiCalendar2Fill,
   RiCalendarScheduleFill,
+  RiCurrencyFill,
   RiFundsFill,
   RiPriceTag2Fill,
   RiStrikethrough,
@@ -81,6 +82,7 @@ const DerivativesTable = ({ isInteractive }: { isInteractive: boolean }) => {
     "Company Name",
     "Stock Symbol",
     "Stock Price",
+    "Shares",
     "Strike Price",
     "Premium",
     "Term",
@@ -235,6 +237,13 @@ const DerivativesTable = ({ isInteractive }: { isInteractive: boolean }) => {
                 <div className="flex flex-col gap-2">Submitted</div>
               ))}
           </>
+        );
+      case "Shares":
+        return (
+          <span className="flex gap-1">
+            <RiCurrencyFill />
+            {contract.shareCount}
+          </span>
         );
       default:
         return null;

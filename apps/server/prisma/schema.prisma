@@ -234,6 +234,7 @@ enum StockAction {
   PRODUCTION
   RESEARCH_EFFECT
   PRESTIGE_REWARD
+  MAGNET_EFFECT
 }
 
 model StockRound {

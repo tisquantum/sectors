@@ -6,7 +6,10 @@ import { RiHandCoinFill, RiTeamFill } from "@remixicon/react";
 import PrestigeRewards from "./PrestigeRewards";
 import ResearchDeck from "../ResearchDeck/ResearchDeck";
 import { Tooltip } from "@nextui-org/react";
-import { tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
+import {
+  tooltipParagraphStyle,
+  tooltipStyle,
+} from "@sectors/app/helpers/tailwind.helpers";
 import CompanyPriorityList from "../Company/CompanyPriorityOperatingRound";
 import { trpc } from "@sectors/app/trpc";
 import { sectorPriority } from "@server/data/constants";
@@ -67,7 +70,7 @@ const EndTurnEconomy = () => {
             className={tooltipStyle}
             content={
               <div>
-                <p>
+                <p className={tooltipParagraphStyle}>
                   The number of consumers available to purchase goods and
                   services each turn. At the end of each turn, they will rotate
                   to each sector being "spooled" out until the total economy
@@ -111,7 +114,7 @@ const EndTurnEconomy = () => {
           <Tooltip
             className={tooltipStyle}
             content={
-              <p>
+              <p className={tooltipParagraphStyle}>
                 Once each sector has floated a company, the economy is eligible
                 to begin moving. If at least one company in each sector pay
                 dividends, the economy will move up by 1. If at least one

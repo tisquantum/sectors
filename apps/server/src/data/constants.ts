@@ -301,17 +301,22 @@ export const getNextCompanyOperatingRoundTurn = (
   currentCompanyId?: string,
 ): Company => {
   const sortedCompanies = getCompanyOperatingRoundTurnOrder(companies);
-  let chosenCompany;
+
   if (!currentCompanyId) {
-    chosenCompany = sortedCompanies[0];
-  } else {
-    const currentIndex = sortedCompanies.findIndex(
-      (company) => company.id === currentCompanyId,
-    );
-    chosenCompany =
-      sortedCompanies[(currentIndex + 1) % sortedCompanies.length];
+    return sortedCompanies[0];
   }
-  return chosenCompany;
+
+  const currentIndex = sortedCompanies.findIndex(
+    (company) => company.id === currentCompanyId,
+  );
+
+  // Handle the case where currentCompanyId is not found
+  if (currentIndex === -1) {
+    // You can decide how to handle this case, for example, returning the first company
+    return sortedCompanies[0];
+  }
+
+  return sortedCompanies[(currentIndex + 1) % sortedCompanies.length];
 };
 
 export enum ThroughputRewardType {
@@ -526,8 +531,7 @@ export const PrestigeTrack = [
   {
     type: PrestigeReward.MAGNET_EFFECT,
     name: 'Magnet Effect',
-    description:
-      'All other companies in the stock sector receive +1 stock price.',
+    description: 'All companies in the stock sector receive +1 stock price.',
     probability: 0.06,
     cost: 2,
   },

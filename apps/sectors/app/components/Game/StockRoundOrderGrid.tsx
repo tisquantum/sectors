@@ -1,7 +1,7 @@
 "use client";
 
 import { Button, Tab, Tabs } from "@nextui-org/react";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   isCurrentPhaseInteractive,
   organizeCompaniesBySector,
@@ -47,8 +47,10 @@ function isOrderInputOpenPlayerOrderCounter(
 
 const StockRoundOrderGrid = ({
   handleOrder,
+  forwardedRef,
 }: {
   handleOrder?: (company: Company, isIpo?: boolean) => void;
+  forwardedRef?: HTMLDivElement | null;
 }) => {
   const { gameId, currentPhase, gameState, authPlayer } = useGame();
   const { data: companies, isLoading } =
@@ -209,7 +211,7 @@ const StockRoundOrderGrid = ({
           </div>
         </Tab>
       </Tabs>
-      <Drawer.Portal>
+      <Drawer.Portal container={forwardedRef}>
         <Drawer.Overlay className="fixed inset-0 bg-black/40" />
         <Drawer.Content className="overflow-y scrollbar bg-slate-900 flex flex-col rounded-t-[10px] h-full w-96 fixed top-[64.9px] right-0">
           {selectedCompanyOrder && (

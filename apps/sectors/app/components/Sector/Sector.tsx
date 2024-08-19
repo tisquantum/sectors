@@ -20,7 +20,10 @@ import { useGame } from "../Game/GameContext";
 import { trpc } from "@sectors/app/trpc";
 import { sectorColors } from "@server/data/gameData";
 import { SectorWithCompanies } from "@server/prisma/prisma.types";
-import { tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
+import {
+  tooltipParagraphStyle,
+  tooltipStyle,
+} from "@sectors/app/helpers/tailwind.helpers";
 
 const SectorComponent = () => {
   const { gameId } = useGame();
@@ -53,7 +56,7 @@ const SectorComponent = () => {
                 <Tooltip
                   className={tooltipStyle}
                   content={
-                    <p>
+                    <p className={tooltipParagraphStyle}>
                       The base demand for this sector. Determines how many many
                       customers will be 'spooled' to sector during economy
                       phase. Also used in conjunction with company demand when
@@ -69,7 +72,7 @@ const SectorComponent = () => {
                 <Tooltip
                   className={tooltipStyle}
                   content={
-                    <p>
+                    <p className={tooltipParagraphStyle}>
                       Share percentage required to float companies in this
                       sector.
                     </p>
@@ -85,7 +88,7 @@ const SectorComponent = () => {
                 <Tooltip
                   className={tooltipStyle}
                   content={
-                    <p>
+                    <p className={tooltipParagraphStyle}>
                       The consumers waiting to buy product from this sector.
                     </p>
                   }
@@ -99,7 +102,7 @@ const SectorComponent = () => {
                 <Tooltip
                   className={tooltipStyle}
                   content={
-                    <p>
+                    <p className={tooltipParagraphStyle}>
                       Minimum|Maximum starting unit price for a company created
                       in this sector.
                     </p>
@@ -119,7 +122,7 @@ const SectorComponent = () => {
                 <Tooltip
                   className={tooltipStyle}
                   content={
-                    <p>
+                    <p className={tooltipParagraphStyle}>
                       Minimum|Maximum starting ipo price for a company created
                       in this sector.
                     </p>

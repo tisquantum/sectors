@@ -9,7 +9,11 @@ import { useGame } from "./GameContext";
 import { isCurrentPhaseInteractive } from "@sectors/app/helpers";
 import PlayerCurrentQueuedOrders from "../Player/PlayerCurrentQueuedOrders";
 
-const StockRoundAction = () => {
+const StockRoundAction = ({
+  forwardedRef,
+}: {
+  forwardedRef?: HTMLDivElement | null;
+}) => {
   const { currentPhase } = useGame();
   const [currentOrder, setCurrentOrder] = useState<any>(null);
   const [isIpo, setIsIpo] = useState<boolean>(false);
@@ -27,7 +31,10 @@ const StockRoundAction = () => {
   return (
     <div className="flex flex-col items-center h-full relative">
       <div className="justify-center items-center content-center max-w-full">
-        <StockRoundOrderGrid handleOrder={handleOrder} />
+        <StockRoundOrderGrid
+          handleOrder={handleOrder}
+          forwardedRef={forwardedRef}
+        />
       </div>
       <div className="flex justify-center items-center gap-10 basis-1/4">
         {isCurrentPhaseInteractive(currentPhase?.name) ? (

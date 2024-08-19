@@ -2,12 +2,13 @@ import { trpc } from "@sectors/app/trpc";
 import { useGame } from "./GameContext";
 import {
   CompanyTierData,
+  PRETIGE_REWARD_OPERATION_COST_PERCENTAGE_REDUCTION,
   throughputRewardOrPenalty,
   ThroughputRewardType,
 } from "@server/data/constants";
 import CompanyInfo from "../Company/CompanyInfo";
 import { CompanyStatus } from "@server/prisma/prisma.client";
-import { RiIncreaseDecreaseFill } from "@remixicon/react";
+import { RiFundsFill, RiIncreaseDecreaseFill } from "@remixicon/react";
 import { Tooltip } from "@nextui-org/react";
 import { tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
 import ThroughputLegend from "./ThroughputLegend";
@@ -70,10 +71,13 @@ const OperatingRoundProduction = () => {
               </span>
               {throughputRewardOrPenalty(productionResult.throughputResult)
                 .type === ThroughputRewardType.SECTOR_REWARD ? (
-                <span>Share Steps: +1</span>
-              ) : (
                 <span>
-                  Share Steps:{" "}
+                  %{PRETIGE_REWARD_OPERATION_COST_PERCENTAGE_REDUCTION}{" "}
+                  Operation Cost Reduction
+                </span>
+              ) : (
+                <span className="flex gap-1">
+                  <RiFundsFill />
                   {productionResult.steps == 0
                     ? "0"
                     : `-${productionResult.steps}`}

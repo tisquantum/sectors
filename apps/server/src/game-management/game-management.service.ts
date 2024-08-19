@@ -2148,7 +2148,7 @@ export class GameManagementService {
     }
     //get all companies in sector except this one
     const otherCompanies = await this.companyService.companies({
-      where: { sectorId: company.sectorId, id: { not: company.id } },
+      where: { sectorId: company.sectorId },
     });
     if (!otherCompanies) {
       throw new Error('Other companies not found');
@@ -2161,7 +2161,7 @@ export class GameManagementService {
         prestigeReward.gameTurnId || '',
         otherCompany.currentStockPrice,
         1,
-        StockAction.PRESTIGE_REWARD,
+        StockAction.MAGNET_EFFECT,
       );
     });
     try {
@@ -2860,6 +2860,10 @@ export class GameManagementService {
 
     let globalConsumers = game.consumerPoolNumber;
 
+    const companyPretigeRewardOperationDiscounts: {
+      [companyId: string]: boolean;
+    } = {};
+
     for (const [sectorId, sectorCompanies] of Object.entries(
       groupedCompanies,
     )) {
@@ -2886,6 +2890,7 @@ export class GameManagementService {
       });
 
       for (const company of reorderedSectorCompanies) {
+        companyPretigeRewardOperationDiscounts[company.id] = false;
         let unitsManufactured = calculateCompanySupply(
           company.supplyBase,
           company.supplyMax,
@@ -2934,9 +2939,10 @@ export class GameManagementService {
           //   currentStockPrice: company.currentStockPrice || 0,
           //   steps: 1,
           // });
+          companyPretigeRewardOperationDiscounts[company.id] = true;
           gameLogs.push({
             gameId: phase.gameId,
-            content: `Company ${company.name} has met optimal efficiency and it's operating costs have been reduced by %${PRETIGE_REWARD_OPERATION_COST_PERCENTAGE_REDUCTION} for the next turn.`,
+            content: `Company ${company.name} has met optimal efficiency and it's operating costs have been reduced by %${PRETIGE_REWARD_OPERATION_COST_PERCENTAGE_REDUCTION} this turn.`,
           });
         } else if (
           throughputOutcome.type === ThroughputRewardType.STOCK_PENALTY
@@ -2983,7 +2989,12 @@ export class GameManagementService {
           operatingCosts = Math.floor(operatingCosts / 2);
         }
       }
-
+      if (companyPretigeRewardOperationDiscounts[company.id]) {
+        operatingCosts = Math.floor(
+          operatingCosts *
+            (PRETIGE_REWARD_OPERATION_COST_PERCENTAGE_REDUCTION / 100),
+        );
+      }
       if (hasAutomationCard) {
         operatingCosts =
           operatingCosts - AUTOMATION_EFFECT_OPERATIONS_REDUCTION;
@@ -3348,8 +3359,8 @@ export class GameManagementService {
         .slice(0, companyActionCount)
         .map(([action]) => action as OperatingRoundAction);
 
-      // Fill remaining actions with VETO if needed
-      while (sortedActions.length < companyActionCount) {
+      // If there are no actions, add a veto action
+      if (sortedActions.length === 0) {
         sortedActions.push(OperatingRoundAction.VETO);
       }
 
@@ -6219,18 +6230,20 @@ export class GameManagementService {
   }
 
   async haveAllActiveCompaniesActionsResolved(gameId: string) {
-    //get current operating round
+    // Get the current operating round
     const game = await this.gamesService.getGameState(gameId);
     if (!game) {
       throw new Error('Game not found');
     }
-    //get all active companies in the game
+
+    // Get all active companies in the game
     const companies = await this.companyService.companies({
       where: {
         gameId,
         status: CompanyStatus.ACTIVE,
       },
     });
+
     const currentOperatingRound =
       await this.operatingRoundService.operatingRoundWithCompanyActions({
         id: game.currentOperatingRoundId || 0,
@@ -6238,56 +6251,65 @@ export class GameManagementService {
     if (!currentOperatingRound) {
       throw new Error('Operating round not found');
     }
+
     console.log('companies length', companies.length);
     console.log(
       'currentOperatingRound companyActions number',
       currentOperatingRound.companyActions.length,
     );
+
     if (companies.length > currentOperatingRound.companyActions.length) {
       return false;
     }
-    //if any company action was EXPANSION or DOWNSIZE, adjust the company tier back to it's previous tier in a shallow copy
-    //because tiers are changed upon resolution, we need to look at the tier before the action was taken when making this check.
+
+    // Adjust company tiers based on actions taken
     const companiesWithAdjustedTier = companies.map((company) => {
       const companyAction = currentOperatingRound.companyActions.find(
         (action) => action.companyId === company.id,
       );
-      if (companyAction?.action === OperatingRoundAction.EXPANSION) {
-        return {
-          ...company,
-          companyTier: getPreviousCompanyTier(company.companyTier),
-        };
-      }
-      if (companyAction?.action === OperatingRoundAction.DOWNSIZE) {
-        return {
-          ...company,
-          companyTier: getNextCompanyTier(company.companyTier),
-        };
-      }
-      return company;
+      return {
+        ...company,
+        companyTier: this.getAdjustedCompanyTier(company, companyAction),
+      };
     });
-    //get total company actions based on company tier
+
+    // Calculate the total expected company actions
     const totalCompanyActions = companiesWithAdjustedTier.reduce(
       (acc, company) =>
         acc + CompanyTierData[company.companyTier].companyActions,
       0,
     );
-    //check if all CompanyAction.resolved
+
+    // Check if all actions are resolved
     const resolvedCompanyActions = currentOperatingRound.companyActions.filter(
       (action) => action.resolved,
     );
-    //check if all companies have at least one voted action
+
+    // Check if all companies have at least one action
     const companiesWithVotedActions = companiesWithAdjustedTier.filter(
       (company) =>
-        currentOperatingRound.companyActions.find(
+        currentOperatingRound.companyActions.some(
           (action) => action.companyId === company.id,
         ),
     );
+
+    // Return true if all companies have at least one voted action
     return companiesWithVotedActions.length === companies.length;
 
+    // Optionally check if all actions are resolved
     // console.log('resolvedCompanyActions', resolvedCompanyActions.length);
     // console.log('totalCompanyActions', totalCompanyActions);
     // return resolvedCompanyActions.length >= totalCompanyActions;
+  }
+
+  getAdjustedCompanyTier(company: Company, action?: CompanyAction) {
+    if (action?.action === OperatingRoundAction.EXPANSION) {
+      return getPreviousCompanyTier(company.companyTier);
+    }
+    if (action?.action === OperatingRoundAction.DOWNSIZE) {
+      return getNextCompanyTier(company.companyTier);
+    }
+    return company.companyTier;
   }
 
   async doesNextPhaseNeedToBePlayed(phaseName: PhaseName, currentPhase: Phase) {

@@ -21,6 +21,7 @@ import PlayerOrderInput from "../Player/PlayerOrderInput";
 import { set } from "lodash";
 import { motion, AnimatePresence } from "framer-motion";
 import { Drawer } from "vaul";
+import { RiCurrencyFill } from "@remixicon/react";
 
 type CompanyCardProps = {
   company: CompanyWithRelations;
@@ -189,15 +190,14 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
               <div
                 className={`${
                   company.status === "INACTIVE" && "bg-gray-950 rounded-md"
-                } p-2`}
+                } p-2 flex gap-1`}
               >
-                IPO (
+                IPO <RiCurrencyFill className="h-6 w-6" />
                 {
                   company.Share.filter(
                     (share: Share) => share.location == ShareLocation.IPO
                   ).length
-                }
-                ){" "}
+                }{" "}
                 <span className="font-bold">@ ${company.ipoAndFloatPrice}</span>
               </div>
             </div>
@@ -287,16 +287,15 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
               <div
                 className={`${
                   company.status === "INACTIVE" && "bg-gray-950 rounded-md"
-                } p-2`}
+                } p-2 flex gap-1`}
               >
-                OPEN MARKET (
+                OPEN MARKET <RiCurrencyFill className="h-6 w-6" />
                 {
                   company.Share.filter(
                     (share: Share) =>
                       share.location == ShareLocation.OPEN_MARKET
                   ).length
-                }
-                ){" "}
+                }{" "}
                 <span className="font-bold">
                   @ ${company.currentStockPrice}
                 </span>

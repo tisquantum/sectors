@@ -126,6 +126,7 @@ const Game = ({ gameId }: { gameId: string }) => {
   const constraintsRef = useRef(null);
   const [isTimerAtZero, setIsTimerAtZero] = useState(false);
   const { isOpen, onOpen, onClose, onOpenChange } = useDisclosure();
+  const gameActionContainerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     onOpen();
   }, [onOpen]);
@@ -153,11 +154,11 @@ const Game = ({ gameId }: { gameId: string }) => {
     ) : currentRoundData?.phase.name === PhaseName.STOCK_RESOLVE_LIMIT_ORDER ? (
       <PendingOrders />
     ) : currentRoundData?.phase.name === PhaseName.STOCK_ACTION_ORDER ? (
-      <StockRoundAction />
+      <StockRoundAction forwardedRef={gameActionContainerRef.current} />
     ) : currentRoundData?.phase.name === PhaseName.STOCK_ACTION_RESULT ? (
-      <StockRoundAction />
+      <StockRoundAction forwardedRef={gameActionContainerRef.current} />
     ) : currentRoundData?.phase.name === PhaseName.STOCK_ACTION_REVEAL ? (
-      <StockRoundOrderGrid />
+      <StockRoundOrderGrid forwardedRef={gameActionContainerRef.current}/>
     ) : currentRoundData?.phase.name ===
       PhaseName.STOCK_RESOLVE_MARKET_ORDER ? (
       <PendingOrders isResolving={true} />
@@ -254,7 +255,7 @@ const Game = ({ gameId }: { gameId: string }) => {
               handleTogglePhaseList={() => setShowPhaseList((prev) => !prev)}
               isTimerAtZero={isTimerAtZero}
             />
-            <div className="relative flex justify-between overflow-y-auto scrollbar">
+            <div className="relative flex justify-between overflow-y-auto scrollbar" ref={gameActionContainerRef}>
               {currentPhase?.name &&
                 isActivePhase(currentPhase.name) &&
                 isTimerAtZero && (

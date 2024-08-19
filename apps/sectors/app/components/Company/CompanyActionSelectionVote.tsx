@@ -127,7 +127,7 @@ const companyActionsDescription = [
     id: 12,
     title: "Lobby",
     name: OperatingRoundAction.LOBBY,
-    message: `Lobby the government to force demand in your favor. Boost the entire sectors demand by ${LOBBY_DEMAND_BOOST}. This demand will decay 1 per stock price adjustment phase.`,
+    message: `Lobby the government to force demand in your favor. Boost the sectors demand by ${LOBBY_DEMAND_BOOST}. This demand will decay 1 per stock price adjustment phase.`,
   },
   {
     id: 13,

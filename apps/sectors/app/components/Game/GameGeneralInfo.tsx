@@ -30,7 +30,10 @@ import {
 } from "@nextui-org/react";
 import PlayerAvatar from "../Player/PlayerAvatar";
 import { EntityType, OrderType, PhaseName } from "@server/prisma/prisma.client";
-import { tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
+import {
+  tooltipParagraphStyle,
+  tooltipStyle,
+} from "@sectors/app/helpers/tailwind.helpers";
 import {
   MoneyTransactionByEntityType,
   MoneyTransactionHistoryByPlayer,
@@ -100,7 +103,7 @@ const GameGeneralInfo = () => {
                 className={tooltipStyle}
                 content={
                   <div>
-                    <p>
+                    <p className={tooltipParagraphStyle}>
                       The potential maximum amount of money you&apos;ve queued
                       for orders this stock round.
                     </p>
@@ -115,7 +118,7 @@ const GameGeneralInfo = () => {
             className={tooltipStyle}
             content={
               <div>
-                <p>
+                <p className={tooltipParagraphStyle}>
                   The remaining actions you have for order types in a stock
                   round. Limit Order and Short Order actions only replenish as
                   existing orders are filled or rejected. Market Orders
@@ -135,7 +138,9 @@ const GameGeneralInfo = () => {
       <div>
         <Tooltip
           className={tooltipStyle}
-          content={<p>The global consumer pool.</p>}
+          content={
+            <p className={tooltipParagraphStyle}>The global consumer pool.</p>
+          }
         >
           <div className="flex items-center gap-2">
             <RiTeamFill size={18} />
@@ -148,7 +153,7 @@ const GameGeneralInfo = () => {
           className={tooltipStyle}
           content={
             <div>
-              <p>
+              <p className={tooltipParagraphStyle}>
                 The bank pool. Once the bank pool is exhausted, the game ends.
               </p>
             </div>
@@ -163,7 +168,7 @@ const GameGeneralInfo = () => {
             className={tooltipStyle}
             content={
               <div>
-                <p>
+                <p className={tooltipParagraphStyle}>
                   The share limit. If a player exceeds this limit, they must
                   divest down to the limit.
                 </p>
@@ -180,7 +185,7 @@ const GameGeneralInfo = () => {
             className={tooltipStyle}
             content={
               <div>
-                <p>
+                <p className={tooltipParagraphStyle}>
                   The company ownership limit percentage. A player may never own
                   more shares than this percentage of a company unless they
                   incidentally fall above this percentage due to company share
@@ -203,7 +208,7 @@ const GameGeneralInfo = () => {
         className={tooltipStyle}
         content={
           <div>
-            <p>
+            <p className={tooltipParagraphStyle}>
               The current turn out of the maximum turns in the game. The game
               ends in one of two ways, either the bank pool is exhausted or the
               maximum turns are reached.

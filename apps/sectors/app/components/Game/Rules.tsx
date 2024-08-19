@@ -130,20 +130,24 @@ const stockRoundRules = (
           REJECTED.
         </li>
       </ul>
-      <strong>Market Order Price Stock Price Adjustments</strong>
       <p>
-        Given the net difference between BUYS and SELLS for market order
-        quantities of a given company, that companies stock price will adjust
-        steps down equivalent to the net negative or move up as many steps as it
-        can fill "price slots" on the stock chart. Different stock tiers require
-        different amounts of slots to be filled before an order can move up in
-        price.
+        <strong>Market Order Price Stock Price Adjustments</strong>
+        <p>
+          Given the net difference between BUYS and SELLS for market order
+          quantities of a given company, that companies stock price will adjust
+          steps down equivalent to the net negative or move up as many steps as
+          it can fill "price slots" on the stock chart. Different stock tiers
+          require different amounts of slots to be filled before an order can
+          move up in price.
+        </p>
       </p>
     </p>
     <p>
       <strong>Profits from Options Contracts:</strong> The profit is the
       difference between the current market price and the strike price,
-      multiplied by the total shares in the contract.
+      multiplied by the total shares in the contract. Should the price be equal
+      to or less than the strike price, you will lose the premium paid for the
+      contract.
     </p>
     <p>
       <strong>Stock Market Price Impact:</strong>

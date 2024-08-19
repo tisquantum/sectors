@@ -79,7 +79,7 @@ const CompanyMoreInfo = ({
           <Tooltip
             className={tooltipStyle}
             content={
-              <p>
+              <p className={tooltipParagraphStyle}>
                 Base sector demand, every company in the sector receives this
                 base bonus.
               </p>
@@ -95,7 +95,7 @@ const CompanyMoreInfo = ({
           <Tooltip
             className={tooltipStyle}
             content={
-              <p>
+              <p className={tooltipParagraphStyle}>
                 The amount of consumers currently looking to buy in this sector.
               </p>
             }
@@ -111,7 +111,7 @@ const CompanyMoreInfo = ({
         <Tooltip
           className={tooltipStyle}
           content={
-            <p>
+            <p className={tooltipParagraphStyle}>
               Prestige tokens. While held, they prioritize the company for
               production. Can be spent for a bonus. Sell all of your companies
               supply during an operating round to earn a prestige token.
@@ -126,7 +126,7 @@ const CompanyMoreInfo = ({
         <Tooltip
           className={tooltipStyle}
           content={
-            <p>
+            <p className={tooltipParagraphStyle}>
               The companies demand score. The maximum amount of customers that
               will visit your company before spending somewhere else.
             </p>
@@ -143,7 +143,9 @@ const CompanyMoreInfo = ({
         <Tooltip
           className={tooltipStyle}
           content={
-            <p>The amount of goods the company produces per operating round.</p>
+            <p className={tooltipParagraphStyle}>
+              The amount of goods the company produces per operating round.
+            </p>
           }
         >
           <div className="flex items-center">
@@ -161,7 +163,7 @@ const CompanyMoreInfo = ({
           className={tooltipStyle}
           content={
             <div className="flex flex-col gap-2">
-              <p>
+              <p className={tooltipParagraphStyle}>
                 Throughput. The base sector demand plus the companies demand
                 minus it&apos;s supply. The closer to zero, the more efficient
                 the company is operating.
@@ -191,7 +193,7 @@ const CompanyMoreInfo = ({
         <Tooltip
           className={tooltipStyle}
           content={
-            <p>
+            <p className={tooltipParagraphStyle}>
               The cost to operate the company per operating round. This cost is
               tied to your company tier.
             </p>
@@ -207,7 +209,9 @@ const CompanyMoreInfo = ({
         <Tooltip
           className={tooltipStyle}
           content={
-            <p>The amount of actions a company may take per operating round.</p>
+            <p className={tooltipParagraphStyle}>
+              The amount of actions a company may take per operating round.
+            </p>
           }
         >
           <div className="flex items-center gap-1">
@@ -219,7 +223,7 @@ const CompanyMoreInfo = ({
           <Tooltip
             className={tooltipStyle}
             content={
-              <p>
+              <p className={tooltipParagraphStyle}>
                 This company has taken a loan. The company must pay back the
                 loan in interest at a fixed rate of $
                 {LOAN_AMOUNT * LOAN_INTEREST_RATE} per turn.
@@ -280,7 +284,7 @@ const CompanyInfo = ({
                 className={tooltipStyle}
                 content={
                   <div className="flex flex-col gap-2 w-full">
-                    <p>
+                    <p className={tooltipParagraphStyle}>
                       The company tier, this determines the operational costs
                       and supply.
                     </p>
@@ -294,7 +298,7 @@ const CompanyInfo = ({
               <Tooltip
                 className={tooltipStyle}
                 content={
-                  <p>
+                  <p className={tooltipParagraphStyle}>
                     The company status. INACTIVE companies have not yet floated.
                   </p>
                 }
@@ -306,7 +310,7 @@ const CompanyInfo = ({
               <Tooltip
                 className={tooltipStyle}
                 content={
-                  <p>
+                  <p className={tooltipParagraphStyle}>
                     Unit Price of goods. Each consumer consumes one good per
                     operating round given the company meets supply and demand.
                   </p>
@@ -318,7 +322,11 @@ const CompanyInfo = ({
               </Tooltip>
               <Tooltip
                 className={tooltipStyle}
-                content={<p>Corporate treasury or cash on hand.</p>}
+                content={
+                  <p className={tooltipParagraphStyle}>
+                    Corporate treasury or cash on hand.
+                  </p>
+                }
               >
                 <span className="flex items-center" onClick={onOpen}>
                   <RiWallet3Fill size={20} /> ${company.cashOnHand}
@@ -327,7 +335,7 @@ const CompanyInfo = ({
               <Tooltip
                 className={tooltipStyle}
                 content={
-                  <p>
+                  <p className={tooltipParagraphStyle}>
                     Company status, inactive companies have not yet been
                     floated.
                   </p>
