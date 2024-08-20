@@ -15,6 +15,7 @@ import { useGame } from "../Game/GameContext";
 import {
   ACTION_ISSUE_SHARE_AMOUNT,
   CompanyActionCosts,
+  CompanyActionPrestigeCosts,
   CompanyTierData,
   DEFAULT_DECREASE_UNIT_PRICE,
   DEFAULT_INCREASE_UNIT_PRICE,
@@ -26,6 +27,7 @@ import {
   MARKETING_CONSUMER_BONUS,
   OURSOURCE_SUPPLY_BONUS,
   PRESTIGE_ACTION_TOKEN_COST,
+  SectorEffects,
   SMALL_MARKETING_CAMPAIGN_DEMAND,
 } from "@server/data/constants";
 import {
@@ -46,7 +48,7 @@ import CompanyInfo from "./CompanyInfo";
 import PrestigeRewards from "../Game/PrestigeRewards";
 import Button from "@sectors/app/components/General/DebounceButton";
 import DebounceButton from "@sectors/app/components/General/DebounceButton";
-import { RiCloseCircleFill } from "@remixicon/react";
+import { RiCloseCircleFill, RiSparkling2Fill } from "@remixicon/react";
 import { companyPriorityOrderOperations } from "@server/data/helpers";
 import { tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
 import CompanyPriorityList from "./CompanyPriorityOperatingRound";
@@ -164,16 +166,14 @@ const companyActionsDescription = [
     id: 17,
     title: "Rapid Expansion",
     name: OperatingRoundAction.RAPID_EXPANSION,
-    message:
-      "The company expands two levels.",
+    message: "The company expands two levels.",
   },
   //Healthcare
   {
     id: 18,
     title: "Fast-track Approval",
     name: OperatingRoundAction.FASTTRACK_APPROVAL,
-    message:
-      "The company gains +5 demand that decays 1 per turn.",
+    message: "The company gains +5 demand that decays 1 per turn.",
   },
   //consumer defensive
   {
@@ -196,8 +196,7 @@ const companyActionsDescription = [
     id: 21,
     title: "Surge Pricing",
     name: OperatingRoundAction.SURGE_PRICING,
-    message:
-      "Next turn, company revenue is increased 25%.",
+    message: "Next turn, company revenue is increased 25%.",
   },
   //passive effect badges
   //technology
@@ -205,8 +204,7 @@ const companyActionsDescription = [
     id: 21,
     title: "Innovation Surge",
     name: OperatingRoundAction.INNOVATION_SURGE,
-    message:
-      "Should the company draw a research card, draw 2 cards instead.",
+    message: "Should the company draw a research card, draw 2 cards instead.",
   },
   //healthcare
   {
@@ -221,8 +219,7 @@ const companyActionsDescription = [
     id: 23,
     title: "Supply Chain",
     name: OperatingRoundAction.SUPPLY_CHAIN,
-    message:
-      "The company gains +1 permanent supply.",
+    message: "The company gains +1 permanent supply.",
   },
   //industrial
   {
@@ -253,9 +250,8 @@ const companyActionsDescription = [
     id: 27,
     title: "Carbon Credit",
     name: OperatingRoundAction.CARBON_CREDIT,
-    message:
-      "This companies throughput can never be less than 1.",
-  }
+    message: "This companies throughput can never be less than 1.",
+  },
 ];
 const CompanyActionSelectionVote = ({
   company,
@@ -336,7 +332,21 @@ const CompanyActionSelectionVote = ({
       }
     }
   };
+  let availableActions = companyActionsDescription.filter(
+    (action) => action.id < 15
+  );
 
+  const companySectorActiveEffect =
+    SectorEffects[company.Sector.sectorName]?.active;
+  if (companySectorActiveEffect) {
+    //add back in the relevant sector active action
+    const sectorActiveAction = companyActionsDescription.find(
+      (action) => action.name === companySectorActiveEffect
+    );
+    if (sectorActiveAction) {
+      availableActions.push(sectorActiveAction);
+    }
+  }
   return (
     <div className="flex flex-col gap-3 p-5">
       <h1 className="text-2xl">{company.name} Shareholder Meeting</h1>
@@ -391,7 +401,7 @@ const CompanyActionSelectionVote = ({
               ) : null}
             </div>
             <div className="grid grid-cols-3 gap-2">
-              {companyActionsDescription.map((action) => (
+              {availableActions.map((action) => (
                 <div
                   key={action.id}
                   onClick={() => handleSelected(action.name, company.id)}
@@ -408,13 +418,24 @@ const CompanyActionSelectionVote = ({
                         PhaseName.OPERATING_ACTION_COMPANY_VOTE
                         ? "ring-2 ring-blue-500"
                         : ""
-                    }`}
+                    } ${
+                      companySectorActiveEffect &&
+                      action.name === companySectorActiveEffect &&
+                      `bg-[${sectorColors[company.Sector.name]}]`
+                    }
+                    `}
                   >
                     <CardHeader>
                       <div className="flex flex-col">
-                        <div className="flex justify-between">
+                        <div className="flex gap-1 justify-between">
                           <span className="font-bold mr-3">{action.title}</span>
                           <span>${CompanyActionCosts[action.name]}</span>
+                          {CompanyActionPrestigeCosts[action.name] > 0 && (
+                            <div className="flex">
+                              <RiSparkling2Fill />
+                              <span>{CompanyActionPrestigeCosts[action.name]}</span>
+                            </div>
+                          )}
                         </div>
                         {action.name === OperatingRoundAction.LOAN && (
                           <span>One time only</span>

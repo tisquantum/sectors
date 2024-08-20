@@ -97,13 +97,13 @@ export function friendlyPhaseName(name: PhaseName | undefined): string {
       return "Start Turn";
     case PhaseName.END_TURN:
       return "End Turn";
-    case PhaseName.PRIZE_VOTE_ACTION;
+    case PhaseName.PRIZE_VOTE_ACTION:
       return "Prize Votes";
-    case PhaseName.PRIZE_VOTE_RESOLVE;
+    case PhaseName.PRIZE_VOTE_RESOLVE:
       return "Resolve Prize Votes";
-    case PhaseName.PRIZE_DISTRIBUTE_ACTION;
+    case PhaseName.PRIZE_DISTRIBUTE_ACTION:
       return "Distribute Prizes";
-    case PhaseName.PRIZE_DISTRIBUTE_RESOLVE;
+    case PhaseName.PRIZE_DISTRIBUTE_RESOLVE:
       return "Resolve Prize Distribution";
     default:
       return "Unknown Phase";

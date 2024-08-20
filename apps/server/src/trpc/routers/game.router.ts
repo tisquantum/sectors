@@ -8,6 +8,7 @@ import {
   PhaseName,
   RoundType,
   GameStatus,
+  OperatingRoundAction,
 } from '@prisma/client';
 import { GameManagementService } from '@server/game-management/game-management.service';
 import {
@@ -25,6 +26,29 @@ type Context = {
   playerService: PlayersService;
   phaseService: PhaseService;
 };
+
+const prizeDistributionInputSchema = z.object({
+  playerId: z.string(),
+  distributionData: z.array(
+    z.union([
+      z.object({
+        prizetype: z.literal('cash'),
+        playerId: z.string(),
+        amount: z.number(),
+      }),
+      z.object({
+        prizetype: z.literal('prestige'),
+        companyId: z.string(),
+        amount: z.number(),
+      }),
+      z.object({
+        prizetype: z.literal('passive'),
+        companyId: z.string(),
+        effectName: z.nativeEnum(OperatingRoundAction),
+      }),
+    ]),
+  ),
+});
 
 export default (trpc: TrpcService, ctx: Context) =>
   trpc.router({
@@ -260,5 +284,66 @@ export default (trpc: TrpcService, ctx: Context) =>
       .input(z.object({ gameId: z.string() }))
       .mutation(async ({ input }) => {
         return ctx.gameManagementService.resumeGame(input.gameId);
+      }),
+    prizeDistribution: trpc.procedure
+      .input(prizeDistributionInputSchema)
+      .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
+      .use(async (opts) => checkSubmissionTime(opts, ctx.phaseService))
+      .mutation(async ({ input, ctx: ctxMiddleware }) => {
+        const { distributionData } = input;
+        if (!distributionData) {
+          throw new Error('Distribution data is required');
+        }
+        if (!ctxMiddleware.submittingPlayerId) {
+          throw new Error('Player ID is required');
+        }
+        let prizes;
+        try {
+          prizes =
+            await ctx.gameManagementService.getPrizesCurrentTurnForPlayer(
+              ctxMiddleware.submittingPlayerId,
+            );
+        } catch (error) {
+          throw new Error('Error getting prizes');
+        }
+        if (!prizes) {
+          throw new Error('No prizes found for this player.');
+        }
+        // Loop through the distributionData and handle each prize type
+        for (const distribution of distributionData) {
+          switch (distribution.prizetype) {
+            case 'cash':
+              // Handle cash distribution
+              await ctx.gameManagementService.distributeCash({
+                playerId: distribution.playerId,
+                amount: distribution.amount,
+                prize: prizes[0],
+              });
+              break;
+
+            case 'prestige':
+              // Handle prestige distribution
+              await ctx.gameManagementService.distributePrestige({
+                companyId: distribution.companyId,
+                amount: distribution.amount,
+                prize: prizes[0],
+              });
+              break;
+
+            case 'passive':
+              // Handle passive effect distribution
+              await ctx.gameManagementService.applyPassiveEffect({
+                companyId: distribution.companyId,
+                effectName: distribution.effectName,
+                prize: prizes[0],
+              });
+              break;
+
+            default:
+              throw new Error('Unknown prize type');
+          }
+        }
+
+        return { success: true };
       }),
   });

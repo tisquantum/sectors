@@ -979,7 +979,7 @@ export const sectorColorVariants: { [key: string]: string[] } = {
 };
 
 export const consumerCyclical = [
-  { name: 'TesLoop Motors', symbol: 'TLM' },
+  { name: 'Eureka Motors', symbol: 'EUM' },
   { name: 'ToyAuto', symbol: 'TA' },
   { name: 'Forge Motors', symbol: 'FGM' },
   { name: 'Jungle Books', symbol: 'JUB' },
@@ -987,13 +987,13 @@ export const consumerCyclical = [
   { name: "McDougall's", symbol: 'MCD' },
   { name: 'Chimichotle', symbol: 'CML' },
   { name: 'StarBrews', symbol: 'SBW' },
-  { name: "Domino's Pizzeria", symbol: 'DMP' },
+  { name: 'Slabs Pizzeria', symbol: 'SBP' },
   { name: 'HomePalace', symbol: 'HMP' },
   { name: 'Hilman Hotels', symbol: 'HH' },
   { name: 'Marriott Inn', symbol: 'MIT' },
   { name: 'LuLuActive', symbol: 'LLA' },
   { name: 'The Void Clothing', symbol: 'TVC' },
-  { name: 'Nikey Footwear', symbol: 'NKF' },
+  { name: 'Victory Footwear', symbol: 'VF' },
   { name: 'AdiSport', symbol: 'ADS' },
 ];
 

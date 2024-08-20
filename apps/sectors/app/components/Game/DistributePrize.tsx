@@ -14,18 +14,47 @@ import DebounceButton from "../General/DebounceButton";
 import PlayerSelect from "./PlayerSelect";
 import { organizeCompaniesBySector } from "@sectors/app/helpers";
 import { useState } from "react";
+import { OperatingRoundAction } from "@server/prisma/prisma.client";
 
-const DistributePrize = ({ prize }: { prize: PrizeWithSectorPrizes }) => {
+type DistributionData =
+  | {
+      prizetype: "cash";
+      playerId: string;
+      amount: number;
+    }
+  | {
+      prizetype: "prestige";
+      companyId: string;
+      amount: number;
+    }
+  | {
+      prizetype: "passive";
+      companyId: string;
+      effectName: OperatingRoundAction;
+    };
+
+const DistributePrize = ({
+  prize,
+  setDistributionData,
+  distributionData,
+}: {
+  prize: PrizeWithSectorPrizes;
+  setDistributionData: React.Dispatch<React.SetStateAction<DistributionData[]>>;
+  distributionData: DistributionData[];
+}) => {
   const { gameId } = useGame();
   const { data: companiesWithSector, isLoading } =
     trpc.company.listCompaniesWithSector.useQuery({
       where: { gameId },
     });
 
-  const [selectedCompanies, setSelectedCompanies] = useState<
+  const [selectedPlayer, setSelectedPlayer] = useState<string>("");
+  const [cashAmount, setCashAmount] = useState<number>(0);
+  const [selectedCompany, setSelectedCompany] = useState<string>("");
+  const [prestigeAmount, setPrestigeAmount] = useState<number>(0);
+  const [selectedSectorCompany, setSelectedSectorCompany] = useState<
     Record<string, string>
   >({});
-  const [distributionData, setDistributionData] = useState<any[]>([]);
 
   if (isLoading) {
     return <div>Loading...</div>;
@@ -36,146 +65,162 @@ const DistributePrize = ({ prize }: { prize: PrizeWithSectorPrizes }) => {
   const companiesBySector = organizeCompaniesBySector(companiesWithSector);
 
   const handleSelectChange = (sectorId: string, companyId: string) => {
-    setSelectedCompanies((prev) => ({
+    setSelectedSectorCompany((prev) => ({
       ...prev,
       [sectorId]: companyId,
     }));
   };
 
-  const handleAddCashDistribution = (playerId: string, amount: number) => {
-    setDistributionData((prev) => [
-      ...prev,
-      {
-        prizetype: "cash",
-        playerId,
-        amount,
-      },
-    ]);
+  const handleAddCashDistribution = () => {
+    if (selectedPlayer && cashAmount > 0) {
+      setDistributionData((prev) => [
+        ...prev,
+        {
+          prizetype: "cash",
+          playerId: selectedPlayer,
+          amount: cashAmount,
+        },
+      ]);
+      // Reset state after adding
+      setSelectedPlayer("");
+      setCashAmount(0);
+    }
   };
 
-  const handleAddPrestigeDistribution = (companyId: string, amount: number) => {
-    setDistributionData((prev) => [
-      ...prev,
-      {
-        prizetype: "prestige",
-        companyId,
-        amount,
-      },
-    ]);
+  const handleAddPrestigeDistribution = () => {
+    if (selectedCompany && prestigeAmount > 0) {
+      setDistributionData((prev) => [
+        ...prev,
+        {
+          prizetype: "prestige",
+          companyId: selectedCompany,
+          amount: prestigeAmount,
+        },
+      ]);
+      // Reset state after adding
+      setSelectedCompany("");
+      setPrestigeAmount(0);
+    }
   };
 
-  const handleAddPassiveEffectDistribution = (
-    companyId: string,
-    sectorId: string
-  ) => {
-    const effectName = SectorEffects[sectorId].passive;
-    setDistributionData((prev) => [
-      ...prev,
-      {
-        prizetype: "passive",
-        companyId,
-        effectName,
-      },
-    ]);
+  const handleAddPassiveEffectDistribution = (sectorId: string) => {
+    const companyId = selectedSectorCompany[sectorId];
+    if (companyId) {
+      const effectName = SectorEffects[sectorId].passive;
+      setDistributionData((prev) => [
+        ...prev,
+        {
+          prizetype: "passive",
+          companyId,
+          effectName,
+        },
+      ]);
+      // Reset state after adding
+      setSelectedSectorCompany((prev) => ({
+        ...prev,
+        [sectorId]: "",
+      }));
+    }
   };
 
   return (
     <div>
-      <div>
-        {prize.cashAmount && (
+      {prize.cashAmount && (
+        <div>
+          <div>${prize.cashAmount}</div>
+          <PlayerSelect
+            onChange={(event) => setSelectedPlayer(event.target.value)}
+          />
+          <Input
+            type="number"
+            placeholder="Amount"
+            value={cashAmount.toString()}
+            onChange={(event) => setCashAmount(Number(event.target.value))}
+            min={0}
+            max={prize.cashAmount}
+          />
+          <DebounceButton onClick={handleAddCashDistribution}>
+            Add To Distribution
+          </DebounceButton>
+        </div>
+      )}
+      {prize.prestigeAmount && (
+        <div>
           <div>
-            <div>${prize.cashAmount}</div>
-            <PlayerSelect
-              onChange={(event) => {
-                const cashAmount = Number(
-                  prompt(`Enter cash amount (max ${prize.cashAmount}):`)
-                );
-                if (cashAmount > 0 && cashAmount <= (prize.cashAmount || 0)) {
-                  handleAddCashDistribution(event.target.value, cashAmount);
-                }
-              }}
-            />
-            <DebounceButton onClick={() => console.log(distributionData)}>
-              Add To Distribution
-            </DebounceButton>
+            <RiSparkling2Fill /> {prize.prestigeAmount}
           </div>
-        )}
-        {prize.prestigeAmount && (
-          <div>
-            <div>
-              <RiSparkling2Fill /> {prize.prestigeAmount}
-            </div>
+          <Select
+            label="Company Topic"
+            placeholder="Select a company"
+            className="max-w-xs"
+            onChange={(event) => setSelectedCompany(event.target.value)}
+          >
+            {Object.entries(companiesBySector).map(
+              ([sectorId, { sector, companies }]) => (
+                <SelectSection key={sectorId} title={sector.name}>
+                  {companies.map((company) => (
+                    <SelectItem key={company.id} value={company.id}>
+                      {company.name}
+                    </SelectItem>
+                  ))}
+                </SelectSection>
+              )
+            )}
+          </Select>
+          <Input
+            type="number"
+            placeholder="Amount"
+            value={prestigeAmount.toString()}
+            onChange={(event) => setPrestigeAmount(Number(event.target.value))}
+            min={0}
+            max={prize.prestigeAmount}
+          />
+          <DebounceButton onClick={handleAddPrestigeDistribution}>
+            Add To Distribution
+          </DebounceButton>
+        </div>
+      )}
+      {prize.SectorPrizes &&
+        prize.SectorPrizes.map((sectorPrize) => (
+          <div key={sectorPrize.sectorId}>
+            <span>{sectorPrize.Sector.name}</span>
+            <span>{SectorEffects[sectorPrize.Sector.sectorName].passive}</span>
             <Select
               label="Company Topic"
               placeholder="Select a company"
               className="max-w-xs"
-              onChange={(event) => {
-                const companyId = event.target.value;
-                const prestigeAmount = Number(
-                  prompt(`Enter prestige amount (max ${prize.prestigeAmount}):`)
-                );
-                if (
-                  prestigeAmount > 0 &&
-                  prestigeAmount <= (prize.prestigeAmount || 0)
-                ) {
-                  handleAddPrestigeDistribution(companyId, prestigeAmount);
-                }
-              }}
+              onChange={(event) =>
+                handleSelectChange(sectorPrize.sectorId, event.target.value)
+              }
             >
-              {Object.entries(companiesBySector).map(
-                ([sectorId, { sector, companies }]) => (
-                  <SelectSection key={sectorId} title={sector.name}>
-                    {companies.map((company) => (
-                      <SelectItem key={company.id} value={company.id}>
-                        {company.name}
-                      </SelectItem>
-                    ))}
-                  </SelectSection>
+              {companiesBySector[sectorPrize.sectorId]?.companies.map(
+                (company) => (
+                  <SelectItem key={company.id} value={company.id}>
+                    {company.name}
+                  </SelectItem>
                 )
               )}
             </Select>
-            <DebounceButton onClick={() => console.log(distributionData)}>
+            <DebounceButton
+              onClick={() =>
+                handleAddPassiveEffectDistribution(
+                  sectorPrize.Sector.sectorName
+                )
+              }
+            >
               Add To Distribution
             </DebounceButton>
           </div>
-        )}
-      </div>
-      <div>
-        {prize.SectorPrizes &&
-          prize.SectorPrizes.map((sectorPrize) => (
-            <div key={sectorPrize.sectorId}>
-              <span>{sectorPrize.Sector.name}</span>
-              <span>
-                {SectorEffects[sectorPrize.Sector.sectorName].passive}
-              </span>
-              <Select
-                label="Company Topic"
-                placeholder="Select a company"
-                className="max-w-xs"
-                onChange={(event) =>
-                  handleAddPassiveEffectDistribution(
-                    event.target.value,
-                    sectorPrize.Sector.sectorName
-                  )
-                }
-              >
-                {companiesBySector[sectorPrize.sectorId]?.companies.map(
-                  (company) => (
-                    <SelectItem key={company.id} value={company.id}>
-                      {company.name}
-                    </SelectItem>
-                  )
-                )}
-              </Select>
-            </div>
-          ))}
-      </div>
+        ))}
     </div>
   );
 };
-
 const DistributePrizes = () => {
   const { currentTurn, authPlayer } = useGame();
+  const [distributionData, setDistributionData] = useState<DistributionData[]>(
+    []
+  );
+
   const {
     data: prizes,
     isLoading,
@@ -186,6 +231,9 @@ const DistributePrizes = () => {
       playerId: authPlayer.id,
     },
   });
+  const usePrizeDistributionMutation =
+    trpc.game.prizeDistribution.useMutation();
+
   if (isLoading) {
     return <div>Loading...</div>;
   }
@@ -195,15 +243,32 @@ const DistributePrizes = () => {
   if (!prizes) {
     return null;
   }
+
+  const handleFinalizeDistribution = () => {
+    console.log("Final Distribution Data:", distributionData);
+    usePrizeDistributionMutation.mutate({
+      playerId: authPlayer.id,
+      distributionData,
+    });
+  };
+
   return (
     <div>
-      <h1>Distribute Prize</h1>
+      <h1>Distribute Prizes</h1>
       {prizes.map((prize) => (
         <div key={prize.id}>
-          <DistributePrize prize={prize} />
+          <DistributePrize
+            prize={prize}
+            setDistributionData={setDistributionData}
+            distributionData={distributionData}
+          />
         </div>
       ))}
+      <button onClick={handleFinalizeDistribution}>
+        Finalize Distribution
+      </button>
     </div>
   );
 };
+
 export default DistributePrizes;

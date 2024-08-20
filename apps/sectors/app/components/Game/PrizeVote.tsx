@@ -20,16 +20,18 @@ const PrizeComponent = ({
   const useCreatePrizeVoteMutation =
     trpc.prizeVotes.createPrizeVote.useMutation();
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex gap-1">
-        {prize.cashAmount && (
-          <div className="flex gap-1">${prize.cashAmount}</div>
-        )}
-        {prize.prestigeAmount && (
-          <div className="flex gap-1">
-            <RiSparkling2Fill /> {prize.prestigeAmount}
-          </div>
-        )}
+    <div className="flex flex-col gap-1 rounded-md bg-slate-800 p-2">
+      <div className="flex flex-col gap-1">
+        <div className="flex gap-1">
+          {prize.cashAmount && (
+            <div className="flex gap-1">${prize.cashAmount}</div>
+          )}
+          {prize.prestigeAmount && (
+            <div className="flex gap-1">
+              <RiSparkling2Fill /> {prize.prestigeAmount}
+            </div>
+          )}
+        </div>
         <div className="flex gap-1">
           {prize.SectorPrizes &&
             prize.SectorPrizes.map((sectorPrize) => (
@@ -68,8 +70,10 @@ const PrizeRound = () => {
     isLoading: isLoadingPrizes,
     isError: isErrorPrizes,
   } = trpc.prizes.listPrizes.useQuery({
-    where: { gameTurnId: currentTurn.id },
-    orderBy: { value: "asc" },
+    where: {
+      gameTurnId: currentTurn.id,
+    },
+    orderBy: { createdAt: "asc" },
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
   if (isLoadingPrizes) return <div>Loading...</div>;
@@ -80,7 +84,7 @@ const PrizeRound = () => {
   };
   return (
     <div className="flex flex-col gap-2">
-      <h1>Influence Round</h1>
+      <h1>Investor Gambit</h1>
       <p>
         In this round, players vote on the prize they want to win. There are
         three types of rewards:
@@ -112,9 +116,9 @@ const PrizeRound = () => {
         After voting, any player who receives a cash reward may distribute this
         reward amongst all players in the game in whatever way they see fit.
       </p>
-      <div className="flex flex-wrap gap-1">
+      <div className="flex flex-wrap gap-2">
         {prizes.map((prize) => (
-          <div key={prize.id} className="flex gap-1">
+          <div key={prize.id} className="flex">
             <PrizeComponent
               prize={prize}
               handleSubmit={handleSubmitVote}

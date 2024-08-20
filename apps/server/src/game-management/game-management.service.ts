@@ -40,6 +40,7 @@ import {
   InsolvencyContribution,
   Prize,
   SectorPrize,
+  PrizeVote,
 } from '@prisma/client';
 import { GamesService } from '@server/games/games.service';
 import { CompanyService } from '@server/company/company.service';
@@ -56,6 +57,8 @@ import {
   PlayerOrderWithPlayerCompany,
   PlayerOrderWithPlayerCompanySectorShortOrder,
   PlayerWithShares,
+  PrizeVoteWithRelations,
+  PrizeWithSectorPrizes,
   ProductionResultWithCompany,
   ShareWithCompany,
   ShortOrderWithShares,
@@ -240,6 +243,12 @@ export class GameManagementService {
       case PhaseName.INFLUENCE_BID_RESOLVE:
         await this.resolveInfluenceBid(phase);
         break;
+      case PhaseName.PRIZE_VOTE_RESOLVE:
+        await this.resolvePrizeVotes(phase);
+        break;
+      case PhaseName.PRIZE_DISTRIBUTE_RESOLVE:
+        await this.resolvePrizeDistribution(phase);
+        break;
       case PhaseName.STOCK_RESOLVE_LIMIT_ORDER:
         await this.resolveLimitOrders(phase);
         break;
@@ -308,15 +317,97 @@ export class GameManagementService {
     }
   }
 
+  async resolvePrizeVotes(phase: Phase) {
+    //get game
+    const game = await this.gamesService.game({ id: phase.gameId });
+    if (!game) {
+      throw new Error('Game not found');
+    }
+    //get all votes for current turn
+    const votes = await this.prizeVoteService.listPrizeVotes({
+      where: { gameTurnId: game.currentTurn },
+    });
+    //group votes by prize
+    const groupedVotes = votes.reduce(
+      (acc, vote) => {
+        if (!acc[vote.prizeId]) {
+          acc[vote.prizeId] = [];
+        }
+        acc[vote.prizeId].push(vote);
+        return acc;
+      },
+      {} as { [key: string]: PrizeVoteWithRelations[] },
+    );
+    //if any single prize id has only one vote, that player is assigned to it, otherwise no one is
+    const prizeIds = Object.keys(groupedVotes);
+    const prizePromises: Promise<any>[] = [];
+    const gameLogPromises: Promise<any>[] = [];
+    for (let i = 0; i < prizeIds.length; i++) {
+      const votes = groupedVotes[prizeIds[i]];
+      if (votes.length === 1) {
+        prizePromises.push(
+          this.prizeService.updatePrize({
+            where: { id: prizeIds[i] },
+            data: { Player: { connect: { id: votes[0].playerId } } },
+          }),
+        );
+        gameLogPromises.push(
+          this.gameLogService.createGameLog({
+            game: { connect: { id: phase.gameId } },
+            content: `Player ${votes[0].Player.nickname} has won prize ${prizeIds[i]}.`,
+          }),
+        );
+      }
+    }
+    await Promise.all(prizePromises);
+  }
+
+  /**
+   * Distribute cash prizes that have not yet been assigned.
+   * @param phase
+   */
+  async resolvePrizeDistribution(phase: Phase) {
+    //get game
+    const game = await this.gamesService.game({ id: phase.gameId });
+    if (!game) {
+      throw new Error('Game not found');
+    }
+    if (!game.currentPhaseId) {
+      throw new Error('Current phase not found');
+    }
+    //get all prizes for current turn
+    const prizes = await this.prizeService.listPrizes({
+      where: { gameTurnId: game.currentTurn },
+    });
+    //if any prizes have remaining cash, distribute it to the owning player
+    const playerAddMoneyPromises: Promise<any>[] = [];
+    for (let i = 0; i < prizes.length; i++) {
+      const prize = prizes[i];
+      if ((prize.cashAmount || 0) > 0 && prize.playerId) {
+        playerAddMoneyPromises.push(
+          this.playerAddMoney(
+            game.id,
+            game.currentTurn,
+            game.currentPhaseId,
+            prize.playerId,
+            prize.cashAmount || 0,
+            EntityType.BANK,
+            'Prize cash distribution.',
+          ),
+        );
+      }
+    }
+  }
+
   async handlePrizeRound(phase: Phase) {
     // Check if it's the third turn to trigger the prize round
     const gameTurn = await this.gameTurnService.getCurrentTurn(phase.gameId);
     if (!gameTurn) {
       throw new Error('Game turn not found');
     }
-    if (gameTurn.turn % 3 !== 0) {
-      return;
-    }
+    // if (gameTurn.turn % 3 !== 0) {
+    //   return;
+    // }
 
     // Fetch players and determine prize count
     const players = await this.playersService.players({
@@ -6421,19 +6512,21 @@ export class GameManagementService {
   }
 
   async isPrizeRoundTurn(gameId: string) {
-    const game = await this.gamesService.getGameState(gameId);
-    if (!game) {
-      throw new Error('Game not found');
-    }
-    //get game turn
-    const gameTurn = await this.gameTurnService.gameTurn({
-      id: game.currentTurn || '',
-    });
-    if (!gameTurn) {
-      throw new Error('Game turn not found');
-    }
-    //if current turn is divisible by 3, return false
-    return gameTurn.turn % 3 === 0;
+    //TODO: Remove this eventually;
+    return true;
+    // const game = await this.gamesService.getGameState(gameId);
+    // if (!game) {
+    //   throw new Error('Game not found');
+    // }
+    // //get game turn
+    // const gameTurn = await this.gameTurnService.gameTurn({
+    //   id: game.currentTurn || '',
+    // });
+    // if (!gameTurn) {
+    //   throw new Error('Game turn not found');
+    // }
+    // //if current turn is divisible by 3, return false
+    // return gameTurn.turn % 3 === 0;
   }
 
   async anyOptionOrdersPurchased(gameId: string) {
@@ -6835,5 +6928,179 @@ export class GameManagementService {
       Sector: { connect: { id: company.sectorId } },
       GameTurn: { connect: { id: game.currentTurn || '' } },
     });
+  }
+
+  async distributeCash({
+    playerId,
+    amount,
+    prize,
+  }: {
+    playerId: string;
+    amount: number;
+    prize: PrizeWithSectorPrizes;
+  }) {
+    // get player
+    const player = await this.playersService.player({
+      id: playerId,
+    });
+    if (!player) {
+      throw new Error('Player not found');
+    }
+    //get game
+    const game = await this.gamesService.game({
+      id: player.gameId,
+    });
+    if (!game) {
+      throw new Error('Game not found');
+    }
+    if (!game.currentTurn || !game.currentPhaseId) {
+      throw new Error('Game turn or phase not found');
+    }
+    if ((prize.cashAmount || 0) < amount) {
+      throw new Error('Not enough cash in prize to distribute');
+    }
+    //add money to player
+    this.playerAddMoney(
+      game.id,
+      game.currentTurn,
+      game.currentPhaseId,
+      player.id,
+      amount,
+      EntityType.BANK,
+      'Cash prize distribution',
+    );
+    //remove this amount from the prize
+    await this.prizeService.updatePrize({
+      where: { id: prize.id },
+      data: { cashAmount: (prize.cashAmount || 0) - amount },
+    });
+  }
+
+  async distributePrestige({
+    companyId,
+    amount,
+    prize,
+  }: {
+    companyId: string;
+    amount: number;
+    prize: PrizeWithSectorPrizes;
+  }) {
+    //get company
+    const company = await this.companyService.company({
+      id: companyId,
+    });
+    if (!company) {
+      throw new Error('Company not found');
+    }
+    if ((prize.prestigeAmount || 0) < amount) {
+      throw new Error('Not enough prestige in prize to distribute');
+    }
+    //update prestige
+    await this.companyService.updateCompany({
+      where: { id: companyId },
+      data: { prestigeTokens: company.prestigeTokens + amount },
+    });
+    //update prize
+    await this.prizeService.updatePrize({
+      where: { id: prize.id },
+      data: { prestigeAmount: (prize.prestigeAmount || 0) - amount },
+    });
+  }
+
+  async applyPassiveEffect({
+    companyId,
+    effectName,
+    prize,
+  }: {
+    companyId: string;
+    effectName: OperatingRoundAction;
+    prize: PrizeWithSectorPrizes;
+  }) {
+    //get company
+    const company = await this.companyService.company({
+      id: companyId,
+    });
+    if (!company) {
+      throw new Error('Company not found');
+    }
+    //get current turn
+    const game = await this.gamesService.game({
+      id: company.gameId,
+    });
+    if (!game) {
+      throw new Error('Game not found');
+    }
+    //get company actions for company
+    await this.companyActionService.companyActions({
+      where: {
+        Company: { id: companyId },
+      },
+    });
+    //ensure this company has not already taken this action
+    const existingAction = await this.companyActionService.companyActions({
+      where: {
+        companyId: companyId,
+        action: effectName,
+      },
+    });
+    if (existingAction.length > 0) {
+      throw new Error('Company has already taken this action');
+    }
+    //create company action
+    await this.companyActionService.createCompanyAction({
+      Company: { connect: { id: company.id || '' } },
+      GameTurn: { connect: { id: game.currentTurn || '' } },
+      action: effectName,
+      resolved: true,
+    });
+    //remove this action if it exists from any companies in the same sector except this one
+    const companiesInSector = await this.companyService.companies({
+      where: {
+        sectorId: company.sectorId,
+        id: { not: companyId },
+      },
+    });
+    //see if any companies in the sector have taken this action
+    const sectorActions = await this.companyActionService.companyActions({
+      where: {
+        companyId: { in: companiesInSector.map((c) => c.id) },
+        action: effectName,
+      },
+    });
+    //if so, remove the action
+    if (sectorActions.length > 0) {
+      await this.companyActionService.deleteCompanyAction({
+        id: sectorActions[0].id,
+      });
+    }
+  }
+  async getPrizesCurrentTurnForPlayer(
+    playerId: string,
+  ): Promise<PrizeWithSectorPrizes[]> {
+    //get player
+    const player = await this.playersService.player({ id: playerId });
+    if (!player) {
+      throw new Error('Player not found');
+    }
+    //get game
+    const game = await this.gamesService.game({ id: player.gameId });
+    if (!game) {
+      throw new Error('Game not found');
+    }
+    if (!game.currentTurn) {
+      throw new Error('Game turn not found');
+    }
+    //get prize for current turn for player
+    const prizes = await this.prizeService.listPrizes({
+      where: {
+        gameTurnId: game.currentTurn,
+        playerId,
+      },
+    });
+    //if no prizes found, throw
+    if (!prizes) {
+      throw new Error('Prize not found');
+    }
+    return prizes;
   }
 }

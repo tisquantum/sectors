@@ -453,10 +453,10 @@ model CompanyAction {
   id               Int                   @id @default(autoincrement())
   companyId        String
   action           OperatingRoundAction?
-  operatingRoundId Int
+  operatingRoundId Int?
   resolved         Boolean               @default(false)
   Company          Company               @relation(fields: [companyId], references: [id])
-  OperatingRound   OperatingRound        @relation(fields: [operatingRoundId], references: [id])
+  OperatingRound   OperatingRound?       @relation(fields: [operatingRoundId], references: [id])
   createdAt        DateTime              @default(now())
   updatedAt        DateTime              @updatedAt
   GameTurn         GameTurn?             @relation(fields: [gameTurnId], references: [id])

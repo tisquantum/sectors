@@ -43,6 +43,8 @@ import { isActivePhase } from "@server/data/helpers";
 import GameResults from "./GameResults";
 import { Drawer } from "vaul";
 import { useDrawer } from "../Drawer.context";
+import PrizeRound from "./PrizeVote";
+import DistributePrizes from "./DistributePrize";
 
 const determineGameRound = (
   game: GameState
@@ -151,6 +153,14 @@ const Game = ({ gameId }: { gameId: string }) => {
       <Meeting />
     ) : currentRoundData?.phase.name === PhaseName.START_TURN ? (
       <Meeting />
+    ) : currentRoundData?.phase.name === PhaseName.PRIZE_VOTE_ACTION ? (
+      <PrizeRound />
+    ) : currentRoundData?.phase.name === PhaseName.PRIZE_VOTE_RESOLVE ? (
+      <PrizeRound />
+    ) : currentRoundData?.phase.name === PhaseName.PRIZE_DISTRIBUTE_ACTION ? (
+      <DistributePrizes />
+    ) : currentRoundData?.phase.name === PhaseName.PRIZE_DISTRIBUTE_RESOLVE ? (
+      <DistributePrizes />
     ) : currentRoundData?.phase.name === PhaseName.STOCK_RESOLVE_LIMIT_ORDER ? (
       <PendingOrders />
     ) : currentRoundData?.phase.name === PhaseName.STOCK_ACTION_ORDER ? (
@@ -158,7 +168,7 @@ const Game = ({ gameId }: { gameId: string }) => {
     ) : currentRoundData?.phase.name === PhaseName.STOCK_ACTION_RESULT ? (
       <StockRoundAction forwardedRef={gameActionContainerRef.current} />
     ) : currentRoundData?.phase.name === PhaseName.STOCK_ACTION_REVEAL ? (
-      <StockRoundOrderGrid forwardedRef={gameActionContainerRef.current}/>
+      <StockRoundOrderGrid forwardedRef={gameActionContainerRef.current} />
     ) : currentRoundData?.phase.name ===
       PhaseName.STOCK_RESOLVE_MARKET_ORDER ? (
       <PendingOrders isResolving={true} />
@@ -255,7 +265,10 @@ const Game = ({ gameId }: { gameId: string }) => {
               handleTogglePhaseList={() => setShowPhaseList((prev) => !prev)}
               isTimerAtZero={isTimerAtZero}
             />
-            <div className="relative flex justify-between overflow-y-auto scrollbar" ref={gameActionContainerRef}>
+            <div
+              className="relative flex justify-between overflow-y-auto scrollbar"
+              ref={gameActionContainerRef}
+            >
               {currentPhase?.name &&
                 isActivePhase(currentPhase.name) &&
                 isTimerAtZero && (

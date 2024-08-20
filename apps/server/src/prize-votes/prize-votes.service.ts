@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { Prisma, PrizeVote } from '@prisma/client';
+import { PrizeVoteWithRelations } from '@server/prisma/prisma.types';
 
 @Injectable()
 export class PrizeVotesService {
@@ -27,7 +28,7 @@ export class PrizeVotesService {
     cursor?: Prisma.PrizeVoteWhereUniqueInput;
     where?: Prisma.PrizeVoteWhereInput;
     orderBy?: Prisma.PrizeVoteOrderByWithRelationInput;
-  }): Promise<PrizeVote[]> {
+  }): Promise<PrizeVoteWithRelations[]> {
     const { skip, take, cursor, where, orderBy } = params;
     return this.prisma.prizeVote.findMany({
       skip,
