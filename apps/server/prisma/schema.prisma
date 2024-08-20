@@ -91,6 +91,8 @@ model Player {
   //1:1 relation with Entity
   Entity                   Entity?                   @relation(fields: [entityId], references: [id])
   entityId                 String?                   @unique
+  Prizes                   Prize[]
+  PrizeVotes               PrizeVote[]
 }
 
 enum AccountStatus {
@@ -617,6 +619,7 @@ model Sector {
   gameId                 String?
   createdAt              DateTime      @default(now())
   updatedAt              DateTime      @updatedAt
+  SectorPrize            SectorPrize[]
 }
 
 enum SectorName {
@@ -680,6 +683,7 @@ model Game {
   Entities                Entity[]
   InsolvencyContribution  InsolvencyContribution[]
   StockHistory            StockHistory[]
+  Prizes                  Prize[]
 }
 
 enum GameStatus {
@@ -708,6 +712,8 @@ model GameTurn {
   playerOrders           PlayerOrder[]
   transactions           Transaction[]
   insolvencyContribution InsolvencyContribution[]
+  prizes                 Prize[]
+  prizeVotes             PrizeVote[]
 }
 
 model PlayerPriority {
@@ -722,6 +728,7 @@ model PlayerPriority {
 
 enum RoundType {
   INFLUENCE
+  PRIZE
   GAME_UPKEEP
   STOCK
   OPERATING
@@ -781,6 +788,10 @@ enum PhaseName {
   CAPITAL_GAINS
   DIVESTMENT
   SECTOR_NEW_COMPANY
+  PRIZE_VOTE_ACTION
+  PRIZE_VOTE_RESOLVE
+  PRIZE_DISTRIBUTE_ACTION
+  PRIZE_DISTRIBUTE_RESOLVE
 }
 
 model InfluenceRound {
@@ -929,4 +940,43 @@ model TransactionsOnShares {
   Share         Share       @relation(fields: [shareId], references: [id])
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+}
+
+model Prize {
+  id             String        @id @default(uuid())
+  gameId         String
+  gameTurnId     String
+  playerId       String?
+  sectorPrizeId  String[]
+  prestigeAmount Int?
+  cashAmount     Int?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  Player         Player?       @relation(fields: [playerId], references: [id])
+  Game           Game          @relation(fields: [gameId], references: [id])
+  GameTurn       GameTurn      @relation(fields: [gameTurnId], references: [id])
+  SectorPrizes   SectorPrize[]
+  PrizeVotes     PrizeVote[]
+}
+
+model PrizeVote {
+  id         Int      @id @default(autoincrement())
+  playerId   String
+  gameTurnId String
+  prizeId    String
+  Player     Player   @relation(fields: [playerId], references: [id])
+  GameTurn   GameTurn @relation(fields: [gameTurnId], references: [id])
+  Prize      Prize    @relation(fields: [prizeId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model SectorPrize {
+  id        String   @id @default(uuid())
+  prizeId   String
+  sectorId  String
+  Prize     Prize    @relation(fields: [prizeId], references: [id])
+  Sector    Sector   @relation(fields: [sectorId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

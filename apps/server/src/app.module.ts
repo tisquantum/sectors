@@ -41,6 +41,8 @@ import { GameRecordModule } from './game-record/game-record.module';
 import { PlayerResultModule } from './player-result/player-result.module';
 import { TransactionModule } from './transaction/transaction.module';
 import { InsolvencyContributionModule } from './insolvency-contribution/insolvency-contribution.module';
+import { PrizeModule } from './prize/prize.module';
+import { PrizeVotesModule } from './prize-votes/prize-votes.module';
 
 const yourPusherOptions = {
   cluster: process.env.PUSHER_CLUSTER ?? 'CLUSTER',
@@ -98,6 +100,8 @@ const chunkingOptions = {
     PlayerResultModule,
     TransactionModule,
     InsolvencyContributionModule,
+    PrizeModule,
+    PrizeVotesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

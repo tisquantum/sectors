@@ -118,11 +118,11 @@ export default (trpc: TrpcService, ctx: Context) =>
           console.error('Error resolving insolvency contribution', error);
         }
         //pusher service
-        ctx.pusherService.trigger(
-          getGameChannelId(ctxMiddleware.gameId),
-          EVENT_NEW_INVOLVENCY_CONTRIBUTION,
-          insolvencyContribution,
-        );
+        // ctx.pusherService.trigger(
+        //   getGameChannelId(ctxMiddleware.gameId),
+        //   EVENT_NEW_INVOLVENCY_CONTRIBUTION,
+        //   insolvencyContribution,
+        // );
         return insolvencyContribution;
       }),
 

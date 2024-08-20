@@ -78,6 +78,7 @@ export const checkIsPlayerAction = async (
   }
   //include game id in ctx
   ctx.gameId = player.gameId;
+  ctx.submittingPlayerId = player.id;
   return next();
 };
 

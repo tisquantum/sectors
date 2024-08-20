@@ -38,6 +38,8 @@ import {
   EntityType,
   TransactionSubType,
   InsolvencyContribution,
+  Prize,
+  SectorPrize,
 } from '@prisma/client';
 import { GamesService } from '@server/games/games.service';
 import { CompanyService } from '@server/company/company.service';
@@ -163,6 +165,8 @@ import { UsersService } from '@server/users/users.service';
 import { TransactionService } from '@server/transaction/transaction.service';
 import { InsolvencyContributionService } from '@server/insolvency-contribution/insolvency-contribution.service';
 import { time } from 'console';
+import { PrizeService } from '@server/prize/prize.service';
+import { PrizeVotesService } from '@server/prize-votes/prize-votes.service';
 
 type GroupedByPhase = {
   [key: string]: {
@@ -211,6 +215,8 @@ export class GameManagementService {
     private usersService: UsersService,
     private transactionService: TransactionService,
     private insolvencyContributionService: InsolvencyContributionService,
+    private prizeService: PrizeService,
+    private prizeVoteService: PrizeVotesService,
   ) {}
 
   /**
@@ -229,6 +235,7 @@ export class GameManagementService {
       case PhaseName.START_TURN:
         await this.determinePriorityOrderBasedOnNetWorth(phase);
         await this.handleOpeningNewCompany(phase);
+        await this.handlePrizeRound(phase);
         break;
       case PhaseName.INFLUENCE_BID_RESOLVE:
         await this.resolveInfluenceBid(phase);
@@ -299,6 +306,74 @@ export class GameManagementService {
       default:
         return;
     }
+  }
+
+  async handlePrizeRound(phase: Phase) {
+    // Check if it's the third turn to trigger the prize round
+    const gameTurn = await this.gameTurnService.getCurrentTurn(phase.gameId);
+    if (!gameTurn) {
+      throw new Error('Game turn not found');
+    }
+    if (gameTurn.turn % 3 !== 0) {
+      return;
+    }
+
+    // Fetch players and determine prize count
+    const players = await this.playersService.players({
+      where: { gameId: phase.gameId },
+    });
+    if (!players) {
+      throw new Error('Players not found');
+    }
+
+    let prizeCount = Math.max(2, players.length - 1); // Ensure at least 2 prizes
+    prizeCount = Math.min(prizeCount, 6); // Ensure no more than 6 prizes
+
+    // Fetch sectors
+    const sectors = await this.sectorService.sectors({
+      where: { gameId: phase.gameId },
+    });
+    if (!sectors) {
+      throw new Error('Sectors not found');
+    }
+
+    const sectorIds = sectors.map((sector) => sector.id);
+    const shuffledSectorIds = sectorIds.sort(() => 0.5 - Math.random());
+
+    // Create prizes with random distribution of rewards
+    const prizePromises: Promise<any>[] = [];
+    let prestigeRewardsLeft = 2;
+    const totalCash = 500;
+    const cashPerPrize = Math.floor(totalCash / prizeCount);
+    const remainder = totalCash % prizeCount;
+
+    for (let i = 0; i < prizeCount; i++) {
+      const prize: Prisma.PrizeCreateInput = {
+        prestigeAmount: 0,
+        cashAmount: cashPerPrize + (i < remainder ? 1 : 0),
+        Game: { connect: { id: gameTurn.gameId } },
+        GameTurn: { connect: { id: gameTurn.id } },
+        SectorPrizes: {
+          create: [
+            {
+              sectorId: shuffledSectorIds[i % shuffledSectorIds.length],
+            },
+          ],
+        },
+      };
+
+      // Randomly assign prestige rewards
+      if (prestigeRewardsLeft > 0) {
+        prize.prestigeAmount = 1;
+        prestigeRewardsLeft--;
+      }
+
+      // Push each prize creation promise into the array
+      prizePromises.push(this.prizeService.createPrize(prize));
+    }
+
+    // Execute all prize creation promises concurrently
+    await Promise.all(prizePromises);
   }
 
   /**
@@ -6314,6 +6389,11 @@ export class GameManagementService {
 
   async doesNextPhaseNeedToBePlayed(phaseName: PhaseName, currentPhase: Phase) {
     switch (phaseName) {
+      case PhaseName.PRIZE_VOTE_ACTION:
+      case PhaseName.PRIZE_VOTE_RESOLVE:
+      case PhaseName.PRIZE_DISTRIBUTE_ACTION:
+      case PhaseName.PRIZE_DISTRIBUTE_RESOLVE:
+        return this.isPrizeRoundTurn(currentPhase?.gameId || '');
       case PhaseName.STOCK_RESOLVE_LIMIT_ORDER:
         //count limit orders
         return this.limitOrdersRequiringFulfillment(currentPhase?.gameId || '');
@@ -6338,6 +6418,22 @@ export class GameManagementService {
       default:
         return true;
     }
+  }
+
+  async isPrizeRoundTurn(gameId: string) {
+    const game = await this.gamesService.getGameState(gameId);
+    if (!game) {
+      throw new Error('Game not found');
+    }
+    //get game turn
+    const gameTurn = await this.gameTurnService.gameTurn({
+      id: game.currentTurn || '',
+    });
+    if (!gameTurn) {
+      throw new Error('Game turn not found');
+    }
+    //if current turn is divisible by 3, return false
+    return gameTurn.turn % 3 === 0;
   }
 
   async anyOptionOrdersPurchased(gameId: string) {

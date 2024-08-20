@@ -98,6 +98,10 @@ export const phaseTimes = {
   [PhaseName.SECTOR_NEW_COMPANY]: 10 * 1000,
   [PhaseName.START_TURN]: 30 * 1000,
   [PhaseName.END_TURN]: 20 * 1000,
+  [PhaseName.PRIZE_VOTE_ACTION]: 50 * 1000,
+  [PhaseName.PRIZE_VOTE_RESOLVE]: 12 * 1000,
+  [PhaseName.PRIZE_DISTRIBUTE_ACTION]: 50 * 1000,
+  [PhaseName.PRIZE_DISTRIBUTE_RESOLVE]: 12 * 1000,
 };
 
 //Stock Grid Prices
@@ -264,6 +268,20 @@ export const companyVoteActionPriority = (
     OperatingRoundAction.LOBBY,
     OperatingRoundAction.OUTSOURCE,
     OperatingRoundAction.LOAN,
+    OperatingRoundAction.VISIONARY,
+    OperatingRoundAction.STRATEGIC_RESERVE,
+    OperatingRoundAction.RAPID_EXPANSION,
+    OperatingRoundAction.FASTTRACK_APPROVAL,
+    OperatingRoundAction.PRICE_FREEZE,
+    OperatingRoundAction.REBRAND,
+    OperatingRoundAction.SURGE_PRICING,
+    OperatingRoundAction.INNOVATION_SURGE,
+    OperatingRoundAction.REGULATORY_SHIELD,
+    OperatingRoundAction.SUPPLY_CHAIN,
+    OperatingRoundAction.ROBOTICS,
+    OperatingRoundAction.STEADY_DEMAND,
+    OperatingRoundAction.BOOM_CYCLE,
+    OperatingRoundAction.CARBON_CREDIT,
   ];
   return actions.sort(
     (a, b) => actionPriority.indexOf(a) - actionPriority.indexOf(b),
@@ -412,7 +430,6 @@ export const CompanyActionCosts = {
   [OperatingRoundAction.BOOM_CYCLE]: 0,
   [OperatingRoundAction.CARBON_CREDIT]: 0,
 };
-
 
 export const CompanyActionPrestigeCosts = {
   [OperatingRoundAction.DOWNSIZE]: 0,
@@ -656,3 +673,66 @@ export const StartingTier = {
     tier: CompanyTier.STARTUP,
   },
 };
+
+interface SectorEffects {
+  active: OperatingRoundAction;
+  passive: OperatingRoundAction;
+}
+
+export const SectorEffects: {
+  [key: string]: SectorEffects;
+} = {
+  [SectorName.CONSUMER_CYCLICAL]: {
+    active: OperatingRoundAction.REBRAND,
+    passive: OperatingRoundAction.BOOM_CYCLE,
+  },
+  [SectorName.CONSUMER_DEFENSIVE]: {
+    active: OperatingRoundAction.PRICE_FREEZE,
+    passive: OperatingRoundAction.STEADY_DEMAND,
+  },
+  [SectorName.INDUSTRIALS]: {
+    active: OperatingRoundAction.RAPID_EXPANSION,
+    passive: OperatingRoundAction.ROBOTICS,
+  },
+  [SectorName.TECHNOLOGY]: {
+    active: OperatingRoundAction.VISIONARY,
+    passive: OperatingRoundAction.INNOVATION_SURGE,
+  },
+  [SectorName.HEALTHCARE]: {
+    active: OperatingRoundAction.FASTTRACK_APPROVAL,
+    passive: OperatingRoundAction.REGULATORY_SHIELD,
+  },
+  [SectorName.ENERGY]: {
+    active: OperatingRoundAction.SURGE_PRICING,
+    passive: OperatingRoundAction.CARBON_CREDIT,
+  },
+  [SectorName.MATERIALS]: {
+    active: OperatingRoundAction.STRATEGIC_RESERVE,
+    passive: OperatingRoundAction.SUPPLY_CHAIN,
+  },
+  [SectorName.CONSUMER_DISCRETIONARY]: {
+    active: OperatingRoundAction.REBRAND,
+    passive: OperatingRoundAction.CARBON_CREDIT,
+  },
+  [SectorName.CONSUMER_STAPLES]: {
+    active: OperatingRoundAction.PRICE_FREEZE,
+    passive: OperatingRoundAction.CARBON_CREDIT,
+  },
+  [SectorName.GENERAL]: {
+    active: OperatingRoundAction.RAPID_EXPANSION,
+    passive: OperatingRoundAction.CARBON_CREDIT,
+  },
+};
+
+export type PrizeType = 'passive_effect' | 'prestige';
+
+export interface Prize {
+  type: PrizeType;
+  sector?: SectorName;
+  prestigeAmount?: number;
+}
+
+export interface PrizePool {
+  prize: Prize[];
+  cash: number;
+}

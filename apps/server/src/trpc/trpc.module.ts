@@ -37,6 +37,8 @@ import { GameRecordService } from '@server/game-record/game-record.service';
 import { PlayerResultService } from '@server/player-result/player-result.service';
 import { TransactionService } from '@server/transaction/transaction.service';
 import { InsolvencyContributionService } from '@server/insolvency-contribution/insolvency-contribution.service';
+import { PrizeService } from '@server/prize/prize.service';
+import { PrizeVotesService } from '@server/prize-votes/prize-votes.service';
 
 @Module({
   imports: [PrismaModule],
@@ -80,6 +82,8 @@ import { InsolvencyContributionService } from '@server/insolvency-contribution/i
     PlayerResultService,
     TransactionService,
     InsolvencyContributionService,
+    PrizeService,
+    PrizeVotesService,
   ],
 })
 export class TrpcModule {}

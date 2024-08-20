@@ -22,6 +22,7 @@ export interface Context {
   user: User | null; // Use the User type from Supabase
   submissionStamp?: Date;
   gameId?: string;
+  submittingPlayerId?: string;
 }
 
 export const createContext = async (

@@ -20,6 +20,7 @@ import {
   PlayerOrder,
   PlayerPriority,
   PlayerResult,
+  Prize,
   ProductionResult,
   ResearchDeck,
   RevenueDistributionVote,
@@ -27,6 +28,7 @@ import {
   RoomMessage,
   RoomUser,
   Sector,
+  SectorPrize,
   Share,
   ShareContribution,
   ShortOrder,
@@ -269,3 +271,9 @@ export type InsolvencyContributionWithRelations = InsolvencyContribution & {
 };
 
 export type ShareContributionWithShare = ShareContribution & { Share: Share };
+
+export type SectorPrizeWithSector = SectorPrize & { Sector: Sector };
+
+export type PrizeWithSectorPrizes = Prize & {
+  SectorPrizes: SectorPrizeWithSector[];
+};

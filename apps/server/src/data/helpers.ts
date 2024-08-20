@@ -75,6 +75,26 @@ export function determineNextGamePhase(
   switch (phaseName) {
     case PhaseName.START_TURN:
       return {
+        phaseName: PhaseName.PRIZE_VOTE_ACTION,
+        roundType: RoundType.INFLUENCE,
+      };
+    case PhaseName.PRIZE_VOTE_ACTION:
+      return {
+        phaseName: PhaseName.PRIZE_VOTE_RESOLVE,
+        roundType: RoundType.INFLUENCE,
+      };
+    case PhaseName.PRIZE_VOTE_RESOLVE:
+      return {
+        phaseName: PhaseName.PRIZE_DISTRIBUTE_ACTION,
+        roundType: RoundType.INFLUENCE,
+      };
+    case PhaseName.PRIZE_DISTRIBUTE_ACTION:
+      return {
+        phaseName: PhaseName.PRIZE_DISTRIBUTE_RESOLVE,
+        roundType: RoundType.INFLUENCE,
+      };
+    case PhaseName.PRIZE_DISTRIBUTE_RESOLVE:
+      return {
         phaseName: PhaseName.STOCK_RESOLVE_LIMIT_ORDER,
         roundType: RoundType.STOCK,
       };
