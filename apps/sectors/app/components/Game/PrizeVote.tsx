@@ -4,9 +4,21 @@ import { Prize } from "@server/prisma/prisma.client";
 import { RiSparkling2Fill } from "@remixicon/react";
 import { PrizeWithSectorPrizes } from "@server/prisma/prisma.types";
 import { SectorEffects } from "@server/data/constants";
+import DebounceButton from "../General/DebounceButton";
+import { useState } from "react";
 
-const PrizeComponent = ({ prize }: { prize: PrizeWithSectorPrizes }) => {
-    const useCreatePrizeVoteMutation = trpc.prizeVotes.createPrizeVote.useMutation();
+const PrizeComponent = ({
+  prize,
+  handleSubmit,
+  isSubmitted,
+}: {
+  prize: PrizeWithSectorPrizes;
+  handleSubmit: () => void;
+  isSubmitted: boolean;
+}) => {
+  const { currentTurn } = useGame();
+  const useCreatePrizeVoteMutation =
+    trpc.prizeVotes.createPrizeVote.useMutation();
   return (
     <div className="flex flex-col gap-1">
       <div className="flex gap-1">
@@ -30,6 +42,21 @@ const PrizeComponent = ({ prize }: { prize: PrizeWithSectorPrizes }) => {
             ))}
         </div>
       </div>
+      {isSubmitted ? (
+        <div>Vote submitted</div>
+      ) : (
+        <DebounceButton
+          onClick={() => {
+            useCreatePrizeVoteMutation.mutate({
+              gameTurnId: currentTurn.id,
+              prizeId: prize.id,
+            });
+            handleSubmit();
+          }}
+        >
+          Claim Prize
+        </DebounceButton>
+      )}
     </div>
   );
 };
@@ -44,9 +71,13 @@ const PrizeRound = () => {
     where: { gameTurnId: currentTurn.id },
     orderBy: { value: "asc" },
   });
+  const [isSubmitted, setIsSubmitted] = useState(false);
   if (isLoadingPrizes) return <div>Loading...</div>;
   if (isErrorPrizes) return <div>Error loading prizes</div>;
   if (!prizes) return <div>No prizes found</div>;
+  const handleSubmitVote = () => {
+    setIsSubmitted(true);
+  };
   return (
     <div className="flex flex-col gap-2">
       <h1>Influence Round</h1>
@@ -84,7 +115,11 @@ const PrizeRound = () => {
       <div className="flex flex-wrap gap-1">
         {prizes.map((prize) => (
           <div key={prize.id} className="flex gap-1">
-            <PrizeComponent prize={prize} />
+            <PrizeComponent
+              prize={prize}
+              handleSubmit={handleSubmitVote}
+              isSubmitted={isSubmitted}
+            />
           </div>
         ))}
       </div>
