@@ -213,7 +213,7 @@ const StockRoundOrderGrid = ({
       </Tabs>
       <Drawer.Portal container={forwardedRef}>
         <Drawer.Overlay className="fixed inset-0 bg-black/40" />
-        <Drawer.Content className="overflow-y scrollbar bg-slate-900 flex flex-col rounded-t-[10px] h-full w-96 fixed top-[64.9px] right-0">
+        <Drawer.Content className="relative overflow-y scrollbar bg-slate-900 flex flex-col rounded-t-[10px] h-full w-96 fixed top-[64.9px] right-0">
           {selectedCompanyOrder && (
             <div className="flex flex-col justify-center items-center bg-slate-900 p-4">
               <h2 className="text-white text-2xl font-bold mb-2">

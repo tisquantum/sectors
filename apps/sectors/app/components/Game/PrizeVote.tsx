@@ -1,11 +1,12 @@
 import { trpc } from "@sectors/app/trpc";
 import { useGame } from "./GameContext";
 import { Prize } from "@server/prisma/prisma.client";
-import { RiSparkling2Fill } from "@remixicon/react";
+import { RiGameFill, RiRepeat2Fill, RiSparkling2Fill } from "@remixicon/react";
 import { PrizeWithSectorPrizes } from "@server/prisma/prisma.types";
 import { SectorEffects } from "@server/data/constants";
 import DebounceButton from "../General/DebounceButton";
 import { useState } from "react";
+import { sectorColors } from "@server/data/gameData";
 
 const PrizeComponent = ({
   prize,
@@ -35,7 +36,14 @@ const PrizeComponent = ({
         <div className="flex gap-1">
           {prize.SectorPrizes &&
             prize.SectorPrizes.map((sectorPrize) => (
-              <div key={sectorPrize.sectorId} className="flex gap-1">
+              <div
+                key={sectorPrize.sectorId}
+                className="flex flex-col gap-1 rounded-md p-2"
+                style={{
+                  backgroundColor: sectorColors[sectorPrize.Sector.name],
+                }}
+              >
+                <RiGameFill />
                 <span>{sectorPrize.Sector.name}</span>
                 <span>
                   {SectorEffects[sectorPrize.Sector.sectorName].passive}

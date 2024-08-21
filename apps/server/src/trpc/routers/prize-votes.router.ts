@@ -4,7 +4,7 @@ import { PrizeVotesService } from '@server/prize-votes/prize-votes.service';
 import { TRPCError } from '@trpc/server';
 import { PlayersService } from '@server/players/players.service';
 import { PhaseService } from '@server/phase/phase.service';
-import { checkIsPlayerAction, checkSubmissionTime } from '../trpc.middleware';
+import { checkIsPlayerAction, checkIsPlayerActionBasedOnAuth, checkSubmissionTime } from '../trpc.middleware';
 import { PusherService } from 'nestjs-pusher';
 import { EVENT_NEW_PRIZE_VOTE, getGameChannelId } from '@server/pusher/pusher.types';
 
@@ -25,7 +25,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           prizeId: z.string(),
         }),
       )
-      .use(async (opts) => checkIsPlayerAction(opts, ctx.playersService))
+      .use(async (opts) => checkIsPlayerActionBasedOnAuth(opts, ctx.playersService))
       .use(async (opts) => checkSubmissionTime(opts, ctx.phaseService))
       .mutation(async ({ input, ctx: ctxMiddleware }) => {
         const { gameTurnId, prizeId } = input;

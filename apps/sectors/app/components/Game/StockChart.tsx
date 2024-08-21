@@ -358,8 +358,8 @@ const StockChart = () => {
             </div>
           </>
         </Tab>
-        <Tab key="stock-chart" title="Stock Chart">
-          <div className="flex flex-col justify-center items-center h-[800px]">
+        <Tab key="stock-chart" title="Stock Chart" className="w-full">
+          <div className="flex w-full flex-col justify-center items-center h-[800px]">
             <LineChart
               className="h-full"
               data={allChartData}

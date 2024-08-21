@@ -82,6 +82,33 @@ export const checkIsPlayerAction = async (
   return next();
 };
 
+export const checkIsPlayerActionBasedOnAuth = async (
+  opts: any,
+  playerService: PlayersService,
+) => {
+  const { ctx, input, next } = opts;
+  const player = await playerService.player({ userId: ctx.user.id });
+  if (!player) {
+    console.error('Player not found');
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Player not found',
+    });
+  }
+  if (player.userId !== ctx.user.id) {
+    console.error(
+      `Player ${player.id} is not allowed to perform this operation ${ctx.mutationName}`,
+    );
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'You are not allowed to perform this operation',
+    });
+  }
+  ctx.gameId = player.gameId;
+  ctx.submittingPlayerId = player.id;
+  return next();
+};
+
 export const checkSubmissionTime = async (
   opts: any,
   phaseService: PhaseService,

@@ -5,7 +5,6 @@ import MeetingMessages from "./MeetingMessages";
 export const Meeting = () => {
   return (
     <div className="w-full h-full flex flex-col">
-      <PrizeRound />
       <div className="basis-3/4 flex justify-center content-center overflow-y-auto scrollbar">
         <MeetingMessages />
       </div>

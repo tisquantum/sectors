@@ -360,6 +360,20 @@ export class GameManagementService {
       }
     }
     await Promise.all(prizePromises);
+    //if all prizes have been distributed (have a playerId), double their cashValue
+    const prizes = await this.prizeService.listPrizes({
+      where: { gameTurnId: game.currentTurn },
+    });
+    const undistributedPrizes = prizes.filter((prize) => !prize.playerId);
+    if (undistributedPrizes.length === 0) {
+      const doublePrizePromises = prizes.map((prize) => {
+        return this.prizeService.updatePrize({
+          where: { id: prize.id },
+          data: { cashAmount: (prize.cashAmount || 0) * 2 },
+        });
+      });
+      await Promise.all(doublePrizePromises);
+    }
   }
 
   /**
