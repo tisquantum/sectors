@@ -255,18 +255,24 @@ const DistributePrizes = () => {
   return (
     <div>
       <h1>Distribute Prizes</h1>
-      {prizes.map((prize) => (
-        <div key={prize.id}>
-          <DistributePrize
-            prize={prize}
-            setDistributionData={setDistributionData}
-            distributionData={distributionData}
-          />
-        </div>
-      ))}
-      <button onClick={handleFinalizeDistribution}>
-        Finalize Distribution
-      </button>
+      {prizes.length > 0 ? (
+        <>
+          {prizes.map((prize) => (
+            <div key={prize.id}>
+              <DistributePrize
+                prize={prize}
+                setDistributionData={setDistributionData}
+                distributionData={distributionData}
+              />
+            </div>
+          ))}
+          <DebounceButton onClick={handleFinalizeDistribution}>
+            Finalize Distribution
+          </DebounceButton>
+        </>
+      ) : (
+        <div>No prizes to distribute</div>
+      )}
     </div>
   );
 };

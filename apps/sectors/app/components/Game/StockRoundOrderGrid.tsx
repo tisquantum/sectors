@@ -213,73 +213,79 @@ const StockRoundOrderGrid = ({
       </Tabs>
       <Drawer.Portal container={forwardedRef}>
         <Drawer.Overlay className="fixed inset-0 bg-black/40" />
-        <Drawer.Content className="relative overflow-y scrollbar bg-slate-900 flex flex-col rounded-t-[10px] h-full w-96 fixed top-[64.9px] right-0">
-          {selectedCompanyOrder && (
-            <div className="flex flex-col justify-center items-center bg-slate-900 p-4">
-              <h2 className="text-white text-2xl font-bold mb-2">
-                {selectedCompanyOrder.isIpo ? "IPO Order" : "Open Market Order"}
-              </h2>
-              <PlayerOrderInput
-                currentOrder={selectedCompanyOrder.company}
-                handleCancel={() => {}}
-                isIpo={selectedCompanyOrder.isIpo} // Pass IPO state here
-                handlePlayerInputConfirmed={() => {
-                  companyCardButtonClicked();
-                }} // Callback on input confirmed
-              />
+        <Drawer.Content className="relative bg-slate-900 flex flex-col rounded-t-[10px] h-full w-96 right-0">
+          <div className="overflow-y scrollbar">
+            {selectedCompanyOrder && (
+              <div className="flex flex-col justify-center items-center bg-slate-900 p-4">
+                <h2 className="text-white text-2xl font-bold mb-2">
+                  {selectedCompanyOrder.isIpo
+                    ? "IPO Order"
+                    : "Open Market Order"}
+                </h2>
+                <PlayerOrderInput
+                  currentOrder={selectedCompanyOrder.company}
+                  handleCancel={() => {}}
+                  isIpo={selectedCompanyOrder.isIpo} // Pass IPO state here
+                  handlePlayerInputConfirmed={() => {
+                    companyCardButtonClicked();
+                  }} // Callback on input confirmed
+                />
 
-              <div>
-                <OrderResults
-                  playerOrdersConcealed={orders.filter(
-                    (order) =>
-                      order.companyId === selectedCompanyOrder.company.id
-                  )}
-                  playerOrdersRevealed={
-                    playerOrdersRevealed?.filter(
+                <div>
+                  <OrderResults
+                    playerOrdersConcealed={orders.filter(
                       (order) =>
                         order.companyId === selectedCompanyOrder.company.id
-                    ) || []
-                  }
-                  currentPhase={currentPhase}
-                  phasesOfStockRound={phasesOfStockRound}
-                  isRevealRound={isRevealRound}
-                />
+                    )}
+                    playerOrdersRevealed={
+                      playerOrdersRevealed?.filter(
+                        (order) =>
+                          order.companyId === selectedCompanyOrder.company.id
+                      ) || []
+                    }
+                    currentPhase={currentPhase}
+                    phasesOfStockRound={phasesOfStockRound}
+                    isRevealRound={isRevealRound}
+                  />
+                </div>
+                <Tabs>
+                  <Tab key="drawer-company-info" title="Company Info">
+                    <div className="h-96">
+                      <CompanyInfo
+                        company={selectedCompanyOrder.company}
+                        showBarChart
+                      />
+                    </div>
+                  </Tab>
+                  <Tab key="drawer-stock-chart" title="Stock Chart">
+                    <div className="h-96 w-80">
+                      <LineChart
+                        className="w-full"
+                        data={selectedCompanyOrder.company.StockHistory.map(
+                          (stockHistory, index) => ({
+                            phaseId: `${index + 1} ${stockHistory.Phase.name}`,
+                            stockPrice: stockHistory.price,
+                            stockAction: stockHistory.action,
+                            steps: stockHistory.stepsMoved,
+                          })
+                        )}
+                        index="phaseId"
+                        categories={["stockPrice"]}
+                        yAxisLabel="Stock Price"
+                        xAxisLabel="Stock Price Updated"
+                        colors={[
+                          sectorColors[
+                            selectedCompanyOrder.company.Sector.name
+                          ],
+                        ]}
+                        valueFormatter={valueFormatter}
+                      />
+                    </div>
+                  </Tab>
+                </Tabs>
               </div>
-              <Tabs>
-                <Tab key="drawer-company-info" title="Company Info">
-                  <div className="h-96">
-                    <CompanyInfo
-                      company={selectedCompanyOrder.company}
-                      showBarChart
-                    />
-                  </div>
-                </Tab>
-                <Tab key="drawer-stock-chart" title="Stock Chart">
-                  <div className="h-96 w-80">
-                    <LineChart
-                      className="w-full"
-                      data={selectedCompanyOrder.company.StockHistory.map(
-                        (stockHistory, index) => ({
-                          phaseId: `${index + 1} ${stockHistory.Phase.name}`,
-                          stockPrice: stockHistory.price,
-                          stockAction: stockHistory.action,
-                          steps: stockHistory.stepsMoved,
-                        })
-                      )}
-                      index="phaseId"
-                      categories={["stockPrice"]}
-                      yAxisLabel="Stock Price"
-                      xAxisLabel="Stock Price Updated"
-                      colors={[
-                        sectorColors[selectedCompanyOrder.company.Sector.name],
-                      ]}
-                      valueFormatter={valueFormatter}
-                    />
-                  </div>
-                </Tab>
-              </Tabs>
-            </div>
-          )}
+            )}
+          </div>
           <Drawer.Close asChild>
             <Button>Close drawer</Button>
           </Drawer.Close>

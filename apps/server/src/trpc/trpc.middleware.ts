@@ -87,6 +87,8 @@ export const checkIsPlayerActionBasedOnAuth = async (
   playerService: PlayersService,
 ) => {
   const { ctx, input, next } = opts;
+  //TODO: This isn't going to work as it's just grabbing a player based on the user id, 
+  //we need something more specific, probably data including in the JWT
   const player = await playerService.player({ userId: ctx.user.id });
   if (!player) {
     console.error('Player not found');

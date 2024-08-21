@@ -2,22 +2,28 @@ import { trpc } from "@sectors/app/trpc";
 import { useGame } from "./GameContext";
 import { Prize } from "@server/prisma/prisma.client";
 import { RiGameFill, RiRepeat2Fill, RiSparkling2Fill } from "@remixicon/react";
-import { PrizeWithSectorPrizes } from "@server/prisma/prisma.types";
+import {
+  PrizeVoteWithRelations,
+  PrizeWithSectorPrizes,
+} from "@server/prisma/prisma.types";
 import { SectorEffects } from "@server/data/constants";
 import DebounceButton from "../General/DebounceButton";
 import { useState } from "react";
 import { sectorColors } from "@server/data/gameData";
+import PlayerAvatar from "../Player/PlayerAvatar";
 
 const PrizeComponent = ({
   prize,
   handleSubmit,
   isSubmitted,
+  prizeVotes,
 }: {
   prize: PrizeWithSectorPrizes;
   handleSubmit: () => void;
   isSubmitted: boolean;
+  prizeVotes?: PrizeVoteWithRelations[];
 }) => {
-  const { currentTurn } = useGame();
+  const { currentTurn, authPlayer } = useGame();
   const useCreatePrizeVoteMutation =
     trpc.prizeVotes.createPrizeVote.useMutation();
   return (
@@ -51,6 +57,20 @@ const PrizeComponent = ({
               </div>
             ))}
         </div>
+        {prizeVotes && (
+          <div>
+            Votes: {prizeVotes.length}{" "}
+            {prizeVotes.length > 0 && (
+              <div>
+                {prizeVotes.map((vote) => (
+                  <div key={vote.id}>
+                    <PlayerAvatar player={vote.Player} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
       {isSubmitted ? (
         <div>Vote submitted</div>
@@ -58,6 +78,7 @@ const PrizeComponent = ({
         <DebounceButton
           onClick={() => {
             useCreatePrizeVoteMutation.mutate({
+              playerId: authPlayer.id,
               gameTurnId: currentTurn.id,
               prizeId: prize.id,
             });
@@ -72,7 +93,7 @@ const PrizeComponent = ({
 };
 
 const PrizeRound = () => {
-  const { currentTurn } = useGame();
+  const { currentTurn, authPlayer } = useGame();
   const {
     data: prizes,
     isLoading: isLoadingPrizes,
@@ -83,6 +104,14 @@ const PrizeRound = () => {
     },
     orderBy: { createdAt: "asc" },
   });
+  const {
+    data: prizeVotes,
+    isLoading: isLoadingVotes,
+    isError: isErrorVotes,
+  } = trpc.prizeVotes.listRevealedResults.useQuery({
+    gameTurnId: currentTurn.id,
+    playerId: authPlayer.id,
+  });
   const [isSubmitted, setIsSubmitted] = useState(false);
   if (isLoadingPrizes) return <div>Loading...</div>;
   if (isErrorPrizes) return <div>Error loading prizes</div>;
@@ -90,6 +119,8 @@ const PrizeRound = () => {
   const handleSubmitVote = () => {
     setIsSubmitted(true);
   };
+  if (isLoadingVotes) return <div>Loading votes...</div>;
+  if (isErrorVotes) return <div>Error loading votes</div>;
   return (
     <div className="flex flex-col gap-2">
       <h1>Investor Gambit</h1>
@@ -131,6 +162,9 @@ const PrizeRound = () => {
               prize={prize}
               handleSubmit={handleSubmitVote}
               isSubmitted={isSubmitted}
+              prizeVotes={prizeVotes?.filter(
+                (vote) => vote.prizeId === prize.id
+              )}
             />
           </div>
         ))}

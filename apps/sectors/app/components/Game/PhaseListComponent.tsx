@@ -92,6 +92,15 @@ const PhaseListComponent = () => {
         phase !== PhaseName.INFLUENCE_BID_RESOLVE
     );
   }
+  if (currentTurn.turn % 3 !== 0) {
+    _phasesInOrder = _phasesInOrder.filter(
+      (phase) =>
+        phase !== PhaseName.PRIZE_VOTE_ACTION &&
+        phase !== PhaseName.PRIZE_VOTE_RESOLVE &&
+        phase !== PhaseName.PRIZE_DISTRIBUTE_ACTION &&
+        phase !== PhaseName.PRIZE_DISTRIBUTE_RESOLVE
+    );
+  }
   return (
     <div className="flex flex-col gap-2">
       {_phasesInOrder.map((phase) => (

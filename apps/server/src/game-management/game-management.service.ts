@@ -354,7 +354,7 @@ export class GameManagementService {
         gameLogPromises.push(
           this.gameLogService.createGameLog({
             game: { connect: { id: phase.gameId } },
-            content: `Player ${votes[0].Player.nickname} has won prize ${prizeIds[i]}.`,
+            content: `Player ${votes[0].Player.nickname} has won a prize.`,
           }),
         );
       }
@@ -894,6 +894,11 @@ export class GameManagementService {
     await this.gameLogService.createGameLog({
       game: { connect: { id: phase.gameId } },
       content: `A new company ${newCompany.name} has been established in the ${sector.sectorName} sector.`,
+    });
+    //add 1 base demand to the company sector
+    await this.sectorService.updateSector({
+      where: { id: sectorId },
+      data: { demand: (sector.demand || 0) + 1 },
     });
   }
   /**
@@ -6988,6 +6993,13 @@ export class GameManagementService {
       where: { id: prize.id },
       data: { cashAmount: (prize.cashAmount || 0) - amount },
     });
+    //game log
+    this.gameLogService.createGameLog({
+      game: { connect: { id: game.id } },
+      content: `Player ${
+        player.nickname
+      } has won a cash prize of $${amount.toFixed(2)}`,
+    });
   }
 
   async distributePrestige({
@@ -7018,6 +7030,11 @@ export class GameManagementService {
     await this.prizeService.updatePrize({
       where: { id: prize.id },
       data: { prestigeAmount: (prize.prestigeAmount || 0) - amount },
+    });
+    //game log
+    await this.gameLogService.createGameLog({
+      game: { connect: { id: company.gameId } },
+      content: `${company.name} has won a prestige prize of ${amount} tokens`,
     });
   }
 
@@ -7087,6 +7104,11 @@ export class GameManagementService {
         id: sectorActions[0].id,
       });
     }
+    //game log
+    await this.gameLogService.createGameLog({
+      game: { connect: { id: game.id } },
+      content: `${company.name} has taken the passive effect ${effectName}`,
+    });
   }
   async getPrizesCurrentTurnForPlayer(
     playerId: string,

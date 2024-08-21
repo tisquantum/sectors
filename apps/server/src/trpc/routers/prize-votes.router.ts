@@ -21,11 +21,12 @@ export default (trpc: TrpcService, ctx: Context) =>
     createPrizeVote: trpc.procedure
       .input(
         z.object({
+          playerId: z.string(),
           gameTurnId: z.string(),
           prizeId: z.string(),
         }),
       )
-      .use(async (opts) => checkIsPlayerActionBasedOnAuth(opts, ctx.playersService))
+      .use(async (opts) => checkIsPlayerAction(opts, ctx.playersService))
       .use(async (opts) => checkSubmissionTime(opts, ctx.phaseService))
       .mutation(async ({ input, ctx: ctxMiddleware }) => {
         const { gameTurnId, prizeId } = input;
@@ -97,12 +98,19 @@ export default (trpc: TrpcService, ctx: Context) =>
       .input(
         z.object({
           gameTurnId: z.string(),
+          playerId: z.optional(z.string()),
         }),
       )
       .query(async ({ input }) => {
         const { gameTurnId } = input;
 
         try {
+          if (input.playerId) {
+            return await ctx.prizeVotesService.listPrizeVotes({
+              where: { gameTurnId, playerId: input.playerId },
+              orderBy: { createdAt: 'asc' },
+            });
+          }
           return await ctx.prizeVotesService.listPrizeVotes({
             where: { gameTurnId },
             orderBy: { createdAt: 'asc' },
