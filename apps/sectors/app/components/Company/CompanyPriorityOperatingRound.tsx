@@ -1,5 +1,8 @@
 import React, { useMemo } from "react";
-import { calculateDemand, companyPriorityOrderOperations } from "@server/data/helpers";
+import {
+  calculateDemand,
+  companyPriorityOrderOperations,
+} from "@server/data/helpers";
 import { SectorName } from "@server/prisma/prisma.client";
 import {
   CompanyWithSector,
@@ -109,7 +112,10 @@ const CompanyPriorityList = ({
                     <TableCell>
                       <span className="flex items-center content-center justify-center gap-1">
                         <RiHandCoinFill size={18} />
-                        {calculateDemand(company.demandScore, company.baseDemand)}
+                        {calculateDemand(
+                          company.demandScore,
+                          company.baseDemand
+                        )}
                       </span>
                     </TableCell>
                     <TableCell>
@@ -132,11 +138,11 @@ const CompanyPriorityList = ({
             cheapest company regardless of its unit price.
           </li>
           <li>
-            1: Companies are sorted by prestige tokens in descending order.
+            1: Companies are sorted by unit price in ascending order (cheapest
+            first).
           </li>
           <li>
-            2: Companies are sorted by unit price in ascending order (cheapest
-            first).
+            2: Companies are sorted by prestige tokens in descending order.
           </li>
           <li>3: Companies are sorted by demand score in descending order.</li>
         </ul>

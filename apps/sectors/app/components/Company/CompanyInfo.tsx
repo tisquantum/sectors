@@ -80,8 +80,10 @@ const CompanyMoreInfo = ({
             className={tooltipStyle}
             content={
               <p className={tooltipParagraphStyle}>
-                Base sector demand, every company in the sector receives this
-                base bonus.
+                Sector demand, every company in the sector receives this base
+                bonus. Everytime a new company opens in this sector, this demand
+                increases permanently by 1. The company lobby action will also
+                increase this value temporarily.
               </p>
             }
           >

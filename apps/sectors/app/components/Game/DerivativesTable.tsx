@@ -33,8 +33,13 @@ import { OptionContractWithRelations } from "@server/prisma/prisma.types";
 
 const DerivativesTable = ({ isInteractive }: { isInteractive: boolean }) => {
   const { gameId, gameState, currentPhase, authPlayer } = useGame();
+  const [isLoadingOrderButton, setIsLoadingOrderButton] = useState(false);
   const useCreatePlayerOrderMutation =
-    trpc.playerOrder.createPlayerOrder.useMutation();
+    trpc.playerOrder.createPlayerOrder.useMutation({
+      onSettled: () => {
+        setIsLoadingOrderButton(false);
+      },
+    });
   const useExerciseContract =
     trpc.optionContract.exerciseOptionContract.useMutation();
   const {
@@ -212,6 +217,7 @@ const DerivativesTable = ({ isInteractive }: { isInteractive: boolean }) => {
                         "parseInt(bidAmounts[contract.id])",
                         parseInt(bidAmounts[contract.id])
                       );
+                      setIsLoadingOrderButton(true);
                       try {
                         useCreatePlayerOrderMutation.mutate({
                           companyId: contract.companyId,
@@ -229,6 +235,7 @@ const DerivativesTable = ({ isInteractive }: { isInteractive: boolean }) => {
                       }
                       setIsSubmitted(true);
                     }}
+                    isLoading={isLoadingOrderButton}
                   >
                     Call
                   </DebounceButton>

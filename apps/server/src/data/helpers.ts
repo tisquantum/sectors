@@ -436,16 +436,16 @@ export function companyPriorityOrderOperations(
 ) {
   // PRIORITY for production and consumption of goods
   // 0: If company has ECONOMIES_OF_SCALE, it is considered to be the cheapest company regardless of it's unit price.
-  // 1: Sort companies by prestige tokens DESC
-  // 2. Sory companies by unit price ASC (cheapest first)
+  // 1. Sory companies by unit price ASC (cheapest first)
+  // 2: Sort companies by prestige tokens DESC
   // 3: Sort companies by demand score DESC
   return companies.sort((a, b) => {
     if (a.hasEconomiesOfScale && !b.hasEconomiesOfScale) {
       return -1;
-    } else if (b.prestigeTokens !== a.prestigeTokens) {
-      return b.prestigeTokens - a.prestigeTokens;
     } else if (a.unitPrice !== b.unitPrice) {
       return a.unitPrice - b.unitPrice;
+    } else if (b.prestigeTokens !== a.prestigeTokens) {
+      return b.prestigeTokens - a.prestigeTokens;
     } else {
       return (
         calculateDemand(b.demandScore, b.baseDemand) -

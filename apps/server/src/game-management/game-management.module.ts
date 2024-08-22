@@ -33,6 +33,7 @@ import { TransactionModule } from '@server/transaction/transaction.module';
 import { InsolvencyContributionModule } from '@server/insolvency-contribution/insolvency-contribution.module';
 import { PrizeModule } from '@server/prize/prize.module';
 import { PrizeVotesModule } from '@server/prize-votes/prize-votes.module';
+import { PrizeDistributionModule } from '@server/prize-distribution/prize-distribution.module';
 
 @Module({
   imports: [
@@ -69,6 +70,7 @@ import { PrizeVotesModule } from '@server/prize-votes/prize-votes.module';
     InsolvencyContributionModule,
     PrizeModule,
     PrizeVotesModule,
+    PrizeDistributionModule,
   ],
   providers: [GameManagementService],
   exports: [GameManagementService],

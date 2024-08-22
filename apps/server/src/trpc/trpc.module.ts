@@ -39,6 +39,7 @@ import { TransactionService } from '@server/transaction/transaction.service';
 import { InsolvencyContributionService } from '@server/insolvency-contribution/insolvency-contribution.service';
 import { PrizeService } from '@server/prize/prize.service';
 import { PrizeVotesService } from '@server/prize-votes/prize-votes.service';
+import { PrizeDistributionService } from '@server/prize-distribution/prize-distribution.service';
 
 @Module({
   imports: [PrismaModule],
@@ -84,6 +85,7 @@ import { PrizeVotesService } from '@server/prize-votes/prize-votes.service';
     InsolvencyContributionService,
     PrizeService,
     PrizeVotesService,
+    PrizeDistributionService,
   ],
 })
 export class TrpcModule {}

@@ -265,12 +265,17 @@ const CompanyActionSelectionVote = ({
   companyActions?: CompanyAction[];
 }) => {
   const { currentPhase, authPlayer, gameId } = useGame();
+  const [isLoadingSelectionVote, setIsLoadingSelectionVote] = useState(false);
   const [submitComplete, setSubmitComplete] = useState(false);
   const [selectedActions, setSelectedActions] = useState<
     OperatingRoundAction[]
   >([]);
   const createOperatingRoundVote =
-    trpc.operatingRoundVote.createOperatingRoundVote.useMutation();
+    trpc.operatingRoundVote.createOperatingRoundVote.useMutation({
+      onSettled: () => {
+        setIsLoadingSelectionVote(false);
+      },
+    });
 
   if (!company) return <div>No company found</div>;
 
@@ -279,6 +284,8 @@ const CompanyActionSelectionVote = ({
 
   const checkIfDisabled = (actionName: OperatingRoundAction) => {
     if (CompanyActionCosts[actionName] > company.cashOnHand) return true;
+    if (CompanyActionPrestigeCosts[actionName] > company.prestigeTokens)
+      return true;
     if (actionName === OperatingRoundAction.LOAN && company.hasLoan)
       return true;
     return false;
@@ -313,6 +320,7 @@ const CompanyActionSelectionVote = ({
   };
 
   const handleSubmit = async () => {
+    setIsLoadingSelectionVote(true);
     if (currentPhase?.name === PhaseName.OPERATING_ACTION_COMPANY_VOTE) {
       try {
         await Promise.all(
@@ -395,6 +403,7 @@ const CompanyActionSelectionVote = ({
                 <DebounceButton
                   onClick={handleSubmit}
                   disabled={submitComplete}
+                  isLoading={isLoadingSelectionVote}
                 >
                   Submit All Votes
                 </DebounceButton>
@@ -433,7 +442,9 @@ const CompanyActionSelectionVote = ({
                           {CompanyActionPrestigeCosts[action.name] > 0 && (
                             <div className="flex">
                               <RiSparkling2Fill />
-                              <span>{CompanyActionPrestigeCosts[action.name]}</span>
+                              <span>
+                                {CompanyActionPrestigeCosts[action.name]}
+                              </span>
                             </div>
                           )}
                         </div>

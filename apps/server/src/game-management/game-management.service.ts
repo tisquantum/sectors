@@ -41,6 +41,7 @@ import {
   Prize,
   SectorPrize,
   PrizeVote,
+  PrizeDistributionType,
 } from '@prisma/client';
 import { GamesService } from '@server/games/games.service';
 import { CompanyService } from '@server/company/company.service';
@@ -115,6 +116,7 @@ import {
   BANKRUPTCY_SHARE_PERCENTAGE_RETAINED,
   OURSOURCE_SUPPLY_BONUS,
   PRETIGE_REWARD_OPERATION_COST_PERCENTAGE_REDUCTION,
+  CompanyActionPrestigeCosts,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -170,6 +172,7 @@ import { InsolvencyContributionService } from '@server/insolvency-contribution/i
 import { time } from 'console';
 import { PrizeService } from '@server/prize/prize.service';
 import { PrizeVotesService } from '@server/prize-votes/prize-votes.service';
+import { PrizeDistributionService } from '@server/prize-distribution/prize-distribution.service';
 
 type GroupedByPhase = {
   [key: string]: {
@@ -220,6 +223,7 @@ export class GameManagementService {
     private insolvencyContributionService: InsolvencyContributionService,
     private prizeService: PrizeService,
     private prizeVoteService: PrizeVotesService,
+    private prizeDistributionService: PrizeDistributionService,
   ) {}
 
   /**
@@ -2596,6 +2600,11 @@ export class GameManagementService {
     //check if the company has enough cash on hand
     if (company.cashOnHand < cost) {
       throw new Error('Company does not have enough cash on hand');
+    }
+    //check prestige cost
+    const prestigeCost = CompanyActionPrestigeCosts[companyAction.action];
+    if (prestigeCost && company.prestigeTokens < prestigeCost) {
+      throw new Error('Company does not have enough prestige tokens');
     }
     //update the company cash on hand NOTE: this money does not go back to the bank.
     await this.companyService.updateCompany({
@@ -7000,6 +7009,14 @@ export class GameManagementService {
         player.nickname
       } has won a cash prize of $${amount.toFixed(2)}`,
     });
+    //create prize distribution
+    this.prizeDistributionService.createPrizeDistribution({
+      cashAmount: amount,
+      distributionType: PrizeDistributionType.CASH,
+      Player: { connect: { id: playerId } },
+      Prize: { connect: { id: prize.id } },
+      GameTurn: { connect: { id: game.currentTurn } },
+    });
   }
 
   async distributePrestige({
@@ -7035,6 +7052,13 @@ export class GameManagementService {
     await this.gameLogService.createGameLog({
       game: { connect: { id: company.gameId } },
       content: `${company.name} has won a prestige prize of ${amount} tokens`,
+    });
+    //create prize distribution
+    await this.prizeDistributionService.createPrizeDistribution({
+      prestigeAmount: amount,
+      distributionType: PrizeDistributionType.PRESTIGE,
+      Company: { connect: { id: companyId } },
+      Prize: { connect: { id: prize.id } },
     });
   }
 
@@ -7108,6 +7132,13 @@ export class GameManagementService {
     await this.gameLogService.createGameLog({
       game: { connect: { id: game.id } },
       content: `${company.name} has taken the passive effect ${effectName}`,
+    });
+    //create prize distribution
+    await this.prizeDistributionService.createPrizeDistribution({
+      passiveEffect: effectName,
+      distributionType: PrizeDistributionType.PASSIVE_EFFECT,
+      Company: { connect: { id: companyId } },
+      Prize: { connect: { id: prize.id } },
     });
   }
   async getPrizesCurrentTurnForPlayer(

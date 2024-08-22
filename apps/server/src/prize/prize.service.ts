@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { Prisma, Prize } from '@prisma/client';
-import { PrizeWithSectorPrizes } from '@server/prisma/prisma.types';
+import {
+  PrizeWithRelations,
+  PrizeWithSectorPrizes,
+} from '@server/prisma/prisma.types';
 
 @Injectable()
 export class PrizeService {
@@ -10,11 +13,22 @@ export class PrizeService {
   // Fetch a single prize by its unique identifier
   async getPrize(
     prizeWhereUniqueInput: Prisma.PrizeWhereUniqueInput,
-  ): Promise<Prize | null> {
+  ): Promise<PrizeWithRelations | null> {
     return this.prisma.prize.findUnique({
       where: prizeWhereUniqueInput,
       include: {
-        SectorPrizes: true,
+        SectorPrizes: {
+          include: {
+            Sector: true,
+          },
+        },
+        PrizeDistributions: {
+          include: {
+            Player: true,
+            Company: true,
+            GameTurn: true,
+          },
+        },
       },
     });
   }
@@ -26,7 +40,7 @@ export class PrizeService {
     cursor?: Prisma.PrizeWhereUniqueInput;
     where?: Prisma.PrizeWhereInput;
     orderBy?: Prisma.PrizeOrderByWithRelationInput;
-  }): Promise<PrizeWithSectorPrizes[]> {
+  }): Promise<PrizeWithRelations[]> {
     const { skip, take, cursor, where, orderBy } = params;
     return this.prisma.prize.findMany({
       skip,
@@ -35,6 +49,13 @@ export class PrizeService {
       where,
       orderBy,
       include: {
+        PrizeDistributions: {
+          include: {
+            Player: true,
+            Company: true,
+            GameTurn: true,
+          },
+        },
         SectorPrizes: {
           include: {
             Sector: true,

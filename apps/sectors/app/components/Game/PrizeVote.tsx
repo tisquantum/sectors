@@ -17,15 +17,25 @@ const PrizeComponent = ({
   handleSubmit,
   isSubmitted,
   prizeVotes,
+  handleMutationSuccess,
 }: {
   prize: PrizeWithSectorPrizes;
   handleSubmit: () => void;
   isSubmitted: boolean;
   prizeVotes?: PrizeVoteWithRelations[];
+  handleMutationSuccess?: () => void;
 }) => {
   const { currentTurn, authPlayer } = useGame();
   const useCreatePrizeVoteMutation =
-    trpc.prizeVotes.createPrizeVote.useMutation();
+    trpc.prizeVotes.createPrizeVote.useMutation({
+      onSuccess: () => {
+        handleMutationSuccess;
+      },
+      onSettled: () => {
+        setIsLoadingClaimPrize(false);
+      },
+    });
+  const [isLoadingClaimPrize, setIsLoadingClaimPrize] = useState(false);
   return (
     <div className="flex flex-col gap-1 rounded-md bg-slate-800 p-2">
       <div className="flex flex-col gap-1">
@@ -77,6 +87,7 @@ const PrizeComponent = ({
       ) : (
         <DebounceButton
           onClick={() => {
+            setIsLoadingClaimPrize(true);
             useCreatePrizeVoteMutation.mutate({
               playerId: authPlayer.id,
               gameTurnId: currentTurn.id,
@@ -84,6 +95,7 @@ const PrizeComponent = ({
             });
             handleSubmit();
           }}
+          isLoading={isLoadingClaimPrize}
         >
           Claim Prize
         </DebounceButton>
@@ -92,7 +104,7 @@ const PrizeComponent = ({
   );
 };
 
-const PrizeRound = () => {
+const PrizeRound = ({ isRevealRound = false }: { isRevealRound?: boolean }) => {
   const { currentTurn, authPlayer } = useGame();
   const {
     data: prizes,
@@ -108,10 +120,17 @@ const PrizeRound = () => {
     data: prizeVotes,
     isLoading: isLoadingVotes,
     isError: isErrorVotes,
-  } = trpc.prizeVotes.listRevealedResults.useQuery({
-    gameTurnId: currentTurn.id,
-    playerId: authPlayer.id,
-  });
+    refetch: refetchVotes,
+  } = trpc.prizeVotes.listRevealedResults.useQuery(
+    isRevealRound
+      ? {
+          gameTurnId: currentTurn.id,
+        }
+      : {
+          gameTurnId: currentTurn.id,
+          playerId: authPlayer.id,
+        }
+  );
   const [isSubmitted, setIsSubmitted] = useState(false);
   if (isLoadingPrizes) return <div>Loading...</div>;
   if (isErrorPrizes) return <div>Error loading prizes</div>;
@@ -165,6 +184,7 @@ const PrizeRound = () => {
               prizeVotes={prizeVotes?.filter(
                 (vote) => vote.prizeId === prize.id
               )}
+              handleMutationSuccess={refetchVotes}
             />
           </div>
         ))}

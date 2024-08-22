@@ -156,7 +156,7 @@ const Game = ({ gameId }: { gameId: string }) => {
     ) : currentRoundData?.phase.name === PhaseName.PRIZE_VOTE_ACTION ? (
       <PrizeRound />
     ) : currentRoundData?.phase.name === PhaseName.PRIZE_VOTE_RESOLVE ? (
-      <PrizeRound />
+      <PrizeRound isRevealRound />
     ) : currentRoundData?.phase.name === PhaseName.PRIZE_DISTRIBUTE_ACTION ? (
       <DistributePrizes />
     ) : currentRoundData?.phase.name === PhaseName.PRIZE_DISTRIBUTE_RESOLVE ? (

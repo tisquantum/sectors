@@ -21,6 +21,7 @@ import {
   PlayerPriority,
   PlayerResult,
   Prize,
+  PrizeDistribution,
   PrizeVote,
   ProductionResult,
   ResearchDeck,
@@ -277,6 +278,17 @@ export type SectorPrizeWithSector = SectorPrize & { Sector: Sector };
 
 export type PrizeWithSectorPrizes = Prize & {
   SectorPrizes: SectorPrizeWithSector[];
+};
+
+export type PrizeDistributionWithRelations = PrizeDistribution & {
+  Player: Player | null;
+  Company: Company | null;
+  GameTurn: GameTurn | null;
+};
+
+export type PrizeWithRelations = Prize & {
+  SectorPrizes: SectorPrizeWithSector[];
+  PrizeDistributions: PrizeDistributionWithRelations[];
 };
 
 export type PrizeVoteWithRelations = PrizeVote & {

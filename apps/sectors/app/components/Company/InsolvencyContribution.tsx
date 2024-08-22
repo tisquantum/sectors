@@ -64,6 +64,8 @@ const InsolvencyContributionComponent = ({
     refetchAuthPlayer,
   } = useGame();
   const utils = trpc.useUtils();
+  const [isLoadingInsolvencyContribution, setIsLoadingInsolvencyContribution] =
+    useState(false);
   const {
     data: playerWithShares,
     isLoading: isLoadingPlayerWithShares,
@@ -79,7 +81,11 @@ const InsolvencyContributionComponent = ({
     where: { companyId: company.id, gameTurnId: currentTurn.id },
   });
   const useInsolvencyContributionMutation =
-    trpc.insolvencyContributions.createInsolvencyContribution.useMutation();
+    trpc.insolvencyContributions.createInsolvencyContribution.useMutation({
+      onSettled: () => {
+        setIsLoadingInsolvencyContribution(false);
+      },
+    });
   const [shareContribution, setShareContribution] = useState(0);
   const [cashContribution, setCashContribution] = useState(0);
   useEffect(() => {
@@ -215,6 +221,7 @@ const InsolvencyContributionComponent = ({
         {/* Submit Button */}
         <DebounceButton
           onClick={() => {
+            setIsLoadingInsolvencyContribution(true);
             useInsolvencyContributionMutation.mutate({
               gameId,
               playerId: authPlayer.id,

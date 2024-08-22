@@ -5,25 +5,20 @@ import { useCallback, useMemo, useState } from "react";
 type DebounceButtonProps = ButtonProps & {
   debounceDelay?: number;
   throttleDelay?: number;
+  isLoading?: boolean;
 };
 
 const DebounceButton = ({
   debounceDelay = 300,
   throttleDelay = 300,
   onClick,
+  isLoading = false,
   ...props
 }: DebounceButtonProps) => {
-  const [isLoading, setIsLoading] = useState(false);
-
   const handleClick = useCallback(
     async (event: any) => {
       if (onClick) {
-        setIsLoading(true);
-        try {
-          await onClick(event);
-        } finally {
-          setIsLoading(false);
-        }
+        await onClick(event);
       }
     },
     [onClick]
