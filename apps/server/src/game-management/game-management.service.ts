@@ -117,6 +117,7 @@ import {
   OURSOURCE_SUPPLY_BONUS,
   PRETIGE_REWARD_OPERATION_COST_PERCENTAGE_REDUCTION,
   CompanyActionPrestigeCosts,
+  INSOLVENT_EXTRA_PHASE_TIME,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -423,9 +424,9 @@ export class GameManagementService {
     if (!gameTurn) {
       throw new Error('Game turn not found');
     }
-    // if (gameTurn.turn % 3 !== 0) {
-    //   return;
-    // }
+    if (gameTurn.turn % 3 !== 0) {
+      return;
+    }
 
     // Fetch players and determine prize count
     const players = await this.playersService.players({
@@ -4206,10 +4207,24 @@ export class GameManagementService {
     const gameChannelId = getGameChannelId(gameId);
     //get game
     let game = await this.gamesService.getGameState(gameId);
-
+    let extraPhaseTime = 0;
+    //get company
+    if (companyId) {
+      const company = await this.companyService.company({
+        id: companyId || '',
+      });
+      if (company) {
+        if (
+          phaseName == PhaseName.OPERATING_ACTION_COMPANY_VOTE &&
+          company.status == CompanyStatus.INSOLVENT
+        ) {
+          extraPhaseTime = INSOLVENT_EXTRA_PHASE_TIME;
+        }
+      }
+    }
     const phase = await this.phaseService.createPhase({
       name: phaseName,
-      phaseTime: phaseTimes[phaseName],
+      phaseTime: phaseTimes[phaseName] + extraPhaseTime,
       Game: { connect: { id: gameId } },
       GameTurn: { connect: { id: game?.currentTurn || '' } },
       StockRound: stockRoundId ? { connect: { id: stockRoundId } } : undefined,
@@ -6540,21 +6555,19 @@ export class GameManagementService {
   }
 
   async isPrizeRoundTurn(gameId: string) {
-    //TODO: Remove this eventually;
-    return true;
-    // const game = await this.gamesService.getGameState(gameId);
-    // if (!game) {
-    //   throw new Error('Game not found');
-    // }
-    // //get game turn
-    // const gameTurn = await this.gameTurnService.gameTurn({
-    //   id: game.currentTurn || '',
-    // });
-    // if (!gameTurn) {
-    //   throw new Error('Game turn not found');
-    // }
-    // //if current turn is divisible by 3, return false
-    // return gameTurn.turn % 3 === 0;
+    const game = await this.gamesService.getGameState(gameId);
+    if (!game) {
+      throw new Error('Game not found');
+    }
+    //get game turn
+    const gameTurn = await this.gameTurnService.gameTurn({
+      id: game.currentTurn || '',
+    });
+    if (!gameTurn) {
+      throw new Error('Game turn not found');
+    }
+    //if current turn is divisible by 3, return false
+    return gameTurn.turn % 3 === 0;
   }
 
   async anyOptionOrdersPurchased(gameId: string) {

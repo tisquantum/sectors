@@ -13,6 +13,7 @@ import {
 } from '@server/pusher/pusher.types';
 import { GamesService } from '@server/games/games.service';
 import { GameManagementService } from '@server/game-management/game-management.service';
+import { InsolvencyContributionWithRelations } from '@server/prisma/prisma.types';
 
 type Context = {
   insolvencyContributionService: InsolvencyContributionService;
@@ -89,7 +90,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           Player: { connect: { id: playerId } },
         };
 
-        let insolvencyContribution: InsolvencyContribution;
+        let insolvencyContribution: InsolvencyContributionWithRelations;
         try {
           insolvencyContribution =
             await ctx.insolvencyContributionService.createInsolvencyContribution(
@@ -117,12 +118,11 @@ export default (trpc: TrpcService, ctx: Context) =>
         } catch (error) {
           console.error('Error resolving insolvency contribution', error);
         }
-        //pusher service
-        // ctx.pusherService.trigger(
-        //   getGameChannelId(ctxMiddleware.gameId),
-        //   EVENT_NEW_INVOLVENCY_CONTRIBUTION,
-        //   insolvencyContribution,
-        // );
+        //TODO: Is this causing a game-breaking bug?
+        ctx.pusherService.trigger(
+          getGameChannelId(ctxMiddleware.gameId),
+          EVENT_NEW_INVOLVENCY_CONTRIBUTION,
+        );
         return insolvencyContribution;
       }),
 

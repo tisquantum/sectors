@@ -563,7 +563,12 @@ const PlayerOrderInput = ({
     trpc.company.getCompanyWithShares.useQuery({
       id: currentOrder.id,
     });
-  const createPlayerOrder = trpc.playerOrder.createPlayerOrder.useMutation();
+  const [isLoadingPlayerOrder, setIsLoadingPlayerOrder] = useState(false);
+  const createPlayerOrder = trpc.playerOrder.createPlayerOrder.useMutation({
+    onSettled: () => {
+      setIsLoadingPlayerOrder(false);
+    },
+  });
   const [share, setShare] = useState(1);
   const [orderValue, setOrderValue] = useState(0);
   const [isBuy, setIsBuy] = useState(true);
@@ -620,6 +625,7 @@ const PlayerOrderInput = ({
     isBuy,
   });
   const handleConfirm = () => {
+    setIsLoadingPlayerOrder(true);
     createPlayerOrder.mutate({
       playerId: authPlayer.id,
       companyId: currentOrder.id,
@@ -760,7 +766,9 @@ const PlayerOrderInput = ({
           </Tabs>
           <div className="flex justify-center gap-2">
             <Drawer.Close asChild>
-              <Button onClick={handleConfirm}>Confirm</Button>
+              <Button onClick={handleConfirm} isLoading={isLoadingPlayerOrder}>
+                Confirm
+              </Button>
             </Drawer.Close>
             <Drawer.Close asChild>
               <Button onClick={handleCancel}>Cancel</Button>

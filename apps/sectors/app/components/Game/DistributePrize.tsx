@@ -165,7 +165,7 @@ const DistributePrize = ({
               curr.prizetype === "cash" ? acc + curr.amount : acc,
             0
           ) >= (prize.cashAmount || 0) ? (
-            <div>Cash Prize fully distributed</div>
+            <div>Cash fully distributed</div>
           ) : (
             <>
               <PlayerSelect
@@ -521,7 +521,6 @@ const DistributePrizes = () => {
   } = trpc.prizes.listPrizes.useQuery({
     where: {
       gameTurnId: currentTurn.id,
-      playerId: authPlayer.id,
     },
   });
   useEffect(() => {
@@ -529,7 +528,6 @@ const DistributePrizes = () => {
   }, [currentPhase?.id]);
   const usePrizeDistributionMutation =
     trpc.game.prizeDistribution.useMutation();
-
   if (isLoading) {
     return <div>Loading...</div>;
   }
@@ -539,6 +537,8 @@ const DistributePrizes = () => {
   if (!prizes) {
     return null;
   }
+  const playerPrizes =
+    prizes.filter((prize) => prize.playerId === authPlayer.id) || [];
 
   const handleFinalizeDistribution = () => {
     usePrizeDistributionMutation.mutate({
@@ -549,33 +549,41 @@ const DistributePrizes = () => {
 
   return (
     <div className="flex flex-col gap-2">
-      <h1>Distribute Prizes</h1>
+      <h1>Tranches Distribution</h1>
       {prizes.length > 0 ? (
         <>
-          {prizes.map((prize) => (
-            <div key={prize.id}>
-              {prize.playerId && prize.playerId == authPlayer.id && (
-                <>
-                  <DistributePrize
-                    prize={prize}
-                    setDistributionData={setDistributionData}
-                    distributionData={distributionData}
-                  />
-                  <DebounceButton onClick={handleFinalizeDistribution}>
-                    Finalize Distribution
-                  </DebounceButton>
-                </>
-              )}
-            </div>
-          ))}
-          <DistributionTable
-            distributionData={distributionData}
-            setDistributionData={setDistributionData}
-          />
+          {playerPrizes.length > 0 && (
+            <>
+              {playerPrizes.map((prize) => (
+                <div key={prize.id}>
+                  {prize.playerId && prize.playerId == authPlayer.id && (
+                    <>
+                      <DistributePrize
+                        prize={prize}
+                        setDistributionData={setDistributionData}
+                        distributionData={distributionData}
+                      />
+                    </>
+                  )}
+                </div>
+              ))}
+              <h2>Pending Distributions</h2>
+              <DistributionTable
+                distributionData={distributionData}
+                setDistributionData={setDistributionData}
+              />
+              <div className="flex justify-center">
+                <DebounceButton onClick={handleFinalizeDistribution}>
+                  Finalize Distribution
+                </DebounceButton>
+              </div>
+            </>
+          )}
+          <h2>All Tranches Distributions</h2>
           <PrizeDistributionsTable prizes={prizes} />
         </>
       ) : (
-        <div>No prizes to distribute</div>
+        <div>No tranches to distribute</div>
       )}
     </div>
   );

@@ -44,6 +44,7 @@ const InsolvencyGauge = ({
         aria-label="Insolvency Contributions"
         size="md"
         value={totalValue}
+        maxValue={CompanyTierData[company.companyTier].insolvencyShortFall}
         color="success"
         className="max-w-md"
       />
@@ -63,7 +64,6 @@ const InsolvencyContributionComponent = ({
     socketChannel: channel,
     refetchAuthPlayer,
   } = useGame();
-  const utils = trpc.useUtils();
   const [isLoadingInsolvencyContribution, setIsLoadingInsolvencyContribution] =
     useState(false);
   const {
@@ -77,6 +77,7 @@ const InsolvencyContributionComponent = ({
     data: insolvencyContributions,
     isLoading,
     isError,
+    refetch: refetchInsolvencyContributions,
   } = trpc.insolvencyContributions.listInsolvencyContributions.useQuery({
     where: { companyId: company.id, gameTurnId: currentTurn.id },
   });
@@ -90,16 +91,12 @@ const InsolvencyContributionComponent = ({
   const [cashContribution, setCashContribution] = useState(0);
   useEffect(() => {
     if (!channel) return;
+
     channel.bind(
       EVENT_NEW_INVOLVENCY_CONTRIBUTION,
       (data: InsolvencyContributionWithRelations) => {
-        utils.insolvencyContributions.listInsolvencyContributions.setData(
-          { where: { companyId: company.id } },
-          (oldData: InsolvencyContributionWithRelations[] | undefined) => [
-            ...(oldData || []),
-            data,
-          ]
-        );
+        console.log("new insolvency contribution", data);
+        refetchInsolvencyContributions();
         refetchAuthPlayer();
         refetchPlayerWithShares();
       }
@@ -202,7 +199,11 @@ const InsolvencyContributionComponent = ({
           <div className="flex flex-col gap-1">
             <ShareComponent
               name={company.stockSymbol}
-              quantity={playerWithShares.Share.length}
+              quantity={
+                playerWithShares.Share.filter(
+                  (share) => share.companyId === company.id
+                ).length
+              }
             />
             <Input
               label="Share Contribution"
@@ -236,6 +237,7 @@ const InsolvencyContributionComponent = ({
           disabled={
             cashContribution <= 0 || cashContribution > authPlayer.cashOnHand
           } // Ensure valid contribution
+          isLoading={isLoadingInsolvencyContribution}
         >
           Submit Contributions
         </DebounceButton>

@@ -18,20 +18,20 @@ const PrizeComponent = ({
   isSubmitted,
   prizeVotes,
   handleMutationSuccess,
+  isRevealRound,
 }: {
   prize: PrizeWithSectorPrizes;
   handleSubmit: () => void;
   isSubmitted: boolean;
   prizeVotes?: PrizeVoteWithRelations[];
   handleMutationSuccess?: () => void;
+  isRevealRound: boolean;
 }) => {
   const { currentTurn, authPlayer } = useGame();
   const useCreatePrizeVoteMutation =
     trpc.prizeVotes.createPrizeVote.useMutation({
-      onSuccess: () => {
-        handleMutationSuccess;
-      },
       onSettled: () => {
+        handleMutationSuccess && handleMutationSuccess();
         setIsLoadingClaimPrize(false);
       },
     });
@@ -82,23 +82,27 @@ const PrizeComponent = ({
           </div>
         )}
       </div>
-      {isSubmitted ? (
-        <div>Vote submitted</div>
+      {!isRevealRound ? (
+        isSubmitted ? (
+          <div>Vote submitted</div>
+        ) : (
+          <DebounceButton
+            onClick={() => {
+              setIsLoadingClaimPrize(true);
+              useCreatePrizeVoteMutation.mutate({
+                playerId: authPlayer.id,
+                gameTurnId: currentTurn.id,
+                prizeId: prize.id,
+              });
+              handleSubmit();
+            }}
+            isLoading={isLoadingClaimPrize}
+          >
+            Claim Prize
+          </DebounceButton>
+        )
       ) : (
-        <DebounceButton
-          onClick={() => {
-            setIsLoadingClaimPrize(true);
-            useCreatePrizeVoteMutation.mutate({
-              playerId: authPlayer.id,
-              gameTurnId: currentTurn.id,
-              prizeId: prize.id,
-            });
-            handleSubmit();
-          }}
-          isLoading={isLoadingClaimPrize}
-        >
-          Claim Prize
-        </DebounceButton>
+        <div>Reveal Round</div>
       )}
     </div>
   );
@@ -142,9 +146,9 @@ const PrizeRound = ({ isRevealRound = false }: { isRevealRound?: boolean }) => {
   if (isErrorVotes) return <div>Error loading votes</div>;
   return (
     <div className="flex flex-col gap-2">
-      <h1>Investor Gambit</h1>
+      <h1>Investor Tranches</h1>
       <p>
-        In this round, players vote on the prize they want to win. There are
+        In this round, players vote on the tranch they want to win. There are
         three types of rewards:
         <ul>
           <li>Cash</li>
@@ -165,8 +169,8 @@ const PrizeRound = ({ isRevealRound = false }: { isRevealRound?: boolean }) => {
         </ul>
       </p>
       <p>
-        Players vote on the prize they want to win. If more than one player
-        votes on the prize, no one wins it and the prize is not distributed. If
+        Players vote on the tranch they want to win. If more than one player
+        votes on the tranch, no one wins it and the tranch is not distributed. If
         all votes are distributed, money is doubled in each prize pool. Placing
         a vote is not required.
       </p>
@@ -184,7 +188,10 @@ const PrizeRound = ({ isRevealRound = false }: { isRevealRound?: boolean }) => {
               prizeVotes={prizeVotes?.filter(
                 (vote) => vote.prizeId === prize.id
               )}
-              handleMutationSuccess={refetchVotes}
+              handleMutationSuccess={() => {
+                refetchVotes();
+              }}
+              isRevealRound={isRevealRound}
             />
           </div>
         ))}

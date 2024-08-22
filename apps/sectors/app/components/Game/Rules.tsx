@@ -35,6 +35,41 @@ const overviewRules = (
   </>
 );
 
+const tranchRules = (
+  <>
+    <h1>Investor Tranches</h1>
+    <p>
+      In this round, players vote on the tranch they want to win. There are
+      three types of rewards:
+    </p>
+    <ul className="list-disc pl-5">
+      <li>Cash</li>
+      <li>Prestige</li>
+      <li>
+        Passive Sector Effects:
+        <ul className="list-disc pl-5">
+          <li>
+            Passive Sector Effects are applied to all companies in the sector.
+          </li>
+          <li>
+            These effects will persist on this company until a passive effect is
+            assigned to a different company in the same sector.
+          </li>
+        </ul>
+      </li>
+    </ul>
+    <p>
+      Players vote on the tranch they want to win. If more than one player votes
+      on the tranch, no one wins it and the tranch is not distributed. If all
+      votes are distributed, money is doubled in each prize pool. Placing a vote
+      is not required.
+    </p>
+    <p>
+      After voting, any player who receives a cash reward may distribute this
+      reward amongst all players in the game in whatever way they see fit.
+    </p>
+  </>
+);
 const stockRoundRules = (
   <>
     <p>
@@ -353,6 +388,10 @@ const Rules: FC = () => {
       <div className="mb-8">
         <h2 className="text-2xl font-semibold mb-2">Overview</h2>
         <div className="text-base space-y-4">{overviewRules}</div>
+      </div>
+      <div className="mb-8">
+        <h2 className="text-2xl font-semibold mb-2">Investor Tranches</h2>
+        <div className="text-base space-y-4">{tranchRules}</div>
       </div>
       <div className="mb-8">
         <h2 className="text-2xl font-semibold mb-2">Stock Round Rules</h2>

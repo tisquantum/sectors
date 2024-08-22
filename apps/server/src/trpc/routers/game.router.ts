@@ -317,7 +317,7 @@ export default (trpc: TrpcService, ctx: Context) =>
               await ctx.gameManagementService.distributeCash({
                 playerId: distribution.playerId,
                 amount: distribution.amount,
-                prize: prizes[0],
+                prize: prizes[0], //this assumption is based on the fact that we only have one prize per turn
               });
               break;
 

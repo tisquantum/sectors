@@ -35,8 +35,8 @@ export const MAX_SHARE_PERCENTAGE = 60;
 export const MAX_SHARE_DEFAULT =
   DEFAULT_SHARE_DISTRIBUTION * (MAX_SHARE_PERCENTAGE / 100);
 
-export const DEFAULT_INCREASE_UNIT_PRICE = 20;
-export const DEFAULT_DECREASE_UNIT_PRICE = 20;
+export const DEFAULT_INCREASE_UNIT_PRICE = 10;
+export const DEFAULT_DECREASE_UNIT_PRICE = 10;
 export const DEFAULT_RESEARCH_DECK_SIZE = 12;
 
 export const GOVERNMENT_GRANT_AMOUNT = 500;
@@ -64,6 +64,7 @@ export const ACTION_ISSUE_SHARE_AMOUNT = 2;
 export const BANKRUPTCY_SHARE_PERCENTAGE_RETAINED = 10;
 export const OURSOURCE_SUPPLY_BONUS = 3;
 export const PRETIGE_REWARD_OPERATION_COST_PERCENTAGE_REDUCTION = 50;
+export const INSOLVENT_EXTRA_PHASE_TIME = 50 * 1000;
 /**
  * Phase times in milliseconds
  */
@@ -548,31 +549,31 @@ export const MARGIN_ACCOUNT_ID_PREFIX = 'MA__';
 export const CapitalGainsTiers = [
   {
     minNetWorth: 0,
-    maxNetWorth: 1000,
+    maxNetWorth: 500,
     taxPercentage: 0,
   },
   {
-    minNetWorth: 1001,
-    maxNetWorth: 2000,
+    minNetWorth: 500,
+    maxNetWorth: 750,
     taxPercentage: 2,
   },
   {
-    minNetWorth: 2000,
-    maxNetWorth: 3000,
+    minNetWorth: 751,
+    maxNetWorth: 1000,
     taxPercentage: 3,
   },
   {
-    minNetWorth: 3000,
-    maxNetWorth: 4000,
+    minNetWorth: 1001,
+    maxNetWorth: 1500,
     taxPercentage: 4,
   },
   {
-    minNetWorth: 4000,
-    maxNetWorth: 5000,
+    minNetWorth: 1501,
+    maxNetWorth: 2000,
     taxPercentage: 5,
   },
   {
-    minNetWorth: 5000,
+    minNetWorth: 2001,
     maxNetWorth: Number.MAX_SAFE_INTEGER,
     taxPercentage: 7,
   },

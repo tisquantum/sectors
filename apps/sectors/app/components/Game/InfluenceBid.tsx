@@ -4,14 +4,20 @@ import PlayerAvatar from "../Player/PlayerAvatar";
 import { DEFAULT_INFLUENCE } from "@server/data/constants";
 import { Input } from "@nextui-org/react";
 import DebounceButton from "../General/DebounceButton";
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 
 const InfluenceBidAction = () => {
   const { currentPhase, authPlayer } = useGame();
   const [influence, setInfluence] = useState("0");
+  const [isLoadingInfluenceSubmission, setIsLoadingInfluenceSubmission] =
+    useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const { mutate: createInfluenceVote } =
-    trpc.influenceRoundVotes.createInfluenceVote.useMutation();
+    trpc.influenceRoundVotes.createInfluenceVote.useMutation({
+      onSettled: () => {
+        setIsLoadingInfluenceSubmission(false);
+      },
+    });
   if (!currentPhase?.influenceRoundId) {
     return null;
   }
@@ -32,6 +38,7 @@ const InfluenceBidAction = () => {
       ) : (
         <DebounceButton
           onClick={() => {
+            setIsLoadingInfluenceSubmission(true);
             let influenceNum = parseInt(influence);
             if (influenceNum < 0 || influenceNum > DEFAULT_INFLUENCE) {
               return;
@@ -45,6 +52,7 @@ const InfluenceBidAction = () => {
             setIsSubmitted(true);
           }}
           className="mt-2"
+          isLoading={isLoadingInfluenceSubmission}
         >
           Submit Influence Bid
         </DebounceButton>
@@ -139,8 +147,8 @@ const InfluenceBid = ({ isRevealRound }: { isRevealRound?: boolean }) => {
                   <div className="flex flex-col gap-2 bg-slate-800 p-2 rounded-md items-center max-w-64">
                     <PlayerAvatar player={vote.Player} showNameLabel />
                     <div className="text-center">
-                      uses {vote.influence} influence of {maxInfluence},
-                      earning a bonus ${maxInfluence - vote.influence}.
+                      uses {vote.influence} influence of {maxInfluence}, earning
+                      a bonus ${maxInfluence - vote.influence}.
                     </div>
                   </div>
                 </div>
@@ -151,8 +159,8 @@ const InfluenceBid = ({ isRevealRound }: { isRevealRound?: boolean }) => {
           <div>
             <h2>
               Place a bid of influence to determine starting player priority.
-              You have {maxInfluence} influence to spend.
-              For every influence you don&apos;t spend, collect $1.
+              You have {maxInfluence} influence to spend. For every influence
+              you don&apos;t spend, collect $1.
             </h2>
           </div>
         )}
