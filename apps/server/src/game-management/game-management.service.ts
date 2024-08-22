@@ -895,6 +895,15 @@ export class GameManagementService {
       });
     }
     await this.shareService.createManyShares(shares);
+    //create stock history
+    await this.stockHistoryService.createStockHistory({
+      price: ipoPrice || 0,
+      action: StockAction.INITIAL,
+      stepsMoved: 0,
+      Company: { connect: { id: newCompany.id } },
+      Game: { connect: { id: phase.gameId } },
+      Phase: { connect: { id: phase.id } },
+    });
 
     await this.gameLogService.createGameLog({
       game: { connect: { id: phase.gameId } },
@@ -1566,6 +1575,7 @@ export class GameManagementService {
 
       let taxAmount = netWorth * (tier.taxPercentage / 100);
       const player = players.find((p) => p.id === playerId);
+      console.log('taxAmount', taxAmount);
       //round tax amount down
       taxAmount = Math.floor(taxAmount);
       if (!player) {
@@ -6319,6 +6329,7 @@ export class GameManagementService {
     }
     //the lowest player cash can go is 0
     const cashToRemove = Math.min(player.cashOnHand, amount);
+    console.log('cash to remove', cashToRemove, player.cashOnHand, amount);
     //create transaction
     this.transactionService.createTransactionEntityToEntity({
       gameId,

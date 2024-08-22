@@ -150,29 +150,28 @@ const PrizeRound = ({ isRevealRound = false }: { isRevealRound?: boolean }) => {
       <p>
         In this round, players vote on the tranch they want to win. There are
         three types of rewards:
-        <ul>
-          <li>Cash</li>
-          <li>Prestige</li>
-          <li>
-            Passive Sector Effects:
-            <ul>
-              <li>
-                Passive Sector Effects are applied to all companies in the
-                sector.
-              </li>
-              <li>
-                These effects will persist on this company until a passive
-                effect is assigned to a different company in the same sector.
-              </li>
-            </ul>
-          </li>
-        </ul>
       </p>
+      <ul>
+        <li>Cash</li>
+        <li>Prestige</li>
+        <li>
+          Passive Sector Effects:
+          <ul>
+            <li>
+              Passive Sector Effects are applied to all companies in the sector.
+            </li>
+            <li>
+              These effects will persist on this company until a passive effect
+              is assigned to a different company in the same sector.
+            </li>
+          </ul>
+        </li>
+      </ul>
       <p>
         Players vote on the tranch they want to win. If more than one player
-        votes on the tranch, no one wins it and the tranch is not distributed. If
-        all votes are distributed, money is doubled in each prize pool. Placing
-        a vote is not required.
+        votes on the tranch, no one wins it and the tranch is not distributed.
+        If all votes are distributed, money is doubled in each prize pool.
+        Placing a vote is not required.
       </p>
       <p>
         After voting, any player who receives a cash reward may distribute this

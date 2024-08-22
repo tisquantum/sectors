@@ -53,6 +53,18 @@ const PlayerShares = ({
       orderStatus: OrderStatus.OPEN,
     },
   });
+  const {
+    data: companies,
+    isLoading: isLoadingCompanies,
+    isError: isErrorCompanies,
+  } = trpc.company.listCompanies.useQuery({
+    where: {
+      id: { in: playerWithShares.Share.map((share) => share.companyId) },
+    },
+  });
+  if (isLoadingCompanies) return <div>Loading...</div>;
+  if (isErrorCompanies) return <div>Error...</div>;
+  if (!companies) return <div>No companies found</div>;
   //get all shares that don't have shortOrderId
   const marketShares = playerWithShares.Share.filter(
     (share) => !share.shortOrderId
@@ -72,7 +84,9 @@ const PlayerShares = ({
         acc[shortOrderId] = {
           totalShares: 0,
           totalValue: 0,
-          company: playerShare.Company,
+          company: companies.find(
+            (company) => company.id == playerShare.Company.id
+          ),
         };
       }
       acc[shortOrderId].totalShares += 1;
@@ -90,7 +104,9 @@ const PlayerShares = ({
       }
       acc[companyId].totalShares += 1;
       acc[companyId].totalValue += price;
-      acc[companyId].company = playerShare.Company;
+      acc[companyId].company = companies.find(
+        (company) => company.id == playerShare.Company.id
+      );
       return acc;
     },
     {}
@@ -119,9 +135,11 @@ const PlayerShares = ({
             <ShareComponent
               name={company.company?.stockSymbol || ""}
               quantity={company.shareTotal}
-              price={company.pricePerShare}
+              price={company.company?.currentStockPrice || 0}
             />
-            <div className="text-sm mt-1">${company.totalValue.toFixed(2)}</div>
+            <div className="text-sm mt-1">
+              ${(company.company?.currentStockPrice || 0) * company.shareTotal}
+            </div>
           </div>
         ))
       ) : (

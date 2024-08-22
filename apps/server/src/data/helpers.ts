@@ -1,6 +1,7 @@
 import {
   Card,
   Company,
+  CompanyStatus,
   OrderType,
   Phase,
   PhaseName,
@@ -708,9 +709,16 @@ export function calculateNetWorth(
   cashOnHand: number,
   shares: ShareWithCompany[],
 ) {
+  //filter out shares with companys that are bankrupt
+  const activeShares = shares.filter(
+    (share) => share.Company.status !== CompanyStatus.BANKRUPT,
+  );
   return (
     cashOnHand +
-    shares.reduce((acc, share) => acc + share.Company.currentStockPrice, 0)
+    activeShares.reduce(
+      (acc, share) => acc + share.Company.currentStockPrice,
+      0,
+    )
   );
 }
 

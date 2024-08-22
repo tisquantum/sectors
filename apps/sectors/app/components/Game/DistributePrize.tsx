@@ -513,6 +513,8 @@ const DistributePrizes = () => {
   const [distributionData, setDistributionData] = useState<DistributionData[]>(
     []
   );
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isLoadingSubmission, setIsLoadingSubmission] = useState(false);
   const {
     data: prizes,
     isLoading,
@@ -526,8 +528,11 @@ const DistributePrizes = () => {
   useEffect(() => {
     refetch();
   }, [currentPhase?.id]);
-  const usePrizeDistributionMutation =
-    trpc.game.prizeDistribution.useMutation();
+  const usePrizeDistributionMutation = trpc.game.prizeDistribution.useMutation({
+    onSettled: () => {
+      setIsLoadingSubmission(false);
+    },
+  });
   if (isLoading) {
     return <div>Loading...</div>;
   }
@@ -541,6 +546,8 @@ const DistributePrizes = () => {
     prizes.filter((prize) => prize.playerId === authPlayer.id) || [];
 
   const handleFinalizeDistribution = () => {
+    setIsLoadingSubmission(true);
+    setIsSubmitted(true);
     usePrizeDistributionMutation.mutate({
       playerId: authPlayer.id,
       distributionData,
@@ -573,7 +580,10 @@ const DistributePrizes = () => {
                 setDistributionData={setDistributionData}
               />
               <div className="flex justify-center">
-                <DebounceButton onClick={handleFinalizeDistribution}>
+                <DebounceButton
+                  onClick={handleFinalizeDistribution}
+                  isLoading={isLoadingSubmission}
+                >
                   Finalize Distribution
                 </DebounceButton>
               </div>
