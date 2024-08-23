@@ -2232,7 +2232,7 @@ export class GameManagementService {
 
   async research(companyAction: CompanyAction) {
     //get the company
-    const company = await this.companyService.company({
+    const company = await this.companyService.companyWithRelations({
       id: companyAction.companyId,
     });
     if (!company) {
@@ -2247,14 +2247,34 @@ export class GameManagementService {
     }
     //filter cards from the deck that do not have a company id
     const cards = researchDeck.cards.filter((card) => !card.companyId);
-    //pick a random card
-    const card = cards[Math.floor(Math.random() * cards.length)];
-    //assign this card to the company
-    await this.cardsService.updateCard(card.id, {
-      Company: { connect: { id: company.id } },
-    });
-    //trigger effect
-    await this.triggerCardEffect(card.effect, company);
+    //check if this company has the INNOVATION_SURGE effect
+    const hasInnovationSurge = company.CompanyActions.some(
+      (action) => action.action === OperatingRoundAction.INNOVATION_SURGE,
+    );
+    if(hasInnovationSurge) {
+      //draw two cards
+      const randomCards = this.shuffleArray(cards).slice(0, 2);
+      //assign these cards to the company
+      const cardPromises = randomCards.map((card) =>
+        this.cardsService.updateCard(card.id, {
+          Company: { connect: { id: company.id } },
+        }),
+      );
+      await Promise.all(cardPromises);
+      //trigger effects of cards
+      for (const card of randomCards) {
+        await this.triggerCardEffect(card.effect, company);
+      }
+    } else {
+      //pick a random card
+      const card = cards[Math.floor(Math.random() * cards.length)];
+      //assign this card to the company
+      await this.cardsService.updateCard(card.id, {
+        Company: { connect: { id: company.id } },
+      });
+      //trigger effect
+      await this.triggerCardEffect(card.effect, company);
+    }
   }
 
   async triggerCardEffect(effect: ResearchCardEffect, company: Company) {
@@ -7408,6 +7428,7 @@ export class GameManagementService {
       GameTurn: { connect: { id: game.currentTurn || '' } },
       action: effectName,
       resolved: true,
+      isPassive: true,
     });
     //remove this action if it exists from any companies in the same sector except this one
     const companiesInSector = await this.companyService.companies({

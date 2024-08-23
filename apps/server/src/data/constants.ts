@@ -116,6 +116,19 @@ export const stockGridPrices = [
   470, 484, 498, 512, 526, 540, 555, 570, 585, 600,
 ];
 
+export const getStockPriceClosestEqualOrLess = (price: number): number => {
+  const index = stockGridPrices.findIndex((value) => value >= price);
+  return stockGridPrices[index];
+}
+
+export const getStepsBetweenTwoNumbers = (
+  start: number,
+  end: number,
+): number => {
+  const startIndex = stockGridPrices.indexOf(start);
+  const endIndex = stockGridPrices.indexOf(end);
+  return Math.abs(endIndex - startIndex);
+}
 /**
  * Move the stock price up by a given number of steps.
  * @param currentPrice The current stock price.

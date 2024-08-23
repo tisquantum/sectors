@@ -182,3 +182,4 @@ I'm thinking short orders can only be performed on a company you have no ownersh
 - TODO: Generated Options should be for active companies only
 - TODO: Insolvency should only be allowed in company action vote round
 - TODO: Insolvency actions should only be rendered for the current turn
+- TODO: Start on SUPPLY_CHAIN for passive, PRICE_FREEZE needs to be implemented

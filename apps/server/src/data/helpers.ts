@@ -336,9 +336,14 @@ export function determineStockTier(stockPrice: number): StockTier {
   )!.tier;
 }
 
-function getTierMaxValue(tier: StockTier): number {
+export function getTierMaxValue(tier: StockTier): number {
   return stockTierChartRanges.find((range) => range.tier === tier)!
     .chartMaxValue;
+}
+
+export function getTierMinValue(tier: StockTier): number {
+  return stockTierChartRanges.find((range) => range.tier === tier)!
+    .chartMinValue;
 }
 
 export function getCurrentTierBySharePrice(
