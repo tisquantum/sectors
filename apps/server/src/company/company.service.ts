@@ -112,6 +112,7 @@ export class CompanyService {
           },
         },
         Cards: true,
+        CompanyActions: true,
       },
     });
   }

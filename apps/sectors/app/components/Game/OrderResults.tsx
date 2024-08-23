@@ -3,12 +3,13 @@ import { ShareLocation, Phase, StockRound } from "@server/prisma/prisma.client";
 import {
   PlayerOrderConcealedWithPlayer,
   PlayerOrderWithPlayerCompany,
+  PlayerOrderWithPlayerRevealed,
 } from "@server/prisma/prisma.types";
 import { renderOrdersByPhase, groupOrdersByPhase } from "./groupOrdersHelpers";
 
 type OrderResultsProps = {
   playerOrdersConcealed?: PlayerOrderConcealedWithPlayer[];
-  playerOrdersRevealed?: PlayerOrderWithPlayerCompany[];
+  playerOrdersRevealed?: PlayerOrderWithPlayerRevealed[];
   currentPhase: Phase;
   phasesOfStockRound: Phase[];
   isRevealRound: boolean;

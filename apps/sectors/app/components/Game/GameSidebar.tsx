@@ -128,11 +128,13 @@ const GameSidebar = () => {
             )}
           </div>
         ) : (
-          roomUsers?.map((roomUser) => (
-            <div key={roomUser.user.id}>
-              <UserAvatar user={roomUser.user} />
-            </div>
-          ))
+          <div className="flex gap-2 p-2">
+            {roomUsers?.map((roomUser) => (
+              <div key={roomUser.user.id}>
+                <UserAvatar user={roomUser.user} />
+              </div>
+            ))}
+          </div>
         )}
       </div>
       <TabView />

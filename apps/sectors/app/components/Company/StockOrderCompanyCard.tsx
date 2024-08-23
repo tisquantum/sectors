@@ -13,6 +13,7 @@ import {
   CompanyWithSector,
   PlayerOrderConcealedWithPlayer,
   PlayerOrderWithPlayerCompany,
+  PlayerOrderWithPlayerRevealed,
 } from "@server/prisma/prisma.types";
 import CompanyInfo from "./CompanyInfo";
 import PlayerOrderConcealed from "../Player/PlayerOrderConcealed";
@@ -30,7 +31,7 @@ type CompanyCardProps = {
   isInteractive: boolean;
   focusedOrder: CompanyWithRelations; // Replace with the actual type
   currentPhase?: Phase;
-  playerOrdersRevealed: PlayerOrderWithPlayerCompany[]; // Replace with the actual type
+  playerOrdersRevealed: PlayerOrderWithPlayerRevealed[]; // Replace with the actual type
   phasesOfStockRound: Phase[];
   isOrderInputOpen?: boolean;
   handleButtonSelect: () => void;

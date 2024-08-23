@@ -11,6 +11,7 @@ import { useGame } from "./GameContext";
 import { notFound } from "next/navigation";
 import {
   Company,
+  OrderType,
   Phase,
   PhaseName,
   Player,
@@ -70,6 +71,25 @@ const StockRoundOrderGrid = ({
     }
   );
   const {
+    data: playerOrdersConcealedSpotMarket,
+    isLoading: isLoadingOrdersSpotMarket,
+    refetch: refetchPlayerOrdersConcealedSpotMarket,
+  } = trpc.playerOrder.listPlayerOrdersConcealed.useQuery(
+    {
+      where: {
+        stockRoundId: gameState?.currentStockRoundId,
+        OR: [
+          { orderType: OrderType.MARKET },
+          { orderType: OrderType.LIMIT },
+          { orderType: OrderType.SHORT },
+        ],
+      },
+    },
+    {
+      enabled: currentPhase?.name == PhaseName.STOCK_ACTION_REVEAL,
+    }
+  );
+  const {
     data: playerOrdersRevealed,
     isLoading: isLoadingPlayerOrdersRevealed,
   } = trpc.playerOrder.listPlayerOrdersWithPlayerRevealed.useQuery({
@@ -105,6 +125,7 @@ const StockRoundOrderGrid = ({
   useEffect(() => {
     setIsInteractive(isCurrentPhaseInteractive(currentPhase?.name));
     refetchPlayerOrdersConcealed();
+    refetchPlayerOrdersConcealedSpotMarket();
     refetchPhasesOfStockRound();
   }, [currentPhase?.id]);
   useEffect(() => {
@@ -200,11 +221,13 @@ const StockRoundOrderGrid = ({
             <h2 className="text-xl font-bold mb-4">Spot Market</h2>
             <SpotMarketTable
               companies={companies}
-              orders={orders}
+              ordersConcealed={playerOrdersConcealedSpotMarket}
+              ordersRevealed={playerOrdersRevealed}
               handleDisplayOrderInput={handleDisplayOrderInput}
               handleCompanySelect={handleCompanySelect}
               handleButtonSelect={companyCardButtonClicked}
               isInteractive={isInteractive}
+              isRevealRound={isRevealRound}
             />
             <h2 className="text-xl font-bold mt-8 mb-4">Derivatives</h2>
             <DerivativesTable isInteractive={isInteractive} />

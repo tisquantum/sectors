@@ -266,7 +266,7 @@ const Game = ({ gameId }: { gameId: string }) => {
               isTimerAtZero={isTimerAtZero}
             />
             <div
-              className="relative flex justify-between overflow-y-auto scrollbar"
+              className="relative flex justify-between overflow-y-auto scrollbar w-full"
               ref={gameActionContainerRef}
             >
               {/* {currentPhase?.name &&
@@ -277,7 +277,7 @@ const Game = ({ gameId }: { gameId: string }) => {
                   </div>
                 )} */}
               <div
-                className={`active-panel flex flex-col h-full p-4 overflow-y-auto scrollbar max-h-full ${
+                className={`active-panel flex flex-col h-full max-h-full w-full p-4 overflow-y-auto scrollbar ${
                   showPhaseList && "basis-10/12"
                 }`}
               >

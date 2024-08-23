@@ -111,20 +111,24 @@ export type PlayerOrderWithCompanyAndOptionContract = PlayerOrder & {
   OptionContract: OptionContract | null;
 };
 export type CompanyWithShare = Company & { Share: Share[] };
+export type CompanyWithShareAndCompanyActions = Company & {
+  Share: Share[];
+  CompanyActions: CompanyAction[];
+};
 export type CompanyWithShareAndSector = Company & {
   Share: Share[];
   Sector: Sector;
 };
 export type PhaseWithStockRound = Phase & { StockRound: StockRound | null };
 export type PlayerOrderWithPlayerCompany = PlayerOrder & {
-  Company: CompanyWithShare;
+  Company: CompanyWithShareAndCompanyActions;
   Player: Player;
   Sector: Sector;
   Phase: Phase;
   GameTurn: GameTurn;
 };
 export type PlayerOrderWithPlayerRevealed = PlayerOrder & {
-  Company: CompanyWithShare;
+  Company: CompanyWithShareAndCompanyActions;
   Player: Player;
   Sector: Sector;
   Phase: PhaseWithStockRound;
@@ -161,7 +165,7 @@ export type OperatingRoundWithRevenueDistributionVotes = OperatingRound & {
 };
 
 export type ProductionResultWithCompany = ProductionResult & {
-  Company: CompanyWithSector;
+  Company: CompanyWithRelations;
 };
 
 export type OperatingRoundWithProductionResults = OperatingRound & {

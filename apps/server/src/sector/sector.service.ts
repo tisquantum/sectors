@@ -64,6 +64,7 @@ export class SectorService {
             },
             Sector: true,
             Cards: true,
+            CompanyActions: true,
           },
         },
       },
@@ -99,18 +100,20 @@ export class SectorService {
       where,
     });
   }
-  async updateMany(updates: { id: string; consumers: number }[]): Promise<void> {
+  async updateMany(
+    updates: { id: string; consumers: number }[],
+  ): Promise<void> {
     const updatePromises = updates.map((update) =>
       this.prisma.sector.update({
         where: { id: update.id },
         data: { consumers: update.consumers },
-      })
+      }),
     );
-  
+
     // Execute all updates in parallel
     await Promise.all(updatePromises);
   }
-  
+
   async deleteSector(where: Prisma.SectorWhereUniqueInput): Promise<Sector> {
     return this.prisma.sector.delete({
       where,

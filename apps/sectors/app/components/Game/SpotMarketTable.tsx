@@ -4,6 +4,7 @@ import {
   CompanyWithSector,
   PlayerOrderConcealedWithPlayer,
   PlayerOrderWithPlayerCompany,
+  PlayerOrderWithPlayerRevealed,
 } from "@server/prisma/prisma.types";
 import CompanyInfoTable from "../Company/CompanyInfoTable";
 import {
@@ -19,14 +20,17 @@ import ShareOwnershipTable from "../Company/ShareOwnershipTable";
 
 const SpotMarketTable = ({
   companies,
-  orders,
+  ordersConcealed,
+  ordersRevealed,
   handleDisplayOrderInput,
   handleButtonSelect,
   handleCompanySelect,
   isInteractive,
+  isRevealRound,
 }: {
   companies: CompanyWithRelations[];
-  orders: PlayerOrderConcealedWithPlayer[] | undefined;
+  ordersConcealed?: PlayerOrderConcealedWithPlayer[] | undefined;
+  ordersRevealed?: PlayerOrderWithPlayerRevealed[] | undefined;
   handleDisplayOrderInput: (
     company: CompanyWithSector,
     isIpo?: boolean
@@ -34,6 +38,7 @@ const SpotMarketTable = ({
   handleButtonSelect: () => void;
   handleCompanySelect: (company: CompanyWithRelations, isIpo: boolean) => void;
   isInteractive: boolean;
+  isRevealRound: boolean;
 }) => {
   const columns = [
     "Company Name",
@@ -89,7 +94,10 @@ const SpotMarketTable = ({
                 >
                   <CompanyInfoTable
                     company={company}
-                    orders={orders?.filter(
+                    ordersConcealed={ordersConcealed?.filter(
+                      (order) => order.companyId === company.id
+                    )}
+                    ordersRevealed={ordersRevealed?.filter(
                       (order) => order.companyId === company.id
                     )}
                     column={column}
@@ -97,6 +105,7 @@ const SpotMarketTable = ({
                     handleButtonSelect={handleButtonSelect}
                     handleCompanySelect={handleCompanySelect}
                     isInteractive={isInteractive}
+                    isRevealRound={isRevealRound}
                   />
                 </div>
               </TableCell>

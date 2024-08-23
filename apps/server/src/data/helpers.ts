@@ -25,6 +25,7 @@ import {
 } from '@server/prisma/prisma.types';
 import {
   AUTOMATION_EFFECT_OPERATIONS_REDUCTION,
+  BOOM_CYCLE_STOCK_CHART_BONUS,
   DEFAULT_RESEARCH_DECK_SIZE,
   GOVERNMENT_GRANT_AMOUNT,
   PRESTIGE_TRACK_LENGTH,
@@ -301,33 +302,35 @@ export function determineFloatPrice(sector: Sector) {
   return closest;
 }
 
-export function calculateStepsToNewTier(
+/**
+ * Calculate the steps a price will move given revenue and current price.
+ * The price will jump as many steps as is divisible by the revenue and the current price.
+ * Should the steps hit the next tier, the steps will stop being counted halting the price
+ * at the next tier's minimum value.  Also factor in BOOM_CYCLE passive effect if it is available.
+ *
+ * @param revenue
+ * @param currentStockPrice
+ * @returns
+ */
+export function getStepsWithMaxBeingTheNextTierMin(
   revenue: number,
   currentStockPrice: number,
+  companyHasBoomCyclePassive: boolean,
 ): number {
   let remainingSteps = Math.floor(revenue / currentStockPrice);
   let newStockPrice = currentStockPrice;
-  let totalSteps = 0;
-
-  while (remainingSteps > 0) {
-    const currentTier = getCurrentTierBySharePrice(newStockPrice);
-    const tierMaxValue = getTierMaxValue(currentTier);
-
-    const stepsToTierMax =
-      stockGridPrices.indexOf(tierMaxValue) -
-      stockGridPrices.indexOf(newStockPrice);
-
-    if (remainingSteps <= stepsToTierMax) {
-      totalSteps += remainingSteps;
-      remainingSteps = 0;
-    } else {
-      totalSteps += stepsToTierMax + 1;
-      newStockPrice = tierMaxValue;
-      remainingSteps -= stepsToTierMax + 1;
-    }
+  const currentTier = getCurrentTierBySharePrice(currentStockPrice);
+  const nextTier = getNextTier(currentTier);
+  const nextTierMinValue = getTierMinValue(nextTier!);
+  let stoppingPoint = stockGridPrices.indexOf(nextTierMinValue);
+  if (companyHasBoomCyclePassive) {
+    stoppingPoint = Math.min(
+      stoppingPoint + BOOM_CYCLE_STOCK_CHART_BONUS,
+      stockGridPrices.length - 1,
+    );
   }
-
-  return totalSteps;
+  const currentIndex = stockGridPrices.indexOf(newStockPrice);
+  return Math.min(remainingSteps, stoppingPoint - currentIndex);
 }
 
 export function determineStockTier(stockPrice: number): StockTier {

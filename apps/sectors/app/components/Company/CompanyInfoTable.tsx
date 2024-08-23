@@ -4,6 +4,7 @@ import {
   CompanyWithSector,
   PlayerOrderConcealedWithPlayer,
   PlayerOrderWithPlayerCompany,
+  PlayerOrderWithPlayerRevealed,
 } from "@server/prisma/prisma.types";
 import {
   RiFundsFill,
@@ -31,7 +32,7 @@ import { sectorColors } from "@server/data/gameData";
 import DebounceButton from "../General/DebounceButton";
 import { AvatarGroup, Button, TableCell } from "@nextui-org/react";
 import { Drawer } from "vaul";
-import { CompanyStatus } from "@server/prisma/prisma.client";
+import { CompanyStatus, OrderType } from "@server/prisma/prisma.client";
 import PlayerAvatar from "../Player/PlayerAvatar";
 import { useGame } from "../Game/GameContext";
 import ShareOwnershipTable from "./ShareOwnershipTable";
@@ -39,15 +40,18 @@ import ShareOwnershipTable from "./ShareOwnershipTable";
 const CompanyInfoTable = ({
   company,
   column,
-  orders,
+  ordersConcealed,
+  ordersRevealed,
   handleDisplayOrderInput,
   handleButtonSelect,
   handleCompanySelect,
   isInteractive,
+  isRevealRound,
 }: {
   company: CompanyWithRelations;
   column: string;
-  orders: PlayerOrderConcealedWithPlayer[] | undefined;
+  ordersConcealed?: PlayerOrderConcealedWithPlayer[] | undefined;
+  ordersRevealed?: PlayerOrderWithPlayerRevealed[] | undefined;
   handleDisplayOrderInput: (
     company: CompanyWithSector,
     isIpo?: boolean
@@ -55,6 +59,7 @@ const CompanyInfoTable = ({
   handleButtonSelect: () => void;
   handleCompanySelect: (company: CompanyWithRelations, isIpo: boolean) => void;
   isInteractive: boolean;
+  isRevealRound: boolean;
 }) => {
   const { authPlayer } = useGame();
   const [showOrderDetail, setShowOrderDetail] = useState(false);
@@ -83,13 +88,27 @@ const CompanyInfoTable = ({
       case "Orders":
         return (
           <>
-            {orders && orders.length > 0 && (
-              <AvatarGroup>
-                {orders.map((order, index) => (
-                  <PlayerAvatar key={index} player={order.Player} />
-                ))}
-              </AvatarGroup>
-            )}
+            {isRevealRound
+              ? ordersRevealed &&
+                ordersRevealed.length > 0 && (
+                  <AvatarGroup>
+                    {ordersRevealed
+                      .filter((order) => {
+                        return order.orderType !== OrderType.OPTION;
+                      })
+                      .map((order, index) => (
+                        <PlayerAvatar key={index} player={order.Player} />
+                      ))}
+                  </AvatarGroup>
+                )
+              : ordersConcealed &&
+                ordersConcealed.length > 0 && (
+                  <AvatarGroup>
+                    {ordersConcealed.map((order, index) => (
+                      <PlayerAvatar key={index} player={order.Player} />
+                    ))}
+                  </AvatarGroup>
+                )}
           </>
         );
       case "OM Shares":
@@ -104,7 +123,7 @@ const CompanyInfoTable = ({
                   }}
                   className="flex items-center gap-1"
                 >
-                  <span>Place Order</span>
+                  <span>Order OM</span>
                   <RiCurrencyFill />
                   <span>
                     {
@@ -147,7 +166,7 @@ const CompanyInfoTable = ({
                     handleDisplayOrderInput(company, true);
                   }}
                 >
-                  <span>Place Order</span>
+                  <span>Order IPO</span>
                   <RiCurrencyFill />
                   <span>
                     {

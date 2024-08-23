@@ -16,6 +16,7 @@ import {
   ACTION_ISSUE_SHARE_AMOUNT,
   CompanyActionCosts,
   CompanyActionPrestigeCosts,
+  companyActionsDescription,
   CompanyTierData,
   DEFAULT_DECREASE_UNIT_PRICE,
   DEFAULT_INCREASE_UNIT_PRICE,
@@ -56,204 +57,6 @@ import { tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
 import CompanyPriorityList from "./CompanyPriorityOperatingRound";
 import InsolvencyContributionComponent from "./InsolvencyContribution";
 
-const companyActionsDescription = [
-  {
-    id: 1,
-    title: "Large Marketing Campaign",
-    name: OperatingRoundAction.MARKETING,
-    message: `The sector receives an additional ${MARKETING_CONSUMER_BONUS} consumers. Your company receives +${LARGE_MARKETING_CAMPAIGN_DEMAND} demand that decays 1 per production phase.`,
-  },
-  {
-    id: 2,
-    title: "Small Marketing Campaign",
-    name: OperatingRoundAction.MARKETING_SMALL_CAMPAIGN,
-    message: `The company receives +${SMALL_MARKETING_CAMPAIGN_DEMAND} demand that decays 1 per production phase.`,
-  },
-  {
-    id: 3,
-    title: "Research",
-    name: OperatingRoundAction.RESEARCH,
-    message:
-      "Invest in research to gain a competitive edge. Draw one card from the research deck.",
-  },
-  {
-    id: 4,
-    title: "Expansion",
-    name: OperatingRoundAction.EXPANSION,
-    message:
-      "Increase company size (base operational costs per OR) to meet higher demand and increase supply.",
-  },
-  {
-    id: 5,
-    title: "Downsize",
-    name: OperatingRoundAction.DOWNSIZE,
-    message:
-      "Reduce company size (base operational costs per OR) to lower operation costs and decrease supply.",
-  },
-  {
-    id: 6,
-    title: "Share Buyback",
-    name: OperatingRoundAction.SHARE_BUYBACK,
-    message:
-      "Buy back a share from the open market. This share is taken out of rotation from the game.",
-  },
-  {
-    id: 7,
-    title: "Share Issue",
-    name: OperatingRoundAction.SHARE_ISSUE,
-    message: `Issue ${ACTION_ISSUE_SHARE_AMOUNT} share(s) to the open market.`,
-  },
-  {
-    id: 8,
-    title: "Increase Unit Price",
-    name: OperatingRoundAction.INCREASE_PRICE,
-    message: `Increase the unit price of the company's product by ${DEFAULT_INCREASE_UNIT_PRICE}. This will increase the company's revenue. Be careful as consumers choose the company with the cheapest product in the sector first!`,
-  },
-  {
-    id: 9,
-    title: "Decrease Unit Price",
-    name: OperatingRoundAction.DECREASE_PRICE,
-    message: `Decrease the unit price of the company's product by ${DEFAULT_DECREASE_UNIT_PRICE}. This will decrease the company's revenue.`,
-  },
-  {
-    id: 10,
-    title: "Spend Prestige",
-    name: OperatingRoundAction.SPEND_PRESTIGE,
-    message: `Purchase the current prestige track item at it's cost to receive the reward on the prestige track and move it forward by 1. If the company does not have enough prestige, move the prestige track forward by 1.`,
-  },
-  {
-    id: 11,
-    title: "Loan",
-    name: OperatingRoundAction.LOAN,
-    message: `Take out a loan of $${LOAN_AMOUNT} to increase cash on hand. Be careful, loans must be paid back with interest @ %${LOAN_INTEREST_RATE} per turn. This action can only be taken once per game.`,
-  },
-  {
-    id: 12,
-    title: "Lobby",
-    name: OperatingRoundAction.LOBBY,
-    message: `Lobby the government to force demand in your favor. Boost the sectors demand by ${LOBBY_DEMAND_BOOST}. This demand will decay 1 per stock price adjustment phase.`,
-  },
-  {
-    id: 13,
-    title: "Outsource",
-    name: OperatingRoundAction.OUTSOURCE,
-    message: `The company outsources production.  Increase supply by ${OURSOURCE_SUPPLY_BONUS} that decays once per turn.  Lose all prestige tokens. A company may only ever have up to twice of the maximum supply it's company tier allows.`,
-  },
-  {
-    id: 14,
-    title: "Veto",
-    name: OperatingRoundAction.VETO,
-    message:
-      "The company does nothing this turn. Pick this to ensure the company will not act on any other proposal. Additionally, the next turn this companies operating costs are 50% less.",
-  },
-  //sector specific actions active effects
-  //technology
-  {
-    id: 15,
-    title: "Visionary",
-    name: OperatingRoundAction.VISIONARY,
-    message:
-      "Draw 2 research cards and the company gains +1 demand permanently.",
-  },
-  //materials
-  {
-    id: 16,
-    title: "Strategic Reserve",
-    name: OperatingRoundAction.STRATEGIC_RESERVE,
-    message: `The company has no production cost next turn and revenue is increased ${STRATEGIC_RESERVE_REVENUE_MULTIPLIER_PERCENTAGE}%.`,
-  },
-  //industrial
-  {
-    id: 17,
-    title: "Rapid Expansion",
-    name: OperatingRoundAction.RAPID_EXPANSION,
-    message: "The company expands two levels.",
-  },
-  //Healthcare
-  {
-    id: 18,
-    title: "Fast-track Approval",
-    name: OperatingRoundAction.FASTTRACK_APPROVAL,
-    message: "The company gains +5 demand that decays 1 per turn.",
-  },
-  //consumer defensive
-  {
-    id: 19,
-    title: "Price Freeze",
-    name: OperatingRoundAction.PRICE_FREEZE,
-    message:
-      "The company stock price will move a maximum of 2 spaces next turn.",
-  },
-  //consumer cyclical
-  {
-    id: 20,
-    title: "Re-Brand",
-    name: OperatingRoundAction.REBRAND,
-    message:
-      "The company gains +1 temporary demand, +1 permanent demand and a $40 increase in price.",
-  },
-  //energy
-  {
-    id: 21,
-    title: "Surge Pricing",
-    name: OperatingRoundAction.SURGE_PRICING,
-    message: `Next turn, company revenue is increased ${SURGE_PRICING_REVENUE_MULTIPLIER_PERCENTAGE}%.`,
-  },
-  //passive effect badges
-  //technology
-  {
-    id: 21,
-    title: "Innovation Surge",
-    name: OperatingRoundAction.INNOVATION_SURGE,
-    message: "Should the company draw a research card, draw 2 cards instead.",
-  },
-  //healthcare
-  {
-    id: 22,
-    title: "Regulatory Shield",
-    name: OperatingRoundAction.REGULATORY_SHIELD,
-    message:
-      "Should the company stock price decrease, it will stop at the top of the next stock price tier should it drop any further.",
-  },
-  //materials
-  {
-    id: 23,
-    title: "Supply Chain",
-    name: OperatingRoundAction.SUPPLY_CHAIN,
-    message: "The company gains +1 permanent supply.",
-  },
-  //industrial
-  {
-    id: 24,
-    title: "Operating Round Action",
-    name: OperatingRoundAction.ROBOTICS,
-    message:
-      "This company is charged the operational cost of the tier underneath it, with a minimum of 0.",
-  },
-  //consumer defensive
-  {
-    id: 25,
-    title: "Steady Demand",
-    name: OperatingRoundAction.STEADY_DEMAND,
-    message:
-      "Should the company have remaining demand but no consumers are available, sell up to 2 demand anyway.",
-  },
-  //consumer cyclical
-  {
-    id: 26,
-    title: "Boom Cycle",
-    name: OperatingRoundAction.BOOM_CYCLE,
-    message:
-      "Would the companies stock price be stopped by a new price tier, allow it to move up at least 3 spaces further.",
-  },
-  //energy
-  {
-    id: 27,
-    title: "Carbon Credit",
-    name: OperatingRoundAction.CARBON_CREDIT,
-    message: "This companies throughput can never be less than 1.",
-  },
-];
 const CompanyActionSelectionVote = ({
   company,
   actionVoteResults,
@@ -388,9 +191,10 @@ const CompanyActionSelectionVote = ({
             <div>
               <h3>Company Action Selection Vote</h3>
               <p>
-                The company is considering the following actions. Please vote
-                for the action(s) you believe will benefit the company the most.
-                You can select up to {companyAllowedActions} actions.
+                Vote for the action(s) you believe will benefit the company the
+                most. You can select up to {companyAllowedActions} actions.
+                Votes are weighted based on the number of shares you own. If you
+                do not own shares in the company, your vote will not be counted.
               </p>
             </div>
             <div className="flex justify-center">

@@ -13,6 +13,7 @@ import { determineNextGamePhase, isActivePhase } from "@server/data/helpers";
 import next from "next";
 import { getNextCompanyOperatingRoundTurn } from "@server/data/constants";
 import Button from "@sectors/app/components/General/DebounceButton";
+import { friendlyPhaseName } from "@sectors/app/helpers";
 
 const PassiveLoading = () => <Spinner color="secondary" />;
 
@@ -206,7 +207,9 @@ const GameTopBar = ({
             onEnd={() => {}}
           />
         )}
-        <Button onClick={handleTogglePhaseList}>Phases | {currentPhase?.name}</Button>
+        <Button onClick={handleTogglePhaseList}>
+          Phases | {friendlyPhaseName(currentPhase?.name)}
+        </Button>
         <GameGeneralInfo />
       </div>
     </Navbar>

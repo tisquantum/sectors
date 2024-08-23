@@ -138,6 +138,7 @@ export class PlayerOrderService {
         Company: {
           include: {
             Share: true,
+            CompanyActions: true,
           },
         },
         Player: true,
@@ -166,6 +167,7 @@ export class PlayerOrderService {
         Company: {
           include: {
             Share: true,
+            CompanyActions: true,
           },
         },
         Player: true,

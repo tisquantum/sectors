@@ -44,6 +44,7 @@ export class StockRoundService {
             Company: {
               include: {
                 Share: true,
+                CompanyActions: true,
               },
             },
             Sector: true,

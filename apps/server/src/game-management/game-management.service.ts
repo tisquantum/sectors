@@ -122,6 +122,8 @@ import {
   PlayerReadiness,
   STRATEGIC_RESERVE_REVENUE_MULTIPLIER_PERCENTAGE,
   SURGE_PRICING_REVENUE_MULTIPLIER_PERCENTAGE,
+  STEADY_DEMAND_CONSUMER_BONUS,
+  PRIZE_FREEZE_AMOUNT,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -131,7 +133,7 @@ import {
   calculateMarginAccountMinimum,
   calculateNetWorth,
   calculateStepsAndRemainder,
-  calculateStepsToNewTier,
+  getStepsWithMaxBeingTheNextTierMin,
   companyPriorityOrderOperations,
   createPrestigeTrackBasedOnSeed,
   createSeededResearchCards,
@@ -2251,7 +2253,7 @@ export class GameManagementService {
     const hasInnovationSurge = company.CompanyActions.some(
       (action) => action.action === OperatingRoundAction.INNOVATION_SURGE,
     );
-    if(hasInnovationSurge) {
+    if (hasInnovationSurge) {
       //draw two cards
       const randomCards = this.shuffleArray(cards).slice(0, 2);
       //assign these cards to the company
@@ -2934,19 +2936,26 @@ export class GameManagementService {
 
       let newStockPrice;
       let steps;
-
+      const companyHasBoomCyclePassiveEffect = company.CompanyActions.some(
+        (action) => action.action === OperatingRoundAction.BOOM_CYCLE,
+      );
       switch (revenueDistribution) {
         case RevenueDistribution.DIVIDEND_FULL:
-          steps = calculateStepsToNewTier(revenue, company.currentStockPrice);
+          steps = getStepsWithMaxBeingTheNextTierMin(
+            revenue,
+            company.currentStockPrice,
+            companyHasBoomCyclePassiveEffect,
+          );
           newStockPrice = getStockPriceStepsUp(
             company.currentStockPrice,
             steps,
           );
           break;
         case RevenueDistribution.DIVIDEND_FIFTY_FIFTY:
-          steps = calculateStepsToNewTier(
+          steps = getStepsWithMaxBeingTheNextTierMin(
             Math.floor(revenue / 2),
             company.currentStockPrice,
+            companyHasBoomCyclePassiveEffect,
           );
           newStockPrice = getStockPriceStepsUp(
             company.currentStockPrice,
@@ -3177,7 +3186,7 @@ export class GameManagementService {
     unitsManufactured: number,
     unitsSold: number,
   ): number {
-    return unitsManufactured - unitsSold;
+    return Math.abs(unitsManufactured - unitsSold);
   }
 
   async getPreviousTurn(game: Game): Promise<GameTurnWithRelations> {
@@ -3284,18 +3293,27 @@ export class GameManagementService {
           company.supplyMax,
           company.supplyCurrent,
         );
+        let consumersCountForCompany = consumers;
+        //does company have the STEADY_DEMAND passive effect
+        const hasSteadyDemand = company.CompanyActions.some(
+          (action) => action.action === OperatingRoundAction.STEADY_DEMAND,
+        );
+        if (hasSteadyDemand) {
+          consumersCountForCompany += STEADY_DEMAND_CONSUMER_BONUS;
+        }
+
         const maxCustomersAttracted =
           calculateDemand(company.demandScore, company.baseDemand) +
           sector.demand +
           (sector.demandBonus || 0);
 
         let unitsSold = Math.min(unitsManufactured, maxCustomersAttracted);
-        if (unitsSold > consumers) {
-          unitsSold = consumers;
+        if (unitsSold > consumersCountForCompany) {
+          unitsSold = consumersCountForCompany;
         }
 
         let revenue = company.unitPrice * unitsSold;
-        //check if company has the STRATEGIC_RESERVE CARD unresolved
+        //check if company has the STRATEGIC_RESERVE unresolved
         const hasStrategicReserve = company.CompanyActions.some(
           (action) =>
             action.action === OperatingRoundAction.STRATEGIC_RESERVE &&
@@ -3333,10 +3351,17 @@ export class GameManagementService {
           consumers,
         });
 
-        const throughput = this.calculateThroughputByUnitsSold(
+        let throughput = this.calculateThroughputByUnitsSold(
           unitsManufactured,
           maxCustomersAttracted,
         );
+        //if company has the CARBON_CREDIT throughtput passive effect, ensure the throughput is at maximum 1.
+        const hasCarbonCredit = company.CompanyActions.some(
+          (action) => action.action === OperatingRoundAction.CARBON_CREDIT,
+        );
+        if (hasCarbonCredit) {
+          throughput = Math.min(throughput, 1);
+        }
         const throughputOutcome = throughputRewardOrPenalty(throughput);
 
         const companyUpdate = {
@@ -5483,6 +5508,13 @@ export class GameManagementService {
               (acc, order) => acc + (order.quantity || 0),
               0,
             );
+            let netDifference = buyQuantity - sellQuantity;
+            //if company has price freeze, the minimum net difference is 2
+            if (orders[0].Company.CompanyActions.some(
+              (action) => action.action === OperatingRoundAction.PRICE_FREEZE,
+            )) {
+              netDifference = Math.min(netDifference, PRIZE_FREEZE_AMOUNT);
+            }
             return {
               companyId,
               netDifference: buyQuantity - sellQuantity,

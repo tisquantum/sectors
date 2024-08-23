@@ -38,6 +38,13 @@ export class ProductionResultService {
                 Player: true,
               },
             },
+            StockHistory: {
+              include: {
+                Phase: true,
+              },
+            },
+            Cards: true,
+            CompanyActions: true,
           },
         },
       },

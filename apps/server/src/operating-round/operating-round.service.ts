@@ -87,6 +87,13 @@ export class OperatingRoundService {
                     Player: true,
                   },
                 },
+                StockHistory: {
+                  include: {
+                    Phase: true,
+                  },
+                },
+                Cards: true,
+                CompanyActions: true,
               },
             },
           },
