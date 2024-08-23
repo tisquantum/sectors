@@ -50,6 +50,7 @@ import { gameDataJson } from '@server/data/gameData';
 import { StartGameInput } from './game-management.interface';
 import {
   CompanyActionWithCompany,
+  CompanyWithRelations,
   CompanyWithSector,
   GameState,
   GameTurnWithRelations,
@@ -118,6 +119,9 @@ import {
   PRETIGE_REWARD_OPERATION_COST_PERCENTAGE_REDUCTION,
   CompanyActionPrestigeCosts,
   INSOLVENT_EXTRA_PHASE_TIME,
+  PlayerReadiness,
+  STRATEGIC_RESERVE_REVENUE_MULTIPLIER_PERCENTAGE,
+  SURGE_PRICING_REVENUE_MULTIPLIER_PERCENTAGE,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -151,7 +155,10 @@ import { PlayerOrderService } from '@server/player-order/player-order.service';
 import e from 'express';
 import { StockHistoryService } from '@server/stock-history/stock-history.service';
 import { ProductionResultService } from '@server/production-result/production-result.service';
-import { CompanyActionService } from '@server/company-action/company-action.service';
+import {
+  CompanyActionService,
+  CompanyActionUpdate,
+} from '@server/company-action/company-action.service';
 import { GameLogService } from '@server/game-log/game-log.service';
 import { CapitalGainsService } from '@server/capital-gains/capital-gains.service';
 import { GameTurnService } from '@server/game-turn/game-turn.service';
@@ -190,6 +197,8 @@ interface ShareUpdate {
 
 @Injectable()
 export class GameManagementService {
+  private readinessStore: Record<string, PlayerReadiness[]> = {};
+
   constructor(
     private prisma: PrismaService,
     private playersService: PlayersService,
@@ -323,16 +332,19 @@ export class GameManagementService {
   }
 
   async resolvePrizeVotes(phase: Phase) {
-    //get game
-    const game = await this.gamesService.game({ id: phase.gameId });
+    // Parallel fetching of game and votes
+    const [game, votes] = await Promise.all([
+      this.gamesService.game({ id: phase.gameId }),
+      this.prizeVoteService.listPrizeVotes({
+        where: { gameTurnId: phase.gameId },
+      }),
+    ]);
+
     if (!game) {
       throw new Error('Game not found');
     }
-    //get all votes for current turn
-    const votes = await this.prizeVoteService.listPrizeVotes({
-      where: { gameTurnId: game.currentTurn },
-    });
-    //group votes by prize
+
+    // Group votes by prize
     const groupedVotes = votes.reduce(
       (acc, vote) => {
         if (!acc[vote.prizeId]) {
@@ -343,16 +355,19 @@ export class GameManagementService {
       },
       {} as { [key: string]: PrizeVoteWithRelations[] },
     );
-    //if any single prize id has only one vote, that player is assigned to it, otherwise no one is
+
     const prizeIds = Object.keys(groupedVotes);
+
     const prizePromises: Promise<any>[] = [];
     const gameLogPromises: Promise<any>[] = [];
-    for (let i = 0; i < prizeIds.length; i++) {
-      const votes = groupedVotes[prizeIds[i]];
+
+    // Process votes in parallel
+    prizeIds.forEach((prizeId) => {
+      const votes = groupedVotes[prizeId];
       if (votes.length === 1) {
         prizePromises.push(
           this.prizeService.updatePrize({
-            where: { id: prizeIds[i] },
+            where: { id: prizeId },
             data: { Player: { connect: { id: votes[0].playerId } } },
           }),
         );
@@ -363,14 +378,19 @@ export class GameManagementService {
           }),
         );
       }
-    }
-    await Promise.all(prizePromises);
-    //if all prizes have been distributed (have a playerId), double their cashValue
-    const prizes = await this.prizeService.listPrizes({
-      where: { gameTurnId: game.currentTurn },
     });
+
+    await Promise.all([...prizePromises, ...gameLogPromises]);
+
+    // Fetch prizes to check distribution status
+    const prizes = await this.prizeService.listPrizes({
+      where: { gameTurnId: phase.gameId },
+    });
+
     const undistributedPrizes = prizes.filter((prize) => !prize.playerId);
+
     if (undistributedPrizes.length === 0) {
+      // Double cash value of distributed prizes
       const doublePrizePromises = prizes.map((prize) => {
         return this.prizeService.updatePrize({
           where: { id: prize.id },
@@ -1049,10 +1069,16 @@ export class GameManagementService {
     const playersPromise = this.playersService.playersWithShares({
       gameId: phase.gameId,
     });
+    //get player priorities
+    const playerPrioritiesPromise =
+      this.playerPriorityService.listPlayerPriorities({
+        where: { gameTurnId: phase.gameTurnId },
+      });
 
-    const [gameTurn, players] = await Promise.all([
+    const [gameTurn, players, playerPriorities] = await Promise.all([
       gameTurnPromise,
       playersPromise,
+      playerPrioritiesPromise,
     ]);
 
     if (!gameTurn) {
@@ -1060,6 +1086,11 @@ export class GameManagementService {
     }
 
     if (gameTurn.turn === 1) {
+      return;
+    }
+
+    //if player priorities already exist, do not recreate them
+    if (playerPriorities.length > 0) {
       return;
     }
 
@@ -1972,6 +2003,24 @@ export class GameManagementService {
         case OperatingRoundAction.OUTSOURCE:
           await this.outsourceCompany(companyAction);
           break;
+        case OperatingRoundAction.VISIONARY:
+          await this.visionary(companyAction);
+          break;
+        case OperatingRoundAction.STRATEGIC_RESERVE:
+          break;
+        case OperatingRoundAction.RAPID_EXPANSION:
+          await this.rapidExpansion(companyAction);
+          break;
+        case OperatingRoundAction.FASTTRACK_APPROVAL:
+          await this.fasttrackApprovalCompany(companyAction);
+          break;
+        case OperatingRoundAction.PRICE_FREEZE:
+          break;
+        case OperatingRoundAction.REBRAND:
+          await this.rebrand(companyAction);
+          break;
+        case OperatingRoundAction.SURGE_PRICING:
+          break;
         case OperatingRoundAction.VETO:
           console.log('VETO action encountered');
           break;
@@ -1981,6 +2030,119 @@ export class GameManagementService {
       }
     }
   }
+
+  /**
+   * The company gains +1 temporary demand, +1 permanent demand and a $40 increase in price
+   * @param companyAction
+   * @returns
+   */
+  async rebrand(companyAction: CompanyAction) {
+    //get the company
+    const company = await this.companyService.company({
+      id: companyAction.companyId,
+    });
+    if (!company) {
+      throw new Error('Company not found');
+    }
+    //increase demand for the company by 1
+    await this.companyService.updateCompany({
+      where: { id: company.id },
+      data: {
+        demandScore: company.demandScore + 1,
+        baseDemand: company.baseDemand + 1,
+        currentStockPrice: company.unitPrice + 40,
+      },
+    });
+  }
+  /**
+   * The company gains +5 demand that decays 1 per turn
+   * @param companyAction
+   */
+  async fasttrackApprovalCompany(companyAction: CompanyAction) {
+    //get the company
+    const company = await this.companyService.company({
+      id: companyAction.companyId,
+    });
+    if (!company) {
+      throw new Error('Company not found');
+    }
+    //increase demand for the company by 5
+    await this.companyService.updateCompany({
+      where: { id: company.id },
+      data: { demandScore: company.demandScore + 5 },
+    });
+  }
+
+  /**
+   * The company expands two levels.
+   * @param companyAction
+   */
+  async rapidExpansion(companyAction: CompanyAction) {
+    //get the company
+    const company = await this.companyService.company({
+      id: companyAction.companyId,
+    });
+    if (!company) {
+      throw new Error('Company not found');
+    }
+    const newTier = getNextCompanyTier(company.companyTier);
+    if (!newTier) {
+      throw new Error('Company tier not found');
+    }
+    //get the next tier up
+    const newTierUp = getNextCompanyTier(newTier);
+    if (!newTierUp) {
+      throw new Error('Company tier not found');
+    }
+    //update the company tier
+    await this.companyService.updateCompany({
+      where: { id: company.id },
+      data: {
+        companyTier: newTier,
+        supplyMax: company.supplyMax + 2,
+      },
+    });
+  }
+
+  /**
+   * Draw 2 research cards and the company gains +1 demand permanently.
+   */
+  async visionary(companyAction: CompanyAction) {
+    //get the company
+    const company = await this.companyService.company({
+      id: companyAction.companyId,
+    });
+    if (!company) {
+      throw new Error('Company not found');
+    }
+    //get the research deck
+    const researchDeck = await this.researchDeckService.researchDeckFirst({
+      where: { gameId: company.gameId },
+    });
+    if (!researchDeck) {
+      throw new Error('Research deck not found');
+    }
+    //pick 2 random cards
+    const randomCards = this.shuffleArray(researchDeck.cards).slice(0, 2);
+    //assign these cards to the company
+    const cardPromises = randomCards.map((card) =>
+      this.cardsService.updateCard(card.id, {
+        Company: { connect: { id: company.id } },
+      }),
+    );
+    await Promise.all(cardPromises);
+    //increase demand permanently for the company by 1
+    await this.companyService.updateCompany({
+      where: { id: company.id },
+      data: { demandScore: company.baseDemand + 1 },
+    });
+    //trigger effects of cards
+    for (const card of randomCards) {
+      await this.triggerCardEffect(card.effect, company);
+    }
+  }
+
+  async strategicReserve(companyAction: CompanyAction) {}
 
   /** Increase company currentSupply */
   async outsourceCompany(companyAction: CompanyAction) {
@@ -3048,7 +3210,7 @@ export class GameManagementService {
 
     // Group companies by sector
     const groupedCompanies = companies.reduce<{
-      [key: string]: CompanyWithSector[];
+      [key: string]: CompanyWithRelations[];
     }>((acc, company) => {
       if (!acc[company.sectorId]) {
         acc[company.sectorId] = [];
@@ -3059,6 +3221,7 @@ export class GameManagementService {
 
     const sectorRewards: { [sectorId: string]: number } = {};
     const companyUpdates = [];
+    const companyActionUpdates = [];
     const productionResults = [];
     const stockPenalties = [];
     const sectorConsumersUpdates = [];
@@ -3111,7 +3274,37 @@ export class GameManagementService {
           unitsSold = consumers;
         }
 
-        const revenue = company.unitPrice * unitsSold;
+        let revenue = company.unitPrice * unitsSold;
+        //check if company has the STRATEGIC_RESERVE CARD unresolved
+        const hasStrategicReserve = company.CompanyActions.some(
+          (action) =>
+            action.action === OperatingRoundAction.STRATEGIC_RESERVE &&
+            action.actedOn == false,
+        );
+        if (hasStrategicReserve) {
+          revenue += Math.floor(
+            revenue * (STRATEGIC_RESERVE_REVENUE_MULTIPLIER_PERCENTAGE / 100),
+          );
+        }
+        const hasSurgePricing = company.CompanyActions.some(
+          (action) =>
+            action.action === OperatingRoundAction.SURGE_PRICING &&
+            action.actedOn == false,
+        );
+        const companyActionId = company.CompanyActions.find(
+          (action) =>
+            action.action === OperatingRoundAction.SURGE_PRICING &&
+            action.actedOn == false,
+        )?.id;
+        if (hasSurgePricing && companyActionId) {
+          revenue += Math.floor(
+            revenue * (SURGE_PRICING_REVENUE_MULTIPLIER_PERCENTAGE / 100),
+          );
+          companyActionUpdates.push({
+            id: companyActionId,
+            actedOn: true,
+          });
+        }
         consumers -= unitsSold;
         globalConsumers += unitsSold;
 
@@ -3204,8 +3397,26 @@ export class GameManagementService {
         operatingCosts =
           operatingCosts - AUTOMATION_EFFECT_OPERATIONS_REDUCTION;
       }
-      operatingCosts = Math.max(operatingCosts, 0);
+      const hasStrategicReserveCard = company.CompanyActions.some(
+        (action) =>
+          action.action === OperatingRoundAction.STRATEGIC_RESERVE &&
+          action.actedOn === false,
+      );
+      const companyActionId = company.CompanyActions.find(
+        (action) =>
+          action.action === OperatingRoundAction.STRATEGIC_RESERVE &&
+          action.actedOn === false,
+      )?.id;
 
+      if (hasStrategicReserveCard && companyActionId) {
+        operatingCosts = 0;
+        companyActionUpdates.push({
+          id: companyActionId,
+          actedOn: true,
+        });
+      } else {
+        operatingCosts = Math.max(operatingCosts, 0);
+      }
       if (company.cashOnHand < operatingCosts) {
         companyCashOnHandUpdates.push({
           id: company.id,
@@ -3255,6 +3466,9 @@ export class GameManagementService {
     // Log all game events in bulk
     await this.gameLogService.createManyGameLogs(gameLogs);
 
+    await this.companyActionService.updateManyCompanyActions(
+      companyActionUpdates,
+    );
     // Batch update companies, production results, stock changes, and sectors
     await this.companyService.updateManyCompanies(companyUpdates);
     await this.productionResultService.createManyProductionResults(
@@ -4081,7 +4295,9 @@ export class GameManagementService {
       roundType,
       companyId,
     );
-    const game = await this.gamesService.getGameState(gameId);
+    const game = await this.gamesService.game({
+      id: gameId,
+    });
 
     if (!game) {
       throw new Error('Game not found');
@@ -4127,6 +4343,10 @@ export class GameManagementService {
         : undefined;
     const _influenceRoundId =
       roundType === RoundType.INFLUENCE ? influenceRoundId : undefined;
+
+    //ensure player ready up is reset for next phase
+    this.resetPlayerReadiness(gameId);
+
     return this.startPhase({
       gameId,
       phaseName,
@@ -4315,7 +4535,7 @@ export class GameManagementService {
   /**
    * This function starts the timer for the current phase and advances to the next phase.
    *
-   * @param phase - The current phase object.
+   * @param phase - The next phase object.
    * @param gameId - ID of the game.
    * @param stockRoundId - Optional ID of the stock round.
    * @param operatingRoundId - Optional ID of the operating round.
@@ -4343,45 +4563,56 @@ export class GameManagementService {
     );
     await this.timerService.setTimer(phase.id, phase.phaseTime, async () => {
       try {
-        //get current phase
-        const currentPhase = await this.phaseService.phase({
-          id: phase.id,
-        });
-        const nameAndRoundTypeAndCompanyForNextPhase =
-          await this.determineAndHandleNextPhase({
-            phase,
-            gameId,
-          });
-
-        const nextPhase = await this.determineIfNewRoundAndStartPhase({
+        await this.handlePhaseTransition({
+          phase,
           gameId,
-          phaseName: nameAndRoundTypeAndCompanyForNextPhase.phaseName,
-          roundType: nameAndRoundTypeAndCompanyForNextPhase.roundType,
-          stockRoundId: phase.stockRoundId || undefined,
-          operatingRoundId: phase.operatingRoundId || undefined,
-          influenceRoundId: phase.influenceRoundId || undefined,
-          companyId:
-            nameAndRoundTypeAndCompanyForNextPhase.companyId ||
-            currentPhase?.companyId ||
-            '',
-        });
-        //get game
-        const game = await this.gamesService.game({ id: gameId });
-        //if game ended, stop the timer
-        if (game?.gameStatus === GameStatus.FINISHED) {
-          return;
-        }
-        await this.startPhaseTimer({
-          phase: nextPhase,
-          gameId,
-          stockRoundId: nextPhase.stockRoundId || undefined,
-          operatingRoundId: nextPhase.operatingRoundId || undefined,
-          influenceRoundId: nextPhase.influenceRoundId || undefined,
         });
       } catch (error) {
         console.error('Error during phase transition:', error);
         // Optionally handle retries or fallback logic here
       }
+    });
+  }
+
+  private async endPhaseTimer(phaseId: string) {
+    await this.timerService.clearTimer(phaseId);
+  }
+
+  private async handlePhaseTransition({
+    phase,
+    gameId,
+  }: {
+    phase: Phase;
+    gameId: string;
+  }) {
+    const nameAndRoundTypeAndCompanyForNextPhase =
+      await this.determineAndHandleNextPhase({ phase, gameId });
+
+    const nextPhase = await this.determineIfNewRoundAndStartPhase({
+      gameId,
+      phaseName: nameAndRoundTypeAndCompanyForNextPhase.phaseName,
+      roundType: nameAndRoundTypeAndCompanyForNextPhase.roundType,
+      stockRoundId: phase.stockRoundId || undefined,
+      operatingRoundId: phase.operatingRoundId || undefined,
+      influenceRoundId: phase.influenceRoundId || undefined,
+      companyId:
+        nameAndRoundTypeAndCompanyForNextPhase.companyId ||
+        phase?.companyId ||
+        '',
+    });
+
+    const game = await this.gamesService.game({ id: gameId });
+
+    if (game?.gameStatus === GameStatus.FINISHED) {
+      return;
+    }
+
+    await this.startPhaseTimer({
+      phase: nextPhase,
+      gameId,
+      stockRoundId: nextPhase.stockRoundId || undefined,
+      operatingRoundId: nextPhase.operatingRoundId || undefined,
+      influenceRoundId: nextPhase.influenceRoundId || undefined,
     });
   }
 
@@ -4457,11 +4688,10 @@ export class GameManagementService {
     currentPhase: Phase,
     gameId: string,
   ): Promise<PhaseName> {
-    //game state
-    const gameState = await this.gamesService.getGameState(gameId);
-    if (!gameState) {
-      throw new Error('Game not found');
-    }
+    //get stock round
+    const stockRound = await this.stockRoundService.stockRound({
+      id: currentPhase.stockRoundId || 0,
+    });
     let doesNextPhaseNeedToBePlayed = await this.doesNextPhaseNeedToBePlayed(
       nextPhaseName,
       currentPhase,
@@ -4473,9 +4703,7 @@ export class GameManagementService {
     );
     while (!doesNextPhaseNeedToBePlayed) {
       nextPhaseName = determineNextGamePhase(nextPhaseName, {
-        stockActionSubRound: gameState.StockRound.find(
-          (stockRound) => stockRound.id === currentPhase?.stockRoundId,
-        )?.stockActionSubRound,
+        stockActionSubRound: stockRound?.stockActionSubRound,
       }).phaseName;
       doesNextPhaseNeedToBePlayed = await this.doesNextPhaseNeedToBePlayed(
         nextPhaseName,
@@ -5348,14 +5576,18 @@ export class GameManagementService {
           (order) => !order.isSell && order.location == ShareLocation.IPO,
         );
         if (buyOrdersIPO.length > 0) {
-          if (game.distributionStrategy === DistributionStrategy.BID_PRIORITY) {
-            await this.distributeSharesBidStrategy(
+          if (
+            game.distributionStrategy === DistributionStrategy.BID_PRIORITY ||
+            game.distributionStrategy === DistributionStrategy.PRIORITY
+          ) {
+            await this.distributeSharesStrategy(
               buyOrdersIPO,
               ShareLocation.IPO,
               companyId,
               this.shareService,
               game,
               this.prisma,
+              game.distributionStrategy,
             );
           } else {
             await this.distributeShares(
@@ -5373,14 +5605,18 @@ export class GameManagementService {
             !order.isSell && order.location == ShareLocation.OPEN_MARKET,
         );
         if (buyOrdersOM.length > 0) {
-          if (game.distributionStrategy === DistributionStrategy.BID_PRIORITY) {
-            await this.distributeSharesBidStrategy(
+          if (
+            game.distributionStrategy === DistributionStrategy.BID_PRIORITY ||
+            game.distributionStrategy === DistributionStrategy.PRIORITY
+          ) {
+            await this.distributeSharesStrategy(
               buyOrdersOM,
               ShareLocation.OPEN_MARKET,
               companyId,
               this.shareService,
               game,
               this.prisma,
+              game.distributionStrategy,
             );
           } else {
             await this.distributeShares(
@@ -5484,6 +5720,17 @@ export class GameManagementService {
       const valueDifference = (b.value || 0) - (a.value || 0);
       if (valueDifference !== 0) return valueDifference;
 
+      const priorityA = playerPriorities[a.playerId] || Infinity;
+      const priorityB = playerPriorities[b.playerId] || Infinity;
+      return priorityA - priorityB;
+    });
+  }
+
+  sortByPlayerPriority(
+    buyOrders: PlayerOrderWithPlayerCompany[],
+    playerPriorities: Record<string, number>,
+  ) {
+    return buyOrders.sort((a, b) => {
       const priorityA = playerPriorities[a.playerId] || Infinity;
       const priorityB = playerPriorities[b.playerId] || Infinity;
       return priorityA - priorityB;
@@ -5615,6 +5862,18 @@ export class GameManagementService {
     return { currentShareIndex, remainingShares };
   }
 
+  processOrdersPriorityStrategy(
+    sortedOrders: PlayerOrderWithPlayerCompany[],
+    remainingShares: number,
+    allAvailableShares: Share[],
+    currentShareIndex: number,
+    shareUpdates: ShareUpdate[],
+    playerCashUpdates: { playerId: string; decrement: number }[],
+    orderStatusUpdates: any[],
+    gameLogEntries: any[],
+    playersWithShares: PlayerWithShares[], //we need this reference because we are now actively checking stock ownership and cash on hand
+  ) {}
+
   async fetchPlayerPriorities(playerIds: string[], prisma: PrismaService) {
     const playerPriorities =
       await this.playerPriorityService.listPlayerPriorities({
@@ -5629,13 +5888,14 @@ export class GameManagementService {
     }, {});
   }
 
-  async distributeSharesBidStrategy(
+  async distributeSharesStrategy(
     phaseOrders: PlayerOrderWithPlayerCompany[],
     location: ShareLocation,
     companyId: string,
     shareService: ShareService,
     game: Game,
     prisma: any,
+    strategy: DistributionStrategy,
   ) {
     let currentShareIndex = 0;
 
@@ -5678,7 +5938,24 @@ export class GameManagementService {
       playerIds,
       prisma,
     );
-    const sortedByBidValue = this.sortByBidValue(phaseOrders, playerPriorities);
+    let sortedOrders: PlayerOrderWithPlayerCompany[] | undefined;
+    if (strategy === DistributionStrategy.BID_PRIORITY) {
+      const sortedByBidValue = this.sortByBidValue(
+        phaseOrders,
+        playerPriorities,
+      );
+      sortedOrders = sortedByBidValue;
+    }
+    if (strategy === DistributionStrategy.PRIORITY) {
+      const sortedByPlayerPriority = this.sortByPlayerPriority(
+        phaseOrders,
+        playerPriorities,
+      );
+      sortedOrders = sortedByPlayerPriority;
+    }
+    if (!sortedOrders) {
+      throw new Error('Strategy not found');
+    }
     const playersWithShares = await this.playersService.playersWithShares({
       gameId: game.id,
       id: { in: playerIds },
@@ -5687,7 +5964,7 @@ export class GameManagementService {
       currentShareIndex: _currentShareIndex,
       remainingShares: _remainingShares,
     } = await this.processBidOrdersBidStrategy(
-      sortedByBidValue,
+      sortedOrders,
       remainingShares,
       allAvailableShares,
       currentShareIndex,
@@ -7193,5 +7470,71 @@ export class GameManagementService {
       throw new Error('Prize not found');
     }
     return prizes;
+  }
+
+  async setPlayerReadiness(
+    gameId: string,
+    playerId: string,
+    isReady: boolean,
+  ): Promise<void> {
+    if (!this.readinessStore[gameId]) {
+      this.readinessStore[gameId] = [];
+    }
+
+    const player = this.readinessStore[gameId].find(
+      (p) => p.playerId === playerId,
+    );
+
+    if (player) {
+      player.isReady = isReady;
+    } else {
+      this.readinessStore[gameId].push({ playerId, isReady });
+    }
+    //check if all players are ready
+    //get total player length for game
+    this.playersService
+      .players({
+        where: { gameId },
+      })
+      .then(async (players) => {
+        //if all players are ready, start the next phase
+        if (
+          this.readinessStore[gameId].length === players.length &&
+          this.readinessStore[gameId].every((p) => p.isReady)
+        ) {
+          //end current phase timer
+          this.endPhaseTimer(gameId);
+          //get game
+          const game = await this.gamesService.game({ id: gameId });
+          if (!game) {
+            throw new Error('Game not found');
+          }
+          if (!game.currentPhaseId) {
+            throw new Error('Current phase not found');
+          }
+          //get the phase
+          const phase = await this.phaseService.phase({
+            id: game.currentPhaseId,
+          });
+          if (!phase) {
+            throw new Error('Phase not found');
+          }
+          //do the thing to start the next phase immediately
+          // Start the next phase immediately
+          this.handlePhaseTransition({
+            phase,
+            gameId,
+          });
+        }
+      });
+  }
+
+  //set all player readiness to false for gameId helper
+  resetPlayerReadiness(gameId: string): void {
+    this.readinessStore[gameId] = [];
+  }
+
+  listPlayerReadiness(gameId: string): PlayerReadiness[] {
+    return this.readinessStore[gameId] || [];
   }
 }

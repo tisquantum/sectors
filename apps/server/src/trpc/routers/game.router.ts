@@ -13,6 +13,8 @@ import {
 import { GameManagementService } from '@server/game-management/game-management.service';
 import {
   EVENT_GAME_STARTED,
+  EVENT_PLAYER_READINESS_CHANGED,
+  getGameChannelId,
   getRoomChannelId,
 } from '@server/pusher/pusher.types';
 import { PlayersService } from '@server/players/players.service';
@@ -345,5 +347,38 @@ export default (trpc: TrpcService, ctx: Context) =>
         }
 
         return { success: true };
+      }),
+
+    setPlayerReadiness: trpc.procedure
+      .input(
+        z.object({
+          gameId: z.string(),
+          playerId: z.string(),
+          isReady: z.boolean(),
+        }),
+      )
+      .mutation(({ input }) => {
+        const { gameId, playerId, isReady } = input;
+
+        // Delegate the responsibility to GameManagementService
+        ctx.gameManagementService.setPlayerReadiness(gameId, playerId, isReady);
+        ctx.pusherService.trigger(
+          getGameChannelId(gameId),
+          EVENT_PLAYER_READINESS_CHANGED,
+          {
+            playerId,
+            isReady,
+          },
+        );
+        return { success: true };
+      }),
+
+    listPlayerReadiness: trpc.procedure
+      .input(z.object({ gameId: z.string() }))
+      .query(({ input }) => {
+        const { gameId } = input;
+
+        // Delegate the responsibility to GameManagementService
+        return ctx.gameManagementService.listPlayerReadiness(gameId);
       }),
   });

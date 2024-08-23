@@ -8,7 +8,12 @@ import { useState } from "react";
 const CoverShortButton = ({ shortOrderId }: { shortOrderId: number }) => {
   const { gameId } = useGame();
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const useCoverShortMutation = trpc.game.coverShort.useMutation();
+  const [isLoadingCoverShort, setIsLoadingCoverShort] = useState(false);
+  const useCoverShortMutation = trpc.game.coverShort.useMutation({
+    onSettled: () => {
+      setIsLoadingCoverShort(false);
+    },
+  });
   return (
     <>
       {isSubmitted ? (
@@ -16,12 +21,14 @@ const CoverShortButton = ({ shortOrderId }: { shortOrderId: number }) => {
       ) : (
         <DebounceButton
           onClick={() => {
+            setIsLoadingCoverShort(true);
             useCoverShortMutation.mutate({
               shortId: shortOrderId,
               gameId,
             });
             setIsSubmitted(true);
           }}
+          isLoading={isLoadingCoverShort}
         >
           Cover Short Order
         </DebounceButton>

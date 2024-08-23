@@ -212,11 +212,11 @@ const StockRoundOrderGrid = ({
         </Tab>
       </Tabs>
       <Drawer.Portal container={forwardedRef}>
-        <Drawer.Overlay className="fixed inset-0 bg-black/40" />
-        <Drawer.Content className="relative bg-slate-900 flex flex-col rounded-t-[10px] h-full w-96 right-0">
-          <div className="overflow-y scrollbar">
-            {selectedCompanyOrder && (
-              <div className="flex flex-col justify-center items-center bg-slate-900 p-4">
+        <Drawer.Overlay className="z-40 fixed inset-0 bg-black/40" />
+        <Drawer.Content className="z-50 bg-slate-900 flex flex-col rounded-t-[10px] h-full w-[400px] fixed bottom-0 right-0">
+          {selectedCompanyOrder && (
+            <div className="h-full relative bg-slate-900 p-4 overflow-y-scroll scrollbar">
+              <div className="flex flex-col justify-center items-center">
                 <h2 className="text-white text-2xl font-bold mb-2">
                   {selectedCompanyOrder.isIpo
                     ? "IPO Order"
@@ -284,8 +284,8 @@ const StockRoundOrderGrid = ({
                   </Tab>
                 </Tabs>
               </div>
-            )}
-          </div>
+            </div>
+          )}
           <Drawer.Close asChild>
             <Button>Close drawer</Button>
           </Drawer.Close>

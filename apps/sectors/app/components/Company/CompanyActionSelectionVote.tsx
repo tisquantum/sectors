@@ -29,6 +29,8 @@ import {
   PRESTIGE_ACTION_TOKEN_COST,
   SectorEffects,
   SMALL_MARKETING_CAMPAIGN_DEMAND,
+  STRATEGIC_RESERVE_REVENUE_MULTIPLIER_PERCENTAGE,
+  SURGE_PRICING_REVENUE_MULTIPLIER_PERCENTAGE,
 } from "@server/data/constants";
 import {
   Company,
@@ -158,8 +160,7 @@ const companyActionsDescription = [
     id: 16,
     title: "Strategic Reserve",
     name: OperatingRoundAction.STRATEGIC_RESERVE,
-    message:
-      "The company has no production cost next turn and revenue is increased 10%.",
+    message: `The company has no production cost next turn and revenue is increased ${STRATEGIC_RESERVE_REVENUE_MULTIPLIER_PERCENTAGE}%.`,
   },
   //industrial
   {
@@ -196,7 +197,7 @@ const companyActionsDescription = [
     id: 21,
     title: "Surge Pricing",
     name: OperatingRoundAction.SURGE_PRICING,
-    message: "Next turn, company revenue is increased 25%.",
+    message: `Next turn, company revenue is increased ${SURGE_PRICING_REVENUE_MULTIPLIER_PERCENTAGE}%.`,
   },
   //passive effect badges
   //technology

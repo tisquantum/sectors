@@ -65,6 +65,8 @@ export const BANKRUPTCY_SHARE_PERCENTAGE_RETAINED = 10;
 export const OURSOURCE_SUPPLY_BONUS = 3;
 export const PRETIGE_REWARD_OPERATION_COST_PERCENTAGE_REDUCTION = 50;
 export const INSOLVENT_EXTRA_PHASE_TIME = 50 * 1000;
+export const STRATEGIC_RESERVE_REVENUE_MULTIPLIER_PERCENTAGE = 10;
+export const SURGE_PRICING_REVENUE_MULTIPLIER_PERCENTAGE = 20;
 /**
  * Phase times in milliseconds
  */
@@ -737,3 +739,8 @@ export interface PrizePool {
   prize: Prize[];
   cash: number;
 }
+
+export type PlayerReadiness = {
+  playerId: string;
+  isReady: boolean;
+};

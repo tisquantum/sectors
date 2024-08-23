@@ -457,6 +457,7 @@ model CompanyAction {
   action           OperatingRoundAction?
   operatingRoundId Int?
   resolved         Boolean               @default(false)
+  actedOn          Boolean?              @default(false)
   Company          Company               @relation(fields: [companyId], references: [id])
   OperatingRound   OperatingRound?       @relation(fields: [operatingRoundId], references: [id])
   createdAt        DateTime              @default(now())

@@ -269,13 +269,13 @@ const Game = ({ gameId }: { gameId: string }) => {
               className="relative flex justify-between overflow-y-auto scrollbar"
               ref={gameActionContainerRef}
             >
-              {currentPhase?.name &&
+              {/* {currentPhase?.name &&
                 isActivePhase(currentPhase.name) &&
                 isTimerAtZero && (
                   <div className="absolute inset-0 flex items-center justify-center transition-opacity duration-300 opacity-100 z-20 bg-black bg-opacity-50">
                     <TimesUp />
                   </div>
-                )}
+                )} */}
               <div
                 className={`active-panel flex flex-col h-full p-4 overflow-y-auto scrollbar max-h-full ${
                   showPhaseList && "basis-10/12"

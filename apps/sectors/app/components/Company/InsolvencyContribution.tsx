@@ -47,6 +47,7 @@ const InsolvencyGauge = ({
         maxValue={CompanyTierData[company.companyTier].insolvencyShortFall}
         color="success"
         className="max-w-md"
+        label="Shortfall Progress"
       />
     </div>
   );

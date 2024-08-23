@@ -65,6 +65,7 @@ export type CompanyWithRelations = Company & {
   Share: ShareWithPlayer[];
   StockHistory: StockHistoryWithPhase[];
   Cards: Card[];
+  CompanyActions: CompanyAction[];
 };
 export type StockHistoryWithPhase = StockHistory & { Phase: Phase };
 export type CompanyWithSectorAndStockHistory = Company & {
