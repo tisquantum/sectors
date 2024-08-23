@@ -17,6 +17,7 @@ import {
   RiExpandUpDownFill,
   RiFundsBoxFill,
   RiFundsFill,
+  RiGameFill,
   RiGovernmentFill,
   RiHandCoinFill,
   RiIncreaseDecreaseFill,
@@ -34,6 +35,7 @@ import {
   CompanyTierData,
   LOAN_AMOUNT,
   LOAN_INTEREST_RATE,
+  SectorEffects,
 } from "@server/data/constants";
 import { sectorColors } from "@server/data/gameData";
 import { calculateCompanySupply } from "@server/data/helpers";
@@ -254,7 +256,14 @@ const CompanyInfo = ({
   showingProductionResults?: boolean;
   isMinimal?: boolean;
 }) => {
+  const { data: companyActions, isLoading: isLoadingCompanyActions } =
+    trpc.companyAction.listCompanyActions.useQuery({
+      where: { companyId: company.id },
+    });
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
+  const companyHasPassiveAction = companyActions?.some(
+    (action) => action.isPassive
+  );
   return (
     <>
       <div className="flex flex-row gap-1 items-center h-full">
@@ -361,6 +370,29 @@ const CompanyInfo = ({
                   )}
                 </span>
               </Tooltip>
+              {companyHasPassiveAction && (
+                <Tooltip
+                  className={tooltipStyle}
+                  content={
+                    <p className={tooltipParagraphStyle}>
+                      The passive effect the company currently has.
+                    </p>
+                  }
+                >
+                  <div
+                    key={company.Sector.id}
+                    className="flex flex-col gap-1 rounded-md p-2"
+                    style={{
+                      backgroundColor: sectorColors[company.Sector.name],
+                    }}
+                  >
+                    <RiGameFill />
+                    <span>
+                      {SectorEffects[company.Sector.sectorName].passive}
+                    </span>
+                  </div>
+                </Tooltip>
+              )}
             </div>
           </div>
           {isMinimal ? (
