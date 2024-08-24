@@ -2242,12 +2242,12 @@ export class GameManagementService {
       );
       const consumersRemaining = Math.max(0, sector.consumers - consumersTaken);
       consumerTakenCount += consumersTaken;
-      this.sectorService.updateSector({
+      return this.sectorService.updateSector({
         where: { id: sector.id },
         data: { consumers: consumersRemaining },
       });
-      await Promise.all(consumerPromises);
     });
+    await Promise.all(consumerPromises);
     //add consumerTakenCount to healthcare
     await this.sectorService.updateSector({
       where: { id: healthcareSector.id },
@@ -4370,6 +4370,7 @@ export class GameManagementService {
         });
         companies =
           await this.companyService.createManyCompanies(newCompanyData);
+
         //iterate through companies and create ipo shares
         const shares: {
           companyId: string;
@@ -4554,6 +4555,16 @@ export class GameManagementService {
     if (!currentPhase) {
       throw new Error('Phase not found');
     }
+    let currentOperatingRound: OperatingRound | null = null;
+    if (game.currentOperatingRoundId) {
+      //get current operating round
+      currentOperatingRound = await this.operatingRoundService.operatingRound({
+        id: game.currentOperatingRoundId,
+      });
+      if (!currentOperatingRound) {
+        throw new Error('Current operating round not found');
+      }
+    }
     console.log(
       'determineIfNewRoundAndStartPhase',
       phaseName,
@@ -4567,6 +4578,14 @@ export class GameManagementService {
     );
     let newStockRound: StockRound | null = null;
     let newOperatingRound: OperatingRound | null = null;
+    console.log(
+      'checking conditions',
+      game.currentRound,
+      roundType,
+      game.currentOperatingRoundId,
+      currentOperatingRound,
+      game.currentTurn,
+    );
     // If the current phase roundtype is different to the new one, initiate the new round
     if (game.currentRound !== roundType) {
       //start new round
@@ -4582,6 +4601,45 @@ export class GameManagementService {
           },
         });
       }
+    } else if (
+      game.currentRound === RoundType.OPERATING &&
+      (!game.currentOperatingRoundId ||
+        (currentOperatingRound &&
+          currentOperatingRound.gameTurnId !== game.currentTurn))
+    ) {
+      console.error(
+        'No current operating round found, this is an assertion basically and we should never get here.',
+      );
+      newOperatingRound = await this.startOperatingRound(gameId);
+    } else if (
+      game.currentRound == RoundType.STOCK &&
+      !game.currentStockRoundId
+    ) {
+      console.log(
+        'No current stock round found, this is an assertion basically and we should never get here.',
+      );
+      newStockRound = await this.startStockRound(gameId);
+    }
+    //conditional checks that are basically fail states for assertions
+    if (
+      !stockRoundId &&
+      !newStockRound &&
+      roundType === RoundType.STOCK &&
+      game.currentStockRoundId
+    ) {
+      console.error('No stock round id found, this is basically an assertion.');
+      stockRoundId = game.currentStockRoundId;
+    }
+    if (
+      !operatingRoundId &&
+      !newOperatingRound &&
+      roundType === RoundType.OPERATING &&
+      game.currentOperatingRoundId
+    ) {
+      console.error(
+        'No operating round id found, this is basically an assertion.',
+      );
+      operatingRoundId = game.currentOperatingRoundId;
     }
     const _stockRoundId =
       roundType === RoundType.STOCK
@@ -6801,6 +6859,7 @@ export class GameManagementService {
     amount: number,
     fromEntity: EntityType,
     description?: string,
+    fromEntityId?: string,
   ) {
     //get player fromm id
     const player = await this.prisma.player.findUnique({

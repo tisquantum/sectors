@@ -91,7 +91,7 @@ const StockRoundResults = () => {
         {companyNetDifference.map(({ companyName, netDifference }) => (
           <div
             key={companyName}
-            className="flex justify-between p-2 rounded-md mt-2"
+            className="flex gap-1 p-2 rounded-md mt-2"
           >
             <span>{companyName}</span>
             <span>

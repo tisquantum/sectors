@@ -176,6 +176,7 @@ export class TransactionService {
           });
           break;
         case EntityType.COMPANY:
+          console.log('creating company entity', companyId);
           entity = await this.prisma.entity.create({
             data: {
               entityType,
