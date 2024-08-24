@@ -6,18 +6,34 @@ import DebounceButton from "../General/DebounceButton";
 import { useState } from "react";
 
 const CoverShortButton = ({ shortOrderId }: { shortOrderId: number }) => {
+  const { gameId } = useGame();
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const useCoverShortMutation = trpc.game.coverShort.useMutation();
+  const [isLoadingCoverShort, setIsLoadingCoverShort] = useState(false);
+  const useCoverShortMutation = trpc.game.coverShort.useMutation({
+    onSettled: () => {
+      setIsLoadingCoverShort(false);
+    },
+  });
   return (
-    <DebounceButton
-      onClick={() => {
-        useCoverShortMutation.mutate({
-          shortId: shortOrderId,
-        });
-      }}
-    >
-      Cover Short Order
-    </DebounceButton>
+    <>
+      {isSubmitted ? (
+        <div>Covering short order...</div>
+      ) : (
+        <DebounceButton
+          onClick={() => {
+            setIsLoadingCoverShort(true);
+            useCoverShortMutation.mutate({
+              shortId: shortOrderId,
+              gameId,
+            });
+            setIsSubmitted(true);
+          }}
+          isLoading={isLoadingCoverShort}
+        >
+          Cover Short Order
+        </DebounceButton>
+      )}
+    </>
   );
 };
 const CoverShortOrders = () => {
@@ -60,9 +76,10 @@ const CoverShortOrders = () => {
               Shares Price At Purchase:{" "}
               {shortOrder.ShortOrder?.shortStockPriceAtPurchase}
             </div>
-            {authPlayer.id == shortOrder.Player.id && (
-              <CoverShortButton shortOrderId={shortOrder.id} />
-            )}
+            {authPlayer.id == shortOrder.Player.id &&
+              shortOrder.ShortOrder?.id && (
+                <CoverShortButton shortOrderId={shortOrder.ShortOrder.id} />
+              )}
           </div>
         ))}
       </div>

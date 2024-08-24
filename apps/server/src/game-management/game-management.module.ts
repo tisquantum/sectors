@@ -26,6 +26,14 @@ import { InfluenceRoundModule } from '@server/influence-round/influence-round.mo
 import { PlayerPriorityModule } from '@server/player-priority/player-priority.module';
 import { OptionContractModule } from '@server/option-contract/option-contract.module';
 import { ShortOrderModule } from '@server/short-order/short-order.module';
+import { GameRecordModule } from '@server/game-record/game-record.module';
+import { PlayerResultModule } from '@server/player-result/player-result.module';
+import { UsersModule } from '@server/users/users.module';
+import { TransactionModule } from '@server/transaction/transaction.module';
+import { InsolvencyContributionModule } from '@server/insolvency-contribution/insolvency-contribution.module';
+import { PrizeModule } from '@server/prize/prize.module';
+import { PrizeVotesModule } from '@server/prize-votes/prize-votes.module';
+import { PrizeDistributionModule } from '@server/prize-distribution/prize-distribution.module';
 
 @Module({
   imports: [
@@ -55,6 +63,14 @@ import { ShortOrderModule } from '@server/short-order/short-order.module';
     InfluenceRoundVotesModule,
     OptionContractModule,
     ShortOrderModule,
+    GameRecordModule,
+    PlayerResultModule,
+    UsersModule,
+    TransactionModule,
+    InsolvencyContributionModule,
+    PrizeModule,
+    PrizeVotesModule,
+    PrizeDistributionModule,
   ],
   providers: [GameManagementService],
   exports: [GameManagementService],

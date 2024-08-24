@@ -18,6 +18,7 @@ import {
   OrderType,
   PlayerOrder,
   Prisma,
+  Share,
   ShareLocation,
 } from "@server/prisma/prisma.client";
 import React, {
@@ -38,6 +39,9 @@ import { PlayerOrderWithCompany } from "@server/prisma/prisma.types";
 import { getPseudoSpend } from "@server/data/helpers";
 import Button from "@sectors/app/components/General/DebounceButton";
 import { set } from "lodash";
+import PlayerShares from "./PlayerShares";
+import ShareComponent from "../Company/Share";
+import { Drawer } from "vaul";
 
 const RiskAssessment = () => {
   return (
@@ -130,41 +134,70 @@ const OrderCounter: React.FC<{
 const LimitOrderInput = ({
   handleLimitOrder,
   handleSelectionIsBuy,
+  handleShares,
+  handleValueChange,
   isBuy,
+  maxValue,
+  minValue,
+  defaultValue,
 }: {
   handleLimitOrder: (limitOrderValue: number) => void;
   handleSelectionIsBuy: (selection: boolean) => void;
+  handleShares: (event: number) => void;
+  handleValueChange: (event: number) => void;
+  maxValue: number;
+  minValue: number;
+  defaultValue?: number;
   isBuy?: boolean;
 }) => {
   const { authPlayer } = useGame();
   const { data: shares, isLoading } = trpc.share.listShares.useQuery({
     where: { playerId: authPlayer.id },
   });
-  const [limitOrderValue, setLimitOrderValue] = useState<number>(0);
+  const [limitOrderValue, setLimitOrderValue] = useState<number>(
+    defaultValue || 0
+  );
   useEffect(() => {
     handleLimitOrder(limitOrderValue);
   }, [limitOrderValue]);
   return (
     <>
       <BuyOrSell handleSelectionIsBuy={handleSelectionIsBuy} />
-      {!!!isBuy && (
-        <div>
-          <span>Shares Owned x {shares?.length}</span>
-        </div>
-      )}
       <Input
         id="loAmount"
         type="number"
         label="Limit Order Amount"
         placeholder="0.00"
         labelPlacement="inside"
-        onValueChange={(value: string) => setLimitOrderValue(Number(value))}
+        value={limitOrderValue.toString()}
+        onValueChange={(value: string) => {
+          setLimitOrderValue(Number(value));
+        }}
         startContent={
           <div className="pointer-events-none flex items-center">
             <span className="text-default-400 text-small">$</span>
           </div>
         }
       />
+      {!!!isBuy && (
+        <Slider
+          size="md"
+          step={1}
+          color="foreground"
+          label="Shares"
+          showSteps={true}
+          maxValue={maxValue}
+          minValue={minValue}
+          onChange={(value) => {
+            if (Array.isArray(value)) {
+              value = value[0];
+            }
+            handleShares(value);
+          }}
+          defaultValue={minValue}
+          className="max-w-md"
+        />
+      )}
     </>
   );
 };
@@ -172,12 +205,14 @@ interface BuyOrSellProps {
   alsoCancel?: boolean;
   handleSelectionIsBuy?: (selection: boolean) => void;
   isIpo?: boolean;
+  showBuy?: boolean;
 }
 
 const BuyOrSell: React.FC<BuyOrSellProps> = ({
   alsoCancel,
   handleSelectionIsBuy,
   isIpo,
+  showBuy = true,
 }) => {
   const handleSelection = (event: ChangeEvent<HTMLInputElement>) => {
     if (handleSelectionIsBuy) {
@@ -189,11 +224,13 @@ const BuyOrSell: React.FC<BuyOrSellProps> = ({
     <RadioGroup
       onChange={handleSelection}
       orientation="horizontal"
-      defaultValue="buy"
+      defaultValue={showBuy ? "buy" : "sell"}
     >
-      <Radio defaultChecked value="buy">
-        Buy
-      </Radio>
+      {showBuy && (
+        <Radio defaultChecked value="buy">
+          Buy
+        </Radio>
+      )}
       {!isIpo && <Radio value="sell">Sell</Radio>}
       {alsoCancel && <Radio value="cancel">Cancel Order</Radio>}
     </RadioGroup>
@@ -210,6 +247,8 @@ interface TabContentProps {
   minValue: number;
   defaultValue?: number;
   isBuy?: boolean;
+  sharesInMarket: number;
+  minBidValue?: number;
 }
 
 const TabContentMO: React.FC<TabContentProps> = ({
@@ -222,7 +261,10 @@ const TabContentMO: React.FC<TabContentProps> = ({
   minValue,
   defaultValue,
   isBuy,
+  sharesInMarket,
+  minBidValue,
 }) => {
+  console.log("mo values", isBuy, maxValue, minValue, defaultValue);
   const { gameState } = useGame();
   const [shareValue, setShareValue] = useState<number>(1);
   const [marketOrderBidValue, setMarketOrderBidValue] = useState<number>(
@@ -234,13 +276,20 @@ const TabContentMO: React.FC<TabContentProps> = ({
   }, []);
   return (
     <div className="flex flex-col text-center items-center center-content justify-center gap-2">
+      {/* 
+      No need for this in market orders, gonna take this order counter out of market orders for now.
       <OrderCounter
         ordersRemaining={ordersRemaining}
         maxOrders={MAX_MARKET_ORDER_ACTIONS}
+      /> */}
+      <BuyOrSell
+        handleSelectionIsBuy={handleSelectionIsBuy}
+        isIpo={isIpo}
+        showBuy={sharesInMarket > 0 || true}
       />
-      <BuyOrSell handleSelectionIsBuy={handleSelectionIsBuy} isIpo={isIpo} />
       {gameState.distributionStrategy == DistributionStrategy.BID_PRIORITY &&
-        isBuy && (
+        isBuy &&
+        sharesInMarket > 0 && (
           <Input
             id="moAmount"
             type="number"
@@ -257,6 +306,7 @@ const TabContentMO: React.FC<TabContentProps> = ({
                 <span className="text-default-400 text-small">$</span>
               </div>
             }
+            min={minBidValue || 0}
           />
         )}
       {minValue === maxValue ? (
@@ -326,6 +376,11 @@ interface TabContentPropsLO {
   handleSelectionIsBuy: (selection: boolean) => void;
   ordersRemaining: number;
   isBuy?: boolean;
+  maxValue: number;
+  minValue: number;
+  defaultValue?: number;
+  handleShares: (event: number) => void;
+  handleValueChange: (event: number) => void;
 }
 
 const TabContentLO: React.FC<TabContentPropsLO> = ({
@@ -333,6 +388,11 @@ const TabContentLO: React.FC<TabContentPropsLO> = ({
   handleSelectionIsBuy,
   ordersRemaining,
   isBuy,
+  handleShares,
+  handleValueChange,
+  maxValue,
+  minValue,
+  defaultValue,
 }) => {
   return (
     <div className="flex flex-col text-center items-center center-content justify-center gap-2">
@@ -344,6 +404,11 @@ const TabContentLO: React.FC<TabContentPropsLO> = ({
         handleLimitOrder={handleLimitOrderChange}
         handleSelectionIsBuy={handleSelectionIsBuy}
         isBuy={isBuy}
+        handleShares={handleShares}
+        handleValueChange={handleValueChange}
+        maxValue={maxValue}
+        minValue={minValue}
+        defaultValue={defaultValue}
       />
     </div>
   );
@@ -490,11 +555,20 @@ const PlayerOrderInput = ({
         playerId: authPlayer?.id,
       },
     });
+  const { data: playerWithShares, isLoading: isLoadingPlayerWithShares } =
+    trpc.player.playerWithShares.useQuery({
+      where: { id: authPlayer.id },
+    });
   const { data: company, isLoading: companyLoading } =
     trpc.company.getCompanyWithShares.useQuery({
       id: currentOrder.id,
     });
-  const createPlayerOrder = trpc.playerOrder.createPlayerOrder.useMutation();
+  const [isLoadingPlayerOrder, setIsLoadingPlayerOrder] = useState(false);
+  const createPlayerOrder = trpc.playerOrder.createPlayerOrder.useMutation({
+    onSettled: () => {
+      setIsLoadingPlayerOrder(false);
+    },
+  });
   const [share, setShare] = useState(1);
   const [orderValue, setOrderValue] = useState(0);
   const [isBuy, setIsBuy] = useState(true);
@@ -510,30 +584,35 @@ const PlayerOrderInput = ({
     setIsSubmit(false);
   }, [currentPhase?.name]);
   useEffect(() => {
-    if (isBuy) {
-      if (isIpo) {
-        setMaxValue(
-          company?.Share.filter((share) => share.location === ShareLocation.IPO)
-            .length || 0
-        );
+    if (orderType === OrderType.MARKET) {
+      console.log("order mo", isBuy, isIpo);
+      if (isBuy) {
+        if (isIpo) {
+          setMaxValue(
+            company?.Share.filter(
+              (share) => share.location === ShareLocation.IPO
+            ).length || 0
+          );
+          setMinValue(1);
+        } else {
+          setMaxValue(company?.Share.length || 0);
+          setMinValue(1);
+        }
+      } else {
+        setMaxValue(company?.Share.length || 1);
+        setMinValue(1);
+      }
+    } else if (orderType === OrderType.LIMIT) {
+      if (isBuy) {
+        setMaxValue(1);
         setMinValue(1);
       } else {
-        setMaxValue(
-          company?.Share.filter(
-            (share) => share.location === ShareLocation.OPEN_MARKET
-          ).length || 0
-        );
+        setMaxValue(company?.Share.length || 0);
         setMinValue(1);
       }
     } else {
-      const playerShares = company?.Share.filter(
-        (share) => share.location === ShareLocation.PLAYER
-      );
-      const authPlayerShares = playerShares?.filter(
-        (share) => share.playerId === authPlayer.id
-      ).length;
-      setMaxValue(authPlayerShares || 0);
       setMinValue(1);
+      setMaxValue(company?.Share.length || 0);
     }
   }, [isBuy, isIpo, company?.Share]);
 
@@ -546,13 +625,10 @@ const PlayerOrderInput = ({
     isBuy,
   });
   const handleConfirm = () => {
+    setIsLoadingPlayerOrder(true);
     createPlayerOrder.mutate({
-      gameId,
-      stockRoundId: gameState.currentStockRoundId ?? 0,
       playerId: authPlayer.id,
       companyId: currentOrder.id,
-      phaseId: gameState.currentPhaseId ?? "",
-      sectorId: currentOrder.sectorId,
       quantity: share,
       value: orderValue ?? company?.currentStockPrice,
       isSell: !!!isBuy,
@@ -566,9 +642,19 @@ const PlayerOrderInput = ({
   const handleSelectionChange = (key: React.Key) => {
     switch (key) {
       case "mo":
+        if (isIpo) {
+          setIsBuy(true);
+        } else {
+          setIsBuy(
+            (company?.Share.filter(
+              (share) => share.location === ShareLocation.OPEN_MARKET
+            ).length || 0) > 0
+          );
+        }
         setOrderType(OrderType.MARKET);
         break;
       case "lo":
+        setIsBuy(true);
         setOrderType(OrderType.LIMIT);
         break;
       case "so":
@@ -576,8 +662,22 @@ const PlayerOrderInput = ({
         break;
     }
   };
+  const sharesOwnedInCompany =
+    playerWithShares?.Share.filter(
+      (share) => share.companyId === currentOrder.id
+    ).length || 0;
   return (
     <div className="flex flex-col justify-center items-center gap-1 min-w-80 max-w-96">
+      <div className="flex items-center gap-1">
+        <span>Shares Owned</span>
+        {!isLoadingPlayerWithShares && playerWithShares && (
+          <ShareComponent
+            name={currentOrder.name}
+            quantity={sharesOwnedInCompany}
+            price={currentOrder.currentStockPrice}
+          />
+        )}
+      </div>
       <PseudoBalance
         stockRoundId={currentPhase?.stockRoundId ?? 0}
         currentOrderValue={currentOrderValue}
@@ -588,9 +688,7 @@ const PlayerOrderInput = ({
           <span>Order Submitted.</span>
         </div>
       ) : (
-        <>
-          {currentOrder && <h2>{currentOrder.name}</h2>}
-          <span>{isIpo ? "IPO" : "OPEN MARKET"}</span>
+        <div className="flex flex-col gap-1 mt-2">
           <Tabs
             aria-label="Dynamic tabs"
             items={tabs}
@@ -607,8 +705,26 @@ const PlayerOrderInput = ({
                     isIpo={isIpo}
                     maxValue={maxValue}
                     minValue={minValue}
-                    defaultValue={currentOrder.currentStockPrice}
+                    defaultValue={
+                      isIpo
+                        ? currentOrder.ipoAndFloatPrice
+                        : currentOrder.currentStockPrice
+                    }
+                    minBidValue={
+                      isIpo
+                        ? currentOrder.ipoAndFloatPrice
+                        : currentOrder.currentStockPrice
+                    }
                     isBuy={isBuy}
+                    sharesInMarket={
+                      company?.Share.filter(
+                        (share) =>
+                          share.location ===
+                          (isIpo
+                            ? ShareLocation.IPO
+                            : ShareLocation.OPEN_MARKET)
+                      ).length || 0
+                    }
                   />
                 </CardBody>
               </Card>
@@ -622,6 +738,11 @@ const PlayerOrderInput = ({
                       handleLimitOrderChange={setOrderValue}
                       handleSelectionIsBuy={setIsBuy}
                       ordersRemaining={authPlayer.limitOrderActions}
+                      maxValue={maxValue}
+                      minValue={minValue}
+                      handleShares={setShare}
+                      handleValueChange={setOrderValue}
+                      defaultValue={currentOrder.currentStockPrice}
                     />
                   </CardBody>
                 </Card>
@@ -644,10 +765,16 @@ const PlayerOrderInput = ({
             )}
           </Tabs>
           <div className="flex justify-center gap-2">
-            <Button onClick={handleConfirm}>Confirm</Button>
-            <Button onClick={handleCancel}>Cancel</Button>
+            <Drawer.Close asChild>
+              <Button onClick={handleConfirm} isLoading={isLoadingPlayerOrder}>
+                Confirm
+              </Button>
+            </Drawer.Close>
+            <Drawer.Close asChild>
+              <Button onClick={handleCancel}>Cancel</Button>
+            </Drawer.Close>
           </div>
-        </>
+        </div>
       )}
     </div>
   );

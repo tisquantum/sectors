@@ -1,5 +1,5 @@
 import { Badge, Tooltip } from "@nextui-org/react";
-import { PrestigeTrack } from "@server/data/constants";
+import { PrestigeTrack, PrestigeTrackItem } from "@server/data/constants";
 import { createPrestigeTrackBasedOnSeed } from "@server/data/helpers";
 import { PrestigeReward } from "@server/prisma/prisma.client";
 import { motion } from "framer-motion";
@@ -16,6 +16,20 @@ const PrestigeRewards: React.FC<PrestigeRewardsProps> = ({
 }) => {
   const { gameId, gameState } = useGame();
   const prestigeTrack = createPrestigeTrackBasedOnSeed(gameId);
+  const renderCapitalInjection = (index: number, reward: PrestigeTrackItem) => {
+    const capitalRewards = gameState.capitalInjectionRewards || [];
+    //find what instance of CAPITAL_INJECTION this is in the prestige track
+    const relativeIndex = prestigeTrack
+      .slice(0, index)
+      .filter((item) => item.type === PrestigeReward.CAPITAL_INJECTION).length;
+    // Get the capital reward value at the relative index
+    const capitalReward = capitalRewards[relativeIndex];
+
+    if (capitalReward > 0) {
+      return <div>${capitalReward}</div>;
+    }
+    return null;
+  };
 
   return (
     <div
@@ -55,6 +69,8 @@ const PrestigeRewards: React.FC<PrestigeRewardsProps> = ({
                 <RiSparkling2Fill className="ml-2 size-4 text-yellow-500" />{" "}
                 {reward.cost}
               </div>
+              {reward.type == PrestigeReward.CAPITAL_INJECTION &&
+                renderCapitalInjection(index, reward)}
             </div>
             {layout === "grid" && (
               <div className="mt-2 text-center text-md">{reward.name}</div>

@@ -48,7 +48,7 @@ const OperatingRoundStockPriceAdjustment = () => {
       <h1 className="text-2xl font-bold mb-6">
         Operating Round Stock Price Adjustment
       </h1>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="flex flex-wrap gap-3">
         {companies.map((company) => (
           <div
             className="flex flex-col p-4 bg-slate-800 rounded-lg shadow-md"

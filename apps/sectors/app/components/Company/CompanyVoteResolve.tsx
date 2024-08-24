@@ -7,8 +7,12 @@ import {
 import CompanyInfo from "./CompanyInfo";
 import PrestigeRewardComponent from "../Game/PrestigeReward";
 import {
+  ACTION_ISSUE_SHARE_AMOUNT,
+  LARGE_MARKETING_CAMPAIGN_DEMAND,
   MARKETING_CONSUMER_BONUS,
+  OURSOURCE_SUPPLY_BONUS,
   PrestigeTrack,
+  SMALL_MARKETING_CAMPAIGN_DEMAND,
 } from "@server/data/constants";
 import PrestigeRewards from "../Game/PrestigeRewards";
 
@@ -27,7 +31,9 @@ const ShareIssue = ({ companyAction }: { companyAction: CompanyAction }) => {
   }
   return (
     <div className="flex flex-col">
-      <span>Previous Share Count: {company.Share.length - 1}</span>
+      <span>
+        Previous Share Count: {company.Share.length - ACTION_ISSUE_SHARE_AMOUNT}
+      </span>
       <span>New Share Count: {company.Share.length}</span>
     </div>
   );
@@ -35,15 +41,20 @@ const ShareIssue = ({ companyAction }: { companyAction: CompanyAction }) => {
 
 const CompanyVoteResolve = () => {
   const { currentPhase, currentTurn } = useGame();
-  const { data: companyAction, isLoading } =
-    trpc.companyAction.getCompanyAction.useQuery({
-      operatingRoundId: currentPhase?.operatingRoundId || 0,
-      companyId: currentPhase?.companyId || "",
+
+  const { data: companyActions, isLoading } =
+    trpc.companyAction.listCompanyActions.useQuery({
+      where: {
+        operatingRoundId: currentPhase?.operatingRoundId || 0,
+        companyId: currentPhase?.companyId || "",
+      },
     });
+
   const { data: company, isLoading: companyLoading } =
     trpc.company.getCompanyWithRelations.useQuery({
       id: currentPhase?.companyId || "",
     });
+
   const { data: prestigeRewards, isLoading: prestigeRewardsLoading } =
     trpc.prestigeReward.listPrestigeRewards.useQuery({
       where: {
@@ -54,30 +65,27 @@ const CompanyVoteResolve = () => {
         createdAt: "desc",
       },
     });
-  if (isLoading) {
+
+  if (isLoading || companyLoading || prestigeRewardsLoading) {
     return <div>Loading...</div>;
   }
-  if (!companyAction) {
+
+  if (!companyActions?.length) {
     return <div>No company actions found</div>;
   }
 
-  if (companyLoading) {
-    return <div>Loading...</div>;
-  }
   if (!company) {
     return <div>No company found</div>;
   }
-  if (prestigeRewardsLoading) {
-    return <div>Loading...</div>;
-  }
-  const researchCardDrawn =
-    companyAction.action === OperatingRoundAction.RESEARCH
-      ? company.Cards.sort(
-          (a, b) => a.createdAt.getTime() - b.createdAt.getTime()
-        )[0]
-      : null;
 
-  const renderAction = () => {
+  const renderAction = (companyAction: CompanyAction) => {
+    const researchCardDrawn =
+      companyAction.action === OperatingRoundAction.RESEARCH
+        ? company.Cards.sort(
+            (a, b) => a.createdAt.getTime() - b.createdAt.getTime()
+          )[0]
+        : null;
+
     switch (companyAction.action) {
       case OperatingRoundAction.MARKETING:
         return (
@@ -86,7 +94,8 @@ const CompanyVoteResolve = () => {
             <div>
               <p>
                 The sector receives {MARKETING_CONSUMER_BONUS} additional
-                consumers. Your company receives +3 demand that decays 1 per
+                consumers. Your company receives +
+                {LARGE_MARKETING_CAMPAIGN_DEMAND} demand that decays 1 per
                 production phase.
               </p>
             </div>
@@ -98,8 +107,8 @@ const CompanyVoteResolve = () => {
             <span>Small Marketing Campaign</span>
             <div>
               <p>
-                The company receives +2 demand that decays 1 per production
-                phase.
+                The company receives +{SMALL_MARKETING_CAMPAIGN_DEMAND} demand
+                that decays 1 per production phase.
               </p>
             </div>
           </div>
@@ -151,17 +160,35 @@ const CompanyVoteResolve = () => {
             </div>
           </div>
         );
+      case OperatingRoundAction.OUTSOURCE:
+        return (
+          <div>
+            Outsource. The company outsources production. Increase supply by{" "}
+            {OURSOURCE_SUPPLY_BONUS} that decays once per turn. Lose all
+            prestige tokens.
+          </div>
+        );
       case OperatingRoundAction.VETO:
-        return <div>Action vetoed.</div>;
+        return (
+          <div>
+            Action vetoed. The next turn this company&apos;s operating costs are 50%
+            less.
+          </div>
+        );
       default:
         return <div>Unknown action</div>;
     }
   };
+
   return (
     <div>
       <CompanyInfo company={company} showBarChart />
       <div className="border-b-2 border-gray-200 my-4"></div>
-      {renderAction()}
+      {companyActions.map((companyAction) => (
+        <div key={companyAction.id} className="mb-4">
+          {renderAction(companyAction)}
+        </div>
+      ))}
     </div>
   );
 };

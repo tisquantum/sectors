@@ -19,7 +19,7 @@ import {
 } from "@server/data/constants";
 import { trpc } from "@sectors/app/trpc";
 import { useGame } from "./GameContext";
-import { sectorColors } from "@server/data/gameData";
+import { sectorColors, sectorColorVariants } from "@server/data/gameData";
 import { CompanyWithSectorAndStockHistory } from "@server/prisma/prisma.types";
 import { LineChart } from "@tremor/react";
 import {
@@ -33,6 +33,7 @@ import {
   RiCheckboxBlankCircleFill,
   RiCheckboxCircleFill,
   RiExpandUpDownFill,
+  RiFundsFill,
   RiHandCoinFill,
   RiIncreaseDecreaseFill,
   RiPriceTag3Fill,
@@ -76,7 +77,10 @@ const friendlyTierName = (tier: StockTier) => {
 const Legend = () => {
   return (
     <div className="flex flex-col">
-      <h3 className="text-lg">Stock Chart Legend</h3>
+      <div className="flex items-center space-x-2">
+        <RiFundsFill />
+        <h3 className="text-lg"> Stock Chart Legend</h3>
+      </div>
       <div className="flex space-x-4 p-4">
         {stockTierChartRanges.map((range) => (
           <div key={range.tier} className="flex items-center space-x-2">
@@ -91,6 +95,11 @@ const Legend = () => {
         Shareholders must buy these amount of shares from the OPEN MARKET before
         they can advance one step on the stock chart. A sell always moves the
         stock one step down.
+      </p>
+      <p>
+        Operations revenue distributed to shareholders will also increase the
+        stock price by a given number of steps. Should these steps push the
+        price into a new tier, that stock price movement is halted.
       </p>
     </div>
   );
@@ -118,7 +127,7 @@ const TierSharesFulfilled = ({
     }
   }
 
-  return <div className="flex items-center space-x-1">{circles}</div>;
+  return <div className="flex flex-wrap items-center space-x-1">{circles}</div>;
 };
 
 const StockChart = () => {
@@ -134,12 +143,15 @@ const StockChart = () => {
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
   useEffect(() => {
     if (selectedCompany) {
-      const data = selectedCompany.StockHistory.map((stockHistory) => ({
-        phaseId: stockHistory.phaseId,
-        stockPrice: stockHistory.price,
-        stockAction: stockHistory.action,
-        steps: stockHistory.stepsMoved,
-      }));
+      const stockHistory = selectedCompany.StockHistory;
+      const data = stockHistory
+        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+        .map((stockHistory, index) => ({
+          phaseId: `${index + 1} ${stockHistory.Phase.name}`,
+          stockPrice: stockHistory.price,
+          stockAction: stockHistory.action,
+          steps: stockHistory.stepsMoved,
+        }));
       setChartData(data);
     }
   }, [selectedCompany]);
@@ -155,145 +167,203 @@ const StockChart = () => {
   const valueFormatter = function (number: number) {
     return "$ " + new Intl.NumberFormat("us").format(number).toString();
   };
-  const companyColorsMap = companies.reduce(
-    (acc, company) => ({
+  const companyColorsMap = companies.reduce((acc, company, index) => {
+    const sector = company.Sector.name;
+    const colorVariantIndex = index % 10; // Cycle through the 10 color variants
+    const colorVariant = sectorColorVariants[sector][colorVariantIndex];
+
+    return {
       ...acc,
-      [company.id]: sectorColors[company.Sector.name],
-    }),
-    {}
-  );
+      [company.id]: colorVariant,
+    };
+  }, {});
+
   const colorsArray: string[] = Object.values(companyColorsMap) || [];
   const groupedData =
-    companies?.flatMap((company) =>
-      company.StockHistory.map((stockHistory) => ({
-        phaseId: stockHistory.phaseId,
-        phaseName: stockHistory.Phase.name,
-        companyName: company.name,
-        stockPrice: stockHistory.price,
-      }))
-    ) ?? [];
+    companies
+      ?.flatMap((company) => {
+        return company.StockHistory.sort(
+          (a, b) => a.createdAt.getTime() - b.createdAt.getTime()
+        ) // Sort by createdAt
+          .map((stockHistory, index) => ({
+            indexer: `${index + 1} ${stockHistory.Phase.name}`,
+            phaseId: stockHistory.phaseId, // Generate consistent phaseId
+            phaseName: stockHistory.Phase.name,
+            companyName: company.name,
+            stockPrice: stockHistory.price,
+            createdAt: stockHistory.createdAt, // Ensure createdAt is included for consistency
+          }));
+      })
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()) ?? []; // Final sort to ensure order across companies
 
   interface PhaseEntry {
+    indexer: string;
     phaseId: string;
     phaseName: string;
     [key: string]: string | number; // Allows dynamic company names as keys with stock prices as values
   }
 
   interface LastKnownPrices {
-    [key: string]: number; // Company names as keys with last known stock prices as values
+    [phaseId: string]: {
+      [companyName: string]: number; // Company names as keys with last known stock prices as values
+    };
   }
 
   const allChartData: PhaseEntry[] = [];
   const lastKnownPrices: LastKnownPrices = {}; // Keeps track of the last known price for each company
+  // Process groupedData into allChartData
+  groupedData.forEach(
+    ({ indexer, phaseId, phaseName, companyName, stockPrice }) => {
+      let phaseEntry = allChartData.find(
+        (entry) => entry.phaseId === phaseId && entry.phaseName === phaseName
+      );
+      console.log('phaseEntry found', phaseEntry);
+      if (!phaseEntry) {
+        phaseEntry = { indexer, phaseId, phaseName };
+        allChartData.push({
+          indexer,
+          phaseId,
+          phaseName,
+          [companyName]: stockPrice,
+        });
+      }
 
-  groupedData.forEach(({ phaseId, phaseName, companyName, stockPrice }) => {
-    // Find or create a phase entry
-    let phaseEntry = allChartData.find((entry) => entry.phaseId === phaseId);
-    if (!phaseEntry) {
-      phaseEntry = { phaseId, phaseName };
-      allChartData.push(phaseEntry);
+      phaseEntry[companyName] = stockPrice;
+      // Initialize lastKnownPrices for the phaseId if it doesn't exist
+      if (!lastKnownPrices[phaseId]) {
+        lastKnownPrices[phaseId] = {};
+      }
+      // Update the last known price for the company at the current phase
+      lastKnownPrices[phaseId][companyName] = stockPrice;
     }
-
-    // Update the phase entry with the current stock price
-    phaseEntry[companyName] = stockPrice;
-
-    // Update the last known price for the company
-    lastKnownPrices[companyName] = stockPrice;
-  });
-
+  );
   // Ensure every phase entry contains the price for every company
   const companyNames = companies.map((company) => company.name);
   allChartData.forEach((entry) => {
     companyNames.forEach((companyName) => {
       if (!(companyName in entry)) {
-        // If the company doesn't have a price in the current phase, use the last known price
-        entry[companyName] = lastKnownPrices[companyName];
+        //get the last phase with a known price for this company by iterating over
+        //all chart data phases in reverse order from the current phase
+        let lastKnownPrice = null;
+        for (let i = allChartData.indexOf(entry) - 1; i >= 0; i--) {
+          if (companyName in allChartData[i]) {
+            if (
+              lastKnownPrices[allChartData[i].phaseId][companyName] &&
+              lastKnownPrices[allChartData[i].phaseId][companyName] !== null
+            ) {
+              lastKnownPrice =
+                lastKnownPrices[allChartData[i].phaseId][companyName];
+              break;
+            }
+          }
+        }
+        entry[companyName] = lastKnownPrice || 0;
       }
     });
   });
-
-  //iterate through all chart data and update phase id to be the phase name with a unique number
-  allChartData.forEach((entry, index) => {
-    entry.phaseId = `${index + 1} ${entry.phaseName}`;
-  });
-
   return (
     <div className="flex flex-col">
-      <Legend />
       <Tabs>
         <Tab key="stock-grid" title="Stock Grid">
-          <div className="grid grid-cols-10 gap-3 p-4">
-            {stockGridPrices.map((value, index) => {
-              const companiesOnCell = companies.filter(
-                (company) => company.currentStockPrice === value
-              );
-              const tier = getTierForStockPrice(value)?.tier;
-              const backgroundColor = tier ? tierColors[tier] : "";
+          <>
+            <Legend />
+            <div className="grid grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 2xl:grid-cols-10 gap-3 p-4">
+              {stockGridPrices.map((value, index) => {
+                const companiesOnCell = companies.filter(
+                  (company) => company.currentStockPrice === value
+                );
+                const tier = getTierForStockPrice(value)?.tier;
+                const backgroundColor = tier ? tierColors[tier] : "";
 
-              return (
-                <div
-                  key={index}
-                  className={`relative ring-1 p-2 text-center min-h-[81px] ${backgroundColor} ${
-                    value === 0 ? "text-red-500 font-bold" : ""
-                  }`}
-                >
-                  {value === 0 ? "INSOLVENT" : value}
-                  <Divider />
-                  {companiesOnCell.length > 0 && (
-                    <div className="flex flex-col mt-2 gap-2">
-                      {companiesOnCell.map((company) => (
-                        <div
-                          key={company.id}
-                          className={`flex flex-col items-center shadow-md rounded-md p-1 cursor-pointer border-2 border-slate-700 ${
-                            company.status === CompanyStatus.INACTIVE
-                              ? "red-stripes"
-                              : ""
-                          }`}
-                          style={{
-                            backgroundColor: sectorColors[company.Sector.name],
-                          }}
-                          onClick={() => handleCompanySelect(company.id)}
-                        >
-                          {company.status === CompanyStatus.INACTIVE ? (
-                            <div className="ml-2 p-1 rounded-md text-small text-slate-800 flex bg-yellow-500">
-                              <RiSailboatFill
-                                size={18}
-                                className="ml-2 text-slate-800"
-                              />
-                              <span className="ml-1">
-                                %{company.Sector.sharePercentageToFloat}
-                              </span>
-                            </div>
-                          ) : (
-                            <div className="ml-2 p-1 rounded-md text-small text-green-800 flex bg-green-500">
-                              <RiSailboatFill size={18} className="ml-2" />
-                              <span className="ml-1">
-                                %{company.Sector.sharePercentageToFloat}
-                              </span>
-                            </div>
-                          )}
-                          <span className="subpixel-antialiased text-slate-100">
-                            {company.name}
-                          </span>
-                          <TierSharesFulfilled
-                            tierSharesFulfilled={company.tierSharesFulfilled}
-                            tier={tier}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                return (
+                  <div
+                    key={index}
+                    className={`relative ring-1 p-2 text-center min-h-[81px] ${backgroundColor} ${
+                      value === 0 ? "text-red-500 font-bold" : ""
+                    }`}
+                  >
+                    {value === 0 ? "BANKRUPT" : value}
+                    <Divider />
+                    {companiesOnCell.length > 0 && (
+                      <div className="flex flex-col mt-2 gap-2">
+                        {companiesOnCell.map((company) => (
+                          <div
+                            key={company.id}
+                            className={`relative flex flex-col items-center shadow-md rounded-md p-1 cursor-pointer border-2 border-slate-700 ${
+                              company.status === CompanyStatus.INACTIVE
+                                ? "red-stripes"
+                                : ""
+                            }`}
+                            style={{
+                              backgroundColor:
+                                sectorColors[company.Sector.name],
+                              opacity:
+                                company.status === CompanyStatus.BANKRUPT
+                                  ? 0.7
+                                  : 1, // Reduce opacity if BANKRUPT
+                            }}
+                            onClick={() => handleCompanySelect(company.id)}
+                          >
+                            {company.status === CompanyStatus.INACTIVE ? (
+                              <div className="ml-2 p-1 rounded-md text-small text-slate-800 flex bg-yellow-500">
+                                <RiSailboatFill
+                                  size={18}
+                                  className="ml-2 text-slate-800"
+                                />
+                                <span className="ml-1">
+                                  %{company.Sector.sharePercentageToFloat}
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="ml-2 p-1 rounded-md text-small text-green-800 flex bg-green-500">
+                                <RiSailboatFill size={18} className="ml-2" />
+                                <span className="ml-1">
+                                  %{company.Sector.sharePercentageToFloat}
+                                </span>
+                              </div>
+                            )}
+                            <span className="subpixel-antialiased text-slate-100">
+                              {company.name}
+                            </span>
+                            <TierSharesFulfilled
+                              tierSharesFulfilled={company.tierSharesFulfilled}
+                              tier={tier}
+                            />
+
+                            {company.status === CompanyStatus.BANKRUPT && (
+                              <div className="absolute inset-0 bg-gray-600 bg-opacity-30 flex items-center justify-center rounded-md">
+                                <div className="flex flex-col">
+                                  <span
+                                    className="text-black text-sm font-bold transform rotate-40"
+                                    style={{
+                                      display: "inline-block",
+                                      color: "black", // Adjust the color if needed to match a stamped look
+                                      border: "2px solid black", // Optional: add a border to enhance the stamped effect
+                                      padding: "2px 6px", // Optional: add padding to create some space around the text
+                                      transform: "rotate(40deg)", // Rotate the text 45 degrees clockwise
+                                    }}
+                                  >
+                                    BANKRUPT
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>
         </Tab>
-        <Tab key="stock-chart" title="Stock Chart">
-          <div className="flex flex-col justify-center items-center h-[800px]">
+        <Tab key="stock-chart" title="Stock Chart" className="w-full">
+          <div className="flex w-full flex-col justify-center items-center h-[800px]">
             <LineChart
               className="h-full"
               data={allChartData}
-              index="phaseId"
+              index="indexer"
               categories={companies.map((company) => company.name)}
               yAxisLabel="Stock Price"
               xAxisLabel="Stock Price Updated"

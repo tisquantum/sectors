@@ -10,7 +10,7 @@ import OptionContract from "./OptionContract";
 import PlayerAvatar from "../Player/PlayerAvatar";
 import { useEffect } from "react";
 
-const Derivatives = () => {
+const Derivatives = ({ isInteractive = false }: { isInteractive: boolean }) => {
   const { gameId, currentPhase } = useGame();
   const { data: optionsContracts, isLoading } =
     trpc.optionContract.listOptionContracts.useQuery({
@@ -45,7 +45,7 @@ const Derivatives = () => {
               <OptionContract
                 key={optionContract.id}
                 contract={optionContract}
-                isInteractive
+                isInteractive={isInteractive}
               />
             ))}
           </div>

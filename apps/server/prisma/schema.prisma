@@ -14,14 +14,15 @@ datasource db {
 }
 
 model User {
-  id          String        @id @default(uuid())
-  authUserId  String        @unique @default(uuid())
-  name        String        @default("anon")
-  RoomMessage RoomMessage[]
-  RoomUser    RoomUser[]
-  player      Player[]
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id            String         @id @default(uuid())
+  authUserId    String         @unique @default(uuid())
+  name          String         @default("anon")
+  RoomMessage   RoomMessage[]
+  RoomUser      RoomUser[]
+  player        Player[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  PlayerResults PlayerResult[]
 }
 
 model Room {
@@ -85,6 +86,14 @@ model Player {
   RevenueDistributionVotes RevenueDistributionVote[]
   PlayerPriority           PlayerPriority[]
   InfluenceVote            InfluenceVote[]
+  PlayerResult             PlayerResult[]
+  InsolvencyContribution   InsolvencyContribution[]
+  //1:1 relation with Entity
+  Entity                   Entity?                   @relation(fields: [entityId], references: [id])
+  entityId                 String?                   @unique
+  Prizes                   Prize[]
+  PrizeVotes               PrizeVote[]
+  PrizeDistributions       PrizeDistribution[]
 }
 
 enum AccountStatus {
@@ -102,21 +111,23 @@ enum OverdraftTier {
 }
 
 model Share {
-  id               String          @id @default(uuid())
-  price            Float
-  companyId        String
-  location         ShareLocation
-  gameId           String
-  playerId         String?
-  shortOrderId     Int?
-  optionContractId Int?
-  ShortOrder       ShortOrder?     @relation(fields: [shortOrderId], references: [id])
-  OptionContract   OptionContract? @relation(fields: [optionContractId], references: [id])
-  Company          Company         @relation(fields: [companyId], references: [id])
-  Player           Player?         @relation(fields: [playerId], references: [id])
-  Game             Game            @relation(fields: [gameId], references: [id])
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
+  id                String                 @id @default(uuid())
+  price             Float
+  companyId         String
+  location          ShareLocation
+  gameId            String
+  playerId          String?
+  shortOrderId      Int?
+  optionContractId  Int?
+  ShortOrder        ShortOrder?            @relation(fields: [shortOrderId], references: [id])
+  OptionContract    OptionContract?        @relation(fields: [optionContractId], references: [id])
+  Company           Company                @relation(fields: [companyId], references: [id])
+  Player            Player?                @relation(fields: [playerId], references: [id])
+  Game              Game                   @relation(fields: [gameId], references: [id])
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  Transactions      TransactionsOnShares[]
+  ShareContribution ShareContribution[]
 }
 
 enum ShareLocation {
@@ -144,12 +155,13 @@ model Company {
   supplyBase               Int                       @default(0)
   supplyCurrent            Int                       @default(0)
   demandScore              Int                       @default(0)
+  baseDemand               Int                       @default(0)
   prestigeTokens           Int                       @default(0)
   sectorId                 String
   gameId                   String
-  insolvent                Boolean
   isFloated                Boolean                   @default(false)
   hasLoan                  Boolean                   @default(false)
+  hasEconomiesOfScale      Boolean                   @default(false)
   stockTier                StockTier                 @default(TIER_1)
   tierSharesFulfilled      Int                       @default(0)
   currentStockPrice        Int                       @default(0)
@@ -175,6 +187,11 @@ model Company {
   Cards                    Card[]
   OptionContracts          OptionContract[]
   ShortOrders              ShortOrder[]
+  TransactionsPerformedOn  Transaction[]
+  InsolvencyContributions  InsolvencyContribution[]
+  PrizeDistributions       PrizeDistribution[]
+  Entity                   Entity?                   @relation(fields: [entityId], references: [id])
+  entityId                 String?                   @unique
 }
 
 enum CompanyTier {
@@ -190,6 +207,7 @@ enum CompanyTier {
 enum CompanyStatus {
   ACTIVE
   INACTIVE
+  INSOLVENT
   BANKRUPT
 }
 
@@ -202,6 +220,7 @@ model StockHistory {
   phaseId           String
   stepsMoved        Int
   action            StockAction
+  Game              Game        @relation(fields: [gameId], references: [id])
   Phase             Phase       @relation(fields: [phaseId], references: [id])
   Company           Company     @relation(fields: [companyId], references: [id])
   createdAt         DateTime    @default(now())
@@ -219,6 +238,7 @@ enum StockAction {
   PRODUCTION
   RESEARCH_EFFECT
   PRESTIGE_REWARD
+  MAGNET_EFFECT
 }
 
 model StockRound {
@@ -252,6 +272,7 @@ model PlayerOrder {
   isSell           Boolean?
   isConcealed      Boolean?        @default(true)
   optionContractId Int?
+  gameTurnCreated  String
   location         ShareLocation
   orderType        OrderType
   ShortOrder       ShortOrder?
@@ -262,6 +283,7 @@ model PlayerOrder {
   Company          Company         @relation(fields: [companyId], references: [id])
   Phase            Phase           @relation(fields: [phaseId], references: [id])
   Sector           Sector          @relation(fields: [sectorId], references: [id])
+  GameTurn         GameTurn        @relation(fields: [gameTurnCreated], references: [id])
   submissionStamp  DateTime?
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
@@ -369,16 +391,17 @@ model CapitalGains {
 }
 
 model PrestigeRewards {
-  id         Int            @id @default(autoincrement())
-  gameId     String
-  companyId  String
-  gameTurnId String
-  reward     PrestigeReward
-  Game       Game           @relation(fields: [gameId], references: [id])
-  GameTurn   GameTurn       @relation(fields: [gameTurnId], references: [id])
-  Company    Company        @relation(fields: [companyId], references: [id])
-  createdAt  DateTime       @default(now())
-  updatedAt  DateTime       @updatedAt
+  id          Int            @id @default(autoincrement())
+  gameId      String
+  companyId   String
+  gameTurnId  String
+  reward      PrestigeReward
+  description String?
+  Game        Game           @relation(fields: [gameId], references: [id])
+  GameTurn    GameTurn       @relation(fields: [gameTurnId], references: [id])
+  Company     Company        @relation(fields: [companyId], references: [id])
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 }
 
 enum PrestigeReward {
@@ -387,6 +410,7 @@ enum PrestigeReward {
   MAGNET_EFFECT
   INVESTOR_CONFIDENCE
   BULL_SIGNAL
+  INFLUENCER
 }
 
 model ProductionResult {
@@ -431,12 +455,41 @@ model CompanyAction {
   id               Int                   @id @default(autoincrement())
   companyId        String
   action           OperatingRoundAction?
-  operatingRoundId Int
+  operatingRoundId Int?
   resolved         Boolean               @default(false)
+  actedOn          Boolean?              @default(false)
+  isPassive        Boolean?              @default(false)
   Company          Company               @relation(fields: [companyId], references: [id])
-  OperatingRound   OperatingRound        @relation(fields: [operatingRoundId], references: [id])
+  OperatingRound   OperatingRound?       @relation(fields: [operatingRoundId], references: [id])
   createdAt        DateTime              @default(now())
   updatedAt        DateTime              @updatedAt
+  GameTurn         GameTurn?             @relation(fields: [gameTurnId], references: [id])
+  gameTurnId       String?
+}
+
+model InsolvencyContribution {
+  id                Int      @id @default(autoincrement())
+  gameId            String
+  playerId          String
+  companyId         String
+  cashContribution  Int
+  shareContribution Int
+  gameTurnId        String
+  Game              Game     @relation(fields: [gameId], references: [id])
+  Company           Company  @relation(fields: [companyId], references: [id])
+  Player            Player   @relation(fields: [playerId], references: [id])
+  GameTurn          GameTurn @relation(fields: [gameTurnId], references: [id])
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model ShareContribution {
+  id                       Int      @id @default(autoincrement())
+  insolvencyContributionId Int
+  shareId                  String
+  Share                    Share    @relation(fields: [shareId], references: [id])
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
 }
 
 model OperatingRoundVote {
@@ -470,6 +523,23 @@ enum OperatingRoundAction {
   DECREASE_PRICE
   LOBBY
   LOAN
+  OUTSOURCE
+  //sector specific active actions
+  VISIONARY
+  STRATEGIC_RESERVE
+  RAPID_EXPANSION
+  FASTTRACK_APPROVAL
+  PRICE_FREEZE
+  REBRAND
+  SURGE_PRICING
+  //passive effect actions
+  INNOVATION_SURGE
+  REGULATORY_SHIELD
+  EXTRACT
+  MANUFACTURE
+  STEADY_DEMAND
+  BOOM_CYCLE
+  CARBON_CREDIT
 }
 
 model ResearchDeck {
@@ -521,6 +591,9 @@ enum ResearchCardEffect {
   ECONOMIES_OF_SCALE
   MARKET_EXPANSION
   AUTOMATION
+  SPECIALIZATION
+  DIVERSIFICATION
+  INNOVATION
   NO_DISCERNIBLE_FINDINGS
 }
 
@@ -550,6 +623,7 @@ model Sector {
   gameId                 String?
   createdAt              DateTime      @default(now())
   updatedAt              DateTime      @updatedAt
+  SectorPrize            SectorPrize[]
 }
 
 enum SectorName {
@@ -566,7 +640,7 @@ enum SectorName {
 }
 
 model Game {
-  id                      String               @id @default(uuid())
+  id                      String                   @id @default(uuid())
   name                    String
   currentTurn             String
   currentOrSubRound       Int
@@ -574,12 +648,17 @@ model Game {
   currentActivePlayer     String?
   bankPoolNumber          Int
   consumerPoolNumber      Int
-  gameStatus              String
+  gameStatus              GameStatus               @default(PENDING)
   gameStep                Int
   roomId                  Int
-  overdraft               Boolean              @default(true) //facilitates overdrafts for player accounts during stock purchase
+  overdraft               Boolean                  @default(true) //facilitates overdrafts for player accounts during stock purchase
+  isPaused                Boolean                  @default(false)
+  certificateLimit        Int                      @default(12)
+  economyScore            Int                      @default(10)
   nextPrestigeReward      Int?
-  distributionStrategy    DistributionStrategy @default(FAIR_SPLIT)
+  gameMaxTurns            Int?
+  capitalInjectionRewards Int[] //track Capital Injection rewards, should we instate prestige rewards on game creation instead and put this there?
+  distributionStrategy    DistributionStrategy     @default(FAIR_SPLIT)
   gameLogs                GameLog[]
   sectors                 Sector[]
   InfluenceRound          InfluenceRound[]
@@ -597,12 +676,25 @@ model Game {
   CapitalGains            CapitalGains[]
   PrestigeRewards         PrestigeRewards[]
   Cards                   Card[]
-  Room                    Room                 @relation(fields: [roomId], references: [id])
+  Room                    Room                     @relation(fields: [roomId], references: [id])
   currentPhaseId          String?
   currentStockRoundId     Int?
   currentOperatingRoundId Int?
-  createdAt               DateTime             @default(now())
-  updatedAt               DateTime             @updatedAt
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  GameRecord              GameRecord?
+  Transactions            Transaction[]
+  Entities                Entity[]
+  InsolvencyContribution  InsolvencyContribution[]
+  StockHistory            StockHistory[]
+  Prizes                  Prize[]
+}
+
+enum GameStatus {
+  PENDING
+  ACTIVE
+  PAUSED
+  FINISHED
 }
 
 model GameTurn {
@@ -613,13 +705,20 @@ model GameTurn {
   updatedAt      DateTime         @updatedAt
   playerPriority PlayerPriority[]
 
-  game            Game              @relation(fields: [gameId], references: [id])
-  operatingRounds OperatingRound[]
-  stockRounds     StockRound[]
-  influenceRounds InfluenceRound[]
-  phases          Phase[]
-  capitalGains    CapitalGains[]
-  prestigeRewards PrestigeRewards[]
+  game                   Game                     @relation(fields: [gameId], references: [id])
+  operatingRounds        OperatingRound[]
+  stockRounds            StockRound[]
+  influenceRounds        InfluenceRound[]
+  phases                 Phase[]
+  capitalGains           CapitalGains[]
+  prestigeRewards        PrestigeRewards[]
+  companyActions         CompanyAction[]
+  playerOrders           PlayerOrder[]
+  transactions           Transaction[]
+  insolvencyContribution InsolvencyContribution[]
+  prizes                 Prize[]
+  prizeVotes             PrizeVote[]
+  prizeDistributions     PrizeDistribution[]
 }
 
 model PlayerPriority {
@@ -634,6 +733,7 @@ model PlayerPriority {
 
 enum RoundType {
   INFLUENCE
+  PRIZE
   GAME_UPKEEP
   STOCK
   OPERATING
@@ -657,6 +757,7 @@ model Phase {
   GameTurn         GameTurn        @relation(fields: [gameTurnId], references: [id])
   PlayerOrder      PlayerOrder[]
   StockHistory     StockHistory[]
+  Transactions     Transaction[]
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 }
@@ -692,6 +793,10 @@ enum PhaseName {
   CAPITAL_GAINS
   DIVESTMENT
   SECTOR_NEW_COMPANY
+  PRIZE_VOTE_ACTION
+  PRIZE_VOTE_RESOLVE
+  PRIZE_DISTRIBUTE_ACTION
+  PRIZE_DISTRIBUTE_RESOLVE
 }
 
 model InfluenceRound {
@@ -699,6 +804,7 @@ model InfluenceRound {
   gameId         String
   roundStep      Int
   gameTurnId     String
+  maxInfluence   Int             @default(0)
   phase          Phase[]
   InfluenceVotes InfluenceVote[]
   isRevealed     Boolean         @default(false)
@@ -742,4 +848,165 @@ model MeetingMessage {
 
   game   Game   @relation(fields: [gameId], references: [id])
   player Player @relation(fields: [playerId], references: [id])
+}
+
+model GameRecord {
+  id           String         @id @default(uuid())
+  gameId       String         @unique
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  PlayerResult PlayerResult[]
+  game         Game           @relation(fields: [gameId], references: [id])
+}
+
+model PlayerResult {
+  id            String     @id @default(uuid())
+  playerId      String
+  userId        String
+  netWorth      Int
+  placement     Int
+  rankingPoints Int //determined based on the placement and amount of players in the game
+  player        Player     @relation(fields: [playerId], references: [id])
+  user          User       @relation(fields: [userId], references: [id])
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  gameRecordId  String
+  GameRecord    GameRecord @relation(fields: [gameRecordId], references: [id])
+}
+
+enum EntityType {
+  PLAYER
+  PLAYER_MARGIN_ACCOUNT
+  COMPANY
+  BANK
+  OPEN_MARKET
+  DERIVATIVE_MARKET
+  IPO
+}
+
+enum TransactionType {
+  SHARE
+  CASH
+}
+
+enum TransactionSubType {
+  DEFAULT
+  SHORT
+  OPTION_CALL
+  LIMIT_BUY
+  LIMIT_SELL
+  MARKET_BUY
+  MARKET_SELL
+  DIVESTMENT
+  OPERATING_COST
+}
+
+model Entity {
+  id               String        @id @default(uuid())
+  gameId           String
+  entityType       EntityType
+  fromTransactions Transaction[] @relation("FromEntity")
+  toTransactions   Transaction[] @relation("ToEntity")
+  marginAccountId  String?
+  Player           Player?
+  Company          Company?
+  Game             Game          @relation(fields: [gameId], references: [id])
+}
+
+model Transaction {
+  id                 String                 @id @default(uuid())
+  gameId             String
+  phaseId            String
+  gameTurnId         String
+  fromEntityId       String
+  toEntityId         String
+  transactionType    TransactionType
+  transactionSubType TransactionSubType
+  amount             Int
+  description        String?
+  companyInvolvedId  String?
+  Shares             TransactionsOnShares[]
+  fromEntity         Entity                 @relation("FromEntity", fields: [fromEntityId], references: [id])
+  toEntity           Entity                 @relation("ToEntity", fields: [toEntityId], references: [id])
+  timestamp          DateTime
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+  Company            Company?               @relation(fields: [companyInvolvedId], references: [id])
+  Game               Game                   @relation(fields: [gameId], references: [id])
+  GameTurn           GameTurn               @relation(fields: [gameTurnId], references: [id])
+  Phase              Phase                  @relation(fields: [phaseId], references: [id])
+}
+
+model TransactionsOnShares {
+  id            String      @id @default(uuid())
+  transactionId String
+  shareId       String
+  Transaction   Transaction @relation(fields: [transactionId], references: [id])
+  Share         Share       @relation(fields: [shareId], references: [id])
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Prize {
+  id                 String              @id @default(uuid())
+  gameId             String
+  gameTurnId         String
+  playerId           String?
+  sectorPrizeId      String[]
+  prestigeAmount     Int?
+  cashAmount         Int?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  Player             Player?             @relation(fields: [playerId], references: [id])
+  Game               Game                @relation(fields: [gameId], references: [id])
+  GameTurn           GameTurn            @relation(fields: [gameTurnId], references: [id])
+  SectorPrizes       SectorPrize[]
+  PrizeVotes         PrizeVote[]
+  PrizeDistributions PrizeDistribution[]
+}
+
+model PrizeDistribution {
+  id               String                @id @default(uuid())
+  prizeId          String
+  distributionType PrizeDistributionType
+  playerId         String?
+  prestigeAmount   Int?
+  cashAmount       Int?
+  passiveEffect    OperatingRoundAction?
+  companyId        String?
+  Prize            Prize                 @relation(fields: [prizeId], references: [id])
+  Player           Player?               @relation(fields: [playerId], references: [id])
+  Company          Company?              @relation(fields: [companyId], references: [id])
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  GameTurn         GameTurn?             @relation(fields: [gameTurnId], references: [id])
+  gameTurnId       String?
+}
+
+enum PrizeDistributionType {
+  CASH
+  PRESTIGE
+  PASSIVE_EFFECT
+}
+
+model PrizeVote {
+  id         Int      @id @default(autoincrement())
+  playerId   String
+  gameTurnId String
+  prizeId    String
+  Player     Player   @relation(fields: [playerId], references: [id])
+  GameTurn   GameTurn @relation(fields: [gameTurnId], references: [id])
+  Prize      Prize    @relation(fields: [prizeId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model SectorPrize {
+  id        String   @id @default(uuid())
+  prizeId   String
+  sectorId  String
+  Prize     Prize    @relation(fields: [prizeId], references: [id])
+  Sector    Sector   @relation(fields: [sectorId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

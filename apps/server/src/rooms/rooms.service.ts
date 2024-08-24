@@ -34,7 +34,7 @@ export class RoomService {
     cursor?: Prisma.RoomWhereUniqueInput;
     where?: Prisma.RoomWhereInput;
     orderBy?: Prisma.RoomOrderByWithRelationInput;
-  }): Promise<(Room & { users: { user: User }[] })[]> {
+  }): Promise<RoomWithUsersAndGames[]> {
     const { skip, take, cursor, where, orderBy } = params;
     return this.prisma.room.findMany({
       skip,
@@ -48,6 +48,7 @@ export class RoomService {
             user: true, // Assuming RoomUser has a relation to User
           },
         },
+        game: true,
       },
     });
   }

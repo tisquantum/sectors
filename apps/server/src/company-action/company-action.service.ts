@@ -8,6 +8,15 @@ type MarketingCountGroupedBySectorId = {
   count: number;
 };
 
+export interface CompanyActionUpdate {
+  id: number;
+  resolved?: boolean;
+  companyId?: string;
+  action?: OperatingRoundAction;
+  operatingRoundId?: number;
+  gameTurnId?: string;
+}
+
 @Injectable()
 export class CompanyActionService {
   constructor(private prisma: PrismaService) {}
@@ -85,7 +94,10 @@ export class CompanyActionService {
       acc[sectorId] += 1;
       return acc;
     }, {});
-    console.log('marketingOrdersGroupedBySectorId', marketingOrdersGroupedBySectorId);
+    console.log(
+      'marketingOrdersGroupedBySectorId',
+      marketingOrdersGroupedBySectorId,
+    );
     //convert to array
     return Object.entries(marketingOrdersGroupedBySectorId).map(
       ([sectorId, count]) => ({
@@ -97,9 +109,12 @@ export class CompanyActionService {
 
   async createCompanyAction(
     data: Prisma.CompanyActionCreateInput,
-  ): Promise<CompanyAction> {
+  ): Promise<CompanyActionWithCompany> {
     return this.prisma.companyAction.create({
       data,
+      include: {
+        Company: true,
+      },
     });
   }
 
@@ -127,6 +142,57 @@ export class CompanyActionService {
       },
     });
   }
+
+  async updateManyCompanyActions(
+    updates: {
+      id: number;
+      companyId?: string;
+      action?: OperatingRoundAction;
+      operatingRoundId?: number;
+      resolved?: boolean;
+      gameTurnId?: string;
+      actedOn?: boolean;
+    }[],
+  ) {
+    // Convert the updates array into the format required by Prisma's updateMany operation
+    const updatePromises = updates.map((update) => {
+      const data: {
+        companyId?: string;
+        action?: OperatingRoundAction;
+        operatingRoundId?: number;
+        resolved?: boolean;
+        gameTurnId?: string;
+        actedOn?: boolean;
+      } = {};
+  
+      if (update.companyId !== undefined) {
+        data.companyId = update.companyId;
+      }
+      if (update.action !== undefined) {
+        data.action = update.action;
+      }
+      if (update.operatingRoundId !== undefined) {
+        data.operatingRoundId = update.operatingRoundId;
+      }
+      if (update.resolved !== undefined) {
+        data.resolved = update.resolved;
+      }
+      if (update.gameTurnId !== undefined) {
+        data.gameTurnId = update.gameTurnId;
+      }
+      if (update.actedOn !== undefined) {
+        data.actedOn = update.actedOn;
+      }
+  
+      return this.prisma.companyAction.update({
+        where: { id: update.id },
+        data,
+      });
+    });
+  
+    // Execute all update promises in parallel
+    await Promise.all(updatePromises);
+  }  
 
   async deleteCompanyAction(
     where: Prisma.CompanyActionWhereUniqueInput,

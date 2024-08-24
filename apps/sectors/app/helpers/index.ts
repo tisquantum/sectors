@@ -1,11 +1,18 @@
-import { Company, OrderType, PhaseName, Sector } from "@server/prisma/prisma.client";
+import {
+  Company,
+  DistributionStrategy,
+  GameStatus,
+  OrderType,
+  PhaseName,
+  Sector,
+} from "@server/prisma/prisma.client";
 import { CompanyWithSector } from "@server/prisma/prisma.types";
 
 type CompaniesBySector = Record<
   string,
   {
     sector: Sector;
-    companies: CompanyWithSector[];
+    companies: any[];
   }
 >;
 
@@ -91,6 +98,14 @@ export function friendlyPhaseName(name: PhaseName | undefined): string {
       return "Start Turn";
     case PhaseName.END_TURN:
       return "End Turn";
+    case PhaseName.PRIZE_VOTE_ACTION:
+      return "Tranches Votes";
+    case PhaseName.PRIZE_VOTE_RESOLVE:
+      return "Resolve Tranches Votes";
+    case PhaseName.PRIZE_DISTRIBUTE_ACTION:
+      return "Distribute Tranches";
+    case PhaseName.PRIZE_DISTRIBUTE_RESOLVE:
+      return "Resolve Tranches Distribution";
     default:
       return "Unknown Phase";
   }
@@ -108,7 +123,10 @@ export const isCurrentPhaseInteractive = (
   );
 };
 
-export const determineColorByOrderType = (orderType: OrderType, isSell: boolean | null) => {
+export const determineColorByOrderType = (
+  orderType: OrderType,
+  isSell: boolean | null
+) => {
   switch (orderType) {
     case OrderType.LIMIT:
       return isSell ? "danger" : "secondary";
@@ -118,5 +136,33 @@ export const determineColorByOrderType = (orderType: OrderType, isSell: boolean 
       return "warning";
     default:
       return "default";
+  }
+};
+
+export const renderGameStatusColor = (status?: GameStatus) => {
+  switch (status) {
+    case GameStatus.PENDING:
+      return "warning";
+    case GameStatus.ACTIVE:
+      return "success";
+    case GameStatus.FINISHED:
+      return "secondary";
+    default:
+      return "warning";
+  }
+};
+
+export const friendlyDistributionStrategyName = (
+  strategy: DistributionStrategy
+) => {
+  switch (strategy) {
+    case DistributionStrategy.FAIR_SPLIT:
+      return "Fair Split";
+    case DistributionStrategy.BID_PRIORITY:
+      return "Bid Priority";
+    case DistributionStrategy.PRIORITY:
+      return "Priority";
+    default:
+      return "Unknown";
   }
 };

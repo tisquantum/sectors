@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { Prisma, GameTurn } from '@prisma/client';
+import { GameTurnWithRelations } from '@server/prisma/prisma.types';
 
 @Injectable()
 export class GameTurnService {
@@ -31,7 +32,7 @@ export class GameTurnService {
     cursor?: Prisma.GameTurnWhereUniqueInput;
     where?: Prisma.GameTurnWhereInput;
     orderBy?: Prisma.GameTurnOrderByWithRelationInput;
-  }): Promise<GameTurn[]> {
+  }): Promise<GameTurnWithRelations[]> {
     const { skip, take, cursor, where, orderBy } = params;
     return this.prisma.gameTurn.findMany({
       skip,
@@ -39,6 +40,9 @@ export class GameTurnService {
       cursor,
       where,
       orderBy,
+      include: {
+        companyActions: true,
+      }
     });
   }
 

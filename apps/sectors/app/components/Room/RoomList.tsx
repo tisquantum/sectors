@@ -1,22 +1,24 @@
-'use client'
+"use client";
 
 import React from "react";
-import { AvatarGroup, Avatar } from "@nextui-org/react";
+import { AvatarGroup, Avatar, Chip } from "@nextui-org/react";
 import { trpc } from "@sectors/app/trpc";
-import { RoomWithUsers } from "@server/prisma/prisma.types";
+import { RoomWithUsersAndGames } from "@server/prisma/prisma.types";
 import { useAuthUser } from "@sectors/app/components/AuthUser.context";
 import { useRouter } from "next/navigation";
 import Button from "@sectors/app/components/General/DebounceButton";
 import UserAvatar from "./UserAvatar";
+import { GameStatus } from "@server/prisma/prisma.client";
+import { renderGameStatusColor } from "@sectors/app/helpers";
 interface RoomListProps {
-  room: RoomWithUsers;
+  room: RoomWithUsersAndGames;
 }
 
 const RoomListItem: React.FC<RoomListProps> = ({ room }) => {
   const { user } = useAuthUser();
   const router = useRouter();
   const joinRoomMutation = trpc.roomUser.joinRoom.useMutation();
-  if(!user) return null;
+  if (!user) return null;
 
   const handleJoin = (roomId: number) => {
     joinRoomMutation.mutate({
@@ -37,6 +39,12 @@ const RoomListItem: React.FC<RoomListProps> = ({ room }) => {
             ))}
         </AvatarGroup>
         <h2 className="ml-4 text-lg font-bold">{room.name}</h2>
+        <Chip
+          color={renderGameStatusColor(room.game?.[0]?.gameStatus)}
+          className="ml-4"
+        >
+          {room.game?.[0]?.gameStatus || GameStatus.PENDING}
+        </Chip>
       </div>
       <Button color="primary" onClick={() => handleJoin(room.id)}>
         Join

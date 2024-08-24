@@ -57,6 +57,20 @@ import { PlayerPriorityService } from '@server/player-priority/player-priority.s
 import optionContractRouter from './routers/option-contract.router';
 import { OptionContractService } from '@server/option-contract/option-contract.service';
 import { createContext } from './trpc.context';
+import transactionRouter from './routers/transaction.router';
+import { TransactionService } from '@server/transaction/transaction.service';
+import cardsRouter from './routers/cards.router';
+import { CardsService } from '@server/cards/cards.service';
+import playerResultRouter from './routers/player-result.router';
+import { PlayerResultService } from '@server/player-result/player-result.service';
+import productionResultRouter from './routers/production-result.router';
+import { ProductionResultService } from '@server/production-result/production-result.service';
+import insolvencyContributionRouter from './routers/insolvency-contribution.router';
+import { InsolvencyContributionService } from '@server/insolvency-contribution/insolvency-contribution.service';
+import prizesRouter from './routers/prizes.router';
+import prizeVotesRouter from './routers/prize-votes.router';
+import { PrizeService } from '@server/prize/prize.service';
+import { PrizeVotesService } from '@server/prize-votes/prize-votes.service';
 @Injectable()
 export class TrpcRouter {
   constructor(
@@ -89,6 +103,13 @@ export class TrpcRouter {
     private readonly influenceRoundVotesService: InfluenceRoundVotesService,
     private readonly playerPriorityService: PlayerPriorityService,
     private readonly optionContractService: OptionContractService,
+    private readonly transactionService: TransactionService,
+    private readonly cardsService: CardsService,
+    private readonly playerResultService: PlayerResultService,
+    private readonly productionResultService: ProductionResultService,
+    private readonly insolvencyContributionService: InsolvencyContributionService,
+    private readonly prizeService: PrizeService,
+    private readonly prizeVotesService: PrizeVotesService,
   ) {}
 
   appRouter = this.trpc.router({
@@ -118,6 +139,8 @@ export class TrpcRouter {
       gamesService: this.gamesService,
       gameManagementService: this.gameManagementService,
       pusherService: this.pusherService,
+      playerService: this.playersService,
+      phaseService: this.phaseService,
     }),
     gameLog: gameLogRouter(this.trpc, {
       gameLogService: this.gameLogService,
@@ -145,6 +168,7 @@ export class TrpcRouter {
       pusherService: this.pusherService,
       gameLogService: this.gameLogService,
       phaseService: this.phaseService,
+      gameManagementService: this.gameManagementService,
     }),
     share: shareRouter(this.trpc, {
       shareService: this.shareService,
@@ -196,6 +220,36 @@ export class TrpcRouter {
     optionContract: optionContractRouter(this.trpc, {
       optionContractService: this.optionContractService,
       gameManagementService: this.gameManagementService,
+      phaseService: this.phaseService,
+      playerService: this.playersService,
+    }),
+    transactions: transactionRouter(this.trpc, {
+      transactionService: this.transactionService,
+    }),
+    cards: cardsRouter(this.trpc, {
+      cardsService: this.cardsService,
+    }),
+    playerResult: playerResultRouter(this.trpc, {
+      playerResultService: this.playerResultService,
+    }),
+    productionResult: productionResultRouter(this.trpc, {
+      productionResultService: this.productionResultService,
+    }),
+    insolvencyContributions: insolvencyContributionRouter(this.trpc, {
+      insolvencyContributionService: this.insolvencyContributionService,
+      phaseService: this.phaseService,
+      playerService: this.playersService,
+      pusherService: this.pusherService,
+      gameManagementService: this.gameManagementService,
+    }),
+    prizes: prizesRouter(this.trpc, {
+      prizeService: this.prizeService,
+    }),
+    prizeVotes: prizeVotesRouter(this.trpc, {
+      prizeVotesService: this.prizeVotesService,
+      phaseService: this.phaseService,
+      playersService: this.playersService,
+      pusherService: this.pusherService,
     }),
   });
 

@@ -5,22 +5,52 @@ import { TrpcService } from '../trpc.service';
 import {
   DistributionStrategy,
   Game,
-  Phase,
   PhaseName,
-  Prisma,
   RoundType,
+  GameStatus,
+  OperatingRoundAction,
 } from '@prisma/client';
 import { GameManagementService } from '@server/game-management/game-management.service';
 import {
   EVENT_GAME_STARTED,
+  EVENT_PLAYER_READINESS_CHANGED,
+  getGameChannelId,
   getRoomChannelId,
 } from '@server/pusher/pusher.types';
+import { PlayersService } from '@server/players/players.service';
+import { PhaseService } from '@server/phase/phase.service';
+import { checkIsPlayerAction, checkSubmissionTime } from '../trpc.middleware';
 
 type Context = {
   gamesService: GamesService;
   gameManagementService: GameManagementService;
   pusherService: PusherService;
+  playerService: PlayersService;
+  phaseService: PhaseService;
 };
+
+const prizeDistributionInputSchema = z.object({
+  playerId: z.string(),
+  distributionData: z.array(
+    z.union([
+      z.object({
+        prizetype: z.literal('cash'),
+        playerId: z.string(),
+        amount: z.number(),
+      }),
+      z.object({
+        prizetype: z.literal('prestige'),
+        companyId: z.string(),
+        amount: z.number(),
+      }),
+      z.object({
+        prizetype: z.literal('passive'),
+        companyId: z.string(),
+        effectName: z.nativeEnum(OperatingRoundAction),
+      }),
+    ]),
+  ),
+});
 
 export default (trpc: TrpcService, ctx: Context) =>
   trpc.router({
@@ -66,6 +96,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           roomName: z.string(),
           startingCashOnHand: z.number(),
           distributionStrategy: z.nativeEnum(DistributionStrategy),
+          gameMaxTurns: z.number(),
           players: z.any().optional(),
           companies: z.any().optional(),
           Player: z.any().optional(),
@@ -86,6 +117,7 @@ export default (trpc: TrpcService, ctx: Context) =>
             consumerPoolNumber: input.consumerPoolNumber,
             bankPoolNumber: input.bankPoolNumber,
             distributionStrategy: input.distributionStrategy,
+            gameMaxTurns: input.gameMaxTurns,
           });
         } catch (error) {
           return {
@@ -122,7 +154,7 @@ export default (trpc: TrpcService, ctx: Context) =>
             currentActivePlayer: z.string().nullable().optional(),
             bankPoolNumber: z.number().optional(),
             consumerPoolNumber: z.number().optional(),
-            gameStatus: z.string().optional(),
+            gameStatus: z.nativeEnum(GameStatus).optional(),
             players: z.any().optional(),
             companies: z.any().optional(),
             Player: z.any().optional(),
@@ -202,7 +234,7 @@ export default (trpc: TrpcService, ctx: Context) =>
       .input(z.object({ gameId: z.string() }))
       .query(async ({ input }) => {
         const { gameId } = input;
-        return ctx.gameManagementService.haveAllCompaniesActionsResolved(
+        return ctx.gameManagementService.haveAllActiveCompaniesActionsResolved(
           gameId,
         );
       }),
@@ -234,8 +266,119 @@ export default (trpc: TrpcService, ctx: Context) =>
       }),
 
     coverShort: trpc.procedure
-      .input(z.object({ shortId: z.number() }))
+      .input(z.object({ shortId: z.number(), gameId: z.string() }))
+      .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
+      .use(async (opts) => checkSubmissionTime(opts, ctx.phaseService))
       .mutation(async ({ input }) => {
-        return ctx.gameManagementService.coverShortOrder(input.shortId);
+        try {
+          console.log('input short id', input);
+          ctx.gameManagementService.coverShortOrder(input.shortId);
+        } catch (error) {
+          throw new Error('Error covering short order');
+        }
+      }),
+    pauseGame: trpc.procedure
+      .input(z.object({ gameId: z.string() }))
+      .mutation(async ({ input }) => {
+        return ctx.gameManagementService.pauseGame(input.gameId);
+      }),
+    resumeGame: trpc.procedure
+      .input(z.object({ gameId: z.string() }))
+      .mutation(async ({ input }) => {
+        return ctx.gameManagementService.resumeGame(input.gameId);
+      }),
+    prizeDistribution: trpc.procedure
+      .input(prizeDistributionInputSchema)
+      .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
+      .use(async (opts) => checkSubmissionTime(opts, ctx.phaseService))
+      .mutation(async ({ input, ctx: ctxMiddleware }) => {
+        const { distributionData } = input;
+        if (!distributionData) {
+          throw new Error('Distribution data is required');
+        }
+        if (!ctxMiddleware.submittingPlayerId) {
+          throw new Error('Player ID is required');
+        }
+        let prizes;
+        try {
+          prizes =
+            await ctx.gameManagementService.getPrizesCurrentTurnForPlayer(
+              ctxMiddleware.submittingPlayerId,
+            );
+        } catch (error) {
+          throw new Error('Error getting prizes');
+        }
+        if (!prizes) {
+          throw new Error('No prizes found for this player.');
+        }
+        // Loop through the distributionData and handle each prize type
+        for (const distribution of distributionData) {
+          switch (distribution.prizetype) {
+            case 'cash':
+              // Handle cash distribution
+              await ctx.gameManagementService.distributeCash({
+                playerId: distribution.playerId,
+                amount: distribution.amount,
+                prize: prizes[0], //this assumption is based on the fact that we only have one prize per turn
+              });
+              break;
+
+            case 'prestige':
+              // Handle prestige distribution
+              await ctx.gameManagementService.distributePrestige({
+                companyId: distribution.companyId,
+                amount: distribution.amount,
+                prize: prizes[0],
+              });
+              break;
+
+            case 'passive':
+              // Handle passive effect distribution
+              await ctx.gameManagementService.applyPassiveEffect({
+                companyId: distribution.companyId,
+                effectName: distribution.effectName,
+                prize: prizes[0],
+              });
+              break;
+
+            default:
+              throw new Error('Unknown prize type');
+          }
+        }
+
+        return { success: true };
+      }),
+
+    setPlayerReadiness: trpc.procedure
+      .input(
+        z.object({
+          gameId: z.string(),
+          playerId: z.string(),
+          isReady: z.boolean(),
+        }),
+      )
+      .mutation(({ input }) => {
+        const { gameId, playerId, isReady } = input;
+
+        // Delegate the responsibility to GameManagementService
+        ctx.gameManagementService.setPlayerReadiness(gameId, playerId, isReady);
+        ctx.pusherService.trigger(
+          getGameChannelId(gameId),
+          EVENT_PLAYER_READINESS_CHANGED,
+          {
+            playerId,
+            isReady,
+          },
+        );
+        return { success: true };
+      }),
+
+    listPlayerReadiness: trpc.procedure
+      .input(z.object({ gameId: z.string() }))
+      .query(({ input }) => {
+        const { gameId } = input;
+
+        // Delegate the responsibility to GameManagementService
+        return ctx.gameManagementService.listPlayerReadiness(gameId);
       }),
   });

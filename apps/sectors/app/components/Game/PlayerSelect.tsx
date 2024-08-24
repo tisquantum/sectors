@@ -1,11 +1,23 @@
-import { Avatar, Chip, Select, SelectItem } from "@nextui-org/react";
+import {
+  Avatar,
+  Chip,
+  Select,
+  SelectionMode,
+  SelectItem,
+} from "@nextui-org/react";
 import { trpc } from "@sectors/app/trpc";
 import { useGame } from "./GameContext";
 import { notFound } from "next/navigation";
 import { ChangeEventHandler } from "react";
 import PlayerAvatar from "../Player/PlayerAvatar";
 
-const PlayerSelect = ({ onChange }: { onChange: ChangeEventHandler<HTMLSelectElement> }) => {
+const PlayerSelect = ({
+  onChange,
+  selectionMode,
+}: {
+  onChange: ChangeEventHandler<HTMLSelectElement>;
+  selectionMode?: SelectionMode;
+}) => {
   const { gameId } = useGame();
   const { data: players, isLoading } = trpc.player.listPlayers.useQuery({
     where: { gameId },
@@ -20,7 +32,7 @@ const PlayerSelect = ({ onChange }: { onChange: ChangeEventHandler<HTMLSelectEle
       label="Users"
       variant="bordered"
       isMultiline={true}
-      selectionMode="multiple"
+      selectionMode={selectionMode || "multiple"}
       placeholder="Select a user"
       labelPlacement="outside"
       classNames={{

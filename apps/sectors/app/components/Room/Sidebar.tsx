@@ -14,6 +14,7 @@ import { BeakerIcon, SunIcon } from "@heroicons/react/24/solid";
 import { useRouter } from "next/navigation";
 import UserAvatar from "./UserAvatar";
 import Button from "../General/DebounceButton";
+import DebounceButton from "../General/DebounceButton";
 interface SidebarProps {
   roomUsers: RoomUserWithUser[];
   room: RoomWithUsersAndGames;
@@ -24,20 +25,29 @@ interface GameOptionsState {
   consumerPoolNumber: number;
   startingCashOnHand: number;
   distributionStrategy: DistributionStrategy;
+  gameMaxTurns: number;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
   const { user } = useAuthUser();
   const router = useRouter();
+  const [startGameIsSubmitted, setStartGameIsSubmitted] = useState(false);
+  const [isLoadingStartGame, setIsLoadingStartGame] = useState(false);
   const [gameOptions, setGameOptions] = useState<GameOptionsState>({
-    bankPoolNumber: 0,
-    consumerPoolNumber: 0,
-    startingCashOnHand: 0,
-    distributionStrategy: DistributionStrategy.FAIR_SPLIT,
+    bankPoolNumber: 12000,
+    consumerPoolNumber: 75,
+    startingCashOnHand: 300,
+    distributionStrategy: DistributionStrategy.BID_PRIORITY,
+    gameMaxTurns: 15,
   });
   const joinRoomMutation = trpc.roomUser.joinRoom.useMutation();
   const leaveRoomMutation = trpc.roomUser.leaveRoom.useMutation();
-  const startGameMutation = trpc.game.startGame.useMutation();
+  const startGameMutation = trpc.game.startGame.useMutation({
+    onSettled: () => {
+      setIsLoadingStartGame(false);
+      setStartGameIsSubmitted(true);
+    },
+  });
 
   let roomHostAuthUser: RoomUserWithUser | undefined;
   if (user && roomUsers) {
@@ -74,7 +84,8 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
     startingCashOnHand: number,
     consumerPoolNumber: number,
     bankPoolNumber: number,
-    distributionStrategy: DistributionStrategy
+    distributionStrategy: DistributionStrategy,
+    gameMaxTurns: number
   ) => {
     //response happens through pusher to all clients.
     startGameMutation.mutate({
@@ -84,6 +95,7 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
       consumerPoolNumber,
       bankPoolNumber,
       distributionStrategy,
+      gameMaxTurns,
     });
   };
 
@@ -103,24 +115,36 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
         </Button>
         {roomHostAuthUser?.roomHost && (
           <>
-            <GameOptions onOptionsChange={handleGameOptionsChange} />
-            {room.game.length == 0 && (
-              <Button
+            <GameOptions
+              initialBankPoolNumber={12000}
+              initialConsumerPoolNumber={75}
+              initialStartingCashOnHand={300}
+              initialDistributionStrategy={DistributionStrategy.BID_PRIORITY}
+              initialGameMaxTurns={15}
+              onOptionsChange={handleGameOptionsChange}
+            />
+            {room.game.length == 0 && startGameIsSubmitted ? (
+              <div>Starting Game</div>
+            ) : (
+              <DebounceButton
                 color="primary"
-                onClick={() =>
+                onClick={() => {
+                  setIsLoadingStartGame(true);
                   handleStartGame(
                     room.id,
                     gameOptions.startingCashOnHand,
                     gameOptions.consumerPoolNumber,
                     gameOptions.bankPoolNumber,
-                    gameOptions.distributionStrategy
-                  )
-                }
+                    gameOptions.distributionStrategy,
+                    gameOptions.gameMaxTurns
+                  );
+                }}
                 radius="none"
                 className="w-full rounded-b-md"
+                isLoading={isLoadingStartGame}
               >
                 Start Game
-              </Button>
+              </DebounceButton>
             )}
           </>
         )}
@@ -134,7 +158,7 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
           </Button>
         )}
       </div>
-      <ul className="flex-1 overflow-y-auto">
+      <ul className="flex-1 overflow-y-auto scrollbar">
         {roomUsers.map((roomUser) => (
           <li key={roomUser.user.id} className="flex items-center mb-4 gap-1">
             <div className="flex items-center mr-1">

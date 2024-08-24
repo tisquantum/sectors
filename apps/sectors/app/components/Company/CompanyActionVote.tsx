@@ -5,17 +5,25 @@ import { Company, OperatingRoundAction } from "@server/prisma/prisma.client";
 import { useState } from "react";
 import { CompanyActionCosts } from "@server/data/constants";
 import Button from "@sectors/app/components/General/DebounceButton";
+import DebounceButton from "@sectors/app/components/General/DebounceButton";
 
 const CompanyActionVote = ({ company }: { company?: Company }) => {
   const { currentPhase, authPlayer, gameId } = useGame();
+  const [isLoading, setIsLoading] = useState(false);
   const [selected, setSelected] = useState<OperatingRoundAction>(
     OperatingRoundAction.MARKETING
   );
   const [submitComplete, setSubmitComplete] = useState(false);
   const createOperatingRoundVote =
-    trpc.operatingRoundVote.createOperatingRoundVote.useMutation();
+    trpc.operatingRoundVote.createOperatingRoundVote.useMutation({
+      onSettled: () => {
+        setIsLoading(false);
+        setSubmitComplete(true);
+      },
+    });
   if (!company) return null;
   const handleSubmit = async () => {
+    setIsLoading(true);
     try {
       await createOperatingRoundVote.mutate({
         operatingRoundId: currentPhase?.operatingRoundId || 0,
@@ -24,7 +32,6 @@ const CompanyActionVote = ({ company }: { company?: Company }) => {
         actionVoted: selected,
         gameId,
       });
-      setSubmitComplete(true);
     } catch (error) {
       console.error(error);
     }
@@ -46,6 +53,7 @@ const CompanyActionVote = ({ company }: { company?: Company }) => {
     { name: OperatingRoundAction.SPEND_PRESTIGE, label: "Prestige" },
     { name: OperatingRoundAction.LOAN, label: "Loan" },
     { name: OperatingRoundAction.LOBBY, label: "Lobby" },
+    { name: OperatingRoundAction.OUTSOURCE, label: "Outsource" },
     { name: OperatingRoundAction.VETO, label: "Veto" },
   ];
   //if company hasLoan, remove the loan option
@@ -81,9 +89,13 @@ const CompanyActionVote = ({ company }: { company?: Company }) => {
           submitComplete ? (
             <div>Vote Submitted</div>
           ) : (
-            <Button className="btn btn-primary" onClick={handleSubmit}>
+            <DebounceButton
+              className="btn btn-primary"
+              onClick={handleSubmit}
+              isLoading={isLoading}
+            >
               Submit Vote
-            </Button>
+            </DebounceButton>
           )
         ) : (
           <Button disabled className="btn btn-primary">

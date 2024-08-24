@@ -129,7 +129,11 @@ const OperatingRoundRevenueVoteResolve = () => {
                 <CompanyInfo company={productionResult.Company} showBarChart />
                 <div className="flex flex-col gap-2 rounded-md bg-gray-950 m-2 p-2">
                   <span className="text-lg">Production Results</span>
-                  <span>Result: {productionResult.revenueDistribution}</span>
+                  <span>
+                    Result:{" "}
+                    {productionResult.revenueDistribution ||
+                      RevenueDistribution.RETAINED}
+                  </span>
                   <span>Revenue: ${revenue}</span>
                   <span className="text-md my-2">
                     Operating Costs: ${operatingCosts}
@@ -169,7 +173,7 @@ const OperatingRoundRevenueVoteResolve = () => {
                             />
                           );
                         })}
-                        <Badge
+                        {/* <Badge
                           content={
                             "$" +
                             calculateDividendFullRetainedRevenue(
@@ -178,7 +182,7 @@ const OperatingRoundRevenueVoteResolve = () => {
                           }
                         >
                           <Avatar name={productionResult.Company.stockSymbol} />
-                        </Badge>
+                        </Badge> */}
                       </>
                     )}
                     {productionResult?.revenueDistribution ===
@@ -214,8 +218,9 @@ const OperatingRoundRevenueVoteResolve = () => {
                         </Badge>
                       </>
                     )}
-                    {productionResult?.revenueDistribution ===
-                      RevenueDistribution.RETAINED && (
+                    {(productionResult?.revenueDistribution ===
+                      RevenueDistribution.RETAINED ||
+                      !productionResult?.revenueDistribution) && (
                       <Badge content={"$" + revenue}>
                         <Avatar name={productionResult.Company.stockSymbol} />
                       </Badge>

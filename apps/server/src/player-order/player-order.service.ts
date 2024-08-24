@@ -8,6 +8,8 @@ import {
   ShareLocation,
   OrderStatus,
   DistributionStrategy,
+  CompanyStatus,
+  ContractState,
 } from '@prisma/client';
 import {
   PlayerOrderConcealed,
@@ -136,11 +138,13 @@ export class PlayerOrderService {
         Company: {
           include: {
             Share: true,
+            CompanyActions: true,
           },
         },
         Player: true,
         Sector: true,
         Phase: true,
+        GameTurn: true,
       },
     });
   }
@@ -163,6 +167,7 @@ export class PlayerOrderService {
         Company: {
           include: {
             Share: true,
+            CompanyActions: true,
           },
         },
         Player: true,
@@ -172,6 +177,7 @@ export class PlayerOrderService {
             StockRound: true,
           },
         },
+        GameTurn: true,
       },
     });
   }
@@ -237,6 +243,7 @@ export class PlayerOrderService {
         Sector: true,
         ShortOrder: true,
         OptionContract: true,
+        GameTurn: true,
       },
     });
   }
@@ -278,37 +285,47 @@ export class PlayerOrderService {
       throw new Error('Cannot sell into IPO');
     }
 
+    const playerId = data.Player.connect?.id;
+    const companyId = data.Company.connect?.id;
+    const stockRoundId = data.StockRound.connect?.id;
+
+    if (!playerId || !companyId || !stockRoundId) {
+      console.error('Invalid data input', data);
+      throw new Error('Invalid data input');
+    }
+
+    const [player, company, playerOrders] = await this.prisma.$transaction([
+      this.prisma.player.findUnique({
+        where: { id: playerId },
+        include: { Share: true },
+      }),
+      this.prisma.company.findUnique({
+        where: { id: companyId },
+      }),
+      this.prisma.playerOrder.findMany({
+        where: {
+          playerId,
+          stockRoundId,
+        },
+        include: { Company: true },
+      }),
+    ]);
+
+    if (!player || !company) {
+      throw new Error('Player or Company not found');
+    }
+
+    if (
+      data.location === ShareLocation.OPEN_MARKET &&
+      company.status != CompanyStatus.ACTIVE
+    ) {
+      throw new Error(
+        'Cannot place an order into the open market on a company that is not active',
+      );
+    }
+
     // Filter out fields based on order type
     if (data.orderType === OrderType.MARKET) {
-      const playerId = data.Player.connect?.id;
-      const companyId = data.Company.connect?.id;
-      const stockRoundId = data.StockRound.connect?.id;
-
-      if (!playerId || !companyId || !stockRoundId) {
-        throw new Error('Invalid data input');
-      }
-
-      const [player, company, playerOrders] = await this.prisma.$transaction([
-        this.prisma.player.findUnique({
-          where: { id: playerId },
-          include: { Share: true },
-        }),
-        this.prisma.company.findUnique({
-          where: { id: companyId },
-        }),
-        this.prisma.playerOrder.findMany({
-          where: {
-            playerId,
-            stockRoundId,
-          },
-          include: { Company: true },
-        }),
-      ]);
-
-      if (!player || !company) {
-        throw new Error('Player or Company not found');
-      }
-
       if (player.marketOrderActions <= 0) {
         throw new Error('Player has no more market order actions');
       }
@@ -316,9 +333,20 @@ export class PlayerOrderService {
       const spend = getPseudoSpend(playerOrders);
       let orderValue = 0;
       if (game.distributionStrategy === DistributionStrategy.BID_PRIORITY) {
-        if (data.value! < company.currentStockPrice!) {
+        if (
+          data.location === ShareLocation.IPO &&
+          data.value! < company.ipoAndFloatPrice!
+        ) {
           throw new Error(
-            'Bid value must be greater than or equal to current stock price',
+            'Bid value must be greater than or equal to the float price.',
+          );
+        }
+        if (
+          data.location === ShareLocation.OPEN_MARKET &&
+          data.value! < company.currentStockPrice!
+        ) {
+          throw new Error(
+            'Bid value must be greater than or equal to current stock price.',
           );
         }
         orderValue = data.quantity! * data.value!;
@@ -326,17 +354,20 @@ export class PlayerOrderService {
         orderValue = data.quantity! * company.currentStockPrice!;
       }
 
-      if (data.isSell) {
+      /**
+       * if (data.isSell) {
         const playerShares = player.Share.filter(
           (share) => share.companyId === companyId,
         );
-        if (!playerShares || playerShares.length < data.quantity!) {
-          throw new Error('Player does not have enough shares to sell');
-        }
+        //TODO: Removing this rule from here for now, instead orders can be placed but will get reject upon resoltuion for this reason during resolveMarketOrders
+        // if (!playerShares || playerShares.length < data.quantity!) {
+        //   throw new Error('Player does not have enough shares to sell');
+        // }
       } else {
-        if (spend + orderValue > player.cashOnHand!) {
-          throw new Error('Player does not have enough cash to place order');
-        }
+        ////TODO: Removing this rule from here for now, instead orders can be placed but will get reject upon resoltuion for this reason during resolveMarketOrders
+        // if (spend + orderValue > player.cashOnHand!) {
+        //   throw new Error('Player does not have enough cash to place order');
+        // }
 
         //get company with shares TODO: Leaving this open for now, will reject during resolution instead so player can combo.
         // const company = await this.prisma.company.findUnique({
@@ -354,22 +385,9 @@ export class PlayerOrderService {
         //     'This buy would exceed the maximum share percentage.',
         //   );
         // }
-      }
+      }*/
     }
-
     if (data.orderType === OrderType.LIMIT) {
-      delete data.quantity;
-      //get player
-      const playerId = data.Player.connect?.id;
-      if (!playerId) {
-        throw new Error('Invalid data input');
-      }
-      const player = await this.prisma.player.findUnique({
-        where: { id: playerId },
-      });
-      if (!player) {
-        throw new Error('Player not found');
-      }
       //check if player has limit order actions
       if (player.limitOrderActions <= 0) {
         throw new Error('Player has no more limit order actions');
@@ -391,6 +409,39 @@ export class PlayerOrderService {
       //check if player has short order actions
       if (player.shortOrderActions <= 0) {
         throw new Error('Player has no more short order actions');
+      }
+    }
+
+    if (data.orderType === OrderType.OPTION) {
+      if (data.location != ShareLocation.DERIVATIVE_MARKET) {
+        throw new Error('Invalid location for option contract');
+      }
+      if (data.isSell) {
+        throw new Error('Cannot sell option contracts');
+      }
+      if (!data.OptionContract) {
+        throw new Error('Invalid option contract');
+      }
+      //get option contract
+      const optionContract = await this.prisma.optionContract.findUnique({
+        where: { id: data.OptionContract.connect?.id },
+      });
+      if (!optionContract) {
+        throw new Error('Option contract not found');
+      }
+      //if option contract not for sale, throw error
+      if (optionContract.contractState !== ContractState.FOR_SALE) {
+        throw new Error('Option contract not for sale');
+      }
+      if (game.distributionStrategy === DistributionStrategy.BID_PRIORITY) {
+        if (data.value! < optionContract.premium!) {
+          throw new Error('Bid value must be greater than or equal to premium');
+        }
+        if (data.value! > player.cashOnHand!) {
+          throw new Error('Player does not have enough cash to place order');
+        }
+      } else if (player.cashOnHand! < optionContract.premium!) {
+        throw new Error('Player does not have enough cash to place order');
       }
     }
 
@@ -427,6 +478,13 @@ export class PlayerOrderService {
     });
   }
 
+  /**
+   * Trigger limit orders to fill if they are between two prices.
+   * @param prevPrice
+   * @param currentPrice
+   * @param companyId
+   * @returns
+   */
   async triggerLimitOrdersFilled(
     prevPrice: number,
     currentPrice: number,
@@ -462,12 +520,14 @@ export class PlayerOrderService {
       },
     });
 
-    //update limit orders to market orders
+    //update limit orders
     const updatedOrders = await Promise.all(
       limitOrders.map((order) => {
         this.gameLogService.createGameLog({
           game: { connect: { id: order.gameId } },
-          content: `Player ${order.Player.nickname} limit order ${order.isSell ? 'SELL' : 'BUY'} @${order.value} for company ${companyId} filled`,
+          content: `Player ${order.Player.nickname} limit order ${
+            order.isSell ? 'SELL' : 'BUY'
+          } @${order.value} for company ${companyId} filled`,
         });
         return this.prisma.playerOrder.update({
           where: { id: order.id },

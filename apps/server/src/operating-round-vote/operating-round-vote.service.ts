@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { Prisma, OperatingRoundVote } from '@prisma/client';
+import { CompanyTierData } from '@server/data/constants';
 
 @Injectable()
 export class OperatingRoundVoteService {
@@ -35,16 +36,31 @@ export class OperatingRoundVoteService {
     data: Prisma.OperatingRoundVoteCreateInput,
   ): Promise<OperatingRoundVote> {
     const newData = { ...data };
+    //get company
+    const company = await this.prisma.company.findUnique({
+      where: {
+        id: newData.Company.connect?.id || '',
+      },
+    });
+    if (!company) {
+      throw new Error('Company not found');
+    }
+    //get company tier
+    const companyTier = CompanyTierData[company.companyTier as keyof typeof CompanyTierData];
     //ensure vote has not already been cast by player
-    const existingVote = await this.prisma.operatingRoundVote.findFirst({
+    const existingVotes = await this.prisma.operatingRoundVote.findMany({
       where: {
         playerId: newData.Player.connect?.id || '',
         companyId: newData.Company.connect?.id || '',
         operatingRoundId: newData.OperatingRound.connect?.id || 0,
       },
     });
-    if (existingVote) {
-      throw new Error('Player has already voted');
+    if (existingVotes && existingVotes.length >= companyTier.companyActions) {
+      throw new Error('Player has already voted for as many actions as allowed');
+    }
+    //if player has already voted for this action, throw error
+    if(existingVotes.some(vote => vote.actionVoted === newData.actionVoted)){
+      throw new Error('Player has already voted for this action');
     }
     // Calculate vote weight
     const sharesOwned = await this.prisma.share.findMany({

@@ -26,6 +26,7 @@ import {
 import { usePusherSubscription } from "@sectors/app/hooks/pusher";
 import * as PusherTypes from "pusher-js";
 import {
+  EVENT_GAME_ENDED,
   EVENT_NEW_PHASE,
   EVENT_NEW_PLAYER_ORDER_PLAYER_ID,
   EVENT_NEW_PLAYER_ORDER_PLAYER_ID__PAYLOAD,
@@ -132,8 +133,13 @@ export const GameProvider: React.FC<{
       refetchPlayerOrder();
     };
 
+    const handleGameEnded = () => {
+      refetchGameState();
+    };
+
     channel.bind(EVENT_NEW_PHASE, handleNewPhase);
     channel.bind(EVENT_NEW_PLAYER_ORDER_PLAYER_ID, handleNewPlayerOrder);
+    channel.bind(EVENT_GAME_ENDED, handleGameEnded);
 
     return () => {
       channel.unbind(EVENT_NEW_PHASE, handleNewPhase);

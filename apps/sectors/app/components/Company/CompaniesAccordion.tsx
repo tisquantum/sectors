@@ -39,7 +39,8 @@ import {
 } from "@remixicon/react";
 import { CompanyTierData } from "@server/data/constants";
 import CompanyInfo from "./CompanyInfo";
-import { calculateCompanySupply } from "@server/data/helpers";
+import { calculateCompanySupply, calculateDemand } from "@server/data/helpers";
+import CompanyResearchCards from "./CompanyResearchCards";
 
 type ShareGroupedByPlayer = {
   [key: string]: ShareWithPlayer[];
@@ -168,7 +169,7 @@ const CompaniesAccordion = ({
             }
             isCompact
           >
-            <div className="flex">
+            <div className="flex flex-col">
               <div className="flex flex-col">
                 <span>General Information</span>
                 <div className="p-2 grid grid-cols-2 gap-1">
@@ -179,11 +180,12 @@ const CompaniesAccordion = ({
                     <strong>Supply:</strong>{" "}
                     {calculateCompanySupply(
                       company.supplyMax,
-                      company.supplyBase
+                      company.supplyBase,
+                      company.supplyCurrent
                     ) || 0}
                   </p>
                   <p>
-                    <strong>Company Demand:</strong> {company.demandScore || 0}
+                    <strong>Company Demand:</strong> {calculateDemand(company.demandScore, company.baseDemand) || 0}
                   </p>
                   <p>
                     <strong>Sector Demand:</strong>{" "}
@@ -192,7 +194,7 @@ const CompaniesAccordion = ({
                   </p>
                   <p>
                     <strong>Demand Score:</strong>{" "}
-                    {company.demandScore ||
+                    {calculateDemand(company.demandScore, company.baseDemand) ||
                       0 +
                         company.Sector.demand +
                         (company.Sector.demandBonus || 0) ||
@@ -200,20 +202,17 @@ const CompaniesAccordion = ({
                   </p>
                   <p>
                     <strong>Throughput:</strong>{" "}
-                    {company.demandScore ||
+                    {calculateDemand(company.demandScore, company.baseDemand) ||
                       0 +
                         company.Sector.demand +
                         (company.Sector.demandBonus || 0) ||
                       0 -
                         calculateCompanySupply(
                           company.supplyMax,
-                          company.supplyBase
+                          company.supplyBase,
+                          company.supplyCurrent
                         ) ||
                       0}
-                  </p>
-                  <p>
-                    <strong>Insolvent:</strong>{" "}
-                    {company.insolvent ? "Yes" : "No"}
                   </p>
                   <p>
                     <strong>IPO Price (Float Price):</strong> $
@@ -236,6 +235,10 @@ const CompaniesAccordion = ({
                   )}
                   {renderPlayerShares(company.Share || [])}
                 </div>
+              </div>
+              <div className="flex flex-col">
+                <span>Research Cards</span>
+                <CompanyResearchCards companyId={company.id} />
               </div>
             </div>
           </AccordionItem>

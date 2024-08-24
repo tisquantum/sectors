@@ -87,6 +87,7 @@ export class GamesService {
         StockRound: true,
         InfluenceRound: true,
         Phase: true,
+        GameRecord: true,
       },
     });
   }
@@ -116,6 +117,7 @@ export class GamesService {
           },
         },
         Phase: true,
+        GameRecord: true,
       },
     });
   }

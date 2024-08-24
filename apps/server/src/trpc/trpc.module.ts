@@ -33,6 +33,13 @@ import { InfluenceRoundVotesService } from '@server/influence-round-votes/influe
 import { PlayerPriorityService } from '@server/player-priority/player-priority.service';
 import { OptionContractService } from '@server/option-contract/option-contract.service';
 import { ShortOrderService } from '@server/short-order/short-order.service';
+import { GameRecordService } from '@server/game-record/game-record.service';
+import { PlayerResultService } from '@server/player-result/player-result.service';
+import { TransactionService } from '@server/transaction/transaction.service';
+import { InsolvencyContributionService } from '@server/insolvency-contribution/insolvency-contribution.service';
+import { PrizeService } from '@server/prize/prize.service';
+import { PrizeVotesService } from '@server/prize-votes/prize-votes.service';
+import { PrizeDistributionService } from '@server/prize-distribution/prize-distribution.service';
 
 @Module({
   imports: [PrismaModule],
@@ -72,6 +79,13 @@ import { ShortOrderService } from '@server/short-order/short-order.service';
     InfluenceRoundVotesService,
     OptionContractService,
     ShortOrderService,
+    GameRecordService,
+    PlayerResultService,
+    TransactionService,
+    InsolvencyContributionService,
+    PrizeService,
+    PrizeVotesService,
+    PrizeDistributionService,
   ],
 })
 export class TrpcModule {}

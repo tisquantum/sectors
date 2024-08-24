@@ -19,12 +19,14 @@ import { TRPCError } from '@trpc/server';
 import { GameLogService } from '@server/game-log/game-log.service';
 import { checkIsPlayerAction, checkSubmissionTime } from '../trpc.middleware';
 import { PhaseService } from '@server/phase/phase.service';
+import { GameManagementService } from '@server/game-management/game-management.service';
 
 type Context = {
   playerOrdersService: PlayerOrderService;
   playerService: PlayersService;
   pusherService: PusherService;
   phaseService: PhaseService;
+  gameManagementService: GameManagementService;
   gameLogService: GameLogService;
 };
 
@@ -191,12 +193,8 @@ export default (trpc: TrpcService, ctx: Context) =>
     createPlayerOrder: trpc.procedure
       .input(
         z.object({
-          gameId: z.string(),
-          stockRoundId: z.number(),
-          phaseId: z.string(),
           playerId: z.string(),
           companyId: z.string(),
-          sectorId: z.string(),
           quantity: z.number().optional(),
           value: z.number().optional(),
           isSell: z.boolean().optional(),
@@ -208,35 +206,23 @@ export default (trpc: TrpcService, ctx: Context) =>
       .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
       .use(async (opts) => checkSubmissionTime(opts, ctx.phaseService))
       .mutation(async ({ input, ctx: ctxMiddleware }) => {
-        //remove game id from input
-        const {
-          gameId,
-          stockRoundId,
-          companyId,
-          playerId,
-          phaseId,
-          sectorId,
-          contractId,
-          ...playerOrderInput
-        } = input;
-        console.log('playerOrderInput', playerOrderInput);
-        const data: Prisma.PlayerOrderCreateInput = {
-          ...playerOrderInput,
-          orderStatus: OrderStatus.PENDING,
-          Game: { connect: { id: gameId } },
-          StockRound: { connect: { id: stockRoundId } },
-          Company: { connect: { id: companyId } },
-          Player: { connect: { id: playerId } },
-          Phase: { connect: { id: phaseId } },
-          Sector: { connect: { id: sectorId } },
-          ...(contractId && {
-            OptionContract: { connect: { id: contractId } },
-          }),
-          submissionStamp: ctxMiddleware.submissionStamp,
-        };
+        console.log('playerOrderInput', input);
+        const { playerId, ...rest } = input;
+        if (!ctxMiddleware.gameId) {
+          //throw
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Game ID was not found for this player.',
+          });
+        }
         let playerOrder;
         try {
-          playerOrder = await ctx.playerOrdersService.createPlayerOrder(data);
+          playerOrder = await ctx.gameManagementService.createPlayerOrder({
+            ...input,
+            orderStatus: OrderStatus.PENDING,
+            gameId: ctxMiddleware.gameId,
+            submissionStamp: ctxMiddleware.submissionStamp,
+          });
           //subtract one from related player action counter
           await ctx.playerService.subtractActionCounter(
             playerOrder.playerId,
@@ -245,12 +231,12 @@ export default (trpc: TrpcService, ctx: Context) =>
           //get player
           const player = await ctx.playerService.player({ id: playerId });
           await ctx.gameLogService.createGameLog({
-            game: { connect: { id: gameId } },
+            game: { connect: { id: ctxMiddleware.gameId } },
             content: `Player ${player?.nickname} created an order.`,
           });
           //Use for "ready up" and updating the authPlayerState
           ctx.pusherService.trigger(
-            getGameChannelId(gameId),
+            getGameChannelId(ctxMiddleware.gameId),
             EVENT_NEW_PLAYER_ORDER_PLAYER_ID,
             {
               playerId: playerOrder.playerId,

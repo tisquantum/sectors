@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import GameSidebar from "./GameSidebar";
 import GameTopBar from "./GameTopBar";
 import StockRoundOrderGrid from "./StockRoundOrderGrid";
@@ -10,6 +10,7 @@ import PendingOrders from "./PendingOrders";
 import StockChart from "./StockChart";
 import CompanyActionSlider from "@sectors/app/components/Company/CompanyActionSelectionVote";
 import {
+  GameStatus,
   InfluenceRound,
   OperatingRound,
   Phase,
@@ -37,6 +38,13 @@ import Divestment from "./Divestment";
 import InfluenceBid from "./InfluenceBid";
 import ExerciseOptionOrders from "./ExerciseOptionOrders";
 import CoverShortOrders from "./CoverShortOrders";
+import { Button, Spinner, useDisclosure } from "@nextui-org/react";
+import { isActivePhase } from "@server/data/helpers";
+import GameResults from "./GameResults";
+import { Drawer } from "vaul";
+import { useDrawer } from "../Drawer.context";
+import PrizeRound from "./PrizeVote";
+import DistributePrizes from "./DistributePrize";
 
 const determineGameRound = (
   game: GameState
@@ -100,17 +108,30 @@ const TimesUp = () => (
       <h1 className="text-slate-100 text-center font-bold	text-2xl z-10">
         TIME&apos;S UP!
       </h1>
-      <span className="text-lg z-10 max-w-40 text-center">Gathering Data For Next Phase</span>
+      <span className="text-lg z-10 max-w-40 text-center">
+        Gathering Data For Next Phase
+      </span>
     </div>
   </div>
 );
 
 const Game = ({ gameId }: { gameId: string }) => {
   const { gameState, currentPhase } = useGame();
-
+  const {
+    isOpen: drawerIsOpen,
+    openDrawer,
+    closeDrawer,
+    toggleDrawer,
+  } = useDrawer();
   const [currentView, setCurrentView] = useState<string>("action");
+  const [showPhaseList, setShowPhaseList] = useState<boolean>(true);
   const constraintsRef = useRef(null);
   const [isTimerAtZero, setIsTimerAtZero] = useState(false);
+  const { isOpen, onOpen, onClose, onOpenChange } = useDisclosure();
+  const gameActionContainerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    onOpen();
+  }, [onOpen]);
   useEffect(() => {
     const timer = setInterval(() => {
       if (currentPhase) {
@@ -132,14 +153,22 @@ const Game = ({ gameId }: { gameId: string }) => {
       <Meeting />
     ) : currentRoundData?.phase.name === PhaseName.START_TURN ? (
       <Meeting />
+    ) : currentRoundData?.phase.name === PhaseName.PRIZE_VOTE_ACTION ? (
+      <PrizeRound />
+    ) : currentRoundData?.phase.name === PhaseName.PRIZE_VOTE_RESOLVE ? (
+      <PrizeRound isRevealRound />
+    ) : currentRoundData?.phase.name === PhaseName.PRIZE_DISTRIBUTE_ACTION ? (
+      <DistributePrizes />
+    ) : currentRoundData?.phase.name === PhaseName.PRIZE_DISTRIBUTE_RESOLVE ? (
+      <DistributePrizes />
     ) : currentRoundData?.phase.name === PhaseName.STOCK_RESOLVE_LIMIT_ORDER ? (
       <PendingOrders />
     ) : currentRoundData?.phase.name === PhaseName.STOCK_ACTION_ORDER ? (
-      <StockRoundAction />
+      <StockRoundAction forwardedRef={gameActionContainerRef.current} />
     ) : currentRoundData?.phase.name === PhaseName.STOCK_ACTION_RESULT ? (
-      <StockRoundAction />
+      <StockRoundAction forwardedRef={gameActionContainerRef.current} />
     ) : currentRoundData?.phase.name === PhaseName.STOCK_ACTION_REVEAL ? (
-      <StockRoundOrderGrid />
+      <StockRoundOrderGrid forwardedRef={gameActionContainerRef.current} />
     ) : currentRoundData?.phase.name ===
       PhaseName.STOCK_RESOLVE_MARKET_ORDER ? (
       <PendingOrders isResolving={true} />
@@ -195,9 +224,15 @@ const Game = ({ gameId }: { gameId: string }) => {
     ) : null;
 
   return (
-    <div className="relative flex flex-grow overflow-hidden">
-      <GameSidebar />
-      <motion.div
+    <>
+      <Drawer.Root
+        open={drawerIsOpen}
+        onOpenChange={toggleDrawer}
+        direction="right"
+      >
+        <div className="relative flex flex-col lg:flex-row flex-grow w-full overflow-y scrollbar lg:overflow-hidden">
+          <GameSidebar />
+          {/* <motion.div
         className="absolute inset-0 z-10 pointer-events-none"
         ref={constraintsRef}
       >
@@ -208,29 +243,76 @@ const Game = ({ gameId }: { gameId: string }) => {
         >
           <TabView gameId={gameId} />
         </motion.div>
-      </motion.div>
-      <div className="flex flex-col w-full">
-        <GameTopBar gameId={gameId} handleCurrentView={handleCurrentView} />
-        <div className="relative flex justify-between overflow-y-auto">
-          <div
-            className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${
-              isTimerAtZero
-                ? "opacity-100 z-20 bg-black bg-opacity-50"
-                : "opacity-0 z-0"
-            }`}
-          >
-            <TimesUp />
+      </motion.div> */}
+          <div className="flex flex-col relative w-full lg:w-3/4">
+            {gameState.gameStatus == GameStatus.FINISHED && (
+              <Button
+                color="primary"
+                className="h-44 w-[90%] bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg transform transition-transform duration-300 hover:scale-90 hover:shadow-2xl"
+                onPress={onOpen}
+              >
+                <div className="flex flex-col gap-2 items-center">
+                  <span className="text-2xl font-bold animate-pulse">
+                    Game Is Finished!
+                  </span>
+                  <span className="text-xl font-medium">View Game Results</span>
+                </div>
+              </Button>
+            )}
+
+            <GameTopBar
+              handleCurrentView={handleCurrentView}
+              handleTogglePhaseList={() => setShowPhaseList((prev) => !prev)}
+              isTimerAtZero={isTimerAtZero}
+            />
+            <div
+              className="relative flex justify-between overflow-y-auto scrollbar w-full"
+              ref={gameActionContainerRef}
+            >
+              {/* {currentPhase?.name &&
+                isActivePhase(currentPhase.name) &&
+                isTimerAtZero && (
+                  <div className="absolute inset-0 flex items-center justify-center transition-opacity duration-300 opacity-100 z-20 bg-black bg-opacity-50">
+                    <TimesUp />
+                  </div>
+                )} */}
+              <div
+                className={`active-panel flex flex-col h-full max-h-full w-full p-4 overflow-y-auto scrollbar ${
+                  showPhaseList && "basis-10/12"
+                }`}
+              >
+                {currentView === "action" && renderCurrentPhase}
+                {currentView === "chart" && <StockChart />}
+                {currentView === "pending" && <PendingOrders />}
+                {currentView == "economy" && <EndTurnEconomy />}
+                {currentView == "markets" && <StockRoundOrderGrid />}
+                {gameState.gameStatus == GameStatus.FINISHED && (
+                  <GameResults
+                    isOpen={isOpen}
+                    onOpen={onOpen}
+                    onClose={onClose}
+                    onOpenChange={onOpenChange}
+                  />
+                )}
+              </div>
+              <AnimatePresence>
+                {showPhaseList && (
+                  <motion.div
+                    className="overflow-y-auto max-h-full scrollbar"
+                    initial={{ x: 300 }}
+                    animate={{ x: 0 }}
+                    exit={{ x: 300 }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    <PhaseListComponent />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
-          <div className="basis-10/12	active-panel flex flex-col h-full p-4">
-            {currentView === "action" && renderCurrentPhase}
-            {currentView === "chart" && <StockChart />}
-            {currentView === "pending" && <PendingOrders />}
-            {currentView == "economy" && <EndTurnEconomy />}
-          </div>
-          <PhaseListComponent />
         </div>
-      </div>
-    </div>
+      </Drawer.Root>
+    </>
   );
 };
 

@@ -6,7 +6,15 @@ import {
   CheckIcon,
   ClockIcon,
 } from "@heroicons/react/24/solid";
-import { Avatar, Card, CardBody, CardHeader, Chip } from "@nextui-org/react";
+import {
+  Accordion,
+  AccordionItem,
+  Avatar,
+  Card,
+  CardBody,
+  CardHeader,
+  Chip,
+} from "@nextui-org/react";
 import "./PendingOrders.css";
 import { trpc } from "@sectors/app/trpc";
 import { useGame } from "./GameContext";
@@ -33,7 +41,17 @@ import { RiCloseCircleFill } from "@remixicon/react";
 import { flushAllTraces } from "next/dist/trace";
 import PlayerAvatar from "../Player/PlayerAvatar";
 import OptionContract from "./OptionContract";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
+
+const containerVariants = {
+  hidden: { opacity: 0, y: -20 }, // Defines the initial state of the component: invisible and slightly shifted upward
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { delay: 0.5, duration: 0.5 }, // The component fades in and moves to its original position with a delay and duration
+  },
+};
+
 interface GroupedOrders {
   [key: string]: PlayerOrderAllRelations[];
 }
@@ -84,23 +102,41 @@ const PendingMarketOrders = ({
       },
       orderBy: { createdAt: "asc" },
     });
+
   if (isLoadingPhases) return <div>Loading...</div>;
   if (!phasesOfStockRound) return <div>No phases found.</div>;
+
   const mapPhaseIdToSubRound = (phaseId: string) => {
     return phasesOfStockRound.findIndex((phase) => phase.id === phaseId) + 1;
   };
-  // Assuming marketOrders is an array of objects with name, companyName, orderType (buy/sell), and shares
+
+  // Group orders by orderStatus and company
   const groupedOrders = marketOrders.reduce(
-    (acc: GroupedOrders, order: PlayerOrderAllRelations) => {
-      const key = order.Company.name;
-      if (!acc[key]) {
-        acc[key] = [];
+    (
+      acc: Record<string, Record<string, PlayerOrderAllRelations[]>>,
+      order: PlayerOrderAllRelations
+    ) => {
+      const statusKey = order.orderStatus;
+      const companyKey = order.Company.name;
+
+      if (!acc[statusKey]) {
+        acc[statusKey] = {};
       }
-      acc[key].push(order);
+      if (!acc[statusKey][companyKey]) {
+        acc[statusKey][companyKey] = [];
+      }
+      acc[statusKey][companyKey].push(order);
       return acc;
     },
-    {} as GroupedOrders
+    {} as Record<string, Record<string, PlayerOrderAllRelations[]>>
   );
+  //sort grouped orders by game turn in DESCENDING order
+  Object.entries(groupedOrders).forEach(([status, companies]) => {
+    Object.entries(companies).forEach(([company, orders]) => {
+      orders.sort((a, b) => b.GameTurn.turn - a.GameTurn.turn);
+    });
+  });
+
   const checkmarkVariants = {
     hidden: { scale: 0 },
     visible: { scale: 1, transition: { duration: 0.5 } },
@@ -111,63 +147,87 @@ const PendingMarketOrders = ({
     visible: { opacity: 1, y: 0, transition: { delay: 0.5, duration: 0.5 } },
   };
 
+  // Render the orders in an accordion
   return (
-    <div className="space-y-2">
-      {Object.entries(groupedOrders).map(([company, orders]) => {
-        let netDifference: string | number = orders.reduce((acc, order) => {
-          //if order is IPO, skip it
-          if (order.location === ShareLocation.IPO) {
-            return acc;
-          }
-          return (
-            acc + (!order.isSell ? order.quantity || 0 : -(order.quantity || 0))
-          );
-        }, 0);
-        netDifference = netDifference > 0 ? `+${netDifference}` : netDifference;
-        if (netDifference === 0) {
-          netDifference = "+0";
-        }
-        //group orders by phaseId
-        const groupedOrdersByPhase = orders.reduce((acc, order) => {
-          const phaseId = order.phaseId;
-          if (!phaseId) return acc;
-          if (acc[phaseId]) {
-            acc[phaseId].orders.push(order);
-          } else {
-            acc[phaseId] = {
-              orders: [order],
-              subRound: mapPhaseIdToSubRound(order.phaseId),
-            };
-          }
-          return acc;
-        }, {} as { [key: string]: { orders: PlayerOrderAllRelations[]; subRound: number } });
-        return (
-          <div
-            key={company}
-            className="flex flex-col p-2 rounded gap-2"
-            style={{ backgroundColor: sectorColors[orders[0].Sector.name] }}
-          >
-            <div className="text-lg font-bold flex gap-2 bg-stone-600 p-2 content-center items-center">
-              {/* We need to animate the change in stock price or at least show the previous price and the current price.*/}
-              <ArrowTrendingUpIcon className="size-4" /> $
-              {orders[0].Company.currentStockPrice}
-              <span>
-                {company} {netDifference}
-              </span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {Object.entries(groupedOrdersByPhase).map(
-                ([phaseId, orders], index) => {
-                  return (
-                    <div className="flex flex-col" key={index}>
-                      <div>
-                        <span> Stock Round {orders.subRound} </span>
-                      </div>
-                      <div>
-                        {orders.orders.map((order, index) =>
-                          isResolving ? (
-                            <>
+    <Accordion
+      defaultExpandedKeys={[OrderStatus.PENDING, OrderStatus.FILLED]}
+      className="space-y-4"
+    >
+      {Object.entries(groupedOrders).map(([status, companies], index) => (
+        <AccordionItem key={status} aria-label={status} title={status}>
+          <div className="space-y-4 max-h-96 overflow-y-auto scrollbar">
+            {Object.entries(companies).map(([company, orders]) => {
+              // let netDifference: string | number = orders.reduce(
+              //   (acc, order) => {
+              //     if (order.location === ShareLocation.IPO) {
+              //       return acc;
+              //     }
+              //     return (
+              //       acc +
+              //       (!order.isSell
+              //         ? order.quantity || 0
+              //         : -(order.quantity || 0))
+              //     );
+              //   },
+              //   0
+              // );
+              // netDifference =
+              //   netDifference > 0 ? +${netDifference} : netDifference;
+              // if (netDifference === 0) {
+              //   netDifference = "+0";
+              // }
+
+              const groupedOrdersByPhase = orders.reduce(
+                (
+                  acc: {
+                    [key: string]: {
+                      orders: PlayerOrderAllRelations[];
+                      subRound: number;
+                    };
+                  },
+                  order
+                ) => {
+                  const phaseId = order.phaseId;
+                  if (!phaseId) return acc;
+                  if (acc[phaseId]) {
+                    acc[phaseId].orders.push(order);
+                  } else {
+                    acc[phaseId] = {
+                      orders: [order],
+                      subRound: mapPhaseIdToSubRound(order.phaseId),
+                    };
+                  }
+                  return acc;
+                },
+                {}
+              );
+
+              return (
+                <div
+                  key={company}
+                  className="flex flex-col p-2 rounded gap-2"
+                  style={{
+                    backgroundColor: sectorColors[orders[0].Sector.name],
+                  }}
+                >
+                  <div className="text-lg font-bold flex gap-2 bg-stone-600 p-2 content-center items-center">
+                    <ArrowTrendingUpIcon className="size-4" /> $
+                    {orders[0].Company.currentStockPrice}
+                    <span>{company}</span>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {Object.entries(groupedOrdersByPhase).map(
+                      ([phaseId, { orders, subRound }], index) => (
+                        <div className="flex flex-col" key={index}>
+                          {status == OrderStatus.PENDING && (
+                            <div>
+                              <span> Stock Round {subRound} </span>
+                            </div>
+                          )}
+                          <div className="flex flex-col">
+                            {orders.map((order, index) => (
                               <motion.div
+                                key={index}
                                 initial="hidden"
                                 animate="visible"
                                 variants={containerVariants}
@@ -179,7 +239,8 @@ const PendingMarketOrders = ({
                                   endContent={
                                     order.orderStatus == OrderStatus.FILLED ? (
                                       <CheckCircleIcon className="size-5 text-green-500" />
-                                    ) : OrderStatus.REJECTED ? (
+                                    ) : order.orderStatus ==
+                                      OrderStatus.REJECTED ? (
                                       <RiCloseCircleFill className="size-5 text-red-500" />
                                     ) : (
                                       <ClockIcon className="size-5 text-yellow-500" />
@@ -187,25 +248,19 @@ const PendingMarketOrders = ({
                                   }
                                 />
                               </motion.div>
-                            </>
-                          ) : (
-                            <OrderChipWithPlayer
-                              order={order}
-                              status={order.orderStatus}
-                              key={index}
-                            />
-                          )
-                        )}
-                      </div>
-                    </div>
-                  );
-                }
-              )}
-            </div>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        );
-      })}
-    </div>
+        </AccordionItem>
+      ))}
+    </Accordion>
   );
 };
 
@@ -216,67 +271,90 @@ const PendingLimitOrders = ({
   limitOrders: PlayerOrderAllRelations[];
   isResolving?: boolean;
 }) => {
-  // Group orders by company
-  const groupedOrders = limitOrders.reduce(
-    (acc: GroupedOrders, order: PlayerOrderAllRelations) => {
-      const key = order.Company.name;
-      if (!acc[key]) {
-        acc[key] = [];
-      }
-      acc[key].push(order);
-      return acc;
-    },
-    {} as GroupedOrders
-  );
+  // Group orders by orderStatus and company
+  const groupedOrders = useMemo(() => {
+    return limitOrders.reduce(
+      (acc: Record<string, GroupedOrders>, order: PlayerOrderAllRelations) => {
+        const statusKey = order.orderStatus;
+        const companyKey = order.Company.name;
 
-  // Sort each group's orders by amount in descending order
-  const sortedGroupedOrders = Object.entries(groupedOrders).map(
-    ([company, orders]) => {
-      const sortedOrders = [...orders].sort(
-        (a, b) => (b.value || 0) - (a.value || 0)
-      );
-      return { company, orders: sortedOrders };
-    }
-  );
+        if (!acc[statusKey]) {
+          acc[statusKey] = {};
+        }
+        if (!acc[statusKey][companyKey]) {
+          acc[statusKey][companyKey] = [];
+        }
+        acc[statusKey][companyKey].push(order);
+        return acc;
+      },
+      {} as Record<string, GroupedOrders>
+    );
+  }, [limitOrders]);
+  //sort grouped orders by game turn in DESCENDING order
+  Object.entries(groupedOrders).forEach(([status, companies]) => {
+    Object.entries(companies).forEach(([company, orders]) => {
+      orders.sort((a, b) => b.GameTurn.turn - a.GameTurn.turn);
+    });
+  });
 
-  // Sort groups by the highest order amount within each group in descending order
-  sortedGroupedOrders.sort(
-    (a, b) => (b.orders[0].value || 0) - (a.orders[0].value || 0)
-  );
-
+  // Render the orders in an accordion
   return (
-    <div className="space-y-4">
-      {sortedGroupedOrders.map(({ company, orders }) => (
-        <div key={company}>
-          <div className="text-lg font-bold mb-2">{company}</div>
-          <div className="space-y-2">
-            {orders.map((order, index) => (
-              <div
-                key={index}
-                className="p-2 rounded flex items-center gap-2"
-                style={{ backgroundColor: sectorColors[order.Sector.name] }}
-              >
-                <PlayerAvatar player={order.Player} />
-                <div>{order.Company.name}</div>
-                <div>
-                  {String(order.orderType).toUpperCase()} @ {order.value}
+    <Accordion
+      defaultExpandedKeys={[
+        OrderStatus.OPEN,
+        OrderStatus.PENDING,
+        OrderStatus.FILLED_PENDING_SETTLEMENT,
+        OrderStatus.FILLED,
+      ]}
+      className="space-y-4"
+    >
+      {Object.entries(groupedOrders).map(([status, companies], index) => (
+        <AccordionItem key={status} aria-label={status} title={status}>
+          <div className="space-y-4">
+            {Object.entries(companies).map(([company, orders]) => {
+              // Sort each company's orders by amount in descending order
+              const sortedOrders = [...orders].sort(
+                (a, b) => (b.value || 0) - (a.value || 0)
+              );
+
+              return (
+                <div key={company}>
+                  <div className="text-lg font-bold mb-2">{company}</div>
+                  <div className="space-y-2">
+                    {sortedOrders.map((order, index) => (
+                      <div
+                        key={index}
+                        className="p-2 rounded flex items-center gap-2"
+                        style={{
+                          backgroundColor: sectorColors[order.Sector.name],
+                        }}
+                      >
+                        <PlayerAvatar player={order.Player} />
+                        <div>{order.Company.name}</div>
+                        <div>
+                          {String(order.orderType).toUpperCase()} @{" "}
+                          {order.value}
+                        </div>
+                        {order.orderStatus === OrderStatus.OPEN ? (
+                          <ClockIcon className="size-5 text-yellow-500" />
+                        ) : order.orderStatus ===
+                          OrderStatus.FILLED_PENDING_SETTLEMENT ? (
+                          <ClockIcon className="size-5 text-green-500" />
+                        ) : order.orderStatus === OrderStatus.FILLED ? (
+                          <CheckCircleIcon className="size-5 text-green-500" />
+                        ) : (
+                          <ClockIcon className="size-5 text-red-500" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                {order.orderStatus == OrderStatus.OPEN ? (
-                  <ClockIcon className="size-5 text-yellow-500" />
-                ) : order.orderStatus ==
-                  OrderStatus.FILLED_PENDING_SETTLEMENT ? (
-                  <ClockIcon className="size-5 text-green-500" />
-                ) : order.orderStatus == OrderStatus.FILLED ? (
-                  <CheckCircleIcon className="size-5 text-green-500" />
-                ) : (
-                  <ClockIcon className="size-5 text-red-500" />
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
-        </div>
+        </AccordionItem>
       ))}
-    </div>
+    </Accordion>
   );
 };
 
@@ -285,6 +363,8 @@ const PendingShortOrders = ({
 }: {
   shortOrders: PlayerOrderAllRelations[];
 }) => {
+  // sort short orders by game turn in DESCENDING order
+  shortOrders.sort((a, b) => b.GameTurn.turn - a.GameTurn.turn);
   return (
     <div className="space-y-2">
       {shortOrders.map((order, index) => (
@@ -353,7 +433,7 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
   }, [currentPhase?.name]);
   if (isLoading) return <div>Loading...</div>;
   if (!playerOrders) return <div>No pending orders.</div>;
-
+  console.log('playerOrders', playerOrders);
   const limitOrdersPendingSettlement = playerOrders.filter(
     (order) =>
       order.orderType === OrderType.LIMIT &&
@@ -370,13 +450,6 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
 
   let marketOrders = playerOrders.filter(
     (order) => order.orderType === OrderType.MARKET
-  );
-  //filter out any market orders that are not from the current stock round and are filled
-  const marketOrdersToFilterOut = marketOrders.filter(
-    (order) => order.stockRoundId !== currentPhase?.stockRoundId
-  );
-  marketOrders = marketOrders.filter(
-    (order) => !marketOrdersToFilterOut.includes(order)
   );
   const shortOrders = playerOrders.filter(
     (order) => order.orderType === OrderType.SHORT
@@ -498,7 +571,7 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
             {gameState?.distributionStrategy ==
             DistributionStrategy.BID_PRIORITY ? (
               <div className="flex flex-col gap-2">
-                <span>Big Priority</span>
+                <span>Bid Priority</span>
                 <p>
                   Bids are placed in priority according to the highest ask price
                   of the market order. This ask price is quoted per share. If

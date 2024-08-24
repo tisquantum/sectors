@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { Prisma, ProductionResult } from '@prisma/client';
+import { ProductionResultWithCompany } from '@server/prisma/prisma.types';
 
 @Injectable()
 export class ProductionResultService {
@@ -20,7 +21,7 @@ export class ProductionResultService {
     cursor?: Prisma.ProductionResultWhereUniqueInput;
     where?: Prisma.ProductionResultWhereInput;
     orderBy?: Prisma.ProductionResultOrderByWithRelationInput;
-  }): Promise<ProductionResult[]> {
+  }): Promise<ProductionResultWithCompany[]> {
     const { skip, take, cursor, where, orderBy } = params;
     return this.prisma.productionResult.findMany({
       skip,
@@ -28,16 +29,39 @@ export class ProductionResultService {
       cursor,
       where,
       orderBy,
+      include: {
+        Company: {
+          include: {
+            Sector: true,
+            Share: {
+              include: {
+                Player: true,
+              },
+            },
+            StockHistory: {
+              include: {
+                Phase: true,
+              },
+            },
+            Cards: true,
+            CompanyActions: true,
+          },
+        },
+      },
     });
   }
 
-  async createProductionResult(data: Prisma.ProductionResultCreateInput): Promise<ProductionResult> {
+  async createProductionResult(
+    data: Prisma.ProductionResultCreateInput,
+  ): Promise<ProductionResult> {
     return this.prisma.productionResult.create({
       data,
     });
   }
 
-  async createManyProductionResults(data: Prisma.ProductionResultCreateManyInput[]): Promise<Prisma.BatchPayload> {
+  async createManyProductionResults(
+    data: Prisma.ProductionResultCreateManyInput[],
+  ): Promise<Prisma.BatchPayload> {
     return this.prisma.productionResult.createMany({
       data,
       skipDuplicates: true,
@@ -66,7 +90,9 @@ export class ProductionResultService {
     });
   }
 
-  async deleteProductionResult(where: Prisma.ProductionResultWhereUniqueInput): Promise<ProductionResult> {
+  async deleteProductionResult(
+    where: Prisma.ProductionResultWhereUniqueInput,
+  ): Promise<ProductionResult> {
     return this.prisma.productionResult.delete({
       where,
     });

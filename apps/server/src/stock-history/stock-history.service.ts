@@ -1,11 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
-import { Prisma, StockAction, StockHistory } from '@prisma/client';
 import {
+  OperatingRoundAction,
+  Prisma,
+  StockAction,
+  StockHistory,
+} from '@prisma/client';
+import {
+  getStepsBetweenTwoNumbers,
+  getStockPriceClosestEqualOrLess,
   getStockPriceStepsUp,
   getStockPriceWithStepsDown,
+  stockTierChartRanges,
 } from '@server/data/constants';
-import { Action } from 'rxjs/internal/scheduler/Action';
+import { getTierMaxValue, getTierMinValue } from '@server/data/helpers';
 
 @Injectable()
 export class StockHistoryService {
@@ -83,21 +91,14 @@ export class StockHistoryService {
     //get new stock price
     const newPrice = getStockPriceStepsUp(currentStockPrice, steps);
     //update company stock price
-    const updatedCompany = await this.prisma.company.update({
+    await this.prisma.company.update({
       where: { id: companyId },
       data: {
         currentStockPrice: newPrice,
       },
     });
-    await this.prisma.gameLog.create({
-      data: {
-        gameId: gameId,
-        content: `Stock price for ${updatedCompany.name} moved up by ${steps} steps`,
-      },
-    });
     //create new stock history
     return this.createStockHistory({
-      gameId: gameId,
       price: newPrice,
       stepsMoved: steps,
       action: action,
@@ -109,6 +110,11 @@ export class StockHistoryService {
       Company: {
         connect: {
           id: companyId,
+        },
+      },
+      Game: {
+        connect: {
+          id: gameId,
         },
       },
     });
@@ -122,24 +128,41 @@ export class StockHistoryService {
     steps: number,
     action: StockAction,
   ): Promise<StockHistory> {
-    //get new stock price
-    const newPrice = getStockPriceWithStepsDown(currentStockPrice, steps);
+    //get company actions for companyId
+    const hasRegulatoryShield = await this.prisma.companyAction.findFirst({
+      where: {
+        companyId: companyId,
+        action: OperatingRoundAction.REGULATORY_SHIELD,
+      },
+    });
+    let newPrice = getStockPriceWithStepsDown(currentStockPrice, steps);
+    //if company has regulatory shield, prevent company from falling below the top-most spot of the stock tier underneath it
+    if (hasRegulatoryShield) {
+      //get stock tier for current stock price
+      const currentTier = stockTierChartRanges.find(
+        (tier) =>
+          currentStockPrice >= tier.chartMinValue &&
+          currentStockPrice <= tier.chartMaxValue,
+      );
+      //get tier below current tier
+      const tierBelow = stockTierChartRanges.find(
+        (tier) => tier.chartMaxValue === (currentTier?.chartMinValue || 0) - 1,
+      );
+      //check if new price is below tier below tier below max value
+      if (tierBelow && newPrice < getTierMaxValue(tierBelow.tier)) {
+        newPrice = getStockPriceClosestEqualOrLess(tierBelow.chartMaxValue);
+        steps = getStepsBetweenTwoNumbers(currentStockPrice, newPrice);
+      }
+    }
     //update company stock price
-    const updatedCompany = await this.prisma.company.update({
+    await this.prisma.company.update({
       where: { id: companyId },
       data: {
         currentStockPrice: newPrice,
       },
     });
-    await this.prisma.gameLog.create({
-      data: {
-        gameId: gameId,
-        content: `Stock price for ${updatedCompany.name} moved down by ${steps} steps`,
-      },
-    });
     //create new stock history
     return this.createStockHistory({
-      gameId: gameId,
       price: newPrice,
       stepsMoved: steps,
       action: action,
@@ -151,6 +174,11 @@ export class StockHistoryService {
       Company: {
         connect: {
           id: companyId,
+        },
+      },
+      Game: {
+        connect: {
+          id: gameId,
         },
       },
     });

@@ -57,9 +57,14 @@ export class SectorService {
                 Player: true,
               },
             },
-            StockHistory: true,
+            StockHistory: {
+              include: {
+                Phase: true,
+              },
+            },
             Sector: true,
             Cards: true,
+            CompanyActions: true,
           },
         },
       },
@@ -94,6 +99,19 @@ export class SectorService {
       data,
       where,
     });
+  }
+  async updateMany(
+    updates: { id: string; consumers: number }[],
+  ): Promise<void> {
+    const updatePromises = updates.map((update) =>
+      this.prisma.sector.update({
+        where: { id: update.id },
+        data: { consumers: update.consumers },
+      }),
+    );
+
+    // Execute all updates in parallel
+    await Promise.all(updatePromises);
   }
 
   async deleteSector(where: Prisma.SectorWhereUniqueInput): Promise<Sector> {

@@ -148,3 +148,40 @@ I'm thinking short orders can only be performed on a company you have no ownersh
 - TODO: Split out dividend payout.  Make sure calculations are correct.
 
 - Should prestige bonus be based on selling out of your inventory or hitting the expected target customers?  If a companies product is hard to get, does that make it prestigious?
+
+- TODO: Add hyperlinks to company and player names so that when you click it will automatically bring up that detailed accordion in the left panel.
+
+- TODO: Player cash is going to zero at the end of a turn?
+
+- TODO: Limit order functionality, unlimited sells, 1 buy?
+
+- TODO: Extend pending order component to include dropdowns for all order statuses
+
+- TODO: Option Order action limit?
+
+- TODO: Bank breaks x amount, 10K? Give two company actions per OR
+
+- TODO: Market notifications for orders placed, so players don't need to monitor both tabs to see if something popped up
+
+- TODO: Because companies start with 10 shares, make floats divisble by 10 (done)
+
+- TODO: Turn order on company carousel is not accurate
+
+- TODO: Better illustrate divestment stocks being lost, not the stocks you own
+
+- TODO: Better illustrate how consumers move to each sector
+
+- TODO: A table showing company demand more clearly during revenue
+
+- TODO: Game results not correct? Net worth doesn't match placement
+- TODO: Production OR revenue results breaking db, too much write data?
+- TODO: Dropdown for player share ownership on table per row
+- TODO: Increase timer for company action decisions
+- TODO: How do we handle bankruptcy? (replace actions with bankruptcy gameplay)
+- TODO: Sector demand, should we give options for increasing?
+- TODO: Generated Options should be for active companies only
+- TODO: Insolvency should only be allowed in company action vote round
+- TODO: Insolvency actions should only be rendered for the current turn
+- TODO: Start on SUPPLY_CHAIN for passive, PRICE_FREEZE needs to be implemented
+- prizes for sectors that are inactive???
+- company demand vs sector demand 

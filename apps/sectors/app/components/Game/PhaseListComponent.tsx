@@ -7,6 +7,10 @@ const phasesInOrder = [
   PhaseName.INFLUENCE_BID_ACTION,
   PhaseName.INFLUENCE_BID_RESOLVE,
   PhaseName.START_TURN,
+  PhaseName.PRIZE_VOTE_ACTION,
+  PhaseName.PRIZE_VOTE_RESOLVE,
+  PhaseName.PRIZE_DISTRIBUTE_ACTION,
+  PhaseName.PRIZE_DISTRIBUTE_RESOLVE,
   //PhaseName.STOCK_MEET,
   PhaseName.STOCK_RESOLVE_LIMIT_ORDER,
   PhaseName.STOCK_ACTION_ORDER,
@@ -86,6 +90,15 @@ const PhaseListComponent = () => {
       (phase) =>
         phase !== PhaseName.INFLUENCE_BID_ACTION &&
         phase !== PhaseName.INFLUENCE_BID_RESOLVE
+    );
+  }
+  if (currentTurn.turn % 3 !== 0) {
+    _phasesInOrder = _phasesInOrder.filter(
+      (phase) =>
+        phase !== PhaseName.PRIZE_VOTE_ACTION &&
+        phase !== PhaseName.PRIZE_VOTE_RESOLVE &&
+        phase !== PhaseName.PRIZE_DISTRIBUTE_ACTION &&
+        phase !== PhaseName.PRIZE_DISTRIBUTE_RESOLVE
     );
   }
   return (

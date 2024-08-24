@@ -3,6 +3,9 @@ import { Avatar, AvatarGroup, Badge } from "@nextui-org/react";
 import { PlayerWithShares } from "@server/prisma/prisma.types";
 import { StockAggregation } from "./PlayersOverview";
 import ShareComponent from "../Company/Share";
+import { trpc } from "@sectors/app/trpc";
+import { OrderStatus } from "@server/prisma/prisma.client";
+import { OptionContractMinimal } from "../Game/OptionContractMinimal";
 
 const playerCompanies = [
   {
@@ -34,9 +37,34 @@ const playerCompanies = [
 
 const PlayerShares = ({
   playerWithShares,
+  withAdvancedOrderTypes = true,
 }: {
   playerWithShares: PlayerWithShares;
+  withAdvancedOrderTypes?: boolean;
 }) => {
+  const {
+    data: optionsOrders,
+    isLoading,
+    isError,
+  } = trpc.playerOrder.listPlayerOrdersAllRelations.useQuery({
+    where: {
+      playerId: playerWithShares.id,
+      optionContractId: { not: null },
+      orderStatus: OrderStatus.OPEN,
+    },
+  });
+  const {
+    data: companies,
+    isLoading: isLoadingCompanies,
+    isError: isErrorCompanies,
+  } = trpc.company.listCompanies.useQuery({
+    where: {
+      id: { in: playerWithShares.Share.map((share) => share.companyId) },
+    },
+  });
+  if (isLoadingCompanies) return <div>Loading...</div>;
+  if (isErrorCompanies) return <div>Error...</div>;
+  if (!companies) return <div>No companies found</div>;
   //get all shares that don't have shortOrderId
   const marketShares = playerWithShares.Share.filter(
     (share) => !share.shortOrderId
@@ -49,11 +77,17 @@ const PlayerShares = ({
   const shortSharesAggregation = shortShares.reduce(
     (acc: Record<string, StockAggregation>, playerShare) => {
       const { shortOrderId, price } = playerShare;
-      if(!shortOrderId) {
+      if (!shortOrderId) {
         return acc;
       }
       if (!acc[shortOrderId]) {
-        acc[shortOrderId] = { totalShares: 0, totalValue: 0, company: playerShare.Company };
+        acc[shortOrderId] = {
+          totalShares: 0,
+          totalValue: 0,
+          company: companies.find(
+            (company) => company.id == playerShare.Company.id
+          ),
+        };
       }
       acc[shortOrderId].totalShares += 1;
       acc[shortOrderId].totalValue += price;
@@ -70,7 +104,9 @@ const PlayerShares = ({
       }
       acc[companyId].totalShares += 1;
       acc[companyId].totalValue += price;
-      acc[companyId].company = playerShare.Company;
+      acc[companyId].company = companies.find(
+        (company) => company.id == playerShare.Company.id
+      );
       return acc;
     },
     {}
@@ -86,7 +122,8 @@ const PlayerShares = ({
       company: aggregation.company,
     })
   );
-
+  if (isLoading) return <div>Loading...</div>;
+  if (isError) return <div>Error...</div>;
   return (
     <div className="flex flex-wrap gap-4">
       {playerCompanies.length > 0 ? (
@@ -98,26 +135,55 @@ const PlayerShares = ({
             <ShareComponent
               name={company.company?.stockSymbol || ""}
               quantity={company.shareTotal}
-              price={company.pricePerShare}
+              price={company.company?.currentStockPrice || 0}
             />
-            <div className="text-sm mt-1">${company.totalValue.toFixed(2)}</div>
+            <div className="text-sm mt-1">
+              ${(company.company?.currentStockPrice || 0) * company.shareTotal}
+            </div>
           </div>
         ))
       ) : (
         <div>No shares owned.</div>
       )}
-      <div className="w-full border-t border-gray-300 my-4"></div>
-      <div className="flex flex-col gap-2">
-        <div className="text-lg">Short Orders</div>
-        {shortSharesAggregation &&
-          Object.entries(shortSharesAggregation).map(
-            ([shortOrderId, aggregation]) => (
-              <div key={shortOrderId} className="flex flex-col gap-2">
-                <ShareComponent name={aggregation.company?.stockSymbol || ""} quantity={aggregation.totalShares} price={aggregation.totalValue / aggregation.totalShares} />
-              </div>
-            )
-          )}
-      </div>
+      {withAdvancedOrderTypes && (
+        <>
+          <div className="w-full border-t border-gray-300 my-4"></div>
+          <div className="flex flex-col gap-2">
+            <div className="text-lg">Short Orders</div>
+            {shortSharesAggregation &&
+              Object.entries(shortSharesAggregation).map(
+                ([shortOrderId, aggregation]) => (
+                  <div key={shortOrderId} className="flex flex-col gap-2">
+                    <ShareComponent
+                      name={aggregation.company?.stockSymbol || ""}
+                      quantity={aggregation.totalShares}
+                      price={aggregation.totalValue / aggregation.totalShares}
+                    />
+                  </div>
+                )
+              )}
+          </div>
+          <div className="flex flex-col gap-2">
+            <div className="text-lg">Options Orders</div>
+            {optionsOrders &&
+              optionsOrders.map((order) => {
+                console.log("order", order);
+                return (
+                  <div key={order.id} className="flex flex-col gap-2">
+                    {order.OptionContract && order.Company && (
+                      <OptionContractMinimal
+                        contract={{
+                          ...order.OptionContract,
+                          Company: order.Company,
+                        }}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+          </div>
+        </>
+      )}
     </div>
   );
 };

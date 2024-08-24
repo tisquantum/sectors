@@ -37,7 +37,7 @@ const TopBar = () => {
     router.push("/login");
   };
   return (
-    <Navbar isBordered>
+    <Navbar isBordered shouldHideOnScroll>
       <NavbarBrand>
         <Link href="#">Sectors</Link>
       </NavbarBrand>
@@ -62,7 +62,7 @@ const TopBar = () => {
                         <h1 className="text-3xl font-bold">Game Rules</h1>
                       </div>
                     </ModalHeader>
-                    <ModalBody className="overflow-y-scroll">
+                    <ModalBody className="overflow-y-scroll scrollbar">
                       <Rules />
                     </ModalBody>
                     <ModalFooter>

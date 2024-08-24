@@ -1,6 +1,7 @@
 import {
   Card,
   Company,
+  CompanyStatus,
   OrderType,
   Phase,
   PhaseName,
@@ -11,15 +12,20 @@ import {
   RoundType,
   Sector,
   SectorName,
+  Share,
   ShareLocation,
   StockTier,
 } from '@prisma/client';
 import {
+  CompanyOperationOrderPartial,
   CompanyWithSector,
+  CompanyWithSectorPartial,
   PlayerOrderWithCompany,
+  ShareWithCompany,
 } from '@server/prisma/prisma.types';
 import {
-  AUTOMATION_CARD_REDUCTION_AMOUNT,
+  AUTOMATION_EFFECT_OPERATIONS_REDUCTION,
+  BOOM_CYCLE_STOCK_CHART_BONUS,
   DEFAULT_RESEARCH_DECK_SIZE,
   GOVERNMENT_GRANT_AMOUNT,
   PRESTIGE_TRACK_LENGTH,
@@ -27,9 +33,19 @@ import {
   PrestigeTrackItem,
   STOCK_ACTION_SUB_ROUND_MAX,
   StockTierChartRange,
+  getStockPriceClosestEqualOrMore,
   stockGridPrices,
   stockTierChartRanges,
 } from './constants';
+import {
+  consumerCyclical,
+  consumerDefensive,
+  energy,
+  healthcare,
+  industrial,
+  materials,
+  technology,
+} from './gameData';
 interface NextPhaseOptions {
   allCompaniesHaveVoted?: boolean;
   stockActionSubRound?: number;
@@ -61,6 +77,26 @@ export function determineNextGamePhase(
   }
   switch (phaseName) {
     case PhaseName.START_TURN:
+      return {
+        phaseName: PhaseName.PRIZE_VOTE_ACTION,
+        roundType: RoundType.INFLUENCE,
+      };
+    case PhaseName.PRIZE_VOTE_ACTION:
+      return {
+        phaseName: PhaseName.PRIZE_VOTE_RESOLVE,
+        roundType: RoundType.INFLUENCE,
+      };
+    case PhaseName.PRIZE_VOTE_RESOLVE:
+      return {
+        phaseName: PhaseName.PRIZE_DISTRIBUTE_ACTION,
+        roundType: RoundType.INFLUENCE,
+      };
+    case PhaseName.PRIZE_DISTRIBUTE_ACTION:
+      return {
+        phaseName: PhaseName.PRIZE_DISTRIBUTE_RESOLVE,
+        roundType: RoundType.INFLUENCE,
+      };
+    case PhaseName.PRIZE_DISTRIBUTE_RESOLVE:
       return {
         phaseName: PhaseName.STOCK_RESOLVE_LIMIT_ORDER,
         roundType: RoundType.STOCK,
@@ -267,22 +303,89 @@ export function determineFloatPrice(sector: Sector) {
   return closest;
 }
 
+/**
+ * Calculate the steps a price will move given revenue and current price.
+ * The price will jump as many steps as is divisible by the revenue and the current price.
+ * Should the steps hit the next tier, the steps will stop being counted halting the price
+ * at the next tier's minimum value.  Also factor in BOOM_CYCLE passive effect if it is available.
+ *
+ * @param revenue
+ * @param currentStockPrice
+ * @returns
+ */
+export function getStepsWithMaxBeingTheNextTierMin(
+  revenue: number,
+  currentStockPrice: number,
+  companyHasBoomCyclePassive: boolean,
+): number {
+  let remainingSteps = Math.floor(revenue / currentStockPrice);
+
+  // Get current index
+  const currentIndex = stockGridPrices.indexOf(currentStockPrice);
+  if (currentIndex === -1) throw new Error('Invalid current stock price');
+
+  if (currentIndex + remainingSteps >= stockGridPrices.length) {
+    return stockGridPrices.length - 1 - currentIndex;
+  }
+
+  const theoreticalNewPrice = stockGridPrices[currentIndex + remainingSteps];
+  const currentTier = getCurrentTierBySharePrice(currentStockPrice);
+  const nextTier = getNextTier(currentTier);
+
+  if (theoreticalNewPrice <= getTierMaxValue(currentTier)) {
+    return remainingSteps;
+  }
+
+  if (!nextTier) {
+    return Math.min(remainingSteps, stockGridPrices.length - 1 - currentIndex);
+  }
+
+  const nextTierMinValue = getTierMinValue(nextTier);
+  const nextGridPrice = getStockPriceClosestEqualOrMore(nextTierMinValue);
+  let stoppingPointIndex = stockGridPrices.indexOf(nextGridPrice);
+
+  if (stoppingPointIndex === -1) {
+    console.error(
+      'Stopping point not found:',
+      stoppingPointIndex,
+      nextGridPrice,
+    );
+    return Math.min(remainingSteps, stockGridPrices.length - 1 - currentIndex);
+  }
+
+  if (companyHasBoomCyclePassive) {
+    stoppingPointIndex = Math.min(
+      stoppingPointIndex + BOOM_CYCLE_STOCK_CHART_BONUS,
+      stockGridPrices.length - 1,
+    );
+  }
+
+  return Math.min(stoppingPointIndex - currentIndex, remainingSteps);
+}
+
 export function determineStockTier(stockPrice: number): StockTier {
   return stockTierChartRanges.find(
     (range) => stockPrice <= range.chartMaxValue,
   )!.tier;
 }
 
-function getTierMaxValue(tier: StockTier): number {
+export function getTierMaxValue(tier: StockTier): number {
   return stockTierChartRanges.find((range) => range.tier === tier)!
     .chartMaxValue;
+}
+
+export function getTierMinValue(tier: StockTier): number {
+  return stockTierChartRanges.find((range) => range.tier === tier)!
+    .chartMinValue;
 }
 
 export function getCurrentTierBySharePrice(
   currentSharePrice: number,
 ): StockTier {
   return stockTierChartRanges.find(
-    (range) => currentSharePrice <= range.chartMaxValue,
+    (range) =>
+      currentSharePrice >= range.chartMinValue &&
+      currentSharePrice <= range.chartMaxValue,
   )!.tier;
 }
 
@@ -369,18 +472,26 @@ export function calculateMarginAccountMinimum(shortOrderValue: number): number {
   return Math.ceil(shortOrderValue / 2);
 }
 
-export function companyPriorityOrderOperations(companies: CompanyWithSector[]) {
+export function companyPriorityOrderOperations(
+  companies: CompanyOperationOrderPartial[],
+) {
   // PRIORITY for production and consumption of goods
-  // 1: Sort companies by prestige tokens DESC
-  // 2. Sory companies by unit price ASC (cheapest first)
+  // 0: If company has ECONOMIES_OF_SCALE, it is considered to be the cheapest company regardless of it's unit price.
+  // 1. Sory companies by unit price ASC (cheapest first)
+  // 2: Sort companies by prestige tokens DESC
   // 3: Sort companies by demand score DESC
   return companies.sort((a, b) => {
-    if (b.prestigeTokens !== a.prestigeTokens) {
-      return b.prestigeTokens - a.prestigeTokens;
+    if (a.hasEconomiesOfScale && !b.hasEconomiesOfScale) {
+      return -1;
     } else if (a.unitPrice !== b.unitPrice) {
       return a.unitPrice - b.unitPrice;
+    } else if (b.prestigeTokens !== a.prestigeTokens) {
+      return b.prestigeTokens - a.prestigeTokens;
     } else {
-      return b.demandScore - a.demandScore;
+      return (
+        calculateDemand(b.demandScore, b.baseDemand) -
+        calculateDemand(a.demandScore, a.baseDemand)
+      );
     }
   });
 }
@@ -596,13 +707,17 @@ function descriptionForEffect(effect: ResearchCardEffect): string {
     case ResearchCardEffect.RENEWABLE_ENERGY:
       return 'This research has yielded a breakthrough in renewable energy.  Move stock price up 1 step.';
     case ResearchCardEffect.QUALITY_CONTROL:
-      return 'The company has achieved a breakthrough in quality control, receive 1 prestige token.';
+      return 'The company has achieved a breakthrough in quality control. Increase the supply permanently by 1.';
     case ResearchCardEffect.PRODUCT_DEVELOPMENT:
       return 'The company has achieved a breakthrough in product development. Increase the supply permanently by 1.';
     case ResearchCardEffect.ECONOMIES_OF_SCALE:
-      return "The next time this company operates, it is considered to be the cheapest company regardless of it's unit price.";
+      return "When this company operates, it is considered to be the cheapest company regardless of it's unit price.";
+    case ResearchCardEffect.CORPORATE_ESPIONAGE:
+      return 'Reduce all other companies prestige tokens in the sector by 2.';
     case ResearchCardEffect.AUTOMATION:
-      return `This company reduces it's operating costs by ${AUTOMATION_CARD_REDUCTION_AMOUNT}.`;
+      return `This company reduces it's operating costs by ${AUTOMATION_EFFECT_OPERATIONS_REDUCTION}.`;
+    case ResearchCardEffect.SPECIALIZATION:
+      return 'This company has specialized in a particular area. It receives two prestige.';
     case ResearchCardEffect.NO_DISCERNIBLE_FINDINGS:
       return 'This research yielded no discernible findings.';
     default:
@@ -613,6 +728,122 @@ function descriptionForEffect(effect: ResearchCardEffect): string {
 export function calculateCompanySupply(
   supplyBase: number,
   supplyScore: number,
+  supplyTemporary: number,
 ) {
-  return supplyBase + supplyScore;
+  return supplyBase + supplyScore + supplyTemporary;
+}
+
+export function isActivePhase(name: PhaseName) {
+  switch (name) {
+    case PhaseName.STOCK_ACTION_ORDER:
+    case PhaseName.INFLUENCE_BID_ACTION:
+    case PhaseName.OPERATING_PRODUCTION_VOTE:
+    case PhaseName.OPERATING_ACTION_COMPANY_VOTE:
+      return true;
+    default:
+      return false;
+  }
+}
+
+export function calculateNetWorth(
+  cashOnHand: number,
+  shares: ShareWithCompany[],
+) {
+  //filter out shares with companys that are bankrupt
+  const activeShares = shares.filter(
+    (share) => share.Company.status !== CompanyStatus.BANKRUPT,
+  );
+  return (
+    cashOnHand +
+    activeShares.reduce(
+      (acc, share) => acc + share.Company.currentStockPrice,
+      0,
+    )
+  );
+}
+
+export function getRandomCompany(sectorName: SectorName): {
+  name: string;
+  symbol: string;
+} {
+  switch (sectorName) {
+    case SectorName.HEALTHCARE:
+      return healthcare[Math.floor(Math.random() * healthcare.length)];
+    case SectorName.TECHNOLOGY:
+      return technology[Math.floor(Math.random() * technology.length)];
+    case SectorName.ENERGY:
+      return energy[Math.floor(Math.random() * energy.length)];
+    case SectorName.CONSUMER_DEFENSIVE:
+      return consumerDefensive[
+        Math.floor(Math.random() * consumerDefensive.length)
+      ];
+    case SectorName.CONSUMER_CYCLICAL:
+      return consumerCyclical[
+        Math.floor(Math.random() * consumerCyclical.length)
+      ];
+    case SectorName.INDUSTRIALS:
+      return industrial[Math.floor(Math.random() * industrial.length)];
+    case SectorName.MATERIALS:
+      return materials[Math.floor(Math.random() * materials.length)];
+    default:
+      return {
+        name: 'Generic Company',
+        symbol: 'GEN',
+      };
+  }
+}
+
+export function calculateDemand(demandScore: number, baseDemand: number) {
+  return demandScore + baseDemand;
+}
+
+export function calculateCertLimitForPlayerCount(playerCount: number): number {
+  // Define the extremes
+  const minPlayerCount = 2;
+  const maxPlayerCount = 20;
+  const maxCertLimit = 20;
+  const minCertLimit = 6;
+
+  // Ensure the player count is within the defined range
+  if (playerCount < minPlayerCount) {
+    return maxCertLimit;
+  }
+  if (playerCount > maxPlayerCount) {
+    return minCertLimit;
+  }
+
+  // Calculate the cert limit using linear interpolation
+  const certLimit =
+    maxCertLimit -
+    ((maxCertLimit - minCertLimit) / (maxPlayerCount - minPlayerCount)) *
+      (playerCount - minPlayerCount);
+
+  return Math.round(certLimit);
+}
+
+/**
+ * Helper function to group an array of objects by a specific key.
+ */
+export function groupBy<T>(array: T[], key: keyof T) {
+  return array.reduce(
+    (acc, obj) => {
+      const group = String(obj[key]); // Convert the key to a string
+      if (!acc[group]) {
+        acc[group] = [];
+      }
+      acc[group].push(obj);
+      return acc;
+    },
+    {} as Record<string, T[]>,
+  );
+}
+
+export function calculateAverageStockPrice(
+  companiesInSector: CompanyWithSector[],
+) {
+  return (
+    companiesInSector.reduce((acc, company) => {
+      return acc + company.currentStockPrice;
+    }, 0) / companiesInSector.length
+  );
 }

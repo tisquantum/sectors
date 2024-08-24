@@ -9,9 +9,11 @@ import {
   StockRound,
 } from "@server/prisma/prisma.client";
 import {
+  CompanyWithRelations,
   CompanyWithSector,
   PlayerOrderConcealedWithPlayer,
   PlayerOrderWithPlayerCompany,
+  PlayerOrderWithPlayerRevealed,
 } from "@server/prisma/prisma.types";
 import CompanyInfo from "./CompanyInfo";
 import PlayerOrderConcealed from "../Player/PlayerOrderConcealed";
@@ -19,18 +21,21 @@ import PlayerOrder from "../Player/PlayerOrder";
 import PlayerOrderInput from "../Player/PlayerOrderInput";
 import { set } from "lodash";
 import { motion, AnimatePresence } from "framer-motion";
+import { Drawer } from "vaul";
+import { RiCurrencyFill } from "@remixicon/react";
 
 type CompanyCardProps = {
-  company: CompanyWithSector;
+  company: CompanyWithRelations;
   orders: PlayerOrderConcealedWithPlayer[]; // Replace with the actual type
   isRevealRound: boolean;
   isInteractive: boolean;
-  focusedOrder: CompanyWithSector; // Replace with the actual type
+  focusedOrder: CompanyWithRelations; // Replace with the actual type
   currentPhase?: Phase;
-  playerOrdersRevealed: PlayerOrderWithPlayerCompany[]; // Replace with the actual type
+  playerOrdersRevealed: PlayerOrderWithPlayerRevealed[]; // Replace with the actual type
   phasesOfStockRound: Phase[];
   isOrderInputOpen?: boolean;
   handleButtonSelect: () => void;
+  handleCompanySelect: (company: CompanyWithRelations, isIpo: boolean) => void;
 };
 
 const CompanyCard: React.FC<CompanyCardProps> = ({
@@ -44,17 +49,18 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
   phasesOfStockRound,
   isOrderInputOpen,
   handleButtonSelect,
+  handleCompanySelect,
 }) => {
   const [showButton, setShowButton] = useState<boolean | undefined>(
     isOrderInputOpen
   );
   const [isIpo, setIsIpo] = useState<boolean>(false);
-  const [showPlayerInput, setShowPlayerInput] = useState<boolean>(false);
-  useEffect(() => {
-    if (currentPhase?.name == PhaseName.STOCK_ACTION_RESULT) {
-      setShowPlayerInput(false);
-    }
-  }, [currentPhase?.name]);
+  // const [showPlayerInput, setShowPlayerInput] = useState<boolean>(false);
+  // useEffect(() => {
+  //   if (currentPhase?.name == PhaseName.STOCK_ACTION_RESULT) {
+  //     setShowPlayerInput(false);
+  //   }
+  // }, [currentPhase?.name]);
   useEffect(() => {
     setShowButton(isOrderInputOpen);
   }, [isOrderInputOpen]);
@@ -152,9 +158,13 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
     sortedGroupedOpenMarketOrdersByPhaseEntries
   );
 
-  const handleDisplayOrderInput = (company: Company, isIpo?: boolean) => {
+  const handleDisplayOrderInput = (
+    company: CompanyWithRelations,
+    isIpo?: boolean
+  ) => {
     setIsIpo(isIpo || false);
-    setShowPlayerInput(true);
+    //setShowPlayerInput(true);
+    handleCompanySelect(company, isIpo || false);
   };
 
   return (
@@ -181,15 +191,14 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
               <div
                 className={`${
                   company.status === "INACTIVE" && "bg-gray-950 rounded-md"
-                } p-2`}
+                } p-2 flex gap-1`}
               >
-                IPO (
+                IPO <RiCurrencyFill className="h-6 w-6" />
                 {
                   company.Share.filter(
                     (share: Share) => share.location == ShareLocation.IPO
                   ).length
-                }
-                ){" "}
+                }{" "}
                 <span className="font-bold">@ ${company.ipoAndFloatPrice}</span>
               </div>
             </div>
@@ -201,7 +210,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
                   "bg-slate-950 rounded-md p-2"
                 }`}
               >
-                <div className="flex gap-4 w-full">
+                <div className="flex flex-col gap-4 w-full">
                   {Object.keys(groupedIpoOrdersByPhase).map(
                     (index, indexInt) => (
                       <div className="flex flex-col" key={index}>
@@ -233,7 +242,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
                   "bg-slate-950 rounded-md p-2"
                 }`}
               >
-                <div className="flex gap-4 w-full">
+                <div className="flex flex-col gap-4 w-full">
                   {Object.keys(groupedIpoOrdersByPhase).map(
                     (index, indexInt) => (
                       <div className="flex flex-col" key={index}>
@@ -258,35 +267,35 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
               </div>
             )}
             {isInteractive &&
-              showButton &&
               company.Share.filter(
                 (share: Share) => share.location == ShareLocation.IPO
               ).length > 0 && (
-                <Button
-                  className={
-                    focusedOrder?.id == company.id
-                      ? "my-3 bg-gradient-to-tr from-pink-500 to-yellow-500 text-white shadow-lg"
-                      : "my-3 ring-2 ring-gray-950"
-                  }
-                  onClick={() => handleDisplayOrderInput(company, true)}
-                >
-                  Place Order IPO
-                </Button>
+                <Drawer.Trigger asChild>
+                  <Button
+                    className={
+                      focusedOrder?.id == company.id
+                        ? "my-3 bg-gradient-to-tr from-pink-500 to-yellow-500 text-white shadow-lg"
+                        : "my-3 ring-2 ring-gray-950"
+                    }
+                    onClick={() => handleDisplayOrderInput(company, true)}
+                  >
+                    Place Order IPO
+                  </Button>
+                </Drawer.Trigger>
               )}
             <div>
               <div
                 className={`${
                   company.status === "INACTIVE" && "bg-gray-950 rounded-md"
-                } p-2`}
+                } p-2 flex gap-1`}
               >
-                OPEN MARKET (
+                OPEN MARKET <RiCurrencyFill className="h-6 w-6" />
                 {
                   company.Share.filter(
                     (share: Share) =>
                       share.location == ShareLocation.OPEN_MARKET
                   ).length
-                }
-                ){" "}
+                }{" "}
                 <span className="font-bold">
                   @ ${company.currentStockPrice}
                 </span>
@@ -300,7 +309,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
                   "bg-slate-950 rounded-md p-2"
                 }`}
               >
-                <div className="flex gap-4 w-full">
+                <div className="flex flex-col gap-4 w-full">
                   {Object.keys(groupedOpenMarketOrdersByPhase).map(
                     (index, indexInt) => (
                       <div className="flex flex-col" key={index}>
@@ -332,7 +341,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
                   "bg-slate-950 rounded-md p-2"
                 }`}
               >
-                <div className="flex gap-4 w-full">
+                <div className="flex flex-col gap-4 w-full">
                   {Object.keys(groupedOpenMarketOrdersByPhase).map(
                     (index, indexInt) => (
                       <div className="flex flex-col" key={index}>
@@ -356,14 +365,8 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
                 </div>
               </div>
             )}
-            {isInteractive &&
-              showButton &&
-              (company.Share.filter(
-                (share: Share) => share.location == ShareLocation.OPEN_MARKET
-              ).length > 0 ||
-                company.Share.filter(
-                  (share: Share) => share.location == ShareLocation.PLAYER
-                ).length > 0) && (
+            {isInteractive && (
+              <Drawer.Trigger asChild>
                 <Button
                   className={
                     focusedOrder?.id == company.id
@@ -374,11 +377,12 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
                 >
                   Place Order OPEN MARKET
                 </Button>
-              )}
+              </Drawer.Trigger>
+            )}
           </div>
         </CardBody>
       </Card>
-      <AnimatePresence>
+      {/* <AnimatePresence>
         {showPlayerInput && (
           <motion.div
             className="z-0 h-full"
@@ -404,7 +408,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
             </Card>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence> */}
     </div>
   );
 };

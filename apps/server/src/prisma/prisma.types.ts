@@ -3,11 +3,14 @@ import {
   Card,
   Company,
   CompanyAction,
+  Entity,
   Game,
   GameLog,
+  GameRecord,
   GameTurn,
   InfluenceRound,
   InfluenceVote,
+  InsolvencyContribution,
   MeetingMessage,
   OperatingRound,
   OperatingRoundVote,
@@ -16,6 +19,10 @@ import {
   Player,
   PlayerOrder,
   PlayerPriority,
+  PlayerResult,
+  Prize,
+  PrizeDistribution,
+  PrizeVote,
   ProductionResult,
   ResearchDeck,
   RevenueDistributionVote,
@@ -23,10 +30,14 @@ import {
   RoomMessage,
   RoomUser,
   Sector,
+  SectorPrize,
   Share,
+  ShareContribution,
   ShortOrder,
   StockHistory,
   StockRound,
+  Transaction,
+  TransactionsOnShares,
   User,
 } from '@prisma/client';
 
@@ -52,8 +63,9 @@ export type CompanyWithSector = Company & {
 export type CompanyWithRelations = Company & {
   Sector: Sector;
   Share: ShareWithPlayer[];
-  StockHistory: StockHistory[];
+  StockHistory: StockHistoryWithPhase[];
   Cards: Card[];
+  CompanyActions: CompanyAction[];
 };
 export type StockHistoryWithPhase = StockHistory & { Phase: Phase };
 export type CompanyWithSectorAndStockHistory = Company & {
@@ -73,6 +85,7 @@ export type GameState = Game & {
   StockRound: StockRound[];
   InfluenceRound: InfluenceRound[];
   Phase: Phase[];
+  GameRecord: GameRecord | null;
 };
 
 export type RoomWithUsersAndGames = Room & {
@@ -98,22 +111,28 @@ export type PlayerOrderWithCompanyAndOptionContract = PlayerOrder & {
   OptionContract: OptionContract | null;
 };
 export type CompanyWithShare = Company & { Share: Share[] };
+export type CompanyWithShareAndCompanyActions = Company & {
+  Share: Share[];
+  CompanyActions: CompanyAction[];
+};
 export type CompanyWithShareAndSector = Company & {
   Share: Share[];
   Sector: Sector;
 };
 export type PhaseWithStockRound = Phase & { StockRound: StockRound | null };
 export type PlayerOrderWithPlayerCompany = PlayerOrder & {
-  Company: CompanyWithShare;
+  Company: CompanyWithShareAndCompanyActions;
   Player: Player;
   Sector: Sector;
   Phase: Phase;
+  GameTurn: GameTurn;
 };
 export type PlayerOrderWithPlayerRevealed = PlayerOrder & {
-  Company: CompanyWithShare;
+  Company: CompanyWithShareAndCompanyActions;
   Player: Player;
   Sector: Sector;
   Phase: PhaseWithStockRound;
+  GameTurn: GameTurn;
 };
 export type SectorWithCompanyRelations = Sector & {
   Company: CompanyWithRelations[];
@@ -130,6 +149,7 @@ export type PlayerOrderAllRelations = PlayerOrder & {
   Company: Company;
   Player: Player;
   Sector: Sector;
+  GameTurn: GameTurn;
   ShortOrder: ShortOrder | null;
   OptionContract: OptionContract | null;
 };
@@ -145,7 +165,7 @@ export type OperatingRoundWithRevenueDistributionVotes = OperatingRound & {
 };
 
 export type ProductionResultWithCompany = ProductionResult & {
-  Company: CompanyWithSector;
+  Company: CompanyWithRelations;
 };
 
 export type OperatingRoundWithProductionResults = OperatingRound & {
@@ -212,4 +232,72 @@ export type ShortOrderWithRelations = ShortOrder & {
   Company: Company;
   PlayerOrder: PlayerOrder | null;
   Share: Share[];
+};
+
+export type GameTurnWithRelations = GameTurn & {
+  companyActions: CompanyAction[];
+};
+
+export type TransactionWithEntities = Transaction & {
+  fromEntity: Entity & { Player: Player | null; Company: Company | null };
+  toEntity: Entity & { Player: Player | null; Company: Company | null };
+  Shares: TransactionsOnShares[];
+};
+
+export type PlayerResultWithRelations = PlayerResult & {
+  player: Player & { Share: Share[] };
+};
+
+export type CompanyWithSectorPartial = {
+  id: string;
+  name: string;
+  unitPrice: number;
+  prestigeTokens: number;
+  demandScore: number;
+  baseDemand: number;
+  hasEconomiesOfScale: boolean;
+  Sector: {
+    name: string;
+  };
+};
+
+export type CompanyOperationOrderPartial = {
+  id: string;
+  name: string;
+  unitPrice: number;
+  prestigeTokens: number;
+  demandScore: number;
+  baseDemand: number;
+  hasEconomiesOfScale: boolean;
+};
+
+export type InsolvencyContributionWithRelations = InsolvencyContribution & {
+  Player: Player;
+  Company: Company;
+  GameTurn: GameTurn;
+};
+
+export type ShareContributionWithShare = ShareContribution & { Share: Share };
+
+export type SectorPrizeWithSector = SectorPrize & { Sector: Sector };
+
+export type PrizeWithSectorPrizes = Prize & {
+  SectorPrizes: SectorPrizeWithSector[];
+};
+
+export type PrizeDistributionWithRelations = PrizeDistribution & {
+  Player: Player | null;
+  Company: Company | null;
+  GameTurn: GameTurn | null;
+};
+
+export type PrizeWithRelations = Prize & {
+  SectorPrizes: SectorPrizeWithSector[];
+  PrizeDistributions: PrizeDistributionWithRelations[];
+};
+
+export type PrizeVoteWithRelations = PrizeVote & {
+  Player: Player;
+  GameTurn: GameTurn;
+  Prize: Prize;
 };

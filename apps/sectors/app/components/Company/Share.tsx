@@ -2,6 +2,7 @@ import { Divider } from "@nextui-org/react";
 import { Player, Share } from "@server/prisma/prisma.client";
 import React from "react";
 import PlayerAvatar from "../Player/PlayerAvatar";
+import { RiFundsBoxLine, RiFundsFill } from "@remixicon/react";
 
 const ShareComponent = ({
   name,
@@ -31,8 +32,11 @@ const ShareComponent = ({
         </>
       )}
       {price && (
-        <div className="text-md font-semibold text-slate-900">
-          &nbsp;${price}
+        <div className="flex items-center ml-1">
+          <RiFundsFill size={18} className="text-slate-900"/>
+          <div className="text-md font-semibold text-slate-900">
+            ${price}
+          </div>
         </div>
       )}
       <div className="border-l border-slate-900 mx-1 h-4"></div>
