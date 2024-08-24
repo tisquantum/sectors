@@ -73,7 +73,7 @@ const EndTurnEconomy = () => {
                 <p className={tooltipParagraphStyle}>
                   The number of consumers available to purchase goods and
                   services each turn. At the end of each turn, they will rotate
-                  to each sector being "spooled" out until the total economy
+                  to each sector being &quot;spooled&quot; out until the total economy
                   score is consumed. Each time consumers visit a sector, the
                   amount of consumers that move into that sector is equivalent
                   to the sectors base demand score. Sectors operate in priority

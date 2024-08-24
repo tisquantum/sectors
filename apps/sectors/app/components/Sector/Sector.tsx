@@ -60,8 +60,8 @@ const SectorComponent = () => {
                   content={
                     <p className={tooltipParagraphStyle}>
                       The base demand for this sector. Determines how many many
-                      customers will be 'spooled' to sector during economy
-                      phase.
+                      customers will be &apos;spooled&apos; to sector during
+                      economy phase.
                     </p>
                   }
                 >

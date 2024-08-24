@@ -171,7 +171,7 @@ const CompanyVoteResolve = () => {
       case OperatingRoundAction.VETO:
         return (
           <div>
-            Action vetoed. The next turn this company's operating costs are 50%
+            Action vetoed. The next turn this company&apos;s operating costs are 50%
             less.
           </div>
         );

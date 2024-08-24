@@ -115,7 +115,10 @@ const DerivativesTable = ({ isInteractive }: { isInteractive: boolean }) => {
                 (playerOrder) => playerOrder.optionContractId === contract.id
               )
               ?.map((playerOrder) => (
-                <PlayerAvatar player={playerOrder.Player} />
+                <PlayerAvatar
+                  key={playerOrder.id}
+                  player={playerOrder.Player}
+                />
               ))}
           </AvatarGroup>
         );

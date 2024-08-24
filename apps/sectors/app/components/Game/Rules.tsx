@@ -184,9 +184,9 @@ const stockRoundRules = (
           Given the net difference between BUYS and SELLS for market order
           quantities of a given company, that companies stock price will adjust
           steps down equivalent to the net negative or move up as many steps as
-          it can fill "price slots" on the stock chart. Different stock tiers
-          require different amounts of slots to be filled before an order can
-          move up in price.
+          it can fill &quot;price slots&quot; on the stock chart. Different
+          stock tiers require different amounts of slots to be filled before an
+          order can move up in price.
         </p>
       </p>
     </p>
@@ -226,17 +226,18 @@ const OperatingRoundRules = () => (
       <strong>Floating Companies</strong>
       <p>
         Each sector requires companies to sell some percentage of shares from
-        it's IPO before it is floated. Companies that are floated are eligible
-        to operate. Companies eligible for operation conduct company actions
-        during company vote phase. Companies that are not floated may not have
-        open market orders placed against them.
+        it&apos;s IPO before it is floated. Companies that are floated are
+        eligible to operate. Companies eligible for operation conduct company
+        actions during company vote phase. Companies that are not floated may
+        not have open market orders placed against them.
       </p>
     </p>
     <p>
       <strong>Throughput:</strong> Measures company efficiency.
       <ul className="list-disc pl-5">
         <li>
-          Calculated by subtracting company demand score from it's supply score.
+          Calculated by subtracting company demand score from it&apos;s supply
+          score.
         </li>
         <li>The closer to 0, the more efficient the company is operating.</li>
         <li>
@@ -293,13 +294,14 @@ const OperatingRoundRules = () => (
       <strong>Stock Price Adjustment</strong>
       <p>
         The companies share price will be adjusted by one step by the total
-        amount of revenue distributed to shareholders divided by it's current
-        stock price, rounded down. If however this price change would bring the
-        companies stock price into a new stock tier, it stops at the beginning
-        of that tier. For example, if a company has a stock price of $10 and
-        distributes $100 of revenue to shareholders, the stock price will move
-        up 10 steps, but because the next stock tier starts at $21 this increase
-        is halted at that price in at the beginning of the new tier.
+        amount of revenue distributed to shareholders divided by it&apos;s
+        current stock price, rounded down. If however this price change would
+        bring the companies stock price into a new stock tier, it stops at the
+        beginning of that tier. For example, if a company has a stock price of
+        $10 and distributes $100 of revenue to shareholders, the stock price
+        will move up 10 steps, but because the next stock tier starts at $21
+        this increase is halted at that price in at the beginning of the new
+        tier.
       </p>
       <CompanyTiers />
       <p>
@@ -356,7 +358,7 @@ export const insolvencyAndBankruptcy = (
     <ul className="list-disc pl-5">
       <li>
         Following the opportunity for insolvency actions, the company will{" "}
-        <strong>permanently close</strong> if it cannot meet or exceed it's
+        <strong>permanently close</strong> if it cannot meet or exceed it&apos;s
         shortfall cash value.
         <ul className="list-disc pl-5">
           <li>
