@@ -130,21 +130,34 @@ export class TransactionService {
     playerId?: string,
     companyId?: string,
   ): Promise<Entity> {
+    console.log(
+      'getEntityOrCreate',
+      gameId,
+      entityId,
+      entityType,
+      playerId,
+      companyId,
+    );
     let entity;
-    if (entityId && entityType === EntityType.PLAYER) {
+    if (
+      (entityId && entityType === EntityType.PLAYER) ||
+      (entityId && entityType === EntityType.COMPANY) ||
+      (entityId && entityType === EntityType.PLAYER_MARGIN_ACCOUNT)
+    ) {
       entity = await this.prisma.entity.findUnique({
         where: { id: entityId },
       });
-    } else if (entityId && entityType === EntityType.COMPANY) {
-      entity = await this.prisma.entity.findUnique({
-        where: { id: entityId },
-      });
-    } else {
+    } else if (
+      entityType == EntityType.BANK ||
+      entityType == EntityType.DERIVATIVE_MARKET ||
+      entityType == EntityType.IPO ||
+      entityType == EntityType.OPEN_MARKET
+    ) {
       entity = await this.prisma.entity.findFirst({
         where: { entityType, gameId: gameId },
       });
     }
-
+    console.log('getEntityOrCreate', entity);
     if (!entity) {
       switch (entityType) {
         case EntityType.BANK:
@@ -386,11 +399,11 @@ export class TransactionService {
       fromPlayerId,
       fromCompanyId,
     );
-  
+
     if (!fromEntity) {
       throw new Error('Invalid from entity');
     }
-  
+
     const toEntity = await this.getEntityOrCreate(
       gameId,
       toEntityType,
@@ -398,11 +411,11 @@ export class TransactionService {
       toPlayerId,
       toCompanyId,
     );
-  
+
     if (!toEntity) {
       throw new Error('Invalid to entity');
     }
-  
+
     // Return the collected transaction data instead of creating it immediately
     return {
       gameId,
@@ -429,7 +442,7 @@ export class TransactionService {
       amount: number;
       description?: string;
       shares?: string[];
-    }[]
+    }[],
   ) {
     // First, create all transactions in bulk
     const transactions = await this.prisma.transaction.createManyAndReturn({
@@ -447,24 +460,23 @@ export class TransactionService {
       })),
       skipDuplicates: true,
     });
-  
+
     // Then, handle any associated share transfers in bulk
     const shareTransferData = transactionsData
       .filter((tx) => tx.shares && tx.shares.length > 0)
-      .flatMap((tx, index) => 
+      .flatMap((tx, index) =>
         tx.shares!.map((shareId) => ({
           transactionId: transactions[index].id,
           shareId,
-        }))
+        })),
       );
-  
+
     if (shareTransferData.length > 0) {
       await this.prisma.transactionsOnShares.createMany({
         data: shareTransferData,
       });
     }
-  
+
     return transactions;
   }
-  
 }

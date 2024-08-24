@@ -15,6 +15,7 @@ import {
   RiSailboatFill,
   RiTeamFill,
   RiMoneyDollarCircleFill,
+  RiFundsFill,
 } from "@remixicon/react";
 import { useGame } from "../Game/GameContext";
 import { trpc } from "@sectors/app/trpc";
@@ -24,6 +25,7 @@ import {
   tooltipParagraphStyle,
   tooltipStyle,
 } from "@sectors/app/helpers/tailwind.helpers";
+import { calculateAverageStockPrice } from "@server/data/helpers";
 
 const SectorComponent = () => {
   const { gameId } = useGame();
@@ -136,6 +138,20 @@ const SectorComponent = () => {
                     <div className="text-small text-default-500 flex">
                       {sector.ipoMax}
                     </div>
+                  </div>
+                </Tooltip>
+                <Tooltip
+                  className={tooltipStyle}
+                  content={
+                    <p className={tooltipParagraphStyle}>
+                      Median stock price across all ACTIVE and INSOLVENT
+                      companies in the sector.
+                    </p>
+                  }
+                >
+                  <div className="text-small text-default-500 flex">
+                    <RiFundsFill size={18} className="mr-1" />
+                    {calculateAverageStockPrice(sector.Company)}
                   </div>
                 </Tooltip>
               </div>

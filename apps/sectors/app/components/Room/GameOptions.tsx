@@ -177,9 +177,9 @@ const GameOptions: React.FC<GameOptionsProps> = ({
           <SelectItem key={2} value={2}>
             Bid Priority
           </SelectItem>
-          {/* <SelectItem key={3} value={3}>
+          <SelectItem key={3} value={3}>
             Priority
-          </SelectItem> */}
+          </SelectItem>
         </Select>
       </div>
       <div className="mb-4">

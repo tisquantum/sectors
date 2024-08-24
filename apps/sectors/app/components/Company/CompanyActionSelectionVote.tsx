@@ -140,6 +140,7 @@ const CompanyActionSelectionVote = ({
             });
           })
         );
+        setIsLoadingSelectionVote(false);
         setSubmitComplete(true);
       } catch (error) {
         console.error(error);

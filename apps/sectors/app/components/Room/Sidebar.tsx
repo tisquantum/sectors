@@ -14,6 +14,7 @@ import { BeakerIcon, SunIcon } from "@heroicons/react/24/solid";
 import { useRouter } from "next/navigation";
 import UserAvatar from "./UserAvatar";
 import Button from "../General/DebounceButton";
+import DebounceButton from "../General/DebounceButton";
 interface SidebarProps {
   roomUsers: RoomUserWithUser[];
   room: RoomWithUsersAndGames;
@@ -30,6 +31,8 @@ interface GameOptionsState {
 const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
   const { user } = useAuthUser();
   const router = useRouter();
+  const [startGameIsSubmitted, setStartGameIsSubmitted] = useState(false);
+  const [isLoadingStartGame, setIsLoadingStartGame] = useState(false);
   const [gameOptions, setGameOptions] = useState<GameOptionsState>({
     bankPoolNumber: 12000,
     consumerPoolNumber: 75,
@@ -39,7 +42,12 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
   });
   const joinRoomMutation = trpc.roomUser.joinRoom.useMutation();
   const leaveRoomMutation = trpc.roomUser.leaveRoom.useMutation();
-  const startGameMutation = trpc.game.startGame.useMutation();
+  const startGameMutation = trpc.game.startGame.useMutation({
+    onSettled: () => {
+      setIsLoadingStartGame(false);
+      setStartGameIsSubmitted(true);
+    },
+  });
 
   let roomHostAuthUser: RoomUserWithUser | undefined;
   if (user && roomUsers) {
@@ -115,10 +123,13 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
               initialGameMaxTurns={15}
               onOptionsChange={handleGameOptionsChange}
             />
-            {room.game.length == 0 && (
-              <Button
+            {room.game.length == 0 && startGameIsSubmitted ? (
+              <div>Starting Game</div>
+            ) : (
+              <DebounceButton
                 color="primary"
-                onClick={() =>
+                onClick={() => {
+                  setIsLoadingStartGame(true);
                   handleStartGame(
                     room.id,
                     gameOptions.startingCashOnHand,
@@ -126,13 +137,14 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
                     gameOptions.bankPoolNumber,
                     gameOptions.distributionStrategy,
                     gameOptions.gameMaxTurns
-                  )
-                }
+                  );
+                }}
                 radius="none"
                 className="w-full rounded-b-md"
+                isLoading={isLoadingStartGame}
               >
                 Start Game
-              </Button>
+              </DebounceButton>
             )}
           </>
         )}

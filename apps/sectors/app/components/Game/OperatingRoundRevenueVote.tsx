@@ -12,6 +12,7 @@ import { CompanyTierData } from "@server/data/constants";
 import CompanyInfo from "../Company/CompanyInfo";
 import ShareHolders from "../Company/ShareHolders";
 import Button from "@sectors/app/components/General/DebounceButton";
+import DebounceButton from "@sectors/app/components/General/DebounceButton";
 
 const DistributeSelection = ({
   company,
@@ -24,12 +25,18 @@ const DistributeSelection = ({
 }) => {
   const { authPlayer, gameId } = useGame();
   const [isSubmit, setIsSubmit] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [selected, setSelected] = useState<RevenueDistribution>(
     RevenueDistribution.DIVIDEND_FULL
   );
 
   const useVoteRevenueDistributionMutation =
-    trpc.revenueDistributionVote.createRevenueDistributionVote.useMutation();
+    trpc.revenueDistributionVote.createRevenueDistributionVote.useMutation({
+      onSettled: () => {
+        setIsLoading(false);
+        setIsSubmit(true);
+      },
+    });
   const handleSubmit = async () => {
     //submit vote
     useVoteRevenueDistributionMutation.mutate({
@@ -40,7 +47,6 @@ const DistributeSelection = ({
       revenueDistribution: selected,
       gameId,
     });
-    setIsSubmit(true);
   };
 
   return (
@@ -59,7 +65,9 @@ const DistributeSelection = ({
       {isSubmit ? (
         <div>Vote Submitted</div>
       ) : (
-        <Button onClick={handleSubmit}>Submit Vote</Button>
+        <DebounceButton onClick={handleSubmit} isLoading={isLoading}>
+          Submit Vote
+        </DebounceButton>
       )}
     </div>
   );

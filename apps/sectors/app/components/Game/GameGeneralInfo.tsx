@@ -1,4 +1,7 @@
-import { friendlyPhaseName } from "@sectors/app/helpers";
+import {
+  friendlyDistributionStrategyName,
+  friendlyPhaseName,
+} from "@sectors/app/helpers";
 import { trpc } from "@sectors/app/trpc";
 import { notFound } from "next/navigation";
 import React from "react";
@@ -29,7 +32,12 @@ import {
   useDisclosure,
 } from "@nextui-org/react";
 import PlayerAvatar from "../Player/PlayerAvatar";
-import { EntityType, OrderType, PhaseName } from "@server/prisma/prisma.client";
+import {
+  DistributionStrategy,
+  EntityType,
+  OrderType,
+  PhaseName,
+} from "@server/prisma/prisma.client";
 import {
   tooltipParagraphStyle,
   tooltipStyle,
@@ -129,8 +137,7 @@ const GameGeneralInfo = () => {
           >
             <div className="flex items-center text-md">
               <RiFunctionAddFill size={24} /> LO {authPlayer.limitOrderActions}{" "}
-              MO {authPlayer.marketOrderActions} SO{" "}
-              {authPlayer.shortOrderActions}
+              SO {authPlayer.shortOrderActions}
             </div>
           </Tooltip>
         </div>
@@ -220,6 +227,48 @@ const GameGeneralInfo = () => {
           <div className="text-lg font-bold">Turn</div>
           <div>
             {currentTurn.turn ?? "0"} of {gameState.gameMaxTurns}
+          </div>
+        </div>
+      </Tooltip>
+      <Tooltip
+        className={tooltipStyle}
+        content={
+          gameState.distributionStrategy ==
+          DistributionStrategy.BID_PRIORITY ? (
+            <p className={tooltipParagraphStyle}>
+              <p>
+                Bids are placed in priority according to the highest ask price
+                of the market order. This ask price is quoted per share. If
+                there are not enough shares to resolve the order, it is
+                rejected.
+              </p>
+              <p>
+                If shares are still contested (ie: a tie-breaker for players who
+                purchase the same amount of shares), they are resolved by
+                priority where the player with the lowest player priority takes
+                precedence.
+              </p>
+            </p>
+          ) : gameState.distributionStrategy ==
+            DistributionStrategy.PRIORITY ? (
+            <p>
+              Orders are filled in priority. If there are not enough shares to
+              resolve the order, the order is rejected.
+            </p>
+          ) : (
+            <p>
+              When there is not enough shares to distribute, orders are split
+              evenly amongst the remaining orders. Any remaining shares are
+              distributed on a lottery to a random player who has placed an
+              order for this company in that stock round.
+            </p>
+          )
+        }
+      >
+        <div>
+          <div className="text-lg font-bold">Phase</div>
+          <div>
+            {friendlyDistributionStrategyName(gameState.distributionStrategy)}
           </div>
         </div>
       </Tooltip>

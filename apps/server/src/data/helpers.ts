@@ -837,3 +837,13 @@ export function groupBy<T>(array: T[], key: keyof T) {
     {} as Record<string, T[]>,
   );
 }
+
+export function calculateAverageStockPrice(
+  companiesInSector: CompanyWithSector[],
+) {
+  return (
+    companiesInSector.reduce((acc, company) => {
+      return acc + company.currentStockPrice;
+    }, 0) / companiesInSector.length
+  );
+}

@@ -1,5 +1,6 @@
 import {
   Company,
+  DistributionStrategy,
   GameStatus,
   OrderType,
   PhaseName,
@@ -148,5 +149,20 @@ export const renderGameStatusColor = (status?: GameStatus) => {
       return "secondary";
     default:
       return "warning";
+  }
+};
+
+export const friendlyDistributionStrategyName = (
+  strategy: DistributionStrategy
+) => {
+  switch (strategy) {
+    case DistributionStrategy.FAIR_SPLIT:
+      return "Fair Split";
+    case DistributionStrategy.BID_PRIORITY:
+      return "Bid Priority";
+    case DistributionStrategy.PRIORITY:
+      return "Priority";
+    default:
+      return "Unknown";
   }
 };

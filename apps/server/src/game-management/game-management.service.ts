@@ -146,6 +146,7 @@ import {
   getNextPrestigeInt,
   getNextTier,
   getRandomCompany,
+  calculateAverageStockPrice,
 } from '@server/data/helpers';
 import { PusherService } from 'nestjs-pusher';
 import {
@@ -768,9 +769,8 @@ export class GameManagementService {
   }
 
   /**
-   * Every third turn, look for the sector with the top two performing companies.
-   * Performance is measured based on the company's stock price.  If there are no sectors with at least
-   * two active companies, we instead look for the top performing company.  If there are zero companies active, we skip this.
+   * Every third turn, look for the sector with the highest average stock price.
+   * A new company is opened in this sector. If there are zero companies active, we skip this.
    *
    * @param phase
    */
@@ -788,7 +788,13 @@ export class GameManagementService {
 
     // Get all active companies and group by sector
     const companies = await this.companyService.companiesWithSector({
-      where: { gameId: phase.gameId, status: CompanyStatus.ACTIVE },
+      where: {
+        gameId: phase.gameId,
+        OR: [
+          { status: CompanyStatus.ACTIVE },
+          { status: CompanyStatus.INSOLVENT },
+        ],
+      },
     });
     if (!companies || companies.length === 0) {
       throw new Error('No active companies found');
@@ -805,73 +811,24 @@ export class GameManagementService {
       {} as { [key: string]: CompanyWithSector[] },
     );
 
-    // Filter out sectors with fewer than 2 companies
-    const sectorsWithAtLeastTwoCompanies = Object.entries(
-      groupedCompanies,
-    ).filter(([, companies]) => companies.length >= 2);
-
-    // If no sector has two companies, prioritize sectors with one company
-    if (sectorsWithAtLeastTwoCompanies.length === 0) {
-      const sectorsWithOneCompany = Object.entries(groupedCompanies).filter(
-        ([, companies]) => companies.length === 1,
-      );
-
-      if (sectorsWithOneCompany.length === 0) {
-        return; // No eligible sectors for new company creation
-      }
-
-      // Find the sector with the highest stock price among the single-company sectors
-      const highestSingleCompanySector = sectorsWithOneCompany.reduce(
-        (highest, [sectorId, companies]) => {
-          const company = companies[0];
-          if (
-            !highest ||
-            company.currentStockPrice > highest.company.currentStockPrice
-          ) {
-            return { sectorId, company };
-          }
-          return highest;
-        },
-        null as { sectorId: string; company: CompanyWithSector } | null,
-      );
-
-      if (highestSingleCompanySector) {
-        return this.createCompanyInSector(
-          phase,
-          highestSingleCompanySector.sectorId,
-          [highestSingleCompanySector.company],
-        );
-      }
-
-      return;
-    }
-
-    // Combine the stock prices for the top two stock price companies per sector
-    const sectorTopCompanies = sectorsWithAtLeastTwoCompanies.map(
+    //find the average stock price of each sector
+    const sectorAverages = Object.entries(groupedCompanies).map(
       ([sectorId, companies]) => {
-        const sortedCompanies = companies.sort(
-          (a, b) => b.currentStockPrice - a.currentStockPrice,
-        );
-        return {
-          sectorId,
-          combinedStockPrice:
-            sortedCompanies[0].currentStockPrice +
-            sortedCompanies[1].currentStockPrice,
-          topCompanies: sortedCompanies.slice(0, 2),
-        };
+        const averageStockPrice = calculateAverageStockPrice(companies);
+        return { sectorId, averageStockPrice };
       },
     );
 
-    // Get the sector with the highest combined stock price
-    const topSector = sectorTopCompanies.reduce((prev, curr) => {
-      return curr.combinedStockPrice > prev.combinedStockPrice ? curr : prev;
+    //find the sector with the highest median stock price
+    const topSector = sectorAverages.reduce((prev, curr) => {
+      return curr.averageStockPrice > prev.averageStockPrice ? curr : prev;
     });
 
-    // Create a new company in this sector
+    //create a new company in this sector
     return this.createCompanyInSector(
       phase,
       topSector.sectorId,
-      topSector.topCompanies,
+      groupedCompanies[topSector.sectorId],
     );
   }
 
@@ -1334,12 +1291,11 @@ export class GameManagementService {
    * @param phase
    */
   async resolveInfluenceBid(phase: Phase) {
-    //get the game
     const game = await this.gamesService.game({ id: phase.gameId });
     if (!game) {
       throw new Error('Game not found');
     }
-    //get the influence round
+
     const influenceRoundWithVotes =
       await this.influenceRoundService.getInfluenceRound({
         id: phase.influenceRoundId || 0,
@@ -1347,66 +1303,65 @@ export class GameManagementService {
     if (!influenceRoundWithVotes) {
       throw new Error('Influence round not found');
     }
-    //sort the votes in descending order
-    const sortedVotes = influenceRoundWithVotes.InfluenceVotes.sort(
-      (a, b) => b.influence - a.influence,
-    );
-    //create player priority for the turn
-    const playerPriority = sortedVotes.map((vote, index) => {
-      return {
-        playerId: vote.playerId,
-        priority: index + 1,
-        influence: vote.influence,
-        gameTurnId: phase.gameTurnId,
-      };
-    });
-    //get all players in the game
+
     const players = await this.playersService.players({
       where: { gameId: game.id },
     });
-    //if there are any missing players from the playerPriority, add them
+
     const missingPlayers = players.filter(
       (player) =>
-        !playerPriority.find((priority) => priority.playerId === player.id),
+        !influenceRoundWithVotes.InfluenceVotes.some(
+          (vote) => vote.playerId === player.id,
+        ),
     );
-    const missingPlayerPriority = missingPlayers.map((player) => {
-      return {
+
+    //create an array of votes with influence and playerId, where if there is no vote in influenceRoundWithVotes we assign the influence score
+    //as the default influence score
+    const allVotes = [
+      ...influenceRoundWithVotes.InfluenceVotes,
+      ...missingPlayers.map((player) => ({
+        influence: DEFAULT_INFLUENCE,
         playerId: player.id,
-        priority: playerPriority.length + 1,
-        influence: 0,
-        gameTurnId: phase.gameTurnId,
-      };
-    });
-    //create the player priority
-    const allPlayerPriority = [...playerPriority, ...missingPlayerPriority];
-    const gameLogMessages: Prisma.GameLogCreateManyInput[] = [];
-    //create game logs
-    allPlayerPriority.forEach(async (priority) => {
-      const player = await this.playersService.player({
-        id: priority.playerId,
-      });
-      if (!player) {
-        throw new Error('Player not found');
-      }
-      gameLogMessages.push({
-        gameId: phase.gameId,
-        content: `Player ${player.nickname} has a priority of ${
-          priority.priority
-        } with ${priority.influence} influence. They earned a total of $${
-          influenceRoundWithVotes.maxInfluence - priority.influence
-        } for unspent influence.`,
-      });
-    });
+      })),
+    ];
+
+    const sortedVotes = allVotes.sort((a, b) => b.influence - a.influence);
+
+    const playerPriority = sortedVotes.map((vote, index) => ({
+      playerId: vote.playerId,
+      priority: index + 1,
+      influence: vote.influence,
+      gameTurnId: phase.gameTurnId,
+    }));
+
+    const gameLogMessages = await Promise.all(
+      playerPriority.map(async (priority) => {
+        const player = await this.playersService.player({
+          id: priority.playerId,
+        });
+        if (!player) {
+          throw new Error('Player not found');
+        }
+        return {
+          gameId: phase.gameId,
+          content: `Player ${player.nickname} has a priority of ${
+            priority.priority
+          } with ${priority.influence} influence. They earned a total of $${
+            influenceRoundWithVotes.maxInfluence - priority.influence
+          } for unspent influence.`,
+        };
+      }),
+    );
+
     try {
       await this.gameLogService.createManyGameLogs(gameLogMessages);
     } catch (error) {
       console.error('Error creating game logs', error);
     }
-    const playerPriorityAddMany = allPlayerPriority.map((priority) => {
-      //remove influence from object
-      const { influence, ...rest } = priority;
-      return rest;
-    });
+
+    const playerPriorityAddMany = playerPriority.map(
+      ({ influence, ...rest }) => rest,
+    );
 
     try {
       await this.playerPriorityService.createManyPlayerPriorities(
@@ -1415,30 +1370,23 @@ export class GameManagementService {
     } catch (error) {
       console.error('Error creating player priority', error);
     }
-    //give players money for unspent priority
-    const playerPriorityUnspent = allPlayerPriority.filter(
-      (priority) => priority.influence < influenceRoundWithVotes.maxInfluence,
-    );
-    const playerPriorityUnspentMoney = playerPriorityUnspent.map((priority) => {
-      return {
-        playerId: priority.playerId,
-        amount: influenceRoundWithVotes.maxInfluence - priority.influence,
-        gameTurnId: phase.gameTurnId,
-      };
-    });
-    const playerPriorityUnspentPromises = playerPriorityUnspentMoney.map(
-      async (money) => {
-        await this.playerAddMoney(
+
+    const playerPriorityUnspentPromises = playerPriority
+      .filter(
+        (priority) => priority.influence < influenceRoundWithVotes.maxInfluence,
+      )
+      .map((priority) =>
+        this.playerAddMoney(
           phase.gameId,
           phase.gameTurnId,
           phase.id,
-          money.playerId,
-          money.amount,
+          priority.playerId,
+          influenceRoundWithVotes.maxInfluence - priority.influence,
           EntityType.BANK,
           `Unspent influence.`,
-        );
-      },
-    );
+        ),
+      );
+
     await Promise.all(playerPriorityUnspentPromises);
   }
 

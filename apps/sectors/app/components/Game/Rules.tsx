@@ -35,6 +35,19 @@ const overviewRules = (
   </>
 );
 
+const newCompanyRules = (
+  <>
+    <p>
+      <strong>New Companies</strong>
+    </p>
+    <p>
+      Every third turn, a new company is opened in the sector with the highest
+      median stock price across ACTIVE and INSOLVENT companies. If there are no
+      ACTIVE or INSOLVENT companies in the game, no company is opened.
+    </p>
+  </>
+);
+
 const tranchRules = (
   <>
     <h1>Investor Tranches</h1>
@@ -394,6 +407,10 @@ const Rules: FC = () => {
       <div className="mb-8">
         <h2 className="text-2xl font-semibold mb-2">Investor Tranches</h2>
         <div className="text-base space-y-4">{tranchRules}</div>
+      </div>
+      <div className="mb-8">
+        <h2 className="text-2xl font-semibold mb-2">New Companies</h2>
+        <div className="text-base space-y-4">{newCompanyRules}</div>
       </div>
       <div className="mb-8">
         <h2 className="text-2xl font-semibold mb-2">Stock Round Rules</h2>
