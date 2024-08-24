@@ -123,29 +123,30 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
               initialGameMaxTurns={15}
               onOptionsChange={handleGameOptionsChange}
             />
-            {room.game.length == 0 && startGameIsSubmitted ? (
-              <div>Starting Game</div>
-            ) : (
-              <DebounceButton
-                color="primary"
-                onClick={() => {
-                  setIsLoadingStartGame(true);
-                  handleStartGame(
-                    room.id,
-                    gameOptions.startingCashOnHand,
-                    gameOptions.consumerPoolNumber,
-                    gameOptions.bankPoolNumber,
-                    gameOptions.distributionStrategy,
-                    gameOptions.gameMaxTurns
-                  );
-                }}
-                radius="none"
-                className="w-full rounded-b-md"
-                isLoading={isLoadingStartGame}
-              >
-                Start Game
-              </DebounceButton>
-            )}
+            {room.game.length == 0 &&
+              (startGameIsSubmitted ? (
+                <div>Start Game Submitted</div>
+              ) : (
+                <DebounceButton
+                  color="primary"
+                  onClick={() => {
+                    setIsLoadingStartGame(true);
+                    handleStartGame(
+                      room.id,
+                      gameOptions.startingCashOnHand,
+                      gameOptions.consumerPoolNumber,
+                      gameOptions.bankPoolNumber,
+                      gameOptions.distributionStrategy,
+                      gameOptions.gameMaxTurns
+                    );
+                  }}
+                  radius="none"
+                  className="w-full rounded-b-md"
+                  isLoading={isLoadingStartGame}
+                >
+                  Start Game
+                </DebounceButton>
+              ))}
           </>
         )}
         {room.game.length > 0 && (

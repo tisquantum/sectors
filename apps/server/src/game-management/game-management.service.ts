@@ -819,7 +819,7 @@ export class GameManagementService {
       },
     );
 
-    //find the sector with the highest median stock price
+    //find the sector with the highest average stock price
     const topSector = sectorAverages.reduce((prev, curr) => {
       return curr.averageStockPrice > prev.averageStockPrice ? curr : prev;
     });

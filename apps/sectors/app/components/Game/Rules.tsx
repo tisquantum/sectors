@@ -7,7 +7,12 @@ import CompanyPriorityList from "../Company/CompanyPriorityOperatingRound";
 import { useGame } from "./GameContext";
 import { CompanyStatus } from "@server/prisma/prisma.client";
 import { trpc } from "@sectors/app/trpc";
-import { BANKRUPTCY_SHARE_PERCENTAGE_RETAINED } from "@server/data/constants";
+import {
+  BANKRUPTCY_SHARE_PERCENTAGE_RETAINED,
+  CompanyActionCosts,
+  CompanyActionPrestigeCosts,
+  companyActionsDescription,
+} from "@server/data/constants";
 
 const overviewRules = (
   <>
@@ -42,7 +47,7 @@ const newCompanyRules = (
     </p>
     <p>
       Every third turn, a new company is opened in the sector with the highest
-      median stock price across ACTIVE and INSOLVENT companies. If there are no
+      average stock price across ACTIVE and INSOLVENT companies. If there are no
       ACTIVE or INSOLVENT companies in the game, no company is opened.
     </p>
   </>
@@ -50,7 +55,6 @@ const newCompanyRules = (
 
 const tranchRules = (
   <>
-    <h1>Investor Tranches</h1>
     <p>
       In this round, players vote on the tranch they want to win. There are
       three types of rewards:
@@ -167,19 +171,42 @@ const stockRoundRules = (
     </p>
     <p>
       <strong>Market Order Resolution:</strong>
-      <ul className="list-disc pl-5">
+      <ul className="list-disc pl-5 space-y-2">
         <li>Orders placed in the earliest sub-round are resolved first.</li>
-        <li>If using bid priority, bids are resolved in descending order.</li>
-        <li>
-          In case of ties, the player with the highest priority resolves first.
-        </li>
+
+        <li>If there are multiple orders in the same sub-round:</li>
+        <ul className="list-disc pl-5 space-y-2">
+          <li>
+            <strong>Bid Strategy:</strong>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>
+                Bids are resolved in descending order when using bid priority.
+              </li>
+              <li>
+                In case of bid ties, the player with the highest priority
+                resolves first.
+              </li>
+            </ul>
+          </li>
+
+          <li>
+            <strong>Priority Strategy:</strong>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Orders are resolved according to priority order.</li>
+            </ul>
+          </li>
+        </ul>
+
         <li>
           Orders that cannot be filled due to lack of shares are marked as
           REJECTED.
         </li>
       </ul>
-      <p>
-        <strong>Market Order Price Stock Price Adjustments</strong>
+
+      <p className="space-y-2 my-2">
+        <p>
+          <strong>Market Order Price Stock Price Adjustments</strong>
+        </p>
         <p>
           Given the net difference between BUYS and SELLS for market order
           quantities of a given company, that companies stock price will adjust
@@ -319,16 +346,26 @@ export const insolvencyAndBankruptcy = (
     </p>
     <ul className="list-disc pl-5">
       <li>
-        Players can contribute <strong>cash</strong> or <strong>shares</strong>{" "}
-        to help the company avoid bankruptcy.
+        Should the company fall to 0 dollars due to company actions or
+        operational fees, the company will become INSOLVENT. The next time that
+        company would operate, instead of the typical ACTIVE operating round
+        actions, the company enters an INSOLVENCY action phase. All shareholders
+        of the company can then contribute <strong>cash</strong> or{" "}
+        <strong>shares</strong> to help the company avoid bankruptcy.
         <ul className="list-disc pl-5">
-          <li>All contributions provide the company with liquidity.</li>
           <li>
-            Shares handed over are sold at market rates, which will{" "}
-            <strong>lower the share price</strong> after all contributions are
-            completed.
+            All cash contributions are immediately given directly to the company
+            treasury. All share contributions are immediately sold and the cash
+            profit is transferd to the company treasury.
           </li>
-          <li>The proceeds from these sales go directly to the company.</li>
+          <li>
+            Shares handed over are sold at market rates, the share price of the
+            company will move share price steps down equal to the net negative
+            of all shares sold <strong>after</strong> the contribution action
+            phase is completed. Therefore, every share sold during the
+            insolvency phase will be equivalent to the share price of the
+            company entering that phase.
+          </li>
         </ul>
       </li>
     </ul>
@@ -384,7 +421,11 @@ const prestigeTokens = (
   <>
     <p>
       <strong>Prestige Tokens</strong> can be spent on the prestige track to get
-      various rewards.
+      various prestige rewards. They are used as part of the payment for the
+      companies sector action. Prestige tokens are also factored as the second
+      condition for company priority. The company with the higher prestige token
+      count will have priority over the company with the lower prestige token
+      count.
     </p>
   </>
 );
@@ -394,10 +435,97 @@ const customerMovement = (
     <p>
       Each stock sector has customers that move to it from the global consumer
       pool every turn, based on the sector&apos;s demand. Various events can
-      trigger customer movement to a sector.
+      also trigger customer movement to a sector.
     </p>
   </>
 );
+
+const CompanyActionsRules = () => {
+  const generalCompanyActions = companyActionsDescription.filter(
+    (actionDescription) => {
+      return actionDescription.actionType == "general";
+    }
+  );
+  const sectorCompanyActionsActive = companyActionsDescription.filter(
+    (actionDescription) => {
+      return actionDescription.actionType == "sector-active";
+    }
+  );
+  const sectorCompanyActionsPassive = companyActionsDescription.filter(
+    (actionDescription) => {
+      return actionDescription.actionType == "sector-passive";
+    }
+  );
+  return (
+    <>
+      <p>
+        <strong>Company Actions</strong>
+      </p>
+      <p>
+        Each Operating Round, companies will take turns in company priority
+        order. On their turn, players will vote for a set of company actions to
+        take place. The amount of actions a company can take is directly tied to
+        it&apos;s current company tier. Actions are paid for with assets from the
+        company treasury.
+      </p>
+      <p>
+        <span className="space-y-2 font-bold">General Actions</span>
+      </p>
+      <p>
+        These actions are available to every company every operating round
+        action phase.
+      </p>
+      <ul className="list-disc space-y-2">
+        {generalCompanyActions.map((action, index) => (
+          <li key={index} className="flex flex-col">
+            <div className="font-semibold text-md">{action.title}</div>
+            <div className="text-sm">{action.message}</div>
+            <div className="text-sm">
+              Cash Cost: ${CompanyActionCosts[action.name]}
+            </div>
+          </li>
+        ))}
+      </ul>
+      <p>
+        <span className="space-y-2 font-bold">Active Sector Actions</span>
+      </p>
+      <p>
+        These actions are specific to the company sector and both cash and
+        prestige must be used to pay for them.
+      </p>
+      <ul className="list-disc space-y-2">
+        {sectorCompanyActionsActive.map((action, index) => (
+          <li key={index} className="flex flex-col">
+            <div className="font-semibold text-md">{action.title}</div>
+            <div className="text-sm">{action.message}</div>
+            <div className="text-sm">
+              Cash Cost: ${CompanyActionCosts[action.name]}
+            </div>
+            <div className="text-sm">
+              Prestige Cost: {CompanyActionPrestigeCosts[action.name]}
+            </div>
+          </li>
+        ))}
+      </ul>
+      <p>
+        <span className="space-y-2 font-bold">Passive Sector Abilities</span>
+      </p>
+      <p>
+        These actions are specific to the company sector and are given out
+        during the Tranches phase. Only one company in a sector may have a
+        passive ability at a time.
+      </p>
+      <ul className="list-disc space-y-2">
+        {sectorCompanyActionsPassive.map((action, index) => (
+          <li key={index} className="flex flex-col">
+            <div className="font-semibold text-md">{action.title}</div>
+            <div className="text-sm">{action.message}</div>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+};
 
 const Rules: FC = () => {
   return (
@@ -405,14 +533,6 @@ const Rules: FC = () => {
       <div className="mb-8">
         <h2 className="text-2xl font-semibold mb-2">Overview</h2>
         <div className="text-base space-y-4">{overviewRules}</div>
-      </div>
-      <div className="mb-8">
-        <h2 className="text-2xl font-semibold mb-2">Investor Tranches</h2>
-        <div className="text-base space-y-4">{tranchRules}</div>
-      </div>
-      <div className="mb-8">
-        <h2 className="text-2xl font-semibold mb-2">New Companies</h2>
-        <div className="text-base space-y-4">{newCompanyRules}</div>
       </div>
       <div className="mb-8">
         <h2 className="text-2xl font-semibold mb-2">Stock Round Rules</h2>
@@ -423,6 +543,20 @@ const Rules: FC = () => {
         <div className="text-base space-y-4">
           <OperatingRoundRules />
         </div>
+      </div>
+      <div className="mb-8">
+        <h2 className="text-2xl font-semibold mb-2">Company Actions</h2>
+        <div className="text-base space-y-4">
+          <CompanyActionsRules />
+        </div>
+      </div>
+      <div className="mb-8">
+        <h2 className="text-2xl font-semibold mb-2">New Companies</h2>
+        <div className="text-base space-y-4">{newCompanyRules}</div>
+      </div>
+      <div className="mb-8">
+        <h2 className="text-2xl font-semibold mb-2">Investor Tranches</h2>
+        <div className="text-base space-y-4">{tranchRules}</div>
       </div>
       <div className="mb-8">
         <h2 className="text-2xl font-semibold mb-2">

@@ -144,7 +144,7 @@ const SectorComponent = () => {
                   className={tooltipStyle}
                   content={
                     <p className={tooltipParagraphStyle}>
-                      Median stock price across all ACTIVE and INSOLVENT
+                      Average stock price across all ACTIVE and INSOLVENT
                       companies in the sector.
                     </p>
                   }
