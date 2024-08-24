@@ -16,7 +16,7 @@ The game is played over turns, each turn is separated into distinct rounds.  The
 
 - **Influence Round:** This round only occurs once at the beginning of the game.  It determines initial **player priority** order.  Each player will, in secret, perform an influence bid.  Each player starts with 100 "influence" points.  For each point the player does not spend on their influence bid, they will retain $1.  Player priority is then determined in descending order of influence points spent on the bid.  In the case of tied bids, priority order is determined randomly.
 - **Tranche Distribution:** Tranche packages are made for offer every three turns.  These are rewards which are distributed based on player ownership which is handled via a vote. 
-- **Stock Round:** Players take turns buying and selling shares of companies through distinct order mechanisms.
+- **Stock Round:** Players place orders against companies through distinct order mechanisms.
 - **Operation Round:** Investors vote on company operations, and companies generate revenue by attracting customers.
 
 ## Players
