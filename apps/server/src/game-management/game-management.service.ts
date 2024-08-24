@@ -1548,11 +1548,7 @@ export class GameManagementService {
 
       await this.gameLogService.createGameLog({
         game: { connect: { id: phase.gameId } },
-        content: `Stock price for ${
-          sharesToDivest[0].Company.name
-        } has decreased to $${stockPrice.price.toFixed(
-          2,
-        )} by ${netDifference} steps due to market sell orders during DIVESTMENT`,
+        content: `Stock price for ${sharesToDivest[0].Company.name} has decreased to $${stockPrice.price} by ${netDifference} steps due to market sell orders during DIVESTMENT`,
       });
 
       await this.playerOrderService.triggerLimitOrdersFilled(
@@ -3389,8 +3385,7 @@ export class GameManagementService {
       company.supplyCurrent,
     );
     const throughput =
-      calculateDemand(company.demandScore, company.baseDemand) -
-      companySupply;
+      calculateDemand(company.demandScore, company.baseDemand) - companySupply;
     return throughput;
   }
 
@@ -3514,8 +3509,10 @@ export class GameManagementService {
           consumersCountForCompany += STEADY_DEMAND_CONSUMER_BONUS;
         }
 
-        const maxCustomersAttracted =
-          calculateDemand(company.demandScore, company.baseDemand);
+        const maxCustomersAttracted = calculateDemand(
+          company.demandScore,
+          company.baseDemand,
+        );
 
         let unitsSold = Math.min(unitsManufactured, maxCustomersAttracted);
         if (unitsSold > consumersCountForCompany) {
@@ -3612,14 +3609,15 @@ export class GameManagementService {
             content: `Company ${company.name} has not met optimal efficiency and has been penalized ${throughputOutcome.share_price_steps_down} share price steps down.`,
           });
         }
-
-        productionResults.push({
+        const productionResultToPush = {
           revenue,
           companyId: company.id,
           operatingRoundId: phase.operatingRoundId || 0,
           throughputResult: throughput,
           steps: throughputOutcome.share_price_steps_down || 0,
-        });
+        };
+        console.log('productionResultToPush', productionResultToPush);
+        productionResults.push(productionResultToPush);
 
         companyUpdates.push(companyUpdate);
       }
@@ -5646,13 +5644,12 @@ export class GameManagementService {
 
       const groupedByPhase = this.groupByPhase(playerOrders);
       const sortedPhases = this.sortByPhaseCreationTimeAsc(groupedByPhase);
-
+      console.log('sortedPhases', sortedPhases);
       for (const phaseOrders of sortedPhases) {
         const phaseId = phaseOrders[0].phaseId;
         const currentPhaseOrders = phaseOrders.filter(
           (order) => order.phaseId === phaseId,
         );
-
         let marketOrders = currentPhaseOrders.filter(
           (order) =>
             order.orderType === OrderType.MARKET &&
@@ -5697,60 +5694,60 @@ export class GameManagementService {
         } catch (error) {
           console.error('Error setting market order actions:', error);
         }
-
-        //get all orders for the current round that are FILLED and in the OPEN_MARKET,
-        //when calculating net differences we should only take the net for successful orders.
-        const openMarketOrders =
-          await this.playerOrderService.playerOrdersWithPlayerCompany({
-            where: {
-              stockRoundId: phase.stockRoundId,
-              location: ShareLocation.OPEN_MARKET,
-              orderStatus: OrderStatus.FILLED,
-            },
-          });
-
-        //group these orders by company
-        const groupedOpenMarketOrders = this.groupByCompany(openMarketOrders);
-
-        const netDifferences = Object.entries(groupedOpenMarketOrders).map(
-          ([companyId, orders]) => {
-            const buys = orders.filter((order) => !order.isSell);
-            const sells = orders.filter((order) => order.isSell);
-            const buyQuantity = buys.reduce(
-              (acc, order) => acc + (order.quantity || 0),
-              0,
-            );
-            const sellQuantity = sells.reduce(
-              (acc, order) => acc + (order.quantity || 0),
-              0,
-            );
-            let netDifference = buyQuantity - sellQuantity;
-            //if company has price freeze, the minimum net difference is 2
-            if (
-              orders[0].Company.CompanyActions.some(
-                (action) => action.action === OperatingRoundAction.PRICE_FREEZE,
-              )
-            ) {
-              netDifference = Math.min(netDifference, PRIZE_FREEZE_AMOUNT);
-            }
-            return {
-              companyId,
-              netDifference: buyQuantity - sellQuantity,
-              orders,
-            };
+      }
+      //get all orders for the current round that are FILLED and in the OPEN_MARKET,
+      //when calculating net differences we should only take the net for successful orders.
+      const openMarketOrders =
+        await this.playerOrderService.playerOrdersWithPlayerCompany({
+          where: {
+            stockRoundId: phase.stockRoundId,
+            location: ShareLocation.OPEN_MARKET,
+            orderStatus: OrderStatus.FILLED,
           },
-        );
+        });
 
-        try {
-          await this.processNetDifferences(netDifferences, phase);
-        } catch (error) {
-          console.error('Error resolving netDifferences iteration:', error);
-        }
+      //group these orders by company
+      const groupedOpenMarketOrders = this.groupByCompany(openMarketOrders);
+
+      const netDifferences = Object.entries(groupedOpenMarketOrders).map(
+        ([companyId, orders]) => {
+          const buys = orders.filter((order) => !order.isSell);
+          const sells = orders.filter((order) => order.isSell);
+          const buyQuantity = buys.reduce(
+            (acc, order) => acc + (order.quantity || 0),
+            0,
+          );
+          const sellQuantity = sells.reduce(
+            (acc, order) => acc + (order.quantity || 0),
+            0,
+          );
+          let netDifference = buyQuantity - sellQuantity;
+          //if company has price freeze, the minimum net difference is 2
+          if (
+            orders[0].Company.CompanyActions.some(
+              (action) => action.action === OperatingRoundAction.PRICE_FREEZE,
+            )
+          ) {
+            netDifference = Math.min(netDifference, PRIZE_FREEZE_AMOUNT);
+          }
+          return {
+            companyId,
+            netDifference: buyQuantity - sellQuantity,
+            orders,
+          };
+        },
+      );
+      console.log('netDifferences', netDifferences);
+      try {
+        await this.processNetDifferences(netDifferences, phase);
+      } catch (error) {
+        console.error('Error resolving netDifferences iteration:', error);
       }
     }
   }
 
   async processNetDifferences(netDifferences: any[], phase: Phase) {
+    console.log('processing net differences');
     await Promise.all(
       netDifferences.map(async ({ companyId, netDifference, orders }) => {
         let currentTier = orders[0].Company.stockTier;
@@ -5784,11 +5781,7 @@ export class GameManagementService {
           );
           await this.gameLogService.createGameLog({
             game: { connect: { id: orders[0].gameId } },
-            content: `Stock price for ${
-              orders[0].Company.name
-            } has increased to $${newStockPrice.price.toFixed(
-              2,
-            )} due to market buy orders`,
+            content: `Stock price for ${orders[0].Company.name} has increased to $${newStockPrice.price} due to market buy orders`,
           });
           await this.playerOrderService.triggerLimitOrdersFilled(
             orders[0].Company.currentStockPrice || 0,
@@ -5806,11 +5799,7 @@ export class GameManagementService {
           );
           await this.gameLogService.createGameLog({
             game: { connect: { id: orders[0].gameId } },
-            content: `Stock price for ${
-              orders[0].Company.name
-            } has decreased to $${stockPrice.price.toFixed(
-              2,
-            )} by ${netDifference} steps due to market sell orders`,
+            content: `Stock price for ${orders[0].Company.name} has decreased to $${stockPrice.price} by ${netDifference} steps due to market sell orders`,
           });
           await this.playerOrderService.triggerLimitOrdersFilled(
             orders[0].Company.currentStockPrice || 0,

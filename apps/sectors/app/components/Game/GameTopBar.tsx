@@ -152,7 +152,7 @@ const GameTopBar = ({
   };
   return (
     <Navbar height="100%">
-      <div className="flex justify-between p-2 flex-wrap">
+      <div className="flex justify-between items-center p-2 flex-wrap">
         <ButtonGroup>
           <Button
             className={getButtonClass("action")}

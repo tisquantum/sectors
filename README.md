@@ -183,3 +183,5 @@ I'm thinking short orders can only be performed on a company you have no ownersh
 - TODO: Insolvency should only be allowed in company action vote round
 - TODO: Insolvency actions should only be rendered for the current turn
 - TODO: Start on SUPPLY_CHAIN for passive, PRICE_FREEZE needs to be implemented
+- prizes for sectors that are inactive???
+- company demand vs sector demand 
