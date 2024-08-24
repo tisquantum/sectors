@@ -130,7 +130,7 @@ export const getStockPriceClosestEqualOrLess = (price: number): number => {
 export const getStockPriceClosestEqualOrMore = (price: number): number => {
   const index = stockGridPrices.findIndex((value) => value > price);
   return stockGridPrices[index];
-}
+};
 
 export const getStepsBetweenTwoNumbers = (
   start: number,
@@ -769,18 +769,29 @@ export type PlayerReadiness = {
   isReady: boolean;
 };
 
-export const companyActionsDescription = [
+export type CompanyActionType = 'general' | 'sector-active' | 'sector-passive';
+export interface CompanyActionDescription {
+  id: number;
+  title: string;
+  name: OperatingRoundAction;
+  message: string;
+  actionType: CompanyActionType;
+}
+
+export const companyActionsDescription: CompanyActionDescription[] = [
   {
     id: 1,
     title: 'Large Marketing Campaign',
     name: OperatingRoundAction.MARKETING,
     message: `The sector receives an additional ${MARKETING_CONSUMER_BONUS} consumers. Your company receives +${LARGE_MARKETING_CAMPAIGN_DEMAND} demand that decays 1 per production phase.`,
+    actionType: 'general',
   },
   {
     id: 2,
     title: 'Small Marketing Campaign',
     name: OperatingRoundAction.MARKETING_SMALL_CAMPAIGN,
     message: `The company receives +${SMALL_MARKETING_CAMPAIGN_DEMAND} demand that decays 1 per production phase.`,
+    actionType: 'general',
   },
   {
     id: 3,
@@ -788,6 +799,7 @@ export const companyActionsDescription = [
     name: OperatingRoundAction.RESEARCH,
     message:
       'Invest in research to gain a competitive edge. Draw one card from the research deck.',
+    actionType: 'general',
   },
   {
     id: 4,
@@ -795,6 +807,7 @@ export const companyActionsDescription = [
     name: OperatingRoundAction.EXPANSION,
     message:
       'Increase company size (base operational costs per OR) to meet higher demand and increase supply.',
+    actionType: 'general',
   },
   {
     id: 5,
@@ -802,6 +815,7 @@ export const companyActionsDescription = [
     name: OperatingRoundAction.DOWNSIZE,
     message:
       'Reduce company size (base operational costs per OR) to lower operation costs and decrease supply.',
+    actionType: 'general',
   },
   {
     id: 6,
@@ -809,48 +823,56 @@ export const companyActionsDescription = [
     name: OperatingRoundAction.SHARE_BUYBACK,
     message:
       'Buy back a share from the open market. This share is taken out of rotation from the game.',
+    actionType: 'general',
   },
   {
     id: 7,
     title: 'Share Issue',
     name: OperatingRoundAction.SHARE_ISSUE,
     message: `Issue ${ACTION_ISSUE_SHARE_AMOUNT} share(s) to the open market.`,
+    actionType: 'general',
   },
   {
     id: 8,
     title: 'Increase Unit Price',
     name: OperatingRoundAction.INCREASE_PRICE,
     message: `Increase the unit price of the company's product by ${DEFAULT_INCREASE_UNIT_PRICE}. This will increase the company's revenue. Be careful as consumers choose the company with the cheapest product in the sector first!`,
+    actionType: 'general',
   },
   {
     id: 9,
     title: 'Decrease Unit Price',
     name: OperatingRoundAction.DECREASE_PRICE,
     message: `Decrease the unit price of the company's product by ${DEFAULT_DECREASE_UNIT_PRICE}. This will decrease the company's revenue.`,
+    actionType: 'general',
   },
   {
     id: 10,
     title: 'Spend Prestige',
     name: OperatingRoundAction.SPEND_PRESTIGE,
     message: `Purchase the current prestige track item at it's cost to receive the reward on the prestige track and move it forward by 1. If the company does not have enough prestige, move the prestige track forward by 1.`,
+    actionType: 'general',
   },
   {
     id: 11,
     title: 'Loan',
     name: OperatingRoundAction.LOAN,
     message: `Take out a loan of $${LOAN_AMOUNT} to increase cash on hand. Be careful, loans must be paid back with interest @ %${LOAN_INTEREST_RATE} per turn. This action can only be taken once per game.`,
+    actionType: 'general',
   },
   {
     id: 12,
     title: 'Lobby',
     name: OperatingRoundAction.LOBBY,
     message: `Lobby the government to force demand in your favor. Boost the sectors demand by ${LOBBY_DEMAND_BOOST}. This demand will decay 1 per stock price adjustment phase.`,
+    actionType: 'general',
   },
   {
     id: 13,
     title: 'Outsource',
     name: OperatingRoundAction.OUTSOURCE,
     message: `The company outsources production.  Increase supply by ${OURSOURCE_SUPPLY_BONUS} that decays once per turn.  Lose all prestige tokens. A company may only ever have up to twice of the maximum supply it's company tier allows.`,
+    actionType: 'general',
   },
   {
     id: 14,
@@ -858,6 +880,7 @@ export const companyActionsDescription = [
     name: OperatingRoundAction.VETO,
     message:
       'The company does nothing this turn. Pick this to ensure the company will not act on any other proposal. Additionally, the next turn this companies operating costs are 50% less.',
+    actionType: 'general',
   },
   //sector specific actions active effects
   //technology
@@ -867,6 +890,7 @@ export const companyActionsDescription = [
     name: OperatingRoundAction.VISIONARY,
     message:
       'Draw 2 research cards and the company gains +1 demand permanently.',
+    actionType: 'sector-active',
   },
   //materials
   {
@@ -874,6 +898,7 @@ export const companyActionsDescription = [
     title: 'Strategic Reserve',
     name: OperatingRoundAction.STRATEGIC_RESERVE,
     message: `The company has no production cost next turn and revenue is increased ${STRATEGIC_RESERVE_REVENUE_MULTIPLIER_PERCENTAGE}%.`,
+    actionType: 'sector-active',
   },
   //industrial
   {
@@ -881,6 +906,7 @@ export const companyActionsDescription = [
     title: 'Rapid Expansion',
     name: OperatingRoundAction.RAPID_EXPANSION,
     message: 'The company expands two levels.',
+    actionType: 'sector-active',
   },
   //Healthcare
   {
@@ -888,6 +914,7 @@ export const companyActionsDescription = [
     title: 'Fast-track Approval',
     name: OperatingRoundAction.FASTTRACK_APPROVAL,
     message: `Take up to ${FASTTRACK_APPROVAL_AMOUNT_CONSUMERS} consumers from each other sector and add them to the Healthcare sector, the company gets +${FASTTRACK_APPROVAL_AMOUNT_DEMAND} temporary demand.`,
+    actionType: 'sector-active',
   },
   //consumer defensive
   {
@@ -895,6 +922,7 @@ export const companyActionsDescription = [
     title: 'Price Freeze',
     name: OperatingRoundAction.PRICE_FREEZE,
     message: `During the marketing action resolve round, the company stock price will move a maximum of ${PRIZE_FREEZE_AMOUNT} spaces next turn.`,
+    actionType: 'sector-active',
   },
   //consumer cyclical
   {
@@ -903,6 +931,7 @@ export const companyActionsDescription = [
     name: OperatingRoundAction.REBRAND,
     message:
       'The company gains +1 temporary demand, +1 permanent demand and a $40 increase in price.',
+    actionType: 'sector-active',
   },
   //energy
   {
@@ -910,6 +939,7 @@ export const companyActionsDescription = [
     title: 'Surge Pricing',
     name: OperatingRoundAction.SURGE_PRICING,
     message: `Next turn, company revenue is increased ${SURGE_PRICING_REVENUE_MULTIPLIER_PERCENTAGE}%.`,
+    actionType: 'sector-active',
   },
   //passive effect badges
   //technology
@@ -918,6 +948,7 @@ export const companyActionsDescription = [
     title: 'Innovation Surge',
     name: OperatingRoundAction.INNOVATION_SURGE,
     message: 'Should the company draw a research card, draw 2 cards instead.',
+    actionType: 'sector-passive',
   },
   //healthcare
   {
@@ -926,6 +957,7 @@ export const companyActionsDescription = [
     name: OperatingRoundAction.REGULATORY_SHIELD,
     message:
       'Should the company stock price decrease, it will stop at the top of the next stock price tier should it drop any further.',
+    actionType: 'sector-passive',
   },
   {
     id: 23,
@@ -933,6 +965,7 @@ export const companyActionsDescription = [
     name: OperatingRoundAction.EXTRACT,
     message:
       'Gain this action during the Company Action phase: The company gains 1 temporary supply and, if the Industrial Sector exists,  a random active insolvent Industrials sector company gains one temporary supply.',
+    actionType: 'sector-passive',
   },
   {
     id: 24,
@@ -940,6 +973,7 @@ export const companyActionsDescription = [
     name: OperatingRoundAction.MANUFACTURE,
     message:
       'Gain this action during the Company Action phase: The company gains 1 temporary supply and, if the Materials Sector exists, a random active insolvent Materials sector company gains one temporary supply.',
+    actionType: 'sector-passive',
   },
   //consumer defensive
   {
@@ -947,6 +981,7 @@ export const companyActionsDescription = [
     title: 'Steady Demand',
     name: OperatingRoundAction.STEADY_DEMAND,
     message: `Should the company have remaining demand but no consumers are available, sell up to ${STEADY_DEMAND_CONSUMER_BONUS} demand anyway.`,
+    actionType: 'sector-passive',
   },
   //consumer cyclical
   {
@@ -954,6 +989,7 @@ export const companyActionsDescription = [
     title: 'Boom Cycle',
     name: OperatingRoundAction.BOOM_CYCLE,
     message: `Would the companies stock price be stopped by a new price tier, allow it to move up at least ${BOOM_CYCLE_STOCK_CHART_BONUS} spaces further.`,
+    actionType: 'sector-passive',
   },
   //energy
   {
@@ -961,5 +997,6 @@ export const companyActionsDescription = [
     title: 'Carbon Credit',
     name: OperatingRoundAction.CARBON_CREDIT,
     message: 'This companies throughput can never be less than 1.',
+    actionType: 'sector-passive',
   },
 ];
