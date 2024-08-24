@@ -10,7 +10,11 @@ As soon as this happens, the remainder of the turn is played out and this is the
 - **Total Turns Exceeded:** If the game runs through it's maximum turn length, the game ends on the final turn.
 
 ### Game Flow
-The game is played over turns, each turn is separated into distinct rounds.  The stock round has three sub-rounds.  Each round has phases where players will either perform some action or observe the result of a phases resolution.
+The game is played over turns, each turn is separated into distinct rounds.  The stock round has three sub-rounds.  Each round has phases where players will either perform some action or observe the result of a phases resolution.  
+
+Each phase has a given amount of time before it will end and the next phase will begin.  If the phase is actionable, players will have an opportunity, given they are eligible, to perform some action or set of actions.  Actions conducted in sectors phases are performed **simultanenously**. Players are never forced to place an action.  If players do not act within the given timer, they are considered not to have acted in that phase.  
+
+If a player is ready, they can elect to "ready up" which will signal they have nothing else they wish to do or observe in the current phase.  If all players of the game ready up, that phase is considered finished regardless of the time remaining in that phase.
 
 ### Sections of the Game:
 
@@ -31,7 +35,7 @@ Player priority determines how any ties are resolved in relation to the player. 
 
 ## Stock Rounds
 
-**The Stock Round** is the first major section of each turn and provides the mechanisms for players to build their stock portfolio and earn (or lose!) money in investments. The Stock Round is broken down into a number of *"sub-rounds"* where players can place one order in each round. Players have 4 distinct order mechanisms: Market Orders, Limit Orders, Short Orders, and Options Contracts.
+**The Stock Round** is the first major section of each turn and provides the mechanisms for players to build their stock portfolio and earn (or lose!) money in investments. The Stock Round is broken down into a number of *"sub-rounds"* where players can place one order in each round.  The order is placed in the "Place Stock Orders" phase. Player orders are submitted simultaneously and in secret.Players have 4 distinct order mechanisms: Market Orders, Limit Orders, Short Orders, and Options Contracts. 
 
 ### Order Mechanisms:
 
