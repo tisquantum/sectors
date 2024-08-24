@@ -267,7 +267,6 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
               </div>
             )}
             {isInteractive &&
-              showButton &&
               company.Share.filter(
                 (share: Share) => share.location == ShareLocation.IPO
               ).length > 0 && (
@@ -366,27 +365,20 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
                 </div>
               </div>
             )}
-            {isInteractive &&
-              showButton &&
-              (company.Share.filter(
-                (share: Share) => share.location == ShareLocation.OPEN_MARKET
-              ).length > 0 ||
-                company.Share.filter(
-                  (share: Share) => share.location == ShareLocation.PLAYER
-                ).length > 0) && (
-                <Drawer.Trigger asChild>
-                  <Button
-                    className={
-                      focusedOrder?.id == company.id
-                        ? "my-3 bg-gradient-to-tr from-pink-500 to-yellow-500 text-white shadow-lg"
-                        : "my-3 ring-2 ring-gray-950"
-                    }
-                    onClick={() => handleDisplayOrderInput(company, false)}
-                  >
-                    Place Order OPEN MARKET
-                  </Button>
-                </Drawer.Trigger>
-              )}
+            {isInteractive && (
+              <Drawer.Trigger asChild>
+                <Button
+                  className={
+                    focusedOrder?.id == company.id
+                      ? "my-3 bg-gradient-to-tr from-pink-500 to-yellow-500 text-white shadow-lg"
+                      : "my-3 ring-2 ring-gray-950"
+                  }
+                  onClick={() => handleDisplayOrderInput(company, false)}
+                >
+                  Place Order OPEN MARKET
+                </Button>
+              </Drawer.Trigger>
+            )}
           </div>
         </CardBody>
       </Card>

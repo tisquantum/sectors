@@ -32,6 +32,7 @@ import { useEffect, useState } from "react";
 import {
   CompanyStatus,
   OperatingRoundAction,
+  PhaseName,
   PrizeDistributionType,
   SectorName,
 } from "@server/prisma/prisma.client";
@@ -69,6 +70,7 @@ const DistributePrize = ({
       where: {
         gameId,
         OR: [
+          { status: CompanyStatus.INACTIVE },
           { status: CompanyStatus.ACTIVE },
           { status: CompanyStatus.INSOLVENT },
         ],
@@ -559,36 +561,37 @@ const DistributePrizes = () => {
       <h1>Tranches Distribution</h1>
       {prizes.length > 0 ? (
         <>
-          {playerPrizes.length > 0 && (
-            <>
-              {playerPrizes.map((prize) => (
-                <div key={prize.id}>
-                  {prize.playerId && prize.playerId == authPlayer.id && (
-                    <>
-                      <DistributePrize
-                        prize={prize}
-                        setDistributionData={setDistributionData}
-                        distributionData={distributionData}
-                      />
-                    </>
-                  )}
+          {playerPrizes.length > 0 &&
+            currentPhase?.name == PhaseName.PRIZE_DISTRIBUTE_ACTION && (
+              <>
+                {playerPrizes.map((prize) => (
+                  <div key={prize.id}>
+                    {prize.playerId && prize.playerId == authPlayer.id && (
+                      <>
+                        <DistributePrize
+                          prize={prize}
+                          setDistributionData={setDistributionData}
+                          distributionData={distributionData}
+                        />
+                      </>
+                    )}
+                  </div>
+                ))}
+                <h2>Pending Distributions</h2>
+                <DistributionTable
+                  distributionData={distributionData}
+                  setDistributionData={setDistributionData}
+                />
+                <div className="flex justify-center">
+                  <DebounceButton
+                    onClick={handleFinalizeDistribution}
+                    isLoading={isLoadingSubmission}
+                  >
+                    Finalize Distribution
+                  </DebounceButton>
                 </div>
-              ))}
-              <h2>Pending Distributions</h2>
-              <DistributionTable
-                distributionData={distributionData}
-                setDistributionData={setDistributionData}
-              />
-              <div className="flex justify-center">
-                <DebounceButton
-                  onClick={handleFinalizeDistribution}
-                  isLoading={isLoadingSubmission}
-                >
-                  Finalize Distribution
-                </DebounceButton>
-              </div>
-            </>
-          )}
+              </>
+            )}
           <h2>All Tranches Distributions</h2>
           <PrizeDistributionsTable prizes={prizes} />
         </>

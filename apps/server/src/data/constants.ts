@@ -70,6 +70,9 @@ export const SURGE_PRICING_REVENUE_MULTIPLIER_PERCENTAGE = 20;
 export const STEADY_DEMAND_CONSUMER_BONUS = 2;
 export const BOOM_CYCLE_STOCK_CHART_BONUS = 3;
 export const PRIZE_FREEZE_AMOUNT = 2;
+export const FASTTRACK_APPROVAL_AMOUNT_DEMAND = 2;
+export const FASTTRACK_APPROVAL_AMOUNT_CONSUMERS = 3;
+
 /**
  * Phase times in milliseconds
  */
@@ -92,7 +95,7 @@ export const phaseTimes = {
   [PhaseName.STOCK_OPEN_LIMIT_ORDERS]: 10 * 1000,
   [PhaseName.STOCK_RESULTS_OVERVIEW]: 15 * 1000,
   [PhaseName.OPERATING_PRODUCTION]: 15 * 1000,
-  [PhaseName.OPERATING_PRODUCTION_VOTE]: 30 * 1000,
+  [PhaseName.OPERATING_PRODUCTION_VOTE]: 45 * 1000,
   [PhaseName.OPERATING_PRODUCTION_VOTE_RESOLVE]: 10 * 1000,
   [PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT]: 15 * 1000,
   [PhaseName.OPERATING_MEET]: 30 * 1000,
@@ -123,6 +126,11 @@ export const getStockPriceClosestEqualOrLess = (price: number): number => {
   const index = stockGridPrices.findIndex((value) => value >= price);
   return stockGridPrices[index];
 };
+
+export const getStockPriceClosestEqualOrMore = (price: number): number => {
+  const index = stockGridPrices.findIndex((value) => value > price);
+  return stockGridPrices[index];
+}
 
 export const getStepsBetweenTwoNumbers = (
   start: number,
@@ -296,8 +304,8 @@ export const companyVoteActionPriority = (
     OperatingRoundAction.SURGE_PRICING,
     OperatingRoundAction.INNOVATION_SURGE,
     OperatingRoundAction.REGULATORY_SHIELD,
-    OperatingRoundAction.SUPPLY_CHAIN,
-    OperatingRoundAction.ROBOTICS,
+    OperatingRoundAction.EXTRACT,
+    OperatingRoundAction.MANUFACTURE,
     OperatingRoundAction.STEADY_DEMAND,
     OperatingRoundAction.BOOM_CYCLE,
     OperatingRoundAction.CARBON_CREDIT,
@@ -443,8 +451,8 @@ export const CompanyActionCosts = {
   [OperatingRoundAction.SURGE_PRICING]: 400,
   [OperatingRoundAction.INNOVATION_SURGE]: 0,
   [OperatingRoundAction.REGULATORY_SHIELD]: 0,
-  [OperatingRoundAction.SUPPLY_CHAIN]: 0,
-  [OperatingRoundAction.ROBOTICS]: 0,
+  [OperatingRoundAction.EXTRACT]: 25,
+  [OperatingRoundAction.MANUFACTURE]: 25,
   [OperatingRoundAction.STEADY_DEMAND]: 0,
   [OperatingRoundAction.BOOM_CYCLE]: 0,
   [OperatingRoundAction.CARBON_CREDIT]: 0,
@@ -478,8 +486,8 @@ export const CompanyActionPrestigeCosts = {
   //passive effects
   [OperatingRoundAction.INNOVATION_SURGE]: 0,
   [OperatingRoundAction.REGULATORY_SHIELD]: 0,
-  [OperatingRoundAction.SUPPLY_CHAIN]: 0,
-  [OperatingRoundAction.ROBOTICS]: 0,
+  [OperatingRoundAction.EXTRACT]: 0,
+  [OperatingRoundAction.MANUFACTURE]: 0,
   [OperatingRoundAction.STEADY_DEMAND]: 0,
   [OperatingRoundAction.BOOM_CYCLE]: 0,
   [OperatingRoundAction.CARBON_CREDIT]: 0,
@@ -711,7 +719,7 @@ export const SectorEffects: {
   },
   [SectorName.INDUSTRIALS]: {
     active: OperatingRoundAction.RAPID_EXPANSION,
-    passive: OperatingRoundAction.ROBOTICS,
+    passive: OperatingRoundAction.MANUFACTURE,
   },
   [SectorName.TECHNOLOGY]: {
     active: OperatingRoundAction.VISIONARY,
@@ -727,7 +735,7 @@ export const SectorEffects: {
   },
   [SectorName.MATERIALS]: {
     active: OperatingRoundAction.STRATEGIC_RESERVE,
-    passive: OperatingRoundAction.SUPPLY_CHAIN,
+    passive: OperatingRoundAction.EXTRACT,
   },
   [SectorName.CONSUMER_DISCRETIONARY]: {
     active: OperatingRoundAction.REBRAND,
@@ -879,7 +887,7 @@ export const companyActionsDescription = [
     id: 18,
     title: 'Fast-track Approval',
     name: OperatingRoundAction.FASTTRACK_APPROVAL,
-    message: 'The company gains +5 demand that decays 1 per turn.',
+    message: `Take up to ${FASTTRACK_APPROVAL_AMOUNT_CONSUMERS} consumers from each other sector and add them to the Healthcare sector, the company gets +${FASTTRACK_APPROVAL_AMOUNT_DEMAND} temporary demand.`,
   },
   //consumer defensive
   {
@@ -919,20 +927,19 @@ export const companyActionsDescription = [
     message:
       'Should the company stock price decrease, it will stop at the top of the next stock price tier should it drop any further.',
   },
-  //materials TODO: let's change this
   {
     id: 23,
-    title: 'Supply Chain',
-    name: OperatingRoundAction.SUPPLY_CHAIN,
-    message: 'The company gains +1 permanent supply.',
+    title: 'Extract',
+    name: OperatingRoundAction.EXTRACT,
+    message:
+      'Gain this action during the Company Action phase: The company gains 1 temporary supply and, if the Industrial Sector exists,  a random active insolvent Industrials sector company gains one temporary supply.',
   },
-  //industrial TODO: let's change this
   {
     id: 24,
-    title: 'Operating Round Action',
-    name: OperatingRoundAction.ROBOTICS,
+    title: 'Manufacture',
+    name: OperatingRoundAction.MANUFACTURE,
     message:
-      'This company is charged the operational cost of the tier underneath it, with a minimum of 0.',
+      'Gain this action during the Company Action phase: The company gains 1 temporary supply and, if the Materials Sector exists, a random active insolvent Materials sector company gains one temporary supply.',
   },
   //consumer defensive
   {

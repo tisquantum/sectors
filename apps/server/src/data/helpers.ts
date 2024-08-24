@@ -33,6 +33,7 @@ import {
   PrestigeTrackItem,
   STOCK_ACTION_SUB_ROUND_MAX,
   StockTierChartRange,
+  getStockPriceClosestEqualOrMore,
   stockGridPrices,
   stockTierChartRanges,
 } from './constants';
@@ -318,19 +319,48 @@ export function getStepsWithMaxBeingTheNextTierMin(
   companyHasBoomCyclePassive: boolean,
 ): number {
   let remainingSteps = Math.floor(revenue / currentStockPrice);
-  let newStockPrice = currentStockPrice;
+
+  // Get current index
+  const currentIndex = stockGridPrices.indexOf(currentStockPrice);
+  if (currentIndex === -1) throw new Error('Invalid current stock price');
+
+  if (currentIndex + remainingSteps >= stockGridPrices.length) {
+    return stockGridPrices.length - 1 - currentIndex;
+  }
+
+  const theoreticalNewPrice = stockGridPrices[currentIndex + remainingSteps];
   const currentTier = getCurrentTierBySharePrice(currentStockPrice);
   const nextTier = getNextTier(currentTier);
-  const nextTierMinValue = getTierMinValue(nextTier!);
-  let stoppingPoint = stockGridPrices.indexOf(nextTierMinValue);
+
+  if (theoreticalNewPrice <= getTierMaxValue(currentTier)) {
+    return remainingSteps;
+  }
+
+  if (!nextTier) {
+    return Math.min(remainingSteps, stockGridPrices.length - 1 - currentIndex);
+  }
+
+  const nextTierMinValue = getTierMinValue(nextTier);
+  const nextGridPrice = getStockPriceClosestEqualOrMore(nextTierMinValue);
+  let stoppingPointIndex = stockGridPrices.indexOf(nextGridPrice);
+
+  if (stoppingPointIndex === -1) {
+    console.error(
+      'Stopping point not found:',
+      stoppingPointIndex,
+      nextGridPrice,
+    );
+    return Math.min(remainingSteps, stockGridPrices.length - 1 - currentIndex);
+  }
+
   if (companyHasBoomCyclePassive) {
-    stoppingPoint = Math.min(
-      stoppingPoint + BOOM_CYCLE_STOCK_CHART_BONUS,
+    stoppingPointIndex = Math.min(
+      stoppingPointIndex + BOOM_CYCLE_STOCK_CHART_BONUS,
       stockGridPrices.length - 1,
     );
   }
-  const currentIndex = stockGridPrices.indexOf(newStockPrice);
-  return Math.min(remainingSteps, stoppingPoint - currentIndex);
+
+  return Math.min(stoppingPointIndex - currentIndex, remainingSteps);
 }
 
 export function determineStockTier(stockPrice: number): StockTier {
@@ -353,7 +383,9 @@ export function getCurrentTierBySharePrice(
   currentSharePrice: number,
 ): StockTier {
   return stockTierChartRanges.find(
-    (range) => currentSharePrice <= range.chartMaxValue,
+    (range) =>
+      currentSharePrice >= range.chartMinValue &&
+      currentSharePrice <= range.chartMaxValue,
   )!.tier;
 }
 

@@ -91,7 +91,7 @@ const OperatingRoundProduction = () => {
                     units sold. The units sold is whatever is less, the
                     customers wanting product from the company or the supply of
                     the company. The amount of customers who visit the company
-                    is equal to the sector demand plus the company demand.
+                    is equal to the company demand score.
                   </p>
                 }
               >

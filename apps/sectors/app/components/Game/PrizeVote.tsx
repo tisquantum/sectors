@@ -11,6 +11,7 @@ import DebounceButton from "../General/DebounceButton";
 import { useState } from "react";
 import { sectorColors } from "@server/data/gameData";
 import PlayerAvatar from "../Player/PlayerAvatar";
+import PassiveEffect from "../Company/PassiveEffect";
 
 const PrizeComponent = ({
   prize,
@@ -59,11 +60,12 @@ const PrizeComponent = ({
                   backgroundColor: sectorColors[sectorPrize.Sector.name],
                 }}
               >
-                <RiGameFill />
-                <span>{sectorPrize.Sector.name}</span>
-                <span>
-                  {SectorEffects[sectorPrize.Sector.sectorName].passive}
-                </span>
+                <PassiveEffect
+                  passiveEffect={
+                    SectorEffects[sectorPrize.Sector.sectorName].passive
+                  }
+                  sectorName={sectorPrize.Sector.name}
+                />
               </div>
             ))}
         </div>

@@ -187,8 +187,8 @@ const GameTopBar = ({
         </ButtonGroup>
         {/* <Button onClick={handleNextPhase}>Next Phase</Button>
       <Button onClick={handleRetryPhase}>Retry Phase</Button> */}
-        <Button onClick={pauseGame}>Pause Game</Button>
-        <Button onClick={resumeGame}>Resume Game</Button>
+        {/* <Button onClick={pauseGame}>Pause Game</Button>
+        <Button onClick={resumeGame}>Resume Game</Button> */}
         {currentPhase?.name && !isActivePhase(currentPhase.name) && (
           <div
             className={`flex flex-col justify-center items-center ${

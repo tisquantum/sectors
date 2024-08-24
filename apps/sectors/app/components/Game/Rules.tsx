@@ -222,7 +222,9 @@ const OperatingRoundRules = () => (
     <p>
       <strong>Throughput:</strong> Measures company efficiency.
       <ul className="list-disc pl-5">
-        <li>Calculated by subtracting total demand from supply.</li>
+        <li>
+          Calculated by subtracting company demand score from it's supply score.
+        </li>
         <li>The closer to 0, the more efficient the company is operating.</li>
         <li>
           If a company reaches zero efficiency, it is awarded one increment
@@ -240,7 +242,7 @@ const OperatingRoundRules = () => (
       efficiency.
       <ul className="list-disc pl-5">
         <li>
-          Revenue is determined by the lower of sector demand and company
+          Revenue is determined by the lower of company demand score and company
           supply.
         </li>
         <li>Unit price multiplied by this number gives the revenue.</li>

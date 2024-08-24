@@ -32,13 +32,14 @@ import {
   tooltipStyle,
 } from "@sectors/app/helpers/tailwind.helpers";
 import {
+  companyActionsDescription,
   CompanyTierData,
   LOAN_AMOUNT,
   LOAN_INTEREST_RATE,
   SectorEffects,
 } from "@server/data/constants";
 import { sectorColors } from "@server/data/gameData";
-import { calculateCompanySupply } from "@server/data/helpers";
+import { calculateCompanySupply, calculateDemand } from "@server/data/helpers";
 import { CompanyStatus, Share } from "@server/prisma/prisma.client";
 import { CompanyWithSector } from "@server/prisma/prisma.types";
 import { BarList } from "@tremor/react";
@@ -46,6 +47,7 @@ import ThroughputLegend from "../Game/ThroughputLegend";
 import { trpc } from "@sectors/app/trpc";
 import CompanyTiers from "./CompanyTiers";
 import { MoneyTransactionHistoryByCompany } from "../Game/MoneyTransactionHistory";
+import PassiveEffect from "./PassiveEffect";
 
 const buildBarChart = (share: Share[]) => {
   //group shares by location and sum the quantity
@@ -116,7 +118,7 @@ const CompanyMoreInfo = ({
           className={tooltipStyle}
           content={
             <p className={tooltipParagraphStyle}>
-              Prestige tokens. While held, they prioritize the company for
+              Prestige tokens. While held, they help prioritize the company for
               production. Can be spent for a bonus. Sell all of your companies
               supply during an operating round to earn a prestige token.
             </p>
@@ -132,7 +134,7 @@ const CompanyMoreInfo = ({
           content={
             <p className={tooltipParagraphStyle}>
               The companies demand score. The maximum amount of customers that
-              will visit your company before spending somewhere else.
+              will visit your company before visiting somewhere else.
             </p>
           }
         >
@@ -168,9 +170,8 @@ const CompanyMoreInfo = ({
           content={
             <div className="flex flex-col gap-2">
               <p className={tooltipParagraphStyle}>
-                Throughput. The base sector demand plus the companies demand
-                minus it&apos;s supply. The closer to zero, the more efficient
-                the company is operating.
+                Throughput. The companies demand minus it&apos;s supply. The
+                closer to zero, the more efficient the company is operating.
               </p>
               <div className="flex flex-col gap-2">
                 <ThroughputLegend />
@@ -182,9 +183,7 @@ const CompanyMoreInfo = ({
             <RiIncreaseDecreaseFill size={18} className="ml-2" />
             <div className="ml-1 flex">
               <span>
-                {company.demandScore +
-                  company.Sector.demand +
-                  (company.Sector.demandBonus || 0) -
+                {calculateDemand(company.demandScore, company.baseDemand) -
                   calculateCompanySupply(
                     company.supplyMax,
                     company.supplyBase,
@@ -371,27 +370,12 @@ const CompanyInfo = ({
                 </span>
               </Tooltip>
               {companyHasPassiveAction && (
-                <Tooltip
-                  className={tooltipStyle}
-                  content={
-                    <p className={tooltipParagraphStyle}>
-                      The passive effect the company currently has.
-                    </p>
+                <PassiveEffect
+                  passiveEffect={
+                    SectorEffects[company.Sector.sectorName].passive
                   }
-                >
-                  <div
-                    key={company.Sector.id}
-                    className="flex flex-col gap-1 rounded-md p-2"
-                    style={{
-                      backgroundColor: sectorColors[company.Sector.name],
-                    }}
-                  >
-                    <RiGameFill />
-                    <span>
-                      {SectorEffects[company.Sector.sectorName].passive}
-                    </span>
-                  </div>
-                </Tooltip>
+                  sectorName={company.Sector.name}
+                />
               )}
             </div>
           </div>
@@ -414,15 +398,15 @@ const CompanyInfo = ({
               showingProductionResults={showingProductionResults}
             />
           )}
-        </div>
-        <div className="flex flex-col">
-          {showBarChart && (
-            <BarList
-              data={buildBarChart(company.Share || [])}
-              color="red"
-              className="mx-auto max-w-sm px-2 w-32"
-            />
-          )}
+          <div className="flex flex-col">
+            {showBarChart && (
+              <BarList
+                data={buildBarChart(company.Share || [])}
+                color="red"
+                className="mx-auto max-w-sm px-2 w-32"
+              />
+            )}
+          </div>
         </div>
       </div>
       <Modal isOpen={isOpen} onOpenChange={onOpenChange} className="h-full">

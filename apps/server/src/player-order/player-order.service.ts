@@ -290,6 +290,7 @@ export class PlayerOrderService {
     const stockRoundId = data.StockRound.connect?.id;
 
     if (!playerId || !companyId || !stockRoundId) {
+      console.error('Invalid data input', data);
       throw new Error('Invalid data input');
     }
 

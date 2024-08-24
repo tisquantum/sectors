@@ -104,7 +104,7 @@ const OperatingRoundRevenueVote = () => {
               key={productionResult.id}
             >
               <div className="flex flex-col">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col items-center gap-2">
                   <CompanyInfo company={productionResult.Company} />
                   <ShareHolders companyId={productionResult.Company.id} />
                 </div>

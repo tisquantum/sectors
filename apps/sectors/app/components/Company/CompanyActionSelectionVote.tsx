@@ -39,8 +39,10 @@ import {
   CompanyStatus,
   OperatingRoundAction,
   PhaseName,
+  SectorName,
 } from "@server/prisma/prisma.client";
 import {
+  CompanyWithRelations,
   CompanyWithSector,
   OperatingRoundVoteWithPlayer,
 } from "@server/prisma/prisma.types";
@@ -63,7 +65,7 @@ const CompanyActionSelectionVote = ({
   companyActions,
   withResult,
 }: {
-  company?: CompanyWithSector;
+  company?: CompanyWithRelations;
   actionVoteResults?: OperatingRoundVoteWithPlayer[];
   withResult?: boolean;
   companyActions?: CompanyAction[];
@@ -157,6 +159,26 @@ const CompanyActionSelectionVote = ({
     );
     if (sectorActiveAction) {
       availableActions.push(sectorActiveAction);
+    }
+  }
+  const companySectorPassiveEffect =
+    SectorEffects[company.Sector.sectorName]?.passive;
+  if (
+    companySectorPassiveEffect &&
+    (company.Sector.sectorName == SectorName.INDUSTRIALS ||
+      company.Sector.sectorName == SectorName.MATERIALS) &&
+    company.CompanyActions.some(
+      (companyAction) =>
+        companyAction.action === OperatingRoundAction.EXTRACT ||
+        companyAction.action === OperatingRoundAction.MANUFACTURE
+    )
+  ) {
+    //add back in the relevant sector passive action
+    const sectorPassiveAction = companyActionsDescription.find(
+      (action) => action.name === companySectorPassiveEffect
+    );
+    if (sectorPassiveAction) {
+      availableActions.push(sectorPassiveAction);
     }
   }
   return (
@@ -316,7 +338,7 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
     data: companies,
     isLoading: isLoadingCompanies,
     error,
-  } = trpc.company.listCompaniesWithSector.useQuery({
+  } = trpc.company.listCompaniesWithRelations.useQuery({
     where: {
       gameId,
       OR: [
