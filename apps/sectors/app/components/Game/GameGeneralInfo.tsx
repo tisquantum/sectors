@@ -251,12 +251,12 @@ const GameGeneralInfo = () => {
             </p>
           ) : gameState.distributionStrategy ==
             DistributionStrategy.PRIORITY ? (
-            <p>
-              Orders are filled in priority. If there are not enough shares to
-              resolve the order, the order is rejected.
+            <p className={tooltipParagraphStyle}>
+              Orders are filled in player priority. If there are not enough
+              shares to resolve the order, the order is rejected.
             </p>
           ) : (
-            <p>
+            <p className={tooltipParagraphStyle}>
               When there is not enough shares to distribute, orders are split
               evenly amongst the remaining orders. Any remaining shares are
               distributed on a lottery to a random player who has placed an
@@ -266,7 +266,7 @@ const GameGeneralInfo = () => {
         }
       >
         <div>
-          <div className="text-lg font-bold">Phase</div>
+          <div className="text-lg font-bold">Distribution</div>
           <div>
             {friendlyDistributionStrategyName(gameState.distributionStrategy)}
           </div>

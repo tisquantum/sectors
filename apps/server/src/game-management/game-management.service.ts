@@ -5277,13 +5277,30 @@ export class GameManagementService {
                 playerIds,
                 this.prisma,
               );
-              const sortedByBidValue = this.sortByBidValue(
-                phaseOrders,
-                playerPriorities,
-              );
+              let sortedOrders: PlayerOrderWithPlayerCompany[] | undefined;
+              if (
+                game.distributionStrategy === DistributionStrategy.BID_PRIORITY
+              ) {
+                const sortedByBidValue = this.sortByBidValue(
+                  phaseOrders,
+                  playerPriorities,
+                );
+                sortedOrders = sortedByBidValue;
+              }
+              if (game.distributionStrategy === DistributionStrategy.PRIORITY) {
+                const sortedByBidValue = this.sortByPlayerPriority(
+                  phaseOrders,
+                  playerPriorities,
+                );
+                sortedOrders = sortedByBidValue;
+              }
+              if (!sortedOrders) {
+                //exit iteration
+                continue;
+              }
               // Reject all orders except the first
               await Promise.all(
-                sortedByBidValue.slice(1).map(async (order) => {
+                sortedOrders.slice(1).map(async (order) => {
                   await this.prisma.playerOrder.update({
                     where: { id: order.id },
                     data: {
@@ -5294,17 +5311,17 @@ export class GameManagementService {
               );
               // Update the first order to be FILLED
               const playerOrderResolved = await this.prisma.playerOrder.update({
-                where: { id: sortedByBidValue[0].id },
+                where: { id: sortedOrders[0].id },
                 data: {
                   orderStatus: OrderStatus.OPEN,
                 },
               });
               // Update the contract
               await this.optionContractService.updateOptionContract({
-                where: { id: sortedByBidValue[0].optionContractId || 0 },
+                where: { id: sortedOrders[0].optionContractId || 0 },
                 data: {
                   contractState: ContractState.PURCHASED,
-                  currentPremium: sortedByBidValue[0].value || 0,
+                  currentPremium: sortedOrders[0].value || 0,
                 },
               });
               // Remove premium from players' cash on hand
