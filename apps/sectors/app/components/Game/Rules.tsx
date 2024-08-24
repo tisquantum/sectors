@@ -465,7 +465,7 @@ const CompanyActionsRules = () => {
         Each Operating Round, companies will take turns in company priority
         order. On their turn, players will vote for a set of company actions to
         take place. The amount of actions a company can take is directly tied to
-        it's current company tier. Actions are paid for with assets from the
+        it&apos;s current company tier. Actions are paid for with assets from the
         company treasury.
       </p>
       <p>
