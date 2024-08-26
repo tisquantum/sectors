@@ -176,7 +176,7 @@ In this round, players vote on the tranche they want to win. There are three typ
   - Passive Sector Effects are given to one company in the sector.
   - The effect will persist on this company until a passive effect is assigned to a different company in the same sector in a future tranch distribution phase.
 
-Players vote on the tranche they want to win. If more than one player votes on the tranche, no one wins it and the tranche is not distributed. If all votes are distributed, money is doubled in each prize pool. Placing a vote is not required.
+Players vote on the tranche they want to win. If more than one player votes on the tranche, no one wins it and the tranche is not distributed. If all prize pools are won by a player, money is doubled in each prize pool. Placing a vote is not required.
 
 After voting, any player who receives a cash reward may distribute this reward amongst all players in the game in whatever way they see fit.
 
