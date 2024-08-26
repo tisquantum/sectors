@@ -23,9 +23,9 @@ If a player is ready, they can elect to "ready up," which will signal they have 
 {: #sections-of-the-game }
 
 - **Influence Round:** This round only occurs once at the beginning of the game. It determines initial **player priority** order. Each player will, in secret, perform an influence bid. Each player starts with 100 "influence" points. For each point the player does not spend on their influence bid, they will retain $1. Player priority is then determined in descending order of influence points spent on the bid. In the case of tied bids, priority order is determined randomly.
-- **Tranche Distribution:** Tranche packages are made for offer every three turns. These are rewards which are distributed based on player ownership which is handled via a vote.
+- **Tranche Distribution:** Tranche packages are made for offer every three turns. These are rewards which are distributed based on player ownership.
 - **Stock Round:** Players place orders against companies through distinct order mechanisms.
-- **Operation Round:** Investors vote on company operations, and companies generate revenue by attracting customers.
+- **Operation Round:** Players vote on company operations, and companies generate revenue by attracting customers.
 
 ## Players
 {: #players }
@@ -118,7 +118,8 @@ Measures company efficiency.
 
 - Calculated by subtracting the company demand score from its supply score.
 - The closer to 0, the more efficient the company is operating.
-- If a company reaches zero efficiency, it is awarded one increment forward in share price.
+- If a company reaches zero efficiency, it will have a 50% reduction in it's operational costs that round.
+- All penalties are steps down in share price value.
 
 | Throughput | Reward / Penalty                |
 |------------|----------------------------------|
