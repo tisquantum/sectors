@@ -1,8 +1,3 @@
----
-layout: with-sidebar
-title: "Game Rules"
----
-
 # Rules Overview
 {: #rules-overview }
 
