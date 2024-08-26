@@ -173,8 +173,8 @@ In this round, players vote on the tranche they want to win. There are three typ
 - Cash
 - Prestige
 - Passive Sector Effects:
-  - Passive Sector Effects are applied to all companies in the sector.
-  - These effects will persist on this company until a passive effect is assigned to a different company in the same sector.
+  - Passive Sector Effects are given to one company in the sector.
+  - The effect will persist on this company until a passive effect is assigned to a different company in the same sector in a future tranch distribution phase.
 
 Players vote on the tranche they want to win. If more than one player votes on the tranche, no one wins it and the tranche is not distributed. If all votes are distributed, money is doubled in each prize pool. Placing a vote is not required.
 
