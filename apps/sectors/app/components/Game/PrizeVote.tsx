@@ -65,6 +65,7 @@ const PrizeComponent = ({
                     SectorEffects[sectorPrize.Sector.sectorName].passive
                   }
                   sectorName={sectorPrize.Sector.name}
+                  showDescription
                 />
               </div>
             ))}

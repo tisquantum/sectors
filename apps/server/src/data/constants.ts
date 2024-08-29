@@ -345,8 +345,9 @@ export const getNextCompanyOperatingRoundTurn = (
   currentCompanyId?: string,
 ): Company => {
   const sortedCompanies = getCompanyOperatingRoundTurnOrder(companies);
-
+  console.log('getNextCompanyOperatingRoundTurn', sortedCompanies);
   if (!currentCompanyId) {
+    console.log('getNextCompanyOperatingRoundTurn returning the first company', sortedCompanies[0]);
     return sortedCompanies[0];
   }
 
@@ -504,36 +505,36 @@ export const CompanyTierData = {
     operatingCosts: 20,
     supplyMax: 3,
     companyActions: 1,
-    insolvencyShortFall: 150,
+    insolvencyShortFall: 200,
   },
   [CompanyTier.GROWTH]: {
-    operatingCosts: 30,
+    operatingCosts: 40,
     supplyMax: 4,
-    companyActions: 1,
-    insolvencyShortFall: 200,
+    companyActions: 2,
+    insolvencyShortFall: 400,
   },
   [CompanyTier.ESTABLISHED]: {
     operatingCosts: 50,
     supplyMax: 5,
     companyActions: 2,
-    insolvencyShortFall: 400,
+    insolvencyShortFall: 500,
   },
   [CompanyTier.ENTERPRISE]: {
-    operatingCosts: 70,
+    operatingCosts: 80,
     supplyMax: 6,
-    companyActions: 2,
-    insolvencyShortFall: 600,
+    companyActions: 3,
+    insolvencyShortFall: 800,
   },
   [CompanyTier.CONGLOMERATE]: {
     operatingCosts: 100,
     supplyMax: 8,
-    companyActions: 2,
-    insolvencyShortFall: 900,
+    companyActions: 3,
+    insolvencyShortFall: 1000,
   },
   [CompanyTier.TITAN]: {
     operatingCosts: 150,
     supplyMax: 10,
-    companyActions: 3,
+    companyActions: 4,
     insolvencyShortFall: 1500,
   },
 };
@@ -665,7 +666,7 @@ export const StartingTier = {
   },
   [SectorName.CONSUMER_DEFENSIVE]: {
     sector: 'Consumer Defensive',
-    tier: CompanyTier.GROWTH,
+    tier: CompanyTier.STARTUP,
   },
   [SectorName.INDUSTRIALS]: {
     sector: 'Industrial',

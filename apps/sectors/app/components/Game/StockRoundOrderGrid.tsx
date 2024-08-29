@@ -15,6 +15,7 @@ import {
   Phase,
   PhaseName,
   Player,
+  ShareLocation,
 } from "@server/prisma/prisma.client";
 import {
   CompanyWithRelations,
@@ -242,8 +243,17 @@ const StockRoundOrderGrid = ({
               <div className="flex flex-col justify-center items-center">
                 <h2 className="text-white text-2xl font-bold mb-2">
                   {selectedCompanyOrder.isIpo
-                    ? "IPO Order"
-                    : "Open Market Order"}
+                    ? `IPO Order ${
+                        selectedCompanyOrder.company.Share.filter(
+                          (share) => share.location === ShareLocation.IPO
+                        ).length
+                      }`
+                    : `Open Market Order ${
+                        selectedCompanyOrder.company.Share.filter(
+                          (share) =>
+                            share.location === ShareLocation.OPEN_MARKET
+                        ).length
+                      }`}
                 </h2>
                 <PlayerOrderInput
                   currentOrder={selectedCompanyOrder.company}

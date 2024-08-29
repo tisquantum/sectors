@@ -257,7 +257,8 @@ const CompanyActionSelectionVote = ({
                         : ""
                     } ${
                       companySectorActiveEffect &&
-                      action.name === companySectorActiveEffect &&
+                      (action.name === companySectorActiveEffect ||
+                        action.name === companySectorPassiveEffect) &&
                       `bg-[${sectorColors[company.Sector.name]}]`
                     }
                     `}

@@ -32,7 +32,11 @@ import { sectorColors } from "@server/data/gameData";
 import DebounceButton from "../General/DebounceButton";
 import { AvatarGroup, Button, TableCell } from "@nextui-org/react";
 import { Drawer } from "vaul";
-import { CompanyStatus, OrderType } from "@server/prisma/prisma.client";
+import {
+  CompanyStatus,
+  OrderType,
+  ShareLocation,
+} from "@server/prisma/prisma.client";
 import PlayerAvatar from "../Player/PlayerAvatar";
 import { useGame } from "../Game/GameContext";
 import ShareOwnershipTable from "./ShareOwnershipTable";
@@ -128,7 +132,7 @@ const CompanyInfoTable = ({
                   <span>
                     {
                       company.Share.filter(
-                        (share) => share.location === "OPEN_MARKET"
+                        (share) => share.location === ShareLocation.OPEN_MARKET
                       ).length
                     }
                   </span>
@@ -140,7 +144,7 @@ const CompanyInfoTable = ({
                 <span>
                   {
                     company.Share.filter(
-                      (share) => share.location === "OPEN_MARKET"
+                      (share) => share.location === ShareLocation.OPEN_MARKET
                     ).length
                   }
                 </span>
@@ -170,8 +174,9 @@ const CompanyInfoTable = ({
                   <RiCurrencyFill />
                   <span>
                     {
-                      company.Share.filter((share) => share.location === "IPO")
-                        .length
+                      company.Share.filter(
+                        (share) => share.location === ShareLocation.IPO
+                      ).length
                     }
                   </span>
                 </Button>
@@ -181,8 +186,9 @@ const CompanyInfoTable = ({
                 <RiCurrencyFill />
                 <span>
                   {
-                    company.Share.filter((share) => share.location === "IPO")
-                      .length
+                    company.Share.filter(
+                      (share) => share.location === ShareLocation.IPO
+                    ).length
                   }
                 </span>
               </div>

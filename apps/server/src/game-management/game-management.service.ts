@@ -853,7 +853,7 @@ export class GameManagementService {
       Sector: { connect: { id: sectorId } },
       status: CompanyStatus.INACTIVE,
       currentStockPrice: ipoPrice,
-      companyTier: CompanyTier.ESTABLISHED,
+      companyTier: CompanyTier.GROWTH,
       name: newCompanyInfo.name,
       stockSymbol: newCompanyInfo.symbol,
       unitPrice: Math.floor(
@@ -4745,7 +4745,7 @@ export class GameManagementService {
       // Optionally handle retries or fallback logic here
     }
     try {
-      console.log('pusher service new phase', EVENT_NEW_PHASE);
+      console.log('pusher service new phase', EVENT_NEW_PHASE, phaseName);
       this.pusherService.trigger(
         getGameChannelId(gameId),
         EVENT_NEW_PHASE,

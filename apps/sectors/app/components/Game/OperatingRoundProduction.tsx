@@ -42,7 +42,7 @@ const OperatingRoundProduction = () => {
     return <div>No companies found</div>;
   }
   return (
-    <div className="p-6 rounded-lg shadow-md">
+    <div className="p-6 rounded-lg shadow-md flex flex-col">
       <h1 className="text-2xl font-bold mb-4">Operating Round Production</h1>
       <div className="flex flex-wrap gap-8">
         <div className="bg-slate-800 p-4 rounded-lg shadow-md flex gap-4">

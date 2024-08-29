@@ -11,9 +11,11 @@ import { OperatingRoundAction, SectorName } from "@server/prisma/prisma.client";
 const PassiveEffect = ({
   passiveEffect,
   sectorName,
+  showDescription,
 }: {
   passiveEffect: OperatingRoundAction;
   sectorName: string;
+  showDescription?: boolean;
 }) => {
   const actionInfo = companyActionsDescription.find(
     (action) => action.name === passiveEffect
@@ -32,6 +34,7 @@ const PassiveEffect = ({
       >
         <RiGameFill />
         <span>{actionInfo.title}</span>
+        {showDescription && <span>{actionInfo.message}</span>}
       </div>
     </Tooltip>
   );

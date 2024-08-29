@@ -645,11 +645,7 @@ const PlayerOrderInput = ({
         if (isIpo) {
           setIsBuy(true);
         } else {
-          setIsBuy(
-            (company?.Share.filter(
-              (share) => share.location === ShareLocation.OPEN_MARKET
-            ).length || 0) > 0
-          );
+          setIsBuy(true);
         }
         setOrderType(OrderType.MARKET);
         break;
