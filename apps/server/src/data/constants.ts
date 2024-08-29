@@ -2,6 +2,7 @@
 import {
   Company,
   CompanyTier,
+  DistributionStrategy,
   OperatingRoundAction,
   PhaseName,
   PrestigeReward,
@@ -10,6 +11,13 @@ import {
   StockTier,
 } from '@prisma/client';
 import { companyPriorityOrderOperations } from './helpers';
+
+export const GAME_SETUP_DEFAULT_BANK_POOL_NUMBER = 12000;
+export const GAME_SETUP_DEFAULT_CONSUMER_POOL_NUMBER = 75;
+export const GAME_SETUP_DEFAULT_STARTING_CASH_ON_HAND = 300;
+export const GAME_SETUP_DEFAULT_DISTRIBUTION_STRATEGY = DistributionStrategy.BID_PRIORITY;
+export const GAME_SETUP_DEFAULT_GAME_MAX_TURNS = 15;
+export const GAME_SETUP_DEFAULT_PLAYER_ORDERS_CONCEALED = true;
 
 export const USER_NAME_MAX_LENGTH = 20;
 

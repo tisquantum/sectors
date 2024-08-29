@@ -413,7 +413,7 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
       createdAt: Prisma.SortOrder.asc,
     },
     where: {
-      isConcealed: false,
+      ...(gameState.playerOrdersConcealed && { isConcealed: false }),
       Game: {
         id: gameId,
       },
@@ -433,7 +433,7 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
   }, [currentPhase?.name]);
   if (isLoading) return <div>Loading...</div>;
   if (!playerOrders) return <div>No pending orders.</div>;
-  console.log('playerOrders', playerOrders);
+  console.log("playerOrders", playerOrders);
   const limitOrdersPendingSettlement = playerOrders.filter(
     (order) =>
       order.orderType === OrderType.LIMIT &&

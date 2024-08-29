@@ -653,6 +653,7 @@ model Game {
   roomId                  Int
   overdraft               Boolean                  @default(true) //facilitates overdrafts for player accounts during stock purchase
   isPaused                Boolean                  @default(false)
+  playerOrdersConcealed   Boolean                  @default(true) //Conceals player orders until the stock round reveal phase
   certificateLimit        Int                      @default(12)
   economyScore            Int                      @default(10)
   nextPrestigeReward      Int?

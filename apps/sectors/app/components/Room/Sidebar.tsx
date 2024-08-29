@@ -15,6 +15,14 @@ import { useRouter } from "next/navigation";
 import UserAvatar from "./UserAvatar";
 import Button from "../General/DebounceButton";
 import DebounceButton from "../General/DebounceButton";
+import {
+  GAME_SETUP_DEFAULT_BANK_POOL_NUMBER,
+  GAME_SETUP_DEFAULT_CONSUMER_POOL_NUMBER,
+  GAME_SETUP_DEFAULT_DISTRIBUTION_STRATEGY,
+  GAME_SETUP_DEFAULT_GAME_MAX_TURNS,
+  GAME_SETUP_DEFAULT_PLAYER_ORDERS_CONCEALED,
+  GAME_SETUP_DEFAULT_STARTING_CASH_ON_HAND,
+} from "@server/data/constants";
 interface SidebarProps {
   roomUsers: RoomUserWithUser[];
   room: RoomWithUsersAndGames;
@@ -26,6 +34,7 @@ interface GameOptionsState {
   startingCashOnHand: number;
   distributionStrategy: DistributionStrategy;
   gameMaxTurns: number;
+  playerOrdersConcealed: boolean;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
@@ -34,11 +43,12 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
   const [startGameIsSubmitted, setStartGameIsSubmitted] = useState(false);
   const [isLoadingStartGame, setIsLoadingStartGame] = useState(false);
   const [gameOptions, setGameOptions] = useState<GameOptionsState>({
-    bankPoolNumber: 12000,
-    consumerPoolNumber: 75,
-    startingCashOnHand: 300,
-    distributionStrategy: DistributionStrategy.BID_PRIORITY,
-    gameMaxTurns: 15,
+    bankPoolNumber: GAME_SETUP_DEFAULT_BANK_POOL_NUMBER,
+    consumerPoolNumber: GAME_SETUP_DEFAULT_CONSUMER_POOL_NUMBER,
+    startingCashOnHand: GAME_SETUP_DEFAULT_STARTING_CASH_ON_HAND,
+    distributionStrategy: GAME_SETUP_DEFAULT_DISTRIBUTION_STRATEGY,
+    gameMaxTurns: GAME_SETUP_DEFAULT_GAME_MAX_TURNS,
+    playerOrdersConcealed: GAME_SETUP_DEFAULT_PLAYER_ORDERS_CONCEALED,
   });
   const joinRoomMutation = trpc.roomUser.joinRoom.useMutation();
   const leaveRoomMutation = trpc.roomUser.leaveRoom.useMutation();
@@ -57,10 +67,6 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
   } else {
     return null;
   }
-
-  const handleOptionsChange = (options: GameOptionsState) => {
-    setGameOptions(options);
-  };
 
   if (!user) return null;
 
@@ -85,7 +91,8 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
     consumerPoolNumber: number,
     bankPoolNumber: number,
     distributionStrategy: DistributionStrategy,
-    gameMaxTurns: number
+    gameMaxTurns: number,
+    playerOrdersConcealed: boolean
   ) => {
     //response happens through pusher to all clients.
     startGameMutation.mutate({
@@ -96,6 +103,7 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
       bankPoolNumber,
       distributionStrategy,
       gameMaxTurns,
+      playerOrdersConcealed,
     });
   };
 
@@ -104,7 +112,7 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
   };
 
   return (
-    <div className="w-1/4 bg-gray-800 text-white p-6 flex flex-col">
+    <div className="w-1/4 bg-gray-800 text-white p-6 flex flex-col relative overflow-y-auto scrollbar">
       <div className="mb-6">
         <Button
           color="primary"
@@ -115,14 +123,7 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
         </Button>
         {roomHostAuthUser?.roomHost && (
           <>
-            <GameOptions
-              initialBankPoolNumber={12000}
-              initialConsumerPoolNumber={75}
-              initialStartingCashOnHand={300}
-              initialDistributionStrategy={DistributionStrategy.BID_PRIORITY}
-              initialGameMaxTurns={15}
-              onOptionsChange={handleGameOptionsChange}
-            />
+            <GameOptions onOptionsChange={handleGameOptionsChange} />
             {room.game.length == 0 &&
               (startGameIsSubmitted ? (
                 <div>Start Game Submitted</div>
@@ -137,7 +138,8 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
                       gameOptions.consumerPoolNumber,
                       gameOptions.bankPoolNumber,
                       gameOptions.distributionStrategy,
-                      gameOptions.gameMaxTurns
+                      gameOptions.gameMaxTurns,
+                      gameOptions.playerOrdersConcealed
                     );
                   }}
                   radius="none"
@@ -159,7 +161,7 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
           </Button>
         )}
       </div>
-      <ul className="flex-1 overflow-y-auto scrollbar">
+      <ul className="flex-1">
         {roomUsers.map((roomUser) => (
           <li key={roomUser.user.id} className="flex items-center mb-4 gap-1">
             <div className="flex items-center mr-1">

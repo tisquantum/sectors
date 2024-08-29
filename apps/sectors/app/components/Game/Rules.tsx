@@ -63,12 +63,13 @@ const overviewRules = (
     <ul className="list-disc pl-5">
       <li>
         <strong>Influence Round:</strong> This round only occurs once at the
-        beginning of the game. It determines initial <strong>player priority</strong> order. Each player will, in
-        secret, perform an influence bid. Each player starts with 100
-        "influence" points. For each point the player does not spend on their
-        influence bid, they will retain $1. Player priority is then determined
-        in descending order of influence points spent on the bid. In the case of
-        tied bids, priority order is determined randomly.
+        beginning of the game. It determines initial{" "}
+        <strong>player priority</strong> order. Each player will, in secret,
+        perform an influence bid. Each player starts with 100 "influence"
+        points. For each point the player does not spend on their influence bid,
+        they will retain $1. Player priority is then determined in descending
+        order of influence points spent on the bid. In the case of tied bids,
+        priority order is determined randomly.
       </li>
       <li>
         <strong>Tranche Distribution:</strong> Tranche packages are made for
@@ -116,7 +117,8 @@ const tranchRules = (
           </li>
           <li>
             The effect will persist on this company until a passive effect is
-            assigned to a different company in the same sector in a future tranche distribution phase.
+            assigned to a different company in the same sector in a future
+            tranche distribution phase.
           </li>
         </ul>
       </li>
@@ -212,11 +214,12 @@ const stockRoundRules = (
           <strong>Bid Strategy:</strong>
           <ul className="list-disc pl-5">
             <li>
-              Bids are resolved in descending order when using bid priority.
+              Bids are resolved in descending bid ask price when using bid
+              priority.
             </li>
             <li>
-              In case of bid ties, the player with the highest priority resolves
-              first.
+              In case of bid ties, the player with the highest player priority
+              resolves first.
             </li>
           </ul>
         </li>
@@ -288,7 +291,10 @@ const OperatingRoundRules = () => (
     </ul>
     <ThroughputLegend />
     <h4 className="font-semibold">Sales Bonus</h4>
-    <p>Companies that sell all of their produced units of the operating round receive a prestige token.</p>
+    <p>
+      Companies that sell all of their produced units of the operating round
+      receive a prestige token.
+    </p>
     <h4 className="font-semibold">Production</h4>
     <ul className="list-disc pl-5">
       <li>
@@ -377,7 +383,9 @@ export const insolvencyAndBankruptcy = (
       All contributions made during insolvency are <strong>public</strong> and
       take effect <strong>immediately</strong> as soon as they are made.
     </p>
-    <h4 className="font-semibold">If the Company Fails to Meet Its Shortfall</h4>
+    <h4 className="font-semibold">
+      If the Company Fails to Meet Its Shortfall
+    </h4>
     <ul className="list-disc pl-5">
       <li>
         Following the opportunity for insolvency actions, the company will{" "}
@@ -389,7 +397,9 @@ export const insolvencyAndBankruptcy = (
             <strong>{BANKRUPTCY_SHARE_PERCENTAGE_RETAINED}%</strong> of the
             market value for their shares.
           </li>
-          <li>The company will be <strong>delisted</strong> from the stock market.</li>
+          <li>
+            The company will be <strong>delisted</strong> from the stock market.
+          </li>
           <li>The company will no longer be able to perform actions.</li>
           <li>
             The company will be removed from any considerations made in the
@@ -453,7 +463,10 @@ const CompanyActionsRules = () => {
         company treasury.
       </p>
       <h4 className="font-semibold">General Actions</h4>
-      <p>These actions are available to every company every operating round action phase.</p>
+      <p>
+        These actions are available to every company every operating round
+        action phase.
+      </p>
       <ul className="list-disc pl-5 space-y-2">
         {generalCompanyActions.map((action, index) => (
           <li key={index} className="flex flex-col">
@@ -466,7 +479,10 @@ const CompanyActionsRules = () => {
         ))}
       </ul>
       <h4 className="font-semibold">Active Sector Actions</h4>
-      <p>These actions are specific to the company sector, and both cash and prestige must be used to pay for them.</p>
+      <p>
+        These actions are specific to the company sector, and both cash and
+        prestige must be used to pay for them.
+      </p>
       <ul className="list-disc pl-5 space-y-2">
         {sectorCompanyActionsActive.map((action, index) => (
           <li key={index} className="flex flex-col">
@@ -531,7 +547,9 @@ const Rules: FC = () => {
         <div className="text-base space-y-4">{tranchRules}</div>
       </div>
       <div className="mb-8">
-        <h2 className="text-2xl font-semibold mb-2">Insolvency and Bankruptcy</h2>
+        <h2 className="text-2xl font-semibold mb-2">
+          Insolvency and Bankruptcy
+        </h2>
         <div className="text-base space-y-4">{insolvencyAndBankruptcy}</div>
       </div>
       <div className="mb-8">

@@ -4182,6 +4182,7 @@ export class GameManagementService {
       bankPoolNumber,
       distributionStrategy,
       gameMaxTurns,
+      playerOrdersConcealed,
     } = input;
 
     const gameData: Prisma.GameCreateInput = {
@@ -4192,6 +4193,7 @@ export class GameManagementService {
       bankPoolNumber,
       consumerPoolNumber,
       distributionStrategy,
+      playerOrdersConcealed,
       gameStatus: GameStatus.ACTIVE,
       gameStep: 0,
       currentPhaseId: 'initial',
@@ -7099,6 +7101,8 @@ export class GameManagementService {
       case PhaseName.PRIZE_DISTRIBUTE_ACTION:
       case PhaseName.PRIZE_DISTRIBUTE_RESOLVE:
         return this.isPrizeRoundTurn(currentPhase?.gameId || '');
+      case PhaseName.STOCK_ACTION_REVEAL:
+        return this.isStockActionRevealNecessary(currentPhase?.gameId || '');
       case PhaseName.STOCK_RESOLVE_LIMIT_ORDER:
         //count limit orders
         return this.limitOrdersRequiringFulfillment(currentPhase?.gameId || '');
@@ -7123,6 +7127,16 @@ export class GameManagementService {
       default:
         return true;
     }
+  }
+
+  async isStockActionRevealNecessary(gameId: string) {
+    //get game
+    const game = await this.gamesService.getGameState(gameId);
+    if (!game) {
+      throw new Error('Game not found');
+    }
+    //check if player orders are concealed
+    return game.playerOrdersConcealed;
   }
 
   async isPrizeRoundTurn(gameId: string) {

@@ -63,10 +63,10 @@ Player priority determines how any ties are resolved in relation to the player. 
 {: #market-order-resolution }
 
 - Orders are resolved in ascending sub-round order.
-- If there are multiple orders in the same sub-round:
+- If there are multiple orders in the same sub-round, we defer to the **Distribution Strategy**:
   - **Bid Strategy:**
-    - Bids are resolved in descending order when using bid priority.
-    - In case of bid ties, the player with the highest priority resolves first.
+    - Bids are resolved in descending bid ask price when using bid priority.
+    - In case of bid ties, the player with the highest **player priority** resolves first.
   - **Priority Strategy:**
     - Orders are resolved according to **player priority** order.
 - Orders that cannot be filled due to lack of shares are marked as REJECTED.
