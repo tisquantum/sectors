@@ -67,7 +67,7 @@ const CompanyInfoTable = ({
 }) => {
   const { authPlayer, gameState } = useGame();
   const [showOrderDetail, setShowOrderDetail] = useState(false);
-  isRevealRound = gameState?.playerOrdersConcealed || isRevealRound;
+  isRevealRound = !gameState?.playerOrdersConcealed || isRevealRound;
   
   const renderCellContent = ({
     handleShowOrderDetail,

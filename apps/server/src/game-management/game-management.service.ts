@@ -4823,17 +4823,22 @@ export class GameManagementService {
       operatingRoundId,
       influenceRoundId,
     );
-    await this.timerService.setTimer(phase.id, phase.phaseTime, async () => {
-      try {
-        await this.handlePhaseTransition({
-          phase,
-          gameId,
-        });
-      } catch (error) {
-        console.error('Error during phase transition:', error);
-        // Optionally handle retries or fallback logic here
-      }
-    });
+    await this.timerService.setTimer(
+      phase.id,
+      phase.gameId,
+      phase.phaseTime,
+      async () => {
+        try {
+          await this.handlePhaseTransition({
+            phase,
+            gameId,
+          });
+        } catch (error) {
+          console.error('Error during phase transition:', error);
+          // Optionally handle retries or fallback logic here
+        }
+      },
+    );
   }
 
   private async endPhaseTimer(phaseId: string) {

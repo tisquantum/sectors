@@ -93,6 +93,7 @@ const StockRoundOrderGrid = ({
   const {
     data: playerOrdersRevealed,
     isLoading: isLoadingPlayerOrdersRevealed,
+    refetch: refetchPlayerOrdersRevealed,
   } = trpc.playerOrder.listPlayerOrdersWithPlayerRevealed.useQuery({
     where: {
       stockRoundId: currentPhase?.stockRoundId,
@@ -128,6 +129,7 @@ const StockRoundOrderGrid = ({
     refetchPlayerOrdersConcealed();
     refetchPlayerOrdersConcealedSpotMarket();
     refetchPhasesOfStockRound();
+    refetchPlayerOrdersRevealed();
   }, [currentPhase?.id]);
   useEffect(() => {
     if (playerOrdersConcealed && currentPhase) {

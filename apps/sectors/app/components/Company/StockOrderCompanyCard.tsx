@@ -162,7 +162,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
     //setShowPlayerInput(true);
     handleCompanySelect(company, isIpo || false);
   };
-  isRevealRound = gameState?.playerOrdersConcealed || isRevealRound;
+  isRevealRound = !gameState?.playerOrdersConcealed || isRevealRound;
   
   return (
     <div className="flex">
