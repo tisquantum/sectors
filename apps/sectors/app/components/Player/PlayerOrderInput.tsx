@@ -264,7 +264,6 @@ const TabContentMO: React.FC<TabContentProps> = ({
   sharesInMarket,
   minBidValue,
 }) => {
-  console.log("mo values", isBuy, maxValue, minValue, defaultValue);
   const { gameState } = useGame();
   const [shareValue, setShareValue] = useState<number>(1);
   const [marketOrderBidValue, setMarketOrderBidValue] = useState<number>(
@@ -585,7 +584,6 @@ const PlayerOrderInput = ({
   }, [currentPhase?.name]);
   useEffect(() => {
     if (orderType === OrderType.MARKET) {
-      console.log("order mo", isBuy, isIpo);
       if (isBuy) {
         if (isIpo) {
           setMaxValue(

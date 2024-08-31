@@ -11,6 +11,7 @@ import { useGame } from "./GameContext";
 import { notFound } from "next/navigation";
 import {
   Company,
+  CompanyStatus,
   OrderType,
   Phase,
   PhaseName,
@@ -57,7 +58,7 @@ const StockRoundOrderGrid = ({
   const { gameId, currentPhase, gameState, authPlayer } = useGame();
   const { data: companies, isLoading } =
     trpc.company.listCompaniesWithRelations.useQuery({
-      where: { gameId },
+      where: { gameId, status: { not: CompanyStatus.BANKRUPT } },
     });
   const {
     data: playerOrdersConcealed,

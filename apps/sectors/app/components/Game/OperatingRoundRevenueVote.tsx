@@ -2,9 +2,11 @@ import { trpc } from "@sectors/app/trpc";
 import { useGame } from "./GameContext";
 import {
   Company,
+  CompanyStatus,
   ProductionResult,
   RevenueDistribution,
   Sector,
+  SectorName,
 } from "@server/prisma/prisma.client";
 import { Radio, RadioGroup } from "@nextui-org/react";
 import { useState } from "react";
@@ -13,6 +15,8 @@ import CompanyInfo from "../Company/CompanyInfo";
 import ShareHolders from "../Company/ShareHolders";
 import Button from "@sectors/app/components/General/DebounceButton";
 import DebounceButton from "@sectors/app/components/General/DebounceButton";
+import { CompanyWithSector } from "@server/prisma/prisma.types";
+import SectorConsumerDistributionAnimation from "./SectorConsumerDistributionAnimation";
 
 const DistributeSelection = ({
   company,
@@ -81,17 +85,67 @@ const OperatingRoundRevenueVote = () => {
         id: currentPhase?.operatingRoundId,
       },
     });
+  const { data: companiesWithSector, isLoading: isLoadingCompanies } =
+    trpc.company.listCompaniesWithSector.useQuery({
+      where: {
+        gameId: currentPhase?.gameId,
+        status: CompanyStatus.ACTIVE,
+      },
+    });
+  if (isLoadingCompanies) {
+    return <div>Loading companies...</div>;
+  }
+  if (!companiesWithSector) {
+    return <div>No companies found</div>;
+  }
+
   if (isLoading) {
     return <div>Loading...</div>;
   }
   if (!operatingRound) {
     return <div>No operating round found</div>;
   }
+  //organize companies by sector
+  const companiesOrganizedBySector = companiesWithSector.reduce(
+    (acc, company: CompanyWithSector) => {
+      const sectorName = company.Sector.name as SectorName; // Explicitly cast to SectorName
+      if (!acc[sectorName]) {
+        acc[sectorName] = [];
+      }
+      acc[sectorName].push(company);
+      return acc;
+    },
+    {} as Record<SectorName, CompanyWithSector[]>
+  );
+  const sectorNames = Object.keys(companiesOrganizedBySector) as SectorName[];
+
   return (
     <div className="p-6 rounded-lg shadow-md">
       <h1 className="text-2xl font-bold mb-4">
         Operating Round Production Vote
       </h1>
+      <div className="flex flex-wrap gap-4">
+        {sectorNames.map((sectorName: SectorName) => (
+          <SectorConsumerDistributionAnimation
+            key={sectorName}
+            sector={companiesOrganizedBySector[sectorName][0].Sector}
+            companies={companiesOrganizedBySector[sectorName]}
+            consumerOveride={
+              companiesOrganizedBySector[sectorName][0].Sector.consumers +
+              operatingRound.productionResults
+                .filter(
+                  (productionResult) =>
+                    productionResult.Company.sectorId ===
+                    companiesOrganizedBySector[sectorName][0].Sector.id
+                )
+                .reduce(
+                  (acc, productionResult) => acc + productionResult.consumers,
+                  0
+                )
+            }
+          />
+        ))}
+      </div>
       <div className="grid 2xl:flex flex-wrap sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-1">
         {operatingRound.productionResults.map((productionResult) => {
           const operatingCosts =

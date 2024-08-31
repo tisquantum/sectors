@@ -170,6 +170,30 @@ export class CompanyService {
     });
   }
 
+  async companiesWithCompanyActionsWithActionsFilteredByOperatingRoundId(operatingRoundId: number, params: {
+    skip?: number;
+    take?: number;
+    cursor?: Prisma.CompanyWhereUniqueInput;
+    where?: Prisma.CompanyWhereInput;
+    orderBy?: Prisma.CompanyOrderByWithRelationInput;
+  }): Promise<CompanyWithCompanyActions[]> {
+    const { skip, take, cursor, where, orderBy } = params;
+    return this.prisma.company.findMany({
+      skip,
+      take,
+      cursor,
+      where,
+      orderBy,
+      include: {
+        CompanyActions: {
+          where: {
+            operatingRoundId
+          }
+        },
+      },
+    });
+  }
+
   async companiesWithSector(params: {
     skip?: number;
     take?: number;

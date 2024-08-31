@@ -95,7 +95,6 @@ const GameResultsOverview = () => {
   const remainingBankTotal = gameState?.bankPoolNumber || 0;
 
   const highestStockPriceCompany = useMemo(() => {
-    console.log("gameState", gameState);
     return gameState?.Company.reduce((highest, company) =>
       company.currentStockPrice > highest.currentStockPrice ? company : highest
     );

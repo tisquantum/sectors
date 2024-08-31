@@ -848,14 +848,14 @@ export const companyActionsDescription: CompanyActionDescription[] = [
     id: 8,
     title: 'Increase Unit Price',
     name: OperatingRoundAction.INCREASE_PRICE,
-    message: `Increase the unit price of the company's product by ${DEFAULT_INCREASE_UNIT_PRICE}. This will increase the company's revenue. Be careful as consumers choose the company with the cheapest product in the sector first!`,
+    message: `Increase the unit price of the company's product by $${DEFAULT_INCREASE_UNIT_PRICE}. This will increase the company's revenue. Be careful as consumers choose the company with the cheapest product in the sector first!`,
     actionType: 'general',
   },
   {
     id: 9,
     title: 'Decrease Unit Price',
     name: OperatingRoundAction.DECREASE_PRICE,
-    message: `Decrease the unit price of the company's product by ${DEFAULT_DECREASE_UNIT_PRICE}. This will decrease the company's revenue.`,
+    message: `Decrease the unit price of the company's product by $${DEFAULT_DECREASE_UNIT_PRICE}. This will decrease the company's revenue.`,
     actionType: 'general',
   },
   {

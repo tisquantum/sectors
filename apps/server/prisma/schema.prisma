@@ -418,6 +418,7 @@ model ProductionResult {
   companyId                String
   operatingRoundId         Int
   revenue                  Int
+  consumers                Int                       @default(0)
   steps                    Int                       @default(0)
   throughputResult         Int                       @default(0) //0 is better
   revenueDistribution      RevenueDistribution?

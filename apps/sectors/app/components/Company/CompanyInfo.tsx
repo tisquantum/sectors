@@ -140,7 +140,9 @@ const CompanyMoreInfo = ({
         >
           <div className="flex items-center">
             <RiHandCoinFill size={18} className="ml-2" />
-            <span className="ml-1">{company.demandScore}</span>
+            <span className="ml-1">
+              {calculateDemand(company.demandScore, company.baseDemand)}
+            </span>
             {showingProductionResults && (
               <span className="text-red-500"> -1</span>
             )}

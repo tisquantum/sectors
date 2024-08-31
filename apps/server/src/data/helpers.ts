@@ -847,3 +847,21 @@ export function calculateAverageStockPrice(
     }, 0) / companiesInSector.length
   );
 }
+
+export function calculateStartingCompanyCount(playerCount: number) {
+  const minimumStartingCompanies = 3;
+  const maximumStartingCompanies = 6;
+  switch (playerCount) {
+    case 1: 
+    case 2:
+    case 3:
+    case 4:
+      return minimumStartingCompanies;
+    case 5:
+    case 6:
+    case 7:
+      return playerCount - 1;
+    default:
+      return maximumStartingCompanies;
+  }
+}

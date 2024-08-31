@@ -167,7 +167,6 @@ const PlayerShares = ({
             <div className="text-lg">Options Orders</div>
             {optionsOrders &&
               optionsOrders.map((order) => {
-                console.log("order", order);
                 return (
                   <div key={order.id} className="flex flex-col gap-2">
                     {order.OptionContract && order.Company && (

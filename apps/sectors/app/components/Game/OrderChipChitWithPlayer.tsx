@@ -63,7 +63,7 @@ const OrderChipChitWithPlayer = ({
 
   return (
     <Badge
-      className="right-[2%]"
+      className="top-[5%] right-[2%]"
       key={order.id}
       isOneChar
       isDot
@@ -93,7 +93,10 @@ const OrderChipChitWithPlayer = ({
             order.isSell
           )} drop-shadow-md`}
         >
-          {/* Background Image */}
+          {/* Background Image ${hashStringToColor(order.Player.nickname)} ${determineColorByOrderType(
+            order.orderType,
+            order.isSell
+          )} */}
           <img
             src={avatarUri}
             alt="Avatar Background"
@@ -101,29 +104,36 @@ const OrderChipChitWithPlayer = ({
           />
 
           <CardHeader className="z-20 p-1 pt-2 pb-0 flex justify-center gap-2">
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1 drop-shadow-[0_1.2px_1.2px_rgba(0,0,0,0.8)]">
               <div className="flex items-center gap-1 text-xs font-bold">
-                <div className="flex">
-                  <span>{renderOrderTypeShortHand(order.orderType)}</span>
-                  <span>
-                    {(order.orderType === OrderType.LIMIT ||
-                      order.orderType === OrderType.MARKET) && (
-                      <>
-                        <span>{order.isSell ? "-" : "+"}</span>
-                      </>
-                    )}
-                    {order.orderType === OrderType.LIMIT && (
-                      <span>@${order.value}</span>
-                    )}
-                    {(order.orderType === OrderType.MARKET ||
-                      order.orderType === OrderType.LIMIT ||
-                      order.orderType === OrderType.SHORT) && (
-                      <span>{order.quantity}</span>
-                    )}
-                    {order.orderType === OrderType.SHORT && (
-                      <span>@${order.value}</span>
-                    )}
-                  </span>
+                <div className="flex flex-col items-center justify-center">
+                  <div className="flex">
+                    <span>{renderOrderTypeShortHand(order.orderType)}</span>
+
+                    <div className="flex items-center gap-1">
+                      <span>
+                        {(order.orderType === OrderType.LIMIT ||
+                          order.orderType === OrderType.MARKET) && (
+                          <>
+                            <span>{order.isSell ? "-" : "+"}</span>
+                          </>
+                        )}
+                      </span>
+                      {(order.orderType === OrderType.MARKET ||
+                        order.orderType === OrderType.LIMIT ||
+                        order.orderType === OrderType.SHORT) && (
+                        <span>{order.quantity}</span>
+                      )}
+                      <div className="flex items-center gap-1">
+                        {order.orderType === OrderType.LIMIT && (
+                          <span>@${order.value}</span>
+                        )}
+                        {order.orderType === OrderType.SHORT && (
+                          <span>@${order.value}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
               {gameState.distributionStrategy ==
@@ -134,7 +144,7 @@ const OrderChipChitWithPlayer = ({
             </div>
           </CardHeader>
           <CardBody className="z-20 p-1 pb-2 flex flex-col justify-center items-center">
-            <div className="flex justify-center items-center text-gray-100 text-xs font-bold">
+            <div className="flex justify-center items-center text-gray-100 text-xs font-bold drop-shadow-[0_1.2px_1.2px_rgba(0,0,0,0.8)]">
               <span>T{order.GameTurn.turn}</span>
               <span>
                 &nbsp;|&nbsp;{renderLocationShortHand(order.location)}
