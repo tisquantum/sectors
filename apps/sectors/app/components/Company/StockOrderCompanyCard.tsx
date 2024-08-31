@@ -60,7 +60,9 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
   useEffect(() => {
     setShowButton(isOrderInputOpen);
   }, [isOrderInputOpen]);
-  const ipoOrders = orders.filter(
+  const ipoOrders = (
+    gameState.playerOrdersConcealed ? orders : playerOrdersRevealed
+  ).filter(
     (order) =>
       order.companyId == company.id &&
       order.location == ShareLocation.IPO &&
@@ -104,7 +106,9 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
     sortedGroupedIpoOrdersByPhaseEntries
   );
 
-  const openMarketOrders = orders.filter(
+  const openMarketOrders = (
+    gameState.playerOrdersConcealed ? orders : playerOrdersRevealed
+  ).filter(
     (order) =>
       order.companyId == company.id &&
       order.location == ShareLocation.OPEN_MARKET &&
@@ -163,7 +167,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
     handleCompanySelect(company, isIpo || false);
   };
   isRevealRound = !gameState?.playerOrdersConcealed || isRevealRound;
-  
+
   return (
     <div className="flex">
       <Card

@@ -3,6 +3,7 @@ import { PrismaService } from '@server/prisma/prisma.service';
 import { Prisma, Company, Sector, CompanyStatus } from '@prisma/client';
 import {
   CompanyWithCards,
+  CompanyWithCompanyActions,
   CompanyWithRelations,
   CompanyWithSector,
   CompanyWithSectorAndStockHistory,
@@ -144,6 +145,26 @@ export class CompanyService {
           },
         },
         Cards: true,
+        CompanyActions: true,
+      },
+    });
+  }
+
+  async companiesWithCompanyActions(params: {
+    skip?: number;
+    take?: number;
+    cursor?: Prisma.CompanyWhereUniqueInput;
+    where?: Prisma.CompanyWhereInput;
+    orderBy?: Prisma.CompanyOrderByWithRelationInput;
+  }): Promise<CompanyWithCompanyActions[]> {
+    const { skip, take, cursor, where, orderBy } = params;
+    return this.prisma.company.findMany({
+      skip,
+      take,
+      cursor,
+      where,
+      orderBy,
+      include: {
         CompanyActions: true,
       },
     });

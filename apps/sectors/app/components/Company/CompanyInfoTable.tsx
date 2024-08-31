@@ -40,6 +40,7 @@ import {
 import PlayerAvatar from "../Player/PlayerAvatar";
 import { useGame } from "../Game/GameContext";
 import ShareOwnershipTable from "./ShareOwnershipTable";
+import OrderChipChitWithPlayer from "../Game/OrderChipChitWithPlayer";
 
 const CompanyInfoTable = ({
   company,
@@ -68,7 +69,7 @@ const CompanyInfoTable = ({
   const { authPlayer, gameState } = useGame();
   const [showOrderDetail, setShowOrderDetail] = useState(false);
   isRevealRound = !gameState?.playerOrdersConcealed || isRevealRound;
-  
+
   const renderCellContent = ({
     handleShowOrderDetail,
   }: {
@@ -98,13 +99,12 @@ const CompanyInfoTable = ({
               ? ordersRevealed &&
                 ordersRevealed.length > 0 && (
                   <AvatarGroup>
-                    {ordersRevealed
-                      .filter((order) => {
-                        return order.orderType !== OrderType.OPTION;
-                      })
-                      .map((order, index) => (
-                        <PlayerAvatar key={index} player={order.Player} />
-                      ))}
+                    {ordersRevealed.map((order, index) => (
+                      <OrderChipChitWithPlayer
+                        order={order}
+                        showStatus={true}
+                      />
+                    ))}
                   </AvatarGroup>
                 )
               : ordersConcealed &&

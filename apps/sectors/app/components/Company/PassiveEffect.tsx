@@ -27,7 +27,7 @@ const PassiveEffect = ({
       content={<p className={tooltipParagraphStyle}>{actionInfo.message}</p>}
     >
       <div
-        className="flex flex-col gap-1 rounded-md p-2"
+        className="flex flex-col gap-1 rounded-md p-2 max-w-[250px]"
         style={{
           backgroundColor: sectorColors[sectorName],
         }}

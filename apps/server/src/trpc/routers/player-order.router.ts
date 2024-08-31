@@ -133,23 +133,39 @@ export default (trpc: TrpcService, ctx: Context) =>
             message: 'Phase not found',
           });
         }
-        //get game 
+        //get game
         const game = await ctx.gameService.game({ id: gameId });
         if (!game) {
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
             message: 'Game not found',
           });
-        }  
+        }
         if (
           game.playerOrdersConcealed &&
-          phase.name == PhaseName.STOCK_ACTION_ORDER ||
-          phase.name == PhaseName.STOCK_ACTION_RESULT
+          (phase.name == PhaseName.STOCK_ACTION_ORDER ||
+            phase.name == PhaseName.STOCK_ACTION_RESULT)
         ) {
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
             message:
               'Cannot view orders during stock action order or result phase',
+          });
+        }
+        if (phase.name == PhaseName.STOCK_ACTION_ORDER) {
+          // We do not want to show orders made during this phase as players are not
+          // allowed to view orders until all players are ready to reveal them.
+          return ctx.playerOrdersService.playerOrdersWithPlayerRevealed({
+            skip,
+            take,
+            cursor: cursor ? { id: cursor } : undefined,
+            where: {
+              ...where,
+              phaseId: {
+                not: phase.id,
+              },
+            },
+            orderBy,
           });
         }
         return ctx.playerOrdersService.playerOrdersWithPlayerRevealed({

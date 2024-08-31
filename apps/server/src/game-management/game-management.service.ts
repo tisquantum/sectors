@@ -42,6 +42,7 @@ import {
   SectorPrize,
   PrizeVote,
   PrizeDistributionType,
+  Card,
 } from '@prisma/client';
 import { GamesService } from '@server/games/games.service';
 import { CompanyService } from '@server/company/company.service';
@@ -50,6 +51,7 @@ import { gameDataJson } from '@server/data/gameData';
 import { StartGameInput } from './game-management.interface';
 import {
   CompanyActionWithCompany,
+  CompanyWithCompanyActions,
   CompanyWithRelations,
   CompanyWithSector,
   GameState,
@@ -126,6 +128,7 @@ import {
   PRIZE_FREEZE_AMOUNT,
   FASTTRACK_APPROVAL_AMOUNT_CONSUMERS,
   FASTTRACK_APPROVAL_AMOUNT_DEMAND,
+  INNOVATION_SURGE_CARD_DRAW_BONUS,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -2390,7 +2393,11 @@ export class GameManagementService {
     );
     if (hasInnovationSurge) {
       //draw two cards
-      const randomCards = this.shuffleArray(cards).slice(0, 2);
+      const randomCards = this.drawResearchCards(
+        INNOVATION_SURGE_CARD_DRAW_BONUS,
+        company.Sector.sectorName,
+        cards,
+      );
       //assign these cards to the company
       const cardPromises = randomCards.map((card) =>
         this.cardsService.updateCard(card.id, {
@@ -2404,7 +2411,11 @@ export class GameManagementService {
       }
     } else {
       //pick a random card
-      const card = cards[Math.floor(Math.random() * cards.length)];
+      const card = this.drawResearchCards(
+        1,
+        company.Sector.sectorName,
+        cards,
+      )[0];
       //assign this card to the company
       await this.cardsService.updateCard(card.id, {
         Company: { connect: { id: company.id } },
@@ -2412,6 +2423,24 @@ export class GameManagementService {
       //trigger effect
       await this.triggerCardEffect(card.effect, company);
     }
+  }
+
+  drawResearchCards(
+    amountToDraw: number,
+    sectorName: SectorName,
+    cards: Card[],
+  ): Card[] {
+    // Filter out cards that are not in the specified sector
+    const filteredCards = cards.filter(
+      (card) =>
+        card.sector === sectorName || card.sector === SectorName.GENERAL,
+    );
+
+    // Shuffle the filtered cards
+    const shuffledCards = this.shuffleArray(filteredCards);
+
+    // Draw and return the specified amount of cards
+    return shuffledCards.slice(0, amountToDraw);
   }
 
   async triggerCardEffect(effect: ResearchCardEffect, company: Company) {
@@ -3453,16 +3482,13 @@ export class GameManagementService {
         const hasSteadyDemand = company.CompanyActions.some(
           (action) => action.action === OperatingRoundAction.STEADY_DEMAND,
         );
-        if (hasSteadyDemand) {
-          consumersCountForCompany += STEADY_DEMAND_CONSUMER_BONUS;
-        }
 
-        const maxCustomersAttracted = calculateDemand(
+        const demandScore = calculateDemand(
           company.demandScore,
           company.baseDemand,
         );
 
-        let unitsSold = Math.min(unitsManufactured, maxCustomersAttracted);
+        let unitsSold = Math.min(unitsManufactured, demandScore);
         if (unitsSold > consumersCountForCompany) {
           unitsSold = consumersCountForCompany;
         }
@@ -3500,7 +3526,17 @@ export class GameManagementService {
         }
         consumers -= unitsSold;
         globalConsumers += unitsSold;
-
+        //after we have made calculations to adjust the consumer count, we can
+        //apply the steady demand bonus to units sold for revenue.  STEADY_DEMAND should only impact the revenue collected should it be valid to be applied.
+        // Apply the steady demand bonus if no consumers are available
+        if (hasSteadyDemand && consumers <= 0 && demandScore > unitsSold) {
+          const bonusUnits = Math.min(
+            STEADY_DEMAND_CONSUMER_BONUS,
+            unitsManufactured - unitsSold,
+          );
+          unitsSold += bonusUnits;
+          revenue += company.unitPrice * bonusUnits;
+        }
         sectorConsumersUpdates.push({
           id: sectorId,
           consumers,
@@ -3508,7 +3544,7 @@ export class GameManagementService {
 
         let throughput = this.calculateThroughputByUnitsSold(
           unitsManufactured,
-          maxCustomersAttracted,
+          demandScore,
         );
         //if company has the CARBON_CREDIT throughtput passive effect, ensure the throughput is at maximum 1.
         const hasCarbonCredit = company.CompanyActions.some(
@@ -5034,12 +5070,26 @@ export class GameManagementService {
           currentPhase?.name == PhaseName.OPERATING_ACTION_COMPANY_VOTE ||
           currentPhase?.name == PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT)
       ) {
-        return getNextCompanyOperatingRoundTurn(
-          gameState.Company.filter(
-            (company) => company.status == CompanyStatus.ACTIVE,
-          ),
+        //get all active companies
+        const activeCompanies =
+          await this.companyService.companiesWithCompanyActions({
+            where: {
+              gameId,
+              status: CompanyStatus.ACTIVE,
+            },
+          });
+        if (!activeCompanies) {
+          throw new Error('Active companies not found');
+        }
+        const nextCompanyId = this.getNextCompanyId(
+          activeCompanies,
           currentPhase?.companyId,
-        )?.id;
+          gameState.currentTurn,
+        );
+        if (nextCompanyId == undefined) {
+          nextPhase = PhaseName.CAPITAL_GAINS;
+        }
+        return nextCompanyId;
       } else {
         //this should be the first company in the operating round
         return getNextCompanyOperatingRoundTurn(
@@ -5049,6 +5099,52 @@ export class GameManagementService {
         ).id;
       }
     }
+  }
+
+  async getNextCompanyId(
+    activeCompanies: CompanyWithCompanyActions[],
+    currentCompanyId: string | undefined,
+    currentTurnId: string,
+  ): Promise<string | undefined> {
+    const nextCompanyId = getNextCompanyOperatingRoundTurn(
+      activeCompanies,
+      currentCompanyId,
+    )?.id;
+
+    if (!nextCompanyId) {
+      return undefined;
+    }
+
+    //if all companies have resolved actions, return undefined
+    if (
+      activeCompanies.every((company) =>
+        company.CompanyActions.some(
+          (action) => action.gameTurnId === currentTurnId && action.resolved,
+        ),
+      )
+    ) {
+      return undefined;
+    }
+    // Get this company's actions for the current turn
+    const companyActions = activeCompanies
+      .find((company) => company.id === nextCompanyId)
+      ?.CompanyActions.filter((action) => action.gameTurnId === currentTurnId);
+
+    // If this company has at least one resolved action, recursively find the next company
+    if (
+      companyActions &&
+      companyActions.length > 0 &&
+      companyActions.some((action) => action.resolved)
+    ) {
+      return this.getNextCompanyId(
+        activeCompanies,
+        nextCompanyId,
+        currentTurnId,
+      );
+    }
+
+    // Return the next company ID if it doesn't have any resolved actions
+    return nextCompanyId;
   }
 
   /**
@@ -7103,9 +7199,16 @@ export class GameManagementService {
     switch (phaseName) {
       case PhaseName.PRIZE_VOTE_ACTION:
       case PhaseName.PRIZE_VOTE_RESOLVE:
+        return this.isPrizeRoundTurn(currentPhase?.gameId || '');
       case PhaseName.PRIZE_DISTRIBUTE_ACTION:
       case PhaseName.PRIZE_DISTRIBUTE_RESOLVE:
-        return this.isPrizeRoundTurn(currentPhase?.gameId || '');
+        const isPrizeRoundTurn = await this.isPrizeRoundTurn(
+          currentPhase?.gameId || '',
+        );
+        if (isPrizeRoundTurn) {
+          return this.wereAnyPrizesWon(currentPhase?.gameId || '');
+        }
+        return false;
       case PhaseName.STOCK_ACTION_REVEAL:
         return this.isStockActionRevealNecessary(currentPhase?.gameId || '');
       case PhaseName.STOCK_RESOLVE_LIMIT_ORDER:
@@ -7132,6 +7235,32 @@ export class GameManagementService {
       default:
         return true;
     }
+  }
+  async wereAnyPrizesWon(gameId: string) {
+    //check if any prize votes were cast during the current turn
+    //get game
+    const game = await this.gamesService.getGameState(gameId);
+    if (!game) {
+      throw new Error('Game not found');
+    }
+    //get game turn
+    const gameTurn = await this.gameTurnService.gameTurn({
+      id: game.currentTurn || '',
+    });
+    if (!gameTurn) {
+      throw new Error('Game turn not found');
+    }
+    //get all prizes for the current turn that have a playerId
+    //these are prizes that have been assigned a winner
+    const prizesWithPlayerId = await this.prizeService.listPrizes({
+      where: {
+        gameId,
+        gameTurnId: gameTurn.id,
+        playerId: { not: null },
+      },
+    });
+    //return true if any prize votes were cast
+    return prizesWithPlayerId.length > 0;
   }
 
   async isStockActionRevealNecessary(gameId: string) {

@@ -123,7 +123,9 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
         </Button>
         {roomHostAuthUser?.roomHost && (
           <>
-            <GameOptions onOptionsChange={handleGameOptionsChange} />
+            {room.game.length == 0 && (
+              <GameOptions onOptionsChange={handleGameOptionsChange} />
+            )}
             {room.game.length == 0 &&
               (startGameIsSubmitted ? (
                 <div>Start Game Submitted</div>

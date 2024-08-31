@@ -236,7 +236,7 @@ const CompaniesAccordion = ({
                   {renderPlayerShares(company.Share || [])}
                 </div>
               </div>
-              <div className="flex flex-col">
+              <div className="flex flex-col gap-1">
                 <span>Research Cards</span>
                 <CompanyResearchCards companyId={company.id} />
               </div>

@@ -42,6 +42,7 @@ import { flushAllTraces } from "next/dist/trace";
 import PlayerAvatar from "../Player/PlayerAvatar";
 import OptionContract from "./OptionContract";
 import { useEffect, useMemo } from "react";
+import OrderChipChitWithPlayer from "./OrderChipChitWithPlayer";
 
 const containerVariants = {
   hidden: { opacity: 0, y: -20 }, // Defines the initial state of the component: invisible and slightly shifted upward
@@ -215,42 +216,42 @@ const PendingMarketOrders = ({
                     {orders[0].Company.currentStockPrice}
                     <span>{company}</span>
                   </div>
-                  <div className="flex flex-col gap-2">
+                  <div className="flex gap-2">
                     {Object.entries(groupedOrdersByPhase).map(
                       ([phaseId, { orders, subRound }], index) => (
-                        <div className="flex flex-col" key={index}>
-                          {status == OrderStatus.PENDING && (
-                            <div>
-                              <span> Stock Round {subRound} </span>
-                            </div>
-                          )}
-                          <div className="flex flex-col">
-                            {orders.map((order, index) => (
-                              <motion.div
-                                key={index}
-                                initial="hidden"
-                                animate="visible"
-                                variants={containerVariants}
-                                className="flex"
-                              >
-                                <OrderChipWithPlayer
+                        <>
+                          {orders.map((order, index) => (
+                            <motion.div
+                              key={index}
+                              initial="hidden"
+                              animate="visible"
+                              variants={containerVariants}
+                              className="flex"
+                            >
+                              <>
+                                {/* <OrderChipWithPlayer
+                                    order={order}
+                                    status={order.orderStatus}
+                                    endContent={
+                                      order.orderStatus ==
+                                      OrderStatus.FILLED ? (
+                                        <CheckCircleIcon className="size-5 text-green-500" />
+                                      ) : order.orderStatus ==
+                                        OrderStatus.REJECTED ? (
+                                        <RiCloseCircleFill className="size-5 text-red-500" />
+                                      ) : (
+                                        <ClockIcon className="size-5 text-yellow-500" />
+                                      )
+                                    }
+                                  /> */}
+                                <OrderChipChitWithPlayer
                                   order={order}
-                                  status={order.orderStatus}
-                                  endContent={
-                                    order.orderStatus == OrderStatus.FILLED ? (
-                                      <CheckCircleIcon className="size-5 text-green-500" />
-                                    ) : order.orderStatus ==
-                                      OrderStatus.REJECTED ? (
-                                      <RiCloseCircleFill className="size-5 text-red-500" />
-                                    ) : (
-                                      <ClockIcon className="size-5 text-yellow-500" />
-                                    )
-                                  }
+                                  showStatus={true}
                                 />
-                              </motion.div>
-                            ))}
-                          </div>
-                        </div>
+                              </>
+                            </motion.div>
+                          ))}
+                        </>
                       )
                     )}
                   </div>

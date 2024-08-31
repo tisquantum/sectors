@@ -15,7 +15,8 @@ import { companyPriorityOrderOperations } from './helpers';
 export const GAME_SETUP_DEFAULT_BANK_POOL_NUMBER = 12000;
 export const GAME_SETUP_DEFAULT_CONSUMER_POOL_NUMBER = 75;
 export const GAME_SETUP_DEFAULT_STARTING_CASH_ON_HAND = 300;
-export const GAME_SETUP_DEFAULT_DISTRIBUTION_STRATEGY = DistributionStrategy.BID_PRIORITY;
+export const GAME_SETUP_DEFAULT_DISTRIBUTION_STRATEGY =
+  DistributionStrategy.BID_PRIORITY;
 export const GAME_SETUP_DEFAULT_GAME_MAX_TURNS = 15;
 export const GAME_SETUP_DEFAULT_PLAYER_ORDERS_CONCEALED = true;
 
@@ -80,7 +81,7 @@ export const BOOM_CYCLE_STOCK_CHART_BONUS = 3;
 export const PRIZE_FREEZE_AMOUNT = 2;
 export const FASTTRACK_APPROVAL_AMOUNT_DEMAND = 2;
 export const FASTTRACK_APPROVAL_AMOUNT_CONSUMERS = 3;
-
+export const INNOVATION_SURGE_CARD_DRAW_BONUS = 2;
 /**
  * Phase times in milliseconds
  */
@@ -355,7 +356,10 @@ export const getNextCompanyOperatingRoundTurn = (
   const sortedCompanies = getCompanyOperatingRoundTurnOrder(companies);
   console.log('getNextCompanyOperatingRoundTurn', sortedCompanies);
   if (!currentCompanyId) {
-    console.log('getNextCompanyOperatingRoundTurn returning the first company', sortedCompanies[0]);
+    console.log(
+      'getNextCompanyOperatingRoundTurn returning the first company',
+      sortedCompanies[0],
+    );
     return sortedCompanies[0];
   }
 
@@ -365,7 +369,6 @@ export const getNextCompanyOperatingRoundTurn = (
 
   // Handle the case where currentCompanyId is not found
   if (currentIndex === -1) {
-    // You can decide how to handle this case, for example, returning the first company
     return sortedCompanies[0];
   }
 
@@ -956,7 +959,7 @@ export const companyActionsDescription: CompanyActionDescription[] = [
     id: 21,
     title: 'Innovation Surge',
     name: OperatingRoundAction.INNOVATION_SURGE,
-    message: 'Should the company draw a research card, draw 2 cards instead.',
+    message: `Should the company draw a research card, draw ${INNOVATION_SURGE_CARD_DRAW_BONUS} cards instead.`,
     actionType: 'sector-passive',
   },
   //healthcare
@@ -989,7 +992,7 @@ export const companyActionsDescription: CompanyActionDescription[] = [
     id: 25,
     title: 'Steady Demand',
     name: OperatingRoundAction.STEADY_DEMAND,
-    message: `Should the company have remaining demand but no consumers are available, sell up to ${STEADY_DEMAND_CONSUMER_BONUS} demand anyway.`,
+    message: `Should the company have remaining demand to fill but no consumers are available, sell up to ${STEADY_DEMAND_CONSUMER_BONUS} demand anyway given there is enough supply left to sell.`,
     actionType: 'sector-passive',
   },
   //consumer cyclical
