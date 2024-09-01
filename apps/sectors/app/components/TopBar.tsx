@@ -25,6 +25,7 @@ import { createClient } from "@sectors/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import UserAvatar from "./Room/UserAvatar";
 import Rules from "./Game/Rules";
+import { RiFundsFill } from "@remixicon/react";
 
 const TopBar = () => {
   const { user, loading } = useAuthUser();
@@ -39,7 +40,12 @@ const TopBar = () => {
   return (
     <Navbar isBordered shouldHideOnScroll>
       <NavbarBrand>
-        <Link href="#">Sectors</Link>
+        <Link href="#">
+          <div className="flex gap-1 justify-center content-center items-center text-slate-100">
+            <span>SECTORS</span>
+            <RiFundsFill color="#17a34a" />
+          </div>
+        </Link>
       </NavbarBrand>
       <NavbarContent>
         <NavbarItem>
