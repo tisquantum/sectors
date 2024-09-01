@@ -148,7 +148,7 @@ const CompanyActionSelectionVote = ({
     }
   };
   let availableActions = companyActionsDescription.filter(
-    (action) => action.id < 15
+    (action) => action.id < 16
   );
 
   const companySectorActiveEffect =

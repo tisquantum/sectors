@@ -170,13 +170,16 @@ export class CompanyService {
     });
   }
 
-  async companiesWithCompanyActionsWithActionsFilteredByOperatingRoundId(operatingRoundId: number, params: {
-    skip?: number;
-    take?: number;
-    cursor?: Prisma.CompanyWhereUniqueInput;
-    where?: Prisma.CompanyWhereInput;
-    orderBy?: Prisma.CompanyOrderByWithRelationInput;
-  }): Promise<CompanyWithCompanyActions[]> {
+  async companiesWithCompanyActionsWithActionsFilteredByOperatingRoundId(
+    operatingRoundId: number,
+    params: {
+      skip?: number;
+      take?: number;
+      cursor?: Prisma.CompanyWhereUniqueInput;
+      where?: Prisma.CompanyWhereInput;
+      orderBy?: Prisma.CompanyOrderByWithRelationInput;
+    },
+  ): Promise<CompanyWithCompanyActions[]> {
     const { skip, take, cursor, where, orderBy } = params;
     return this.prisma.company.findMany({
       skip,
@@ -187,13 +190,39 @@ export class CompanyService {
       include: {
         CompanyActions: {
           where: {
-            operatingRoundId
-          }
+            operatingRoundId,
+          },
         },
       },
     });
   }
 
+  async companiesWithCompanyActionsForTurn(
+    turnId: string,
+    params: {
+      skip?: number;
+      take?: number;
+      cursor?: Prisma.CompanyWhereUniqueInput;
+      where?: Prisma.CompanyWhereInput;
+      orderBy?: Prisma.CompanyOrderByWithRelationInput;
+    },
+  ): Promise<CompanyWithCompanyActions[]> {
+    const { skip, take, cursor, where, orderBy } = params;
+    return this.prisma.company.findMany({
+      skip,
+      take,
+      cursor,
+      where,
+      orderBy,
+      include: {
+        CompanyActions: {
+          where: {
+            gameTurnId: turnId,
+          },
+        },
+      },
+    });
+  }
   async companiesWithSector(params: {
     skip?: number;
     take?: number;

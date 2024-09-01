@@ -44,7 +44,8 @@ const SectorConsumerDistributionAnimation = ({
   const handleConsumerMove = useCallback(() => {
     if (
       sectorConsumers > 0 &&
-      moneyEarned[currentCompanyIndex] < maximumConsumersWhoWillVisit
+      moneyEarned[currentCompanyIndex] <
+        maximumConsumersWhoWillVisit * currentCompany.unitPrice
     ) {
       setConsumersMoving((prev) => [...prev, prev.length]);
       setSectorConsumers((prev) => prev - 1);
@@ -77,9 +78,7 @@ const SectorConsumerDistributionAnimation = ({
                 key={index}
                 initial={{ opacity: 1 }}
                 animate={
-                  index < consumersMoving.length
-                    ? { y: 50, opacity: 0 }
-                    : {}
+                  index < consumersMoving.length ? { y: 50, opacity: 0 } : {}
                 }
                 transition={{ duration: 1 }}
                 className="relative"

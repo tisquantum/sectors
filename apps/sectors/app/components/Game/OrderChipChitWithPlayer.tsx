@@ -131,16 +131,16 @@ const OrderChipChitWithPlayer = ({
                         {order.orderType === OrderType.SHORT && (
                           <span>@${order.value}</span>
                         )}
+                        {gameState.distributionStrategy ==
+                          DistributionStrategy.BID_PRIORITY &&
+                          order.orderType === OrderType.MARKET && (
+                            <span>@${order.value}</span>
+                          )}
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-              {gameState.distributionStrategy ==
-                DistributionStrategy.BID_PRIORITY &&
-                order.orderType === OrderType.MARKET && (
-                  <span>@${order.value}</span>
-                )}
             </div>
           </CardHeader>
           <CardBody className="z-20 p-1 pb-2 flex flex-col justify-center items-center">

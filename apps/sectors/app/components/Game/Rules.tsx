@@ -442,6 +442,11 @@ const CompanyActionsRules = () => {
       return actionDescription.actionType == "general";
     }
   );
+  const internalCompanyActions = companyActionsDescription.filter(
+    (actionDescription) => {
+      return actionDescription.actionType == "internal";
+    }
+  );
   const sectorCompanyActionsActive = companyActionsDescription.filter(
     (actionDescription) => {
       return actionDescription.actionType == "sector-active";
@@ -469,6 +474,17 @@ const CompanyActionsRules = () => {
       </p>
       <ul className="list-disc pl-5 space-y-2">
         {generalCompanyActions.map((action, index) => (
+          <li key={index} className="flex flex-col">
+            <div className="font-semibold text-md">{action.title}</div>
+            <div className="text-sm">{action.message}</div>
+            <div className="text-sm">
+              Cash Cost: ${CompanyActionCosts[action.name]}
+            </div>
+          </li>
+        ))}
+      </ul>
+      <ul className="list-disc pl-5 space-y-2">
+        {internalCompanyActions.map((action, index) => (
           <li key={index} className="flex flex-col">
             <div className="font-semibold text-md">{action.title}</div>
             <div className="text-sm">{action.message}</div>

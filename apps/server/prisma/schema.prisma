@@ -525,6 +525,7 @@ enum OperatingRoundAction {
   LOBBY
   LOAN
   OUTSOURCE
+  LICENSING_AGREEMENT
   //sector specific active actions
   VISIONARY
   STRATEGIC_RESERVE
@@ -595,6 +596,7 @@ enum ResearchCardEffect {
   SPECIALIZATION
   DIVERSIFICATION
   INNOVATION
+  //PATENT_FILING
   NO_DISCERNIBLE_FINDINGS
 }
 

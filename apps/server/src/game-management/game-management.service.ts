@@ -313,6 +313,9 @@ export class GameManagementService {
         //await this.createOperatingRoundCompanyActions(phase);
         await this.decrementSectorDemandBonus(phase);
         await this.decrementCompanyTemporarySupplyBonus(phase);
+        await this.checkCompaniesForIncreasePricePreviousTurnAndAdjustDemand(
+          phase,
+        );
         break;
       case PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT:
         await this.resolveCompanyVotes(phase);
@@ -340,6 +343,49 @@ export class GameManagementService {
     }
   }
 
+  async checkCompaniesForIncreasePricePreviousTurnAndAdjustDemand(
+    phase: Phase,
+  ) {
+    const game = await this.gamesService.game({ id: phase.gameId });
+    if (!game) {
+      throw new Error('Game not found');
+    }
+    const gameTurn = await this.gameTurnService.getCurrentTurn(phase.gameId);
+    if (!gameTurn) {
+      throw new Error('Game turn not found');
+    }
+    //get previous turn
+    const previousTurn = await this.gameTurnService.gameTurns({
+      where: { gameId: phase.gameId, turn: gameTurn.turn - 1 },
+    });
+    if (!previousTurn) {
+      throw new Error('Previous turn not found');
+    }
+    const companies =
+      await this.companyService.companiesWithCompanyActionsForTurn(
+        previousTurn[0].id,
+        {
+          where: { gameId: phase.gameId },
+        },
+      );
+    if (!companies) {
+      throw new Error('Companies not found');
+    }
+    //look for companies that increased their price last turn
+    const companiesThatIncreasedPrice = companies.filter((company) => {
+      company.CompanyActions.some((action) => {
+        return action.action == OperatingRoundAction.INCREASE_PRICE;
+      });
+    });
+    //iterate over companies and update their demand by 1
+    const updatedCompanies = companiesThatIncreasedPrice.map((company) => {
+      return this.companyService.updateCompany({
+        where: { id: company.id },
+        data: { demandScore: company.demandScore + 1 },
+      });
+    });
+    await Promise.all(updatedCompanies);
+  }
   async resolvePrizeVotes(phase: Phase) {
     // Parallel fetching of game and votes
     const [game, votes] = await Promise.all([
@@ -1376,7 +1422,7 @@ export class GameManagementService {
     const allVotes = [
       ...influenceRoundWithVotes.InfluenceVotes,
       ...missingPlayers.map((player) => ({
-        influence: DEFAULT_INFLUENCE,
+        influence: 0,
         playerId: player.id,
       })),
     ];
@@ -2617,6 +2663,7 @@ export class GameManagementService {
       where: { id: company.id },
       data: {
         unitPrice: company.unitPrice + DEFAULT_INCREASE_UNIT_PRICE,
+        demandScore: Math.max(company.demandScore - 1, 0),
       },
     });
   }
