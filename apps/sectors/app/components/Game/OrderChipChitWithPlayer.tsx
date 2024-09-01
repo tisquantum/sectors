@@ -133,7 +133,8 @@ const OrderChipChitWithPlayer = ({
                         )}
                         {gameState.distributionStrategy ==
                           DistributionStrategy.BID_PRIORITY &&
-                          order.orderType === OrderType.MARKET && (
+                          (order.orderType === OrderType.MARKET ||
+                            order.orderType === OrderType.OPTION) && (
                             <span>@${order.value}</span>
                           )}
                       </div>

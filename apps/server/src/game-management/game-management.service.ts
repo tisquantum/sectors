@@ -971,7 +971,7 @@ export class GameManagementService {
       demandScore: 0,
       baseDemand: 0,
       supplyCurrent: 0,
-      supplyMax: CompanyTierData[CompanyTier.ESTABLISHED].supplyMax,
+      supplyMax: CompanyTierData[startingCompanyTier].supplyMax,
     });
 
     const shares = [];

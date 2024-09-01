@@ -25,7 +25,7 @@ const SectorComponent = ({
 }) => {
   return (
     <div
-      className={`flex flex-col gap-2 text-slate-200 p-4 justify-center items-center ${sectorColor}`}
+      className={`flex flex-col gap-2 text-slate-200 p-4 justify-center items-center rounded-md ${sectorColor}`}
       style={{ backgroundColor: sectorColor }}
     >
       <div className="text-xl">{sector.name}</div>
@@ -73,11 +73,12 @@ const EndTurnEconomy = () => {
                 <p className={tooltipParagraphStyle}>
                   The number of consumers available to purchase goods and
                   services each turn. At the end of each turn, they will rotate
-                  to each sector being &quot;spooled&quot; out until the total economy
-                  score is consumed. Each time consumers visit a sector, the
-                  amount of consumers that move into that sector is equivalent
-                  to the sectors base demand score. Sectors operate in priority
-                  left to right based on this pre-defined ranked order.
+                  to each sector being &quot;spooled&quot; out until the total
+                  economy score is consumed. Each time consumers visit a sector,
+                  the amount of consumers that move into that sector is
+                  equivalent to the sectors base demand score. Sectors operate
+                  in priority left to right based on this pre-defined ranked
+                  order.
                 </p>
                 <table>
                   <thead>

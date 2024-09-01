@@ -316,7 +316,7 @@ const CompanyActionSelectionVote = ({
                             <span className="font-bold mr-3">
                               {action.title}
                             </span>
-                            <div className="flex gap-1">
+                            <div className="flex flex-wrap justify-end gap-1">
                               {companyCosts().map((cost) => (
                                 <span
                                   key={cost} // Add a unique key for each item

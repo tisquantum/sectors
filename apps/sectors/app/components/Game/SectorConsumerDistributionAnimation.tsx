@@ -9,6 +9,7 @@ import { getCompanyOperatingRoundTurnOrder } from "@server/data/constants";
 import { calculateCompanySupply, calculateDemand } from "@server/data/helpers";
 import { Company, Sector } from "@server/prisma/prisma.client";
 import { motion, AnimatePresence } from "framer-motion";
+import { sectorColors } from "@server/data/gameData";
 
 const SectorConsumerDistributionAnimation = ({
   sector,
@@ -29,7 +30,7 @@ const SectorConsumerDistributionAnimation = ({
   );
   const [consumersMoving, setConsumersMoving] = useState<number[]>([]);
 
-  const animationInterval = 1500;
+  const animationInterval = 2500;
   const currentCompany = sortedCompanies[currentCompanyIndex];
 
   const companyDemand =
@@ -67,9 +68,13 @@ const SectorConsumerDistributionAnimation = ({
   }, [handleConsumerMove]);
 
   return (
-    <motion.div className="flex items-start space-x-4">
+    <motion.div
+      className={`flex flex-col items-center space-x-4 bg-[${
+        sectorColors[sector.name]
+      }]`}
+    >
       {/* Sector and Consumers */}
-      <div className="flex flex-col items-center">
+      <div className={`flex flex-col items-center`}>
         <span>{sector.name}</span>
         <div className="flex space-x-2">
           {Array.from({ length: sectorConsumers + consumersMoving.length }).map(
@@ -82,6 +87,7 @@ const SectorConsumerDistributionAnimation = ({
                 }
                 transition={{ duration: 1 }}
                 className="relative"
+                style={{ width: 30, height: 30 }} // Fixed size
                 onAnimationComplete={() => {
                   if (index < consumersMoving.length) {
                     setMoneyEarned((prev) => {
@@ -109,6 +115,7 @@ const SectorConsumerDistributionAnimation = ({
           exit={{ opacity: 0, x: 100 }}
           transition={{ duration: 1 }}
           className="flex flex-col"
+          style={{ width: 200, minHeight: 100 }} // Fixed width/height
         >
           <span>{currentCompany.name}</span>
           <div className="flex gap-1">

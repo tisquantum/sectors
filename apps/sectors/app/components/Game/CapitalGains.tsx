@@ -78,7 +78,7 @@ const CapitalGains = () => {
                 </div>
               )}
               <div className="flex flex-col gap-2 mt-4">
-                <div className="text-lg">
+                <div className="text-xl">
                   Capital Gains Payment: ${capitalGain.capitalGains}
                 </div>
                 <div className="text-lg">

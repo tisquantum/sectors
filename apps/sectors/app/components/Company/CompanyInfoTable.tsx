@@ -98,14 +98,14 @@ const CompanyInfoTable = ({
             {isRevealRound
               ? ordersRevealed &&
                 ordersRevealed.length > 0 && (
-                  <AvatarGroup>
+                  <div className="flex flex-wrap gap-1">
                     {ordersRevealed.map((order, index) => (
                       <OrderChipChitWithPlayer
                         order={order}
                         showStatus={true}
                       />
                     ))}
-                  </AvatarGroup>
+                  </div>
                 )
               : ordersConcealed &&
                 ordersConcealed.length > 0 && (
