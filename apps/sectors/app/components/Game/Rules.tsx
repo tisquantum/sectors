@@ -468,6 +468,13 @@ const CompanyActionsRules = () => {
         its current company tier. Actions are paid for with assets from the
         company treasury.
       </p>
+      <h4 className="font-semibold">Action Cost</h4>
+      <p>
+        Some actions have a fixed price, while others have tiered costs. During
+        an Operating Round, the first company to take a tiered action pays the
+        lowest price, the next company pays the next tier, and all subsequent
+        companies pay the highest price.
+      </p>
       <h4 className="font-semibold">General Actions</h4>
       <p>
         These actions are available to every company every operating round

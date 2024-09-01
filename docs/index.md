@@ -265,6 +265,10 @@ Every third turn, a new company is opened in the sector with the highest average
 
 Each Operating Round, companies will take turns in **company priority** order. On their turn, players will vote for a set of company actions to take place. The number of actions a company can take is directly tied to its current company tier. Actions are paid for with assets from the company treasury.
 
+#### Action Cost
+
+Some actions have a fixed price, while others have tiered costs. During an Operating Round, the first company to take a tiered action pays the lowest price, the next company pays the next tier, and all subsequent companies pay the highest price.
+
 #### General Actions
 {: #general-actions }
 
