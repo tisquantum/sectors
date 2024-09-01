@@ -50,6 +50,7 @@ import {
   materials,
   technology,
 } from './gameData';
+import { get } from 'http';
 interface NextPhaseOptions {
   allCompaniesHaveVoted?: boolean;
   stockActionSubRound?: number;
@@ -872,8 +873,12 @@ export function calculateStartingCompanyCount(playerCount: number) {
 
 export function getCompanyActionCost(
   companyAction: OperatingRoundAction,
+  companyStockPrice: number,
   generalCompanyActionCount?: number,
 ) {
+  if(companyAction == OperatingRoundAction.SHARE_BUYBACK) {
+    return companyStockPrice;
+  }
   if (
     companyActionsDescription.find(
       (description) => description.name == companyAction,

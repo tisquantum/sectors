@@ -1999,26 +1999,13 @@ export class GameManagementService {
         });
       }
 
-      // Pay for the company action
-      try {
-        await this.payForCompanyAction(companyAction);
-      } catch (error) {
-        console.error(
-          'Error paying for company action, vetoing action:',
-          error,
-        );
-        companyAction = await this.companyActionService.updateCompanyAction({
-          where: { id: companyAction.id },
-          data: { action: OperatingRoundAction.VETO },
-        });
-      }
-
       // Mark the company action as resolved
       await this.companyActionService.updateCompanyAction({
         where: { id: companyAction.id },
         data: { resolved: true },
       });
 
+      let payForCompanyAction = true;
       // Handle the specific company action
       switch (companyAction.action) {
         case OperatingRoundAction.SHARE_ISSUE:
@@ -2031,7 +2018,7 @@ export class GameManagementService {
           await this.resolveMarketingSmallCampaignAction(companyAction);
           break;
         case OperatingRoundAction.SHARE_BUYBACK:
-          await this.resolveShareBuyback(companyAction);
+          payForCompanyAction = await this.resolveShareBuyback(companyAction);
           break;
         case OperatingRoundAction.EXPANSION:
           await this.expandCompany(companyAction);
@@ -2090,6 +2077,21 @@ export class GameManagementService {
         default:
           console.warn(`Unknown action encountered: ${companyAction.action}`);
           break;
+      }
+      if (payForCompanyAction) {
+        // Pay for the company action
+        try {
+          await this.payForCompanyAction(companyAction);
+        } catch (error) {
+          console.error(
+            'Error paying for company action, vetoing action:',
+            error,
+          );
+          companyAction = await this.companyActionService.updateCompanyAction({
+            where: { id: companyAction.id },
+            data: { action: OperatingRoundAction.VETO },
+          });
+        }
       }
     }
   }
@@ -3007,7 +3009,7 @@ export class GameManagementService {
     });
   }
 
-  async resolveShareBuyback(companyAction: CompanyAction) {
+  async resolveShareBuyback(companyAction: CompanyAction): Promise<boolean> {
     //get the company
     const company = await this.companyService.company({
       id: companyAction.companyId,
@@ -3025,7 +3027,7 @@ export class GameManagementService {
     const share = shares.find((s) => s.location === ShareLocation.OPEN_MARKET);
     if (!share) {
       console.error('Share not found');
-      return;
+      return false;
     }
     //destroy the share
     await this.shareService.deleteShare({ id: share.id });
@@ -3034,6 +3036,7 @@ export class GameManagementService {
       where: { id: company.id },
       data: { cashOnHand: company.cashOnHand + share.price },
     });
+    return true;
   }
 
   async payForCompanyAction(companyAction: CompanyAction) {
@@ -3062,15 +3065,23 @@ export class GameManagementService {
       //check how many times this action has been taken this round
       const companyActions = await this.companyActionService.companyActions({
         where: {
+          id: { not: companyAction.id },
           companyId: company.id,
           action: companyAction.action,
           gameTurnId: game.currentTurn,
         },
       });
-      cost = getCompanyActionCost(companyAction.action, companyActions.length);
+      cost = getCompanyActionCost(
+        companyAction.action,
+        company.currentStockPrice,
+        companyActions.length,
+      );
     } else {
       //get the cost of the action
-      cost = getCompanyActionCost(companyAction.action);
+      cost = getCompanyActionCost(
+        companyAction.action,
+        company.currentStockPrice,
+      );
     }
 
     if (cost === undefined || cost === null) {

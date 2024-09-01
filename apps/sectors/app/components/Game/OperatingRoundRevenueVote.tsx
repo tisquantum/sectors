@@ -124,7 +124,7 @@ const OperatingRoundRevenueVote = () => {
       <h1 className="text-2xl font-bold mb-4">
         Operating Round Production Vote
       </h1>
-      <div className="flex flex-wrap gap-4">
+      <div className="flex flex-col gap-1">
         {sectorNames.map((sectorName: SectorName) => (
           <SectorConsumerDistributionAnimation
             key={sectorName}

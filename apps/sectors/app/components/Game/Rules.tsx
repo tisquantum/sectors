@@ -486,7 +486,7 @@ const CompanyActionsRules = () => {
             <div className="font-semibold text-md">{action.title}</div>
             <div className="text-sm">{action.message}</div>
             <div className="text-sm">
-              Cash Cost: ${getCompanyActionCost(action.name)}
+              Cash Cost: ${getCompanyActionCost(action.name, 0)}
             </div>
           </li>
         ))}
@@ -497,7 +497,7 @@ const CompanyActionsRules = () => {
             <div className="font-semibold text-md">{action.title}</div>
             <div className="text-sm">{action.message}</div>
             <div className="text-sm">
-              Cash Cost: ${getCompanyActionCost(action.name)}
+              Cash Cost: ${getCompanyActionCost(action.name, 0)}
             </div>
           </li>
         ))}
@@ -513,7 +513,7 @@ const CompanyActionsRules = () => {
             <div className="font-semibold text-md">{action.title}</div>
             <div className="text-sm">{action.message}</div>
             <div className="text-sm">
-              Cash Cost: ${getCompanyActionCost(action.name)}
+              Cash Cost: ${getCompanyActionCost(action.name, 0)}
             </div>
             <div className="text-sm">
               Prestige Cost: {CompanyActionPrestigeCosts[action.name]}

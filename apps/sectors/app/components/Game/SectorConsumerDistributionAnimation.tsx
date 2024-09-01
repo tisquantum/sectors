@@ -30,7 +30,7 @@ const SectorConsumerDistributionAnimation = ({
   );
   const [consumersMoving, setConsumersMoving] = useState<number[]>([]);
 
-  const animationInterval = 2500;
+  const animationInterval = 800;
   const currentCompany = sortedCompanies[currentCompanyIndex];
 
   const companyDemand =
@@ -77,7 +77,7 @@ const SectorConsumerDistributionAnimation = ({
       <div className={`flex flex-col items-center`}>
         <span>{sector.name}</span>
         <div className="flex space-x-2">
-          {Array.from({ length: sectorConsumers + consumersMoving.length }).map(
+          {Array.from({ length: sectorConsumers }).map(
             (_, index) => (
               <motion.div
                 key={index}
@@ -107,7 +107,7 @@ const SectorConsumerDistributionAnimation = ({
       </div>
 
       {/* Company Information */}
-      <AnimatePresence>
+      <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={currentCompanyIndex}
           initial={{ opacity: 0, x: -100 }}

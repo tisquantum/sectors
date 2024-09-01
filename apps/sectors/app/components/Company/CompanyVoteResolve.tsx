@@ -159,6 +159,7 @@ const CompanyVoteResolve = () => {
                 </div>
               ))}
             </div>
+            <PrestigeRewards />
           </div>
         );
         break;

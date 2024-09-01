@@ -98,6 +98,7 @@ const CompanyActionSelectionVote = ({
     if (
       getCompanyActionCost(
         actionName,
+        company.currentStockPrice,
         allCompanyActions?.filter(
           (companyAction) => companyAction.action === actionName
         ).length
@@ -264,15 +265,22 @@ const CompanyActionSelectionVote = ({
                   if (action.actionType == "general") {
                     return getCompanyActionCost(
                       action.name,
+                      company.currentStockPrice,
                       allCompanyActions?.filter(
                         (actionName) => actionName.action === action.name
                       ).length
                     );
                   } else {
-                    return getCompanyActionCost(action.name);
+                    return getCompanyActionCost(
+                      action.name,
+                      company.currentStockPrice
+                    );
                   }
                 };
                 const companyCosts = () => {
+                  if (action.name === OperatingRoundAction.SHARE_BUYBACK) {
+                    return [company.currentStockPrice];
+                  }
                   if (action.actionType == "general") {
                     return GeneralCompanyActionCosts[
                       action.name as keyof typeof GeneralCompanyActionCosts
@@ -313,7 +321,7 @@ const CompanyActionSelectionVote = ({
                       <CardHeader>
                         <div className="flex flex-col w-full">
                           <div className="flex gap-1 justify-between items-start">
-                            <span className="font-bold mr-3">
+                            <span className="basis-5/12	font-bold">
                               {action.title}
                             </span>
                             <div className="flex flex-wrap justify-end gap-1">

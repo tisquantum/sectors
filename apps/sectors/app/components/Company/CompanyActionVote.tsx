@@ -77,7 +77,8 @@ const CompanyActionVote = ({ company }: { company?: Company }) => {
       >
         {actions
           .filter(
-            (action) => getCompanyActionCost(action.name) <= company.cashOnHand
+            (action) =>
+              getCompanyActionCost(action.name, company.currentStockPrice) <= company.cashOnHand
           )
           .map((action) => (
             <Radio key={action.name} value={action.name}>
