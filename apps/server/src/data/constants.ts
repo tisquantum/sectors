@@ -441,11 +441,14 @@ export const throughputRewardOrPenalty = (
   }
 };
 
-export const CompanyActionCosts = {
+export const GeneralCompanyActionCosts = {
   [OperatingRoundAction.LICENSING_AGREEMENT]: [300, 400, 500],
   [OperatingRoundAction.MARKETING]: [220, 250, 300],
   [OperatingRoundAction.OUTSOURCE]: [200, 250, 300],
   [OperatingRoundAction.LOBBY]: [150, 300, 500],
+};
+
+export const CompanyActionCosts = {
   [OperatingRoundAction.DOWNSIZE]: 50,
   [OperatingRoundAction.EXPANSION]: 300,
   [OperatingRoundAction.MARKETING_SMALL_CAMPAIGN]: 100,
@@ -492,6 +495,7 @@ export const CompanyActionPrestigeCosts = {
   [OperatingRoundAction.DECREASE_PRICE]: 0,
   [OperatingRoundAction.OUTSOURCE]: 0,
   [OperatingRoundAction.LOAN]: 0,
+  [OperatingRoundAction.LICENSING_AGREEMENT]: 0,
   //active effects
   [OperatingRoundAction.VISIONARY]: 3,
   [OperatingRoundAction.STRATEGIC_RESERVE]: 3,
@@ -786,7 +790,12 @@ export type PlayerReadiness = {
   isReady: boolean;
 };
 
-export type CompanyActionType = 'general' | 'internal' | 'sector' | 'sector-active' | 'sector-passive';
+export type CompanyActionType =
+  | 'general'
+  | 'internal'
+  | 'sector'
+  | 'sector-active'
+  | 'sector-passive';
 export interface CompanyActionDescription {
   id: number;
   title: string;

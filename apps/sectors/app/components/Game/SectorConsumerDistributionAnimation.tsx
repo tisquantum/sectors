@@ -29,7 +29,7 @@ const SectorConsumerDistributionAnimation = ({
   );
   const [consumersMoving, setConsumersMoving] = useState<number[]>([]);
 
-  const animationInterval = 3000;
+  const animationInterval = 1500;
   const currentCompany = sortedCompanies[currentCompanyIndex];
 
   const companyDemand =

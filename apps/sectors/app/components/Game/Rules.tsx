@@ -13,6 +13,7 @@ import {
   CompanyActionPrestigeCosts,
   companyActionsDescription,
 } from "@server/data/constants";
+import { getCompanyActionCost } from "@server/data/helpers";
 
 const overviewRules = (
   <>
@@ -478,7 +479,7 @@ const CompanyActionsRules = () => {
             <div className="font-semibold text-md">{action.title}</div>
             <div className="text-sm">{action.message}</div>
             <div className="text-sm">
-              Cash Cost: ${CompanyActionCosts[action.name]}
+              Cash Cost: ${getCompanyActionCost(action.name)}
             </div>
           </li>
         ))}
@@ -489,7 +490,7 @@ const CompanyActionsRules = () => {
             <div className="font-semibold text-md">{action.title}</div>
             <div className="text-sm">{action.message}</div>
             <div className="text-sm">
-              Cash Cost: ${CompanyActionCosts[action.name]}
+              Cash Cost: ${getCompanyActionCost(action.name)}
             </div>
           </li>
         ))}
@@ -505,7 +506,7 @@ const CompanyActionsRules = () => {
             <div className="font-semibold text-md">{action.title}</div>
             <div className="text-sm">{action.message}</div>
             <div className="text-sm">
-              Cash Cost: ${CompanyActionCosts[action.name]}
+              Cash Cost: ${getCompanyActionCost(action.name)}
             </div>
             <div className="text-sm">
               Prestige Cost: {CompanyActionPrestigeCosts[action.name]}

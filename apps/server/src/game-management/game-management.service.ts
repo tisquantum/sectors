@@ -129,6 +129,7 @@ import {
   FASTTRACK_APPROVAL_AMOUNT_CONSUMERS,
   FASTTRACK_APPROVAL_AMOUNT_DEMAND,
   INNOVATION_SURGE_CARD_DRAW_BONUS,
+  companyActionsDescription,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -151,6 +152,7 @@ import {
   getRandomCompany,
   calculateAverageStockPrice,
   calculateStartingCompanyCount,
+  getCompanyActionCost,
 } from '@server/data/helpers';
 import { PusherService } from 'nestjs-pusher';
 import {
@@ -3051,8 +3053,25 @@ export class GameManagementService {
       throw new Error('Action not found');
     }
     console.log('companyAction', companyAction);
-    //get the cost of the action
-    const cost = CompanyActionCosts[companyAction.action];
+    //check if company action is of general type
+    const companyActionType = companyActionsDescription.find(
+      (description) => description.name == companyAction.action,
+    )?.actionType;
+    let cost;
+    if (companyActionType === 'general') {
+      //check how many times this action has been taken this round
+      const companyActions = await this.companyActionService.companyActions({
+        where: {
+          companyId: company.id,
+          action: companyAction.action,
+          gameTurnId: game.currentTurn,
+        },
+      });
+      cost = getCompanyActionCost(companyAction.action, companyActions.length);
+    } else {
+      //get the cost of the action
+      cost = getCompanyActionCost(companyAction.action);
+    }
 
     if (cost === undefined || cost === null) {
       throw new Error('Cost not found');
@@ -3070,6 +3089,12 @@ export class GameManagementService {
     await this.companyService.updateCompany({
       where: { id: company.id },
       data: { cashOnHand: company.cashOnHand - cost },
+    });
+
+    //update the company action with the cost
+    await this.companyActionService.updateCompanyAction({
+      where: { id: companyAction.id },
+      data: { cost },
     });
 
     //create entity transaction
