@@ -1459,7 +1459,7 @@ export class GameManagementService {
     );
 
     try {
-      await this.gameLogService.createManyGameLogs(gameLogMessages);
+      this.gameLogService.createManyGameLogs(gameLogMessages);
     } catch (error) {
       console.error('Error creating game logs', error);
     }
@@ -3833,15 +3833,12 @@ export class GameManagementService {
       }
     }
 
-    await this.transactionService.createManyTransactionsFromCollectedData(
+    this.transactionService.createManyTransactionsFromCollectedData(
       transactionDataCollection,
     );
 
     // Batch update companies' cashOnHand and statuses
     await this.companyService.updateManyCompanies(companyCashOnHandUpdates);
-
-    // Log all game events in bulk
-    await this.gameLogService.createManyGameLogs(gameLogs);
 
     await this.companyActionService.updateManyCompanyActions(
       companyActionUpdates,
@@ -3859,7 +3856,7 @@ export class GameManagementService {
     });
 
     // Log all game events
-    await this.gameLogService.createManyGameLogs(gameLogs);
+    this.gameLogService.createManyGameLogs(gameLogs);
   }
 
   async processStockChanges(
