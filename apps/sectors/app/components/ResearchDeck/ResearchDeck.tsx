@@ -12,7 +12,7 @@ import {
 import { Card } from "@server/prisma/prisma.client";
 import { useGame } from "../Game/GameContext";
 import { motion } from "framer-motion";
-import { tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
+import { baseToolTipStyle, tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
 
 const ResearchDeck = () => {
   //TODO: Add descript state for companies
@@ -55,6 +55,7 @@ const ResearchDeck = () => {
               {cards.map((card) => (
                 <Tooltip
                   key={card.id}
+                  classNames={{ base: baseToolTipStyle }}
                   className={tooltipStyle}
                   content={<p>{card.description}</p>}
                 >

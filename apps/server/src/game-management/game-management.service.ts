@@ -43,6 +43,7 @@ import {
   PrizeVote,
   PrizeDistributionType,
   Card,
+  Transaction,
 } from '@prisma/client';
 import { GamesService } from '@server/games/games.service';
 import { CompanyService } from '@server/company/company.service';
@@ -326,7 +327,7 @@ export class GameManagementService {
         await this.resolveCompanyAction(phase);
         break;
       case PhaseName.CAPITAL_GAINS:
-        await this.resolveCapitalGains(phase);
+        await this.resolveCapitalGainsViaTurnIncome(phase);
         break;
       case PhaseName.DIVESTMENT:
         await this.resolveDivestment(phase);
@@ -485,15 +486,16 @@ export class GameManagementService {
       const prize = prizes[i];
       if ((prize.cashAmount || 0) > 0 && prize.playerId) {
         playerAddMoneyPromises.push(
-          this.playerAddMoney(
-            game.id,
-            game.currentTurn,
-            game.currentPhaseId,
-            prize.playerId,
-            prize.cashAmount || 0,
-            EntityType.BANK,
-            'Prize cash distribution.',
-          ),
+          this.playerAddMoney({
+            gameId: game.id,
+            gameTurnId: game.currentTurn,
+            phaseId: game.currentPhaseId,
+            playerId: prize.playerId,
+            amount: prize.cashAmount || 0,
+            fromEntity: EntityType.BANK,
+            description: 'Prize cash distribution.',
+            transactionSubType: TransactionSubType.TRANCHE,
+          }),
         );
       }
     }
@@ -1479,15 +1481,16 @@ export class GameManagementService {
         (priority) => priority.influence < influenceRoundWithVotes.maxInfluence,
       )
       .map((priority) =>
-        this.playerAddMoney(
-          phase.gameId,
-          phase.gameTurnId,
-          phase.id,
-          priority.playerId,
-          influenceRoundWithVotes.maxInfluence - priority.influence,
-          EntityType.BANK,
-          `Unspent influence.`,
-        ),
+        this.playerAddMoney({
+          gameId: phase.gameId,
+          gameTurnId: phase.gameTurnId,
+          phaseId: phase.id,
+          playerId: priority.playerId,
+          amount: influenceRoundWithVotes.maxInfluence - priority.influence,
+          fromEntity: EntityType.BANK,
+          description: `Unspent influence.`,
+          transactionSubType: TransactionSubType.INFLUENCE,
+        }),
       );
 
     await Promise.all(playerPriorityUnspentPromises);
@@ -1570,15 +1573,16 @@ export class GameManagementService {
 
       const sellPromises = sharesToDivest.map((share) => async () => {
         const sharePrice = share.Company.currentStockPrice || 0;
-        await this.playerAddMoney(
-          share.gameId,
-          phase.gameTurnId,
-          phase.id,
-          player.id,
-          sharePrice,
-          EntityType.BANK,
-          `Divestment of ${share.Company.name} share.`,
-        );
+        await this.playerAddMoney({
+          gameId: share.gameId,
+          gameTurnId: phase.gameTurnId,
+          phaseId: phase.id,
+          playerId: player.id,
+          amount: sharePrice,
+          fromEntity: EntityType.BANK,
+          description: `Divestment of ${share.Company.name} share.`,
+          transactionSubType: TransactionSubType.DIVESTMENT,
+        });
         await this.gameLogService.createGameLog({
           game: { connect: { id: share.gameId } },
           content: `Player ${player.nickname} has sold 1 share of ${
@@ -1632,7 +1636,7 @@ export class GameManagementService {
    * @param phase
    * @returns
    */
-  async resolveCapitalGains(phase: Phase) {
+  async resolveCapitalGainsViaNetWorth(phase: Phase) {
     // Calculate capital gains based on player net worth
     const players = await this.playersService.playersWithShares({
       gameId: phase.gameId,
@@ -1712,6 +1716,133 @@ export class GameManagementService {
     await this.capitalGainsService.createManyCapitalGains(capitalGainsUpdates);
 
     return capitalGainsUpdates;
+  }
+
+  /**
+   * Tax capital gains based on the income the player has collected throughout the turn.
+   * @param phase
+   * @returns
+   */
+  async resolveCapitalGainsViaTurnIncome(phase: Phase) {
+    //get game
+    const game = await this.gamesService.game({ id: phase.gameId });
+    if (!game) {
+      throw new Error('Game not found');
+    }
+    //get all players
+    const players = await this.playersService.players({
+      where: { gameId: game.id },
+    });
+    if (!players) {
+      throw new Error('Players not found');
+    }
+    const playerIds = players.map((player) => player.id);
+    const playersIncome = await this.getTurnIncome(playerIds, game.currentTurn);
+    //charge capital gains
+    const capitalGainsUpdates = [];
+    const playerUpdatePromises = [];
+    const gameLogPromises = [];
+    for (const { playerId, totalIncome } of playersIncome) {
+      // Find the appropriate tax tier
+      const tier = CapitalGainsTiers.find(
+        (tier) =>
+          totalIncome >= tier.minNetWorth && totalIncome <= tier.maxNetWorth,
+      );
+      //if no tier is found, skip the player
+      if (!tier) {
+        console.error(`No tax tier found for total income: ${totalIncome}`);
+        continue;
+      }
+      //calculate tax amount
+      let taxAmount = totalIncome * (tier.taxPercentage / 100);
+      //round tax amount down
+      taxAmount = Math.floor(taxAmount);
+      //get player
+      const player = players.find((p) => p.id === playerId);
+      //if player is not found, skip the player
+      if (!player) {
+        console.error(`Player not found: ${playerId}`);
+        continue;
+      }
+      //if tax amount is greater than 0, charge the player
+      if (taxAmount > 0) {
+        // Update player cash on hand
+        capitalGainsUpdates.push({
+          playerId,
+          capitalGains: taxAmount,
+          gameId: phase.gameId,
+          gameTurnId: phase.gameTurnId,
+          taxPercentage: tier.taxPercentage,
+        });
+        //charge the player
+        playerUpdatePromises.push(
+          this.playerRemoveMoney(
+            phase.gameId,
+            phase.gameTurnId,
+            phase.id,
+            playerId,
+            taxAmount,
+            EntityType.BANK,
+            `Capital gains tax.`,
+          ),
+        );
+        //create game log
+        gameLogPromises.push(
+          this.gameLogService.createGameLog({
+            game: { connect: { id: phase.gameId } },
+            content: `Player ${player.nickname} has paid capital gains tax of $${taxAmount}.`,
+          }),
+        );
+      }
+    }
+  }
+
+  async getTurnIncome(playerIds: string[], turnId: string) {
+    //get all transactions from the current turn and only of the selected transaction types.
+    const transactions = await this.transactionService.listTransactions({
+      where: {
+        gameTurnId: turnId,
+        toEntity: {
+          entityType: EntityType.PLAYER, // Ensure toEntity is of type PLAYER
+          id: {
+            in: playerIds,
+          },
+        },
+        OR: [
+          { transactionSubType: TransactionSubType.DIVIDEND },
+          { transactionSubType: TransactionSubType.MARKET_SELL },
+          { transactionSubType: TransactionSubType.SHORT },
+          { transactionSubType: TransactionSubType.OPTION_CALL_EXERCISE },
+          { transactionSubType: TransactionSubType.TRANCHE },
+        ],
+      },
+    });
+    if (!transactions) {
+      throw new Error('Transactions not found');
+    }
+    //group transactions by player id
+    const groupedTransactions = transactions.reduce<{
+      [key: string]: Transaction[];
+    }>((acc, transaction) => {
+      if (!acc[transaction.fromEntityId]) {
+        acc[transaction.fromEntityId] = [];
+      }
+      acc[transaction.fromEntityId].push(transaction);
+      return acc;
+    }, {});
+    //group playerId by total transaction amount
+    return Object.entries(groupedTransactions).map(
+      ([playerId, transactions]) => {
+        const totalIncome = transactions.reduce(
+          (acc, transaction) => acc + transaction.amount,
+          0,
+        );
+        return {
+          playerId,
+          totalIncome,
+        };
+      },
+    );
   }
 
   async createOperatingRoundCompanyActions(phase: Phase) {
@@ -1875,15 +2006,16 @@ export class GameManagementService {
               return;
             }
             const dividendTotal = Math.floor(dividend * shares.length);
-            await this.playerAddMoney(
-              phase.gameId,
-              phase.gameTurnId,
-              phase.id,
-              player.id,
-              dividendTotal,
-              EntityType.BANK,
-              'Dividends.',
-            );
+            await this.playerAddMoney({
+              gameId: phase.gameId,
+              gameTurnId: phase.gameTurnId,
+              phaseId: phase.id,
+              playerId: player.id,
+              amount: dividendTotal,
+              fromEntity: EntityType.BANK,
+              description: 'Dividends.',
+              transactionSubType: TransactionSubType.DIVIDEND,
+            });
             this.gameLogService.createGameLog({
               game: { connect: { id: phase.gameId } },
               content: `Player ${player.nickname} has received dividends of $${dividendTotal}.`,
@@ -4075,15 +4207,16 @@ export class GameManagementService {
             );
             this.shareService.deleteShare({ id: share.id });
             if (share.playerId) {
-              return this.playerAddMoney(
-                phase.gameId,
-                phase.gameTurnId,
-                phase.id,
-                share.playerId,
-                shareLiquidationValue,
-                EntityType.BANK,
-                'Company liquidation',
-              );
+              return this.playerAddMoney({
+                gameId: phase.gameId,
+                gameTurnId: phase.gameTurnId,
+                phaseId: phase.id,
+                playerId: share.playerId,
+                amount: shareLiquidationValue,
+                fromEntity: EntityType.BANK,
+                description: 'Company liquidation',
+                transactionSubType: TransactionSubType.SHARE_LIQUIDATION,
+              });
             }
           });
 
@@ -5398,15 +5531,16 @@ export class GameManagementService {
             game: { connect: { id: order.gameId } },
           });
         } else {
-          await this.playerAddMoney(
-            order.gameId,
-            phase.gameTurnId,
-            phase.id,
-            order.playerId,
-            (order.value || 0) * (order.quantity || 0),
-            EntityType.BANK,
-            `Limit order sell for ${order.Company.stockSymbol}`,
-          );
+          await this.playerAddMoney({
+            gameId: order.gameId,
+            gameTurnId: phase.gameTurnId,
+            phaseId: phase.id,
+            playerId: order.playerId,
+            amount: (order.value || 0) * (order.quantity || 0),
+            fromEntity: EntityType.BANK,
+            description: `Limit order sell for ${order.Company.stockSymbol}`,
+            transactionSubType: TransactionSubType.LIMIT_SELL,
+          });
           //update share location to open market
           await this.shareService.updateManySharesUnchecked({
             where: { id: { in: shares.map((share) => share.id) } },
@@ -5878,15 +6012,16 @@ export class GameManagementService {
                 },
               });
               //give the player the money for the short
-              this.playerAddMoney(
-                order.gameId,
-                phase.gameTurnId,
-                phase.id,
-                order.playerId,
-                shortInitialTotalValue,
-                EntityType.BANK,
-                `Short order against ${order.Company.name}`,
-              );
+              this.playerAddMoney({
+                gameId: order.gameId,
+                gameTurnId: phase.gameTurnId,
+                phaseId: phase.id,
+                playerId: order.playerId,
+                amount: shortInitialTotalValue,
+                fromEntity: EntityType.BANK,
+                description: `Short order against ${order.Company.name}`,
+                transactionSubType: TransactionSubType.SHORT,
+              });
               //game log
               await this.gameLogService.createGameLog({
                 game: { connect: { id: order.gameId } },
@@ -6245,17 +6380,16 @@ export class GameManagementService {
     }
     const sharesToSell = Math.min(playerActualSharesOwned.length, sellAmount);
     try {
-      await this.playerAddMoney(
-        order.gameId,
-        order.gameTurnCreated,
-        order.phaseId,
-        order.playerId,
-        sharesToSell * sharePrice,
-        EntityType.BANK,
-        `Player ${order.Player.nickname} has sold ${sharesToSell} shares of ${
-          order.Company.name
-        } at $${sharePrice.toFixed(2)}`,
-      );
+      await this.playerAddMoney({
+        gameId: order.gameId,
+        gameTurnId: order.gameTurnCreated,
+        phaseId: order.phaseId,
+        playerId: order.playerId,
+        amount: sharesToSell * sharePrice,
+        fromEntity: EntityType.BANK,
+        description: `Player ${order.Player.nickname} has sold ${sharesToSell} shares of ${order.Company.name} at $${sharePrice}`,
+        transactionSubType: TransactionSubType.MARKET_SELL,
+      });
       await this.gameLogService.createGameLog({
         game: { connect: { id: order.gameId } },
         content: `Player ${
@@ -7116,16 +7250,29 @@ export class GameManagementService {
     }
   }
 
-  async playerAddMoney(
-    gameId: string,
-    gameTurnId: string,
-    phaseId: string,
-    playerId: string,
-    amount: number,
-    fromEntity: EntityType,
-    description?: string,
-    fromEntityId?: string,
-  ) {
+  async playerAddMoney({
+    gameId,
+    gameTurnId,
+    phaseId,
+    playerId,
+    amount,
+    fromEntity,
+    description,
+    fromEntityId,
+    transactionType,
+    transactionSubType,
+  }: {
+    gameId: string;
+    gameTurnId: string;
+    phaseId: string;
+    playerId: string;
+    amount: number;
+    fromEntity: EntityType;
+    description?: string;
+    fromEntityId?: string;
+    transactionType?: TransactionType;
+    transactionSubType?: TransactionSubType;
+  }) {
     //get player fromm id
     const player = await this.prisma.player.findUnique({
       where: { id: playerId },
@@ -7164,6 +7311,7 @@ export class GameManagementService {
         toEntityType: EntityType.PLAYER,
         toPlayerId: playerId,
         description,
+        transactionSubType,
       })
       .catch((error) => {
         console.error('Error creating transaction:', error);
@@ -7627,17 +7775,19 @@ export class GameManagementService {
       StockAction.CALL_OPTION,
     );
     //give the player the money from the option contract which is the difference between the current stock price and the strike price
-    await this.playerAddMoney(
-      optionContract.gameId,
-      game.currentTurn || '',
-      game.currentPhaseId || '',
-      playerOrder.playerId,
-      (optionContract.Company.currentStockPrice -
-        (optionContract.strikePrice || 0)) *
+    await this.playerAddMoney({
+      gameId: optionContract.gameId,
+      gameTurnId: game.currentTurn || '',
+      phaseId: game.currentPhaseId || '',
+      playerId: playerOrder.playerId,
+      amount:
+        (optionContract.Company.currentStockPrice -
+          (optionContract.strikePrice || 0)) *
         optionContract.shareCount,
-      EntityType.BANK,
-      `Option contract for ${optionContract.Company.name} exercised`,
-    );
+      fromEntity: EntityType.BANK,
+      description: `Option contract for ${optionContract.Company.name} exercised`,
+      transactionSubType: TransactionSubType.OPTION_CALL_EXERCISE,
+    });
     //get player
     const player = await this.playersService.player({
       id: playerOrder.playerId,
@@ -7930,15 +8080,16 @@ export class GameManagementService {
       throw new Error('Not enough cash in prize to distribute');
     }
     //add money to player
-    this.playerAddMoney(
-      game.id,
-      game.currentTurn,
-      game.currentPhaseId,
-      player.id,
+    this.playerAddMoney({
+      gameId: game.id,
+      gameTurnId: game.currentTurn,
+      phaseId: game.currentPhaseId,
+      playerId: player.id,
       amount,
-      EntityType.BANK,
-      'Cash prize distribution',
-    );
+      fromEntity: EntityType.BANK,
+      description: 'Cash prize distribution',
+      transactionSubType: TransactionSubType.TRANCHE,
+    });
     //remove this amount from the prize
     await this.prizeService.updatePrize({
       where: { id: prize.id },

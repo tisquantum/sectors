@@ -49,8 +49,18 @@ Player priority determines how any ties are resolved in relation to the player. 
 
 - **Market Orders:** Buy or sell shares at the current market price. These are resolved first. If using bid priority, higher asking prices gain advantage. Market Orders are placed against the IPO or OPEN MARKET.
 - **Limit Orders:** Trigger an order based on market price changes. A BUY limit order purchases stock when the price reaches a certain value. A SELL limit order sells stock when the price falls below a certain value. Limit Orders are placed against the OPEN MARKET. Limit Orders have limited actions available. If you have no limit order actions remaining, you cannot place another limit order until more actions become available. Limit order actions become available when a limit order has become FILLED.
-- **Short Orders:** Borrow shares from the market and sell them immediately. Cover these shares in a subsequent turn by purchasing the same quantity at the current market price. Short Orders are placed against the OPEN MARKET. Short orders have an ongoing interest borrow rate. Short order share dividends must be covered by the player. Short Orders have limited actions available. If you have no short order actions available, you cannot place another short order until more actions become available. Short order actions become available when a short order has been covered.
-- **Options Contracts:** Purchase the right to buy or sell stock at a certain price. These contracts are placed against the DERIVATIVES MARKET. The contract price is called the *"premium"*. Contracts have set premiums, shares, terms, and strike prices.
+- **Short Orders:** Borrow shares from the market and sell them immediately at the current market price. 
+  - The short order may be covered in a subsequent turn by purchasing the same quantity at the current market price. 
+  - Short Orders are placed against the OPEN MARKET. 
+  - Short orders have an ongoing interest borrow rate on 5% against the intial sale price.  This rate is paid out from the players cash on hand 
+  - Short order share dividends must be covered by the player.   
+  - Short Orders have limited actions available. If you have no short order actions available, you cannot place another short order until more actions become available. Short order actions become available when a short order has been covered.
+- **Options Contracts:** Purchase the right to buy stock at a certain price by placing an OPTION CALL order. 
+  - These contracts are placed against the DERIVATIVES MARKET. The contract price is called the *"premium"*. Contracts have set premiums, shares, terms, and strike prices.
+  - Once an option contract's company share price has met or exceeded it's strike price, the contract can be exercised.
+  - When a contract is exercised, players collect money that is calculated as **the current share minus the strike price, multiplied by the amount of shares inside the contract**.
+  - After a contract is exercised, any step bonus on that contract is applied to the company's share price.
+  - If the contract is not exercised before it's term period expires, the premium investment is lost and the opportunity to exercise the contract is over.
 
 ### Share Locations
 {: #share-locations }

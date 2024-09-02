@@ -1,6 +1,7 @@
 import { Tooltip } from "@nextui-org/react";
 import { RiGameFill } from "@remixicon/react";
 import {
+  baseToolTipStyle,
   tooltipParagraphStyle,
   tooltipStyle,
 } from "@sectors/app/helpers/tailwind.helpers";
@@ -23,6 +24,7 @@ const PassiveEffect = ({
   if (!actionInfo) return <div>No Effect Found.</div>;
   return (
     <Tooltip
+      classNames={{ base: baseToolTipStyle }}
       className={tooltipStyle}
       content={<p className={tooltipParagraphStyle}>{actionInfo.message}</p>}
     >

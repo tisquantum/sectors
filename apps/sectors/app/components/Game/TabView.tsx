@@ -1,7 +1,7 @@
 "use client";
 
 import PlayersOverview from "../Player/PlayersOverview";
-import { Accordion, Card, CardBody, Tab, Tabs } from "@nextui-org/react";
+import { Card, Tab, Tabs } from "@nextui-org/react";
 import SectorComponent from "../Sector/Sector";
 import GameLog from "./GameLog";
 import GameChat from "../GameChat/GameChat";

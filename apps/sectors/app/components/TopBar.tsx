@@ -40,7 +40,7 @@ const TopBar = () => {
   return (
     <Navbar isBordered shouldHideOnScroll>
       <NavbarBrand>
-        <Link href="#">
+        <Link href="/">
           <div className="flex gap-1 justify-center content-center items-center text-slate-100">
             <span>SECTORS</span>
             <RiFundsFill color="#17a34a" />

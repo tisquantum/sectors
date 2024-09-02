@@ -10,6 +10,7 @@ import {
 } from "@remixicon/react";
 import ShareComponent from "../Company/Share";
 import {
+  baseToolTipStyle,
   tooltipParagraphStyle,
   tooltipStyle,
 } from "@sectors/app/helpers/tailwind.helpers";
@@ -28,6 +29,7 @@ export const OptionContractMinimal = ({
           <span>{contract.Company.name}</span>
         </div>
         <Tooltip
+          classNames={{ base: baseToolTipStyle }}
           className={tooltipStyle}
           content={
             <p className={tooltipParagraphStyle}>
@@ -46,6 +48,7 @@ export const OptionContractMinimal = ({
         </Tooltip>
         <div className="flex items-center gap-1">
           <Tooltip
+            classNames={{ base: baseToolTipStyle }}
             className={tooltipStyle}
             content={
               <p className={tooltipParagraphStyle}>The current stock price</p>
@@ -63,6 +66,7 @@ export const OptionContractMinimal = ({
       </div>
       <div className="flex gap-3 text-gray-200 justify-between text-xl">
         <Tooltip
+          classNames={{ base: baseToolTipStyle }}
           className={tooltipStyle}
           content={
             <p className={tooltipParagraphStyle}>
@@ -75,6 +79,7 @@ export const OptionContractMinimal = ({
           </div>
         </Tooltip>
         <Tooltip
+          classNames={{ base: baseToolTipStyle }}
           className={tooltipStyle}
           content={
             <p className={tooltipParagraphStyle}>
@@ -88,6 +93,7 @@ export const OptionContractMinimal = ({
           </div>
         </Tooltip>
         <Tooltip
+          classNames={{ base: baseToolTipStyle }}
           className={tooltipStyle}
           content={
             <p className={tooltipParagraphStyle}>
@@ -102,6 +108,7 @@ export const OptionContractMinimal = ({
         </Tooltip>
         {contract.currentTerm > 0 && (
           <Tooltip
+            classNames={{ base: baseToolTipStyle }}
             className={tooltipStyle}
             content={
               <p className={tooltipParagraphStyle}>
@@ -117,6 +124,7 @@ export const OptionContractMinimal = ({
           </Tooltip>
         )}
         <Tooltip
+          classNames={{ base: baseToolTipStyle }}
           className={tooltipStyle}
           content={
             <p className={tooltipParagraphStyle}>
@@ -133,6 +141,7 @@ export const OptionContractMinimal = ({
           </div>
         </Tooltip>
         <Tooltip
+          classNames={{ base: baseToolTipStyle }}
           className={tooltipStyle}
           content={
             <p className={tooltipParagraphStyle}>

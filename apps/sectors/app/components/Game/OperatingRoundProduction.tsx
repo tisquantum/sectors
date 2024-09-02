@@ -10,7 +10,10 @@ import CompanyInfo from "../Company/CompanyInfo";
 import { CompanyStatus, SectorName } from "@server/prisma/prisma.client";
 import { RiFundsFill, RiIncreaseDecreaseFill } from "@remixicon/react";
 import { Tooltip } from "@nextui-org/react";
-import { tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
+import {
+  baseToolTipStyle,
+  tooltipStyle,
+} from "@sectors/app/helpers/tailwind.helpers";
 import ThroughputLegend from "./ThroughputLegend";
 import CompanyPriorityList from "../Company/CompanyPriorityOperatingRound";
 import SectorConsumerDistributionAnimation from "./SectorConsumerDistributionAnimation";
@@ -121,6 +124,7 @@ const OperatingRoundProduction = () => {
                 </span>
               )}
               <Tooltip
+                classNames={{ base: baseToolTipStyle }}
                 className={tooltipStyle}
                 content={
                   <p>
