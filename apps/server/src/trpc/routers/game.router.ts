@@ -97,6 +97,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           startingCashOnHand: z.number(),
           distributionStrategy: z.nativeEnum(DistributionStrategy),
           gameMaxTurns: z.number(),
+          playerOrdersConcealed: z.boolean(),
           players: z.any().optional(),
           companies: z.any().optional(),
           Player: z.any().optional(),
@@ -118,6 +119,7 @@ export default (trpc: TrpcService, ctx: Context) =>
             bankPoolNumber: input.bankPoolNumber,
             distributionStrategy: input.distributionStrategy,
             gameMaxTurns: input.gameMaxTurns,
+            playerOrdersConcealed: input.playerOrdersConcealed,
           });
         } catch (error) {
           return {

@@ -38,15 +38,21 @@ const PrizeComponent = ({
     });
   const [isLoadingClaimPrize, setIsLoadingClaimPrize] = useState(false);
   return (
-    <div className="flex flex-col gap-1 rounded-md bg-slate-800 p-2">
+    <div className="flex flex-col gap-1 rounded-md bg-slate-800 p-2 justify-between">
       <div className="flex flex-col gap-1">
-        <div className="flex gap-1">
+        <div className="flex justify-between gap-1">
           {prize.cashAmount && (
-            <div className="flex gap-1">${prize.cashAmount}</div>
+            <div className="flex flex-col gap-1">
+              <h4>Cash Reward</h4>
+              <div className="flex gap-1">${prize.cashAmount}</div>
+            </div>
           )}
           {prize.prestigeAmount && (
-            <div className="flex gap-1">
-              <RiSparkling2Fill /> {prize.prestigeAmount}
+            <div className="flex flex-col gap-1">
+              <h4>Prestige Reward</h4>
+              <div className="flex gap-1">
+                <RiSparkling2Fill /> {prize.prestigeAmount}
+              </div>
             </div>
           )}
         </div>
@@ -60,11 +66,13 @@ const PrizeComponent = ({
                   backgroundColor: sectorColors[sectorPrize.Sector.name],
                 }}
               >
+                <span className="text-md">Passive Reward</span>
                 <PassiveEffect
                   passiveEffect={
                     SectorEffects[sectorPrize.Sector.sectorName].passive
                   }
                   sectorName={sectorPrize.Sector.name}
+                  showDescription
                 />
               </div>
             ))}

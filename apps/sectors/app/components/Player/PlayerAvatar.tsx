@@ -3,23 +3,7 @@ import { Player } from "@server/prisma/prisma.client";
 import { lorelei } from "@dicebear/collection";
 import { createAvatar } from "@dicebear/core";
 import { useMemo } from "react";
-
-function hashStringToColor(str: string): string {
-  // Simple hash function to generate a consistent hash from a string
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-
-  // Convert hash to a hex color
-  let color = "";
-  for (let i = 0; i < 3; i++) {
-    const value = (hash >> (i * 8)) & 0xff;
-    color += ("00" + value.toString(16)).slice(-2);
-  }
-
-  return color;
-}
+import { hashStringToColor } from "@sectors/app/helpers";
 
 const PlayerAvatar = ({
   player,

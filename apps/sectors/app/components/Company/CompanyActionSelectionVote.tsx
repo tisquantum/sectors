@@ -20,6 +20,7 @@ import {
   CompanyTierData,
   DEFAULT_DECREASE_UNIT_PRICE,
   DEFAULT_INCREASE_UNIT_PRICE,
+  GeneralCompanyActionCosts,
   getCompanyOperatingRoundTurnOrder,
   LARGE_MARKETING_CAMPAIGN_DEMAND,
   LOAN_AMOUNT,
@@ -54,7 +55,10 @@ import PrestigeRewards from "../Game/PrestigeRewards";
 import Button from "@sectors/app/components/General/DebounceButton";
 import DebounceButton from "@sectors/app/components/General/DebounceButton";
 import { RiCloseCircleFill, RiSparkling2Fill } from "@remixicon/react";
-import { companyPriorityOrderOperations } from "@server/data/helpers";
+import {
+  companyPriorityOrderOperations,
+  getCompanyActionCost,
+} from "@server/data/helpers";
 import { tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
 import CompanyPriorityList from "./CompanyPriorityOperatingRound";
 import InsolvencyContributionComponent from "./InsolvencyContribution";
@@ -64,11 +68,13 @@ const CompanyActionSelectionVote = ({
   actionVoteResults,
   companyActions,
   withResult,
+  allCompanyActions,
 }: {
   company?: CompanyWithRelations;
   actionVoteResults?: OperatingRoundVoteWithPlayer[];
   withResult?: boolean;
   companyActions?: CompanyAction[];
+  allCompanyActions?: CompanyAction[];
 }) => {
   const { currentPhase, authPlayer, gameId } = useGame();
   const [isLoadingSelectionVote, setIsLoadingSelectionVote] = useState(false);
@@ -89,7 +95,16 @@ const CompanyActionSelectionVote = ({
     CompanyTierData[company.companyTier].companyActions;
 
   const checkIfDisabled = (actionName: OperatingRoundAction) => {
-    if (CompanyActionCosts[actionName] > company.cashOnHand) return true;
+    if (
+      getCompanyActionCost(
+        actionName,
+        company.currentStockPrice,
+        allCompanyActions?.filter(
+          (companyAction) => companyAction.action === actionName
+        ).length
+      ) > company.cashOnHand
+    )
+      return true;
     if (CompanyActionPrestigeCosts[actionName] > company.prestigeTokens)
       return true;
     if (actionName === OperatingRoundAction.LOAN && company.hasLoan)
@@ -148,7 +163,7 @@ const CompanyActionSelectionVote = ({
     }
   };
   let availableActions = companyActionsDescription.filter(
-    (action) => action.id < 15
+    (action) => action.id < 16
   );
 
   const companySectorActiveEffect =
@@ -182,6 +197,7 @@ const CompanyActionSelectionVote = ({
       availableActions.push(sectorPassiveAction);
     }
   }
+
   return (
     <div className="flex flex-col gap-3 p-5">
       <h1 className="text-2xl">{company.name} Shareholder Meeting</h1>
@@ -238,93 +254,151 @@ const CompanyActionSelectionVote = ({
               ) : null}
             </div>
             <div className="grid grid-cols-3 gap-2">
-              {availableActions.map((action) => (
-                <div
-                  key={action.id}
-                  onClick={() => handleSelected(action.name, company.id)}
-                >
-                  <Card
-                    isDisabled={checkIfDisabled(action.name)}
-                    className={`${
-                      companyActions?.some((ca) => ca.action === action.name)
-                        ? "bg-blue-700"
-                        : ""
-                    } ${
-                      selectedActions.includes(action.name) &&
-                      currentPhase?.name ===
-                        PhaseName.OPERATING_ACTION_COMPANY_VOTE
-                        ? "ring-2 ring-blue-500"
-                        : ""
-                    } ${
-                      companySectorActiveEffect &&
-                      action.name === companySectorActiveEffect &&
-                      `bg-[${sectorColors[company.Sector.name]}]`
-                    }
-                    `}
+              {availableActions.map((action) => {
+                const currentCost = () => {
+                  const companyActionCost = companyActions?.find(
+                    (companyAction) => companyAction.action === action.name
+                  )?.cost;
+                  if (companyActionCost) {
+                    return companyActionCost;
+                  }
+                  if (action.actionType == "general") {
+                    return getCompanyActionCost(
+                      action.name,
+                      company.currentStockPrice,
+                      allCompanyActions?.filter(
+                        (actionName) => actionName.action === action.name
+                      ).length
+                    );
+                  } else {
+                    return getCompanyActionCost(
+                      action.name,
+                      company.currentStockPrice
+                    );
+                  }
+                };
+                const companyCosts = () => {
+                  if (action.name === OperatingRoundAction.SHARE_BUYBACK) {
+                    return [company.currentStockPrice];
+                  }
+                  if (action.actionType == "general") {
+                    return GeneralCompanyActionCosts[
+                      action.name as keyof typeof GeneralCompanyActionCosts
+                    ];
+                  }
+                  return [
+                    CompanyActionCosts[
+                      action.name as keyof typeof CompanyActionCosts
+                    ],
+                  ];
+                };
+                return (
+                  <div
+                    key={action.id}
+                    onClick={() => handleSelected(action.name, company.id)}
+                    className="h-full"
                   >
-                    <CardHeader>
-                      <div className="flex flex-col">
-                        <div className="flex gap-1 justify-between">
-                          <span className="font-bold mr-3">{action.title}</span>
-                          <span>${CompanyActionCosts[action.name]}</span>
-                          {CompanyActionPrestigeCosts[action.name] > 0 && (
-                            <div className="flex">
-                              <RiSparkling2Fill />
-                              <span>
-                                {CompanyActionPrestigeCosts[action.name]}
-                              </span>
+                    <Card
+                      isDisabled={checkIfDisabled(action.name)}
+                      className={`h-full ${
+                        companyActions?.some((ca) => ca.action === action.name)
+                          ? "bg-blue-700"
+                          : ""
+                      } ${
+                        selectedActions.includes(action.name) &&
+                        currentPhase?.name ===
+                          PhaseName.OPERATING_ACTION_COMPANY_VOTE
+                          ? "ring-2 ring-blue-500"
+                          : ""
+                      } ${
+                        companySectorActiveEffect &&
+                        (action.name === companySectorActiveEffect ||
+                          action.name === companySectorPassiveEffect) &&
+                        `bg-[${sectorColors[company.Sector.name]}]`
+                      }
+                    `}
+                    >
+                      <CardHeader>
+                        <div className="flex flex-col w-full">
+                          <div className="flex gap-1 justify-between items-start">
+                            <span className="basis-5/12	font-bold">
+                              {action.title}
+                            </span>
+                            <div className="flex flex-wrap justify-end gap-1">
+                              {companyCosts().map((cost) => (
+                                <span
+                                  key={cost} // Add a unique key for each item
+                                  className={`px-2 py-1 rounded-md ${
+                                    cost === currentCost()
+                                      ? "bg-blue-500 text-white font-semibold"
+                                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                                  }`}
+                                >
+                                  ${cost}
+                                </span>
+                              ))}
                             </div>
+                            {CompanyActionPrestigeCosts[action.name] > 0 && (
+                              <div className="flex">
+                                <RiSparkling2Fill />
+                                <span>
+                                  {CompanyActionPrestigeCosts[action.name]}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          {action.name === OperatingRoundAction.LOAN && (
+                            <span>One time only</span>
+                          )}
+                          {action.name === OperatingRoundAction.LOAN &&
+                            company.hasLoan && (
+                              <span>Loan has been taken.</span>
+                            )}
+                        </div>
+                      </CardHeader>
+                      <CardBody>
+                        <div className="flex flex-col">
+                          {action.message}
+                          {action.name ===
+                            OperatingRoundAction.SPEND_PRESTIGE && (
+                            <PrestigeRewards layout="minimalist" />
                           )}
                         </div>
-                        {action.name === OperatingRoundAction.LOAN && (
-                          <span>One time only</span>
+                      </CardBody>
+                      <CardFooter>
+                        {actionVoteResults && (
+                          <div className="flex gap-2">
+                            {actionVoteResults
+                              .filter(
+                                (actionVoteResult) =>
+                                  actionVoteResult.actionVoted === action.name
+                              )
+                              .map((action: OperatingRoundVoteWithPlayer) => (
+                                <PlayerAvatar
+                                  key={action.id}
+                                  badgeContent={action.weight}
+                                  player={action.Player}
+                                />
+                              ))}
+                          </div>
                         )}
-                        {action.name === OperatingRoundAction.LOAN &&
-                          company.hasLoan && <span>Loan has been taken.</span>}
-                      </div>
-                    </CardHeader>
-                    <CardBody>
-                      <div className="flex flex-col">
-                        {action.message}
-                        {action.name ===
-                          OperatingRoundAction.SPEND_PRESTIGE && (
-                          <PrestigeRewards layout="minimalist" />
-                        )}
-                      </div>
-                    </CardBody>
-                    <CardFooter>
-                      {actionVoteResults && (
-                        <div className="flex gap-2">
-                          {actionVoteResults
-                            .filter(
-                              (actionVoteResult) =>
-                                actionVoteResult.actionVoted === action.name
-                            )
-                            .map((action: OperatingRoundVoteWithPlayer) => (
-                              <PlayerAvatar
-                                key={action.id}
-                                badgeContent={action.weight}
-                                player={action.Player}
-                              />
-                            ))}
-                        </div>
-                      )}
-                      {selectedActions.includes(action.name) &&
-                        companyAllowedActions > 1 &&
-                        currentPhase?.name ===
-                          PhaseName.OPERATING_ACTION_COMPANY_VOTE &&
-                        currentPhase?.companyId === company.id && (
-                          <Button
-                            className="text-red-500"
-                            onClick={() => handleRemoveSelection(action.name)}
-                          >
-                            <RiCloseCircleFill />
-                          </Button>
-                        )}
-                    </CardFooter>
-                  </Card>
-                </div>
-              ))}
+                        {selectedActions.includes(action.name) &&
+                          companyAllowedActions > 1 &&
+                          currentPhase?.name ===
+                            PhaseName.OPERATING_ACTION_COMPANY_VOTE &&
+                          currentPhase?.companyId === company.id && (
+                            <Button
+                              className="text-red-500"
+                              onClick={() => handleRemoveSelection(action.name)}
+                            >
+                              <RiCloseCircleFill />
+                            </Button>
+                          )}
+                      </CardFooter>
+                    </Card>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </>
@@ -485,6 +559,7 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
               )}
               companyActions={currentCompanyActions}
               withResult={withResult}
+              allCompanyActions={companyActions}
             />
           </div>
         </motion.div>

@@ -5,6 +5,7 @@ import {
   OrderType,
   PhaseName,
   Sector,
+  ShareLocation,
 } from "@server/prisma/prisma.client";
 import { CompanyWithSector } from "@server/prisma/prisma.types";
 
@@ -166,3 +167,50 @@ export const friendlyDistributionStrategyName = (
       return "Unknown";
   }
 };
+
+export function renderLocationShortHand(location: ShareLocation) {
+  switch (location) {
+    case ShareLocation.DERIVATIVE_MARKET:
+      return "DM";
+    case ShareLocation.OPEN_MARKET:
+      return "OM";
+    case ShareLocation.IPO:
+      return "IPO";
+    case ShareLocation.PLAYER:
+      return "PLAYER";
+    default:
+      return location;
+  }
+}
+
+export function renderOrderTypeShortHand(orderType: OrderType) {
+  switch (orderType) {
+    case OrderType.LIMIT:
+      return "LO";
+    case OrderType.MARKET:
+      return "MO";
+    case OrderType.SHORT:
+      return "SO";
+    case OrderType.OPTION:
+      return "OO";
+    default:
+      return orderType;
+  }
+}
+
+export function hashStringToColor(str: string): string {
+  // Simple hash function to generate a consistent hash from a string
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+
+  // Convert hash to a hex color
+  let color = "";
+  for (let i = 0; i < 3; i++) {
+    const value = (hash >> (i * 8)) & 0xff;
+    color += ("00" + value.toString(16)).slice(-2);
+  }
+
+  return color;
+}

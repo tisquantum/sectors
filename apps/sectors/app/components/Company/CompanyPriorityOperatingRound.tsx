@@ -78,7 +78,7 @@ const CompanyPriorityList = ({
     return companyData.find((company) => company.id === sortedCompany.id)!;
   });
   return (
-    <div className="container mx-auto px-4">
+    <div className="container mx-auto px-4 flex flex-col">
       {!isRuleExplanation && (
         <>
           <h2 className="text-2xl font-bold mb-4">Company Priority List</h2>

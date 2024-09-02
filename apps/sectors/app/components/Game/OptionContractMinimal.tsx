@@ -24,6 +24,9 @@ export const OptionContractMinimal = ({
   return (
     <div className="flex flex-col gap-1 p-2 rounded-md bg-slate-700">
       <div className="flex gap-1 items-center">
+        <div>
+          <span>{contract.Company.name}</span>
+        </div>
         <Tooltip
           className={tooltipStyle}
           content={

@@ -3,9 +3,11 @@ import { PrismaService } from '@server/prisma/prisma.service';
 import { Prisma, Company, Sector, CompanyStatus } from '@prisma/client';
 import {
   CompanyWithCards,
+  CompanyWithCompanyActions,
   CompanyWithRelations,
   CompanyWithSector,
   CompanyWithSectorAndStockHistory,
+  CompanyWithSectorOnly,
   CompanyWithShare,
   CompanyWithShareAndSector,
 } from '@server/prisma/prisma.types';
@@ -25,6 +27,18 @@ export class CompanyService {
       where: companyWhereUniqueInput,
     });
     return company;
+  }
+
+  async companyWithSectorFindFirst(params: {
+    where?: Prisma.CompanyWhereInput;
+    orderBy?: Prisma.CompanyOrderByWithRelationInput;
+  }): Promise<CompanyWithSectorOnly | null> {
+    return this.prisma.company.findFirst({
+      ...params,
+      include: {
+        Sector: true,
+      },
+    });
   }
 
   async companyWithShares(
@@ -149,6 +163,79 @@ export class CompanyService {
     });
   }
 
+  async companiesWithCompanyActions(params: {
+    skip?: number;
+    take?: number;
+    cursor?: Prisma.CompanyWhereUniqueInput;
+    where?: Prisma.CompanyWhereInput;
+    orderBy?: Prisma.CompanyOrderByWithRelationInput;
+  }): Promise<CompanyWithCompanyActions[]> {
+    const { skip, take, cursor, where, orderBy } = params;
+    return this.prisma.company.findMany({
+      skip,
+      take,
+      cursor,
+      where,
+      orderBy,
+      include: {
+        CompanyActions: true,
+      },
+    });
+  }
+
+  async companiesWithCompanyActionsWithActionsFilteredByOperatingRoundId(
+    operatingRoundId: number,
+    params: {
+      skip?: number;
+      take?: number;
+      cursor?: Prisma.CompanyWhereUniqueInput;
+      where?: Prisma.CompanyWhereInput;
+      orderBy?: Prisma.CompanyOrderByWithRelationInput;
+    },
+  ): Promise<CompanyWithCompanyActions[]> {
+    const { skip, take, cursor, where, orderBy } = params;
+    return this.prisma.company.findMany({
+      skip,
+      take,
+      cursor,
+      where,
+      orderBy,
+      include: {
+        CompanyActions: {
+          where: {
+            operatingRoundId,
+          },
+        },
+      },
+    });
+  }
+
+  async companiesWithCompanyActionsForTurn(
+    turnId: string,
+    params: {
+      skip?: number;
+      take?: number;
+      cursor?: Prisma.CompanyWhereUniqueInput;
+      where?: Prisma.CompanyWhereInput;
+      orderBy?: Prisma.CompanyOrderByWithRelationInput;
+    },
+  ): Promise<CompanyWithCompanyActions[]> {
+    const { skip, take, cursor, where, orderBy } = params;
+    return this.prisma.company.findMany({
+      skip,
+      take,
+      cursor,
+      where,
+      orderBy,
+      include: {
+        CompanyActions: {
+          where: {
+            gameTurnId: turnId,
+          },
+        },
+      },
+    });
+  }
   async companiesWithSector(params: {
     skip?: number;
     take?: number;

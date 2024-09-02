@@ -217,7 +217,6 @@ const StockChart = () => {
       let phaseEntry = allChartData.find(
         (entry) => entry.phaseId === phaseId && entry.phaseName === phaseName
       );
-      console.log('phaseEntry found', phaseEntry);
       if (!phaseEntry) {
         phaseEntry = { indexer, phaseId, phaseName };
         allChartData.push({

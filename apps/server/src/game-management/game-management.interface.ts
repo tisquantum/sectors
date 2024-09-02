@@ -8,4 +8,5 @@ export interface StartGameInput {
   bankPoolNumber: number;
   distributionStrategy: DistributionStrategy;
   gameMaxTurns?: number;
+  playerOrdersConcealed: boolean;
 }

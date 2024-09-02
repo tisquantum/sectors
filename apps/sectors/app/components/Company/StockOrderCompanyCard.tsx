@@ -23,6 +23,7 @@ import { set } from "lodash";
 import { motion, AnimatePresence } from "framer-motion";
 import { Drawer } from "vaul";
 import { RiCurrencyFill } from "@remixicon/react";
+import { useGame } from "../Game/GameContext";
 
 type CompanyCardProps = {
   company: CompanyWithRelations;
@@ -51,20 +52,17 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
   handleButtonSelect,
   handleCompanySelect,
 }) => {
+  const { gameState } = useGame();
   const [showButton, setShowButton] = useState<boolean | undefined>(
     isOrderInputOpen
   );
   const [isIpo, setIsIpo] = useState<boolean>(false);
-  // const [showPlayerInput, setShowPlayerInput] = useState<boolean>(false);
-  // useEffect(() => {
-  //   if (currentPhase?.name == PhaseName.STOCK_ACTION_RESULT) {
-  //     setShowPlayerInput(false);
-  //   }
-  // }, [currentPhase?.name]);
   useEffect(() => {
     setShowButton(isOrderInputOpen);
   }, [isOrderInputOpen]);
-  const ipoOrders = orders.filter(
+  const ipoOrders = (
+    gameState.playerOrdersConcealed ? orders : playerOrdersRevealed
+  ).filter(
     (order) =>
       order.companyId == company.id &&
       order.location == ShareLocation.IPO &&
@@ -108,7 +106,9 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
     sortedGroupedIpoOrdersByPhaseEntries
   );
 
-  const openMarketOrders = orders.filter(
+  const openMarketOrders = (
+    gameState.playerOrdersConcealed ? orders : playerOrdersRevealed
+  ).filter(
     (order) =>
       order.companyId == company.id &&
       order.location == ShareLocation.OPEN_MARKET &&
@@ -166,6 +166,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
     //setShowPlayerInput(true);
     handleCompanySelect(company, isIpo || false);
   };
+  isRevealRound = !gameState?.playerOrdersConcealed || isRevealRound;
 
   return (
     <div className="flex">

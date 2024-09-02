@@ -264,7 +264,6 @@ const TabContentMO: React.FC<TabContentProps> = ({
   sharesInMarket,
   minBidValue,
 }) => {
-  console.log("mo values", isBuy, maxValue, minValue, defaultValue);
   const { gameState } = useGame();
   const [shareValue, setShareValue] = useState<number>(1);
   const [marketOrderBidValue, setMarketOrderBidValue] = useState<number>(
@@ -585,7 +584,6 @@ const PlayerOrderInput = ({
   }, [currentPhase?.name]);
   useEffect(() => {
     if (orderType === OrderType.MARKET) {
-      console.log("order mo", isBuy, isIpo);
       if (isBuy) {
         if (isIpo) {
           setMaxValue(
@@ -645,11 +643,7 @@ const PlayerOrderInput = ({
         if (isIpo) {
           setIsBuy(true);
         } else {
-          setIsBuy(
-            (company?.Share.filter(
-              (share) => share.location === ShareLocation.OPEN_MARKET
-            ).length || 0) > 0
-          );
+          setIsBuy(true);
         }
         setOrderType(OrderType.MARKET);
         break;
@@ -695,7 +689,7 @@ const PlayerOrderInput = ({
             onSelectionChange={handleSelectionChange}
           >
             <Tab key="mo" title={"MARKET ORDER"} className="w-full">
-              <Card>
+              <Card className="min-w-[250px]">
                 <CardBody>
                   <TabContentMO
                     handleSelectionIsBuy={setIsBuy}

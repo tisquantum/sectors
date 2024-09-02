@@ -1,6 +1,7 @@
 import React from "react";
 import OrderChipWithPlayer from "../Game/OrderChipWithPlayer";
 import { PlayerOrderWithPlayerCompany } from "@server/prisma/prisma.types";
+import OrderChipChitWithPlayer from "../Game/OrderChipChitWithPlayer";
 
 type OrderType = "LO" | "MO" | "SO";
 
@@ -19,7 +20,7 @@ const PlayerOrder = ({
 }) => (
   <div className="flex flex-wrap gap-2">
     {orders.map((order, index) => (
-      <OrderChipWithPlayer order={order} key={index} />
+      <OrderChipChitWithPlayer order={order} key={index} />
     ))}
   </div>
 );

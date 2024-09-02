@@ -46,7 +46,6 @@ const GameSidebar = () => {
     if (!channel) return;
 
     channel.bind(EVENT_PLAYER_READINESS_CHANGED, (data: PlayerReadiness) => {
-      console.log("player readiness changed", data);
       refetchPlayerReadiness();
     });
 

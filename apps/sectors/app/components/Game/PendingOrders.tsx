@@ -42,6 +42,7 @@ import { flushAllTraces } from "next/dist/trace";
 import PlayerAvatar from "../Player/PlayerAvatar";
 import OptionContract from "./OptionContract";
 import { useEffect, useMemo } from "react";
+import OrderChipChitWithPlayer from "./OrderChipChitWithPlayer";
 
 const containerVariants = {
   hidden: { opacity: 0, y: -20 }, // Defines the initial state of the component: invisible and slightly shifted upward
@@ -215,42 +216,42 @@ const PendingMarketOrders = ({
                     {orders[0].Company.currentStockPrice}
                     <span>{company}</span>
                   </div>
-                  <div className="flex flex-col gap-2">
+                  <div className="flex gap-2">
                     {Object.entries(groupedOrdersByPhase).map(
                       ([phaseId, { orders, subRound }], index) => (
-                        <div className="flex flex-col" key={index}>
-                          {status == OrderStatus.PENDING && (
-                            <div>
-                              <span> Stock Round {subRound} </span>
-                            </div>
-                          )}
-                          <div className="flex flex-col">
-                            {orders.map((order, index) => (
-                              <motion.div
-                                key={index}
-                                initial="hidden"
-                                animate="visible"
-                                variants={containerVariants}
-                                className="flex"
-                              >
-                                <OrderChipWithPlayer
+                        <>
+                          {orders.map((order, index) => (
+                            <motion.div
+                              key={index}
+                              initial="hidden"
+                              animate="visible"
+                              variants={containerVariants}
+                              className="flex"
+                            >
+                              <>
+                                {/* <OrderChipWithPlayer
+                                    order={order}
+                                    status={order.orderStatus}
+                                    endContent={
+                                      order.orderStatus ==
+                                      OrderStatus.FILLED ? (
+                                        <CheckCircleIcon className="size-5 text-green-500" />
+                                      ) : order.orderStatus ==
+                                        OrderStatus.REJECTED ? (
+                                        <RiCloseCircleFill className="size-5 text-red-500" />
+                                      ) : (
+                                        <ClockIcon className="size-5 text-yellow-500" />
+                                      )
+                                    }
+                                  /> */}
+                                <OrderChipChitWithPlayer
                                   order={order}
-                                  status={order.orderStatus}
-                                  endContent={
-                                    order.orderStatus == OrderStatus.FILLED ? (
-                                      <CheckCircleIcon className="size-5 text-green-500" />
-                                    ) : order.orderStatus ==
-                                      OrderStatus.REJECTED ? (
-                                      <RiCloseCircleFill className="size-5 text-red-500" />
-                                    ) : (
-                                      <ClockIcon className="size-5 text-yellow-500" />
-                                    )
-                                  }
+                                  showStatus={true}
                                 />
-                              </motion.div>
-                            ))}
-                          </div>
-                        </div>
+                              </>
+                            </motion.div>
+                          ))}
+                        </>
                       )
                     )}
                   </div>
@@ -329,22 +330,13 @@ const PendingLimitOrders = ({
                           backgroundColor: sectorColors[order.Sector.name],
                         }}
                       >
-                        <PlayerAvatar player={order.Player} />
                         <div>{order.Company.name}</div>
-                        <div>
-                          {String(order.orderType).toUpperCase()} @{" "}
-                          {order.value}
+                        <div className="flex">
+                          <OrderChipChitWithPlayer
+                            order={order}
+                            showStatus={true}
+                          />
                         </div>
-                        {order.orderStatus === OrderStatus.OPEN ? (
-                          <ClockIcon className="size-5 text-yellow-500" />
-                        ) : order.orderStatus ===
-                          OrderStatus.FILLED_PENDING_SETTLEMENT ? (
-                          <ClockIcon className="size-5 text-green-500" />
-                        ) : order.orderStatus === OrderStatus.FILLED ? (
-                          <CheckCircleIcon className="size-5 text-green-500" />
-                        ) : (
-                          <ClockIcon className="size-5 text-red-500" />
-                        )}
                       </div>
                     ))}
                   </div>
@@ -370,32 +362,23 @@ const PendingShortOrders = ({
       {shortOrders.map((order, index) => (
         <div
           key={index}
-          className="bg-gray-500 p-2 rounded flex items-center gap-2"
+          className="bg-gray-500 p-2 rounded flex flex-col items-center gap-2"
         >
-          <PlayerAvatar player={order.Player} />
           <div>{order.Company.name}</div>
           <div className="flex flex-col gap-2">
-            <div className="flex gap-2">
-              <span>
-                $
-                {order.ShortOrder?.shortStockPriceAtPurchase ??
-                  order.Company.currentStockPrice}
-              </span>
-              <span>
-                {order.quantity} SHARES @ {BORROW_RATE}%
-              </span>
-              <span>{order.orderStatus}</span>
+            <div className="flex">
+              <OrderChipChitWithPlayer order={order} showStatus={true} />
             </div>
-            <span>
-              Margin Account Minimum $
-              {order.ShortOrder?.marginAccountMinimum ??
-                Math.floor(
-                  ((order.Company.currentStockPrice || 0) *
-                    (order.quantity || 0)) /
-                    2
-                )}
-            </span>
           </div>
+          <span>
+            Margin Account Minimum $
+            {order.ShortOrder?.marginAccountMinimum ??
+              Math.floor(
+                ((order.Company.currentStockPrice || 0) *
+                  (order.quantity || 0)) /
+                  2
+              )}
+          </span>
         </div>
       ))}
     </div>
@@ -413,7 +396,7 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
       createdAt: Prisma.SortOrder.asc,
     },
     where: {
-      isConcealed: false,
+      ...(gameState.playerOrdersConcealed && { isConcealed: false }),
       Game: {
         id: gameId,
       },
@@ -433,7 +416,6 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
   }, [currentPhase?.name]);
   if (isLoading) return <div>Loading...</div>;
   if (!playerOrders) return <div>No pending orders.</div>;
-  console.log('playerOrders', playerOrders);
   const limitOrdersPendingSettlement = playerOrders.filter(
     (order) =>
       order.orderType === OrderType.LIMIT &&

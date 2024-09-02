@@ -20,7 +20,7 @@ const CompanyResearchCards = ({ companyId }: { companyId: string }) => {
     return <div>No research cards found</div>;
   }
   return (
-    <div>
+    <div className="flex flex-col gap-1">
       {researchCards.map((card) => (
         <div key={card.id} className="p-2 bg-gray-700 rounded-md text-white">
           <h2>{card.name}</h2>

@@ -7,12 +7,14 @@ import {
   ThroughputRewardType,
 } from "@server/data/constants";
 import CompanyInfo from "../Company/CompanyInfo";
-import { CompanyStatus } from "@server/prisma/prisma.client";
+import { CompanyStatus, SectorName } from "@server/prisma/prisma.client";
 import { RiFundsFill, RiIncreaseDecreaseFill } from "@remixicon/react";
 import { Tooltip } from "@nextui-org/react";
 import { tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
 import ThroughputLegend from "./ThroughputLegend";
 import CompanyPriorityList from "../Company/CompanyPriorityOperatingRound";
+import SectorConsumerDistributionAnimation from "./SectorConsumerDistributionAnimation";
+import { CompanyWithSector } from "@server/prisma/prisma.types";
 
 const OperatingRoundProduction = () => {
   const { currentPhase } = useGame();
@@ -41,9 +43,44 @@ const OperatingRoundProduction = () => {
   if (!companiesWithSector) {
     return <div>No companies found</div>;
   }
+  //organize companies by sector
+  const companiesOrganizedBySector = companiesWithSector.reduce(
+    (acc, company: CompanyWithSector) => {
+      const sectorName = company.Sector.name as SectorName; // Explicitly cast to SectorName
+      if (!acc[sectorName]) {
+        acc[sectorName] = [];
+      }
+      acc[sectorName].push(company);
+      return acc;
+    },
+    {} as Record<SectorName, CompanyWithSector[]>
+  );
+  const sectorNames = Object.keys(companiesOrganizedBySector) as SectorName[];
   return (
-    <div className="p-6 rounded-lg shadow-md">
+    <div className="p-6 rounded-lg shadow-md flex flex-col">
       <h1 className="text-2xl font-bold mb-4">Operating Round Production</h1>
+      <div className="flex flex-col gap-1">
+        {sectorNames.map((sectorName: SectorName) => (
+          <SectorConsumerDistributionAnimation
+            key={sectorName}
+            sector={companiesOrganizedBySector[sectorName][0].Sector}
+            companies={companiesOrganizedBySector[sectorName]}
+            consumerOveride={
+              companiesOrganizedBySector[sectorName][0].Sector.consumers +
+              operatingRound.productionResults
+                .filter(
+                  (productionResult) =>
+                    productionResult.Company.sectorId ===
+                    companiesOrganizedBySector[sectorName][0].Sector.id
+                )
+                .reduce(
+                  (acc, productionResult) => acc + productionResult.consumers,
+                  0
+                )
+            }
+          />
+        ))}
+      </div>
       <div className="flex flex-wrap gap-8">
         <div className="bg-slate-800 p-4 rounded-lg shadow-md flex gap-4">
           <div>
@@ -88,10 +125,11 @@ const OperatingRoundProduction = () => {
                 content={
                   <p>
                     Revenue is calculated by multiplying the unit price times
-                    units sold. The units sold is whatever is less, the
-                    customers wanting product from the company or the supply of
-                    the company. The amount of customers who visit the company
-                    is equal to the company demand score.
+                    units sold. The units sold is whatever is less, the company
+                    demand or the company supply. The maximum amount of
+                    customers who will visit a company before moving to the next
+                    company in priority order is equal to the company demand
+                    score.
                   </p>
                 }
               >

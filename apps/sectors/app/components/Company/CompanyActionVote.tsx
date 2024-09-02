@@ -6,6 +6,7 @@ import { useState } from "react";
 import { CompanyActionCosts } from "@server/data/constants";
 import Button from "@sectors/app/components/General/DebounceButton";
 import DebounceButton from "@sectors/app/components/General/DebounceButton";
+import { getCompanyActionCost } from "@server/data/helpers";
 
 const CompanyActionVote = ({ company }: { company?: Company }) => {
   const { currentPhase, authPlayer, gameId } = useGame();
@@ -76,7 +77,8 @@ const CompanyActionVote = ({ company }: { company?: Company }) => {
       >
         {actions
           .filter(
-            (action) => CompanyActionCosts[action.name] <= company.cashOnHand
+            (action) =>
+              getCompanyActionCost(action.name, company.currentStockPrice) <= company.cashOnHand
           )
           .map((action) => (
             <Radio key={action.name} value={action.name}>

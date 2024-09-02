@@ -2,6 +2,7 @@ import {
   Card,
   Company,
   CompanyStatus,
+  OperatingRoundAction,
   OrderType,
   Phase,
   PhaseName,
@@ -26,13 +27,16 @@ import {
 import {
   AUTOMATION_EFFECT_OPERATIONS_REDUCTION,
   BOOM_CYCLE_STOCK_CHART_BONUS,
+  CompanyActionCosts,
   DEFAULT_RESEARCH_DECK_SIZE,
   GOVERNMENT_GRANT_AMOUNT,
+  GeneralCompanyActionCosts,
   PRESTIGE_TRACK_LENGTH,
   PrestigeTrack,
   PrestigeTrackItem,
   STOCK_ACTION_SUB_ROUND_MAX,
   StockTierChartRange,
+  companyActionsDescription,
   getStockPriceClosestEqualOrMore,
   stockGridPrices,
   stockTierChartRanges,
@@ -46,6 +50,7 @@ import {
   materials,
   technology,
 } from './gameData';
+import { get } from 'http';
 interface NextPhaseOptions {
   allCompaniesHaveVoted?: boolean;
   stockActionSubRound?: number;
@@ -846,4 +851,49 @@ export function calculateAverageStockPrice(
       return acc + company.currentStockPrice;
     }, 0) / companiesInSector.length
   );
+}
+
+export function calculateStartingCompanyCount(playerCount: number) {
+  const minimumStartingCompanies = 3;
+  const maximumStartingCompanies = 6;
+  switch (playerCount) {
+    case 1:
+    case 2:
+    case 3:
+    case 4:
+      return minimumStartingCompanies;
+    case 5:
+    case 6:
+    case 7:
+      return playerCount - 1;
+    default:
+      return maximumStartingCompanies;
+  }
+}
+
+export function getCompanyActionCost(
+  companyAction: OperatingRoundAction,
+  companyStockPrice: number,
+  generalCompanyActionCount?: number,
+) {
+  if(companyAction == OperatingRoundAction.SHARE_BUYBACK) {
+    return companyStockPrice;
+  }
+  if (
+    companyActionsDescription.find(
+      (description) => description.name == companyAction,
+    )?.actionType == 'general'
+  ) {
+    const generalCompanyActionCost =
+      GeneralCompanyActionCosts[
+        companyAction as keyof typeof GeneralCompanyActionCosts
+      ];
+    return generalCompanyActionCost[
+      generalCompanyActionCount
+        ? Math.min(generalCompanyActionCount, generalCompanyActionCost.length)
+        : 0
+    ];
+  } else {
+    return CompanyActionCosts[companyAction as keyof typeof CompanyActionCosts];
+  }
 }

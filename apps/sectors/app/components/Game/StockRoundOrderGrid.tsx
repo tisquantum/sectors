@@ -11,10 +11,12 @@ import { useGame } from "./GameContext";
 import { notFound } from "next/navigation";
 import {
   Company,
+  CompanyStatus,
   OrderType,
   Phase,
   PhaseName,
   Player,
+  ShareLocation,
 } from "@server/prisma/prisma.client";
 import {
   CompanyWithRelations,
@@ -56,7 +58,7 @@ const StockRoundOrderGrid = ({
   const { gameId, currentPhase, gameState, authPlayer } = useGame();
   const { data: companies, isLoading } =
     trpc.company.listCompaniesWithRelations.useQuery({
-      where: { gameId },
+      where: { gameId, status: { not: CompanyStatus.BANKRUPT } },
     });
   const {
     data: playerOrdersConcealed,
@@ -92,6 +94,7 @@ const StockRoundOrderGrid = ({
   const {
     data: playerOrdersRevealed,
     isLoading: isLoadingPlayerOrdersRevealed,
+    refetch: refetchPlayerOrdersRevealed,
   } = trpc.playerOrder.listPlayerOrdersWithPlayerRevealed.useQuery({
     where: {
       stockRoundId: currentPhase?.stockRoundId,
@@ -127,6 +130,7 @@ const StockRoundOrderGrid = ({
     refetchPlayerOrdersConcealed();
     refetchPlayerOrdersConcealedSpotMarket();
     refetchPhasesOfStockRound();
+    refetchPlayerOrdersRevealed();
   }, [currentPhase?.id]);
   useEffect(() => {
     if (playerOrdersConcealed && currentPhase) {
@@ -242,8 +246,17 @@ const StockRoundOrderGrid = ({
               <div className="flex flex-col justify-center items-center">
                 <h2 className="text-white text-2xl font-bold mb-2">
                   {selectedCompanyOrder.isIpo
-                    ? "IPO Order"
-                    : "Open Market Order"}
+                    ? `IPO Order ${
+                        selectedCompanyOrder.company.Share.filter(
+                          (share) => share.location === ShareLocation.IPO
+                        ).length
+                      }`
+                    : `Open Market Order ${
+                        selectedCompanyOrder.company.Share.filter(
+                          (share) =>
+                            share.location === ShareLocation.OPEN_MARKET
+                        ).length
+                      }`}
                 </h2>
                 <PlayerOrderInput
                   currentOrder={selectedCompanyOrder.company}

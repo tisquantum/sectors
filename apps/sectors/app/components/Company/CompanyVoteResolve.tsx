@@ -8,6 +8,7 @@ import CompanyInfo from "./CompanyInfo";
 import PrestigeRewardComponent from "../Game/PrestigeReward";
 import {
   ACTION_ISSUE_SHARE_AMOUNT,
+  companyActionsDescription,
   LARGE_MARKETING_CAMPAIGN_DEMAND,
   MARKETING_CONSUMER_BONUS,
   OURSOURCE_SUPPLY_BONUS,
@@ -86,35 +87,25 @@ const CompanyVoteResolve = () => {
           )[0]
         : null;
 
+    const costDiv = <span>Action Cost: ${companyAction.cost}</span>;
+    const actionDescription = (
+      <p>
+        {
+          companyActionsDescription.find(
+            (description) => description.name === companyAction.action
+          )?.message
+        }
+      </p>
+    );
+    let actionContent;
+
     switch (companyAction.action) {
       case OperatingRoundAction.MARKETING:
-        return (
-          <div>
-            <span>Large Marketing Campaign</span>
-            <div>
-              <p>
-                The sector receives {MARKETING_CONSUMER_BONUS} additional
-                consumers. Your company receives +
-                {LARGE_MARKETING_CAMPAIGN_DEMAND} demand that decays 1 per
-                production phase.
-              </p>
-            </div>
-          </div>
-        );
+        break;
       case OperatingRoundAction.MARKETING_SMALL_CAMPAIGN:
-        return (
-          <div>
-            <span>Small Marketing Campaign</span>
-            <div>
-              <p>
-                The company receives +{SMALL_MARKETING_CAMPAIGN_DEMAND} demand
-                that decays 1 per production phase.
-              </p>
-            </div>
-          </div>
-        );
+        break;
       case OperatingRoundAction.RESEARCH:
-        return (
+        actionContent = (
           <div>
             <h1>Research</h1>
             <div>You drew a research card.</div>
@@ -124,31 +115,41 @@ const CompanyVoteResolve = () => {
             </div>
           </div>
         );
+        break;
       case OperatingRoundAction.EXPANSION:
-        return <div>Expansion</div>;
+        actionContent = <div>Expansion</div>;
+        break;
       case OperatingRoundAction.DOWNSIZE:
-        return <div>Downsize</div>;
+        actionContent = <div>Downsize</div>;
+        break;
       case OperatingRoundAction.MERGE:
-        return <div>Merge</div>;
+        actionContent = <div>Merge</div>;
+        break;
       case OperatingRoundAction.SHARE_BUYBACK:
-        return <div>Share Buyback</div>;
+        actionContent = <div>Share Buyback</div>;
+        break;
       case OperatingRoundAction.SHARE_ISSUE:
-        return (
+        actionContent = (
           <div>
             <span>Share Issue</span>
             <ShareIssue companyAction={companyAction} />
           </div>
         );
+        break;
       case OperatingRoundAction.INCREASE_PRICE:
-        return <div>Increase Price</div>;
+        actionContent = <div>Increase Price</div>;
+        break;
       case OperatingRoundAction.DECREASE_PRICE:
-        return <div>Decrease Price</div>;
+        actionContent = <div>Decrease Price</div>;
+        break;
       case OperatingRoundAction.LOAN:
-        return <div>Loan</div>;
+        actionContent = <div>Loan</div>;
+        break;
       case OperatingRoundAction.LOBBY:
-        return <div>Lobby</div>;
+        actionContent = <div>Lobby</div>;
+        break;
       case OperatingRoundAction.SPEND_PRESTIGE:
-        return (
+        actionContent = (
           <div>
             <span>Spent Prestige and received a reward.</span>
             <div>
@@ -158,26 +159,26 @@ const CompanyVoteResolve = () => {
                 </div>
               ))}
             </div>
+            <PrestigeRewards />
           </div>
         );
+        break;
       case OperatingRoundAction.OUTSOURCE:
-        return (
-          <div>
-            Outsource. The company outsources production. Increase supply by{" "}
-            {OURSOURCE_SUPPLY_BONUS} that decays once per turn. Lose all
-            prestige tokens.
-          </div>
-        );
+        break;
       case OperatingRoundAction.VETO:
-        return (
-          <div>
-            Action vetoed. The next turn this company&apos;s operating costs are 50%
-            less.
-          </div>
-        );
+        break;
       default:
-        return <div>Unknown action</div>;
+        actionContent = <div>Unknown action</div>;
+        break;
     }
+
+    return (
+      <div>
+        {actionContent}
+        {actionDescription}
+        {costDiv}
+      </div>
+    );
   };
 
   return (

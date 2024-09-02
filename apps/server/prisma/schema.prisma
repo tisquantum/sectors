@@ -418,6 +418,7 @@ model ProductionResult {
   companyId                String
   operatingRoundId         Int
   revenue                  Int
+  consumers                Int                       @default(0)
   steps                    Int                       @default(0)
   throughputResult         Int                       @default(0) //0 is better
   revenueDistribution      RevenueDistribution?
@@ -456,6 +457,7 @@ model CompanyAction {
   companyId        String
   action           OperatingRoundAction?
   operatingRoundId Int?
+  cost             Int                   @default(0)
   resolved         Boolean               @default(false)
   actedOn          Boolean?              @default(false)
   isPassive        Boolean?              @default(false)
@@ -524,6 +526,7 @@ enum OperatingRoundAction {
   LOBBY
   LOAN
   OUTSOURCE
+  LICENSING_AGREEMENT
   //sector specific active actions
   VISIONARY
   STRATEGIC_RESERVE
@@ -594,6 +597,7 @@ enum ResearchCardEffect {
   SPECIALIZATION
   DIVERSIFICATION
   INNOVATION
+  //PATENT_FILING
   NO_DISCERNIBLE_FINDINGS
 }
 
@@ -653,6 +657,7 @@ model Game {
   roomId                  Int
   overdraft               Boolean                  @default(true) //facilitates overdrafts for player accounts during stock purchase
   isPaused                Boolean                  @default(false)
+  playerOrdersConcealed   Boolean                  @default(true) //Conceals player orders until the stock round reveal phase
   certificateLimit        Int                      @default(12)
   economyScore            Int                      @default(10)
   nextPrestigeReward      Int?

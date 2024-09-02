@@ -63,10 +63,10 @@ Player priority determines how any ties are resolved in relation to the player. 
 {: #market-order-resolution }
 
 - Orders are resolved in ascending sub-round order.
-- If there are multiple orders in the same sub-round:
+- If there are multiple orders in the same sub-round, we defer to the **Distribution Strategy**:
   - **Bid Strategy:**
-    - Bids are resolved in descending order when using bid priority.
-    - In case of bid ties, the player with the highest priority resolves first.
+    - Bids are resolved in descending bid ask price when using bid priority.
+    - In case of bid ties, the player with the highest **player priority** resolves first.
   - **Priority Strategy:**
     - Orders are resolved according to **player priority** order.
 - Orders that cannot be filled due to lack of shares are marked as REJECTED.
@@ -264,6 +264,10 @@ Every third turn, a new company is opened in the sector with the highest average
 {: #company-actions }
 
 Each Operating Round, companies will take turns in **company priority** order. On their turn, players will vote for a set of company actions to take place. The number of actions a company can take is directly tied to its current company tier. Actions are paid for with assets from the company treasury.
+
+#### Action Cost
+
+Some actions have a fixed price, while others have tiered costs. During an Operating Round, the first company to take a tiered action pays the lowest price, the next company pays the next tier, and all subsequent companies pay the highest price.
 
 #### General Actions
 {: #general-actions }

@@ -10,12 +10,14 @@ interface AuthUserContextProps {
   supabaseUser: SupabaseUser | null;
   user: User | null;
   loading: boolean;
+  fetchUser: () => Promise<void>;
 }
 const supabase = createClient();
 const AuthUserContext = createContext<AuthUserContextProps>({
     supabaseUser: null,
     user: null,
     loading: true,
+    fetchUser: async () => {},
 });
 
 export const AuthUserProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -27,19 +29,19 @@ export const AuthUserProvider: React.FC<{ children: React.ReactNode }> = ({
     { enabled: !!supabaseUser }
   );
   const loading = userLoading;
-
+  const fetchUser = async () => {
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
+    if (error) {
+      console.error("Error fetching user:", error);
+    } else {
+      setSupabaseUser(user);
+    }
+  };
+  
   useEffect(() => {
-    const fetchUser = async () => {
-      const {
-        data: { user },
-        error,
-      } = await supabase.auth.getUser();
-      if (error) {
-        console.error("Error fetching user:", error);
-      } else {
-        setSupabaseUser(user);
-      }
-    };
     // Initial fetch
     fetchUser();
 
@@ -57,7 +59,7 @@ export const AuthUserProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   return (
-    <AuthUserContext.Provider value={{ supabaseUser, user: user ?? null, loading }}>
+    <AuthUserContext.Provider value={{ supabaseUser, user: user ?? null, loading, fetchUser }}>
       {children}
     </AuthUserContext.Provider>
   );

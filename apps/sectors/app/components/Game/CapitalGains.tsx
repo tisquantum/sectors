@@ -78,8 +78,9 @@ const CapitalGains = () => {
                 </div>
               )}
               <div className="flex flex-col gap-2 mt-4">
-                <div className="text-lg">
-                  Capital Gains Payment: ${capitalGain.capitalGains}
+                <div className="text-xl p-2 bg-slate-500 rounded-md">
+                  Capital Gains Payment:{" "}
+                  <span className="font-bold">${capitalGain.capitalGains}</span>
                 </div>
                 <div className="text-lg">
                   Capital Gains Tax Percentage: {capitalGain.taxPercentage}%

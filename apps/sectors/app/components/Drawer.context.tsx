@@ -22,7 +22,6 @@ export const DrawerProvider: React.FC<{ children: React.ReactNode }> = ({
   const openDrawer = () => setIsOpen(true);
   const closeDrawer = () => setIsOpen(false);
   const toggleDrawer = (drawerState: boolean) => {
-    console.log("toggleDrawer", drawerState);
     setIsOpen(drawerState);
   }
   const onOpenChange = (open: boolean) => setIsOpen(open);

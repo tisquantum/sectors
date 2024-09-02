@@ -56,6 +56,7 @@ export type PlayerWithShares = Player & {
 };
 
 export type ShareWithPlayer = Share & { Player: Player | null };
+export type CompanyWithSectorOnly = Company & { Sector: Sector };
 export type CompanyWithSector = Company & {
   Sector: Sector;
   Share: ShareWithPlayer[];
@@ -118,6 +119,9 @@ export type CompanyWithShareAndCompanyActions = Company & {
 export type CompanyWithShareAndSector = Company & {
   Share: Share[];
   Sector: Sector;
+};
+export type CompanyWithCompanyActions = Company & {
+  CompanyActions: CompanyAction[];
 };
 export type PhaseWithStockRound = Phase & { StockRound: StockRound | null };
 export type PlayerOrderWithPlayerCompany = PlayerOrder & {

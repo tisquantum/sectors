@@ -20,6 +20,7 @@ import { GameLogService } from '@server/game-log/game-log.service';
 import { checkIsPlayerAction, checkSubmissionTime } from '../trpc.middleware';
 import { PhaseService } from '@server/phase/phase.service';
 import { GameManagementService } from '@server/game-management/game-management.service';
+import { GamesService } from '@server/games/games.service';
 
 type Context = {
   playerOrdersService: PlayerOrderService;
@@ -27,6 +28,7 @@ type Context = {
   pusherService: PusherService;
   phaseService: PhaseService;
   gameManagementService: GameManagementService;
+  gameService: GamesService;
   gameLogService: GameLogService;
 };
 
@@ -131,14 +133,39 @@ export default (trpc: TrpcService, ctx: Context) =>
             message: 'Phase not found',
           });
         }
+        //get game
+        const game = await ctx.gameService.game({ id: gameId });
+        if (!game) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Game not found',
+          });
+        }
         if (
-          phase.name == PhaseName.STOCK_ACTION_ORDER ||
-          phase.name == PhaseName.STOCK_ACTION_RESULT
+          game.playerOrdersConcealed &&
+          (phase.name == PhaseName.STOCK_ACTION_ORDER ||
+            phase.name == PhaseName.STOCK_ACTION_RESULT)
         ) {
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
             message:
               'Cannot view orders during stock action order or result phase',
+          });
+        }
+        if (phase.name == PhaseName.STOCK_ACTION_ORDER) {
+          // We do not want to show orders made during this phase as players are not
+          // allowed to view orders until all players are ready to reveal them.
+          return ctx.playerOrdersService.playerOrdersWithPlayerRevealed({
+            skip,
+            take,
+            cursor: cursor ? { id: cursor } : undefined,
+            where: {
+              ...where,
+              phaseId: {
+                not: phase.id,
+              },
+            },
+            orderBy,
           });
         }
         return ctx.playerOrdersService.playerOrdersWithPlayerRevealed({

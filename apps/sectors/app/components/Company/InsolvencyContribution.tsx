@@ -96,7 +96,6 @@ const InsolvencyContributionComponent = ({
     channel.bind(
       EVENT_NEW_INVOLVENCY_CONTRIBUTION,
       (data: InsolvencyContributionWithRelations) => {
-        console.log("new insolvency contribution", data);
         refetchInsolvencyContributions();
         refetchAuthPlayer();
         refetchPlayerWithShares();
@@ -121,7 +120,6 @@ const InsolvencyContributionComponent = ({
   if (!playerWithShares) {
     return <div>Player not found</div>;
   }
-  console.log("insolvency contributions", insolvencyContributions);
   return (
     <div className="flex flex-col justify-center items-center">
       <h2>Insolvency Contributions</h2>
