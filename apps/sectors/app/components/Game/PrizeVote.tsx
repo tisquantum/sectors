@@ -38,7 +38,7 @@ const PrizeComponent = ({
     });
   const [isLoadingClaimPrize, setIsLoadingClaimPrize] = useState(false);
   return (
-    <div className="flex flex-col gap-1 rounded-md bg-slate-800 p-2">
+    <div className="flex flex-col gap-1 rounded-md bg-slate-800 p-2 justify-between">
       <div className="flex flex-col gap-1">
         <div className="flex justify-between gap-1">
           {prize.cashAmount && (
@@ -49,7 +49,7 @@ const PrizeComponent = ({
           )}
           {prize.prestigeAmount && (
             <div className="flex flex-col gap-1">
-              <h4>Pretige Reward</h4>
+              <h4>Prestige Reward</h4>
               <div className="flex gap-1">
                 <RiSparkling2Fill /> {prize.prestigeAmount}
               </div>

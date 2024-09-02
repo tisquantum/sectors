@@ -21,13 +21,13 @@ const StartTurnUpdates = () => {
     }
   );
   return (
-    <div>
+    <div className="flex flex-col justify-center items-center">
       <h2>Turn {currentTurn.turn}</h2>
       {currentTurn.turn % 3 === 0 && (
-        <div>
+        <div className="flex flex-col justify-center items-center">
           <p>
             A new company has opened in {companyWithSector?.Sector.name},
-            welcome {companyWithSector?.name}.
+            welcome {companyWithSector?.name}!
           </p>
           <p>Investor Tranches will be distributed.</p>
         </div>

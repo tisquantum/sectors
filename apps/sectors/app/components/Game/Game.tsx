@@ -290,6 +290,9 @@ const Game = ({ gameId }: { gameId: string }) => {
                 {currentView === "pending" && <PendingOrders />}
                 {currentView == "economy" && <EndTurnEconomy />}
                 {currentView == "markets" && <StockRoundOrderGrid />}
+                {currentView == "companies" && (
+                  <CompanyActionSlider />
+                )}
                 {gameState.gameStatus == GameStatus.FINISHED && (
                   <GameResults
                     isOpen={isOpen}

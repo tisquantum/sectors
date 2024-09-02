@@ -28,9 +28,8 @@ const SectorConsumerDistributionAnimation = ({
   const [moneyEarned, setMoneyEarned] = useState(() =>
     sortedCompanies.map(() => 0)
   );
-  const [consumersMoving, setConsumersMoving] = useState<number[]>([]);
-
-  const animationInterval = 800;
+  const [totalConsumersMoved, setTotalConsumersMoved] = useState<number>(0);
+  const animationInterval = 900;
   const currentCompany = sortedCompanies[currentCompanyIndex];
 
   const companyDemand =
@@ -48,11 +47,9 @@ const SectorConsumerDistributionAnimation = ({
       moneyEarned[currentCompanyIndex] <
         maximumConsumersWhoWillVisit * currentCompany.unitPrice
     ) {
-      setConsumersMoving((prev) => [...prev, prev.length]);
       setSectorConsumers((prev) => prev - 1);
     } else {
       setCurrentCompanyIndex((prev) => (prev + 1) % sortedCompanies.length);
-      setConsumersMoving([]); // Reset consumers moving for the next company
     }
   }, [
     sectorConsumers,
@@ -67,9 +64,13 @@ const SectorConsumerDistributionAnimation = ({
     return () => clearInterval(interval);
   }, [handleConsumerMove]);
 
+  useEffect(() => {
+    setTotalConsumersMoved((prev) => prev + maximumConsumersWhoWillVisit);
+  }, [currentCompanyIndex]);
+
   return (
     <motion.div
-      className={`flex flex-col items-center space-x-4 bg-[${
+      className={`flex flex-col items-center space-x-4 rounded-md my-2 bg-[${
         sectorColors[sector.name]
       }]`}
     >
@@ -77,32 +78,28 @@ const SectorConsumerDistributionAnimation = ({
       <div className={`flex flex-col items-center`}>
         <span>{sector.name}</span>
         <div className="flex space-x-2">
-          {Array.from({ length: sectorConsumers }).map(
-            (_, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 1 }}
-                animate={
-                  index < consumersMoving.length ? { y: 50, opacity: 0 } : {}
+          {Array.from({ length: sectorConsumers }).map((_, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 1 }}
+              animate={index < totalConsumersMoved ? { y: 50, opacity: 0 } : {}}
+              transition={{ duration: 1 }}
+              className="relative"
+              style={{ width: 30, height: 30 }} // Fixed size
+              onAnimationComplete={() => {
+                if (index < totalConsumersMoved) {
+                  setMoneyEarned((prev) => {
+                    const newEarnings = [...prev];
+                    newEarnings[currentCompanyIndex] +=
+                      currentCompany.unitPrice;
+                    return newEarnings;
+                  });
                 }
-                transition={{ duration: 1 }}
-                className="relative"
-                style={{ width: 30, height: 30 }} // Fixed size
-                onAnimationComplete={() => {
-                  if (index < consumersMoving.length) {
-                    setMoneyEarned((prev) => {
-                      const newEarnings = [...prev];
-                      newEarnings[currentCompanyIndex] +=
-                        currentCompany.unitPrice;
-                      return newEarnings;
-                    });
-                  }
-                }}
-              >
-                <RiTeamFill size={30} />
-              </motion.div>
-            )
-          )}
+              }}
+            >
+              <RiTeamFill size={30} />
+            </motion.div>
+          ))}
         </div>
       </div>
 

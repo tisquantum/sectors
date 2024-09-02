@@ -299,7 +299,7 @@ const GameOptions: React.FC<GameOptionsProps> = ({ onOptionsChange }) => {
           description={
             <p className={tooltipParagraphStyle}>
               Determines if player orders will be concealed from other players
-              during a sub-stock round.
+              until all sub-stock rounds are completed.
             </p>
           }
         />

@@ -689,7 +689,7 @@ const PlayerOrderInput = ({
             onSelectionChange={handleSelectionChange}
           >
             <Tab key="mo" title={"MARKET ORDER"} className="w-full">
-              <Card>
+              <Card className="min-w-[250px]">
                 <CardBody>
                   <TabContentMO
                     handleSelectionIsBuy={setIsBuy}

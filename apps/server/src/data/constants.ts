@@ -11,7 +11,6 @@ import {
   StockTier,
 } from '@prisma/client';
 import { companyPriorityOrderOperations } from './helpers';
-import { friendlyPhaseName } from '@sectors/app/helpers';
 export const GAME_SETUP_DEFAULT_BANK_POOL_NUMBER = 12000;
 export const GAME_SETUP_DEFAULT_CONSUMER_POOL_NUMBER = 75;
 export const GAME_SETUP_DEFAULT_STARTING_CASH_ON_HAND = 300;
@@ -862,7 +861,7 @@ export const companyActionsDescription: CompanyActionDescription[] = [
     id: 8,
     title: 'Increase Unit Price',
     name: OperatingRoundAction.INCREASE_PRICE,
-    message: `Increase the unit price of the company's product by $${DEFAULT_INCREASE_UNIT_PRICE}. This will increase the company's revenue. The company temporarily loses 1 demand until the following turns ${friendlyPhaseName(PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT)} phase.`,
+    message: `Increase the unit price of the company's product by $${DEFAULT_INCREASE_UNIT_PRICE}. This will increase the company's revenue. The company temporarily loses 1 demand until the following turns Stock Price Adjustment phase.`,
     actionType: 'internal',
   },
   {

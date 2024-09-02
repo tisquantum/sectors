@@ -184,6 +184,12 @@ const GameTopBar = ({
           >
             Economy
           </Button>
+          <Button
+            className={getButtonClass("companies")}
+            onClick={() => handleViewChange("companies")}
+          >
+            Operations
+          </Button>
         </ButtonGroup>
         {/* <Button onClick={handleNextPhase}>Next Phase</Button>
       <Button onClick={handleRetryPhase}>Retry Phase</Button> */}

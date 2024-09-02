@@ -159,8 +159,10 @@ const InfluenceBid = ({ isRevealRound }: { isRevealRound?: boolean }) => {
           <div>
             <h2>
               Place a bid of influence to determine starting player priority.
-              You have {maxInfluence} influence to spend. For every influence
-              you don&apos;t spend, collect $1.
+              You have {maxInfluence} influence to spend. Players are assigned
+              player priority in descending order according to their influence
+              bids, with the highest bid receiving the highest priority. For
+              every influence you don&apos;t spend, collect $1.
             </h2>
           </div>
         )}

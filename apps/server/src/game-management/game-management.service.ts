@@ -5870,6 +5870,16 @@ export class GameManagementService {
                   Company: { connect: { id: order.companyId } },
                 },
               });
+              //give the player the money for the short
+              this.playerAddMoney(
+                order.gameId,
+                phase.gameTurnId,
+                phase.id,
+                order.playerId,
+                shortInitialTotalValue,
+                EntityType.BANK,
+                `Short order against ${order.Company.name}`,
+              );
               //game log
               await this.gameLogService.createGameLog({
                 game: { connect: { id: order.gameId } },
@@ -7116,6 +7126,7 @@ export class GameManagementService {
     if (!player) {
       throw new Error('Player not found');
     }
+    //TODO: What if entity is not from the BANK?
     //update bank pool for game
     await this.prisma.game.update({
       where: { id: gameId },
