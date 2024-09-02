@@ -1458,11 +1458,9 @@ export class GameManagementService {
       }),
     );
 
-    try {
-      this.gameLogService.createManyGameLogs(gameLogMessages);
-    } catch (error) {
-      console.error('Error creating game logs', error);
-    }
+    this.gameLogService.createManyGameLogs(gameLogMessages).catch((error) => {
+      console.error('Error creating game log', error);
+    });
 
     const playerPriorityAddMany = playerPriority.map(
       ({ influence, ...rest }) => rest,
@@ -3833,9 +3831,11 @@ export class GameManagementService {
       }
     }
 
-    this.transactionService.createManyTransactionsFromCollectedData(
-      transactionDataCollection,
-    );
+    this.transactionService
+      .createManyTransactionsFromCollectedData(transactionDataCollection)
+      .catch((error) => {
+        console.error('Error creating transactions', error);
+      });
 
     // Batch update companies' cashOnHand and statuses
     await this.companyService.updateManyCompanies(companyCashOnHandUpdates);
@@ -3856,7 +3856,9 @@ export class GameManagementService {
     });
 
     // Log all game events
-    this.gameLogService.createManyGameLogs(gameLogs);
+    this.gameLogService.createManyGameLogs(gameLogs).catch((error) => {
+      console.error('Error creating game logs', error);
+    });
   }
 
   async processStockChanges(
