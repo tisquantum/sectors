@@ -1,19 +1,8 @@
-import {
-  friendlyDistributionStrategyName,
-  friendlyPhaseName,
-} from "@sectors/app/helpers";
-import { trpc } from "@sectors/app/trpc";
+import { friendlyDistributionStrategyName } from "@sectors/app/helpers";
 import { notFound } from "next/navigation";
 import React from "react";
 import { useGame } from "./GameContext";
 import {
-  CircleStackIcon,
-  CurrencyDollarIcon,
-  SquaresPlusIcon,
-  UserIcon,
-} from "@heroicons/react/24/solid";
-import {
-  RiWalletFill,
   RiFunctionAddFill,
   RiTeamFill,
   RiBankFill,
@@ -39,19 +28,13 @@ import {
   PhaseName,
 } from "@server/prisma/prisma.client";
 import {
+  baseToolTipStyle,
   tooltipParagraphStyle,
   tooltipStyle,
 } from "@sectors/app/helpers/tailwind.helpers";
-import {
-  MoneyTransactionByEntityType,
-  MoneyTransactionHistoryByPlayer,
-} from "./MoneyTransactionHistory";
+import { MoneyTransactionByEntityType } from "./MoneyTransactionHistory";
 import WalletInfo from "./WalletInfo";
-import {
-  DEFAULT_SHARE_DISTRIBUTION,
-  DEFAULT_SHARE_LIMIT,
-  MAX_SHARE_PERCENTAGE,
-} from "@server/data/constants";
+import { MAX_SHARE_PERCENTAGE } from "@server/data/constants";
 
 const BankInfo = () => {
   const { gameState, gameId } = useGame();
@@ -108,6 +91,7 @@ const GameGeneralInfo = () => {
             {(currentPhase?.name == PhaseName.STOCK_ACTION_ORDER ||
               currentPhase?.name == PhaseName.STOCK_ACTION_RESULT) && (
               <Tooltip
+                classNames={{ base: baseToolTipStyle }}
                 className={tooltipStyle}
                 content={
                   <div>
@@ -123,6 +107,7 @@ const GameGeneralInfo = () => {
             )}
           </div>
           <Tooltip
+            classNames={{ base: baseToolTipStyle }}
             className={tooltipStyle}
             content={
               <div>
@@ -144,6 +129,7 @@ const GameGeneralInfo = () => {
       </div>
       <div>
         <Tooltip
+          classNames={{ base: baseToolTipStyle }}
           className={tooltipStyle}
           content={
             <p className={tooltipParagraphStyle}>The global consumer pool.</p>
@@ -157,6 +143,7 @@ const GameGeneralInfo = () => {
       </div>
       <div>
         <Tooltip
+          classNames={{ base: baseToolTipStyle }}
           className={tooltipStyle}
           content={
             <div>
@@ -172,6 +159,7 @@ const GameGeneralInfo = () => {
       <div className="flex flex-col gap-1 items-start">
         <div>
           <Tooltip
+            classNames={{ base: baseToolTipStyle }}
             className={tooltipStyle}
             content={
               <div>
@@ -189,6 +177,7 @@ const GameGeneralInfo = () => {
         </div>
         <div>
           <Tooltip
+            classNames={{ base: baseToolTipStyle }}
             className={tooltipStyle}
             content={
               <div>
@@ -212,6 +201,7 @@ const GameGeneralInfo = () => {
         <div>{gameState.currentRound ?? "0"}</div>
       </div>
       <Tooltip
+        classNames={{ base: baseToolTipStyle }}
         className={tooltipStyle}
         content={
           <div>
@@ -231,6 +221,7 @@ const GameGeneralInfo = () => {
         </div>
       </Tooltip>
       <Tooltip
+        classNames={{ base: baseToolTipStyle }}
         className={tooltipStyle}
         content={
           gameState.distributionStrategy ==

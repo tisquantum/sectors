@@ -59,7 +59,7 @@ import {
   companyPriorityOrderOperations,
   getCompanyActionCost,
 } from "@server/data/helpers";
-import { tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
+import { baseToolTipStyle, tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
 import CompanyPriorityList from "./CompanyPriorityOperatingRound";
 import InsolvencyContributionComponent from "./InsolvencyContribution";
 
@@ -516,6 +516,7 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
     <div className="flex flex-col flex-grow relative">
       <div className="flex flex-col gap-2 justify-center items-center">
         <Tooltip
+          classNames={{ base: baseToolTipStyle }}
           className={tooltipStyle}
           content={<CompanyPriorityList companies={companies} />}
         >

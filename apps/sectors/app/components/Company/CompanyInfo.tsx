@@ -28,6 +28,7 @@ import {
   RiWallet3Fill,
 } from "@remixicon/react";
 import {
+  baseToolTipStyle,
   tooltipParagraphStyle,
   tooltipStyle,
 } from "@sectors/app/helpers/tailwind.helpers";
@@ -81,6 +82,7 @@ const CompanyMoreInfo = ({
         <span>{company.Sector.name}</span>
         <div className="flex items-center gap-1">
           <Tooltip
+            classNames={{ base: baseToolTipStyle }}
             className={tooltipStyle}
             content={
               <p className={tooltipParagraphStyle}>
@@ -99,6 +101,7 @@ const CompanyMoreInfo = ({
             </div>
           </Tooltip>
           <Tooltip
+            classNames={{ base: baseToolTipStyle }}
             className={tooltipStyle}
             content={
               <p className={tooltipParagraphStyle}>
@@ -115,6 +118,7 @@ const CompanyMoreInfo = ({
       </div>
       <div className="grid grid-cols-2 items-center">
         <Tooltip
+          classNames={{ base: baseToolTipStyle }}
           className={tooltipStyle}
           content={
             <p className={tooltipParagraphStyle}>
@@ -130,6 +134,7 @@ const CompanyMoreInfo = ({
           </div>
         </Tooltip>
         <Tooltip
+          classNames={{ base: baseToolTipStyle }}
           className={tooltipStyle}
           content={
             <p className={tooltipParagraphStyle}>
@@ -149,6 +154,7 @@ const CompanyMoreInfo = ({
           </div>
         </Tooltip>
         <Tooltip
+          classNames={{ base: baseToolTipStyle }}
           className={tooltipStyle}
           content={
             <p className={tooltipParagraphStyle}>
@@ -168,6 +174,7 @@ const CompanyMoreInfo = ({
           </div>
         </Tooltip>
         <Tooltip
+          classNames={{ base: baseToolTipStyle }}
           className={tooltipStyle}
           content={
             <div className="flex flex-col gap-2">
@@ -196,6 +203,7 @@ const CompanyMoreInfo = ({
           </div>
         </Tooltip>
         <Tooltip
+          classNames={{ base: baseToolTipStyle }}
           className={tooltipStyle}
           content={
             <p className={tooltipParagraphStyle}>
@@ -212,6 +220,7 @@ const CompanyMoreInfo = ({
           </div>
         </Tooltip>
         <Tooltip
+          classNames={{ base: baseToolTipStyle }}
           className={tooltipStyle}
           content={
             <p className={tooltipParagraphStyle}>
@@ -226,18 +235,25 @@ const CompanyMoreInfo = ({
         </Tooltip>
         {company.hasLoan && (
           <Tooltip
+            classNames={{ base: baseToolTipStyle }}
             className={tooltipStyle}
             content={
               <p className={tooltipParagraphStyle}>
                 This company has taken a loan. The company must pay back the
                 loan with 10% interest at a fixed rate of $
-                {(LOAN_AMOUNT + (LOAN_AMOUNT * LOAN_INTEREST_RATE)) * LOAN_INTEREST_RATE} per turn.
+                {(LOAN_AMOUNT + LOAN_AMOUNT * LOAN_INTEREST_RATE) *
+                  LOAN_INTEREST_RATE}{" "}
+                per turn.
               </p>
             }
           >
             <div className="flex items-center col-span-2">
               <RiBankCard2Fill size={18} className="ml-2" />
-              <span className="ml-1">${(LOAN_AMOUNT + (LOAN_AMOUNT * LOAN_INTEREST_RATE)) * LOAN_INTEREST_RATE}</span>
+              <span className="ml-1">
+                $
+                {(LOAN_AMOUNT + LOAN_AMOUNT * LOAN_INTEREST_RATE) *
+                  LOAN_INTEREST_RATE}
+              </span>
             </div>
           </Tooltip>
         )}
@@ -278,6 +294,7 @@ const CompanyInfo = ({
             <div className="flex gap-1">
               <span>{company.stockSymbol}</span>
               <Tooltip
+                classNames={{ base: baseToolTipStyle }}
                 className={tooltipStyle}
                 content={
                   <p className={tooltipParagraphStyle}>
@@ -293,6 +310,7 @@ const CompanyInfo = ({
             </div>
             <div className="flex gap-1">
               <Tooltip
+                classNames={{ base: baseToolTipStyle }}
                 className={tooltipStyle}
                 content={
                   <div className="flex flex-col gap-2 w-full">
@@ -308,6 +326,7 @@ const CompanyInfo = ({
               </Tooltip>
               |
               <Tooltip
+                classNames={{ base: baseToolTipStyle }}
                 className={tooltipStyle}
                 content={
                   <p className={tooltipParagraphStyle}>
@@ -320,6 +339,7 @@ const CompanyInfo = ({
             </div>
             <div className="flex gap-3">
               <Tooltip
+                classNames={{ base: baseToolTipStyle }}
                 className={tooltipStyle}
                 content={
                   <p className={tooltipParagraphStyle}>
@@ -333,6 +353,7 @@ const CompanyInfo = ({
                 </span>
               </Tooltip>
               <Tooltip
+                classNames={{ base: baseToolTipStyle }}
                 className={tooltipStyle}
                 content={
                   <p className={tooltipParagraphStyle}>
@@ -345,6 +366,7 @@ const CompanyInfo = ({
                 </span>
               </Tooltip>
               <Tooltip
+                classNames={{ base: baseToolTipStyle }}
                 className={tooltipStyle}
                 content={
                   <p className={tooltipParagraphStyle}>

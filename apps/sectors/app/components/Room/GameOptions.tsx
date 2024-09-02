@@ -11,6 +11,7 @@ import {
 } from "@server/data/constants";
 import { RiInformation2Fill } from "@remixicon/react";
 import {
+  baseToolTipStyle,
   tooltipParagraphStyle,
   tooltipStyle,
 } from "@sectors/app/helpers/tailwind.helpers";
@@ -45,7 +46,11 @@ const GameOptionDescription: React.FC<{
 }> = ({ name, description }) => (
   <div className="relative flex gap-1 items-center">
     <div className="text-lg font-bold mb-2">{name}</div>
-    <Tooltip className={tooltipStyle} content={description}>
+    <Tooltip
+      classNames={{ base: baseToolTipStyle }}
+      className={tooltipStyle}
+      content={description}
+    >
       <div>
         <RiInformation2Fill className="text-sky-400/100 mb-2" />
       </div>
@@ -246,7 +251,7 @@ const GameOptions: React.FC<GameOptionsProps> = ({ onOptionsChange }) => {
           onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
             handleSelectChange("distributionStrategy", Number(e.target.value))
           }
-          defaultSelectedKeys={["2"]}
+          defaultSelectedKeys={["3"]}
         >
           {/* <SelectItem key={1} value={1}>
             Fair Split
@@ -309,7 +314,7 @@ const GameOptions: React.FC<GameOptionsProps> = ({ onOptionsChange }) => {
           onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
             handleSelectChange("playerOrdersConcealed", Number(e.target.value))
           }
-          defaultSelectedKeys={["1"]}
+          defaultSelectedKeys={["2"]}
         >
           <SelectItem key={1} value={1}>
             Yes

@@ -14,7 +14,7 @@ import {
 import React, { useMemo } from "react";
 import PlayerAvatar from "../Player/PlayerAvatar";
 import { RiText } from "@remixicon/react";
-import { tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
+import { baseToolTipStyle, tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
 
 const OrderChipWithPlayer = ({
   order,
@@ -35,6 +35,7 @@ const OrderChipWithPlayer = ({
       className="my-2"
     >
       <Tooltip
+        classNames={{ base: baseToolTipStyle }}
         className={tooltipStyle}
         content={
           <p>

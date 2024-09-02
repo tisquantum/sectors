@@ -22,6 +22,7 @@ import { trpc } from "@sectors/app/trpc";
 import { sectorColors } from "@server/data/gameData";
 import { SectorWithCompanies } from "@server/prisma/prisma.types";
 import {
+  baseToolTipStyle,
   tooltipParagraphStyle,
   tooltipStyle,
 } from "@sectors/app/helpers/tailwind.helpers";
@@ -56,6 +57,7 @@ const SectorComponent = () => {
             <div className="flex flex-col">
               <div className="flex items-center">
                 <Tooltip
+                  classNames={{ base: baseToolTipStyle }}
                   className={tooltipStyle}
                   content={
                     <p className={tooltipParagraphStyle}>
@@ -71,6 +73,7 @@ const SectorComponent = () => {
                   </div>
                 </Tooltip>
                 <Tooltip
+                  classNames={{ base: baseToolTipStyle }}
                   className={tooltipStyle}
                   content={
                     <p className={tooltipParagraphStyle}>
@@ -87,6 +90,7 @@ const SectorComponent = () => {
                   </div>
                 </Tooltip>
                 <Tooltip
+                  classNames={{ base: baseToolTipStyle }}
                   className={tooltipStyle}
                   content={
                     <p className={tooltipParagraphStyle}>
@@ -101,6 +105,7 @@ const SectorComponent = () => {
               </div>
               <div className="flex items-center gap-2">
                 <Tooltip
+                  classNames={{ base: baseToolTipStyle }}
                   className={tooltipStyle}
                   content={
                     <p className={tooltipParagraphStyle}>
@@ -121,6 +126,7 @@ const SectorComponent = () => {
                   </div>
                 </Tooltip>
                 <Tooltip
+                  classNames={{ base: baseToolTipStyle }}
                   className={tooltipStyle}
                   content={
                     <p className={tooltipParagraphStyle}>
@@ -141,6 +147,7 @@ const SectorComponent = () => {
                   </div>
                 </Tooltip>
                 <Tooltip
+                  classNames={{ base: baseToolTipStyle }}
                   className={tooltipStyle}
                   content={
                     <p className={tooltipParagraphStyle}>

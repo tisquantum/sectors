@@ -37,6 +37,7 @@ import {
   RiTimeFill,
 } from "@remixicon/react";
 import {
+  baseToolTipStyle,
   tooltipParagraphStyle,
   tooltipStyle,
 } from "@sectors/app/helpers/tailwind.helpers";
@@ -82,6 +83,7 @@ const OrderChipChitWithPlayer = ({
       placement="top-right"
     >
       <Tooltip
+        classNames={{ base: baseToolTipStyle }}
         className={tooltipStyle}
         content={
           <p className={tooltipParagraphStyle}>{order.Player.nickname}</p>

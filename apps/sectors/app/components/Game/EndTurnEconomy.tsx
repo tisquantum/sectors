@@ -7,6 +7,7 @@ import PrestigeRewards from "./PrestigeRewards";
 import ResearchDeck from "../ResearchDeck/ResearchDeck";
 import { Tooltip } from "@nextui-org/react";
 import {
+  baseToolTipStyle,
   tooltipParagraphStyle,
   tooltipStyle,
 } from "@sectors/app/helpers/tailwind.helpers";
@@ -67,6 +68,7 @@ const EndTurnEconomy = () => {
       <div className="flex flex-col gap-2 text-xl">
         <div className="flex relative">
           <Tooltip
+            classNames={{ base: baseToolTipStyle }}
             className={tooltipStyle}
             content={
               <div>
@@ -113,6 +115,7 @@ const EndTurnEconomy = () => {
         </div>
         <div className="flex relative">
           <Tooltip
+            classNames={{ base: baseToolTipStyle }}
             className={tooltipStyle}
             content={
               <p className={tooltipParagraphStyle}>

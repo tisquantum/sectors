@@ -24,7 +24,7 @@ import {
 } from "@remixicon/react";
 import PlayerAvatar from "./PlayerAvatar";
 import { useGame } from "../Game/GameContext";
-import { tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
+import { baseToolTipStyle, tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
 import { calculateNetWorth } from "@server/data/helpers";
 import WalletInfo from "../Game/WalletInfo";
 
@@ -72,6 +72,7 @@ const PlayersOverview = ({ gameId }: { gameId: string }) => {
             subtitle={
               <div className="flex gap-2">
                 <Tooltip
+                  classNames={{ base: baseToolTipStyle }}
                   className={tooltipStyle}
                   content={<p>Cash on hand.</p>}
                 >
@@ -80,6 +81,7 @@ const PlayersOverview = ({ gameId }: { gameId: string }) => {
                   </span>
                 </Tooltip>
                 <Tooltip
+                  classNames={{ base: baseToolTipStyle }}
                   className={tooltipStyle}
                   content={
                     <p>
@@ -93,6 +95,7 @@ const PlayersOverview = ({ gameId }: { gameId: string }) => {
                   </span>
                 </Tooltip>
                 <Tooltip
+                  classNames={{ base: baseToolTipStyle }}
                   className={tooltipStyle}
                   content={
                     <p>
@@ -111,6 +114,7 @@ const PlayersOverview = ({ gameId }: { gameId: string }) => {
                 </Tooltip>
                 {playerWithShares.marginAccount > 0 && (
                   <Tooltip
+                    classNames={{ base: baseToolTipStyle }}
                     className={tooltipStyle}
                     content={
                       <p>

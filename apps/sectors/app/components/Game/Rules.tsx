@@ -169,21 +169,58 @@ const stockRoundRules = (
       </li>
       <li>
         <strong>Short Orders:</strong> Borrow shares from the market and sell
-        them immediately. Cover these shares in a subsequent turn by purchasing
-        the same quantity at the current market price. Short Orders are placed
-        against the OPEN MARKET. Short orders have an ongoing interest borrow
-        rate. Short order share dividends must be covered by the player. Short
-        Orders have limited actions available. If you have no short order
-        actions available, you cannot place another short order until more
-        actions become available. Short order actions become available when a
-        short order has been covered.
+        them immediately at the current market price.
+        <ul className="list-disc pl-5">
+          <li>
+            The short order may be covered in a subsequent turn by purchasing
+            the same quantity at the current market price.
+          </li>
+          <li>Short Orders are placed against the OPEN MARKET.</li>
+          <li>
+            Short orders have an ongoing interest borrow rate of 5% against the
+            initial sale price. This rate is paid out from the player&apos;s
+            cash on hand.
+          </li>
+          <li>Short order share dividends must be covered by the player.</li>
+          <li>
+            Short Orders have limited actions available. If you have no short
+            order actions available, you cannot place another short order until
+            more actions become available. Short order actions become available
+            when a short order has been covered.
+          </li>
+        </ul>
       </li>
       <li>
-        <strong>Options Contracts:</strong> Purchase the right to buy or sell
-        stock at a certain price. These contracts are placed against the
-        DERIVATIVES MARKET. The contract price is called the{" "}
-        <i>&quot;premium&quot;</i>. Contracts have set premiums, shares, terms,
-        and strike prices.
+        <strong>Options Contracts:</strong> Purchase the right to buy stock at a
+        certain price by placing an OPTION CALL order.
+        <ul className="list-disc pl-5">
+          <li>These contracts are placed against the DERIVATIVES MARKET.</li>
+          <li>
+            The contract price is called the <i>&quot;premium&quot;</i>.
+            Contracts have set premiums, shares, terms, and strike prices.
+          </li>
+          <li>
+            Once an option contract&apos;s company share price has met or
+            exceeded its strike price, the contract can be exercised.
+          </li>
+          <li>
+            When a contract is exercised, players collect money calculated as{" "}
+            <strong>
+              the current share price minus the strike price, multiplied by the
+              amount of shares inside the contract
+            </strong>
+            .
+          </li>
+          <li>
+            After a contract is exercised, any step bonus on that contract is
+            applied to the company&apos;s share price.
+          </li>
+          <li>
+            If the contract is not exercised before it&apos;s term period
+            expires, the premium investment is lost and the opportunity to
+            exercise the contract is over.
+          </li>
+        </ul>
       </li>
     </ul>
     <h4 className="font-semibold">Share Locations</h4>
