@@ -595,31 +595,31 @@ export const MARGIN_ACCOUNT_ID_PREFIX = 'MA__';
 export const CapitalGainsTiers = [
   {
     minNetWorth: 0,
-    maxNetWorth: 500,
+    maxNetWorth: 100,
     taxPercentage: 0,
   },
   {
-    minNetWorth: 500,
-    maxNetWorth: 750,
+    minNetWorth: 100,
+    maxNetWorth: 200,
     taxPercentage: 2,
   },
   {
-    minNetWorth: 751,
-    maxNetWorth: 1000,
+    minNetWorth: 200,
+    maxNetWorth: 300,
     taxPercentage: 3,
   },
   {
-    minNetWorth: 1001,
-    maxNetWorth: 1500,
+    minNetWorth: 300,
+    maxNetWorth: 400,
     taxPercentage: 4,
   },
   {
-    minNetWorth: 1501,
-    maxNetWorth: 2000,
+    minNetWorth: 400,
+    maxNetWorth: 500,
     taxPercentage: 5,
   },
   {
-    minNetWorth: 2001,
+    minNetWorth: 500,
     maxNetWorth: Number.MAX_SAFE_INTEGER,
     taxPercentage: 7,
   },

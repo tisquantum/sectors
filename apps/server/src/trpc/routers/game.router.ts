@@ -383,4 +383,13 @@ export default (trpc: TrpcService, ctx: Context) =>
         // Delegate the responsibility to GameManagementService
         return ctx.gameManagementService.listPlayerReadiness(gameId);
       }),
+    getTurnIncome: trpc.procedure
+      .input(z.object({ gameId: z.string(), gameTurnId: z.string() }))
+      .query(async ({ input }) => {
+        const { gameId, gameTurnId } = input;
+        //get players for game
+        const players = await ctx.playerService.players({ where: { gameId } });
+        const playerIds = players.map((player) => player.id); 
+        return ctx.gameManagementService.getTurnIncome(playerIds, gameTurnId);
+      }),
   });
