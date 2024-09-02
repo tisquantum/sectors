@@ -2,6 +2,18 @@ NestJS Responsibilities
 -Web Sockets
 -Game Business Logic
 
+Email
+Resend
+
+DB
+Supabase
+
+Transport Layer
+TRPC
+
+Sockets
+Pusher
+
 TRPC PLAYGROUND
 /trpc-playground
 
@@ -185,3 +197,29 @@ I'm thinking short orders can only be performed on a company you have no ownersh
 - TODO: Start on SUPPLY_CHAIN for passive, PRICE_FREEZE needs to be implemented
 - prizes for sectors that are inactive???
 - company demand vs sector demand 
+
+-- Drop the trigger
+drop trigger if exists after_insert_profile on public.profiles;
+
+-- Drop the trigger that depends on the function
+drop trigger if exists on_auth_user_created on auth.users;
+
+-- Drop the function with CASCADE to remove all dependencies
+drop function if exists public.handle_new_user() cascade;
+-- inserts a row into public.user with authUserId set to the new.id
+create function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer set search_path = ''
+as $$
+begin
+  insert into public."User" (id, "authUserId", "createdAt", "updatedAt")
+  values (new.id, new.id, current_timestamp, current_timestamp);
+  return new;
+end;
+$$;
+
+-- trigger the function every time a user is created
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute procedure handle_new_user();

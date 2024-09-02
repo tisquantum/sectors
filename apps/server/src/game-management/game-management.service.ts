@@ -1458,11 +1458,9 @@ export class GameManagementService {
       }),
     );
 
-    try {
-      await this.gameLogService.createManyGameLogs(gameLogMessages);
-    } catch (error) {
-      console.error('Error creating game logs', error);
-    }
+    this.gameLogService.createManyGameLogs(gameLogMessages).catch((error) => {
+      console.error('Error creating game log', error);
+    });
 
     const playerPriorityAddMany = playerPriority.map(
       ({ influence, ...rest }) => rest,
@@ -1552,18 +1550,22 @@ export class GameManagementService {
           },
         });
         //create share transaction
-        await this.transactionService.createTransactionEntityToEntity({
-          fromEntityId: player.entityId || undefined,
-          fromEntityType: EntityType.PLAYER,
-          toEntityType: EntityType.OPEN_MARKET,
-          amount: sharesToDivest.length,
-          gameId: phase.gameId,
-          gameTurnId: phase.gameTurnId,
-          phaseId: phase.id,
-          transactionType: TransactionType.SHARE,
-          transactionSubType: TransactionSubType.DIVESTMENT,
-          companyInvolvedId: companyId,
-        });
+        this.transactionService
+          .createTransactionEntityToEntity({
+            fromEntityId: player.entityId || undefined,
+            fromEntityType: EntityType.PLAYER,
+            toEntityType: EntityType.OPEN_MARKET,
+            amount: sharesToDivest.length,
+            gameId: phase.gameId,
+            gameTurnId: phase.gameTurnId,
+            phaseId: phase.id,
+            transactionType: TransactionType.SHARE,
+            transactionSubType: TransactionSubType.DIVESTMENT,
+            companyInvolvedId: companyId,
+          })
+          .catch((error) => {
+            console.error('Error creating transaction', error);
+          });
       });
 
       const sellPromises = sharesToDivest.map((share) => async () => {
@@ -3110,18 +3112,22 @@ export class GameManagementService {
     });
 
     //create entity transaction
-    await this.transactionService.createTransactionEntityToEntity({
-      fromEntityId: company.entityId || undefined,
-      fromCompanyId: company.id,
-      fromEntityType: EntityType.COMPANY,
-      toEntityType: EntityType.BANK,
-      amount: cost,
-      transactionType: TransactionType.CASH,
-      gameId: game.id,
-      gameTurnId: game.currentTurn,
-      phaseId: game.currentPhaseId || '',
-      description: `Company action ${companyAction.action}.`,
-    });
+    this.transactionService
+      .createTransactionEntityToEntity({
+        fromEntityId: company.entityId || undefined,
+        fromCompanyId: company.id,
+        fromEntityType: EntityType.COMPANY,
+        toEntityType: EntityType.BANK,
+        amount: cost,
+        transactionType: TransactionType.CASH,
+        gameId: game.id,
+        gameTurnId: game.currentTurn,
+        phaseId: game.currentPhaseId || '',
+        description: `Company action ${companyAction.action}.`,
+      })
+      .catch((error) => {
+        console.error('Error creating transaction', error);
+      });
   }
 
   /**
@@ -3833,15 +3839,14 @@ export class GameManagementService {
       }
     }
 
-    await this.transactionService.createManyTransactionsFromCollectedData(
-      transactionDataCollection,
-    );
+    this.transactionService
+      .createManyTransactionsFromCollectedData(transactionDataCollection)
+      .catch((error) => {
+        console.error('Error creating transactions', error);
+      });
 
     // Batch update companies' cashOnHand and statuses
     await this.companyService.updateManyCompanies(companyCashOnHandUpdates);
-
-    // Log all game events in bulk
-    await this.gameLogService.createManyGameLogs(gameLogs);
 
     await this.companyActionService.updateManyCompanyActions(
       companyActionUpdates,
@@ -3859,7 +3864,9 @@ export class GameManagementService {
     });
 
     // Log all game events
-    await this.gameLogService.createManyGameLogs(gameLogs);
+    this.gameLogService.createManyGameLogs(gameLogs).catch((error) => {
+      console.error('Error creating game logs', error);
+    });
   }
 
   async processStockChanges(
@@ -7144,9 +7151,9 @@ export class GameManagementService {
         },
       },
     });
-    try {
-      //create transaction
-      this.transactionService.createTransactionEntityToEntity({
+    //create transaction
+    this.transactionService
+      .createTransactionEntityToEntity({
         gameId,
         gameTurnId,
         phaseId,
@@ -7157,10 +7164,10 @@ export class GameManagementService {
         toEntityType: EntityType.PLAYER,
         toPlayerId: playerId,
         description,
+      })
+      .catch((error) => {
+        console.error('Error creating transaction:', error);
       });
-    } catch (e) {
-      console.error('transaction service failed', e);
-    }
     return updatedPlayer;
   }
 
@@ -7185,19 +7192,23 @@ export class GameManagementService {
     const cashToRemove = Math.min(player.cashOnHand, amount);
     console.log('cash to remove', cashToRemove, player.cashOnHand, amount);
     //create transaction
-    this.transactionService.createTransactionEntityToEntity({
-      gameId,
-      gameTurnId,
-      phaseId,
-      amount: cashToRemove,
-      fromEntityId: player.entityId || undefined,
-      fromEntityType: EntityType.PLAYER,
-      fromPlayerId: playerId,
-      transactionType: TransactionType.CASH,
-      toEntityType: toEntity,
-      toEntityId,
-      description,
-    });
+    this.transactionService
+      .createTransactionEntityToEntity({
+        gameId,
+        gameTurnId,
+        phaseId,
+        amount: cashToRemove,
+        fromEntityId: player.entityId || undefined,
+        fromEntityType: EntityType.PLAYER,
+        fromPlayerId: playerId,
+        transactionType: TransactionType.CASH,
+        toEntityType: toEntity,
+        toEntityId,
+        description,
+      })
+      .catch((error) => {
+        console.error('Error creating transaction:', error);
+      });
     //update bank pool for game
     await this.prisma.game.update({
       where: { id: gameId },
@@ -7278,18 +7289,22 @@ export class GameManagementService {
       );
     }
     //create transaction
-    this.transactionService.createTransactionEntityToEntity({
-      gameId,
-      gameTurnId,
-      phaseId,
-      amount: shares.length,
-      fromEntityId,
-      fromEntityType,
-      fromPlayerId,
-      transactionType: TransactionType.SHARE,
-      toEntityType,
-      description,
-    });
+    this.transactionService
+      .createTransactionEntityToEntity({
+        gameId,
+        gameTurnId,
+        phaseId,
+        amount: shares.length,
+        fromEntityId,
+        fromEntityType,
+        fromPlayerId,
+        transactionType: TransactionType.SHARE,
+        toEntityType,
+        description,
+      })
+      .catch((error) => {
+        console.error('Error creating transaction:', error);
+      });
     //update shares
     await this.prisma.share.updateMany({
       where: {
@@ -7678,19 +7693,23 @@ export class GameManagementService {
     if (!game) {
       throw new Error('Game not found');
     }
-    this.transactionService.createTransactionEntityToEntity({
-      fromEntityId: MARGIN_ACCOUNT_ID_PREFIX + player.id,
-      fromEntityType: EntityType.PLAYER_MARGIN_ACCOUNT,
-      toEntityType: EntityType.PLAYER,
-      toEntityId: player.entityId || undefined,
-      toPlayerId: player.id,
-      amount: Math.floor(shortOrder.shortSalePrice / 2),
-      transactionType: TransactionType.CASH,
-      gameId: player.gameId,
-      gameTurnId: game.currentTurn || '',
-      phaseId: game.currentPhaseId || '',
-      description: 'Margin account funds released',
-    });
+    this.transactionService
+      .createTransactionEntityToEntity({
+        fromEntityId: MARGIN_ACCOUNT_ID_PREFIX + player.id,
+        fromEntityType: EntityType.PLAYER_MARGIN_ACCOUNT,
+        toEntityType: EntityType.PLAYER,
+        toEntityId: player.entityId || undefined,
+        toPlayerId: player.id,
+        amount: Math.floor(shortOrder.shortSalePrice / 2),
+        transactionType: TransactionType.CASH,
+        gameId: player.gameId,
+        gameTurnId: game.currentTurn || '',
+        phaseId: game.currentPhaseId || '',
+        description: 'Margin account funds released',
+      })
+      .catch((error) => {
+        console.error('Error creating transaction:', error);
+      });
     //release the margin account funds
     this.playersService.updatePlayer({
       where: { id: player.id },
