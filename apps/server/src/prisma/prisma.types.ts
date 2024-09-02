@@ -56,6 +56,7 @@ export type PlayerWithShares = Player & {
 };
 
 export type ShareWithPlayer = Share & { Player: Player | null };
+export type CompanyWithSectorOnly = Company & { Sector: Sector };
 export type CompanyWithSector = Company & {
   Sector: Sector;
   Share: ShareWithPlayer[];

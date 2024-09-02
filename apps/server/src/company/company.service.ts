@@ -7,6 +7,7 @@ import {
   CompanyWithRelations,
   CompanyWithSector,
   CompanyWithSectorAndStockHistory,
+  CompanyWithSectorOnly,
   CompanyWithShare,
   CompanyWithShareAndSector,
 } from '@server/prisma/prisma.types';
@@ -26,6 +27,18 @@ export class CompanyService {
       where: companyWhereUniqueInput,
     });
     return company;
+  }
+
+  async companyWithSectorFindFirst(params: {
+    where?: Prisma.CompanyWhereInput;
+    orderBy?: Prisma.CompanyOrderByWithRelationInput;
+  }): Promise<CompanyWithSectorOnly | null> {
+    return this.prisma.company.findFirst({
+      ...params,
+      include: {
+        Sector: true,
+      },
+    });
   }
 
   async companyWithShares(

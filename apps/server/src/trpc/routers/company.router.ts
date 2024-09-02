@@ -53,6 +53,16 @@ export default (trpc: TrpcService, ctx: Context) =>
         }
         return company;
       }),
+    companyWithSectorFindFirst: trpc.procedure
+      .input(
+        z.object({
+          where: z.any().optional(),
+          orderBy: z.any().optional(),
+        }),
+      )
+      .query(async ({ input }) => {
+        return ctx.companyService.companyWithSectorFindFirst(input);
+      }),
     listCompanies: trpc.procedure
       .input(
         z.object({

@@ -230,14 +230,14 @@ const CompanyMoreInfo = ({
             content={
               <p className={tooltipParagraphStyle}>
                 This company has taken a loan. The company must pay back the
-                loan in interest at a fixed rate of $
-                {LOAN_AMOUNT * LOAN_INTEREST_RATE} per turn.
+                loan with 10% interest at a fixed rate of $
+                {(LOAN_AMOUNT + (LOAN_AMOUNT * LOAN_INTEREST_RATE)) * LOAN_INTEREST_RATE} per turn.
               </p>
             }
           >
             <div className="flex items-center col-span-2">
               <RiBankCard2Fill size={18} className="ml-2" />
-              <span className="ml-1">${LOAN_AMOUNT * LOAN_INTEREST_RATE}</span>
+              <span className="ml-1">${(LOAN_AMOUNT + (LOAN_AMOUNT * LOAN_INTEREST_RATE)) * LOAN_INTEREST_RATE}</span>
             </div>
           </Tooltip>
         )}

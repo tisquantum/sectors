@@ -101,6 +101,7 @@ const CompanyInfoTable = ({
                   <div className="flex flex-wrap gap-1">
                     {ordersRevealed.map((order, index) => (
                       <OrderChipChitWithPlayer
+                        key={index}
                         order={order}
                         showStatus={true}
                       />
@@ -274,7 +275,9 @@ const CompanyInfoTable = ({
       case "Loan":
         return company.hasLoan ? (
           <>
-            <RiBankCard2Fill size={20} /> ${LOAN_AMOUNT * LOAN_INTEREST_RATE}
+            <RiBankCard2Fill size={20} /> $
+            {(LOAN_AMOUNT + LOAN_AMOUNT * LOAN_INTEREST_RATE) *
+              LOAN_INTEREST_RATE}
           </>
         ) : (
           "No Loan"

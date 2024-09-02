@@ -1079,7 +1079,8 @@ export class GameManagementService {
     //take 10% of the loan amount from the company cash on hand, the company cannot go below 0
     const companyLoans = companies.map(async (company) => {
       const newCashOnHand = Math.max(
-        company.cashOnHand - LOAN_AMOUNT * LOAN_INTEREST_RATE,
+        company.cashOnHand -
+          (LOAN_AMOUNT + LOAN_AMOUNT * LOAN_INTEREST_RATE) * LOAN_INTEREST_RATE,
         0,
       );
       await this.companyService.updateCompany({

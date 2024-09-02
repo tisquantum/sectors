@@ -28,9 +28,9 @@ const overviewRules = (
       Sectors ends in one of two ways:
       <ul className="list-disc pl-5">
         <li>
-          <strong>Bank Breaks:</strong> The bank <em>"breaks"</em> as it reaches
-          or goes below 0. As soon as this happens, the remainder of the turn is
-          played out and this is the last turn of the game.
+          <strong>Bank Breaks:</strong> The bank <em>&quot;breaks&quot;</em> as
+          it reaches or goes below 0. As soon as this happens, the remainder of
+          the turn is played out and this is the last turn of the game.
         </li>
         <li>
           <strong>Total Turns Exceeded:</strong> If the game runs through its
@@ -42,8 +42,8 @@ const overviewRules = (
     <p>
       The game is played over turns, each turn is separated into distinct
       rounds. The stock round has three sub-rounds. Each round has phases where
-      players will either perform some action or observe the result of a phase's
-      resolution.
+      players will either perform some action or observe the result of a
+      phase&apos;s resolution.
     </p>
     <p>
       Each phase has a given amount of time before it will end and the next
@@ -55,10 +55,10 @@ const overviewRules = (
       not to have acted in that phase.
     </p>
     <p>
-      If a player is ready, they can elect to "ready up," which will signal they
-      have nothing else they wish to do or observe in the current phase. If all
-      players of the game ready up, that phase is considered finished regardless
-      of the time remaining in that phase.
+      If a player is ready, they can elect to &quot;ready up&quot;, which will
+      signal they have nothing else they wish to do or observe in the current
+      phase. If all players of the game ready up, that phase is considered
+      finished regardless of the time remaining in that phase.
     </p>
     <h3 className="font-semibold">Sections of the Game</h3>
     <ul className="list-disc pl-5">
@@ -66,11 +66,11 @@ const overviewRules = (
         <strong>Influence Round:</strong> This round only occurs once at the
         beginning of the game. It determines initial{" "}
         <strong>player priority</strong> order. Each player will, in secret,
-        perform an influence bid. Each player starts with 100 "influence"
-        points. For each point the player does not spend on their influence bid,
-        they will retain $1. Player priority is then determined in descending
-        order of influence points spent on the bid. In the case of tied bids,
-        priority order is determined randomly.
+        perform an influence bid. Each player starts with 100
+        &quot;influence&quot; points. For each point the player does not spend
+        on their influence bid, they will retain $1. Player priority is then
+        determined in descending order of influence points spent on the bid. In
+        the case of tied bids, priority order is determined randomly.
       </li>
       <li>
         <strong>Tranche Distribution:</strong> Tranche packages are made for
@@ -145,9 +145,9 @@ const stockRoundRules = (
       Players take turns buying and selling shares of companies. The Stock Round
       is broken down into a number of <i>&quot;sub-rounds&quot;</i> where
       players can place one order in each round. The order is placed in the
-      "Place Stock Orders" phase. Player orders are submitted simultaneously and
-      in secret. Players have 4 distinct order mechanisms: Market Orders, Limit
-      Orders, Short Orders, and Options Contracts.
+      <strong>Place Stock Orders phase</strong>. Player orders are submitted
+      simultaneously and in secret. Players have 4 distinct order mechanisms:
+      Market Orders, Limit Orders, Short Orders, and Options Contracts.
     </p>
     <h4 className="font-semibold">Order Mechanisms</h4>
     <ul className="list-disc pl-5">
@@ -195,7 +195,7 @@ const stockRoundRules = (
       </li>
       <li>
         <strong>OPEN MARKET:</strong> Shares are purchased from the open market.
-        Shares bought or sold in the open market impact the company's stock
+        Shares bought or sold in the open market impact the company&apos;s stock
         price. For each share sold, the stock price moves down 1 step. For each
         share bought, the stock price moves up one slot on the stock tier track.
         Different stock tiers require different amounts of slots to be filled
@@ -241,7 +241,7 @@ const stockRoundRules = (
     </p>
     <p>
       Given the net difference between BUYS and SELLS for market order
-      quantities of a given company, that company's stock price will adjust
+      quantities of a given company, that company&apos;s stock price will adjust
       steps down equivalent to the net negative or move up as many steps as it
       can fill &quot;price slots&quot; on the stock chart. Different stock tiers
       require different amounts of slots to be filled before an order can move
@@ -330,14 +330,14 @@ const OperatingRoundRules = () => (
     </ul>
     <h4 className="font-semibold">Stock Price Adjustment</h4>
     <p>
-      The company's share price will be adjusted by one step by the total amount
-      of revenue distributed to shareholders divided by its current stock price,
-      rounded down. If, however, this price change would bring the company's
-      stock price into a new stock tier, it stops at the beginning of that tier.
-      For example, if a company has a stock price of $10 and distributes $100 of
-      revenue to shareholders, the stock price will move up 10 steps, but
-      because the next stock tier starts at $21, this increase is halted at that
-      price at the beginning of the new tier.
+      The company&apos;s share price will be adjusted by one step by the total
+      amount of revenue distributed to shareholders divided by its current stock
+      price, rounded down. If, however, this price change would bring the
+      company&apos;s stock price into a new stock tier, it stops at the
+      beginning of that tier. For example, if a company has a stock price of $10
+      and distributes $100 of revenue to shareholders, the stock price will move
+      up 10 steps, but because the next stock tier starts at $21, this increase
+      is halted at that price at the beginning of the new tier.
     </p>
     <CompanyTiers />
     <p>
@@ -376,8 +376,8 @@ export const insolvencyAndBankruptcy = (
     <h4 className="font-semibold">Reactivating the Company</h4>
     <p>
       For the company to become <strong>active</strong> again, the total
-      liquidity generated from contributions must meet or exceed the company's{" "}
-      <strong>shortfall</strong> cash value for its tier.
+      liquidity generated from contributions must meet or exceed the
+      company&apos;s <strong>shortfall</strong> cash value for its tier.
     </p>
     <h4 className="font-semibold">Transparency of Contributions</h4>
     <p>
@@ -418,10 +418,10 @@ const prestigeTokens = (
     <p>
       <strong>Prestige Tokens</strong> can be spent on the prestige track to get
       various prestige rewards. They are used as part of the payment for the
-      company's sector action. Prestige tokens are also factored as the second
-      condition for company priority. The company with the higher prestige token
-      count will have priority over the company with the lower prestige token
-      count.
+      company&apos;s sector action. Prestige tokens are also factored as the
+      second condition for company priority. The company with the higher
+      prestige token count will have priority over the company with the lower
+      prestige token count.
     </p>
   </>
 );
@@ -431,8 +431,8 @@ const customerMovement = (
     <h3 className="font-semibold">Customer Movement</h3>
     <p>
       Each stock sector has customers that move to it from the global consumer
-      pool every turn, based on the sector's demand. Various events can also
-      trigger customer movement to a sector.
+      pool every turn, based on the sector&apos;s demand. Various events can
+      also trigger customer movement to a sector.
     </p>
   </>
 );
