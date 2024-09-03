@@ -280,7 +280,7 @@ const CompanyInfo = ({
     data: company,
     isLoading: isLoadingCompany,
     refetch: refetchCompany,
-  } = trpc.company.getCompanyWithSector.useQuery({ where: { id: companyId } });
+  } = trpc.company.getCompanyWithSector.useQuery({ id: companyId });
   const { data: companyActions, isLoading: isLoadingCompanyActions } =
     trpc.companyAction.listCompanyActions.useQuery({
       where: { companyId },
@@ -294,6 +294,9 @@ const CompanyInfo = ({
   );
   if (isLoadingCompany || isLoadingCompanyActions) {
     return <div>Loading...</div>;
+  }
+  if (!company) {
+    return <div>No company found</div>;
   }
   return (
     <>

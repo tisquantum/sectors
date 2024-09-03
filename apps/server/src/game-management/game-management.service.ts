@@ -1738,6 +1738,7 @@ export class GameManagementService {
     }
     const playerIds = players.map((player) => player.id);
     const playersIncome = await this.getTurnIncome(playerIds, game.currentTurn);
+    console.log('playersIncome', playersIncome);
     //charge capital gains
     const capitalGainsUpdates = [];
     const playerUpdatePromises = [];
@@ -1798,6 +1799,18 @@ export class GameManagementService {
   }
 
   async getTurnIncome(playerIds: string[], turnId: string) {
+    console.log('getTurnIncome turnId', turnId, playerIds);
+    //get players
+    const players = await this.playersService.players({
+      where: { id: { in: playerIds } },
+    });
+    if (!players) {
+      throw new Error('Players not found');
+    }
+    const entityIds = players
+      .filter((player) => player.entityId !== null)
+      .map((player) => player.entityId) as string[];
+
     //get all transactions from the current turn and only of the selected transaction types.
     const transactions = await this.transactionService.listTransactions({
       where: {
@@ -1805,7 +1818,7 @@ export class GameManagementService {
         toEntity: {
           entityType: EntityType.PLAYER, // Ensure toEntity is of type PLAYER
           id: {
-            in: playerIds,
+            in: entityIds,
           },
         },
         OR: [
@@ -1817,6 +1830,7 @@ export class GameManagementService {
         ],
       },
     });
+    console.log('getTurnIncome transactions', transactions);
     if (!transactions) {
       throw new Error('Transactions not found');
     }

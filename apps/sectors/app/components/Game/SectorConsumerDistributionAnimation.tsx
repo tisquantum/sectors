@@ -28,7 +28,10 @@ const SectorConsumerDistributionAnimation = ({
   const [moneyEarned, setMoneyEarned] = useState(() =>
     sortedCompanies.map(() => 0)
   );
-  const [totalConsumersMoved, setTotalConsumersMoved] = useState<number>(0);
+  const [
+    currentConsumersMovedAcrossAllCompaniesInSector,
+    setCurrentConsumersMovedAcrossAllCompaniesInSector,
+  ] = useState<number>(0);
   const animationInterval = 900;
   const currentCompany = sortedCompanies[currentCompanyIndex];
 
@@ -41,7 +44,7 @@ const SectorConsumerDistributionAnimation = ({
   );
   const maximumConsumersWhoWillVisit = Math.min(companyDemand, companySupply);
 
-  const handleConsumerMove = useCallback(() => {
+  const handleConsumerMove = () => {
     if (
       sectorConsumers > 0 &&
       moneyEarned[currentCompanyIndex] <
@@ -49,25 +52,33 @@ const SectorConsumerDistributionAnimation = ({
     ) {
       setSectorConsumers((prev) => prev - 1);
     } else {
-      setCurrentCompanyIndex((prev) => (prev + 1) % sortedCompanies.length);
+      setCurrentCompanyIndex((prev) => {
+        if (prev + 1 > sortedCompanies.length - 1) {
+          return prev;
+        } else {
+          return prev + 1;
+        }
+      });
     }
-  }, [
-    sectorConsumers,
-    currentCompanyIndex,
-    moneyEarned,
-    maximumConsumersWhoWillVisit,
-    sortedCompanies.length,
-  ]);
+  };
 
   useEffect(() => {
-    const interval = setInterval(handleConsumerMove, animationInterval);
-    return () => clearInterval(interval);
-  }, [handleConsumerMove]);
-
-  useEffect(() => {
-    setTotalConsumersMoved((prev) => prev + maximumConsumersWhoWillVisit);
+    console.log(
+      "maximumConsumersWhoWillVisit",
+      maximumConsumersWhoWillVisit,
+      currentCompany.name,
+      currentCompanyIndex,
+      sectorConsumers
+    );
+    if (currentCompanyIndex === 0) {
+      setSectorConsumers(consumerOveride || sector.consumers);
+      setCurrentConsumersMovedAcrossAllCompaniesInSector(0);
+    }
   }, [currentCompanyIndex]);
 
+  useEffect(() => {
+    handleConsumerMove();
+  }, [moneyEarned]);
   return (
     <motion.div
       className={`flex flex-col items-center space-x-4 rounded-md my-2 bg-[${
@@ -82,19 +93,30 @@ const SectorConsumerDistributionAnimation = ({
             <motion.div
               key={index}
               initial={{ opacity: 1 }}
-              animate={index < totalConsumersMoved ? { y: 50, opacity: 0 } : {}}
+              animate={
+                maximumConsumersWhoWillVisit > 0 &&
+                index <= currentConsumersMovedAcrossAllCompaniesInSector
+                  ? { y: 50, opacity: 0 }
+                  : {}
+              }
               transition={{ duration: 1 }}
               className="relative"
               style={{ width: 30, height: 30 }} // Fixed size
               onAnimationComplete={() => {
-                if (index < totalConsumersMoved) {
-                  setMoneyEarned((prev) => {
-                    const newEarnings = [...prev];
-                    newEarnings[currentCompanyIndex] +=
-                      currentCompany.unitPrice;
-                    return newEarnings;
-                  });
-                }
+                console.log(
+                  "onAnimationComplete",
+                  index,
+                  currentConsumersMovedAcrossAllCompaniesInSector,
+                  currentCompany.name
+                );
+                setMoneyEarned((prev) => {
+                  const newEarnings = [...prev];
+                  newEarnings[currentCompanyIndex] += currentCompany.unitPrice;
+                  return newEarnings;
+                });
+                setCurrentConsumersMovedAcrossAllCompaniesInSector(
+                  (prev) => prev + 1
+                );
               }}
             >
               <RiTeamFill size={30} />

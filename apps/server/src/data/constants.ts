@@ -912,7 +912,7 @@ export const companyActionsDescription: CompanyActionDescription[] = [
     title: 'Veto',
     name: OperatingRoundAction.VETO,
     message:
-      'The company does nothing this turn. Pick this to ensure the company will not act on any other proposal. Additionally, the next turn this companies operating costs are 50% less.',
+      'The company does nothing this turn. The next turn this company\'s operating costs are 50% less.',
     actionType: 'internal',
   },
   //sector specific actions active effects
