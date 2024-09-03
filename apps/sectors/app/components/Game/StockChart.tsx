@@ -379,7 +379,7 @@ const StockChart = () => {
               <>
                 <ModalHeader>
                   <div className="flex flex-col">
-                    <CompanyInfo company={selectedCompany} />
+                    <CompanyInfo companyId={selectedCompany.id} />
                   </div>
                 </ModalHeader>
                 <ModalBody>

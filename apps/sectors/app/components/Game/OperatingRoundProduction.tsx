@@ -3,6 +3,7 @@ import { useGame } from "./GameContext";
 import {
   CompanyTierData,
   PRETIGE_REWARD_OPERATION_COST_PERCENTAGE_REDUCTION,
+  sectorPriority,
   throughputRewardOrPenalty,
   ThroughputRewardType,
 } from "@server/data/constants";
@@ -49,7 +50,7 @@ const OperatingRoundProduction = () => {
   //organize companies by sector
   const companiesOrganizedBySector = companiesWithSector.reduce(
     (acc, company: CompanyWithSector) => {
-      const sectorName = company.Sector.name as SectorName; // Explicitly cast to SectorName
+      const sectorName = company.Sector.sectorName;
       if (!acc[sectorName]) {
         acc[sectorName] = [];
       }
@@ -58,31 +59,44 @@ const OperatingRoundProduction = () => {
     },
     {} as Record<SectorName, CompanyWithSector[]>
   );
-  const sectorNames = Object.keys(companiesOrganizedBySector) as SectorName[];
+  //organize sectors by priority order
+  const sectorNames = Object.keys(companiesOrganizedBySector).sort(
+    (a, b) =>
+      sectorPriority.indexOf(a as SectorName) -
+      sectorPriority.indexOf(b as SectorName)
+  ) as SectorName[];
   return (
     <div className="p-6 rounded-lg shadow-md flex flex-col">
       <h1 className="text-2xl font-bold mb-4">Operating Round Production</h1>
       <div className="flex flex-col gap-1">
-        {sectorNames.map((sectorName: SectorName) => (
-          <SectorConsumerDistributionAnimation
-            key={sectorName}
-            sector={companiesOrganizedBySector[sectorName][0].Sector}
-            companies={companiesOrganizedBySector[sectorName]}
-            consumerOveride={
-              companiesOrganizedBySector[sectorName][0].Sector.consumers +
-              operatingRound.productionResults
-                .filter(
-                  (productionResult) =>
-                    productionResult.Company.sectorId ===
-                    companiesOrganizedBySector[sectorName][0].Sector.id
-                )
-                .reduce(
-                  (acc, productionResult) => acc + productionResult.consumers,
-                  0
-                )
-            }
-          />
-        ))}
+        {sectorNames.map((sectorName: SectorName) => {
+          const consumersMoved = operatingRound.productionResults
+            .filter(
+              (productionResult) =>
+                productionResult.Company.sectorId ===
+                companiesOrganizedBySector[sectorName][0].Sector.id
+            )
+            .reduce(
+              (acc, productionResult) => acc + productionResult.consumers,
+              0
+            );
+          console.log("consumersMoved", sectorName, consumersMoved);
+          const currentSectorConsumers =
+            companiesOrganizedBySector[sectorName][0].Sector.consumers;
+          console.log(
+            "currentSectorConsumers",
+            sectorName,
+            currentSectorConsumers
+          );
+          return (
+            <SectorConsumerDistributionAnimation
+              key={sectorName}
+              sector={companiesOrganizedBySector[sectorName][0].Sector}
+              companies={companiesOrganizedBySector[sectorName]}
+              consumerOveride={currentSectorConsumers + consumersMoved}
+            />
+          );
+        })}
       </div>
       <div className="flex flex-wrap gap-8">
         <div className="bg-slate-800 p-4 rounded-lg shadow-md flex gap-4">
@@ -100,7 +114,7 @@ const OperatingRoundProduction = () => {
             key={productionResult.id}
           >
             <CompanyInfo
-              company={productionResult.Company}
+              companyId={productionResult.Company.id}
               showingProductionResults
             />
             <div className="flex flex-col m-2 rounded-md bg-gray-950 p-2">

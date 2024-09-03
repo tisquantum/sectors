@@ -126,7 +126,7 @@ const OperatingRoundRevenueVoteResolve = () => {
                 className="flex flex-col bg-slate-800 p-4"
                 key={productionResult.id}
               >
-                <CompanyInfo company={productionResult.Company} showBarChart />
+                <CompanyInfo companyId={productionResult.Company.id} showBarChart />
                 <div className="flex flex-col gap-2 rounded-md bg-gray-950 m-2 p-2">
                   <span className="text-lg">Production Results</span>
                   <span>

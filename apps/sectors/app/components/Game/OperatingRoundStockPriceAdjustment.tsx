@@ -54,7 +54,7 @@ const OperatingRoundStockPriceAdjustment = () => {
             className="flex flex-col p-4 bg-slate-800 rounded-lg shadow-md"
             key={company.id}
           >
-            <CompanyInfo company={company} showBarChart isMinimal/>
+            <CompanyInfo companyId={company.id} showBarChart isMinimal/>
             <div className="mt-4">
               <span className="block text-lg font-semibold mb-2">
                 Current Stock Price: ${company.currentStockPrice}

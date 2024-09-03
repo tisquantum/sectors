@@ -89,7 +89,7 @@ const OptionContract = ({
       )}
       <div className="flex-1">
         <div className="text-xl font-bold">
-          <CompanyInfo company={company} isMinimal />
+          <CompanyInfo companyId={company.id} isMinimal />
         </div>
         <div className="border-b border-gray-200 my-2"></div>
         <OptionContractMinimal contract={contract} />
