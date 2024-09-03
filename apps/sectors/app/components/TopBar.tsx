@@ -52,6 +52,9 @@ const TopBar = () => {
           <Link href="/rooms">Rooms</Link>
         </NavbarItem>
         <NavbarItem>
+          <Link href="/leaderboard">Leaderboard</Link>
+        </NavbarItem>
+        <NavbarItem>
           <>
             <Button onPress={onOpen}>Rules</Button>
             <Modal

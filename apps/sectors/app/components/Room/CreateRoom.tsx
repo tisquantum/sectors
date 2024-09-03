@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuthUser } from "../AuthUser.context";
 import Button from "@sectors/app/components/General/DebounceButton";
+import DebounceButton from "@sectors/app/components/General/DebounceButton";
 
 const CreateRoom = () => {
   const router = useRouter();
@@ -11,13 +12,15 @@ const CreateRoom = () => {
   const [roomName, setRoomName] = useState<string | undefined>(undefined);
   const createRoomMutation = trpc.room.createRoom.useMutation();
   const joinRoomMutation = trpc.roomUser.joinRoom.useMutation();
+  const [createRoomIsLoading, setCreateRoomIsLoading] = useState(false);
   const handleCreateRoom = () => {
     if (!roomName) return;
+    setCreateRoomIsLoading(true);
     createRoomMutation.mutate(
       { name: roomName },
       {
         onSuccess: async (data) => {
-          if(user == undefined) return;
+          if (user == undefined) return;
           await joinRoomMutation.mutate({
             roomId: data.id,
             userId: user.id,
@@ -40,9 +43,13 @@ const CreateRoom = () => {
         value={roomName}
         onChange={(e) => setRoomName(e.target.value)}
       />
-      <Button onClick={handleCreateRoom} disabled={!roomName}>
+      <DebounceButton
+        onClick={handleCreateRoom}
+        isLoading={createRoomIsLoading}
+        isDisabled={!roomName || roomName.length == 0}
+      >
         Create Room
-      </Button>
+      </DebounceButton>
     </div>
   );
 };

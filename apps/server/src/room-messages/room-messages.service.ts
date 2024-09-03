@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { RoomMessage, Prisma, User } from '@prisma/client';
+import { ROOM_MESSAGE_MAX_LENGTH } from '@server/data/constants';
 
 @Injectable()
 export class RoomMessageService {
@@ -40,6 +41,9 @@ export class RoomMessageService {
   async createRoomMessage(
     data: Prisma.RoomMessageCreateInput,
   ): Promise<RoomMessage & { user: User }> {
+    if (data.content.length > ROOM_MESSAGE_MAX_LENGTH) {
+      throw new Error('Content too long');
+    }
     return this.prisma.roomMessage.create({
       data,
       include: {

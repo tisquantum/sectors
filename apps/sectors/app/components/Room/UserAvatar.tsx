@@ -27,7 +27,7 @@ const UserAvatar = ({
   badgeContent,
   size = "md",
 }: {
-  user: User;
+  user: { name: string };
   showNameLabel?: boolean;
   badgeContent?: number | string;
   size?: "sm" | "md" | "lg" | undefined;
@@ -50,7 +50,7 @@ const UserAvatar = ({
       seed: user.name,
       backgroundColor: [hashStringToColor(user.name)],
     }).toDataUri();
-  }, []);
+  }, [user.name]);
 
   return (
     <div className="flex flex-col items-center">
