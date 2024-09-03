@@ -77,4 +77,24 @@ export class PlayerResultService {
       },
     });
   }
+
+  async groupPlayerResultsByUserIdAndSumRankingPoints(params: {
+    where?: Prisma.PlayerResultWhereInput;
+    orderBy?: Prisma.PlayerResultSumOrderByAggregateInput;
+  }) {
+    const { where, orderBy } = params;
+    return this.prisma.playerResult.groupBy({
+      by: ['userId'],
+      _sum: {
+        rankingPoints: true,
+      },
+      where,
+      orderBy: {
+        _sum: {
+          rankingPoints: orderBy?.rankingPoints,
+        },
+      },
+      take: 100,
+    });
+  }
 }

@@ -83,6 +83,7 @@ export const FASTTRACK_APPROVAL_AMOUNT_CONSUMERS = 3;
 export const INNOVATION_SURGE_CARD_DRAW_BONUS = 2;
 export const B2B_COMPANY_BONUS = 2;
 export const LICENSING_AGREEMENT_UNIT_PRICE_BONUS = 20;
+export const ROOM_MESSAGE_MAX_LENGTH = 150;
 
 /**
  * Phase times in milliseconds

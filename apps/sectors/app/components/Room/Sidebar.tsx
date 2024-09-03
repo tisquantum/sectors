@@ -131,7 +131,7 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
                 <div>Start Game Submitted</div>
               ) : (
                 <DebounceButton
-                  color="primary"
+                  color="secondary"
                   onClick={() => {
                     setIsLoadingStartGame(true);
                     handleStartGame(

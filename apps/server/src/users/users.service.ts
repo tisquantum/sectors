@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { User, Prisma } from '@prisma/client';
+import { UserRestricted } from '@server/prisma/prisma.types';
 
 @Injectable()
 export class UsersService {
@@ -29,6 +30,27 @@ export class UsersService {
       where,
       orderBy,
     });
+  }
+
+  async listUsersRestricted(params: {
+    skip?: number;
+    take?: number;
+    cursor?: Prisma.UserWhereUniqueInput;
+    where?: Prisma.UserWhereInput;
+    orderBy?: Prisma.UserOrderByWithRelationInput;
+  }): Promise<UserRestricted[]> {
+    const { skip, take, cursor, where, orderBy } = params;
+    const users = await this.prisma.user.findMany({
+      skip,
+      take,
+      cursor,
+      where,
+      orderBy,
+    });
+    return users.map((user) => ({
+      id: user.id,
+      name: user.name,
+    }));
   }
 
   async createUser(data: Prisma.UserCreateInput): Promise<User> {

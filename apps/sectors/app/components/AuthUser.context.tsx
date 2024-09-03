@@ -11,23 +11,30 @@ interface AuthUserContextProps {
   user: User | null;
   loading: boolean;
   fetchUser: () => Promise<void>;
+  refetchUser: () => void;
 }
 const supabase = createClient();
 const AuthUserContext = createContext<AuthUserContextProps>({
-    supabaseUser: null,
-    user: null,
-    loading: true,
-    fetchUser: async () => {},
+  supabaseUser: null,
+  user: null,
+  loading: true,
+  fetchUser: async () => {},
+  refetchUser: async () => {},
 });
 
 export const AuthUserProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
-  const { data: user, isLoading: userLoading } = trpc.user.getUser.useQuery(
-    { id: supabaseUser?.id ?? '' },
+  const {
+    data: user,
+    isLoading: userLoading,
+    refetch: refetchUser,
+  } = trpc.user.getUser.useQuery(
+    { id: supabaseUser?.id ?? "" },
     { enabled: !!supabaseUser }
   );
+  console.log("user", user);
   const loading = userLoading;
   const fetchUser = async () => {
     const {
@@ -40,7 +47,7 @@ export const AuthUserProvider: React.FC<{ children: React.ReactNode }> = ({
       setSupabaseUser(user);
     }
   };
-  
+
   useEffect(() => {
     // Initial fetch
     fetchUser();
@@ -59,10 +66,18 @@ export const AuthUserProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   return (
-    <AuthUserContext.Provider value={{ supabaseUser, user: user ?? null, loading, fetchUser }}>
+    <AuthUserContext.Provider
+      value={{
+        supabaseUser,
+        user: user ?? null,
+        loading,
+        fetchUser,
+        refetchUser,
+      }}
+    >
       {children}
     </AuthUserContext.Provider>
   );
 };
 
-export const useAuthUser = () =>  useContext(AuthUserContext);
+export const useAuthUser = () => useContext(AuthUserContext);

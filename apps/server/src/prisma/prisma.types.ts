@@ -305,3 +305,8 @@ export type PrizeVoteWithRelations = PrizeVote & {
   GameTurn: GameTurn;
   Prize: Prize;
 };
+
+export type UserRestricted = {
+  id: string;
+  name: string;
+};
