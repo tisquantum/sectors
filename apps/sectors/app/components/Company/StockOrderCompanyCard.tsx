@@ -179,7 +179,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
       >
         <CardHeader className="bg-gray-950">
           <div className="flex flex-col w-full">
-            <CompanyInfo company={company} showBarChart />
+            <CompanyInfo companyId={company.id} showBarChart />
           </div>
         </CardHeader>
         <CardBody>

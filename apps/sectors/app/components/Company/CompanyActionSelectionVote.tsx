@@ -217,7 +217,7 @@ const CompanyActionSelectionVote = ({
         )}
       </div>
       <div className="flex gap-2 items-center">
-        <CompanyInfo company={company} />
+        <CompanyInfo companyId={company.id} />
         <div className="max-w-80">
           <ShareHolders companyId={company.id} />
         </div>

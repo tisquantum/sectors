@@ -167,7 +167,7 @@ const OperatingRoundRevenueVote = () => {
             >
               <div className="flex flex-col">
                 <div className="flex flex-col items-center gap-2">
-                  <CompanyInfo company={productionResult.Company} />
+                  <CompanyInfo companyId={productionResult.Company.id} />
                   <ShareHolders companyId={productionResult.Company.id} />
                 </div>
                 <div className="flex flex-col gap-2 rounded-md bg-gray-950 m-2 p-2">

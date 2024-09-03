@@ -49,6 +49,8 @@ import { trpc } from "@sectors/app/trpc";
 import CompanyTiers from "./CompanyTiers";
 import { MoneyTransactionHistoryByCompany } from "../Game/MoneyTransactionHistory";
 import PassiveEffect from "./PassiveEffect";
+import { useGame } from "../Game/GameContext";
+import { useEffect } from "react";
 
 const buildBarChart = (share: Share[]) => {
   //group shares by location and sum the quantity
@@ -263,24 +265,36 @@ const CompanyMoreInfo = ({
 };
 
 const CompanyInfo = ({
-  company,
+  companyId,
   showBarChart,
   showingProductionResults,
   isMinimal,
 }: {
-  company: CompanyWithSector;
+  companyId: string;
   showBarChart?: boolean;
   showingProductionResults?: boolean;
   isMinimal?: boolean;
 }) => {
+  const { currentPhase } = useGame();
+  const {
+    data: company,
+    isLoading: isLoadingCompany,
+    refetch: refetchCompany,
+  } = trpc.company.getCompanyWithSector.useQuery({ where: { id: companyId } });
   const { data: companyActions, isLoading: isLoadingCompanyActions } =
     trpc.companyAction.listCompanyActions.useQuery({
-      where: { companyId: company.id },
+      where: { companyId },
     });
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
+  useEffect(() => {
+    refetchCompany();
+  }, [currentPhase?.id]);
   const companyHasPassiveAction = companyActions?.some(
     (action) => action.isPassive
   );
+  if (isLoadingCompany || isLoadingCompanyActions) {
+    return <div>Loading...</div>;
+  }
   return (
     <>
       <div className="flex flex-row gap-1 items-center h-full">

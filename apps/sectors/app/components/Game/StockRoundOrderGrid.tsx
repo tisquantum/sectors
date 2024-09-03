@@ -288,7 +288,7 @@ const StockRoundOrderGrid = ({
                   <Tab key="drawer-company-info" title="Company Info">
                     <div className="h-96">
                       <CompanyInfo
-                        company={selectedCompanyOrder.company}
+                        companyId={selectedCompanyOrder.company.id}
                         showBarChart
                       />
                     </div>

@@ -183,7 +183,7 @@ const CompanyVoteResolve = () => {
 
   return (
     <div>
-      <CompanyInfo company={company} showBarChart />
+      <CompanyInfo companyId={company.id} showBarChart />
       <div className="border-b-2 border-gray-200 my-4"></div>
       {companyActions.map((companyAction) => (
         <div key={companyAction.id} className="mb-4">

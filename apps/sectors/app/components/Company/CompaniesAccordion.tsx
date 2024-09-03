@@ -164,7 +164,7 @@ const CompaniesAccordion = ({
             }
             title={
               <div className="flex flex-col gap-2">
-                <CompanyInfo company={company} />
+                <CompanyInfo companyId={company.id} />
               </div>
             }
             isCompact

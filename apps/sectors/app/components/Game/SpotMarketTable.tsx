@@ -94,7 +94,7 @@ const SpotMarketTable = ({
                   }`}
                 >
                   <CompanyInfoTable
-                    company={company}
+                    companyId={company.id}
                     ordersConcealed={ordersConcealed?.filter(
                       (order) => order.companyId === company.id
                     )}

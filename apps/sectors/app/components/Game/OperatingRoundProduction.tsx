@@ -100,7 +100,7 @@ const OperatingRoundProduction = () => {
             key={productionResult.id}
           >
             <CompanyInfo
-              company={productionResult.Company}
+              companyId={productionResult.Company.id}
               showingProductionResults
             />
             <div className="flex flex-col m-2 rounded-md bg-gray-950 p-2">
