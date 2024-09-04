@@ -34,7 +34,6 @@ export const AuthUserProvider: React.FC<{ children: React.ReactNode }> = ({
     { id: supabaseUser?.id ?? "" },
     { enabled: !!supabaseUser }
   );
-  console.log("user", user);
   const loading = userLoading;
   const fetchUser = async () => {
     const {

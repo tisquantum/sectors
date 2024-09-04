@@ -3,6 +3,7 @@ import {
   RiBox2Fill,
   RiHandCoinFill,
   RiMoneyDollarBoxFill,
+  RiPriceTag3Fill,
   RiTeamFill,
 } from "@remixicon/react";
 import { getCompanyOperatingRoundTurnOrder } from "@server/data/constants";
@@ -20,7 +21,25 @@ const SectorConsumerDistributionAnimation = ({
   companies: Company[];
   consumerOveride?: number;
 }) => {
+  const totalConsumersWhoWillMoveAcrossAllCompaniesInSector = companies.reduce(
+    (acc, company) => {
+      const companyDemand =
+        calculateDemand(company.demandScore, company.baseDemand) || 0;
+      const companySupply = calculateCompanySupply(
+        company.supplyMax,
+        company.supplyBase,
+        company.supplyCurrent
+      );
+      const maximumConsumersWhoWillVisit = Math.min(
+        companyDemand,
+        companySupply
+      );
+      return acc + maximumConsumersWhoWillVisit;
+    },
+    0
+  );
   const sortedCompanies = getCompanyOperatingRoundTurnOrder(companies);
+  const sectorConsumersStatic = consumerOveride || sector.consumers;
   const [sectorConsumers, setSectorConsumers] = useState(
     consumerOveride || sector.consumers
   );
@@ -32,7 +51,8 @@ const SectorConsumerDistributionAnimation = ({
     currentConsumersMovedAcrossAllCompaniesInSector,
     setCurrentConsumersMovedAcrossAllCompaniesInSector,
   ] = useState<number>(0);
-  const animationInterval = 900;
+  const [calculatedCompanySupply, setCalculatedCompanySupply] = useState(0);
+  const [calculatedCompanyDemand, setCalculatedCompanyDemand] = useState(0);
   const currentCompany = sortedCompanies[currentCompanyIndex];
 
   const companyDemand =
@@ -43,7 +63,10 @@ const SectorConsumerDistributionAnimation = ({
     currentCompany.supplyCurrent
   );
   const maximumConsumersWhoWillVisit = Math.min(companyDemand, companySupply);
-
+  useEffect(() => {
+    setCalculatedCompanySupply(companySupply);
+    setCalculatedCompanyDemand(companyDemand);
+  }, [companySupply, companyDemand]);
   const handleConsumerMove = () => {
     if (
       sectorConsumers > 0 &&
@@ -63,13 +86,6 @@ const SectorConsumerDistributionAnimation = ({
   };
 
   useEffect(() => {
-    console.log(
-      "maximumConsumersWhoWillVisit",
-      maximumConsumersWhoWillVisit,
-      currentCompany.name,
-      currentCompanyIndex,
-      sectorConsumers
-    );
     if (currentCompanyIndex === 0) {
       setSectorConsumers(consumerOveride || sector.consumers);
       setCurrentConsumersMovedAcrossAllCompaniesInSector(0);
@@ -77,10 +93,48 @@ const SectorConsumerDistributionAnimation = ({
   }, [currentCompanyIndex]);
 
   useEffect(() => {
+    if (
+      moneyEarned[currentCompanyIndex] <
+        maximumConsumersWhoWillVisit * currentCompany.unitPrice &&
+      currentConsumersMovedAcrossAllCompaniesInSector > 0
+    ) {
+      setCalculatedCompanyDemand((prev) => prev - 1);
+      setCalculatedCompanySupply((prev) => prev - 1);
+      setMoneyEarned((prev) => {
+        const newEarnings = [...prev];
+        newEarnings[currentCompanyIndex] += currentCompany.unitPrice;
+        return newEarnings;
+      });
+    }
+  }, [currentConsumersMovedAcrossAllCompaniesInSector]);
+  useEffect(() => {
     handleConsumerMove();
   }, [moneyEarned]);
+
+  const list = {
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        staggerChildren: 1,
+      },
+    },
+    hidden: {
+      y: 50,
+      opacity: 0,
+    },
+  };
+
+  // Define the child variants
+  const item = {
+    visible: { y: 0, opacity: 1 },
+    hidden: {
+      y: 50,
+      opacity: 0,
+    },
+  };
   return (
-    <motion.div
+    <div
       className={`flex flex-col items-center space-x-4 rounded-md my-2 bg-[${
         sectorColors[sector.name]
       }]`}
@@ -88,41 +142,30 @@ const SectorConsumerDistributionAnimation = ({
       {/* Sector and Consumers */}
       <div className={`flex flex-col items-center`}>
         <span>{sector.name}</span>
-        <div className="flex space-x-2">
-          {Array.from({ length: sectorConsumers }).map((_, index) => (
-            <motion.div
+        <ul className="flex space-x-2">
+          {Array.from({ length: sectorConsumersStatic }).map((_, index) => (
+            <motion.li
               key={index}
-              initial={{ opacity: 1 }}
+              initial={{ opacity: 1, y: 0 }}
               animate={
-                maximumConsumersWhoWillVisit > 0 &&
-                index <= currentConsumersMovedAcrossAllCompaniesInSector
-                  ? { y: 50, opacity: 0 }
-                  : {}
+                index < totalConsumersWhoWillMoveAcrossAllCompaniesInSector && {
+                  opacity: 0,
+                  y: 30,
+                }
               }
-              transition={{ duration: 1 }}
+              transition={{ duration: 1, delay: (index + 1) * 1 }}
               className="relative"
               style={{ width: 30, height: 30 }} // Fixed size
               onAnimationComplete={() => {
-                console.log(
-                  "onAnimationComplete",
-                  index,
-                  currentConsumersMovedAcrossAllCompaniesInSector,
-                  currentCompany.name
-                );
-                setMoneyEarned((prev) => {
-                  const newEarnings = [...prev];
-                  newEarnings[currentCompanyIndex] += currentCompany.unitPrice;
-                  return newEarnings;
-                });
                 setCurrentConsumersMovedAcrossAllCompaniesInSector(
                   (prev) => prev + 1
                 );
               }}
             >
               <RiTeamFill size={30} />
-            </motion.div>
+            </motion.li>
           ))}
-        </div>
+        </ul>
       </div>
 
       {/* Company Information */}
@@ -132,33 +175,61 @@ const SectorConsumerDistributionAnimation = ({
           initial={{ opacity: 0, x: -100 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: 100 }}
-          transition={{ duration: 1 }}
-          className="flex flex-col"
+          transition={{
+            duration: 1,
+            delay: 1 * (maximumConsumersWhoWillVisit - 1),
+          }}
+          className="flex flex-col bg-slate-500 rounded-md p-2 m-1"
           style={{ width: 200, minHeight: 100 }} // Fixed width/height
         >
           <span>{currentCompany.name}</span>
-          <div className="flex gap-1">
+          <div className="flex gap-1 items-center">
+            <span className="flex items-center">
+              <RiPriceTag3Fill size={20} /> ${currentCompany.unitPrice}
+            </span>
+          </div>
+          <div className="flex gap-1 items-center">
             <RiHandCoinFill size={18} className="ml-2" />
-            <span>{companyDemand}</span>
+            <span
+              className={
+                calculatedCompanyDemand != companyDemand
+                  ? calculatedCompanyDemand == 0
+                    ? "text-red-500"
+                    : "text-yellow-500"
+                  : ""
+              }
+            >
+              {calculatedCompanyDemand}
+            </span>
           </div>
-          <div className="flex gap-1">
+          <div className="flex gap-1 items-center">
             <RiBox2Fill size={18} className="ml-2" />
-            <span>{companySupply}</span>
+            <span
+              className={
+                calculatedCompanySupply != companySupply
+                  ? calculatedCompanySupply == 0
+                    ? "text-red-500"
+                    : "text-yellow-500"
+                  : ""
+              }
+            >
+              {calculatedCompanySupply}
+            </span>
           </div>
-          <div className="flex gap-1">
+          <div className="flex gap-2 items-center">
             <RiMoneyDollarBoxFill size={30} />
             <motion.span
               key={moneyEarned[currentCompanyIndex]}
               initial={{ scale: 1 }}
               animate={{ scale: 1.5 }}
-              transition={{ duration: 0.5 }}
+              transition={{ duration: 1, delay: 1 }}
             >
               {moneyEarned[currentCompanyIndex]}
             </motion.span>
           </div>
         </motion.div>
       </AnimatePresence>
-    </motion.div>
+    </div>
   );
 };
 
