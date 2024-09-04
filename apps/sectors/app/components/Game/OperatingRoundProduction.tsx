@@ -80,14 +80,8 @@ const OperatingRoundProduction = () => {
               (acc, productionResult) => acc + productionResult.consumers,
               0
             );
-          console.log("consumersMoved", sectorName, consumersMoved);
           const currentSectorConsumers =
             companiesOrganizedBySector[sectorName][0].Sector.consumers;
-          console.log(
-            "currentSectorConsumers",
-            sectorName,
-            currentSectorConsumers
-          );
           return (
             <SectorConsumerDistributionAnimation
               key={sectorName}
@@ -98,8 +92,8 @@ const OperatingRoundProduction = () => {
           );
         })}
       </div>
-      <div className="flex flex-wrap gap-8">
-        <div className="bg-slate-800 p-4 rounded-lg shadow-md flex gap-4">
+      <div className="flex flex-col gap-2">
+        <div className="bg-slate-800 p-4 rounded-lg shadow-md flex flex-col gap-4 overflow-auto scrollbar">
           <div>
             <h2 className="text-lg font-semibold mb-2">Operations Priority</h2>
             <CompanyPriorityList companies={companiesWithSector} />
@@ -108,54 +102,56 @@ const OperatingRoundProduction = () => {
             <ThroughputLegend />
           </div>
         </div>
-        {operatingRound.productionResults.map((productionResult) => (
-          <div
-            className="flex flex-col bg-slate-800 text-white p-4 rounded-lg shadow-md"
-            key={productionResult.id}
-          >
-            <CompanyInfo
-              companyId={productionResult.Company.id}
-              showingProductionResults
-            />
-            <div className="flex flex-col m-2 rounded-md bg-gray-950 p-2">
-              <span className="text-lg">Production Results</span>
-              <span className="flex gap-1 items-center">
-                <RiIncreaseDecreaseFill size={18} />{" "}
-                {productionResult.throughputResult}
-              </span>
-              {throughputRewardOrPenalty(productionResult.throughputResult)
-                .type === ThroughputRewardType.SECTOR_REWARD ? (
-                <span>
-                  %{PRETIGE_REWARD_OPERATION_COST_PERCENTAGE_REDUCTION}{" "}
-                  Operation Cost Reduction
+        <div className="flex flex-wrap gap-4">
+          {operatingRound.productionResults.map((productionResult) => (
+            <div
+              className="flex flex-col bg-slate-800 text-white p-4 rounded-lg shadow-md"
+              key={productionResult.id}
+            >
+              <CompanyInfo
+                companyId={productionResult.Company.id}
+                showingProductionResults
+              />
+              <div className="flex flex-col m-2 rounded-md bg-gray-950 p-2">
+                <span className="text-lg">Production Results</span>
+                <span className="flex gap-1 items-center">
+                  <RiIncreaseDecreaseFill size={18} />{" "}
+                  {productionResult.throughputResult}
                 </span>
-              ) : (
-                <span className="flex gap-1">
-                  <RiFundsFill />
-                  {productionResult.steps == 0
-                    ? "0"
-                    : `-${productionResult.steps}`}
-                </span>
-              )}
-              <Tooltip
-                classNames={{ base: baseToolTipStyle }}
-                className={tooltipStyle}
-                content={
-                  <p>
-                    Revenue is calculated by multiplying the unit price times
-                    units sold. The units sold is whatever is less, the company
-                    demand or the company supply. The maximum amount of
-                    customers who will visit a company before moving to the next
-                    company in priority order is equal to the company demand
-                    score.
-                  </p>
-                }
-              >
-                <span>Revenue: ${productionResult.revenue}</span>
-              </Tooltip>
+                {throughputRewardOrPenalty(productionResult.throughputResult)
+                  .type === ThroughputRewardType.SECTOR_REWARD ? (
+                  <span>
+                    %{PRETIGE_REWARD_OPERATION_COST_PERCENTAGE_REDUCTION}{" "}
+                    Operation Cost Reduction
+                  </span>
+                ) : (
+                  <span className="flex gap-1">
+                    <RiFundsFill />
+                    {productionResult.steps == 0
+                      ? "0"
+                      : `-${productionResult.steps}`}
+                  </span>
+                )}
+                <Tooltip
+                  classNames={{ base: baseToolTipStyle }}
+                  className={tooltipStyle}
+                  content={
+                    <p>
+                      Revenue is calculated by multiplying the unit price times
+                      units sold. The units sold is whatever is less, the
+                      company demand or the company supply. The maximum amount
+                      of customers who will visit a company before moving to the
+                      next company in priority order is equal to the company
+                      demand score.
+                    </p>
+                  }
+                >
+                  <span>Revenue: ${productionResult.revenue}</span>
+                </Tooltip>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );
