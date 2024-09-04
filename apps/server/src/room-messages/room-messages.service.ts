@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
-import { RoomMessage, Prisma, User } from '@prisma/client';
+import { RoomMessage, Prisma, User, RoomUser } from '@prisma/client';
 import { ROOM_MESSAGE_MAX_LENGTH } from '@server/data/constants';
+import {
+  RoomUserWithRelations,
+  RoomUserWithUserAndPlayer,
+} from '@server/prisma/prisma.types';
 
 @Injectable()
 export class RoomMessageService {
@@ -9,11 +13,16 @@ export class RoomMessageService {
 
   async roomMessage(
     roomMessageWhereUniqueInput: Prisma.RoomMessageWhereUniqueInput,
-  ): Promise<(RoomMessage & { user: User }) | null> {
+  ): Promise<(RoomMessage & { roomUser: RoomUserWithUserAndPlayer }) | null> {
     return this.prisma.roomMessage.findUnique({
       where: roomMessageWhereUniqueInput,
       include: {
-        user: true,
+        roomUser: {
+          include: {
+            user: true,
+            player: true,
+          },
+        },
       },
     });
   }
@@ -24,7 +33,7 @@ export class RoomMessageService {
     cursor?: Prisma.RoomMessageWhereUniqueInput;
     where?: Prisma.RoomMessageWhereInput;
     orderBy?: Prisma.RoomMessageOrderByWithRelationInput;
-  }): Promise<(RoomMessage & { user: User })[]> {
+  }): Promise<(RoomMessage & { roomUser: RoomUserWithUserAndPlayer })[]> {
     const { skip, take, cursor, where, orderBy } = params;
     return this.prisma.roomMessage.findMany({
       skip,
@@ -33,21 +42,31 @@ export class RoomMessageService {
       where,
       orderBy,
       include: {
-        user: true,
+        roomUser: {
+          include: {
+            user: true,
+            player: true,
+          },
+        },
       },
     });
   }
 
   async createRoomMessage(
     data: Prisma.RoomMessageCreateInput,
-  ): Promise<RoomMessage & { user: User }> {
+  ): Promise<RoomMessage & { roomUser: RoomUserWithUserAndPlayer }> {
     if (data.content.length > ROOM_MESSAGE_MAX_LENGTH) {
       throw new Error('Content too long');
     }
     return this.prisma.roomMessage.create({
       data,
       include: {
-        user: true,
+        roomUser: {
+          include: {
+            user: true,
+            player: true,
+          },
+        },
       },
     });
   }

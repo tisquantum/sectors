@@ -41,10 +41,22 @@ import {
   User,
 } from '@prisma/client';
 
-export type RoomMessageWithUser = RoomMessage & { user: User };
+export type RoomMessageWithRoomUser = RoomMessage & {
+  roomUser: RoomUserWithUserAndPlayer;
+};
 
 export type RoomUserWithUser = RoomUser & {
   user: User;
+};
+export type RoomUserWithUserAndPlayer = RoomUser & {
+  user: User;
+  player: Player | null;
+};
+
+export type RoomUserWithRelations = RoomUser & {
+  user: User;
+  player: Player | null;
+  RoomMessage: RoomMessage[];
 };
 
 export type RoomWithUsers = Room & { users: { user: User }[] };

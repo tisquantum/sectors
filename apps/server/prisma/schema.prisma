@@ -17,7 +17,6 @@ model User {
   id            String         @id @default(uuid())
   authUserId    String         @unique @default(uuid())
   name          String         @default("anon")
-  RoomMessage   RoomMessage[]
   RoomUser      RoomUser[]
   player        Player[]
   createdAt     DateTime       @default(now())
@@ -44,8 +43,8 @@ model RoomMessage {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  room Room @relation(fields: [roomId], references: [id])
-  user User @relation(fields: [userId], references: [id])
+  room     Room     @relation(fields: [roomId], references: [id])
+  roomUser RoomUser @relation(fields: [userId, roomId], references: [userId, roomId])
 
   @@index([roomId])
   @@index([userId])
@@ -55,9 +54,12 @@ model RoomUser {
   userId   String
   roomId   Int
   roomHost Boolean?
+  playerId String?  @unique
 
-  user User @relation(fields: [userId], references: [id])
-  room Room @relation(fields: [roomId], references: [id])
+  user        User          @relation(fields: [userId], references: [id])
+  room        Room          @relation(fields: [roomId], references: [id])
+  player      Player?       @relation(fields: [playerId], references: [id])
+  RoomMessage RoomMessage[]
 
   @@id([userId, roomId])
 }
@@ -94,6 +96,7 @@ model Player {
   Prizes                   Prize[]
   PrizeVotes               PrizeVote[]
   PrizeDistributions       PrizeDistribution[]
+  RoomUser                 RoomUser?
 }
 
 enum AccountStatus {

@@ -12,7 +12,7 @@ import {
   getRoomChannelId,
 } from "@server/pusher/pusher.types";
 import {
-  RoomMessageWithUser,
+  RoomMessageWithRoomUser,
   RoomUserWithUser,
   RoomWithUsersAndGames,
 } from "@server/prisma/prisma.types";
@@ -66,11 +66,11 @@ const RoomComponent = ({ room }: { room: RoomWithUsersAndGames }) => {
       );
     });
 
-    channel.bind(EVENT_ROOM_MESSAGE, (data: RoomMessageWithUser) => {
+    channel.bind(EVENT_ROOM_MESSAGE, (data: RoomMessageWithRoomUser) => {
       // Ensure timestamp remains a string in the cache
       utils.roomMessage.listRoomMessages.setData(
         { where: { roomId: id } },
-        (oldData: RoomMessageWithUser[] | undefined) => [
+        (oldData: RoomMessageWithRoomUser[] | undefined) => [
           ...(oldData || []),
           { ...data, timestamp: new Date(data.timestamp).toISOString() }, // Keep as string
         ]

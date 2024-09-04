@@ -2,10 +2,10 @@
 
 import React, { useEffect, useRef } from "react";
 import MessageComponent from "./Message";
-import { RoomMessageWithUser } from "@server/prisma/prisma.types";
+import { RoomMessageWithRoomUser } from "@server/prisma/prisma.types";
 
 interface MessagePaneProps {
-  messages: RoomMessageWithUser[];
+  messages: RoomMessageWithRoomUser[];
 }
 
 const MessagePane: React.FC<MessagePaneProps> = ({ messages }) => {
