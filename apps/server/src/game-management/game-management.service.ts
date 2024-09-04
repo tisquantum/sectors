@@ -193,6 +193,7 @@ import { time } from 'console';
 import { PrizeService } from '@server/prize/prize.service';
 import { PrizeVotesService } from '@server/prize-votes/prize-votes.service';
 import { PrizeDistributionService } from '@server/prize-distribution/prize-distribution.service';
+import { RoomUserService } from '@server/room-user/room-user.service';
 
 type GroupedByPhase = {
   [key: string]: {
@@ -246,6 +247,7 @@ export class GameManagementService {
     private prizeService: PrizeService,
     private prizeVoteService: PrizeVotesService,
     private prizeDistributionService: PrizeDistributionService,
+    private roomUserService: RoomUserService,
   ) {}
 
   /**
@@ -1237,6 +1239,9 @@ export class GameManagementService {
     stepBonus: number;
     contractState: ContractState;
   } {
+    if (!randomCompany.currentStockPrice) {
+      throw new Error('Company does not have a current stock price');
+    }
     const minTermLength = OPTION_CONTRACT_MIN_TERM;
     const maxTermLength = OPTION_CONTRACT_MAX_TERM;
     //pick a term length between min and max
@@ -1284,6 +1289,10 @@ export class GameManagementService {
       },
     });
 
+    if (!companies) {
+      console.log('No active companies, no options were generated.');
+      return;
+    }
     // Fetch existing option contracts in play
     const optionContracts =
       await this.optionContractService.listOptionContracts({
@@ -4566,6 +4575,25 @@ export class GameManagementService {
         game.id,
         roomId,
         startingCashOnHand,
+      );
+
+      //add player ids to roomuser
+      await Promise.all(
+        players.map((player) =>
+          this.roomUserService.updateRoomUser({
+            where: {
+              userId_roomId: {
+                userId: player.userId,
+                roomId: roomId,
+              },
+            },
+            data: {
+              player: {
+                connect: { id: player.id },
+              },
+            },
+          }),
+        ),
       );
 
       //calculate dynamic cert limit for game

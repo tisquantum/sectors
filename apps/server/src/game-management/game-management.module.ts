@@ -34,6 +34,7 @@ import { InsolvencyContributionModule } from '@server/insolvency-contribution/in
 import { PrizeModule } from '@server/prize/prize.module';
 import { PrizeVotesModule } from '@server/prize-votes/prize-votes.module';
 import { PrizeDistributionModule } from '@server/prize-distribution/prize-distribution.module';
+import { RoomUserModule } from '@server/room-user/room-user.module';
 
 @Module({
   imports: [
@@ -71,6 +72,7 @@ import { PrizeDistributionModule } from '@server/prize-distribution/prize-distri
     PrizeModule,
     PrizeVotesModule,
     PrizeDistributionModule,
+    RoomUserModule,
   ],
   providers: [GameManagementService],
   exports: [GameManagementService],

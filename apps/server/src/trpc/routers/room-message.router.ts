@@ -7,7 +7,7 @@ import {
   EVENT_ROOM_MESSAGE,
   getRoomChannelId,
 } from '@server/pusher/pusher.types';
-import { RoomMessageWithUser } from '@server/prisma/prisma.types';
+import { RoomMessageWithRoomUser } from '@server/prisma/prisma.types';
 import { checkIsUserAction } from '../trpc.middleware';
 import { ROOM_MESSAGE_MAX_LENGTH } from '@server/data/constants';
 
@@ -81,8 +81,13 @@ export default (trpc: TrpcService, ctx: Context) =>
             room: {
               connect: { id: roomId },
             },
-            user: {
-              connect: { id: userId },
+            roomUser: {
+              connect: {
+                userId_roomId: {
+                  userId: userId,
+                  roomId: roomId,
+                },
+              },
             },
           });
 

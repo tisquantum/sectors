@@ -10,7 +10,7 @@ import {
   getRoomChannelId,
 } from "@server/pusher/pusher.types";
 import {
-  RoomMessageWithUser,
+  RoomMessageWithRoomUser,
   RoomUserWithUser,
 } from "@server/prisma/prisma.types";
 import { trpc } from "@sectors/app/trpc";
@@ -61,10 +61,10 @@ const GameChat = ({
       );
     };
 
-    const handleRoomMessage = (data: RoomMessageWithUser) => {
+    const handleRoomMessage = (data: RoomMessageWithRoomUser) => {
       utils.roomMessage.listRoomMessages.setData(
         { where: { roomId } },
-        (oldData: RoomMessageWithUser[] | undefined) => [
+        (oldData: RoomMessageWithRoomUser[] | undefined) => [
           ...(oldData || []),
           { ...data, timestamp: new Date(data.timestamp).toISOString() },
         ]
