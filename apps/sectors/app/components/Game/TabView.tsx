@@ -6,13 +6,30 @@ import SectorComponent from "../Sector/Sector";
 import GameLog from "./GameLog";
 import GameChat from "../GameChat/GameChat";
 import { useGame } from "./GameContext";
+import { Key, useState } from "react";
 
-const TabView = () => {
+const TabView = ({
+  isVertical,
+  setIsVertical,
+}: {
+  isVertical: boolean;
+  setIsVertical: (isVertical: boolean) => void;
+}) => {
   const { gameState, gameId } = useGame();
+  const [selectedTab, setSelectedTab] = useState("chat");
   if (!gameState.roomId || !gameState.name) return null;
   const tabStyle = "flex flex-col overflow-hidden";
+  const handleTabChange = (key: Key) => {
+    setSelectedTab(key as string);
+    setIsVertical(key === "close");
+  };
   return (
-    <Tabs aria-label="Options">
+    <Tabs
+      aria-label="Options"
+      selectedKey={selectedTab}
+      onSelectionChange={handleTabChange}
+      isVertical={isVertical}
+    >
       <Tab key="chat" title="Chat" className={tabStyle}>
         <GameChat roomId={gameState.roomId} gameName={gameState.name} />
       </Tab>
