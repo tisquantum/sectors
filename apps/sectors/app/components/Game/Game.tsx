@@ -248,7 +248,7 @@ const Game = ({ gameId }: { gameId: string }) => {
           <TabView gameId={gameId} />
         </motion.div>
       </motion.div> */}
-          <div className="flex flex-col relative w-full lg:w-3/4">
+          <div className="flex flex-col relative w-full">
             {gameState.gameStatus == GameStatus.FINISHED && (
               <Button
                 color="primary"

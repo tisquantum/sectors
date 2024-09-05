@@ -4,6 +4,7 @@ import { useGame } from "./GameContext";
 import PlayerAvatar from "../Player/PlayerAvatar";
 import DebounceButton from "../General/DebounceButton";
 import { useState } from "react";
+import { toast } from "sonner";
 
 const CoverShortButton = ({ shortOrderId }: { shortOrderId: number }) => {
   const { gameId } = useGame();
@@ -13,6 +14,9 @@ const CoverShortButton = ({ shortOrderId }: { shortOrderId: number }) => {
     onSettled: () => {
       setIsLoadingCoverShort(false);
     },
+    onError: (error) => {
+      toast.error(`Error covering short order.`);
+    }
   });
   return (
     <>

@@ -8,6 +8,7 @@ import TopBar from "./components/TopBar";
 import { trpc, trpcClient } from "./trpc";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
+import { Toaster } from "sonner";
 
 const ClientLayout = ({ children }: { children: React.ReactNode }) => {
   const [queryClient] = useState(() => new QueryClient());
@@ -21,6 +22,7 @@ const ClientLayout = ({ children }: { children: React.ReactNode }) => {
               <PusherProvider>
                 <div className="flex flex-col h-screen text-foreground bg-background">
                   <TopBar />
+                  <Toaster />
                   {children}
                 </div>
               </PusherProvider>

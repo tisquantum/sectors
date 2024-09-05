@@ -32,6 +32,7 @@ const GameSidebar = () => {
   });
   const [isLoadingPlayerReadiness, setIsLoadingPlayerReadiness] =
     useState(false);
+  const [isVertical, setIsVertical] = useState(false);
   const useSetPlayerReadinessMutation =
     trpc.game.setPlayerReadiness.useMutation({
       onSettled: () => {
@@ -60,18 +61,22 @@ const GameSidebar = () => {
     return <div>Loading...</div>;
   }
   return (
-    <div className="w-full lg:w-1/4 bg-background text-white flex flex-col">
+    <div className="w-auto max-w-xs lg:max-w-md bg-background text-white flex flex-col">
       <div className="text-white p-4">
         <h1 className="text-xl font-bold">{gameState.name}</h1>
       </div>
       <div className="flex flex-col gap-1 p-2">
         {(playerPriorities?.length || 0) > 0 ? (
           <div className="flex flex-col gap-1">
-            <div className="flex gap-2 p-2">
+            <div
+              className={`flex ${
+                isVertical ? "flex-col" : "flex-row"
+              } gap-2 p-2`}
+            >
               {playerPriorities?.map((playerPriority) => (
                 <div key={playerPriority.player.id}>
                   <div
-                    className={`rounded-full p-1
+                    className={`rounded-full p-1 w-12 h-12
                     ${
                       playerReadiness &&
                       playerReadiness.find(
@@ -136,7 +141,7 @@ const GameSidebar = () => {
           </div>
         )}
       </div>
-      <TabView />
+      <TabView isVertical={isVertical} setIsVertical={setIsVertical} />
     </div>
   );
 };

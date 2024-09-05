@@ -272,8 +272,8 @@ export default (trpc: TrpcService, ctx: Context) =>
         } catch (error) {
           console.error(error);
           throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: 'An error occurred while creating the player order',
+            code: 'BAD_REQUEST',
+            message: `An error occurred while creating the player order: ${error}`,
           });
         }
         return playerOrder;

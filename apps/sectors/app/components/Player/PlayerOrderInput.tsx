@@ -42,6 +42,7 @@ import { set } from "lodash";
 import PlayerShares from "./PlayerShares";
 import ShareComponent from "../Company/Share";
 import { Drawer } from "vaul";
+import { toast } from "sonner";
 
 const RiskAssessment = () => {
   return (
@@ -566,6 +567,9 @@ const PlayerOrderInput = ({
   const createPlayerOrder = trpc.playerOrder.createPlayerOrder.useMutation({
     onSettled: () => {
       setIsLoadingPlayerOrder(false);
+    },
+    onError: (error) => {
+      toast.error(error.message);
     },
   });
   const [share, setShare] = useState(1);
