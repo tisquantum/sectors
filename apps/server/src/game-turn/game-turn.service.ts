@@ -26,6 +26,23 @@ export class GameTurnService {
     });
   }
 
+  async getCurrentTurnWithRelations(
+    gameId: string,
+  ): Promise<GameTurnWithRelations | null> {
+    return this.prisma.gameTurn.findFirst({
+      where: {
+        gameId: gameId,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      include: {
+        companyActions: true,
+        companyActionOrder: true,
+      },
+    });
+  }
+
   async gameTurns(params: {
     skip?: number;
     take?: number;
@@ -42,7 +59,7 @@ export class GameTurnService {
       orderBy,
       include: {
         companyActions: true,
-      }
+      },
     });
   }
 

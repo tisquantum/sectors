@@ -6,7 +6,7 @@ import {
   RiPriceTag3Fill,
   RiTeamFill,
 } from "@remixicon/react";
-import { getCompanyOperatingRoundTurnOrder } from "@server/data/constants";
+import { getCompanyActionOperatingRoundTurnOrder } from "@server/data/constants";
 import { calculateCompanySupply, calculateDemand } from "@server/data/helpers";
 import { Company, Sector } from "@server/prisma/prisma.client";
 import { motion, AnimatePresence } from "framer-motion";
@@ -38,7 +38,7 @@ const SectorConsumerDistributionAnimation = ({
     },
     0
   );
-  const sortedCompanies = getCompanyOperatingRoundTurnOrder(companies);
+  const sortedCompanies = getCompanyActionOperatingRoundTurnOrder(companies);
   const sectorConsumersStatic = consumerOveride || sector.consumers;
   const [sectorConsumers, setSectorConsumers] = useState(
     consumerOveride || sector.consumers

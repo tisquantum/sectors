@@ -116,7 +116,7 @@ const EndTurnSectorConsumerDistributionAnimation = ({
             <Tooltip content="The number of consumers available to purchase goods and services each turn.">
               <div className="flex gap-2 text-xl">
                 <span>Consumer Pool</span>
-                <span>{currentConsumerPool + economyScore}</span>
+                <span>{currentConsumerPool + gameState.economyScore}</span>
               </div>
             </Tooltip>
           </div>

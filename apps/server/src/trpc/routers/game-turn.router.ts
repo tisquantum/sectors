@@ -26,7 +26,12 @@ export default (trpc: TrpcService, ctx: Context) =>
         const { gameId } = input;
         return ctx.gameTurnService.getCurrentTurn(gameId);
       }),
-
+    getCurrentGameTurnWithRelations: trpc.procedure
+      .input(z.object({ gameId: z.string() }))
+      .query(async ({ input }) => {
+        const { gameId } = input;
+        return ctx.gameTurnService.getCurrentTurnWithRelations(gameId);
+      }),
     listGameTurns: trpc.procedure
       .input(
         z.object({

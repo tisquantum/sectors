@@ -21,7 +21,7 @@ import {
   DEFAULT_DECREASE_UNIT_PRICE,
   DEFAULT_INCREASE_UNIT_PRICE,
   GeneralCompanyActionCosts,
-  getCompanyOperatingRoundTurnOrder,
+  getCompanyActionOperatingRoundTurnOrder,
   LARGE_MARKETING_CAMPAIGN_DEMAND,
   LOAN_AMOUNT,
   LOAN_INTEREST_RATE,
@@ -59,7 +59,10 @@ import {
   companyPriorityOrderOperations,
   getCompanyActionCost,
 } from "@server/data/helpers";
-import { baseToolTipStyle, tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
+import {
+  baseToolTipStyle,
+  tooltipStyle,
+} from "@sectors/app/helpers/tailwind.helpers";
 import CompanyPriorityList from "./CompanyPriorityOperatingRound";
 import InsolvencyContributionComponent from "./InsolvencyContribution";
 
@@ -408,7 +411,7 @@ const CompanyActionSelectionVote = ({
 };
 
 const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
-  const { gameId, currentPhase } = useGame();
+  const { gameId, currentPhase, currentTurn } = useGame();
   const {
     data: companies,
     isLoading: isLoadingCompanies,
@@ -447,7 +450,12 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
       operatingRoundId: currentPhase?.operatingRoundId || 0,
     },
   });
-
+  const {
+    data: currentTurnWithRelations,
+    isLoading: currentTurnIsLoading,
+    isError: currentTurnIsError,
+    refetch: refetchCurrentTurn,
+  } = trpc.gameTurn.getCurrentGameTurnWithRelations.useQuery({ gameId });
   const [currentCompany, setCurrentCompany] = useState<string | undefined>(
     undefined
   );
@@ -467,6 +475,8 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
   if (isLoadingCompanies) return <div>Loading...</div>;
   if (!companies) return <div>No companies found</div>;
   if (!currentPhase) return <div>No current phase found</div>;
+  if (currentTurnIsLoading) return <div>Loading...</div>;
+  if (!currentTurnWithRelations) return <div>No turn found</div>;
   if (error) return <div>Error: {error.message}</div>;
   if (withResult && isLoadingCompanyVoteResults) return <div>Loading...</div>;
   if (withResult && !companyVoteResults) return <div>No results found</div>;
@@ -476,14 +486,22 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
   const insolventCompanies = companies.filter(
     (company) => company.status === CompanyStatus.INSOLVENT
   );
-  const companiesSortedForTurnOrder =
-    companyPriorityOrderOperations(activeCompanies);
+  // const companiesSortedForTurnOrder =
+  //   companyPriorityOrderOperations(activeCompanies);
   //sort companies by turn order
-  const activeCompaniesSorted = activeCompanies.sort(
-    (a, b) =>
-      companiesSortedForTurnOrder.findIndex((c) => c.id === a.id) -
-      companiesSortedForTurnOrder.findIndex((c) => c.id === b.id)
-  );
+  // const activeCompaniesSorted = activeCompanies.sort(
+  //   (a, b) =>
+  //     companiesSortedForTurnOrder.findIndex((c) => c.id === a.id) -
+  //     companiesSortedForTurnOrder.findIndex((c) => c.id === b.id)
+  // );
+  const activeCompaniesSorted = currentTurnWithRelations.companyActionOrder
+    .sort((a, b) => a.orderPriority - b.orderPriority)
+    .map((companyActionOrder) =>
+      activeCompanies.find(
+        (company) => company.id == companyActionOrder.companyId
+      )
+    )
+    .filter((company) => company != undefined);
   const collectedCompanies = [...insolventCompanies, ...activeCompaniesSorted];
   //I thought originally I'd get rid of this, but now I'm thinking
   //of preserving this behavior so players can flip through orders to review votes of other companies if they want.

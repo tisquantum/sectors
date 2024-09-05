@@ -194,6 +194,7 @@ import { PrizeService } from '@server/prize/prize.service';
 import { PrizeVotesService } from '@server/prize-votes/prize-votes.service';
 import { PrizeDistributionService } from '@server/prize-distribution/prize-distribution.service';
 import { RoomUserService } from '@server/room-user/room-user.service';
+import { CompanyActionOrderService } from '@server/company-action-order/company-action-order.service';
 
 type GroupedByPhase = {
   [key: string]: {
@@ -248,6 +249,7 @@ export class GameManagementService {
     private prizeVoteService: PrizeVotesService,
     private prizeDistributionService: PrizeDistributionService,
     private roomUserService: RoomUserService,
+    private companyActionOrderService: CompanyActionOrderService,
   ) {}
 
   /**
@@ -321,6 +323,8 @@ export class GameManagementService {
         await this.checkCompaniesForIncreasePricePreviousTurnAndAdjustDemand(
           phase,
         );
+        //"lock" company actions for the next series of company action phases
+        await this.lockCompanyActions(phase);
         break;
       case PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT:
         await this.resolveCompanyVotes(phase);
@@ -346,6 +350,41 @@ export class GameManagementService {
       default:
         return;
     }
+  }
+
+  async lockCompanyActions(phase: Phase) {
+    //get game
+    const game = await this.gamesService.game({ id: phase.gameId });
+    if (!game) {
+      throw new Error('Game not found');
+    }
+    //get current game turn
+    const gameTurn = await this.gameTurnService.getCurrentTurn(phase.gameId);
+    if (!gameTurn) {
+      throw new Error('Game turn not found');
+    }
+    //get all active and insolvent companies
+    const companies = await this.companyService.companies({
+      where: {
+        gameId: phase.gameId,
+        OR: [
+          { status: CompanyStatus.ACTIVE },
+          { status: CompanyStatus.INSOLVENT },
+        ],
+      },
+    });
+    //get company priority order
+    const companyPriorityOrder = companyPriorityOrderOperations(companies);
+    //create company action order for the current turn
+    return this.companyActionOrderService.createManyCompanyActionOrders(
+      companyPriorityOrder.map((company, index) => {
+        return {
+          companyId: company.id,
+          gameTurnId: gameTurn.id,
+          orderPriority: index,
+        };
+      }),
+    );
   }
 
   async checkCompaniesForIncreasePricePreviousTurnAndAdjustDemand(
@@ -5444,11 +5483,23 @@ export class GameManagementService {
         }
         return nextCompanyId;
       } else {
+        //get company action orders
+        const companyActionOrders = await this.companyActionOrderService.listCompanyActionOrders(
+          {
+            where: {
+              gameTurnId: gameState.currentTurn,
+            },
+          },
+        );
+        if (!companyActionOrders) {
+          throw new Error('Company action orders not found');
+        }
         //this should be the first company in the operating round
         return getNextCompanyOperatingRoundTurn(
           gameState.Company.filter(
             (company) => company.status == CompanyStatus.ACTIVE,
           ),
+          companyActionOrders
         ).id;
       }
     }
@@ -5459,8 +5510,20 @@ export class GameManagementService {
     currentCompanyId: string | undefined,
     currentTurnId: string,
   ): Promise<string | undefined> {
+    //get company action orders
+    const companyActionOrders = await this.companyActionOrderService.listCompanyActionOrders(
+      {
+        where: {
+          gameTurnId: currentTurnId,
+        },
+      },
+    );
+    if (!companyActionOrders) {
+      throw new Error('Company action orders not found');
+    }
     const nextCompanyId = getNextCompanyOperatingRoundTurn(
       activeCompanies,
+      companyActionOrders,
       currentCompanyId,
     )?.id;
 

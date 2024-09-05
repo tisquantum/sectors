@@ -252,6 +252,10 @@ Company Priority is determined in this order of precedence.
 - 2: Companies are sorted by prestige tokens in descending order.
 - 3: Companies are sorted by demand score in descending order.
 
+### Company Action Order
+
+Because certain company actions impact the company priority order, before for the first company action phase, the company prioritiy order is "locked" and this becomes the company action order for this turn. Actions that would adjust price, prestige or gain any abilities to impact priority order do not impact the current turns company action order.
+
 ### Company Tiers
 {: #company-tiers }
 

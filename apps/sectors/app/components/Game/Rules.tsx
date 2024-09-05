@@ -576,6 +576,62 @@ const CompanyActionsRules = () => {
   );
 };
 
+const CompanyRules = (
+  <>
+    <h2 id="companies">Companies</h2>
+    <p>
+      Companies are the vessel for financial investment in sectors. Investors
+      will buy and sell stocks and place orders on the derivative market,
+      placing bets against these companies' performance. Companies will
+      distribute revenue based on earnings during ORs. During ORs, companies
+      will also get a chance to act. Both revenue distribution and company
+      actions are voted on by shareholders of the company.
+    </p>
+
+    <h3 id="company-states">Company States</h3>
+    <ul>
+      <li>
+        <strong>INACTIVE:</strong> This company has not yet floated. Its stock
+        price will not move and it cannot act or gain revenue.
+      </li>
+      <li>
+        <strong>ACTIVE:</strong> This company has floated and is operational.
+      </li>
+      <li>
+        <strong>INSOLVENT:</strong> This company has floated and is operational.
+        Its cash on hand has reached 0. If it does not receive financial
+        support, it will go bankrupt.
+      </li>
+      <li>
+        <strong>BANKRUPT:</strong> Bankrupted companies can no longer operate
+        and are no longer available for player orders in the market.
+      </li>
+    </ul>
+
+    <h3 id="company-priority">Company Priority</h3>
+    <p>Company Priority is determined in this order of precedence:</p>
+    <ol>
+      <li>
+        If a company has Economies of Scale, it is considered to be the cheapest
+        company regardless of its unit price.
+      </li>
+      <li>
+        Companies are sorted by unit price in ascending order (cheapest first).
+      </li>
+      <li>Companies are sorted by prestige tokens in descending order.</li>
+      <li>Companies are sorted by demand score in descending order.</li>
+    </ol>
+
+    <h3 id="company-action-order">Company Action Order</h3>
+    <p>
+      Because certain company actions impact the company priority order, before
+      the first company action phase, the company priority order is "locked" and
+      this becomes the company action order for this turn. Actions that would
+      adjust price, prestige, or gain any abilities to impact priority order do
+      not impact the current turn's company action order.
+    </p>
+  </>
+);
 const Rules: FC = () => {
   return (
     <div className="container mx-auto px-4 py-6">
@@ -592,6 +648,9 @@ const Rules: FC = () => {
         <div className="text-base space-y-4">
           <OperatingRoundRules />
         </div>
+      </div>
+      <div className="mb-8">
+        <CompanyRules />
       </div>
       <div className="mb-8">
         <h2 className="text-2xl font-semibold mb-2">Company Actions</h2>

@@ -42,6 +42,7 @@ const DistributeSelection = ({
       },
     });
   const handleSubmit = async () => {
+    setIsLoading(true);
     //submit vote
     useVoteRevenueDistributionMutation.mutate({
       operatingRoundId: operatingRoundId,
