@@ -1,8 +1,8 @@
 "use client";
-import { useAuthUser } from "../components/AuthUser.context";
-import UpdateName from "../components/General/UpdateName";
-import UserAvatar from "../components/Room/UserAvatar";
-import { trpc } from "../trpc";
+import { useAuthUser } from "../../components/AuthUser.context";
+import UpdateName from "../../components/General/UpdateName";
+import UserAvatar from "../../components/Room/UserAvatar";
+import { trpc } from "../../trpc";
 
 export default function Settings() {
   const { user } = useAuthUser();

@@ -35,7 +35,7 @@ const TopBar = () => {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     //redirect/refresh to login page
-    router.push("/login");
+    router.push("/account/login");
   };
   return (
     <Navbar isBordered shouldHideOnScroll>
@@ -105,14 +105,14 @@ const TopBar = () => {
                 </Button>
               </DropdownTrigger>
               <DropdownMenu>
-                <DropdownItem href="/settings">Settings</DropdownItem>
+                <DropdownItem href="/account/settings">Settings</DropdownItem>
                 <DropdownItem onClick={handleLogout}>Logout</DropdownItem>
               </DropdownMenu>
             </Dropdown>
           </NavbarItem>
         ) : (
           <NavbarItem>
-            <Link href="/login">
+            <Link href="/account/login">
               <DebounceButton>Log in</DebounceButton>
             </Link>
           </NavbarItem>

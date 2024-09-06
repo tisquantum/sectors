@@ -7,7 +7,10 @@ export default function LoginPage() {
         <h3 className="text-lg text-black font-bold mb-4">Login</h3>
         <form>
           <div className="mb-4">
-            <label htmlFor="email" className="block text-gray-800 text-sm font-bold mb-2">
+            <label
+              htmlFor="email"
+              className="block text-gray-800 text-sm font-bold mb-2"
+            >
               Email:
             </label>
             <input
@@ -19,7 +22,10 @@ export default function LoginPage() {
             />
           </div>
           <div className="mb-6">
-            <label htmlFor="password" className="block text-gray-800 text-sm font-bold mb-2">
+            <label
+              htmlFor="password"
+              className="block text-gray-800 text-sm font-bold mb-2"
+            >
               Password:
             </label>
             <input
@@ -43,6 +49,14 @@ export default function LoginPage() {
             >
               Sign up
             </button>
+          </div>
+          <div className="text-center mt-4">
+            <a
+              className="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800"
+              href="/account/forgot-password"
+            >
+              Forgot Password?
+            </a>
           </div>
         </form>
       </div>
