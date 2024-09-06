@@ -59,6 +59,7 @@ export class GameTurnService {
       orderBy,
       include: {
         companyActions: true,
+        companyActionOrder: true,
       },
     });
   }

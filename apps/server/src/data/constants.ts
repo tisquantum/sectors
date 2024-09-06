@@ -351,7 +351,7 @@ export const getCompanyActionOperatingRoundTurnOrder = (
     .map((companyActionOrder) =>
       companies.find((company) => company.id == companyActionOrder.companyId),
     )
-    .filter((company) => company != undefined);
+    .filter((company): company is Company => company != undefined);
 };
 
 export const getNextCompanyOperatingRoundTurn = (
@@ -359,7 +359,10 @@ export const getNextCompanyOperatingRoundTurn = (
   companyActionOrder: CompanyActionOrder[],
   currentCompanyId?: string,
 ): Company => {
-  const sortedCompanies = getCompanyActionOperatingRoundTurnOrder(companies, companyActionOrder);
+  const sortedCompanies = getCompanyActionOperatingRoundTurnOrder(
+    companies,
+    companyActionOrder,
+  );
   console.log('getNextCompanyOperatingRoundTurn', sortedCompanies);
   if (!currentCompanyId) {
     console.log(

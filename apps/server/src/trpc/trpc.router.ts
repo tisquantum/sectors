@@ -71,6 +71,7 @@ import prizesRouter from './routers/prizes.router';
 import prizeVotesRouter from './routers/prize-votes.router';
 import { PrizeService } from '@server/prize/prize.service';
 import { PrizeVotesService } from '@server/prize-votes/prize-votes.service';
+import { CompanyActionOrderService } from '@server/company-action-order/company-action-order.service';
 @Injectable()
 export class TrpcRouter {
   constructor(
@@ -110,6 +111,7 @@ export class TrpcRouter {
     private readonly insolvencyContributionService: InsolvencyContributionService,
     private readonly prizeService: PrizeService,
     private readonly prizeVotesService: PrizeVotesService,
+    private readonly companyActionOrderService: CompanyActionOrderService,
   ) {}
 
   appRouter = this.trpc.router({

@@ -243,8 +243,10 @@ const CompanyMoreInfo = ({
               <p className={tooltipParagraphStyle}>
                 This company has taken a loan. The company must pay back the
                 loan with 10% interest at a fixed rate of $
-                {(LOAN_AMOUNT + LOAN_AMOUNT * LOAN_INTEREST_RATE) *
-                  LOAN_INTEREST_RATE}{" "}
+                {Math.floor(
+                  (LOAN_AMOUNT + LOAN_AMOUNT * LOAN_INTEREST_RATE) *
+                    LOAN_INTEREST_RATE
+                )}{" "}
                 per turn.
               </p>
             }

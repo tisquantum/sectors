@@ -54,7 +54,13 @@ import CompanyInfo from "./CompanyInfo";
 import PrestigeRewards from "../Game/PrestigeRewards";
 import Button from "@sectors/app/components/General/DebounceButton";
 import DebounceButton from "@sectors/app/components/General/DebounceButton";
-import { RiCloseCircleFill, RiSparkling2Fill } from "@remixicon/react";
+import {
+  RiArrowLeftFill,
+  RiArrowRightFill,
+  RiCloseCircleFill,
+  RiLockFill,
+  RiSparkling2Fill,
+} from "@remixicon/react";
 import {
   companyPriorityOrderOperations,
   getCompanyActionCost,
@@ -486,23 +492,32 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
   const insolventCompanies = companies.filter(
     (company) => company.status === CompanyStatus.INSOLVENT
   );
-  // const companiesSortedForTurnOrder =
-  //   companyPriorityOrderOperations(activeCompanies);
-  //sort companies by turn order
-  // const activeCompaniesSorted = activeCompanies.sort(
-  //   (a, b) =>
-  //     companiesSortedForTurnOrder.findIndex((c) => c.id === a.id) -
-  //     companiesSortedForTurnOrder.findIndex((c) => c.id === b.id)
-  // );
-  const activeCompaniesSorted = currentTurnWithRelations.companyActionOrder
-    .sort((a, b) => a.orderPriority - b.orderPriority)
-    .map((companyActionOrder) =>
-      activeCompanies.find(
-        (company) => company.id == companyActionOrder.companyId
+  const companiesSortedForTurnOrder =
+    companyPriorityOrderOperations(activeCompanies);
+  const activeCompaniesSortedUnlocked = activeCompanies.sort(
+    (a, b) =>
+      companiesSortedForTurnOrder.findIndex((c) => c.id === a.id) -
+      companiesSortedForTurnOrder.findIndex((c) => c.id === b.id)
+  );
+  const activeCompaniesSortedLocked =
+    currentTurnWithRelations.companyActionOrder
+      .sort((a, b) => a.orderPriority - b.orderPriority)
+      .map((companyActionOrder) =>
+        activeCompanies.find(
+          (company) => company.id == companyActionOrder.companyId
+        )
       )
-    )
-    .filter((company) => company != undefined);
+      .filter((company) => company != undefined);
+  const showLock =
+    activeCompaniesSortedLocked.length > 0 &&
+    (currentPhase.name == PhaseName.OPERATING_ACTION_COMPANY_VOTE ||
+      currentPhase.name == PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT ||
+      currentPhase.name == PhaseName.OPERATING_COMPANY_VOTE_RESOLVE);
+  const activeCompaniesSorted = showLock
+    ? activeCompaniesSortedLocked
+    : activeCompaniesSortedUnlocked;
   const collectedCompanies = [...insolventCompanies, ...activeCompaniesSorted];
+
   //I thought originally I'd get rid of this, but now I'm thinking
   //of preserving this behavior so players can flip through orders to review votes of other companies if they want.
   const handleNext = () => {
@@ -531,7 +546,7 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
     (companyAction) => companyAction.companyId === currentCompany
   );
   return (
-    <div className="flex flex-col flex-grow relative">
+    <div className="flex flex-col gap-1 flex-grow relative">
       <div className="flex flex-col gap-2 justify-center items-center">
         <Tooltip
           classNames={{ base: baseToolTipStyle }}
@@ -540,25 +555,36 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
         >
           <h2>Turn Order</h2>
         </Tooltip>
-        <div className="flex gap-2">
-          {collectedCompanies.map((company, index) => (
-            <Avatar
-              key={company.id}
-              name={company.name}
-              className={
-                currentCompany === company.id
-                  ? `ring-2 ring-blue-500 ${
-                      company.status == CompanyStatus.INSOLVENT && "bg-rose-500"
-                    }`
-                  : `${
-                      company.status == CompanyStatus.INSOLVENT && "bg-rose-500"
-                    }`
-              }
-            />
-          ))}
+        <div className="flex flex-col gap-2 justify-center items-center">
+          {showLock && <RiLockFill />}
+          <div className="flex gap-2">
+            {collectedCompanies.map((company, index) => (
+              <Avatar
+                key={company.id}
+                name={company.stockSymbol}
+                className={
+                  currentCompany === company.id
+                    ? `ring-2 ring-blue-500 ${
+                        company.status == CompanyStatus.INSOLVENT &&
+                        "bg-rose-500"
+                      }`
+                    : `${
+                        company.status == CompanyStatus.INSOLVENT &&
+                        "bg-rose-500"
+                      }`
+                }
+              />
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={handlePrevious}>
+              <RiArrowLeftFill />
+            </Button>
+            <Button onClick={handleNext}>
+              <RiArrowRightFill />
+            </Button>
+          </div>
         </div>
-        <Button onClick={handlePrevious}>Previous</Button>
-        <Button onClick={handleNext}>Next</Button>
       </div>
       <AnimatePresence mode="wait" initial={false}>
         <motion.div

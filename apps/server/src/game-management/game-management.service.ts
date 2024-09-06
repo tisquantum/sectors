@@ -131,6 +131,7 @@ import {
   FASTTRACK_APPROVAL_AMOUNT_DEMAND,
   INNOVATION_SURGE_CARD_DRAW_BONUS,
   companyActionsDescription,
+  LICENSING_AGREEMENT_UNIT_PRICE_BONUS,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -1123,7 +1124,10 @@ export class GameManagementService {
     const companyLoans = companies.map(async (company) => {
       const newCashOnHand = Math.max(
         company.cashOnHand -
-          (LOAN_AMOUNT + LOAN_AMOUNT * LOAN_INTEREST_RATE) * LOAN_INTEREST_RATE,
+          Math.floor(
+            (LOAN_AMOUNT + LOAN_AMOUNT * LOAN_INTEREST_RATE) *
+              LOAN_INTEREST_RATE,
+          ),
         0,
       );
       await this.companyService.updateCompany({
@@ -2244,6 +2248,9 @@ export class GameManagementService {
         case OperatingRoundAction.OUTSOURCE:
           await this.outsourceCompany(companyAction);
           break;
+        case OperatingRoundAction.LICENSING_AGREEMENT:
+          await this.licensingAgreement(companyAction);
+          break;
         case OperatingRoundAction.VISIONARY:
           await this.visionary(companyAction);
           break;
@@ -2293,6 +2300,31 @@ export class GameManagementService {
     }
   }
 
+  /**
+   * The company gains a bonus to it's unit price.
+   * @param companyAction
+   */
+  async licensingAgreement(companyAction: CompanyAction) {
+    //get the company
+    const company = await this.companyService.company({
+      id: companyAction.companyId,
+    });
+    if (!company) {
+      throw new Error('Company not found');
+    }
+    //increase the unit price of the company
+    await this.companyService.updateCompany({
+      where: { id: company.id },
+      data: {
+        unitPrice: company.unitPrice + LICENSING_AGREEMENT_UNIT_PRICE_BONUS,
+      },
+    });
+    //game log
+    this.gameLogService.createGameLog({
+      game: { connect: { id: company.gameId } },
+      content: `Company ${company.name} has gained a unit price bonus of $${LICENSING_AGREEMENT_UNIT_PRICE_BONUS}.`,
+    });
+  }
   /**
    *  Gain this action during the Company Action phase: The company gains 1 temporary supply and a random active
    *  insolvent Industrials sector company gains one temporary supply.
@@ -5484,13 +5516,12 @@ export class GameManagementService {
         return nextCompanyId;
       } else {
         //get company action orders
-        const companyActionOrders = await this.companyActionOrderService.listCompanyActionOrders(
-          {
+        const companyActionOrders =
+          await this.companyActionOrderService.listCompanyActionOrders({
             where: {
               gameTurnId: gameState.currentTurn,
             },
-          },
-        );
+          });
         if (!companyActionOrders) {
           throw new Error('Company action orders not found');
         }
@@ -5499,7 +5530,7 @@ export class GameManagementService {
           gameState.Company.filter(
             (company) => company.status == CompanyStatus.ACTIVE,
           ),
-          companyActionOrders
+          companyActionOrders,
         ).id;
       }
     }
@@ -5511,13 +5542,12 @@ export class GameManagementService {
     currentTurnId: string,
   ): Promise<string | undefined> {
     //get company action orders
-    const companyActionOrders = await this.companyActionOrderService.listCompanyActionOrders(
-      {
+    const companyActionOrders =
+      await this.companyActionOrderService.listCompanyActionOrders({
         where: {
           gameTurnId: currentTurnId,
         },
-      },
-    );
+      });
     if (!companyActionOrders) {
       throw new Error('Company action orders not found');
     }

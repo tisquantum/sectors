@@ -175,6 +175,8 @@ const CompanyVoteResolve = () => {
         break;
       case OperatingRoundAction.OUTSOURCE:
         break;
+      case OperatingRoundAction.LICENSING_AGREEMENT:
+        break;
       case OperatingRoundAction.VETO:
         break;
       default:

@@ -61,7 +61,7 @@ const GameSidebar = () => {
     return <div>Loading...</div>;
   }
   return (
-    <div className="w-auto max-w-xs lg:max-w-md bg-background text-white flex flex-col">
+    <div className="w-auto max-w-xs lg:max-w-md overflow-y-auto scrollbar bg-background text-white flex flex-col">
       <div className="text-white p-4">
         <h1 className="text-xl font-bold">{gameState.name}</h1>
       </div>
