@@ -44,6 +44,7 @@ import { InsolvencyContributionModule } from './insolvency-contribution/insolven
 import { PrizeModule } from './prize/prize.module';
 import { PrizeVotesModule } from './prize-votes/prize-votes.module';
 import { PrizeDistributionModule } from './prize-distribution/prize-distribution.module';
+import { CompanyActionOrderModule } from './company-action-order/company-action-order.module';
 
 const yourPusherOptions = {
   cluster: process.env.PUSHER_CLUSTER ?? 'CLUSTER',
@@ -104,6 +105,7 @@ const chunkingOptions = {
     PrizeModule,
     PrizeVotesModule,
     PrizeDistributionModule,
+    CompanyActionOrderModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,6 +1,7 @@
 //make a map between PhaseName and phase times
 import {
   Company,
+  CompanyActionOrder,
   CompanyTier,
   DistributionStrategy,
   OperatingRoundAction,
@@ -341,23 +342,27 @@ export const sectorPriority = [
   SectorName.GENERAL,
 ];
 
-export const getCompanyOperatingRoundTurnOrder = (
+export const getCompanyActionOperatingRoundTurnOrder = (
   companies: Company[],
+  companyActionOrder: CompanyActionOrder[],
 ): Company[] => {
-  //get companies with sector
-  const companiesSortedPartial = companyPriorityOrderOperations(companies);
-  //copy companies in same order
-  return companies.sort(
-    (a, b) =>
-      companiesSortedPartial.indexOf(a) - companiesSortedPartial.indexOf(b),
-  );
+  return companyActionOrder
+    .sort((a, b) => a.orderPriority - b.orderPriority)
+    .map((companyActionOrder) =>
+      companies.find((company) => company.id == companyActionOrder.companyId),
+    )
+    .filter((company): company is Company => company != undefined);
 };
 
 export const getNextCompanyOperatingRoundTurn = (
   companies: Company[],
+  companyActionOrder: CompanyActionOrder[],
   currentCompanyId?: string,
 ): Company => {
-  const sortedCompanies = getCompanyOperatingRoundTurnOrder(companies);
+  const sortedCompanies = getCompanyActionOperatingRoundTurnOrder(
+    companies,
+    companyActionOrder,
+  );
   console.log('getNextCompanyOperatingRoundTurn', sortedCompanies);
   if (!currentCompanyId) {
     console.log(
@@ -912,7 +917,7 @@ export const companyActionsDescription: CompanyActionDescription[] = [
     title: 'Veto',
     name: OperatingRoundAction.VETO,
     message:
-      'The company does nothing this turn. The next turn this company\'s operating costs are 50% less.',
+      "The company does nothing this turn. The next turn this company's operating costs are 50% less.",
     actionType: 'internal',
   },
   //sector specific actions active effects
@@ -1032,4 +1037,39 @@ export const companyActionsDescription: CompanyActionDescription[] = [
     message: 'This companies throughput can never be less than 1.',
     actionType: 'sector-passive',
   },
+];
+
+export const phasesInOrder = [
+  PhaseName.INFLUENCE_BID_ACTION,
+  PhaseName.INFLUENCE_BID_RESOLVE,
+  PhaseName.START_TURN,
+  PhaseName.PRIZE_VOTE_ACTION,
+  PhaseName.PRIZE_VOTE_RESOLVE,
+  PhaseName.PRIZE_DISTRIBUTE_ACTION,
+  PhaseName.PRIZE_DISTRIBUTE_RESOLVE,
+  //PhaseName.STOCK_MEET,
+  PhaseName.STOCK_RESOLVE_LIMIT_ORDER,
+  PhaseName.STOCK_ACTION_ORDER,
+  PhaseName.STOCK_ACTION_RESULT,
+  PhaseName.STOCK_ACTION_REVEAL,
+  PhaseName.STOCK_RESOLVE_MARKET_ORDER,
+  PhaseName.STOCK_SHORT_ORDER_INTEREST,
+  PhaseName.STOCK_ACTION_SHORT_ORDER,
+  PhaseName.STOCK_RESOLVE_PENDING_SHORT_ORDER,
+  PhaseName.STOCK_RESOLVE_OPTION_ORDER, //this is the first thing that has to happen, as it expires you will no chance to act on it that turn
+  PhaseName.STOCK_RESOLVE_PENDING_OPTION_ORDER,
+  PhaseName.STOCK_ACTION_OPTION_ORDER, //exercise option orders, this can currently happen the turn they are opened
+  PhaseName.STOCK_OPEN_LIMIT_ORDERS,
+  PhaseName.STOCK_RESULTS_OVERVIEW,
+  //PhaseName.OPERATING_MEET,
+  PhaseName.OPERATING_PRODUCTION,
+  PhaseName.OPERATING_PRODUCTION_VOTE,
+  PhaseName.OPERATING_PRODUCTION_VOTE_RESOLVE,
+  PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT,
+  PhaseName.OPERATING_ACTION_COMPANY_VOTE,
+  PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT,
+  PhaseName.OPERATING_COMPANY_VOTE_RESOLVE,
+  PhaseName.CAPITAL_GAINS,
+  PhaseName.DIVESTMENT,
+  PhaseName.END_TURN,
 ];

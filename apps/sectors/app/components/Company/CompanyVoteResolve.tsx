@@ -88,6 +88,16 @@ const CompanyVoteResolve = () => {
         : null;
 
     const costDiv = <span>Action Cost: ${companyAction.cost}</span>;
+    const actionName = (
+      <h4>
+        Action Name:{" "}
+        {
+          companyActionsDescription.find(
+            (description) => description.name == companyAction.action
+          )?.title
+        }
+      </h4>
+    );
     const actionDescription = (
       <p>
         {
@@ -165,6 +175,8 @@ const CompanyVoteResolve = () => {
         break;
       case OperatingRoundAction.OUTSOURCE:
         break;
+      case OperatingRoundAction.LICENSING_AGREEMENT:
+        break;
       case OperatingRoundAction.VETO:
         break;
       default:
@@ -174,6 +186,7 @@ const CompanyVoteResolve = () => {
 
     return (
       <div>
+        {actionName}
         {actionContent}
         {actionDescription}
         {costDiv}

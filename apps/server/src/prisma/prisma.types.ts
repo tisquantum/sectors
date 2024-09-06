@@ -3,6 +3,7 @@ import {
   Card,
   Company,
   CompanyAction,
+  CompanyActionOrder,
   Entity,
   Game,
   GameLog,
@@ -252,6 +253,7 @@ export type ShortOrderWithRelations = ShortOrder & {
 
 export type GameTurnWithRelations = GameTurn & {
   companyActions: CompanyAction[];
+  companyActionOrder: CompanyActionOrder[];
 };
 
 export type TransactionWithEntities = Transaction & {

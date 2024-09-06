@@ -40,7 +40,7 @@ const SectorComponent = () => {
     return sectorColors[sectorName];
   };
   return (
-    <Accordion selectionMode="multiple">
+    <Accordion selectionMode="multiple" className="p-0 w-full">
       {sectorsWithCompanies.map((sector: SectorWithCompanies) => (
         <AccordionItem
           key={sector.id}

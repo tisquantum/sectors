@@ -6,8 +6,12 @@ import {
   RiPriceTag3Fill,
   RiTeamFill,
 } from "@remixicon/react";
-import { getCompanyOperatingRoundTurnOrder } from "@server/data/constants";
-import { calculateCompanySupply, calculateDemand } from "@server/data/helpers";
+import { getCompanyActionOperatingRoundTurnOrder } from "@server/data/constants";
+import {
+  calculateCompanySupply,
+  calculateDemand,
+  companyPriorityOrderOperations,
+} from "@server/data/helpers";
 import { Company, Sector } from "@server/prisma/prisma.client";
 import { motion, AnimatePresence } from "framer-motion";
 import { sectorColors } from "@server/data/gameData";
@@ -38,7 +42,10 @@ const SectorConsumerDistributionAnimation = ({
     },
     0
   );
-  const sortedCompanies = getCompanyOperatingRoundTurnOrder(companies);
+  const sortedCompaniesPartial = companyPriorityOrderOperations(companies);
+  const sortedCompanies = sortedCompaniesPartial.map((sortedCompany) => {
+    return companies.find((company) => company.id === sortedCompany.id)!;
+  });
   const sectorConsumersStatic = consumerOveride || sector.consumers;
   const [sectorConsumers, setSectorConsumers] = useState(
     consumerOveride || sector.consumers
@@ -142,7 +149,7 @@ const SectorConsumerDistributionAnimation = ({
       {/* Sector and Consumers */}
       <div className={`flex flex-col items-center`}>
         <span>{sector.name}</span>
-        <ul className="flex space-x-2">
+        <ul className="flex flex-wrap space-x-2">
           {Array.from({ length: sectorConsumersStatic }).map((_, index) => (
             <motion.li
               key={index}

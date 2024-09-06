@@ -35,6 +35,7 @@ import { PrizeModule } from '@server/prize/prize.module';
 import { PrizeVotesModule } from '@server/prize-votes/prize-votes.module';
 import { PrizeDistributionModule } from '@server/prize-distribution/prize-distribution.module';
 import { RoomUserModule } from '@server/room-user/room-user.module';
+import { CompanyActionOrderModule } from '@server/company-action-order/company-action-order.module';
 
 @Module({
   imports: [
@@ -73,6 +74,7 @@ import { RoomUserModule } from '@server/room-user/room-user.module';
     PrizeVotesModule,
     PrizeDistributionModule,
     RoomUserModule,
+    CompanyActionOrderModule,
   ],
   providers: [GameManagementService],
   exports: [GameManagementService],

@@ -193,6 +193,7 @@ model Company {
   TransactionsPerformedOn  Transaction[]
   InsolvencyContributions  InsolvencyContribution[]
   PrizeDistributions       PrizeDistribution[]
+  CompanyActionOrders      CompanyActionOrder[]
   Entity                   Entity?                   @relation(fields: [entityId], references: [id])
   entityId                 String?                   @unique
 }
@@ -706,13 +707,13 @@ enum GameStatus {
 }
 
 model GameTurn {
-  id             String           @id @default(uuid())
-  gameId         String
-  turn           Int
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  playerPriority PlayerPriority[]
-
+  id                     String                   @id @default(uuid())
+  gameId                 String
+  turn                   Int
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  playerPriority         PlayerPriority[]
+  companyActionOrder     CompanyActionOrder[]
   game                   Game                     @relation(fields: [gameId], references: [id])
   operatingRounds        OperatingRound[]
   stockRounds            StockRound[]
@@ -727,6 +728,17 @@ model GameTurn {
   prizes                 Prize[]
   prizeVotes             PrizeVote[]
   prizeDistributions     PrizeDistribution[]
+}
+
+model CompanyActionOrder {
+  id            String   @id @default(uuid())
+  gameTurnId    String
+  companyId     String
+  orderPriority Int
+  Company       Company  @relation(fields: [companyId], references: [id])
+  GameTurn      GameTurn @relation(fields: [gameTurnId], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model PlayerPriority {

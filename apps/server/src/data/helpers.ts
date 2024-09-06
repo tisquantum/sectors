@@ -477,6 +477,18 @@ export function calculateMarginAccountMinimum(shortOrderValue: number): number {
   return Math.ceil(shortOrderValue / 2);
 }
 
+/**
+ * Sorts an array of companies based on multiple criteria in ASCENDING order, where the lower the number, the higher the priority.
+ *
+ * The sorting logic is applied as follows:
+ * 1. Companies with the `ECONOMIES_OF_SCALE` advantage are given the highest priority and considered the "cheapest" (sorted first).
+ * 2. Companies are then sorted by their unit price in ascending order (cheapest first).
+ * 3. In the case of a tie in unit price, companies are further sorted by the number of prestige tokens in descending order (most tokens first).
+ * 4. Finally, if the previous criteria are still tied, companies are sorted by their demand score, calculated using `calculateDemand()`, in descending order (highest demand first).
+ *
+ * @param companies - An array of `CompanyOperationOrderPartial` objects to be sorted.
+ * @returns The sorted array of `CompanyOperationOrderPartial` objects.
+ */
 export function companyPriorityOrderOperations(
   companies: CompanyOperationOrderPartial[],
 ) {
@@ -846,10 +858,10 @@ export function groupBy<T>(array: T[], key: keyof T) {
 export function calculateAverageStockPrice(
   companiesInSector: CompanyWithSector[],
 ) {
-  return (
+  return Math.floor(
     companiesInSector.reduce((acc, company) => {
       return acc + company.currentStockPrice;
-    }, 0) / companiesInSector.length
+    }, 0) / companiesInSector.length,
   );
 }
 
@@ -876,7 +888,7 @@ export function getCompanyActionCost(
   companyStockPrice: number,
   generalCompanyActionCount?: number,
 ) {
-  if(companyAction == OperatingRoundAction.SHARE_BUYBACK) {
+  if (companyAction == OperatingRoundAction.SHARE_BUYBACK) {
     return companyStockPrice;
   }
   if (

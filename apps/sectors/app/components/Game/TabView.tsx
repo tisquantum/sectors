@@ -29,6 +29,7 @@ const TabView = ({
       selectedKey={selectedTab}
       onSelectionChange={handleTabChange}
       isVertical={isVertical}
+      className="w-full"
     >
       <Tab key="chat" title="Chat" className={tabStyle}>
         <GameChat roomId={gameState.roomId} gameName={gameState.name} />

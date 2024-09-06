@@ -45,4 +45,15 @@ body {
   .scrollbar::-webkit-scrollbar-thumb:hover {
     @apply bg-slate-200;
   }
+
+  /* Hide scrollbar for Webkit browsers */
+  .hidden-scrollbar::-webkit-scrollbar {
+    @apply hidden;
+  }
+
+  /* Hide scrollbar for IE, Edge, and Firefox */
+  .hidden-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
 }
