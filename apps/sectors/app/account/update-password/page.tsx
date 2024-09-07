@@ -13,14 +13,9 @@ const ResetPasswordPage = () => {
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const supabase = createClient();
-  const resetToken = searchParams.get("token");
 
   const handleSubmit = async () => {
     setIsLoading(true);
-    if (!resetToken) {
-      console.error("No reset token found.");
-      return;
-    }
 
     try {
       // Step 4: Update the user's password using the reset token and new password
