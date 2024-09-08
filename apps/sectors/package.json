@@ -28,6 +28,7 @@
     "lodash": "^4.17.21",
     "next": "14.2.3",
     "next-themes": "^0.3.0",
+    "obscenity": "^0.4.0",
     "pusher-js": "8.4.0-rc2",
     "react": "^18",
     "react-dom": "^18",

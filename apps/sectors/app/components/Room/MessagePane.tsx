@@ -21,7 +21,7 @@ const MessagePane: React.FC<MessagePaneProps> = ({ messages }) => {
   return (
     <div
       ref={containerRef}
-      className="bg-background p-4 overflow-y-auto flex flex-col basis-10/12 scrollbar"
+      className="bg-background p-4 overflow-y-auto flex flex-col scrollbar h-full basis-10/12"
     >
       {messages.map((message) => (
         <div key={message.id}>

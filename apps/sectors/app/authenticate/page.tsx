@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -13,19 +13,18 @@ export default function Authenticate() {
     const authenticateUser = async () => {
       setLoading(true); // Start loading
 
-      await fetchUser(); // Fetch the user using the context method
+      fetchUser().then(() => {
+        if (supabaseUser) {
+          // User is authenticated, redirect to /rooms
+          router.replace("/rooms");
+        } else {
+          // No user found, redirect to login
+          router.replace("/login");
+        }
 
-      if (supabaseUser) {
-        // User is authenticated, redirect to /rooms
-        router.replace("/rooms");
-      } else {
-        // No user found, redirect to login
-        router.replace("/login");
-      }
-
-      setLoading(false); // Stop loading
+        setLoading(false); // Stop loading
+      });
     };
-
     authenticateUser();
   }, [fetchUser, supabaseUser, router]);
 
