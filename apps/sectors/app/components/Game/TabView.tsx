@@ -31,21 +31,21 @@ const TabView = ({
       isVertical={isVertical}
       className="w-full"
     >
-      <Tab key="chat" title="Chat" className={tabStyle}>
+      <Tab key="chat" title="Chat">
         <GameChat roomId={gameState.roomId} gameName={gameState.name} />
       </Tab>
       <Tab key="players" title="Players" className={tabStyle}>
-        <Card className="overflow-y-auto scrollbar">
+        <Card className="h-[calc(100vh-288px)] overflow-y-auto scrollbar">
           <PlayersOverview gameId={gameId} />
         </Card>
       </Tab>
       <Tab key="sectors" title="Sectors" className={tabStyle}>
-        <Card className="overflow-y-auto scrollbar">
+        <Card className="h-[calc(100vh-288px)] overflow-y-auto scrollbar">
           <SectorComponent />
         </Card>
       </Tab>
       <Tab key="game-log" title="GameLog" className={tabStyle}>
-        <Card className="overflow-y-auto scrollbar">
+        <Card className="h-[calc(100vh-288px)] overflow-y-auto scrollbar">
           <GameLog />
         </Card>
       </Tab>

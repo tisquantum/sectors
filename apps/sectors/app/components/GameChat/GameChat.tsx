@@ -98,7 +98,7 @@ const AtList: React.FC<AtListProps> = ({
       {players?.map((player, index) => (
         <div
           key={player.id}
-          className={`p-1 hover:bg-gray-100 cursor-pointer ${
+          className={`p-1 hover:bg-sky-700 cursor-pointer ${
             index === focusedIndex ? "bg-gray-500" : ""
           }`}
           onClick={() => onSelectPlayer(player)}
@@ -124,7 +124,9 @@ const GameChat = ({
   const { pusher } = usePusher();
   const [showAtList, setShowAtList] = useState(false);
   const [caretPosition, setCaretPosition] = useState(0);
+  const [message, setMessage] = useState("");
   const atListRef = useRef<HTMLDivElement | null>(null);
+  const sendMessageRef = useRef<HTMLTextAreaElement | null>(null);
   const [atListHeight, setAtListHeight] = useState(0);
   const { data: players, isLoading: isLoadingPlayers } =
     trpc.player.listPlayers.useQuery({
@@ -199,26 +201,48 @@ const GameChat = ({
     });
   };
 
-  const handleSelectPlayer = (player: Player) => {};
+  const handleSelectPlayer = (player: Player) => {
+    setMessage((prevMessage) => {
+      return (
+        prevMessage.slice(0, caretPosition - 1) +
+        `@${player.nickname} ` +
+        prevMessage.slice(caretPosition)
+      );
+    });
+    setShowAtList(false);
+
+    // Focus back on the SendMessage input
+    if (sendMessageRef.current) {
+      sendMessageRef.current.focus();
+    }
+  };
 
   return (
-    <>
+    <div className="flex flex-col h-[calc(100vh-200px)]">
+      {/* MessagePane for displaying chat messages */}
       {messages && <MessagePane messages={messages} />}
-      <div className="relative flex flex-col">
-        {showAtList && players && (
-          <AtList
-            players={players}
-            onSelectPlayer={handleSelectPlayer}
-            onClose={() => setShowAtList(false)}
-          />
-        )}
+
+      {/* AtList for player selection */}
+      {showAtList && players && (
+        <AtList
+          players={players}
+          onSelectPlayer={handleSelectPlayer}
+          onClose={() => setShowAtList(false)}
+        />
+      )}
+
+      {/* SendMessage component fixed at the bottom */}
+      <div className="sticky bottom-0 bg-background flex items-center">
         <SendMessage
           onSendMessage={handleSendMessage}
           setShowAtList={setShowAtList}
           setCaretPosition={setCaretPosition}
+          controlledMessage={message}
+          setControlledMessage={setMessage}
+          ref={sendMessageRef}
         />
       </div>
-    </>
+    </div>
   );
 };
 
