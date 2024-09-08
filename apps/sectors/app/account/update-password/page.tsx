@@ -1,14 +1,12 @@
 "use client";
-import { useState, useEffect } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@sectors/utils/supabase/client";
 import DebounceButton from "@sectors/app/components/General/DebounceButton";
 import { Input } from "@nextui-org/react";
-import { set } from "lodash";
 
 const ResetPasswordPage = () => {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [newPassword, setNewPassword] = useState("");
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -19,7 +17,7 @@ const ResetPasswordPage = () => {
 
     try {
       // Step 4: Update the user's password using the reset token and new password
-      const { data, error } = await supabase.auth.updateUser({
+      const { error } = await supabase.auth.updateUser({
         password: newPassword,
       });
 

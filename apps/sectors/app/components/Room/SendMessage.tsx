@@ -97,4 +97,6 @@ const SendMessage = forwardRef<HTMLTextAreaElement, SendMessageProps>(
   }
 );
 
+SendMessage.displayName = "SendMessage";
+
 export default SendMessage;

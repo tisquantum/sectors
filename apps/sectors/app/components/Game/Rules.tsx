@@ -576,13 +576,13 @@ const CompanyActionsRules = () => {
   );
 };
 
-const CompanyRules = (
+const companyRules = (
   <>
     <h2 id="companies">Companies</h2>
     <p>
       Companies are the vessel for financial investment in sectors. Investors
       will buy and sell stocks and place orders on the derivative market,
-      placing bets against these companies' performance. Companies will
+      placing bets against these companies&apos; performance. Companies will
       distribute revenue based on earnings during ORs. During ORs, companies
       will also get a chance to act. Both revenue distribution and company
       actions are voted on by shareholders of the company.
@@ -625,10 +625,11 @@ const CompanyRules = (
     <h3 id="company-action-order">Company Action Order</h3>
     <p>
       Because certain company actions impact the company priority order, before
-      the first company action phase, the company priority order is "locked" and
-      this becomes the company action order for this turn. Actions that would
-      adjust price, prestige, or gain any abilities to impact priority order do
-      not impact the current turn's company action order.
+      the first company action phase, the company priority order is
+      &quot;locked&quot; and this becomes the company action order for this
+      turn. Actions that would adjust price, prestige, or gain any abilities to
+      impact priority order do not impact the current turn&apos;s company action
+      order.
     </p>
   </>
 );
@@ -650,7 +651,7 @@ const Rules: FC = () => {
         </div>
       </div>
       <div className="mb-8">
-        <CompanyRules />
+        {companyRules}
       </div>
       <div className="mb-8">
         <h2 className="text-2xl font-semibold mb-2">Company Actions</h2>

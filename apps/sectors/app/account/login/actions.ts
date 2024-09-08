@@ -42,6 +42,6 @@ export async function signup(formData: FormData) {
     redirect('/account/login/error')
   }
 
-  revalidatePath('/sign-up-complete', 'layout')
-  redirect('/sign-up-complete')
+  revalidatePath('/account/sign-up-complete', 'layout')
+  redirect('/account/sign-up-complete')
 }

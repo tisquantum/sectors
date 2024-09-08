@@ -516,32 +516,48 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
   const activeCompaniesSorted = showLock
     ? activeCompaniesSortedLocked
     : activeCompaniesSortedUnlocked;
-  const collectedCompanies = [...insolventCompanies, ...activeCompaniesSorted];
+  const collectedCompanies = [
+    ...insolventCompanies,
+    ...activeCompaniesSorted,
+  ] as CompanyWithRelations[];
 
   //I thought originally I'd get rid of this, but now I'm thinking
   //of preserving this behavior so players can flip through orders to review votes of other companies if they want.
   const handleNext = () => {
-    setCurrentCompany((prev) => {
-      if (!prev) return collectedCompanies[0].id;
-      const currentIndex = collectedCompanies.findIndex(
-        (company) => company.id === prev
-      );
-      if (currentIndex === collectedCompanies.length - 1)
-        return collectedCompanies[0].id;
-      return collectedCompanies[currentIndex + 1].id;
-    });
+    if (collectedCompanies?.length > 0) {
+      setCurrentCompany((prev) => {
+        if (!prev) return collectedCompanies[0]?.id || undefined; // Return undefined instead of null
+        const currentIndex = collectedCompanies.findIndex(
+          (company) => company?.id === prev // Add check for undefined company
+        );
+        if (
+          currentIndex === -1 ||
+          currentIndex === collectedCompanies.length - 1
+        ) {
+          return collectedCompanies[0]?.id || undefined; // Return undefined instead of null
+        }
+        return collectedCompanies[currentIndex + 1]?.id || undefined; // Return undefined instead of null
+      });
+    }
   };
+
   const handlePrevious = () => {
-    setCurrentCompany((prev) => {
-      if (!prev) return collectedCompanies[0].id;
-      const currentIndex = collectedCompanies.findIndex(
-        (company) => company.id === prev
-      );
-      if (currentIndex === 0)
-        return collectedCompanies[collectedCompanies.length - 1].id;
-      return collectedCompanies[currentIndex - 1].id;
-    });
+    if (collectedCompanies?.length > 0) {
+      setCurrentCompany((prev) => {
+        if (!prev) return collectedCompanies[0]?.id || undefined; // Return undefined instead of null
+        const currentIndex = collectedCompanies.findIndex(
+          (company) => company?.id === prev // Add check for undefined company
+        );
+        if (currentIndex === -1 || currentIndex === 0) {
+          return (
+            collectedCompanies[collectedCompanies.length - 1]?.id || undefined
+          ); // Return undefined instead of null
+        }
+        return collectedCompanies[currentIndex - 1]?.id || undefined; // Return undefined instead of null
+      });
+    }
   };
+
   const currentCompanyActions = companyActions?.filter(
     (companyAction) => companyAction.companyId === currentCompany
   );
