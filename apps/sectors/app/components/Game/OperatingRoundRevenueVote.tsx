@@ -166,7 +166,7 @@ const OperatingRoundRevenueVote = () => {
               className="flex flex-col bg-slate-800 p-4 rounded-lg shadow-md"
               key={productionResult.id}
             >
-              <div className="flex flex-col">
+              <div className="flex flex-col justify-between">
                 <div className="flex flex-col items-center gap-2">
                   <CompanyInfo companyId={productionResult.Company.id} />
                   <ShareHolders companyId={productionResult.Company.id} />

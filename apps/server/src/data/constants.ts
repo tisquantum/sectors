@@ -1026,7 +1026,7 @@ export const companyActionsDescription: CompanyActionDescription[] = [
     id: 28,
     title: 'Boom Cycle',
     name: OperatingRoundAction.BOOM_CYCLE,
-    message: `Would the companies stock price be stopped by a new price tier, allow it to move up at least ${BOOM_CYCLE_STOCK_CHART_BONUS} spaces further.`,
+    message: `Would the companies stock price be stopped by a new price tier as it's price increases, allow it to move up at least ${BOOM_CYCLE_STOCK_CHART_BONUS} spaces further.`,
     actionType: 'sector-passive',
   },
   //energy
