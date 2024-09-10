@@ -45,6 +45,9 @@ import { PrizeModule } from './prize/prize.module';
 import { PrizeVotesModule } from './prize-votes/prize-votes.module';
 import { PrizeDistributionModule } from './prize-distribution/prize-distribution.module';
 import { CompanyActionOrderModule } from './company-action-order/company-action-order.module';
+import { SectorPriorityModule } from './sector-priority/sector-priority.module';
+import { HeadlineModule } from './headline/headline.module';
+import { PlayerHeadlineModule } from './player-headline/player-headline.module';
 
 const yourPusherOptions = {
   cluster: process.env.PUSHER_CLUSTER ?? 'CLUSTER',
@@ -106,6 +109,9 @@ const chunkingOptions = {
     PrizeVotesModule,
     PrizeDistributionModule,
     CompanyActionOrderModule,
+    SectorPriorityModule,
+    HeadlineModule,
+    PlayerHeadlineModule,
   ],
   controllers: [AppController],
   providers: [AppService],

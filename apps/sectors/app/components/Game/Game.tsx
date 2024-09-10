@@ -46,6 +46,7 @@ import { useDrawer } from "../Drawer.context";
 import PrizeRound from "./PrizeVote";
 import DistributePrizes from "./DistributePrize";
 import StartTurnUpdates from "./StartTurnUpdates";
+import GamePlayersRecap from "./GamePlayerRecap";
 
 const determineGameRound = (
   game: GameState
@@ -153,9 +154,9 @@ const Game = ({ gameId }: { gameId: string }) => {
     currentRoundData?.phase.name === PhaseName.STOCK_MEET ? (
       <Meeting />
     ) : currentRoundData?.phase.name === PhaseName.START_TURN ? (
-      <div className="flex flex-col items-center justify-center h-full w-full">
+      <div className="flex flex-col items-center justify-center h-full w-full gap-2">
         <StartTurnUpdates />
-        <Meeting />
+        <GamePlayersRecap />
       </div>
     ) : currentRoundData?.phase.name === PhaseName.PRIZE_VOTE_ACTION ? (
       <PrizeRound />
@@ -290,9 +291,7 @@ const Game = ({ gameId }: { gameId: string }) => {
                 {currentView === "pending" && <PendingOrders />}
                 {currentView == "economy" && <EndTurnEconomy />}
                 {currentView == "markets" && <StockRoundOrderGrid />}
-                {currentView == "companies" && (
-                  <CompanyActionSlider />
-                )}
+                {currentView == "companies" && <CompanyActionSlider />}
                 {gameState.gameStatus == GameStatus.FINISHED && (
                   <GameResults
                     isOpen={isOpen}

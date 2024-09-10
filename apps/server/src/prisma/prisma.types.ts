@@ -9,6 +9,7 @@ import {
   GameLog,
   GameRecord,
   GameTurn,
+  Headline,
   InfluenceRound,
   InfluenceVote,
   InsolvencyContribution,
@@ -18,6 +19,7 @@ import {
   OptionContract,
   Phase,
   Player,
+  PlayerHeadline,
   PlayerOrder,
   PlayerPriority,
   PlayerResult,
@@ -323,4 +325,14 @@ export type PrizeVoteWithRelations = PrizeVote & {
 export type UserRestricted = {
   id: string;
   name: string;
+};
+
+export type PlayerHeadlineWithPlayer = PlayerHeadline & {
+  player: Player;
+};
+
+export type HeadlineWithRelations = Headline & {
+  company: Company | null;
+  sector: Sector | null;
+  playerHeadlines: PlayerHeadlineWithPlayer[];
 };

@@ -97,6 +97,7 @@ model Player {
   PrizeVotes               PrizeVote[]
   PrizeDistributions       PrizeDistribution[]
   RoomUser                 RoomUser?
+  PlayerHeadline           PlayerHeadline[]
 }
 
 enum AccountStatus {
@@ -196,6 +197,7 @@ model Company {
   CompanyActionOrders      CompanyActionOrder[]
   Entity                   Entity?                   @relation(fields: [entityId], references: [id])
   entityId                 String?                   @unique
+  Headline                 Headline[]
 }
 
 enum CompanyTier {
@@ -606,32 +608,34 @@ enum ResearchCardEffect {
 }
 
 model Sector {
-  id                     String        @id @default(uuid())
+  id                     String           @id @default(uuid())
   name                   String
-  sectorName             SectorName    @default(GENERAL)
-  consumers              Int           @default(0)
+  sectorName             SectorName       @default(GENERAL)
+  consumers              Int              @default(0)
   supply                 Int
   demand                 Int
-  demandBonus            Int?          @default(0)
+  demandBonus            Int?             @default(0)
   marketingPrice         Float
   basePrice              Float
-  ipoMin                 Int           @default(10)
-  ipoMax                 Int           @default(20)
-  sharePercentageToFloat Int           @default(50)
-  unitPriceMin           Int           @default(0)
-  unitPriceMax           Int           @default(0)
-  supplyDefault          Int           @default(0)
-  demandMin              Int           @default(0)
-  demandMax              Int           @default(1)
-  supplyMin              Int           @default(0)
-  supplyMax              Int           @default(1)
+  ipoMin                 Int              @default(10)
+  ipoMax                 Int              @default(20)
+  sharePercentageToFloat Int              @default(50)
+  unitPriceMin           Int              @default(0)
+  unitPriceMax           Int              @default(0)
+  supplyDefault          Int              @default(0)
+  demandMin              Int              @default(0)
+  demandMax              Int              @default(1)
+  supplyMin              Int              @default(0)
+  supplyMax              Int              @default(1)
   Company                Company[]
   PlayerOrder            PlayerOrder[]
-  Game                   Game?         @relation(fields: [gameId], references: [id])
+  Game                   Game?            @relation(fields: [gameId], references: [id])
   gameId                 String?
-  createdAt              DateTime      @default(now())
-  updatedAt              DateTime      @updatedAt
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
   SectorPrize            SectorPrize[]
+  SectorPriority         SectorPriority[]
+  Headline               Headline[]
 }
 
 enum SectorName {
@@ -654,6 +658,7 @@ model Game {
   currentOrSubRound       Int
   currentRound            RoundType
   currentActivePlayer     String?
+  sectorPriority          SectorPriority[]
   bankPoolNumber          Int
   consumerPoolNumber      Int
   gameStatus              GameStatus               @default(PENDING)
@@ -680,6 +685,7 @@ model Game {
   ResearchDeck            ResearchDeck[]
   MeetingMessage          MeetingMessage[]
   PlayerOrder             PlayerOrder[]
+  Headlines               Headline[]
   Share                   Share[]
   OptionContracts         OptionContract[]
   CapitalGains            CapitalGains[]
@@ -697,6 +703,71 @@ model Game {
   InsolvencyContribution  InsolvencyContribution[]
   StockHistory            StockHistory[]
   Prizes                  Prize[]
+  PlayerHeadline          PlayerHeadline[]
+}
+
+model SectorPriority {
+  id        String   @id @default(uuid())
+  gameId    String
+  sectorId  String
+  priority  Int
+  Game      Game     @relation(fields: [gameId], references: [id])
+  Sector    Sector   @relation(fields: [sectorId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Headline {
+  id        String           @id @default(uuid())
+  name      HeadlineName
+  gameId    String
+  cost      Int
+  timestamp String
+  sectorId  String?
+  companyId String?
+  location  HeadlineLocation
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  game            Game             @relation(fields: [gameId], references: [id])
+  playerHeadlines PlayerHeadline[]
+  sector          Sector?          @relation(fields: [sectorId], references: [id])
+  company         Company?         @relation(fields: [companyId], references: [id])
+}
+
+enum HeadlineLocation {
+  DECK
+  FOR_SALE
+  SOLD
+  DISCARDED
+}
+
+enum HeadlineName {
+  COMPANY_NEGATIVE_1
+  COMPANY_NEGATIVE_2
+  COMPANY_NEGATIVE_3
+  COMPANY_POSITIVE_1
+  COMPANY_POSITIVE_2
+  COMPANY_POSITIVE_3
+  SECTOR_NEGATIVE_1
+  SECTOR_NEGATIVE_2
+  SECTOR_NEGATIVE_3
+  SECTOR_POSITIVE_1
+  SECTOR_POSITIVE_2
+  SECTOR_POSITIVE_3
+}
+
+model PlayerHeadline {
+  id         String   @id @default(uuid())
+  playerId   String
+  headlineId String
+  gameId     String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  game     Game     @relation(fields: [gameId], references: [id])
+  player   Player   @relation(fields: [playerId], references: [id])
+  headline Headline @relation(fields: [headlineId], references: [id])
 }
 
 enum GameStatus {
