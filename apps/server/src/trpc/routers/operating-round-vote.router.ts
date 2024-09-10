@@ -5,6 +5,7 @@ import { Prisma, OperatingRoundAction } from '@prisma/client';
 import { checkIsPlayerAction, checkSubmissionTime } from '../trpc.middleware';
 import { PhaseService } from '@server/phase/phase.service';
 import { PlayersService } from '@server/players/players.service';
+import { TRPCError } from '@trpc/server';
 
 type Context = {
   operatingRoundVoteService: OperatingRoundVoteService;
@@ -60,7 +61,8 @@ export default (trpc: TrpcService, ctx: Context) =>
       .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
       .use(async (opts) => checkSubmissionTime(opts, ctx.phaseService))
       .mutation(async ({ input, ctx: ctxMiddleware }) => {
-        const { operatingRoundId, playerId, companyId, gameId, ...rest } = input;
+        const { operatingRoundId, playerId, companyId, gameId, ...rest } =
+          input;
         //TODO: Remove operating round reference from args
         const data: Prisma.OperatingRoundVoteCreateInput = {
           ...rest,
@@ -69,9 +71,17 @@ export default (trpc: TrpcService, ctx: Context) =>
           Company: { connect: { id: companyId } },
           submissionStamp: ctxMiddleware.submissionStamp,
         };
-        const vote =
-          await ctx.operatingRoundVoteService.createOperatingRoundVote(data);
-        return vote;
+        try {
+          const vote =
+            await ctx.operatingRoundVoteService.createOperatingRoundVote(data);
+          return vote;
+        } catch (error) {
+          console.error(error);
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: `An error occurred while creating the player order: ${error}`,
+          });
+        }
       }),
 
     createManyOperatingRoundVotes: trpc.procedure

@@ -195,7 +195,7 @@ const CompanyVoteResolve = () => {
   };
 
   return (
-    <div>
+    <div className="flex flex-col h-full w-full">
       <CompanyInfo companyId={company.id} showBarChart />
       <div className="border-b-2 border-gray-200 my-4"></div>
       {companyActions.map((companyAction) => (
