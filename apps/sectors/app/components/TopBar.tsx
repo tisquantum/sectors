@@ -33,7 +33,7 @@ import { useState, useMemo, memo } from "react";
 import { User } from "@server/prisma/prisma.client";
 
 // Extracted CommonNavLinks to receive props for the "onOpen" function
-const CommonNavLinks = memo(({ onOpen }: { onOpen: () => void}) => (
+const CommonNavLinks = memo(({ onOpen }: { onOpen: () => void }) => (
   <>
     <NavbarItem>
       <Link href="/rooms">Rooms</Link>
@@ -47,36 +47,46 @@ const CommonNavLinks = memo(({ onOpen }: { onOpen: () => void}) => (
   </>
 ));
 
+CommonNavLinks.displayName = "CommonNavLinks";
+
 // Extracted AuthMenu component outside to prevent unnecessary re-renders
-const AuthMenu = memo(({ loading, user, handleLogout }: {
-  loading: boolean;
-  user: User | null;
-  handleLogout: () => void;
-}) => {
-  return (
-    <NavbarItem>
-      {loading ? (
-        <Button>Loading...</Button>
-      ) : user ? (
-        <Dropdown>
-          <DropdownTrigger>
-            <Button>
-              <UserAvatar user={user} size="sm" /> {user.name}
-            </Button>
-          </DropdownTrigger>
-          <DropdownMenu>
-            <DropdownItem href="/account/settings">Settings</DropdownItem>
-            <DropdownItem onClick={handleLogout}>Logout</DropdownItem>
-          </DropdownMenu>
-        </Dropdown>
-      ) : (
-        <Link href="/account/login">
-          <DebounceButton>Log in</DebounceButton>
-        </Link>
-      )}
-    </NavbarItem>
-  );
-});
+const AuthMenu = memo(
+  ({
+    loading,
+    user,
+    handleLogout,
+  }: {
+    loading: boolean;
+    user: User | null;
+    handleLogout: () => void;
+  }) => {
+    return (
+      <NavbarItem>
+        {loading ? (
+          <Button>Loading...</Button>
+        ) : user ? (
+          <Dropdown>
+            <DropdownTrigger>
+              <Button>
+                <UserAvatar user={user} size="sm" /> {user.name}
+              </Button>
+            </DropdownTrigger>
+            <DropdownMenu>
+              <DropdownItem href="/account/settings">Settings</DropdownItem>
+              <DropdownItem onClick={handleLogout}>Logout</DropdownItem>
+            </DropdownMenu>
+          </Dropdown>
+        ) : (
+          <Link href="/account/login">
+            <DebounceButton>Log in</DebounceButton>
+          </Link>
+        )}
+      </NavbarItem>
+    );
+  }
+);
+
+AuthMenu.displayName = "AuthMenu";
 
 const TopBar = () => {
   const { user, loading } = useAuthUser();
@@ -92,7 +102,9 @@ const TopBar = () => {
 
   // Memoize dropdown content to prevent unnecessary re-renders
   const MemoizedAuthMenu = useMemo(
-    () => <AuthMenu loading={loading} user={user} handleLogout={handleLogout} />,
+    () => (
+      <AuthMenu loading={loading} user={user} handleLogout={handleLogout} />
+    ),
     [loading, user]
   );
 
