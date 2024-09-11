@@ -58,7 +58,7 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
       setStartGameIsSubmitted(true);
     },
   });
-
+  const isSmallDevice = true;
   let roomHostAuthUser: RoomUserWithUser | undefined;
   if (user && roomUsers) {
     roomHostAuthUser = roomUsers.find(
@@ -169,9 +169,15 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
         {roomUsers.map((roomUser) => (
           <li key={roomUser.user.id} className="flex items-center mb-4 gap-1">
             <div className="flex items-center mr-1">
-              <UserAvatar user={roomUser.user} size="lg" />
+              {isSmallDevice ? (
+                <UserAvatar user={roomUser.user} size="sm" />
+              ) : (
+                <UserAvatar user={roomUser.user} size="lg" />
+              )}
             </div>
-            <span className="text-xl">{roomUser.user.name}</span>
+            {!isSmallDevice && (
+              <span className="text-xl">{roomUser.user.name}</span>
+            )}
             {roomUser.roomHost && <BeakerIcon className="size-5" />}
           </li>
         ))}

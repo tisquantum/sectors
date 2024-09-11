@@ -161,24 +161,24 @@ const StartTurnUpdates = () => {
       >
         Turn {currentTurn.turn}
       </motion.h2>
-      <motion.p
+      <motion.div
         className="text-center mb-8 text-lg leading-relaxed italic text-gray-300"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.3, duration: 0.6 }}
       >
         {currentTurn.turn == 1 ? (
-          <span>
+          <p>
             Welcome to Sectors, it is now time to plan your first moves. Feel
             free to plan and coordinate with other players. Be truthful, be
             deceitful, be whatever you need to be to make money. There are no
             binding deals, only agreements made in good will for the greater
             economy. Good luck!
-          </span>
+          </p>
         ) : (
           <FinancialQuote />
         )}
-      </motion.p>
+      </motion.div>
       {currentTurn.turn % 3 === 0 && (
         <motion.div
           className="flex flex-col justify-center items-center bg-black p-6 rounded-md mt-4 shadow-2xl border border-green-600"
