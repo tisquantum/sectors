@@ -121,8 +121,8 @@ const RoomComponent = ({ room }: { room: RoomWithUsersAndGames }) => {
       <div className="flex h-screen overflow-hidden">
         {roomUsers && <Sidebar roomUsers={roomUsers} room={room} />}
         <div className="flex flex-col flex-grow bg-gray-100">
-          <div className="bg-gray-800 text-white p-4">
-            <h1 className="text-xl font-bold">{room.name}</h1>
+          <div className="bg-gray-800 text-white p-2 md:p-4">
+            <h1 className="text-md md:text-xl font-bold">{room.name}</h1>
           </div>
           {messages && <MessagePane messages={messages} />}
           <SendMessage onSendMessage={handleSendMessage} />

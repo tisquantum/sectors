@@ -31,70 +31,74 @@ const GameTopBar = ({
       : "bg-slate-700 text-stone-100";
 
   return (
-    <Navbar height="100%">
-      <div className="flex justify-between items-center p-2 flex-wrap">
-        <ButtonGroup>
-          <Button
-            className={getButtonClass("action")}
-            onClick={() => handleViewChange("action")}
-          >
-            Action
-          </Button>
-          <Button
-            className={getButtonClass("pending")}
-            onClick={() => handleViewChange("pending")}
-          >
-            Pending Orders
-          </Button>
-          <Button
-            className={getButtonClass("chart")}
-            onClick={() => handleViewChange("chart")}
-          >
-            Stock Chart
-          </Button>
-          <Button
-            className={getButtonClass("markets")}
-            onClick={() => handleViewChange("markets")}
-          >
-            Markets
-          </Button>
-          <Button
-            className={getButtonClass("economy")}
-            onClick={() => handleViewChange("economy")}
-          >
-            Economy
-          </Button>
-          <Button
-            className={getButtonClass("companies")}
-            onClick={() => handleViewChange("companies")}
-          >
-            Operations
-          </Button>
-        </ButtonGroup>
-        {currentPhase?.name && !isActivePhase(currentPhase.name) && (
-          <div
-            className={`flex flex-col justify-center items-center ${
-              isTimerAtZero ? "opacity-100 z-20" : "opacity-0 z-0"
-            }`}
-          >
-            <PassiveLoading />
-          </div>
-        )}
-        {currentPhase && (
-          <Timer
-            countdownTime={currentPhase.phaseTime / 1000} //convert from seconds to milliseconds
-            startDate={new Date(currentPhase.createdAt)} // attempt to cast to Date
-            size={16}
-            textSize={1}
-            onEnd={() => {}}
-          />
-        )}
-        <Button onClick={handleTogglePhaseList}>
-          Phases | {friendlyPhaseName(currentPhase?.name)}
+    <div className="flex justify-between items-center p-2 flex-wrap bg-gradient-to-b from-slate-950 to-black">
+      <ButtonGroup className="flex flex-wrap">
+        <Button
+          className={getButtonClass("action")}
+          onClick={() => handleViewChange("action")}
+          size="sm"
+        >
+          Action
         </Button>
-        <GameGeneralInfo />
-      </div>
-    </Navbar>
+        <Button
+          className={getButtonClass("pending")}
+          onClick={() => handleViewChange("pending")}
+          size="sm"
+        >
+          Pending Orders
+        </Button>
+        <Button
+          className={getButtonClass("chart")}
+          onClick={() => handleViewChange("chart")}
+          size="sm"
+        >
+          Stock Chart
+        </Button>
+        <Button
+          className={getButtonClass("markets")}
+          onClick={() => handleViewChange("markets")}
+          size="sm"
+        >
+          Markets
+        </Button>
+        <Button
+          className={getButtonClass("economy")}
+          onClick={() => handleViewChange("economy")}
+          size="sm"
+        >
+          Economy
+        </Button>
+        <Button
+          className={getButtonClass("companies")}
+          onClick={() => handleViewChange("companies")}
+          size="sm"
+        >
+          Operations
+        </Button>
+      </ButtonGroup>
+      {currentPhase?.name && !isActivePhase(currentPhase.name) && (
+        <div
+          className={`flex flex-col justify-center items-center ${
+            isTimerAtZero ? "opacity-100 z-20" : "opacity-0 z-0"
+          }`}
+        >
+          <PassiveLoading />
+        </div>
+      )}
+      {currentPhase && (
+        <Timer
+          countdownTime={currentPhase.phaseTime / 1000} //convert from seconds to milliseconds
+          startDate={new Date(currentPhase.createdAt)} // attempt to cast to Date
+          size={16}
+          textSize={1}
+          onEnd={() => {}}
+        />
+      )}
+      <GameGeneralInfo />
+      <Button onClick={handleTogglePhaseList}>
+        {friendlyPhaseName(currentPhase?.name)}
+      </Button>
+    </div>
   );
 };
 

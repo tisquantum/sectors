@@ -1,3 +1,4 @@
+"use client";
 // components/Message.tsx
 import React from "react";
 import { Avatar, Card, CardBody, Divider } from "@nextui-org/react";
@@ -12,36 +13,49 @@ interface MessageProps {
 const MessageComponent: React.FC<MessageProps> = ({ message }) => {
   const isUserAndPlayerNameEqual =
     message.roomUser.user.name == message.roomUser.player?.nickname;
+  const isSmallDevice = true;
   return (
     <div className="mb-4">
       <Card>
         <CardBody>
           <div className="flex content-center items-center">
-            <div className="items-center mr-4">
-              {message.roomUser.player && !!!isUserAndPlayerNameEqual ? (
-                <UserAvatar
-                  user={message.roomUser.user}
-                  badgeContent={
-                    <PlayerAvatar size="sm" player={message.roomUser.player} />
-                  }
-                  badgeIsOneChar={true}
-                  badgePlacement="bottom-left"
-                  size="lg"
-                />
-              ) : (
-                <UserAvatar user={message.roomUser.user} size="lg" />
-              )}
+            <div className="items-center mr-1 md:mr-4">
+              {!isSmallDevice &&
+                (message.roomUser.player && !!!isUserAndPlayerNameEqual ? (
+                  <UserAvatar
+                    user={message.roomUser.user}
+                    badgeContent={
+                      <PlayerAvatar
+                        size="sm"
+                        player={message.roomUser.player}
+                      />
+                    }
+                    badgeIsOneChar={true}
+                    badgePlacement="bottom-left"
+                    size="md"
+                  />
+                ) : (
+                  <UserAvatar user={message.roomUser.user} size="md" />
+                ))}
             </div>
             <div className="flex flex-col">
-              <p className="mb-2">{message.content}</p>
+              <p className="mb-1 md:mb-2 text-sm md:text-base">
+                {message.content}
+              </p>
               <Divider />
               <div className="flex items-center mt-2 gap-2">
-                <div className="font-bold">
-                  {message.roomUser.user.name}
-                  {!!!isUserAndPlayerNameEqual &&
-                    `(${message.roomUser.player?.nickname})`}
-                </div>
-                <div className="text-sm text-gray-600">
+                {isSmallDevice ? (
+                  <div className="flex flex-wrap">
+                    <UserAvatar user={message.roomUser.user} size="sm" />
+                  </div>
+                ) : (
+                  <div className="font-bold text-sm md:text-base">
+                    {message.roomUser.user.name}
+                    {!!!isUserAndPlayerNameEqual &&
+                      `(${message.roomUser.player?.nickname})`}
+                  </div>
+                )}
+                <div className="text-xs md:text-sm text-gray-600">
                   {new Date(message.timestamp).toLocaleString()}
                 </div>
               </div>

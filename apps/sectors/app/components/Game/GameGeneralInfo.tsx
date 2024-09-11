@@ -82,8 +82,8 @@ const GameGeneralInfo = () => {
     return order.isSell ? acc - orderValue : acc + orderValue;
   }, 0);
   return (
-    <div className="flex space-x-4 items-center">
-      <div className="flex items-center gap-2">
+    <div className="flex flex-wrap space-x-4 items-center">
+      <div className="flex flex-wrap items-center gap-2">
         <PlayerAvatar player={authPlayer} />
         <div className="flex flex-col">
           <div className="flex items-center text-md font-bold">
