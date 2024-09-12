@@ -6,6 +6,9 @@ import {
   CardFooter,
   CardHeader,
   Chip,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   Tooltip,
 } from "@nextui-org/react";
 import {
@@ -45,6 +48,7 @@ import { useGame } from "./GameContext";
 import { CheckCircleIcon } from "@heroicons/react/24/solid";
 import { createAvatar } from "@dicebear/core";
 import { lorelei } from "@dicebear/collection";
+import PlayerOverview from "../Player/PlayerOverview";
 
 const OrderChipChitWithPlayer = ({
   order,
@@ -53,7 +57,7 @@ const OrderChipChitWithPlayer = ({
   order: PlayerOrder & { Player: Player } & { GameTurn: GameTurn };
   showStatus?: boolean;
 }) => {
-  const { gameState } = useGame();
+  const { gameState, playersWithShares } = useGame();
   const avatarUri = useMemo(() => {
     return createAvatar(lorelei, {
       size: 16,
@@ -61,98 +65,102 @@ const OrderChipChitWithPlayer = ({
       backgroundColor: [hashStringToColor(order.Player.nickname)],
     }).toDataUri();
   }, []);
-
+  const playerWithShares = playersWithShares.find(
+    (p) => p.id === order.Player.id
+  );
   return (
-    <Badge
-      className="top-[5%] right-[2%]"
-      key={order.id}
-      isOneChar
-      isDot
-      showOutline={false}
-      size="sm"
-      content={
-        order.orderStatus == OrderStatus.FILLED ? (
-          <RiCheckboxCircleFill className="text-green-500" />
-        ) : order.orderStatus == OrderStatus.REJECTED ? (
-          <RiCloseCircleFill className="text-red-500" />
-        ) : (
-          <RiTimeFill className="text-yellow-500" />
-        )
-      }
-      shape="circle"
-      placement="top-right"
-    >
-      <Tooltip
-        classNames={{ base: baseToolTipStyle }}
-        className={tooltipStyle}
+    <Popover placement="bottom">
+      <Badge
+        className="top-[5%] right-[2%]"
+        key={order.id}
+        isOneChar
+        isDot
+        showOutline={false}
+        size="sm"
         content={
-          <p className={tooltipParagraphStyle}>{order.Player.nickname}</p>
+          order.orderStatus == OrderStatus.FILLED ? (
+            <RiCheckboxCircleFill className="text-green-500" />
+          ) : order.orderStatus == OrderStatus.REJECTED ? (
+            <RiCloseCircleFill className="text-red-500" />
+          ) : (
+            <RiTimeFill className="text-yellow-500" />
+          )
         }
+        shape="circle"
+        placement="top-right"
       >
-        <Card
-          className={`relative bg-${determineColorByOrderType(
-            order.orderType,
-            order.isSell
-          )} drop-shadow-md`}
+        <Tooltip
+          classNames={{ base: baseToolTipStyle }}
+          className={tooltipStyle}
+          content={
+            <p className={tooltipParagraphStyle}>{order.Player.nickname}</p>
+          }
         >
-          {/* Background Image ${hashStringToColor(order.Player.nickname)} ${determineColorByOrderType(
+          <PopoverTrigger>
+            <Card
+              className={`relative bg-${determineColorByOrderType(
+                order.orderType,
+                order.isSell
+              )} drop-shadow-md cursor-pointer`}
+            >
+              {/* Background Image ${hashStringToColor(order.Player.nickname)} ${determineColorByOrderType(
             order.orderType,
             order.isSell
           )} */}
-          <img
-            src={avatarUri}
-            alt="Avatar Background"
-            className="absolute inset-0 w-full h-full object-cover z-0 opacity-25"
-          />
+              <img
+                src={avatarUri}
+                alt="Avatar Background"
+                className="absolute inset-0 w-full h-full object-cover z-0 opacity-25"
+              />
 
-          <CardHeader className="z-20 p-1 pt-2 pb-0 flex justify-center gap-2">
-            <div className="flex flex-col gap-1 drop-shadow-[0_1.2px_1.2px_rgba(0,0,0,0.8)]">
-              <div className="flex items-center gap-1 text-xs font-bold">
-                <div className="flex flex-col items-center justify-center">
-                  <div className="flex">
-                    <span>{renderOrderTypeShortHand(order.orderType)}</span>
+              <CardHeader className="z-20 p-1 pt-2 pb-0 flex justify-center gap-2">
+                <div className="flex flex-col gap-1 drop-shadow-[0_1.2px_1.2px_rgba(0,0,0,0.8)]">
+                  <div className="flex items-center gap-1 text-xs font-bold">
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="flex">
+                        <span>{renderOrderTypeShortHand(order.orderType)}</span>
 
-                    <div className="flex items-center gap-1">
-                      <span>
-                        {(order.orderType === OrderType.LIMIT ||
-                          order.orderType === OrderType.MARKET) && (
-                          <>
-                            <span>{order.isSell ? "-" : "+"}</span>
-                          </>
-                        )}
-                      </span>
-                      {(order.orderType === OrderType.MARKET ||
-                        order.orderType === OrderType.LIMIT ||
-                        order.orderType === OrderType.SHORT) && (
-                        <span>{order.quantity}</span>
-                      )}
-                      <div className="flex items-center gap-1">
-                        {order.orderType === OrderType.LIMIT && (
-                          <span>@${order.value}</span>
-                        )}
-                        {order.orderType === OrderType.SHORT && (
-                          <span>@${order.value}</span>
-                        )}
-                        {gameState.distributionStrategy ==
-                          DistributionStrategy.BID_PRIORITY &&
-                          (order.orderType === OrderType.MARKET ||
-                            order.orderType === OrderType.OPTION) && (
-                            <span>@${order.value}</span>
+                        <div className="flex items-center gap-1">
+                          <span>
+                            {(order.orderType === OrderType.LIMIT ||
+                              order.orderType === OrderType.MARKET) && (
+                              <>
+                                <span>{order.isSell ? "-" : "+"}</span>
+                              </>
+                            )}
+                          </span>
+                          {(order.orderType === OrderType.MARKET ||
+                            order.orderType === OrderType.LIMIT ||
+                            order.orderType === OrderType.SHORT) && (
+                            <span>{order.quantity}</span>
                           )}
+                          <div className="flex items-center gap-1">
+                            {order.orderType === OrderType.LIMIT && (
+                              <span>@${order.value}</span>
+                            )}
+                            {order.orderType === OrderType.SHORT && (
+                              <span>@${order.value}</span>
+                            )}
+                            {gameState.distributionStrategy ==
+                              DistributionStrategy.BID_PRIORITY &&
+                              (order.orderType === OrderType.MARKET ||
+                                order.orderType === OrderType.OPTION) && (
+                                <span>@${order.value}</span>
+                              )}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          </CardHeader>
-          <CardBody className="z-20 p-1 pb-2 flex flex-col justify-center items-center">
-            <div className="flex justify-center items-center text-gray-100 text-xs font-bold drop-shadow-[0_1.2px_1.2px_rgba(0,0,0,0.8)]">
-              <span>T{order.GameTurn.turn}</span>
-              <span>
-                &nbsp;|&nbsp;{renderLocationShortHand(order.location)}
-              </span>
-              {/* <div className="flex items-center">
+              </CardHeader>
+              <CardBody className="z-20 p-1 pb-2 flex flex-col justify-center items-center">
+                <div className="flex justify-center items-center text-gray-100 text-xs font-bold drop-shadow-[0_1.2px_1.2px_rgba(0,0,0,0.8)]">
+                  <span>T{order.GameTurn.turn}</span>
+                  <span>
+                    &nbsp;|&nbsp;{renderLocationShortHand(order.location)}
+                  </span>
+                  {/* <div className="flex items-center">
             <span>&nbsp;|&nbsp;</span>
             {order.orderStatus == OrderStatus.FILLED ? (
               <RiCheckboxCircleFill className="size-3 text-green-500" />
@@ -162,11 +170,18 @@ const OrderChipChitWithPlayer = ({
               <RiTimeFill className="size-3 text-yellow-500" />
             )}
           </div> */}
-            </div>
-          </CardBody>
-        </Card>
-      </Tooltip>
-    </Badge>
+                </div>
+              </CardBody>
+            </Card>
+          </PopoverTrigger>
+        </Tooltip>
+      </Badge>
+      <PopoverContent className="p-0 m-0">
+        {playerWithShares && (
+          <PlayerOverview playerWithShares={playerWithShares} />
+        )}
+      </PopoverContent>
+    </Popover>
   );
 };
 

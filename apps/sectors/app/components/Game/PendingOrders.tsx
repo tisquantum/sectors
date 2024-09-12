@@ -14,6 +14,9 @@ import {
   CardBody,
   CardHeader,
   Chip,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
 } from "@nextui-org/react";
 import "./PendingOrders.css";
 import { trpc } from "@sectors/app/trpc";
@@ -37,12 +40,13 @@ import { create } from "domain";
 import { sectorColors } from "@server/data/gameData";
 import { motion, AnimatePresence } from "framer-motion";
 import OrderChipWithPlayer from "./OrderChipWithPlayer";
-import { RiCloseCircleFill } from "@remixicon/react";
+import { RiCloseCircleFill, RiFundsFill } from "@remixicon/react";
 import { flushAllTraces } from "next/dist/trace";
 import PlayerAvatar from "../Player/PlayerAvatar";
 import OptionContract from "./OptionContract";
 import { useEffect, useMemo } from "react";
 import OrderChipChitWithPlayer from "./OrderChipChitWithPlayer";
+import CompanyInfo from "../Company/CompanyInfo";
 
 const containerVariants = {
   hidden: { opacity: 0, y: -20 }, // Defines the initial state of the component: invisible and slightly shifted upward
@@ -211,11 +215,18 @@ const PendingMarketOrders = ({
                     backgroundColor: sectorColors[orders[0].Sector.name],
                   }}
                 >
-                  <div className="text-lg font-bold flex gap-2 bg-stone-600 p-2 content-center items-center">
-                    <ArrowTrendingUpIcon className="size-4" /> $
-                    {orders[0].Company.currentStockPrice}
-                    <span>{company}</span>
-                  </div>
+                  <Popover>
+                    <PopoverTrigger>
+                      <div className="text-lg font-bold flex gap-2 bg-stone-600 p-2 content-center items-center cursor-pointer">
+                        <RiFundsFill size={20} /> $
+                        {orders[0].Company.currentStockPrice}
+                        <span>{company}</span>
+                      </div>
+                    </PopoverTrigger>
+                    <PopoverContent>
+                      <CompanyInfo companyId={orders[0].companyId} />
+                    </PopoverContent>
+                  </Popover>
                   <div className="flex flex-wrap gap-2">
                     {Object.entries(groupedOrdersByPhase).map(
                       ([phaseId, { orders, subRound }], index) => (
