@@ -255,8 +255,10 @@ const CompanyMoreInfo = ({
               <RiBankCard2Fill size={18} className="ml-2" />
               <span className="ml-1">
                 $
-                {(LOAN_AMOUNT + LOAN_AMOUNT * LOAN_INTEREST_RATE) *
-                  LOAN_INTEREST_RATE}
+                {Math.floor(
+                  (LOAN_AMOUNT + LOAN_AMOUNT * LOAN_INTEREST_RATE) *
+                    LOAN_INTEREST_RATE
+                )}
               </span>
             </div>
           </Tooltip>
@@ -356,7 +358,7 @@ const CompanyInfo = ({
                 <span>{company.status}</span>
               </Tooltip>
             </div>
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-3">
               <Tooltip
                 classNames={{ base: baseToolTipStyle }}
                 className={tooltipStyle}

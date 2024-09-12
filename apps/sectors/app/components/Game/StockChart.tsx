@@ -266,7 +266,7 @@ const StockChart = () => {
         <Tab key="stock-grid" title="Stock Grid">
           <>
             <Legend />
-            <div className="grid grid-cols-5 lg:grid-cols-7 xl:grid-cols-8 2xl:grid-cols-10 gap-3 p-4">
+            <div className="grid grid-cols-1 @sm:grid-cols-3 @lg:grid-cols-5 @3xl:grid-cols-7 @5xl:grid-cols-8 @7xl:grid-cols-10 gap-3 p-4">
               {stockGridPrices.map((value, index) => {
                 const companiesOnCell = companies.filter(
                   (company) => company.currentStockPrice === value
