@@ -1,8 +1,10 @@
 import { PhaseName } from "@server/prisma/prisma.client";
 import { useGame } from "./GameContext";
 import { friendlyPhaseName } from "@sectors/app/helpers";
-import { phasesInOrder, STOCK_ACTION_SUB_ROUND_MAX } from "@server/data/constants";
-
+import {
+  phasesInOrder,
+  STOCK_ACTION_SUB_ROUND_MAX,
+} from "@server/data/constants";
 
 const StockActionSubRoundIndicator = ({
   current,
@@ -68,7 +70,7 @@ const PhaseListComponent = () => {
     );
   }
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2 max-w-[150px] md:max-w-[250px] lg:max-w-[300px] xl:max-w-[450px]">
       {_phasesInOrder.map((phase) => (
         <div key={phase}>
           {phase === PhaseName.STOCK_ACTION_ORDER && (

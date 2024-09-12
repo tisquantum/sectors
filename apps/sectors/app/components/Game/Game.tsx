@@ -285,9 +285,7 @@ const Game = ({ gameId }: { gameId: string }) => {
                   </div>
                 )} */}
               <div
-                className={`@container active-panel flex flex-col h-full max-h-full w-full p-4 overflow-y-auto scrollbar ${
-                  showPhaseList && "basis-10/12"
-                }`}
+                className={`@container active-panel flex flex-col h-full max-h-full w-full p-4 overflow-y-auto scrollbar`}
               >
                 {currentView === "action" && renderCurrentPhase}
                 {currentView === "chart" && <StockChart />}
