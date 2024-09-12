@@ -19,6 +19,7 @@
     "@remixicon/react": "^4.2.0",
     "@supabase/ssr": "^0.3.0",
     "@supabase/supabase-js": "^2.43.4",
+    "@tailwindcss/container-queries": "^0.1.1",
     "@tanstack/react-query": "^5.45.0",
     "@tremor/react": "^3.17.4",
     "@trpc/client": "11.0.0-rc.403",

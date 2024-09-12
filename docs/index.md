@@ -254,7 +254,7 @@ Company Priority is determined in this order of precedence.
 
 ### Company Action Order
 
-Because certain company actions impact the company priority order, before for the first company action phase, the company prioritiy order is "locked" and this becomes the company action order for this turn. Actions that would adjust price, prestige or gain any abilities to impact priority order do not impact the current turns company action order.
+Because certain company actions impact the company priority order, before the first company action phase, the company prioritiy order is "locked" and this becomes the company action order for this turn. Actions that would adjust price, prestige or gain any abilities to impact priority order do not impact the current turns company action order.
 
 ### Company Tiers
 {: #company-tiers }

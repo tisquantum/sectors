@@ -401,6 +401,7 @@ const config: Config = {
     }),
     require("@headlessui/tailwindcss"),
     require("@tailwindcss/forms"),
+    require('@tailwindcss/container-queries'),
   ],
 };
 export default config;
