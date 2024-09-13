@@ -69,15 +69,17 @@ const buildBarChart = (share: Share[]) => {
     return acc;
   }, {} as Record<string, number>);
   //convert object to array
-  return Object.entries(groupedShares).map(([location, quantity]) =>
+  return Object.entries(groupedShares).map(([location, quantity], index) =>
     location == ShareLocation.PLAYER ? (
       <ShareComponent
+        key={index}
         name={"Player"}
         icon={<RiUserFill className={"text-slate-800"} size={18} />}
         quantity={quantity}
       />
     ) : (
       <ShareComponent
+        key={index}
         name={renderLocationShortHand(location as ShareLocation)}
         quantity={quantity}
       />

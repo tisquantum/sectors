@@ -175,9 +175,9 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
                 <UserAvatar user={roomUser.user} size="lg" />
               )}
             </div>
-            {!isSmallDevice && (
-              <span className="text-xl">{roomUser.user.name}</span>
-            )}
+            <span className="max-w-[150px] md:max-w-[200px] lg:max-w-[250px] xl:max-w-[300px] text-xs md:text-lg lg:text-xl overflow-hidden text-ellipsis whitespace-nowrap">
+              {roomUser.user.name}
+            </span>
             {roomUser.roomHost && <BeakerIcon className="size-5" />}
           </li>
         ))}
