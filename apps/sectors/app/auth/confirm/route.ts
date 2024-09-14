@@ -24,11 +24,11 @@ export async function GET(request: NextRequest) {
       token_hash,
     });
     if (!error) {
-      return NextResponse.redirect(new URL(redirectTo.pathname, 'https://sectors.gg'));
+      return NextResponse.redirect(new URL(redirectTo.pathname, process.env.NEXT_PUBLIC_URL));
     }
   }
 
   // return the user to an error page with some instructions
   redirectTo.pathname = "/auth/auth-code-error";
-  return NextResponse.redirect(new URL(redirectTo.pathname, 'https://sectors.gg'));
+  return NextResponse.redirect(new URL(redirectTo.pathname, process.env.NEXT_PUBLIC_URL));
 }
