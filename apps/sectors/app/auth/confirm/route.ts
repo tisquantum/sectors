@@ -5,10 +5,6 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  console.log("searchParams", searchParams);
-  console.log("request url", request.url);
-  console.log("request nextUrl clone", request.nextUrl.clone());
-  console.log("request nextUrl", request.nextUrl);
   const token_hash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
   const next = searchParams.get("next") ?? "/";
