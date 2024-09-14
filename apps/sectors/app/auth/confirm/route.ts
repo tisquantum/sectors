@@ -12,6 +12,7 @@ export async function GET(request: NextRequest) {
   const token_hash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
   const next = searchParams.get("next") ?? "/";
+
   const redirectTo = request.nextUrl.clone();
   redirectTo.pathname = next;
 
@@ -23,11 +24,11 @@ export async function GET(request: NextRequest) {
       token_hash,
     });
     if (!error) {
-      return NextResponse.redirect("/authenticate");
+      return NextResponse.redirect(new URL(redirectTo.pathname, 'https://sectors.gg'));
     }
   }
 
   // return the user to an error page with some instructions
   redirectTo.pathname = "/auth/auth-code-error";
-  return NextResponse.redirect("/auth/auth-code-error");
+  return NextResponse.redirect(new URL(redirectTo.pathname, 'https://sectors.gg'));
 }
