@@ -10,7 +10,7 @@ interface AuthUserContextProps {
   supabaseUser: SupabaseUser | null;
   user: User | null;
   loading: boolean;
-  fetchUser: () => Promise<void>;
+  fetchUser: () => Promise<SupabaseUser | null | undefined>;
   refetchUser: () => void;
 }
 const supabase = createClient();
@@ -18,7 +18,7 @@ const AuthUserContext = createContext<AuthUserContextProps>({
   supabaseUser: null,
   user: null,
   loading: true,
-  fetchUser: async () => {},
+  fetchUser: async () => Promise.resolve(null),
   refetchUser: async () => {},
 });
 
@@ -44,6 +44,7 @@ export const AuthUserProvider: React.FC<{ children: React.ReactNode }> = ({
       console.error("Error fetching user:", error);
     } else {
       setSupabaseUser(user);
+      return user;
     }
   };
 
