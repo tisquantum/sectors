@@ -718,16 +718,19 @@ model SectorPriority {
 }
 
 model Headline {
-  id        String           @id @default(uuid())
-  name      HeadlineName
-  gameId    String
-  cost      Int
-  timestamp String
-  sectorId  String?
-  companyId String?
-  location  HeadlineLocation
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
+  id          String           @id @default(uuid())
+  type        HeadlineType
+  title       String
+  description String
+  gameId      String
+  cost        Int
+  timestamp   String
+  sectorId    String?
+  companyId   String?
+  saleSlot    Int?
+  location    HeadlineLocation
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 
   game            Game             @relation(fields: [gameId], references: [id])
   playerHeadlines PlayerHeadline[]
@@ -742,7 +745,7 @@ enum HeadlineLocation {
   DISCARDED
 }
 
-enum HeadlineName {
+enum HeadlineType {
   COMPANY_NEGATIVE_1
   COMPANY_NEGATIVE_2
   COMPANY_NEGATIVE_3

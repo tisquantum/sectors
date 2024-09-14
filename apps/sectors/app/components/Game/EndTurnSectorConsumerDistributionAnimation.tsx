@@ -7,8 +7,9 @@ import { Sector } from "@server/prisma/prisma.client";
 import { useGame } from "./GameContext";
 import { sectorColors } from "@server/data/gameData";
 import { sectorPriority } from "@server/data/constants";
+import SectorComponent from "../Sector/Sector";
 
-const SectorComponent = ({
+const SectorComponentAnimation = ({
   sector,
   sectorColor,
   sectorIndex,
@@ -180,7 +181,7 @@ const EndTurnSectorConsumerDistributionAnimation = ({
       {/* Sectors with Consumers Moving */}
       <div className="flex gap-3">
         {sectors.map((sector, index) => (
-          <SectorComponent
+          <SectorComponentAnimation
             key={sector.id}
             sector={sector}
             sectorColor={sectorColors[sector.name]}

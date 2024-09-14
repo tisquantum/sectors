@@ -19,7 +19,16 @@ export default (trpc: TrpcService, ctx: Context) =>
         }
         return sector;
       }),
-
+    getSectorWithCompanies: trpc.procedure
+      .input(z.object({ id: z.string() }))
+      .query(async ({ input }) => {
+        const { id } = input;
+        const sector = await ctx.sectorService.sectorWithCompanies({ id });
+        if (!sector) {
+          throw new Error('Sector not found');
+        }
+        return sector;
+      }),
     listSectors: trpc.procedure
       .input(
         z.object({

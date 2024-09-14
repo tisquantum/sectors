@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { HeadlineService } from '@server/headline/headline.service';
 import { TrpcService } from '../trpc.service';
-import { HeadlineName, Prisma } from '@prisma/client';
+import { HeadlineType, Prisma } from '@prisma/client';
 
 type Context = {
   headlineService: HeadlineService;
@@ -45,7 +45,7 @@ export default (trpc: TrpcService, ctx: Context) =>
       .input(
         z.object({
           id: z.string(),
-          name: z.nativeEnum(HeadlineName).optional(),
+          name: z.nativeEnum(HeadlineType).optional(),
           cost: z.number().optional(),
           timestamp: z.string().optional(),
         }),

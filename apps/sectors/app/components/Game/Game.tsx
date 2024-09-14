@@ -47,6 +47,7 @@ import PrizeRound from "./PrizeVote";
 import DistributePrizes from "./DistributePrize";
 import StartTurnUpdates from "./StartTurnUpdates";
 import GamePlayersRecap from "./GamePlayerRecap";
+import Headlines from "./Headlines";
 
 const determineGameRound = (
   game: GameState
@@ -156,6 +157,7 @@ const Game = ({ gameId }: { gameId: string }) => {
     ) : currentRoundData?.phase.name === PhaseName.START_TURN ? (
       <div className="flex flex-col items-center justify-between h-full w-full gap-2">
         <StartTurnUpdates />
+        {/* <Headlines /> */}
         <div className="flex flex-col gap-2 items-center">
           <h2 className="text-xl">Players Overview</h2>
           <GamePlayersRecap />
@@ -285,9 +287,7 @@ const Game = ({ gameId }: { gameId: string }) => {
                   </div>
                 )} */}
               <div
-                className={`@container active-panel flex flex-col h-full max-h-full w-full p-4 overflow-y-auto scrollbar ${
-                  showPhaseList && "basis-10/12"
-                }`}
+                className={`@container active-panel flex flex-col h-full max-h-full w-full p-4 overflow-y-auto scrollbar`}
               >
                 {currentView === "action" && renderCurrentPhase}
                 {currentView === "chart" && <StockChart />}

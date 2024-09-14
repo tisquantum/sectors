@@ -25,6 +25,7 @@ import {
   RiSailboatFill,
   RiSparkling2Fill,
   RiTeamFill,
+  RiUserFill,
   RiWallet3Fill,
 } from "@remixicon/react";
 import {
@@ -41,7 +42,11 @@ import {
 } from "@server/data/constants";
 import { sectorColors } from "@server/data/gameData";
 import { calculateCompanySupply, calculateDemand } from "@server/data/helpers";
-import { CompanyStatus, Share } from "@server/prisma/prisma.client";
+import {
+  CompanyStatus,
+  Share,
+  ShareLocation,
+} from "@server/prisma/prisma.client";
 import { CompanyWithSector } from "@server/prisma/prisma.types";
 import { BarList } from "@tremor/react";
 import ThroughputLegend from "../Game/ThroughputLegend";
@@ -51,6 +56,8 @@ import { MoneyTransactionHistoryByCompany } from "../Game/MoneyTransactionHistor
 import PassiveEffect from "./PassiveEffect";
 import { useGame } from "../Game/GameContext";
 import { useEffect } from "react";
+import ShareComponent from "./Share";
+import { renderLocationShortHand } from "@sectors/app/helpers";
 
 const buildBarChart = (share: Share[]) => {
   //group shares by location and sum the quantity
@@ -62,10 +69,22 @@ const buildBarChart = (share: Share[]) => {
     return acc;
   }, {} as Record<string, number>);
   //convert object to array
-  return Object.entries(groupedShares).map(([location, quantity]) => ({
-    name: location,
-    value: quantity,
-  }));
+  return Object.entries(groupedShares).map(([location, quantity], index) =>
+    location == ShareLocation.PLAYER ? (
+      <ShareComponent
+        key={index}
+        name={"Player"}
+        icon={<RiUserFill className={"text-slate-800"} size={18} />}
+        quantity={quantity}
+      />
+    ) : (
+      <ShareComponent
+        key={index}
+        name={renderLocationShortHand(location as ShareLocation)}
+        quantity={quantity}
+      />
+    )
+  );
 };
 
 const CompanyMoreInfo = ({
@@ -445,11 +464,7 @@ const CompanyInfo = ({
           )}
           <div className="flex flex-col">
             {showBarChart && (
-              <BarList
-                data={buildBarChart(company.Share || [])}
-                color="red"
-                className="mx-auto max-w-sm px-2 w-32"
-              />
+              <div className="flex gap-1">{buildBarChart(company.Share)}</div>
             )}
           </div>
         </div>

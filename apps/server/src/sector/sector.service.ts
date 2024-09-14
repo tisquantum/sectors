@@ -18,6 +18,32 @@ export class SectorService {
     });
   }
 
+  async sectorWithCompanies(
+    sectorWhereUniqueInput: Prisma.SectorWhereUniqueInput,
+  ): Promise<SectorWithCompanies | null> {
+    return this.prisma.sector.findUnique({
+      where: sectorWhereUniqueInput,
+      include: {
+        Company: {
+          include: {
+            Share: {
+              include: {
+                Player: true,
+              },
+            },
+            StockHistory: {
+              include: {
+                Phase: true,
+              },
+            },
+            Sector: true,
+            Cards: true,
+            CompanyActions: true,
+          },
+        },
+      },
+    });
+  }
   async sectors(params: {
     skip?: number;
     take?: number;
