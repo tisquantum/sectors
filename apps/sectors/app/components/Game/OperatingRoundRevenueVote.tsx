@@ -42,6 +42,9 @@ const DistributeSelection = ({
       },
     });
   const handleSubmit = async () => {
+    if(!authPlayer) {
+      return;
+    }
     setIsLoading(true);
     //submit vote
     useVoteRevenueDistributionMutation.mutate({

@@ -59,7 +59,7 @@ export const checkIsPlayerAction = async (
   //get user from player
   const player = await playerService.player({ id: input.playerId });
   if (!player) {
-    console.error('Player not found');
+    console.error('Player not found checkIsPlayerAction');
     throw new TRPCError({
       code: 'INTERNAL_SERVER_ERROR',
       message: 'Player not found',
@@ -91,7 +91,7 @@ export const checkIsPlayerActionBasedOnAuth = async (
   //we need something more specific, probably data including in the JWT
   const player = await playerService.player({ userId: ctx.user.id });
   if (!player) {
-    console.error('Player not found');
+    console.error('Player not found checkIsPlayerActionBasedOnAuth');
     throw new TRPCError({
       code: 'INTERNAL_SERVER_ERROR',
       message: 'Player not found',

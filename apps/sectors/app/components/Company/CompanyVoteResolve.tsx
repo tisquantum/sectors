@@ -9,16 +9,10 @@ import PrestigeRewardComponent from "../Game/PrestigeReward";
 import {
   ACTION_ISSUE_SHARE_AMOUNT,
   companyActionsDescription,
-  LARGE_MARKETING_CAMPAIGN_DEMAND,
-  MARKETING_CONSUMER_BONUS,
-  OURSOURCE_SUPPLY_BONUS,
-  PrestigeTrack,
-  SMALL_MARKETING_CAMPAIGN_DEMAND,
 } from "@server/data/constants";
 import PrestigeRewards from "../Game/PrestigeRewards";
 
 const ShareIssue = ({ companyAction }: { companyAction: CompanyAction }) => {
-  const { authPlayer } = useGame();
   //get company with shares
   const { data: company, isLoading } =
     trpc.company.getCompanyWithShares.useQuery({

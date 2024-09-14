@@ -37,7 +37,7 @@ const PlayerCurrentQueuedOrders = ({
   } = trpc.playerOrder.listPlayerOrdersWithCompany.useQuery({
     where: {
       stockRoundId: currentPhase?.stockRoundId,
-      playerId: authPlayer.id,
+      playerId: authPlayer?.id,
     },
   });
   useEffect(() => {

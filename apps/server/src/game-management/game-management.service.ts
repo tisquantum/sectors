@@ -2068,7 +2068,7 @@ export class GameManagementService {
               id: playerId,
             });
             if (!player) {
-              console.error('Player not found');
+              console.error('Player not found calculateAndDistributeDividends');
               return;
             }
             const dividendTotal = Math.floor(dividend * shares.length);
@@ -4173,7 +4173,7 @@ export class GameManagementService {
       id: contribution.playerId,
     });
     if (!player) {
-      throw new Error('Player not found');
+      throw new Error('Player not found resolveInsolvencyContribution');
     }
     if (!company) {
       throw new Error('Company not found');
@@ -7413,7 +7413,7 @@ export class GameManagementService {
       where: { id: playerId },
     });
     if (!player) {
-      throw new Error('Player not found');
+      throw new Error('Player not found playerAddMoney');
     }
     //TODO: What if entity is not from the BANK?
     //update bank pool for game

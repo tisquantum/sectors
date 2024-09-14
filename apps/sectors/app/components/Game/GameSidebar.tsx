@@ -100,6 +100,7 @@ const GameSidebar = () => {
                 All Players Ready
               </div>
             ) : (
+              authPlayer &&
               playerReadiness && (
                 <DebounceButton
                   color="primary"

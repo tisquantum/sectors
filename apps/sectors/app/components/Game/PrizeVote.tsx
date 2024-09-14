@@ -96,20 +96,22 @@ const PrizeComponent = ({
         isSubmitted ? (
           <div>Vote submitted</div>
         ) : (
-          <DebounceButton
-            onClick={() => {
-              setIsLoadingClaimPrize(true);
-              useCreatePrizeVoteMutation.mutate({
-                playerId: authPlayer.id,
-                gameTurnId: currentTurn.id,
-                prizeId: prize.id,
-              });
-              handleSubmit();
-            }}
-            isLoading={isLoadingClaimPrize}
-          >
-            Claim Prize
-          </DebounceButton>
+          authPlayer && (
+            <DebounceButton
+              onClick={() => {
+                setIsLoadingClaimPrize(true);
+                useCreatePrizeVoteMutation.mutate({
+                  playerId: authPlayer.id,
+                  gameTurnId: currentTurn.id,
+                  prizeId: prize.id,
+                });
+                handleSubmit();
+              }}
+              isLoading={isLoadingClaimPrize}
+            >
+              Claim Prize
+            </DebounceButton>
+          )
         )
       ) : (
         <div>Reveal Round</div>
@@ -142,7 +144,7 @@ const PrizeRound = ({ isRevealRound = false }: { isRevealRound?: boolean }) => {
         }
       : {
           gameTurnId: currentTurn.id,
-          playerId: authPlayer.id,
+          playerId: authPlayer?.id,
         }
   );
   const [isSubmitted, setIsSubmitted] = useState(false);

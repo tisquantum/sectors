@@ -16,7 +16,7 @@ const CoverShortButton = ({ shortOrderId }: { shortOrderId: number }) => {
     },
     onError: (error) => {
       toast.error(`Error covering short order.`);
-    }
+    },
   });
   return (
     <>
@@ -80,7 +80,8 @@ const CoverShortOrders = () => {
               Shares Price At Purchase:{" "}
               {shortOrder.ShortOrder?.shortStockPriceAtPurchase}
             </div>
-            {authPlayer.id == shortOrder.Player.id &&
+            {authPlayer &&
+              authPlayer.id == shortOrder.Player.id &&
               shortOrder.ShortOrder?.id && (
                 <CoverShortButton shortOrderId={shortOrder.ShortOrder.id} />
               )}

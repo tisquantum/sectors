@@ -97,7 +97,6 @@ const CompanyActionSelectionVote = ({
         setIsLoadingSelectionVote(false);
       },
     });
-
   if (!company) return <div>No company found</div>;
 
   const companyAllowedActions =
@@ -150,6 +149,9 @@ const CompanyActionSelectionVote = ({
   };
 
   const handleSubmit = async () => {
+    if(!authPlayer) {
+      return;
+    }
     setIsLoadingSelectionVote(true);
     if (currentPhase?.name === PhaseName.OPERATING_ACTION_COMPANY_VOTE) {
       try {

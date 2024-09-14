@@ -200,12 +200,17 @@ const CompanyInfoTable = ({
         );
       case "Your Shares":
         return (
+          authPlayer ? 
           <span>
             {
               company.Share.filter(
                 (share) => share.Player?.id === authPlayer.id
               ).length
             }
+          </span>
+          :
+          <span>
+            0
           </span>
         );
       case "Unit Price":
