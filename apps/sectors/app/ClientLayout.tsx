@@ -9,6 +9,7 @@ import { trpc, trpcClient } from "./trpc";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { Toaster } from "sonner";
+import UserNameAlert from "./components/General/UserNameAlert";
 
 const ClientLayout = ({ children }: { children: React.ReactNode }) => {
   const [queryClient] = useState(() => new QueryClient());
@@ -21,6 +22,7 @@ const ClientLayout = ({ children }: { children: React.ReactNode }) => {
             <AuthUserProvider>
               <PusherProvider>
                 <div className="flex flex-col h-screen text-foreground bg-background">
+                  <UserNameAlert />
                   <TopBar />
                   <Toaster />
                   {children}

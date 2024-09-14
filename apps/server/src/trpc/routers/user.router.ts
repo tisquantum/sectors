@@ -53,14 +53,21 @@ export default (trpc: TrpcService, ctx: Context) =>
             message: `Name must be less than or equal to ${USER_NAME_MAX_LENGTH} characters.`,
           });
         }
-        return ctx.userService.updateUser({
-          where: {
-            id,
-          },
-          data: {
-            name,
-          },
-        });
+        try {
+          return ctx.userService.updateUser({
+            where: {
+              id,
+            },
+            data: {
+              name,
+            },
+          });
+        } catch (error) {
+          throw new TRPCError({
+            code: `INTERNAL_SERVER_ERROR`,
+            message: `An error occured while updating the user name: ${error}`,
+          });
+        }
       }),
     listUsersRestricted: trpc.procedure
       .input(
