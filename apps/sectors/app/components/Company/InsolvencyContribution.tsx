@@ -72,7 +72,7 @@ const InsolvencyContributionComponent = ({
     isLoading: isLoadingPlayerWithShares,
     refetch: refetchPlayerWithShares,
   } = trpc.player.playerWithShares.useQuery({
-    where: { id: authPlayer.id },
+    where: { id: authPlayer?.id },
   });
   const {
     data: insolvencyContributions,
@@ -158,89 +158,94 @@ const InsolvencyContributionComponent = ({
           ))
         )}
       </div>
-      <div className="flex justify-center items-center flex-col gap-2">
-        <h2>Make a Contribution</h2>
-        <div className="flex justify-center gap-1">
-          <div className="flex flex-col gap-2">
-            <div className="grid grid-cols-2 gap-2 flex-wrap">
-              {/* Denomination Buttons */}
-              {[25, 50, 75, 100, 150, 200, 300, 500].map((amount) =>
-                amount > authPlayer.cashOnHand ? null : (
-                  <Button
-                    key={amount}
-                    className={`px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 ${
-                      cashContribution === amount ? "bg-green-700" : ""
-                    }`}
-                    onClick={() => setCashContribution(amount)}
-                    disabled={amount > authPlayer.cashOnHand} // Disable button if the denomination exceeds the player's cash on hand
-                  >
-                    ${amount}
-                  </Button>
-                )
-              )}
-
-              {/* All in Button */}
-              <Button
-                className={`px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 ${
-                  cashContribution === authPlayer.cashOnHand ? "bg-red-700" : ""
-                }`}
-                onClick={() => setCashContribution(authPlayer.cashOnHand)}
-              >
-                All In ($
-                {Math.max(
-                  authPlayer.cashOnHand,
-                  CompanyTierData[company.companyTier].insolvencyShortFall
+      {authPlayer && (
+        <div className="flex justify-center items-center flex-col gap-2">
+          <h2>Make a Contribution</h2>
+          <div className="flex justify-center gap-1">
+            <div className="flex flex-col gap-2">
+              <div className="grid grid-cols-2 gap-2 flex-wrap">
+                {/* Denomination Buttons */}
+                {[25, 50, 75, 100, 150, 200, 300, 500].map((amount) =>
+                  amount > authPlayer.cashOnHand ? null : (
+                    <Button
+                      key={amount}
+                      className={`px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 ${
+                        cashContribution === amount ? "bg-green-700" : ""
+                      }`}
+                      onClick={() => setCashContribution(amount)}
+                      disabled={amount > authPlayer.cashOnHand} // Disable button if the denomination exceeds the player's cash on hand
+                    >
+                      ${amount}
+                    </Button>
+                  )
                 )}
-                )
-              </Button>
+
+                {/* All in Button */}
+                <Button
+                  className={`px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 ${
+                    cashContribution === authPlayer.cashOnHand
+                      ? "bg-red-700"
+                      : ""
+                  }`}
+                  onClick={() => setCashContribution(authPlayer.cashOnHand)}
+                >
+                  All In ($
+                  {Math.max(
+                    authPlayer.cashOnHand,
+                    CompanyTierData[company.companyTier].insolvencyShortFall
+                  )}
+                  )
+                </Button>
+              </div>
+            </div>
+            <div className="flex flex-col gap-1">
+              <ShareComponent
+                name={company.stockSymbol}
+                quantity={
+                  playerWithShares.Share.filter(
+                    (share) => share.companyId === company.id
+                  ).length
+                }
+              />
+              <Input
+                label="Share Contribution"
+                type="number"
+                onChange={(e) => {
+                  setShareContribution(parseInt(e.target.value));
+                }}
+                value={shareContribution.toString()}
+                min={0}
+                max={
+                  company.Share.filter((s) => s.playerId === authPlayer.id)
+                    .length
+                }
+              />
             </div>
           </div>
-          <div className="flex flex-col gap-1">
-            <ShareComponent
-              name={company.stockSymbol}
-              quantity={
-                playerWithShares.Share.filter(
-                  (share) => share.companyId === company.id
-                ).length
-              }
-            />
-            <Input
-              label="Share Contribution"
-              type="number"
-              onChange={(e) => {
-                setShareContribution(parseInt(e.target.value));
-              }}
-              value={shareContribution.toString()}
-              min={0}
-              max={
-                company.Share.filter((s) => s.playerId === authPlayer.id).length
-              }
-            />
-          </div>
+          {/* Submit Button */}
+          <DebounceButton
+            onClick={() => {
+              setIsLoadingInsolvencyContribution(true);
+              useInsolvencyContributionMutation.mutate({
+                gameId,
+                playerId: authPlayer.id,
+                companyId: company.id,
+                gameTurnId: currentTurn.id,
+                cashContribution,
+                shareContribution,
+              });
+              setCashContribution(0);
+              setShareContribution(0);
+            }}
+            disabled={
+              cashContribution <= 0 || cashContribution > authPlayer.cashOnHand
+            } // Ensure valid contribution
+            isLoading={isLoadingInsolvencyContribution}
+          >
+            Submit Contributions
+          </DebounceButton>
         </div>
-        {/* Submit Button */}
-        <DebounceButton
-          onClick={() => {
-            setIsLoadingInsolvencyContribution(true);
-            useInsolvencyContributionMutation.mutate({
-              gameId,
-              playerId: authPlayer.id,
-              companyId: company.id,
-              gameTurnId: currentTurn.id,
-              cashContribution,
-              shareContribution,
-            });
-            setCashContribution(0);
-            setShareContribution(0);
-          }}
-          disabled={
-            cashContribution <= 0 || cashContribution > authPlayer.cashOnHand
-          } // Ensure valid contribution
-          isLoading={isLoadingInsolvencyContribution}
-        >
-          Submit Contributions
-        </DebounceButton>
-      </div>
+      )}
       <div className="text-base space-y-4">{insolvencyAndBankruptcy}</div>
     </div>
   );

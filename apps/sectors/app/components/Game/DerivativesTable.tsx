@@ -183,7 +183,8 @@ const DerivativesTable = ({ isInteractive }: { isInteractive: boolean }) => {
       case "Place Order":
         return (
           <>
-            {isInteractive &&
+            {authPlayer &&
+              isInteractive &&
               contract.contractState == ContractState.FOR_SALE &&
               (!isSubmitted ? (
                 <div

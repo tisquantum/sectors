@@ -133,7 +133,7 @@ const StockRoundOrderGrid = ({
     refetchPlayerOrdersRevealed();
   }, [currentPhase?.id]);
   useEffect(() => {
-    if (playerOrdersConcealed && currentPhase) {
+    if (authPlayer && playerOrdersConcealed && currentPhase) {
       isOrderInputOpenPlayerOrderCounter(
         playerOrdersConcealed,
         authPlayer,

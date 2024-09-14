@@ -18,7 +18,8 @@ export default (trpc: TrpcService, ctx: Context) =>
         const { where } = input;
         const player = await ctx.playersService.player(where);
         if (!player) {
-          throw new Error('Player not found');
+          console.error('Player not found getPlayer');
+          return null;
         }
         return player;
       }),
@@ -49,7 +50,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         const { where } = input;
         const player = await ctx.playersService.playerWithShares(where);
         if (!player) {
-          throw new Error('Player not found');
+          throw new Error('Player not found playerWithShares');
         }
         return player;
       }),
@@ -124,7 +125,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         const { playerId, gameId } = input;
         const player = await ctx.playersService.player({ id: playerId });
         if (!player) {
-          throw new Error('Player not found');
+          throw new Error('Player not found playerReady');
         }
 
         // Mark the player as ready in the specified game

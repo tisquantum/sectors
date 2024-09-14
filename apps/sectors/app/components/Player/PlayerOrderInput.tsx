@@ -153,7 +153,7 @@ const LimitOrderInput = ({
 }) => {
   const { authPlayer } = useGame();
   const { data: shares, isLoading } = trpc.share.listShares.useQuery({
-    where: { playerId: authPlayer.id },
+    where: { playerId: authPlayer?.id },
   });
   const [limitOrderValue, setLimitOrderValue] = useState<number>(
     defaultValue || 0
@@ -453,13 +453,13 @@ const PseudoBalance = ({
     isLoading,
     refetch,
   } = trpc.playerOrder.listPlayerOrdersWithCompany.useQuery({
-    where: { playerId: authPlayer.id, stockRoundId },
+    where: { playerId: authPlayer?.id, stockRoundId },
   });
   useEffect(() => {
     refetch();
   }, [currentPhase?.name]);
   if (isLoading) return null;
-
+  if (!authPlayer) return null;
   const pseudoSpend = playerOrders ? getPseudoSpend(playerOrders) : 0;
   const netSpend = pseudoSpend - (runningOrderValue || 0);
   return (
@@ -557,7 +557,7 @@ const PlayerOrderInput = ({
     });
   const { data: playerWithShares, isLoading: isLoadingPlayerWithShares } =
     trpc.player.playerWithShares.useQuery({
-      where: { id: authPlayer.id },
+      where: { id: authPlayer?.id },
     });
   const { data: company, isLoading: companyLoading } =
     trpc.company.getCompanyWithShares.useQuery({
@@ -618,7 +618,7 @@ const PlayerOrderInput = ({
     }
   }, [isBuy, isIpo, company?.Share]);
 
-  if (!gameId || !gameState) return null;
+  if (!gameId || !gameState || !authPlayer) return null;
   const currentOrderValue = calculatePseudoOrderValue({
     orderType,
     quantity: share,

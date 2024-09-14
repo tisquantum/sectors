@@ -73,7 +73,7 @@ const BankInfo = () => {
 const GameGeneralInfo = () => {
   const { gameState, currentTurn, authPlayer, currentPhase } = useGame();
   if (!gameState) return notFound();
-  const pseudoSpend = authPlayer.PlayerOrder?.filter(
+  const pseudoSpend = authPlayer?.PlayerOrder?.filter(
     (order) =>
       order.stockRoundId === gameState.currentStockRoundId &&
       order.orderType == OrderType.MARKET
@@ -84,48 +84,59 @@ const GameGeneralInfo = () => {
   return (
     <div className="flex flex-wrap space-x-4 items-center">
       <div className="flex flex-wrap items-center gap-2">
-        <PlayerAvatar player={authPlayer} />
-        <div className="flex flex-col">
-          <div className="flex items-center text-md font-bold">
-            <WalletInfo player={authPlayer} />{" "}
-            {(currentPhase?.name == PhaseName.STOCK_ACTION_ORDER ||
-              currentPhase?.name == PhaseName.STOCK_ACTION_RESULT) && (
+        {authPlayer ? (
+          <>
+            <PlayerAvatar player={authPlayer} />
+            <div className="flex flex-col">
+              <div className="flex items-center text-md font-bold">
+                <WalletInfo player={authPlayer} />{" "}
+                {(currentPhase?.name == PhaseName.STOCK_ACTION_ORDER ||
+                  currentPhase?.name == PhaseName.STOCK_ACTION_RESULT) && (
+                  <Tooltip
+                    classNames={{ base: baseToolTipStyle }}
+                    className={tooltipStyle}
+                    content={
+                      <div>
+                        <p className={tooltipParagraphStyle}>
+                          The potential maximum amount of money you&apos;ve
+                          queued for orders this stock round.
+                        </p>
+                      </div>
+                    }
+                  >
+                    {"($" + pseudoSpend + ")"}
+                  </Tooltip>
+                )}
+              </div>
               <Tooltip
                 classNames={{ base: baseToolTipStyle }}
                 className={tooltipStyle}
                 content={
                   <div>
                     <p className={tooltipParagraphStyle}>
-                      The potential maximum amount of money you&apos;ve queued
-                      for orders this stock round.
+                      The remaining actions you have for order types in a stock
+                      round. Limit Order and Short Order actions only replenish
+                      as existing orders are filled or rejected. Market Orders
+                      replenish each stock round.
                     </p>
                   </div>
                 }
               >
-                {"($" + pseudoSpend + ")"}
+                <div className="flex items-center text-md">
+                  <RiFunctionAddFill size={24} /> LO{" "}
+                  {authPlayer.limitOrderActions} SO{" "}
+                  {authPlayer.shortOrderActions}
+                </div>
               </Tooltip>
-            )}
-          </div>
-          <Tooltip
-            classNames={{ base: baseToolTipStyle }}
-            className={tooltipStyle}
-            content={
-              <div>
-                <p className={tooltipParagraphStyle}>
-                  The remaining actions you have for order types in a stock
-                  round. Limit Order and Short Order actions only replenish as
-                  existing orders are filled or rejected. Market Orders
-                  replenish each stock round.
-                </p>
-              </div>
-            }
-          >
-            <div className="flex items-center text-md">
-              <RiFunctionAddFill size={24} /> LO {authPlayer.limitOrderActions}{" "}
-              SO {authPlayer.shortOrderActions}
             </div>
-          </Tooltip>
-        </div>
+          </>
+        ) : (
+          <div className="flex justify-center items-center ">
+            <span className="text-sm font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 drop-shadow-lg tracking-wide">
+              SPECTATOR MODE
+            </span>
+          </div>
+        )}
       </div>
       <div>
         <Tooltip

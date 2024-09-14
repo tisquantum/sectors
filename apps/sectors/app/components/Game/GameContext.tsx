@@ -34,7 +34,7 @@ import {
 } from "@server/pusher/pusher.types";
 interface GameContextProps {
   gameId: string;
-  authPlayer: PlayerWithPlayerOrders;
+  authPlayer: PlayerWithPlayerOrders | null;
   gameState: GameState;
   currentPhase?: Phase;
   socketChannel: PusherTypes.Channel | null;
@@ -163,7 +163,7 @@ export const GameProvider: React.FC<{
   if (isError || gameStateIsError || currentTurnIsError || researchDeckError)
     return <div>Error...</div>;
   if (
-    !player ||
+    player === undefined ||
     !gameState ||
     !playersWithShares ||
     !currentTurn ||

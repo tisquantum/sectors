@@ -545,9 +545,12 @@ const DistributePrizes = () => {
     return null;
   }
   const playerPrizes =
-    prizes.filter((prize) => prize.playerId === authPlayer.id) || [];
+    prizes.filter((prize) => prize.playerId === authPlayer?.id) || [];
 
   const handleFinalizeDistribution = () => {
+    if (!authPlayer) {
+      return;
+    }
     setIsLoadingSubmission(true);
     setIsSubmitted(true);
     usePrizeDistributionMutation.mutate({
@@ -566,15 +569,17 @@ const DistributePrizes = () => {
               <>
                 {playerPrizes.map((prize) => (
                   <div key={prize.id}>
-                    {prize.playerId && prize.playerId == authPlayer.id && (
-                      <>
-                        <DistributePrize
-                          prize={prize}
-                          setDistributionData={setDistributionData}
-                          distributionData={distributionData}
-                        />
-                      </>
-                    )}
+                    {authPlayer &&
+                      prize.playerId &&
+                      prize.playerId == authPlayer.id && (
+                        <>
+                          <DistributePrize
+                            prize={prize}
+                            setDistributionData={setDistributionData}
+                            distributionData={distributionData}
+                          />
+                        </>
+                      )}
                   </div>
                 ))}
                 <h2>Pending Distributions</h2>

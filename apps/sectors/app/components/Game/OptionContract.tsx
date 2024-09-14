@@ -101,7 +101,8 @@ const OptionContract = ({
         <OptionContractMinimal contract={contract} />
       </div>
       <div>
-        {isInteractive &&
+        {authPlayer &&
+          isInteractive &&
           (!isSubmitted ? (
             <div className="flex flex-col gap-2">
               {gameState.distributionStrategy ==

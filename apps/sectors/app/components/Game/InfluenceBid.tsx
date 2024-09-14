@@ -22,42 +22,46 @@ const InfluenceBidAction = () => {
     return null;
   }
   return (
-    <div>
-      <Input
-        type="number"
-        placeholder="Influence"
-        min={0}
-        max={DEFAULT_INFLUENCE}
-        value={influence}
-        onChange={(e) => {
-          setInfluence(e.target.value);
-        }}
-      />
-      {isSubmitted ? (
-        <div>Bid has been submit.</div>
-      ) : (
-        <DebounceButton
-          onClick={() => {
-            setIsLoadingInfluenceSubmission(true);
-            let influenceNum = parseInt(influence);
-            if (influenceNum < 0 || influenceNum > DEFAULT_INFLUENCE) {
-              return;
-            }
-            createInfluenceVote({
-              influenceRoundId: currentPhase.influenceRoundId || 0,
-              playerId: authPlayer.id,
-              influence: influenceNum,
-              gameId: currentPhase.gameId,
-            });
-            setIsSubmitted(true);
-          }}
-          className="mt-2"
-          isLoading={isLoadingInfluenceSubmission}
-        >
-          Submit Influence Bid
-        </DebounceButton>
+    <>
+      {authPlayer && (
+        <div>
+          <Input
+            type="number"
+            placeholder="Influence"
+            min={0}
+            max={DEFAULT_INFLUENCE}
+            value={influence}
+            onChange={(e) => {
+              setInfluence(e.target.value);
+            }}
+          />
+          {isSubmitted ? (
+            <div>Bid has been submit.</div>
+          ) : (
+            <DebounceButton
+              onClick={() => {
+                setIsLoadingInfluenceSubmission(true);
+                let influenceNum = parseInt(influence);
+                if (influenceNum < 0 || influenceNum > DEFAULT_INFLUENCE) {
+                  return;
+                }
+                createInfluenceVote({
+                  influenceRoundId: currentPhase.influenceRoundId || 0,
+                  playerId: authPlayer.id,
+                  influence: influenceNum,
+                  gameId: currentPhase.gameId,
+                });
+                setIsSubmitted(true);
+              }}
+              className="mt-2"
+              isLoading={isLoadingInfluenceSubmission}
+            >
+              Submit Influence Bid
+            </DebounceButton>
+          )}
+        </div>
       )}
-    </div>
+    </>
   );
 };
 

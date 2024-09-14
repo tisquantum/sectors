@@ -24,6 +24,9 @@ const CompanyActionVote = ({ company }: { company?: Company }) => {
     });
   if (!company) return null;
   const handleSubmit = async () => {
+    if(!authPlayer) {
+      return;
+    }
     setIsLoading(true);
     try {
       await createOperatingRoundVote.mutate({
