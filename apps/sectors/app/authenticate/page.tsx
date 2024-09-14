@@ -13,8 +13,8 @@ export default function Authenticate() {
     const authenticateUser = async () => {
       setLoading(true); // Start loading
 
-      fetchUser().then(() => {
-        if (supabaseUser) {
+      fetchUser().then((supabaseUserResponse) => {
+        if (supabaseUserResponse) {
           // User is authenticated, redirect to /rooms
           router.replace("/rooms");
         } else {
