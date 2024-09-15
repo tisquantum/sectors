@@ -15,8 +15,9 @@ export const EVENT_NEW_PLAYER_ORDER_PLAYER_ID = 'new-player-order-player-id';
 export const EVENT_NEW_INVOLVENCY_CONTRIBUTION = 'new-insolvency-contribution';
 export const EVENT_NEW_PRIZE_VOTE = 'new-prize-vote';
 export const EVENT_PLAYER_READINESS_CHANGED = 'event-player-readiness-changed';
+export const EVENT_NEW_PLAYER_HEADLINE = 'new-player-headline';
 export interface EVENT_NEW_PLAYER_ORDER_PLAYER_ID__PAYLOAD {
-    playerId: string;
+  playerId: string;
 }
 export const CHANNEL_ROOM_GLOBAL = 'room-global';
 export const getRoomChannelId = (roomId: number) => `room-${roomId}`;

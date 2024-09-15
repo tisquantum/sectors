@@ -33,6 +33,7 @@ import {
   RoomMessage,
   RoomUser,
   Sector,
+  SectorPriority,
   SectorPrize,
   Share,
   ShareContribution,
@@ -102,6 +103,7 @@ export type GameState = Game & {
   InfluenceRound: InfluenceRound[];
   Phase: Phase[];
   GameRecord: GameRecord | null;
+  sectorPriority: SectorPriority[];
 };
 
 export type RoomWithUsersAndGames = Room & {

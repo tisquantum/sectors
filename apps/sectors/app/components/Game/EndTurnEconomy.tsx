@@ -16,6 +16,7 @@ import { trpc } from "@sectors/app/trpc";
 import { sectorPriority } from "@server/data/constants";
 import EconomySector from "./EconomySector";
 import EndTurnSectorConsumerDistributionAnimation from "./EndTurnSectorConsumerDistributionAnimation";
+import { sortSectorIdsByPriority } from "@server/data/helpers";
 
 const EndTurnEconomy = () => {
   const { currentPhase, gameState, gameId } = useGame();
@@ -27,12 +28,23 @@ const EndTurnEconomy = () => {
       },
     });
   //get sectors
-  const sectors = gameState?.sectors.sort((a, b) => {
-    return (
-      sectorPriority.indexOf(a.sectorName) -
-      sectorPriority.indexOf(b.sectorName)
-    );
-  });
+  const sectorPriorityStored = gameState?.sectorPriority;
+  let sectors: Sector[] = [];
+  if (sectorPriorityStored) {
+    sectors = sortSectorIdsByPriority(
+      gameState.sectors.map((sector) => sector.id),
+      sectorPriorityStored
+    )
+      .map((sectorId) => gameState.sectors.find((s) => s.id === sectorId))
+      .filter((sector) => sector !== undefined) as Sector[];
+  } else {
+    sectors = gameState.sectors.sort((a, b) => {
+      return (
+        sectorPriority.indexOf(a.sectorName) -
+        sectorPriority.indexOf(b.sectorName)
+      );
+    });
+  }
   if (isLoadingCompanies) {
     return <div>Loading companies...</div>;
   }
@@ -71,18 +83,12 @@ const EndTurnEconomy = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {sectors
-                          .sort(
-                            (a, b) =>
-                              sectorPriority.indexOf(a.sectorName) -
-                              sectorPriority.indexOf(b.sectorName)
-                          )
-                          .map((sector, index) => (
-                            <tr key={index}>
-                              <td>{index + 1}</td>
-                              <td>{sector.name}</td>
-                            </tr>
-                          ))}
+                        {sectors.map((sector, index) => (
+                          <tr key={index}>
+                            <td>{index + 1}</td>
+                            <td>{sector.name}</td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
                   </div>
@@ -115,20 +121,14 @@ const EndTurnEconomy = () => {
               </Tooltip>
             </div>
             <div className="flex gap-3">
-              {sectors
-                .sort(
-                  (a, b) =>
-                    sectorPriority.indexOf(a.sectorName) -
-                    sectorPriority.indexOf(b.sectorName)
-                )
-                .map((sector, index) => (
-                  <EconomySector
-                    key={sector.id}
-                    sector={sector}
-                    sectorColor={sectorColors[sector.name]}
-                    sectorIndex={index}
-                  />
-                ))}
+              {sectors.map((sector, index) => (
+                <EconomySector
+                  key={sector.id}
+                  sector={sector}
+                  sectorColor={sectorColors[sector.name]}
+                  sectorIndex={index}
+                />
+              ))}
             </div>
           </div>
         )}

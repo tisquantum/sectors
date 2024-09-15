@@ -21,7 +21,7 @@ import SectorConsumerDistributionAnimation from "./SectorConsumerDistributionAni
 import { CompanyWithSector } from "@server/prisma/prisma.types";
 
 const OperatingRoundProduction = () => {
-  const { currentPhase } = useGame();
+  const { currentPhase, gameState } = useGame();
   const { data: operatingRound, isLoading } =
     trpc.operatingRound.getOperatingRoundWithProductionResults.useQuery({
       where: {

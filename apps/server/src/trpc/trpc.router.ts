@@ -74,6 +74,8 @@ import { PrizeVotesService } from '@server/prize-votes/prize-votes.service';
 import { CompanyActionOrderService } from '@server/company-action-order/company-action-order.service';
 import { HeadlineService } from '@server/headline/headline.service';
 import headlineRouter from './routers/headline.router';
+import playerHeadlineRouter from './routers/player-headline.router';
+import { PlayerHeadlineService } from '@server/player-headline/player-headline.service';
 @Injectable()
 export class TrpcRouter {
   constructor(
@@ -115,6 +117,7 @@ export class TrpcRouter {
     private readonly prizeVotesService: PrizeVotesService,
     private readonly companyActionOrderService: CompanyActionOrderService,
     private readonly headlineService: HeadlineService,
+    private readonly playerHeadlineService: PlayerHeadlineService,
   ) {}
 
   appRouter = this.trpc.router({
@@ -259,6 +262,12 @@ export class TrpcRouter {
     }),
     headlines: headlineRouter(this.trpc, {
       headlineService: this.headlineService,
+    }),
+    playerHeadlines: playerHeadlineRouter(this.trpc, {
+      playerHeadlineService: this.playerHeadlineService,
+      playerService: this.playersService,
+      pusherService: this.pusherService,
+      phaseService: this.phaseService,
     }),
   });
 

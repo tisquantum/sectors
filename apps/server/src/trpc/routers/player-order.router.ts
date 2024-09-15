@@ -303,11 +303,4 @@ export default (trpc: TrpcService, ctx: Context) =>
           data,
         });
       }),
-
-    deletePlayerOrder: trpc.procedure
-      .input(z.object({ id: z.number() }))
-      .mutation(async ({ input }) => {
-        const { id } = input;
-        return ctx.playerOrdersService.deletePlayerOrder({ id });
-      }),
   });

@@ -2,7 +2,13 @@
 
 import React from "react";
 import Companies from "../Company/Companies";
-import { Accordion, AccordionItem, Avatar, Tooltip } from "@nextui-org/react";
+import {
+  Accordion,
+  AccordionItem,
+  Avatar,
+  Badge,
+  Tooltip,
+} from "@nextui-org/react";
 import {
   ArrowUturnUpIcon,
   ArrowsRightLeftIcon,
@@ -29,7 +35,7 @@ import {
 import { calculateAverageStockPrice } from "@server/data/helpers";
 
 const SectorComponent = () => {
-  const { gameId } = useGame();
+  const { gameId, gameState } = useGame();
   const { data: sectorsWithCompanies, isLoading } =
     trpc.sector.listSectorsWithCompanies.useQuery({
       where: { gameId },
@@ -45,12 +51,19 @@ const SectorComponent = () => {
         <AccordionItem
           key={sector.id}
           startContent={
-            <Avatar
-              className={`text-stone-200 font-extrabold`}
-              style={{ backgroundColor: getSectorColor(sector.name) }}
-              name={String(sector.name).toUpperCase()}
-              size="lg"
-            />
+            <Badge
+              content={
+                gameState.sectorPriority.find((p) => p.sectorId === sector.id)
+                  ?.priority
+              }
+            >
+              <Avatar
+                className={`text-stone-200 font-extrabold`}
+                style={{ backgroundColor: getSectorColor(sector.name) }}
+                name={String(sector.name).toUpperCase()}
+                size="lg"
+              />
+            </Badge>
           }
           title={sector.name}
           subtitle={

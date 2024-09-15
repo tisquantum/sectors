@@ -157,12 +157,14 @@ const Game = ({ gameId }: { gameId: string }) => {
     ) : currentRoundData?.phase.name === PhaseName.START_TURN ? (
       <div className="flex flex-col items-center justify-between h-full w-full gap-2">
         <StartTurnUpdates />
-        {/* <Headlines /> */}
+        <Headlines />
         <div className="flex flex-col gap-2 items-center">
           <h2 className="text-xl">Players Overview</h2>
           <GamePlayersRecap />
         </div>
       </div>
+    ) : currentRoundData?.phase.name === PhaseName.HEADLINE_RESOLVE ? (
+      <Headlines />
     ) : currentRoundData?.phase.name === PhaseName.PRIZE_VOTE_ACTION ? (
       <PrizeRound />
     ) : currentRoundData?.phase.name === PhaseName.PRIZE_VOTE_RESOLVE ? (

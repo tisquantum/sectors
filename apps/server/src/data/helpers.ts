@@ -13,6 +13,7 @@ import {
   RoundType,
   Sector,
   SectorName,
+  SectorPriority,
   Share,
   ShareLocation,
   StockTier,
@@ -82,6 +83,11 @@ export function determineNextGamePhase(
   }
   switch (phaseName) {
     case PhaseName.START_TURN:
+      return {
+        phaseName: PhaseName.HEADLINE_RESOLVE,
+        roundType: RoundType.INFLUENCE,
+      };
+    case PhaseName.HEADLINE_RESOLVE:
       return {
         phaseName: PhaseName.PRIZE_VOTE_ACTION,
         roundType: RoundType.INFLUENCE,
@@ -909,3 +915,28 @@ export function getCompanyActionCost(
     return CompanyActionCosts[companyAction as keyof typeof CompanyActionCosts];
   }
 }
+
+/**
+ * Sorts an array of sector IDs based on their priority.
+ * @param sectorIds - The array of sector IDs to sort.
+ * @param sectorPriorities - The array of sector priority objects.
+ * @returns An array of sector IDs sorted by priority.
+ */
+export function sortSectorIdsByPriority(
+  sectorIds: string[],
+  sectorPriorities: SectorPriority[]
+): string[] {
+  // Create a lookup map for sector priorities
+  const priorityMap = sectorPriorities.reduce<{ [key: string]: number }>((map, sp) => {
+    map[sp.sectorId] = sp.priority;
+    return map;
+  }, {});
+
+  // Sort the sector IDs based on the priority
+  return sectorIds.slice().sort((a, b) => {
+    const priorityA = priorityMap[a] ?? Number.MAX_VALUE;
+    const priorityB = priorityMap[b] ?? Number.MAX_VALUE;
+    return priorityA - priorityB;
+  });
+}
+

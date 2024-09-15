@@ -85,7 +85,7 @@ export const INNOVATION_SURGE_CARD_DRAW_BONUS = 2;
 export const B2B_COMPANY_BONUS = 2;
 export const LICENSING_AGREEMENT_UNIT_PRICE_BONUS = 20;
 export const ROOM_MESSAGE_MAX_LENGTH = 150;
-
+export const DEFAULT_SECTOR_AMOUNT = 3;
 /**
  * Phase times in milliseconds
  */
@@ -124,6 +124,7 @@ export const phaseTimes = {
   [PhaseName.PRIZE_VOTE_RESOLVE]: 12 * 1000,
   [PhaseName.PRIZE_DISTRIBUTE_ACTION]: 50 * 1000,
   [PhaseName.PRIZE_DISTRIBUTE_RESOLVE]: 12 * 1000,
+  [PhaseName.HEADLINE_RESOLVE]: 12 * 1000,
 };
 
 //Stock Grid Prices
@@ -359,6 +360,12 @@ export const getNextCompanyOperatingRoundTurn = (
   companyActionOrder: CompanyActionOrder[],
   currentCompanyId?: string,
 ): Company => {
+  console.log(
+    'getNextCompanyOperatingRoundTurn',
+    companies,
+    companyActionOrder,
+    currentCompanyId,
+  );
   const sortedCompanies = getCompanyActionOperatingRoundTurnOrder(
     companies,
     companyActionOrder,
@@ -1043,6 +1050,7 @@ export const phasesInOrder = [
   PhaseName.INFLUENCE_BID_ACTION,
   PhaseName.INFLUENCE_BID_RESOLVE,
   PhaseName.START_TURN,
+  PhaseName.HEADLINE_RESOLVE,
   PhaseName.PRIZE_VOTE_ACTION,
   PhaseName.PRIZE_VOTE_RESOLVE,
   PhaseName.PRIZE_DISTRIBUTE_ACTION,

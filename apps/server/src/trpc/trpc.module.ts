@@ -42,6 +42,7 @@ import { PrizeVotesService } from '@server/prize-votes/prize-votes.service';
 import { PrizeDistributionService } from '@server/prize-distribution/prize-distribution.service';
 import { CompanyActionOrderService } from '@server/company-action-order/company-action-order.service';
 import { HeadlineService } from '@server/headline/headline.service';
+import { PlayerHeadlineService } from '@server/player-headline/player-headline.service';
 
 @Module({
   imports: [PrismaModule],
@@ -91,6 +92,7 @@ import { HeadlineService } from '@server/headline/headline.service';
     RoomUserService,
     CompanyActionOrderService,
     HeadlineService,
+    PlayerHeadlineService,
   ],
 })
 export class TrpcModule {}
