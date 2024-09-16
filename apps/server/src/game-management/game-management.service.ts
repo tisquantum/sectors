@@ -4858,8 +4858,6 @@ export class GameManagementService {
         );
       });
     }
-    console.log('resolveEndTurn Sectors:', sectors);
-    console.log('resolveEndTurn Game:', game);
 
     if (!game) {
       throw new Error('Game not found');
@@ -5730,8 +5728,31 @@ export class GameManagementService {
     phase: Phase;
     gameId: string;
   }) {
+    // Fetch necessary data upfront
+    const [gameState, stockRound] = await Promise.all([
+      this.gamesService.getGameState(gameId),
+      phase.stockRoundId
+        ? this.stockRoundService.stockRound({ id: phase.stockRoundId })
+        : undefined,
+    ]);
+
+    if (!gameState) {
+      throw new Error('Game state not found');
+    }
+
+    if (gameState?.gameStatus === GameStatus.FINISHED) {
+      return;
+    }
+
+    const stockActionSubRound = stockRound?.stockActionSubRound;
+
     const nameAndRoundTypeAndCompanyForNextPhase =
-      await this.determineAndHandleNextPhase({ phase, gameId });
+      await this.determineAndHandleNextPhase({
+        phase,
+        gameId,
+        gameState,
+        stockActionSubRound,
+      });
 
     const nextPhase = await this.determineIfNewRoundAndStartPhase({
       gameId,
@@ -5745,12 +5766,6 @@ export class GameManagementService {
         phase?.companyId ||
         '',
     });
-
-    const game = await this.gamesService.game({ id: gameId });
-
-    if (game?.gameStatus === GameStatus.FINISHED) {
-      return;
-    }
 
     await this.startPhaseTimer({
       phase: nextPhase,
@@ -5772,45 +5787,43 @@ export class GameManagementService {
   private async determineAndHandleNextPhase({
     phase,
     gameId,
+    gameState,
+    stockActionSubRound,
   }: {
     phase: Phase;
     gameId: string;
+    gameState: GameState;
+    stockActionSubRound?: number;
   }): Promise<{
     phaseName: PhaseName;
     roundType: RoundType;
     companyId?: string;
   }> {
     const determinedNextPhase = determineNextGamePhase(phase.name, {
-      stockActionSubRound: phase.stockRoundId
-        ? (
-            await this.stockRoundService.stockRound({
-              id: phase.stockRoundId,
-            })
-          )?.stockActionSubRound
-        : undefined,
+      stockActionSubRound,
     });
-    console.log('determined next phase', determinedNextPhase);
+
     let nextPhase = await this.adjustPhaseBasedOnGameState(
       determinedNextPhase,
       phase,
+      gameState,
+      stockActionSubRound,
     );
 
-    let companyId;
+    let companyId: string | undefined;
     if (nextPhase.phaseName === PhaseName.OPERATING_ACTION_COMPANY_VOTE) {
-      companyId = await this.handleOperatingActionCompanyVote(
-        nextPhase.phaseName,
-        phase,
-        gameId,
-      );
+      companyId =
+        (await this.handleOperatingActionCompanyVote(
+          nextPhase.phaseName,
+          phase,
+          gameId,
+          gameState,
+        )) || undefined;
       if (!companyId) {
         nextPhase.phaseName = PhaseName.CAPITAL_GAINS;
       }
     } else {
-      companyId = phase.companyId;
-    }
-
-    if (!companyId) {
-      companyId = undefined;
+      companyId = phase.companyId || undefined;
     }
 
     return {
@@ -5833,41 +5846,26 @@ export class GameManagementService {
       roundType: RoundType;
     },
     currentPhase: Phase,
+    gameState: GameState,
+    stockActionSubRound?: number,
   ): Promise<{
     phaseName: PhaseName;
     roundType: RoundType;
   }> {
-    //get stock round
-    const stockRound = await this.stockRoundService.stockRound({
-      id: currentPhase.stockRoundId || 0,
-    });
     let doesNextPhaseNeedToBePlayed = await this.doesNextPhaseNeedToBePlayed(
       nextPhase.phaseName,
       currentPhase,
     );
-    console.log(
-      'doesNextPhaseNeedToBePlayed next phase name',
-      nextPhase,
-      doesNextPhaseNeedToBePlayed,
-    );
+
     while (!doesNextPhaseNeedToBePlayed) {
       nextPhase = determineNextGamePhase(nextPhase.phaseName, {
-        stockActionSubRound: stockRound?.stockActionSubRound,
+        stockActionSubRound,
       });
       doesNextPhaseNeedToBePlayed = await this.doesNextPhaseNeedToBePlayed(
         nextPhase.phaseName,
         currentPhase,
       );
-      console.log(
-        'doesNextPhaseNeedToBePlayed next phase name',
-        nextPhase,
-        doesNextPhaseNeedToBePlayed,
-      );
     }
-    //what is this for?
-    // if (!nextPhase) {
-    //   nextPhaseName = nextPhaseName;
-    // }
 
     return nextPhase;
   }
@@ -5883,13 +5881,9 @@ export class GameManagementService {
     nextPhase: PhaseName,
     currentPhase: Phase,
     gameId: string,
+    gameState: GameState,
   ): Promise<string | undefined> {
-    //get game
-    const gameState = await this.gamesService.getGameState(gameId);
-    if (!gameState) {
-      throw new Error('Game not found');
-    }
-    //get any companies that are insolvent
+    // Use gameState passed from the parent function
     const insolventCompanies = gameState.Company.filter(
       (company) => company.status === CompanyStatus.INSOLVENT,
     );
@@ -5899,23 +5893,23 @@ export class GameManagementService {
     if (insolventCompanies.length > 0) {
       return insolventCompanies[0].id;
     }
+
     const allActiveCompaniesVoted =
       await this.haveAllActiveCompaniesActionsResolved(gameId);
-    console.log('allCompaniesVoted', allActiveCompaniesVoted);
+
     if (allActiveCompaniesVoted) {
-      nextPhase = PhaseName.CAPITAL_GAINS;
       return undefined;
     } else {
       if (
         currentPhase?.companyId &&
-        (currentPhase?.name == PhaseName.OPERATING_COMPANY_VOTE_RESOLVE ||
-          currentPhase?.name == PhaseName.OPERATING_ACTION_COMPANY_VOTE ||
-          currentPhase?.name == PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT)
+        (currentPhase.name === PhaseName.OPERATING_COMPANY_VOTE_RESOLVE ||
+          currentPhase.name === PhaseName.OPERATING_ACTION_COMPANY_VOTE ||
+          currentPhase.name === PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT)
       ) {
         if (!gameState.currentOperatingRoundId) {
           throw new Error('Operating round not found');
         }
-        //get all active companies
+
         const activeCompanies =
           await this.companyService.companiesWithCompanyActionsWithActionsFilteredByOperatingRoundId(
             gameState.currentOperatingRoundId,
@@ -5926,32 +5920,23 @@ export class GameManagementService {
               },
             },
           );
-        console.log(
-          'handleOperatingActionCompanyVote activeCompanies',
-          activeCompanies,
-        );
-        if (!activeCompanies) {
-          throw new Error('Active companies not found');
-        }
+
         const nextCompanyId = this.getNextCompanyId(
           activeCompanies,
           currentPhase?.companyId,
           gameState.currentTurn,
         );
-        if (nextCompanyId == undefined) {
-          nextPhase = PhaseName.CAPITAL_GAINS;
-        }
+
         return nextCompanyId;
       } else {
-        //get company action orders
         let companyActionOrders =
           await this.companyActionOrderService.listCompanyActionOrders({
             where: {
               gameTurnId: gameState.currentTurn,
             },
           });
+
         if (!companyActionOrders || companyActionOrders.length == 0) {
-          console.error('Company action orders not found, attempting to lock');
           await this.lockCompanyActions(currentPhase);
           companyActionOrders =
             await this.companyActionOrderService.listCompanyActionOrders({
@@ -5959,6 +5944,7 @@ export class GameManagementService {
                 gameTurnId: gameState.currentTurn,
               },
             });
+
           if (!companyActionOrders || companyActionOrders.length == 0) {
             throw new Error('Company action orders not found');
           }
@@ -5969,7 +5955,7 @@ export class GameManagementService {
             (company) => company.status == CompanyStatus.ACTIVE,
           ),
           companyActionOrders,
-        ).id;
+        )?.id;
       }
     }
   }

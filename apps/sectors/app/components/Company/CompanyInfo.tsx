@@ -79,11 +79,10 @@ const buildBarChart = (shares: ShareWithPlayer[]) => {
   //convert object to array
   return Object.entries(groupedShares).map(([location, quantity], index) =>
     location == ShareLocation.PLAYER ? (
-      <Popover>
+      <Popover key={index}>
         <PopoverTrigger>
           <div className="flex justify-center items-center cursor-pointer">
             <ShareComponent
-              key={index}
               name={"Player"}
               icon={<RiUserFill className={"text-slate-800"} size={18} />}
               quantity={quantity}
