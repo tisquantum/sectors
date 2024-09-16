@@ -38,7 +38,7 @@ const ShareHolders = ({ companyId }: { companyId: string }) => {
   }, {} as { [key: string]: ShareWithRelations[] });
 
   return (
-    <div className="grid grid-cols-2 justify-start flex-wrap gap-2">
+    <div className="flex flex-wrap justify-start gap-2">
       <ShareComponent
         name="OM"
         quantity={shareGroups[ShareLocation.OPEN_MARKET]?.length || 0}

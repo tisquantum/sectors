@@ -11,9 +11,11 @@ import CompanyComponent from "../Company/Company";
 import PlayerAvatar from "../Player/PlayerAvatar";
 import { motion } from "framer-motion";
 import DebounceButton from "../General/DebounceButton";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import SectorPriority from "./SectorPriority";
 import { toast } from "sonner";
+import { EVENT_NEW_PLAYER_HEADLINE } from "@server/pusher/pusher.types";
+import { set } from "lodash";
 
 const sampleHeadlines = [
   {
@@ -108,6 +110,8 @@ const HeadlineComponent = ({
     trpc.playerHeadlines.createPlayerHeadline.useMutation({
       onSettled: () => {
         setIsLoading(false);
+      },
+      onSuccess: () => {
         setSubmitComplete(true);
       },
       onError: (error) => {
@@ -194,14 +198,14 @@ const HeadlineComponent = ({
       {currentPhase?.name == PhaseName.START_TURN && (
         <div>
           {submitComplete ? (
-            <div className="bg-slate-600 bordered-md">Headline purchased</div>
+            <div className="bg-slate-600 bordered-md p-2">Headline purchased</div>
           ) : (
             <DebounceButton
               onClick={handlePurchaseHeadline}
-              className="w-full"
+              className="p-2"
               isLoading={isLoading}
             >
-              Purchase/Split Headline
+              Buy/Split Headline
             </DebounceButton>
           )}
         </div>
@@ -247,9 +251,10 @@ const HeadlineSlot = ({
 };
 
 const Headlines = () => {
-  const { gameId, currentTurn } = useGame();
+  const { gameId, currentTurn, socketChannel: channel } = useGame();
   const {
     data: headlines,
+    refetch,
     isLoading,
     isError,
   } = trpc.headlines.listHeadlines.useQuery({
@@ -264,6 +269,17 @@ const Headlines = () => {
       createdAt: "desc",
     },
   });
+  useEffect(() => {
+    if (!channel) return;
+
+    channel.bind(EVENT_NEW_PLAYER_HEADLINE, () => {
+      refetch();
+    });
+
+    return () => {
+      channel.unbind(EVENT_NEW_PLAYER_HEADLINE);
+    };
+  }, [channel, isLoading]);
   return (
     <div className="flex flex-col justify-center items-center bg-gray-200 p-8 shadow-lg rounded-lg max-w-3xl mx-auto">
       <div className="border-b-4 border-black mb-4">
