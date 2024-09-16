@@ -5887,7 +5887,9 @@ export class GameManagementService {
     const insolventCompanies = gameState.Company.filter(
       (company) => company.status === CompanyStatus.INSOLVENT,
     );
-
+    //if there are insolvent companies, resolve the first one
+    //as companies that are insolvent ultimately resolve into one of two states, bankrupt or active, we should
+    //be able to safely assume that this check will ultimately pass and continue onto active companies
     if (insolventCompanies.length > 0) {
       return insolventCompanies[0].id;
     }
@@ -5947,7 +5949,7 @@ export class GameManagementService {
             throw new Error('Company action orders not found');
           }
         }
-
+        //this should be the first company in the operating round
         return getNextCompanyOperatingRoundTurn(
           gameState.Company.filter(
             (company) => company.status == CompanyStatus.ACTIVE,
