@@ -112,7 +112,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           console.error(error);
           throw new TRPCError({
             code: 'BAD_REQUEST',
-            message: `An error occurred while creating the player headline: ${error.message}`,
+            message: `An error occurred while creating the player headline: ${error}`,
           });
         }
       }),
