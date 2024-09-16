@@ -543,8 +543,26 @@ export class GameManagementService {
           );
           break;
         case HeadlineType.SECTOR_POSITIVE_1:
+          this.adjustSectorPriorityUp(
+            currentPhase.gameId,
+            headline.sectorId,
+            1,
+          );
+          break;
         case HeadlineType.SECTOR_POSITIVE_2:
+          this.adjustSectorPriorityUp(
+            currentPhase.gameId,
+            headline.sectorId,
+            2,
+          );
+          break;
         case HeadlineType.SECTOR_POSITIVE_3:
+          this.adjustSectorPriorityUp(
+            currentPhase.gameId,
+            headline.sectorId,
+            3,
+          );
+          break;
         default:
           break;
       }
@@ -611,62 +629,89 @@ export class GameManagementService {
    * @returns
    */
   async handleHeadlines(phase: Phase) {
-    //get game
+    // Get game
     const game = await this.gamesService.game({ id: phase.gameId });
     if (!game) {
       throw new Error('Game not found');
     }
-    //get current game turn
+
+    // Get current game turn
     const gameTurn = await this.gameTurnService.getCurrentTurn(phase.gameId);
     if (!gameTurn) {
       throw new Error('Game turn not found');
     }
-    //if turn is 1, skip
-    if (gameTurn.turn == 1) {
+
+    // If turn is 1, skip
+    if (gameTurn.turn === 1) {
       return;
     }
+
     let headlinesToCreate;
-    //if turn is 2, create 3 headlines
-    if (gameTurn.turn == 2) {
+
+    // If turn is 2, create 3 headlines
+    if (gameTurn.turn === 2) {
       headlinesToCreate = await generateHeadlines(this.prisma, phase, 3);
-      //map slotNumber to headlines
-      headlinesToCreate = headlinesToCreate.map((headline, index) => {
-        return { ...headline, saleSlot: index + 1 };
-      });
+      // Map slotNumber to headlines
+      headlinesToCreate = headlinesToCreate.map((headline, index) => ({
+        ...headline,
+        saleSlot: index + 1,
+      }));
     } else {
+      // Get headlines with saleSlot not null and order them by saleSlot
       const headlines = await this.headlineService.listHeadlines({
         where: { gameId: game.id, saleSlot: { not: null } },
+        orderBy: { saleSlot: 'asc' },
       });
-      //check which slots are not filled out of 1, 2 and 3
-      const filledSlots = headlines.map((headline) => headline.saleSlot);
+
+      // Find and discard the headline in slot 1 if all slots are filled
+      if (headlines.length === 3) {
+        const headlineInSlot1 = headlines.find(
+          (headline) => headline.saleSlot === 1,
+        );
+        if (headlineInSlot1) {
+          await this.headlineService.updateHeadline({
+            where: { id: headlineInSlot1.id },
+            data: { location: HeadlineLocation.DISCARDED, saleSlot: null },
+          });
+        }
+      }
+
+      // Shift headlines from right to left
+      for (let slot = 2; slot <= 3; slot++) {
+        const headline = headlines.find((h) => h.saleSlot === slot);
+        if (headline) {
+          await this.headlineService.updateHeadline({
+            where: { id: headline.id },
+            data: { saleSlot: slot - 1 },
+          });
+        }
+      }
+
+      // Recalculate filled and empty slots
+      const updatedHeadlines = await this.headlineService.listHeadlines({
+        where: { gameId: game.id, saleSlot: { not: null } },
+        orderBy: { saleSlot: 'asc' },
+      });
+
+      const filledSlots = updatedHeadlines.map((headline) => headline.saleSlot);
       const emptySlots = [1, 2, 3].filter(
         (slot) => !filledSlots.includes(slot),
       );
-      //if all slots are filled, discard the headline in slot 1
-      if (emptySlots.length == 0) {
-        await this.headlineService.updateHeadline({
-          where: { id: headlines[0].id },
-          data: { location: HeadlineLocation.DISCARDED, saleSlot: null },
-        });
-      }
-      //move headlines from right to left
-      for (let i = 0; i < headlines.length; i++) {
-        await this.headlineService.updateHeadline({
-          where: { id: headlines[i].id },
-          data: { saleSlot: i + 1 },
-        });
-      }
-      //create new headlines for empty slots
+
+      // Create new headlines for empty slots
       headlinesToCreate = await generateHeadlines(
         this.prisma,
         phase,
         emptySlots.length,
       );
-      //map slotNumber to headlines
-      headlinesToCreate = headlinesToCreate.map((headline, index) => {
-        return { ...headline, saleSlot: emptySlots[index] };
-      });
+
+      // Map slotNumber to headlines
+      headlinesToCreate = headlinesToCreate.map((headline, index) => ({
+        ...headline,
+        saleSlot: emptySlots[index],
+      }));
     }
+
     await this.headlineService.createManyHeadlines(headlinesToCreate);
   }
 
