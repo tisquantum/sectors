@@ -13,6 +13,7 @@ import { motion } from "framer-motion";
 import DebounceButton from "../General/DebounceButton";
 import { useState } from "react";
 import SectorPriority from "./SectorPriority";
+import { toast } from "sonner";
 
 const sampleHeadlines = [
   {
@@ -109,6 +110,9 @@ const HeadlineComponent = ({
         setIsLoading(false);
         setSubmitComplete(true);
       },
+      onError: (error) => {
+        toast.error(error.message);
+      },
     });
   const handlePurchaseHeadline = async () => {
     setIsLoading(true);
@@ -190,7 +194,7 @@ const HeadlineComponent = ({
       {currentPhase?.name == PhaseName.START_TURN && (
         <div>
           {submitComplete ? (
-            <div className="bg-slate-200 bordered-md">Headline purchased</div>
+            <div className="bg-slate-600 bordered-md">Headline purchased</div>
           ) : (
             <DebounceButton
               onClick={handlePurchaseHeadline}
@@ -275,11 +279,13 @@ const Headlines = () => {
       {isLoading && <div>Loading...</div>}
       {isError && <div>Error loading headlines</div>}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {headlines?.map((headline) => (
-          <div key={headline.id}>
-            <HeadlineSlot headline={headline} />
-          </div>
-        ))}
+        {headlines
+          ?.sort((a, b) => (a?.saleSlot || 0) - (b?.saleSlot || 0))
+          .map((headline) => (
+            <div key={headline.id}>
+              <HeadlineSlot headline={headline} />
+            </div>
+          ))}
       </div>
     </div>
   );

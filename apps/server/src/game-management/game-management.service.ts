@@ -69,6 +69,8 @@ import {
   PrizeVoteWithRelations,
   PrizeWithSectorPrizes,
   ProductionResultWithCompany,
+  SectorWithCompanies,
+  SectorWithCompanyRelations,
   ShareWithCompany,
   ShortOrderWithShares,
 } from '@server/prisma/prisma.types';
@@ -160,6 +162,7 @@ import {
   calculateAverageStockPrice,
   calculateStartingCompanyCount,
   getCompanyActionCost,
+  sortSectorIdsByPriority,
 } from '@server/data/helpers';
 import { PusherService } from 'nestjs-pusher';
 import {
@@ -643,7 +646,7 @@ export class GameManagementService {
       if (emptySlots.length == 0) {
         await this.headlineService.updateHeadline({
           where: { id: headlines[0].id },
-          data: { location: HeadlineLocation.DISCARDED },
+          data: { location: HeadlineLocation.DISCARDED, saleSlot: null },
         });
       }
       //move headlines from right to left
@@ -4788,17 +4791,30 @@ export class GameManagementService {
       this.sectorService.sectorsWithCompanies({
         where: { gameId: phase.gameId },
       }),
-      this.gamesService.game({ id: phase.gameId }),
+      this.gamesService.getGameState(phase.gameId),
     ]);
 
-    sectors.sort((a, b) => {
-      return (
-        sectorPriority.indexOf(a.sectorName) -
-        sectorPriority.indexOf(b.sectorName)
-      );
-    });
-    console.log('Sectors:', sectors);
-    console.log('Game:', game);
+    const sectorPriorityStored = game?.sectorPriority;
+    let sectorsSorted: SectorWithCompanyRelations[] = [];
+    if (sectorPriorityStored) {
+      sectorsSorted = sortSectorIdsByPriority(
+        sectors.map((sector) => sector.id),
+        sectorPriorityStored,
+      )
+        .map((sectorId) => sectors.find((s) => s.id === sectorId))
+        .filter(
+          (sector) => sector !== undefined,
+        ) as SectorWithCompanyRelations[];
+    } else {
+      sectorsSorted = sectors.sort((a, b) => {
+        return (
+          sectorPriority.indexOf(a.sectorName) -
+          sectorPriority.indexOf(b.sectorName)
+        );
+      });
+    }
+    console.log('resolveEndTurn Sectors:', sectors);
+    console.log('resolveEndTurn Game:', game);
 
     if (!game) {
       throw new Error('Game not found');

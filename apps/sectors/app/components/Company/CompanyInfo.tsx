@@ -8,6 +8,9 @@ import {
   ModalContent,
   ModalFooter,
   ModalHeader,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   Tooltip,
   useDisclosure,
 } from "@nextui-org/react";
@@ -44,10 +47,14 @@ import { sectorColors } from "@server/data/gameData";
 import { calculateCompanySupply, calculateDemand } from "@server/data/helpers";
 import {
   CompanyStatus,
+  Player,
   Share,
   ShareLocation,
 } from "@server/prisma/prisma.client";
-import { CompanyWithSector } from "@server/prisma/prisma.types";
+import {
+  CompanyWithSector,
+  ShareWithPlayer,
+} from "@server/prisma/prisma.types";
 import { BarList } from "@tremor/react";
 import ThroughputLegend from "../Game/ThroughputLegend";
 import { trpc } from "@sectors/app/trpc";
@@ -58,10 +65,11 @@ import { useGame } from "../Game/GameContext";
 import { useEffect } from "react";
 import ShareComponent from "./Share";
 import { renderLocationShortHand } from "@sectors/app/helpers";
+import PlayerAvatar from "../Player/PlayerAvatar";
 
-const buildBarChart = (share: Share[]) => {
+const buildBarChart = (shares: ShareWithPlayer[]) => {
   //group shares by location and sum the quantity
-  const groupedShares = share.reduce((acc, share) => {
+  const groupedShares = shares.reduce((acc, share) => {
     if (!acc[share.location]) {
       acc[share.location] = 0;
     }
@@ -71,12 +79,48 @@ const buildBarChart = (share: Share[]) => {
   //convert object to array
   return Object.entries(groupedShares).map(([location, quantity], index) =>
     location == ShareLocation.PLAYER ? (
-      <ShareComponent
-        key={index}
-        name={"Player"}
-        icon={<RiUserFill className={"text-slate-800"} size={18} />}
-        quantity={quantity}
-      />
+      <Popover>
+        <PopoverTrigger>
+          <div className="flex justify-center items-center cursor-pointer">
+            <ShareComponent
+              key={index}
+              name={"Player"}
+              icon={<RiUserFill className={"text-slate-800"} size={18} />}
+              quantity={quantity}
+            />
+          </div>
+        </PopoverTrigger>
+        <PopoverContent>
+          <div className="flex flex-wrap gap-1">
+            {Object.values(
+              shares
+                .filter((share) => share.location === ShareLocation.PLAYER)
+                .reduce((acc, share) => {
+                  const playerId = share.Player?.id;
+                  if (playerId && share.Player) {
+                    if (!acc[playerId]) {
+                      acc[playerId] = {
+                        quantity: 0,
+                        Player: share.Player,
+                      };
+                    }
+                    acc[playerId].quantity += 1; // Sum the quantity for each player
+                  }
+                  return acc;
+                }, {} as Record<string, { quantity: number; Player: Player }>) // Accumulate by player ID
+            ).map((shareData, index) => (
+              <div key={index} className="flex gap-2 items-center">
+                <div className="flex items-center">
+                  {shareData.Player && (
+                    <PlayerAvatar player={shareData.Player} />
+                  )}
+                </div>
+                <span>{shareData.quantity}</span>
+              </div>
+            ))}
+          </div>
+        </PopoverContent>
+      </Popover>
     ) : (
       <ShareComponent
         key={index}
@@ -323,7 +367,7 @@ const CompanyInfo = ({
   }
   return (
     <>
-      <div className="flex flex-row gap-1 items-center h-full">
+      <div className="flex flex-row gap-1 items-center h-full w-full">
         <div className="flex flex-col gap-1">
           <div className="flex flex-col gap-1">
             <div className="flex flex-start gap-1 items-center justify-between">
