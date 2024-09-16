@@ -42,6 +42,52 @@ export class PlayerHeadlineService {
   async createPlayerHeadline(
     data: Prisma.PlayerHeadlineCreateInput,
   ): Promise<PlayerHeadline> {
+    //if player has already bought a headline in the current turn, throw an error
+    const playerHeadline = await this.prisma.playerHeadline.findFirst({
+      where: {
+        playerId: data.player.connect?.id,
+        gameTurnId: data.gameTurn.connect?.id,
+      },
+    });
+    if (playerHeadline) {
+      throw new Error('Player has already bought a headline in this turn');
+    }
+    //get the headline
+    const headline = await this.prisma.headline.findUnique({
+      where: {
+        id: data.headline.connect?.id,
+      },
+      include: {
+        playerHeadlines: true,
+      },
+    });
+    //get the current cost per player
+    if (!headline) {
+      throw new Error('Headline not found');
+    }
+    let costPerPlayer = 0;
+    if (headline?.playerHeadlines.length === 0) {
+      costPerPlayer = headline?.cost;
+    } else {
+      costPerPlayer = Math.floor(
+        headline?.cost / headline?.playerHeadlines.length,
+      );
+    }
+    //get player
+    const player = await this.prisma.player.findUnique({
+      where: {
+        id: data.player.connect?.id,
+      },
+    });
+    if (!player) {
+      throw new Error('Player not found');
+    }
+    //check if player has enough money
+    if (player?.cashOnHand < costPerPlayer) {
+      throw new Error(
+        'Player does not have enough money to purchase headline.',
+      );
+    }
     return this.prisma.playerHeadline.create({
       data,
     });

@@ -22,11 +22,20 @@ const SectorComponentAnimation = ({
   consumersMoving: number;
   cumulativeConsumers: number;
 }) => {
+  const { gameState } = useGame();
   return (
     <div
       className={`flex flex-col gap-2 text-slate-200 p-4 justify-center items-center rounded-md ${sectorColor}`}
       style={{ backgroundColor: sectorColor }}
     >
+      {gameState?.sectorPriority && (
+        <div className="text-xl">
+          {
+            gameState.sectorPriority.find((s) => s.sectorId === sector.id)
+              ?.priority
+          }
+        </div>
+      )}
       <div className="text-xl">{sector.name}</div>
       <div className="text-xl flex gap-2">
         <RiHandCoinFill /> {sector.demand + (sector.demandBonus || 0)}

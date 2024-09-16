@@ -1,11 +1,19 @@
 import { trpc } from "@sectors/app/trpc";
 import { useGame } from "./GameContext";
-import { HeadlineLocation, HeadlineType } from "@server/prisma/prisma.client";
+import {
+  HeadlineLocation,
+  HeadlineType,
+  PhaseName,
+} from "@server/prisma/prisma.client";
 import { RiArrowUpWideLine, RiMoneyDollarBoxFill } from "@remixicon/react";
 import { HeadlineWithRelations } from "@server/prisma/prisma.types";
 import CompanyComponent from "../Company/Company";
 import PlayerAvatar from "../Player/PlayerAvatar";
 import { motion } from "framer-motion";
+import DebounceButton from "../General/DebounceButton";
+import { useState } from "react";
+import SectorPriority from "./SectorPriority";
+import { toast } from "sonner";
 
 const sampleHeadlines = [
   {
@@ -63,27 +71,27 @@ const HeadlineTypeComponent = ({
   <div className="text-lg">
     {(headlineType === HeadlineType.COMPANY_POSITIVE_1 ||
       headlineType === HeadlineType.SECTOR_POSITIVE_1) && (
-      <div className="text-green-500 flex flex-col">&gt;</div>
+      <div className="text-green-500 flex flex-col">&lt;</div>
     )}
     {(headlineType === HeadlineType.COMPANY_POSITIVE_2 ||
       headlineType === HeadlineType.SECTOR_POSITIVE_2) && (
-      <div className="text-green-500 flex flex-col">&gt;&gt;</div>
+      <div className="text-green-500 flex flex-col">&lt;&lt;</div>
     )}
     {headlineType === HeadlineType.COMPANY_POSITIVE_3 ||
       (headlineType === HeadlineType.SECTOR_POSITIVE_3 && (
-        <div className="text-green-500 flex flex-col">&gt;&gt;&gt;</div>
+        <div className="text-green-500 flex flex-col">&lt;&lt;&lt;</div>
       ))}
     {(headlineType === HeadlineType.COMPANY_NEGATIVE_1 ||
       headlineType === HeadlineType.SECTOR_NEGATIVE_1) && (
-      <div className="text-red-500 flex flex-col">&lt;</div>
+      <div className="text-red-500 flex flex-col">&gt;</div>
     )}
     {(headlineType === HeadlineType.COMPANY_NEGATIVE_2 ||
       headlineType === HeadlineType.SECTOR_NEGATIVE_2) && (
-      <div className="text-red-500 flex flex-col">&lt;&lt;</div>
+      <div className="text-red-500 flex flex-col">&gt;&gt;</div>
     )}
     {(headlineType === HeadlineType.COMPANY_NEGATIVE_3 ||
       headlineType === HeadlineType.SECTOR_NEGATIVE_3) && (
-      <div className="text-red-500 flex flex-col">&lt;&lt;&lt;</div>
+      <div className="text-red-500 flex flex-col">&gt;&gt;&gt;</div>
     )}
   </div>
 );
@@ -92,74 +100,130 @@ const HeadlineComponent = ({
   headline,
 }: {
   headline: Partial<HeadlineWithRelations>;
-}) => (
-  <motion.div
-    className="p-3 bg-slate-200 rounded-lg border border-gray-300 shadow-md flex flex-col justify-between h-full"
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.4 }}
-  >
-    <div className="flex justify-between items-center mb-4">
-      <motion.div
-        className="text-2xl font-bold text-gray-800"
-        initial={{ scale: 0.9 }}
-        animate={{ scale: 1 }}
-      >
-        {headline.title}
-      </motion.div>
-    </div>
-    {headline.type && (
-      <motion.div
-        className="text-gray-600"
-        initial={{ x: -20, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        transition={{ delay: 0.2 }}
-      >
-        <HeadlineTypeComponent headlineType={headline.type} />
-      </motion.div>
-    )}
-    {headline.company && (
-      <motion.div
-        className="mb-4"
-        initial={{ x: -20, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        transition={{ delay: 0.4 }}
-      >
-        <CompanyComponent company={headline.company} />
-      </motion.div>
-    )}
+}) => {
+  const { currentPhase, currentTurn, gameId, authPlayer } = useGame();
+  const [isLoading, setIsLoading] = useState(false);
+  const [submitComplete, setSubmitComplete] = useState(false);
+  const handleCreatePlayerHeadlineMutation =
+    trpc.playerHeadlines.createPlayerHeadline.useMutation({
+      onSettled: () => {
+        setIsLoading(false);
+        setSubmitComplete(true);
+      },
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
+  const handlePurchaseHeadline = async () => {
+    setIsLoading(true);
+    if (headline.id && authPlayer?.id) {
+      handleCreatePlayerHeadlineMutation.mutate({
+        headlineId: headline.id,
+        gameTurnId: currentTurn?.id,
+        gameId,
+        playerId: authPlayer?.id,
+      });
+    }
+  };
 
-    {headline.sector && (
-      <motion.div
-        className="text-sm text-gray-500"
-        initial={{ x: 20, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        transition={{ delay: 0.4 }}
-      >
-        {headline.sector.name}
-      </motion.div>
-    )}
+  //Only capitalize the first letter of a string, the rest should be lowercase
+  const makeSentenceCase = (str: string) => {
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+  };
+
+  return (
     <motion.div
-      className="flex text-green-500 text-lg flex justify-end items-center"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ delay: 0.3 }}
+      className="p-3 bg-slate-200 rounded-lg border border-gray-300 shadow-md flex flex-col justify-between h-full"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
     >
-      <RiMoneyDollarBoxFill className="mr-1" />
-      {headline.cost}
+      <div className="flex justify-between items-center mb-4">
+        <motion.div
+          className="text-2xl font-bold text-gray-800"
+          initial={{ scale: 0.9 }}
+          animate={{ scale: 1 }}
+        >
+          {makeSentenceCase(headline.title || "")}
+        </motion.div>
+      </div>
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex flex-col gap-1">
+          {headline.type && (
+            <motion.div
+              className="text-gray-600"
+              initial={{ x: -20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ delay: 0.2 }}
+            >
+              <HeadlineTypeComponent headlineType={headline.type} />
+            </motion.div>
+          )}
+          {headline.company && (
+            <motion.div
+              className="mb-4"
+              initial={{ x: -20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ delay: 0.4 }}
+            >
+              <CompanyComponent company={headline.company} />
+            </motion.div>
+          )}
+
+          {headline.sector && (
+            <motion.div
+              className="text-sm text-gray-500"
+              initial={{ x: 20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ delay: 0.4 }}
+            >
+              {headline.sector.name}
+            </motion.div>
+          )}
+        </div>
+        <motion.div
+          className="flex text-green-500 text-lg flex justify-end items-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+        >
+          <RiMoneyDollarBoxFill className="mr-1" />
+          {headline.cost}
+        </motion.div>
+      </div>
+      {currentPhase?.name == PhaseName.START_TURN && (
+        <div>
+          {submitComplete ? (
+            <div className="bg-slate-600 bordered-md">Headline purchased</div>
+          ) : (
+            <DebounceButton
+              onClick={handlePurchaseHeadline}
+              className="w-full"
+              isLoading={isLoading}
+            >
+              Purchase/Split Headline
+            </DebounceButton>
+          )}
+        </div>
+      )}
+      {headline.playerHeadlines && headline.playerHeadlines?.length > 0 && (
+        <motion.div
+          className="flex space-x-2 mt-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+        >
+          {headline.playerHeadlines?.map((playerHeadline) => (
+            <PlayerAvatar
+              key={playerHeadline.id}
+              player={playerHeadline.player}
+            />
+          ))}
+        </motion.div>
+      )}
     </motion.div>
-    {/* <motion.div
-      className="flex space-x-2 mt-4"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ delay: 0.5 }}
-    >
-      {headline.playerHeadlines.map((playerHeadline) => (
-        <PlayerAvatar key={playerHeadline.id} player={playerHeadline.player} />
-      ))}
-    </motion.div> */}
-  </motion.div>
-);
+  );
+};
 
 const HeadlineSlot = ({
   headline,
@@ -191,34 +255,37 @@ const Headlines = () => {
   } = trpc.headlines.listHeadlines.useQuery({
     where: {
       gameId,
-      headlineLocation: HeadlineLocation.FOR_SALE,
+      location: HeadlineLocation.FOR_SALE,
+      saleSlot: {
+        not: null,
+      },
     },
     orderBy: {
       createdAt: "desc",
     },
   });
   return (
-    <div className="bg-gray-50 p-8 shadow-lg rounded-lg max-w-3xl mx-auto">
+    <div className="flex flex-col justify-center items-center bg-gray-200 p-8 shadow-lg rounded-lg max-w-3xl mx-auto">
       <div className="border-b-4 border-black mb-4">
         <h2 className="text-4xl font-serif text-center text-black mb-2">
           Today&apos;s Headlines
         </h2>
       </div>
+      <SectorPriority />
       <p className="text-xl text-gray-700 font-light mb-6">
         The following headlines are being pushed, put money on a headline to
         influence the medias narrative.
       </p>
-      {/* {isLoading && <div>Loading...</div>}
+      {isLoading && <div>Loading...</div>}
       {isError && <div>Error loading headlines</div>}
-      {headlines?.map((headline) => (
-        <div key={headline.id}>
-          <HeadlineComponent headline={headline} />
-        </div>
-      ))} */}
-      <div className="grid grid-cols-3 gap-6">
-        <HeadlineSlot headline={sampleHeadlines[0]} />
-        <HeadlineSlot headline={sampleHeadlines[1]} />
-        <HeadlineSlot headline={sampleHeadlines[2]} />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {headlines
+          ?.sort((a, b) => (a?.saleSlot || 0) - (b?.saleSlot || 0))
+          .map((headline) => (
+            <div key={headline.id}>
+              <HeadlineSlot headline={headline} />
+            </div>
+          ))}
       </div>
     </div>
   );

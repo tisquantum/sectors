@@ -37,6 +37,8 @@ export function friendlyPhaseName(name: PhaseName | undefined): string {
     return "Unknown Phase";
   }
   switch (name) {
+    case PhaseName.HEADLINE_RESOLVE:
+      return "Resolve Headlines";
     case PhaseName.INFLUENCE_BID_ACTION:
       return "Influence Bid";
     case PhaseName.INFLUENCE_BID_REVEAL:

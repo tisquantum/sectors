@@ -44,6 +44,9 @@ import {
   PrizeDistributionType,
   Card,
   Transaction,
+  HeadlineLocation,
+  Headline,
+  HeadlineType,
 } from '@prisma/client';
 import { GamesService } from '@server/games/games.service';
 import { CompanyService } from '@server/company/company.service';
@@ -57,6 +60,7 @@ import {
   CompanyWithSector,
   GameState,
   GameTurnWithRelations,
+  HeadlineWithRelations,
   OptionContractWithRelations,
   PlayerOrderWithCompany,
   PlayerOrderWithPlayerCompany,
@@ -65,6 +69,8 @@ import {
   PrizeVoteWithRelations,
   PrizeWithSectorPrizes,
   ProductionResultWithCompany,
+  SectorWithCompanies,
+  SectorWithCompanyRelations,
   ShareWithCompany,
   ShortOrderWithShares,
 } from '@server/prisma/prisma.types';
@@ -132,6 +138,7 @@ import {
   INNOVATION_SURGE_CARD_DRAW_BONUS,
   companyActionsDescription,
   LICENSING_AGREEMENT_UNIT_PRICE_BONUS,
+  DEFAULT_SECTOR_AMOUNT,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -155,6 +162,7 @@ import {
   calculateAverageStockPrice,
   calculateStartingCompanyCount,
   getCompanyActionCost,
+  sortSectorIdsByPriority,
 } from '@server/data/helpers';
 import { PusherService } from 'nestjs-pusher';
 import {
@@ -196,6 +204,8 @@ import { PrizeVotesService } from '@server/prize-votes/prize-votes.service';
 import { PrizeDistributionService } from '@server/prize-distribution/prize-distribution.service';
 import { RoomUserService } from '@server/room-user/room-user.service';
 import { CompanyActionOrderService } from '@server/company-action-order/company-action-order.service';
+import { HeadlineService } from '@server/headline/headline.service';
+import { generateHeadlines } from '@server/headline/headline.helpers';
 
 type GroupedByPhase = {
   [key: string]: {
@@ -251,6 +261,7 @@ export class GameManagementService {
     private prizeDistributionService: PrizeDistributionService,
     private roomUserService: RoomUserService,
     private companyActionOrderService: CompanyActionOrderService,
+    private headlineService: HeadlineService,
   ) {}
 
   /**
@@ -269,7 +280,11 @@ export class GameManagementService {
       case PhaseName.START_TURN:
         await this.determinePriorityOrderBasedOnNetWorth(phase);
         await this.handleOpeningNewCompany(phase);
+        await this.handleHeadlines(phase);
         await this.handlePrizeRound(phase);
+        break;
+      case PhaseName.HEADLINE_RESOLVE:
+        await this.resolveHeadlines(phase);
         break;
       case PhaseName.INFLUENCE_BID_RESOLVE:
         await this.resolveInfluenceBid(phase);
@@ -321,6 +336,7 @@ export class GameManagementService {
         //await this.createOperatingRoundCompanyActions(phase);
         await this.decrementSectorDemandBonus(phase);
         await this.decrementCompanyTemporarySupplyBonus(phase);
+        await this.decrementActiveCompanyDemand(phase);
         await this.checkCompaniesForIncreasePricePreviousTurnAndAdjustDemand(
           phase,
         );
@@ -353,18 +369,8 @@ export class GameManagementService {
     }
   }
 
-  async lockCompanyActions(phase: Phase) {
-    //get game
-    const game = await this.gamesService.game({ id: phase.gameId });
-    if (!game) {
-      throw new Error('Game not found');
-    }
-    //get current game turn
-    const gameTurn = await this.gameTurnService.getCurrentTurn(phase.gameId);
-    if (!gameTurn) {
-      throw new Error('Game turn not found');
-    }
-    //get all active and insolvent companies
+  async decrementActiveCompanyDemand(phase: Phase) {
+    //get all active or insolvent companies
     const companies = await this.companyService.companies({
       where: {
         gameId: phase.gameId,
@@ -374,18 +380,410 @@ export class GameManagementService {
         ],
       },
     });
-    //get company priority order
+    //decrement demand for each company
+    const companyPromises = companies.map((company) => {
+      return this.companyService.updateCompany({
+        where: { id: company.id },
+        data: { demandScore: Math.max(0, company.demandScore - 1) },
+      });
+    });
+    await Promise.all(companyPromises);
+  }
+
+  async resolveHeadlines(phase: Phase) {
+    //get game
+    const game = await this.gamesService.game({ id: phase.gameId });
+    if (!game) {
+      throw new Error('Game not found');
+    }
+    //get headlines with slots
+    const headlines = await this.headlineService.listHeadlines({
+      where: { gameId: game.id, saleSlot: { not: null } },
+    });
+    //for all headlines that have playerHeadlines, attempt to pay for them from player's account
+    const playerHeadlines = headlines.filter(
+      (headline) => headline.playerHeadlines.length > 0,
+    );
+    const playerHeadlinePromises = playerHeadlines.map((headline) => {
+      return this.playerPayForHeadline(headline, phase);
+    });
+    const headlinesResolved = await Promise.all(playerHeadlinePromises);
+    //for each sold headline, perform the headline action
+    const headlineActionsPromises = headlinesResolved.map((headline) => {
+      if (headline) {
+        return this.performHeadlineAction(headline, phase);
+      }
+    });
+  }
+
+  async adjustSectorPriorityDown(
+    gameId: string,
+    sectorId: string,
+    amount: number,
+  ) {
+    const sectorPriorities = await this.prisma.sectorPriority.findMany({
+      where: { gameId },
+    });
+
+    if (!sectorPriorities || sectorPriorities.length === 0) {
+      throw new Error('Sector priorities not found');
+    }
+
+    const sectorPriority = sectorPriorities.find(
+      (sectorPriority) => sectorPriority.sectorId === sectorId,
+    );
+
+    if (!sectorPriority) {
+      throw new Error('Sector priority not found');
+    }
+
+    const maxPriority = DEFAULT_SECTOR_AMOUNT;
+    const oldPriority = sectorPriority.priority;
+    const newPriority = Math.min(oldPriority + amount, maxPriority);
+
+    // Update the priority of the selected sector
+    await this.prisma.sectorPriority.update({
+      where: { id: sectorPriority.id },
+      data: {
+        priority: newPriority,
+      },
+    });
+
+    // Adjust other sectors' priorities
+    const sectorsToAdjust = sectorPriorities.filter(
+      (sp) =>
+        sp.sectorId !== sectorId &&
+        sp.priority > oldPriority &&
+        sp.priority <= newPriority,
+    );
+
+    for (const sp of sectorsToAdjust) {
+      await this.prisma.sectorPriority.update({
+        where: { id: sp.id },
+        data: {
+          priority: sp.priority - 1,
+        },
+      });
+    }
+  }
+
+  async adjustSectorPriorityUp(
+    gameId: string,
+    sectorId: string,
+    amount: number,
+  ) {
+    const sectorPriorities = await this.prisma.sectorPriority.findMany({
+      where: { gameId },
+    });
+
+    if (!sectorPriorities || sectorPriorities.length === 0) {
+      throw new Error('Sector priorities not found');
+    }
+
+    const sectorPriority = sectorPriorities.find(
+      (sectorPriority) => sectorPriority.sectorId === sectorId,
+    );
+
+    if (!sectorPriority) {
+      throw new Error('Sector priority not found');
+    }
+
+    const minPriority = 1;
+    const oldPriority = sectorPriority.priority;
+    const newPriority = Math.max(oldPriority - amount, minPriority);
+
+    // Update the priority of the selected sector
+    await this.prisma.sectorPriority.update({
+      where: { id: sectorPriority.id },
+      data: {
+        priority: newPriority,
+      },
+    });
+
+    // Adjust other sectors' priorities
+    const sectorsToAdjust = sectorPriorities.filter(
+      (sp) =>
+        sp.sectorId !== sectorId &&
+        sp.priority >= newPriority &&
+        sp.priority < oldPriority,
+    );
+
+    for (const sp of sectorsToAdjust) {
+      await this.prisma.sectorPriority.update({
+        where: { id: sp.id },
+        data: {
+          priority: sp.priority + 1,
+        },
+      });
+    }
+  }
+
+  async performHeadlineAction(headline: Headline, currentPhase: Phase) {
+    if (headline.sectorId) {
+      switch (headline.type) {
+        case HeadlineType.SECTOR_NEGATIVE_1:
+          this.adjustSectorPriorityDown(
+            currentPhase.gameId,
+            headline.sectorId,
+            1,
+          );
+          break;
+        case HeadlineType.SECTOR_NEGATIVE_2:
+          this.adjustSectorPriorityDown(
+            currentPhase.gameId,
+            headline.sectorId,
+            2,
+          );
+          break;
+        case HeadlineType.SECTOR_NEGATIVE_3:
+          this.adjustSectorPriorityDown(
+            currentPhase.gameId,
+            headline.sectorId,
+            3,
+          );
+          break;
+        case HeadlineType.SECTOR_POSITIVE_1:
+          this.adjustSectorPriorityUp(
+            currentPhase.gameId,
+            headline.sectorId,
+            1,
+          );
+          break;
+        case HeadlineType.SECTOR_POSITIVE_2:
+          this.adjustSectorPriorityUp(
+            currentPhase.gameId,
+            headline.sectorId,
+            2,
+          );
+          break;
+        case HeadlineType.SECTOR_POSITIVE_3:
+          this.adjustSectorPriorityUp(
+            currentPhase.gameId,
+            headline.sectorId,
+            3,
+          );
+          break;
+        default:
+          break;
+      }
+    }
+  }
+  async playerPayForHeadline(
+    headline: HeadlineWithRelations,
+    currentPhase: Phase,
+  ): Promise<Headline | undefined> {
+    //get game
+    const game = await this.gamesService.game({ id: headline.gameId });
+    if (!game) {
+      console.error('playerPayForHeadline Game not found');
+      return;
+    }
+    //get players
+    const playerIds = headline.playerHeadlines.map(
+      (playerHeadline) => playerHeadline.playerId,
+    );
+    const players = await this.playersService.players({
+      where: { id: { in: playerIds } },
+    });
+    if (!players) {
+      console.error('playerPayForHeadline Players not found');
+      return;
+    }
+    //attempt to pay for headline by splitting the headline cost among players
+    const costPerPlayer = Math.floor(headline.cost / players.length);
+    //ensure players have enough money to pay
+    const doPlayersHaveEnoughMoney = players.every(
+      (player) => player.cashOnHand >= costPerPlayer,
+    );
+    if (!doPlayersHaveEnoughMoney) {
+      //this is an assertion, we should never reach this point as this check is made on the initial mutation during the headline purchase
+      throw new Error('Players do not have enough money to pay for headline');
+    }
+    const playerPromises = players.map((player) => {
+      return this.playerRemoveMoney(
+        headline.gameId,
+        headline.playerHeadlines[0]?.gameTurnId,
+        currentPhase.id,
+        player.id,
+        costPerPlayer,
+        EntityType.BANK,
+        'Headline purchase',
+        TransactionSubType.HEADLINE_PURCHASE,
+      );
+    });
+    await Promise.all(playerPromises);
+    //update headline location and remove sale slot
+    return await this.headlineService.updateHeadline({
+      where: { id: headline.id },
+      data: { location: HeadlineLocation.SOLD, saleSlot: null },
+    });
+  }
+
+  /**
+   * On every turn after turn 1, create headlines and discard them.
+   * On turn 2, create three headlines and put them in "slots" 1, 2 and 3.
+   * On subsequent turns, "push" remaining headlines from right to left ( so 3 -> 2, 2 -> 1, 1 -> discard).
+   * Fill empty slots with new headlines.
+   *
+   * @param phase
+   * @returns
+   */
+  async handleHeadlines(phase: Phase) {
+    // Get game
+    const game = await this.gamesService.game({ id: phase.gameId });
+    if (!game) {
+      throw new Error('Game not found');
+    }
+
+    // Get current game turn
+    const gameTurn = await this.gameTurnService.getCurrentTurn(phase.gameId);
+    if (!gameTurn) {
+      throw new Error('Game turn not found');
+    }
+
+    // If turn is 1, skip
+    if (gameTurn.turn === 1) {
+      return;
+    }
+
+    let headlinesToCreate;
+
+    // If turn is 2, create 3 headlines
+    if (gameTurn.turn === 2) {
+      headlinesToCreate = await generateHeadlines(this.prisma, phase, 3);
+      // Map slotNumber to headlines
+      headlinesToCreate = headlinesToCreate.map((headline, index) => ({
+        ...headline,
+        saleSlot: index + 1,
+      }));
+    } else {
+      // Get headlines with saleSlot not null and order them by saleSlot
+      const headlines = await this.headlineService.listHeadlines({
+        where: { gameId: game.id, saleSlot: { not: null } },
+        orderBy: { saleSlot: 'asc' },
+      });
+
+      // Find and discard the headline in slot 1 if all slots are filled
+      if (headlines.length === 3) {
+        const headlineInSlot1 = headlines.find(
+          (headline) => headline.saleSlot === 1,
+        );
+        if (headlineInSlot1) {
+          await this.headlineService.updateHeadline({
+            where: { id: headlineInSlot1.id },
+            data: { location: HeadlineLocation.DISCARDED, saleSlot: null },
+          });
+        }
+      }
+
+      // Shift headlines from right to left
+      for (let slot = 2; slot <= 3; slot++) {
+        const headline = headlines.find((h) => h.saleSlot === slot);
+        if (headline) {
+          await this.headlineService.updateHeadline({
+            where: { id: headline.id },
+            data: { saleSlot: slot - 1 },
+          });
+        }
+      }
+
+      // Recalculate filled and empty slots
+      const updatedHeadlines = await this.headlineService.listHeadlines({
+        where: { gameId: game.id, saleSlot: { not: null } },
+        orderBy: { saleSlot: 'asc' },
+      });
+
+      const filledSlots = updatedHeadlines.map((headline) => headline.saleSlot);
+      const emptySlots = [1, 2, 3].filter(
+        (slot) => !filledSlots.includes(slot),
+      );
+
+      // Create new headlines for empty slots
+      headlinesToCreate = await generateHeadlines(
+        this.prisma,
+        phase,
+        emptySlots.length,
+      );
+
+      // Map slotNumber to headlines
+      headlinesToCreate = headlinesToCreate.map((headline, index) => ({
+        ...headline,
+        saleSlot: emptySlots[index],
+      }));
+    }
+
+    await this.headlineService.createManyHeadlines(headlinesToCreate);
+  }
+
+  async lockCompanyActions(phase: Phase) {
+    console.log('lockCompanyActions', phase);
+
+    // Get the game
+    const game = await this.gamesService.game({ id: phase.gameId });
+    if (!game) {
+      throw new Error('Game not found');
+    }
+
+    // Get the current game turn
+    const gameTurn = await this.gameTurnService.getCurrentTurn(phase.gameId);
+    if (!gameTurn) {
+      throw new Error('Game turn not found');
+    }
+
+    // Get all active and insolvent companies
+    const companies = await this.companyService.companies({
+      where: {
+        gameId: phase.gameId,
+        OR: [
+          { status: CompanyStatus.ACTIVE },
+          { status: CompanyStatus.INSOLVENT },
+        ],
+      },
+    });
+
+    // Get company priority order
     const companyPriorityOrder = companyPriorityOrderOperations(companies);
-    //create company action order for the current turn
-    return this.companyActionOrderService.createManyCompanyActionOrders(
-      companyPriorityOrder.map((company, index) => {
-        return {
+    console.log(
+      'lockCompanyActions Company priority order',
+      companies,
+      companyPriorityOrder,
+    );
+
+    // Fetch existing company action orders for the current game turn
+    const existingActionOrders =
+      await this.companyActionOrderService.listCompanyActionOrders({
+        where: {
+          gameTurnId: gameTurn.id,
+        },
+      });
+
+    // Build a set of company IDs that already have action orders
+    const existingCompanyIds = new Set(
+      existingActionOrders.map((order) => order.companyId),
+    );
+
+    // Filter out companies that already have an action order for this game turn
+    const newCompanyActionOrders: Prisma.CompanyActionOrderCreateManyInput[] =
+      [];
+    companyPriorityOrder.forEach((company, index) => {
+      if (!existingCompanyIds.has(company.id)) {
+        newCompanyActionOrders.push({
           companyId: company.id,
           gameTurnId: gameTurn.id,
           orderPriority: index,
-        };
-      }),
-    );
+        });
+      }
+    });
+
+    // Create new company action orders
+    if (newCompanyActionOrders.length > 0) {
+      return this.companyActionOrderService.createManyCompanyActionOrders(
+        newCompanyActionOrders,
+      );
+    } else {
+      console.log('No new company action orders to create.');
+      return []; // or handle accordingly
+    }
   }
 
   async checkCompaniesForIncreasePricePreviousTurnAndAdjustDemand(
@@ -3862,7 +4260,9 @@ export class GameManagementService {
         if (unitsSold > consumersCountForCompany) {
           unitsSold = consumersCountForCompany;
         }
-
+        console.log('unitsSold', unitsSold);
+        console.log('demandScore', demandScore);
+        console.log('unitsManufactured', unitsManufactured);
         let revenue = company.unitPrice * unitsSold;
         //check if company has the STRATEGIC_RESERVE unresolved
         const hasStrategicReserve = company.CompanyActions.some(
@@ -3928,7 +4328,6 @@ export class GameManagementService {
 
         const companyUpdate = {
           id: company.id,
-          demandScore: Math.max(company.demandScore - 1, 0),
           prestigeTokens: company.prestigeTokens || 0,
         };
 
@@ -4437,17 +4836,30 @@ export class GameManagementService {
       this.sectorService.sectorsWithCompanies({
         where: { gameId: phase.gameId },
       }),
-      this.gamesService.game({ id: phase.gameId }),
+      this.gamesService.getGameState(phase.gameId),
     ]);
 
-    sectors.sort((a, b) => {
-      return (
-        sectorPriority.indexOf(a.sectorName) -
-        sectorPriority.indexOf(b.sectorName)
-      );
-    });
-    console.log('Sectors:', sectors);
-    console.log('Game:', game);
+    const sectorPriorityStored = game?.sectorPriority;
+    let sectorsSorted: SectorWithCompanyRelations[] = [];
+    if (sectorPriorityStored) {
+      sectorsSorted = sortSectorIdsByPriority(
+        sectors.map((sector) => sector.id),
+        sectorPriorityStored,
+      )
+        .map((sectorId) => sectors.find((s) => s.id === sectorId))
+        .filter(
+          (sector) => sector !== undefined,
+        ) as SectorWithCompanyRelations[];
+    } else {
+      sectorsSorted = sectors.sort((a, b) => {
+        return (
+          sectorPriority.indexOf(a.sectorName) -
+          sectorPriority.indexOf(b.sectorName)
+        );
+      });
+    }
+    console.log('resolveEndTurn Sectors:', sectors);
+    console.log('resolveEndTurn Game:', game);
 
     if (!game) {
       throw new Error('Game not found');
@@ -4750,6 +5162,22 @@ export class GameManagementService {
       try {
         // Create sectors and companies
         const sectors = await this.sectorService.createManySectors(sectorData);
+        // sort sectors by default priority
+        const sectorPrioritySorted = sectors.sort(
+          (a, b) =>
+            sectorPriority.indexOf(a.sectorName) -
+            sectorPriority.indexOf(b.sectorName),
+        );
+
+        //create sector priorities
+        const sectorPriorities = await this.prisma.sectorPriority.createMany({
+          data: sectorPrioritySorted.map((sector, index) => ({
+            sectorId: sector.id,
+            gameId: game.id,
+            priority: index + 1,
+          })),
+        });
+
         //map sector ids to names and update companyData
         const newCompanyData = companyData.map((company) => {
           const sector = sectors.find((s) => s.name === company.sectorId);
@@ -5516,14 +5944,24 @@ export class GameManagementService {
         return nextCompanyId;
       } else {
         //get company action orders
-        const companyActionOrders =
+        let companyActionOrders =
           await this.companyActionOrderService.listCompanyActionOrders({
             where: {
               gameTurnId: gameState.currentTurn,
             },
           });
-        if (!companyActionOrders) {
-          throw new Error('Company action orders not found');
+        if (!companyActionOrders || companyActionOrders.length == 0) {
+          console.error('Company action orders not found, attempting to lock');
+          await this.lockCompanyActions(currentPhase);
+          companyActionOrders =
+            await this.companyActionOrderService.listCompanyActionOrders({
+              where: {
+                gameTurnId: gameState.currentTurn,
+              },
+            });
+          if (!companyActionOrders || companyActionOrders.length == 0) {
+            throw new Error('Company action orders not found');
+          }
         }
         //this should be the first company in the operating round
         return getNextCompanyOperatingRoundTurn(
@@ -5548,7 +5986,7 @@ export class GameManagementService {
           gameTurnId: currentTurnId,
         },
       });
-    if (!companyActionOrders) {
+    if (!companyActionOrders || companyActionOrders.length == 0) {
       throw new Error('Company action orders not found');
     }
     const nextCompanyId = getNextCompanyOperatingRoundTurn(
@@ -7686,6 +8124,8 @@ export class GameManagementService {
 
   async doesNextPhaseNeedToBePlayed(phaseName: PhaseName, currentPhase: Phase) {
     switch (phaseName) {
+      case PhaseName.HEADLINE_RESOLVE:
+        return this.doesHeadlingResolveNeedToBePlayed(currentPhase.gameId);
       case PhaseName.PRIZE_VOTE_ACTION:
       case PhaseName.PRIZE_VOTE_RESOLVE:
         return this.isPrizeRoundTurn(currentPhase?.gameId || '');
@@ -7725,6 +8165,24 @@ export class GameManagementService {
         return true;
     }
   }
+
+  async doesHeadlingResolveNeedToBePlayed(gameId: string) {
+    //get game
+    const game = await this.gamesService.getGameState(gameId);
+    if (!game) {
+      throw new Error('Game not found');
+    }
+    //get game turn
+    const gameTurn = await this.gameTurnService.gameTurn({
+      id: game.currentTurn || '',
+    });
+    if (!gameTurn) {
+      throw new Error('Game turn not found');
+    }
+    //if the game turn is greater than or equal to 2, return true
+    return gameTurn.turn >= 2;
+  }
+
   async wereAnyPrizesWon(gameId: string) {
     //check if any prize votes were cast during the current turn
     //get game

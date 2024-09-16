@@ -765,10 +765,12 @@ model PlayerHeadline {
   playerId   String
   headlineId String
   gameId     String
+  gameTurnId String
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
   game     Game     @relation(fields: [gameId], references: [id])
+  gameTurn GameTurn @relation(fields: [gameTurnId], references: [id])
   player   Player   @relation(fields: [playerId], references: [id])
   headline Headline @relation(fields: [headlineId], references: [id])
 }
@@ -802,6 +804,7 @@ model GameTurn {
   prizes                 Prize[]
   prizeVotes             PrizeVote[]
   prizeDistributions     PrizeDistribution[]
+  PlayerHeadline         PlayerHeadline[]
 }
 
 model CompanyActionOrder {
@@ -891,6 +894,7 @@ enum PhaseName {
   PRIZE_VOTE_RESOLVE
   PRIZE_DISTRIBUTE_ACTION
   PRIZE_DISTRIBUTE_RESOLVE
+  HEADLINE_RESOLVE
 }
 
 model InfluenceRound {
@@ -998,6 +1002,7 @@ enum TransactionSubType {
   TRANCHE
   INFLUENCE
   SHARE_LIQUIDATION
+  HEADLINE_PURCHASE
 }
 
 model Entity {
