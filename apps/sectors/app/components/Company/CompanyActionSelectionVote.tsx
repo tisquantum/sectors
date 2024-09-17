@@ -149,7 +149,7 @@ const CompanyActionSelectionVote = ({
   };
 
   const handleSubmit = async () => {
-    if(!authPlayer) {
+    if (!authPlayer) {
       return;
     }
     setIsLoadingSelectionVote(true);
@@ -563,6 +563,7 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
   const currentCompanyActions = companyActions?.filter(
     (companyAction) => companyAction.companyId === currentCompany
   );
+  console.log("collectedCompanies", collectedCompanies);
   return (
     <div className="flex flex-col gap-1 flex-grow relative">
       <div className="flex flex-col gap-2 justify-center items-center">
@@ -577,21 +578,22 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
           {showLock && <RiLockFill />}
           <div className="flex gap-2">
             {collectedCompanies.map((company, index) => (
-              <Avatar
+              <div
                 key={company.id}
-                name={company.stockSymbol}
-                className={
+                className={`flex items-center justify-center p-2 w-14 h-14 rounded-full text-white text-sm font-bold ${
                   currentCompany === company.id
-                    ? `ring-2 ring-blue-500 ${
-                        company.status == CompanyStatus.INSOLVENT &&
-                        "bg-rose-500"
+                    ? `${
+                        company.status === CompanyStatus.INSOLVENT
+                          ? "bg-rose-500"
+                          : "bg-blue-500"
                       }`
-                    : `${
-                        company.status == CompanyStatus.INSOLVENT &&
-                        "bg-rose-500"
-                      }`
-                }
-              />
+                    : company.status === CompanyStatus.INSOLVENT
+                    ? "bg-rose-500"
+                    : "bg-gray-500"
+                }`}
+              >
+                {company.stockSymbol}
+              </div>
             ))}
           </div>
           <div className="flex gap-2">
