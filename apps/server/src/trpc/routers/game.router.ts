@@ -194,38 +194,38 @@ export default (trpc: TrpcService, ctx: Context) =>
         return ctx.gamesService.getGameState(gameId);
       }),
 
-    forceNextPhase: trpc.procedure
-      .input(
-        z.object({
-          gameId: z.string(),
-          phaseName: z.nativeEnum(PhaseName),
-          roundType: z.nativeEnum(RoundType),
-          stockRoundId: z.number().optional(),
-          operatingRoundId: z.number().optional(),
-          influenceRoundId: z.number().optional(),
-          companyId: z.string().optional(),
-        }),
-      )
-      .mutation(async ({ input }) => {
-        const {
-          gameId,
-          phaseName,
-          roundType,
-          stockRoundId,
-          operatingRoundId,
-          influenceRoundId,
-          companyId,
-        } = input;
-        return ctx.gameManagementService.determineIfNewRoundAndStartPhase({
-          gameId,
-          phaseName,
-          roundType,
-          stockRoundId,
-          operatingRoundId,
-          influenceRoundId,
-          companyId,
-        });
-      }),
+    // forceNextPhase: trpc.procedure
+    //   .input(
+    //     z.object({
+    //       gameId: z.string(),
+    //       phaseName: z.nativeEnum(PhaseName),
+    //       roundType: z.nativeEnum(RoundType),
+    //       stockRoundId: z.number().optional(),
+    //       operatingRoundId: z.number().optional(),
+    //       influenceRoundId: z.number().optional(),
+    //       companyId: z.string().optional(),
+    //     }),
+    //   )
+    //   .mutation(async ({ input }) => {
+    //     const {
+    //       gameId,
+    //       phaseName,
+    //       roundType,
+    //       stockRoundId,
+    //       operatingRoundId,
+    //       influenceRoundId,
+    //       companyId,
+    //     } = input;
+    //     return ctx.gameManagementService.determineIfNewRoundAndStartPhase({
+    //       gameId,
+    //       phaseName,
+    //       roundType,
+    //       stockRoundId,
+    //       operatingRoundId,
+    //       influenceRoundId,
+    //       companyId,
+    //     });
+    //   }),
     retryPhase: trpc.procedure
       .input(z.object({ gameId: z.string() }))
       .mutation(async ({ input }) => {
@@ -256,6 +256,7 @@ export default (trpc: TrpcService, ctx: Context) =>
             phaseTime: z.number(),
             createdAt: z.date(),
             updatedAt: z.date(),
+            phaseStartTime: z.date().nullable(),
           }),
         }),
       )

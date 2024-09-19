@@ -133,8 +133,15 @@ export const checkSubmissionTime = async (
       message: 'Phase not found',
     });
   }
+  if(!phase.phaseStartTime) {
+    console.error('Phase start time not found');
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Phase start time not found',
+    });
+  }
   //check if submission time is within the end time for the current phase
-  const phaseEndTime = phase.createdAt.getTime() + phase.phaseTime;
+  const phaseEndTime = phase.phaseStartTime.getTime() + phase.phaseTime;
   console.log('phaseEndTime', phaseEndTime);
   console.log('submissionStamp', submissionStamp);
   if (submissionStamp > phaseEndTime) {

@@ -119,14 +119,17 @@ const OperatingRoundRevenueVoteResolve = () => {
               shareCount > 0 ? Math.floor(revenue / shareCount) : 0;
             const dividendHalf =
               shareCount > 0 ? Math.floor(revenue / 2 / shareCount) : 0;
-            const retainedRevenueHalf = revenue / 2;
+            const retainedRevenueHalf = Math.floor(revenue / 2);
 
             return (
               <div
                 className="flex flex-col bg-slate-800 p-4"
                 key={productionResult.id}
               >
-                <CompanyInfo companyId={productionResult.Company.id} showBarChart />
+                <CompanyInfo
+                  companyId={productionResult.Company.id}
+                  showBarChart
+                />
                 <div className="flex flex-col gap-2 rounded-md bg-gray-950 m-2 p-2">
                   <span className="text-lg">Production Results</span>
                   <span>

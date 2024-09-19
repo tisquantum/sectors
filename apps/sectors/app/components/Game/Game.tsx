@@ -137,9 +137,9 @@ const Game = ({ gameId }: { gameId: string }) => {
   }, [onOpen]);
   useEffect(() => {
     const timer = setInterval(() => {
-      if (currentPhase) {
+      if (currentPhase && currentPhase.phaseStartTime) {
         const now = Date.now();
-        const phaseStart = new Date(currentPhase.createdAt).getTime();
+        const phaseStart = new Date(currentPhase.phaseStartTime).getTime();
         const phaseDuration = currentPhase.phaseTime;
         const timeLeft = phaseStart + phaseDuration - now;
         setIsTimerAtZero(timeLeft <= 0);

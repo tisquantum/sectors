@@ -187,8 +187,9 @@ const CompanyMoreInfo = ({
           content={
             <p className={tooltipParagraphStyle}>
               Prestige tokens. While held, they help prioritize the company for
-              production. Can be spent for a bonus. Sell all of your companies
-              supply during an operating round to earn a prestige token.
+              production. Can be spent for a bonus. How to earn prestige: If a
+              company sells all of it's supply during an operating round, it
+              earns 1 prestige token.
             </p>
           }
         >
@@ -392,21 +393,16 @@ const CompanyInfo = ({
               </Tooltip>
             </div>
             <div className="flex gap-1">
-              <Tooltip
-                classNames={{ base: baseToolTipStyle }}
-                className={tooltipStyle}
-                content={
-                  <div className="flex flex-col gap-2 w-full">
-                    <p className={tooltipParagraphStyle}>
-                      The company tier, this determines the operational costs
-                      and supply.
-                    </p>
+              <Popover>
+                <PopoverTrigger>
+                  <span className="cursor-pointer">{company.companyTier}</span>
+                </PopoverTrigger>
+                <PopoverContent>
+                  <div className="flex flex-col gap-2">
                     <CompanyTiers company={company} />
                   </div>
-                }
-              >
-                <span>{company.companyTier}</span>
-              </Tooltip>
+                </PopoverContent>
+              </Popover>
               |
               <Tooltip
                 classNames={{ base: baseToolTipStyle }}
@@ -505,9 +501,11 @@ const CompanyInfo = ({
               showingProductionResults={showingProductionResults}
             />
           )}
-          <div className="flex flex-col">
+          <div className="flex flex-col justify-center items-center">
             {showBarChart && (
-              <div className="flex gap-1">{buildBarChart(company.Share)}</div>
+              <div className="flex gap-1 justify-between">
+                {buildBarChart(company.Share)}
+              </div>
             )}
           </div>
         </div>

@@ -11,6 +11,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -855,6 +856,7 @@ model Phase {
   PlayerOrder      PlayerOrder[]
   StockHistory     StockHistory[]
   Transactions     Transaction[]
+  phaseStartTime   DateTime?
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 }

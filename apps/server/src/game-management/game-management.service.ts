@@ -337,9 +337,6 @@ export class GameManagementService {
         await this.decrementSectorDemandBonus(phase);
         await this.decrementCompanyTemporarySupplyBonus(phase);
         await this.decrementActiveCompanyDemand(phase);
-        await this.checkCompaniesForIncreasePricePreviousTurnAndAdjustDemand(
-          phase,
-        );
         //"lock" company actions for the next series of company action phases
         await this.lockCompanyActions(phase);
         break;
@@ -786,49 +783,6 @@ export class GameManagementService {
     }
   }
 
-  async checkCompaniesForIncreasePricePreviousTurnAndAdjustDemand(
-    phase: Phase,
-  ) {
-    const game = await this.gamesService.game({ id: phase.gameId });
-    if (!game) {
-      throw new Error('Game not found');
-    }
-    const gameTurn = await this.gameTurnService.getCurrentTurn(phase.gameId);
-    if (!gameTurn) {
-      throw new Error('Game turn not found');
-    }
-    //get previous turn
-    const previousTurn = await this.gameTurnService.gameTurns({
-      where: { gameId: phase.gameId, turn: gameTurn.turn - 1 },
-    });
-    if (!previousTurn) {
-      throw new Error('Previous turn not found');
-    }
-    const companies =
-      await this.companyService.companiesWithCompanyActionsForTurn(
-        previousTurn[0].id,
-        {
-          where: { gameId: phase.gameId },
-        },
-      );
-    if (!companies) {
-      throw new Error('Companies not found');
-    }
-    //look for companies that increased their price last turn
-    const companiesThatIncreasedPrice = companies.filter((company) => {
-      company.CompanyActions.some((action) => {
-        return action.action == OperatingRoundAction.INCREASE_PRICE;
-      });
-    });
-    //iterate over companies and update their demand by 1
-    const updatedCompanies = companiesThatIncreasedPrice.map((company) => {
-      return this.companyService.updateCompany({
-        where: { id: company.id },
-        data: { demandScore: company.demandScore + 1 },
-      });
-    });
-    await Promise.all(updatedCompanies);
-  }
   async resolvePrizeVotes(phase: Phase) {
     // Parallel fetching of game and votes
     const [game, votes] = await Promise.all([
@@ -2248,6 +2202,12 @@ export class GameManagementService {
     }
   }
 
+  /**
+   * Calculate income for a turn where income is all transactions that have earned the player money.
+   * @param playerIds 
+   * @param turnId 
+   * @returns 
+   */
   async getTurnIncome(playerIds: string[], turnId: string) {
     console.log('getTurnIncome turnId', turnId, playerIds);
     //get players
@@ -4672,12 +4632,12 @@ export class GameManagementService {
           where: { id: company.id },
           data: { status: CompanyStatus.ACTIVE },
         });
-        await this.gameLogService.createGameLog({
+        this.gameLogService.createGameLog({
           game: { connect: { id: phase.gameId } },
           content: `Company ${company.name} has recovered from insolvency.`,
         });
       } else {
-        await this.gameLogService.createGameLog({
+        this.gameLogService.createGameLog({
           game: { connect: { id: phase.gameId } },
           content: `Company ${company.name} has not recovered from insolvency and will now bankrupt.`,
         });
@@ -4728,7 +4688,7 @@ export class GameManagementService {
         },
       });
 
-      await this.gameLogService.createGameLog({
+      this.gameLogService.createGameLog({
         game: { connect: { id: phase.gameId } },
         content: `Company ${company.name} has received a total of $${
           totalCashContributed + totalShareValueContributed
@@ -5351,6 +5311,7 @@ export class GameManagementService {
    */
   public async determineIfNewRoundAndStartPhase({
     gameId,
+    gameState,
     phaseName,
     roundType,
     stockRoundId,
@@ -5359,6 +5320,7 @@ export class GameManagementService {
     companyId,
   }: {
     gameId: string;
+    gameState: GameState;
     phaseName: PhaseName;
     roundType: RoundType;
     stockRoundId?: number;
@@ -5366,27 +5328,28 @@ export class GameManagementService {
     influenceRoundId?: number;
     companyId?: string;
   }) {
-    const game = await this.gamesService.game({
-      id: gameId,
-    });
-
-    if (!game) {
-      throw new Error('Game not found');
-    }
-
+    let currentPhaseTime = Date.now();
     const currentPhase = await this.phaseService.phase({
-      id: game.currentPhaseId || '',
+      id: gameState.currentPhaseId || '',
     });
-
+    console.log(
+      'determineIfNewRoundAndStartPhase currentPhase TTE',
+      Date.now() - currentPhaseTime,
+    );
     if (!currentPhase) {
       throw new Error('Phase not found');
     }
     let currentOperatingRound: OperatingRound | null = null;
-    if (game.currentOperatingRoundId) {
+    if (gameState.currentOperatingRoundId) {
+      let operatingRoundTime = Date.now();
       //get current operating round
       currentOperatingRound = await this.operatingRoundService.operatingRound({
-        id: game.currentOperatingRoundId,
+        id: gameState.currentOperatingRoundId,
       });
+      console.log(
+        'determineIfNewRoundAndStartPhase currentOperatingRound TTE',
+        Date.now() - operatingRoundTime,
+      );
       if (!currentOperatingRound) {
         throw new Error('Current operating round not found');
       }
@@ -5400,25 +5363,25 @@ export class GameManagementService {
       roundType,
       companyId,
       currentPhase,
-      game.currentRound,
+      gameState.currentRound,
     );
     let newStockRound: StockRound | null = null;
     let newOperatingRound: OperatingRound | null = null;
     console.log(
       'checking conditions',
-      game.currentRound,
+      gameState.currentRound,
       roundType,
-      game.currentOperatingRoundId,
+      gameState.currentOperatingRoundId,
       currentOperatingRound,
-      game.currentTurn,
+      gameState.currentTurn,
     );
     // If the current phase roundtype is different to the new one, initiate the new round
-    if (game.currentRound !== roundType) {
+    if (gameState.currentRound !== roundType) {
       //start new round
       if (roundType === RoundType.STOCK) {
-        newStockRound = await this.startStockRound(gameId);
+        newStockRound = await this.startStockRound(gameId, gameState);
       } else if (roundType === RoundType.OPERATING) {
-        newOperatingRound = await this.startOperatingRound(gameId);
+        newOperatingRound = await this.startOperatingRound(gameId, gameState);
       } else if (roundType === RoundType.GAME_UPKEEP) {
         await this.gamesService.updateGameState({
           where: { id: gameId },
@@ -5428,44 +5391,44 @@ export class GameManagementService {
         });
       }
     } else if (
-      game.currentRound === RoundType.OPERATING &&
-      (!game.currentOperatingRoundId ||
+      gameState.currentRound === RoundType.OPERATING &&
+      (!gameState.currentOperatingRoundId ||
         (currentOperatingRound &&
-          currentOperatingRound.gameTurnId !== game.currentTurn))
+          currentOperatingRound.gameTurnId !== gameState.currentTurn))
     ) {
       console.error(
         'No current operating round found, this is an assertion basically and we should never get here.',
       );
-      newOperatingRound = await this.startOperatingRound(gameId);
+      newOperatingRound = await this.startOperatingRound(gameId, gameState);
     } else if (
-      game.currentRound == RoundType.STOCK &&
-      !game.currentStockRoundId
+      gameState.currentRound == RoundType.STOCK &&
+      !gameState.currentStockRoundId
     ) {
       console.log(
         'No current stock round found, this is an assertion basically and we should never get here.',
       );
-      newStockRound = await this.startStockRound(gameId);
+      newStockRound = await this.startStockRound(gameId, gameState);
     }
     //conditional checks that are basically fail states for assertions
     if (
       !stockRoundId &&
       !newStockRound &&
       roundType === RoundType.STOCK &&
-      game.currentStockRoundId
+      gameState.currentStockRoundId
     ) {
       console.error('No stock round id found, this is basically an assertion.');
-      stockRoundId = game.currentStockRoundId;
+      stockRoundId = gameState.currentStockRoundId;
     }
     if (
       !operatingRoundId &&
       !newOperatingRound &&
       roundType === RoundType.OPERATING &&
-      game.currentOperatingRoundId
+      gameState.currentOperatingRoundId
     ) {
       console.error(
         'No operating round id found, this is basically an assertion.',
       );
-      operatingRoundId = game.currentOperatingRoundId;
+      operatingRoundId = gameState.currentOperatingRoundId;
     }
     const _stockRoundId =
       roundType === RoundType.STOCK
@@ -5493,12 +5456,21 @@ export class GameManagementService {
       operatingRoundId: _operatingRoundId,
       influenceRoundId: _influenceRoundId,
       companyId,
+      gameState,
     });
   }
 
-  public async startStockRound(gameId: string): Promise<StockRound | null> {
+  public async startStockRound(
+    gameId: string,
+    gameState?: GameState,
+  ): Promise<StockRound | null> {
     //get game
-    const game = await this.gamesService.getGameState(gameId);
+    let game;
+    if (gameState) {
+      game = await this.gamesService.getGameState(gameId);
+    } else {
+      game = await this.gamesService.game({ id: gameId });
+    }
     const stockRound = await this.stockRoundService.createStockRound({
       Game: { connect: { id: gameId } },
       GameTurn: { connect: { id: game?.currentTurn } },
@@ -5516,9 +5488,15 @@ export class GameManagementService {
 
   public async startOperatingRound(
     gameId: string,
+    gameState?: GameState,
   ): Promise<OperatingRound | null> {
     //get game
-    const game = await this.gamesService.getGameState(gameId);
+    let game;
+    if (gameState) {
+      game = gameState;
+    } else {
+      game = await this.gamesService.getGameState(gameId);
+    }
     const operatingRound =
       await this.operatingRoundService.createOperatingRound({
         Game: { connect: { id: gameId } },
@@ -5558,6 +5536,7 @@ export class GameManagementService {
     operatingRoundId,
     influenceRoundId,
     companyId,
+    gameState,
   }: {
     gameId: string;
     phaseName: PhaseName;
@@ -5566,6 +5545,7 @@ export class GameManagementService {
     operatingRoundId?: number;
     influenceRoundId?: number;
     companyId?: string;
+    gameState?: GameState;
   }) {
     console.log('start phase phase name', phaseName);
     console.log('start phase stock round id', stockRoundId);
@@ -5573,14 +5553,21 @@ export class GameManagementService {
     console.log('start phase influence round id', influenceRoundId);
     console.log('start phase company id', companyId);
     const gameChannelId = getGameChannelId(gameId);
+    let game;
     //get game
-    let game = await this.gamesService.getGameState(gameId);
+    if (!gameState) {
+      game = await this.gamesService.getGameState(gameId);
+    } else {
+      game = gameState;
+    }
     let extraPhaseTime = 0;
     //get company
     if (companyId) {
+      const companyTime = Date.now();
       const company = await this.companyService.company({
         id: companyId || '',
       });
+      console.log('start phase company TTE', Date.now() - companyTime);
       if (company) {
         if (
           phaseName == PhaseName.OPERATING_ACTION_COMPANY_VOTE &&
@@ -5590,7 +5577,7 @@ export class GameManagementService {
         }
       }
     }
-    const phase = await this.phaseService.createPhase({
+    let phase = await this.phaseService.createPhase({
       name: phaseName,
       phaseTime: phaseTimes[phaseName] + extraPhaseTime,
       Game: { connect: { id: gameId } },
@@ -5606,6 +5593,7 @@ export class GameManagementService {
     });
 
     // Update game state
+    let updateGameTime = Date.now();
     game = await this.gamesService.updateGameState({
       where: { id: gameId },
       data: {
@@ -5615,9 +5603,11 @@ export class GameManagementService {
         // currentOperatingRoundId: operatingRoundId,
       },
     });
-
+    console.log('startPhase update game TTE', Date.now() - updateGameTime);
     try {
+      let handlePhaseTime = Date.now();
       await this.handlePhase(phase);
+      console.log('startPhase handle phase TTE', Date.now() - handlePhaseTime);
     } catch (error) {
       console.error('Error during phase:', error);
       // Optionally handle retries or fallback logic here
@@ -5632,7 +5622,11 @@ export class GameManagementService {
     } catch (error) {
       console.error('Error triggering new phase:', error);
     }
-
+    //create phase start time
+    phase = await this.phaseService.updatePhase({
+      where: { id: phase.id },
+      data: { phaseStartTime: new Date() },
+    });
     // Return the created phase for further processing if needed
     return phase;
   }
@@ -5698,11 +5692,13 @@ export class GameManagementService {
       stockRoundId,
       operatingRoundId,
       influenceRoundId,
+      Date.now(),
     );
     await this.timerService.setTimer(
       phase.id,
       phase.gameId,
       phase.phaseTime,
+      phase?.phaseStartTime?.getTime() || Date.now(),
       async () => {
         try {
           await this.handlePhaseTransition({
@@ -5729,13 +5725,14 @@ export class GameManagementService {
     gameId: string;
   }) {
     // Fetch necessary data upfront
+    let gameStateTime = Date.now();
     const [gameState, stockRound] = await Promise.all([
       this.gamesService.getGameState(gameId),
       phase.stockRoundId
         ? this.stockRoundService.stockRound({ id: phase.stockRoundId })
         : undefined,
     ]);
-
+    console.log('gameState TTE', Date.now() - gameStateTime);
     if (!gameState) {
       throw new Error('Game state not found');
     }
@@ -5745,7 +5742,8 @@ export class GameManagementService {
     }
 
     const stockActionSubRound = stockRound?.stockActionSubRound;
-
+    let startTimeHandleNextPhase = Date.now();
+    console.log('handleNextPhase', startTimeHandleNextPhase);
     const nameAndRoundTypeAndCompanyForNextPhase =
       await this.determineAndHandleNextPhase({
         phase,
@@ -5753,9 +5751,12 @@ export class GameManagementService {
         gameState,
         stockActionSubRound,
       });
-
+    console.log('handleNextPhase TTE', Date.now() - startTimeHandleNextPhase);
+    let startTime = Date.now();
+    console.log('determineIfNewRoundAndStartPhase', startTime);
     const nextPhase = await this.determineIfNewRoundAndStartPhase({
       gameId,
+      gameState,
       phaseName: nameAndRoundTypeAndCompanyForNextPhase.phaseName,
       roundType: nameAndRoundTypeAndCompanyForNextPhase.roundType,
       stockRoundId: phase.stockRoundId || undefined,
@@ -5766,6 +5767,7 @@ export class GameManagementService {
         phase?.companyId ||
         '',
     });
+    console.log('determineIfNewRoundAndStartPhase TTE', Date.now() - startTime);
 
     await this.startPhaseTimer({
       phase: nextPhase,
@@ -5803,13 +5805,14 @@ export class GameManagementService {
       stockActionSubRound,
     });
 
+    let nextPhaseTimer = Date.now();
     let nextPhase = await this.adjustPhaseBasedOnGameState(
       determinedNextPhase,
       phase,
       gameState,
       stockActionSubRound,
     );
-
+    console.log('adjustPhaseBasedOnGameState TTE', Date.now() - nextPhaseTimer);
     let companyId: string | undefined;
     if (nextPhase.phaseName === PhaseName.OPERATING_ACTION_COMPANY_VOTE) {
       companyId =
@@ -6243,7 +6246,7 @@ export class GameManagementService {
             },
             {} as { [key: string]: PlayerOrderWithPlayerCompany[] },
           );
-          // TODO: Is this a safe assumption?
+          // TODO: This is not sorting by phases, not sure what the original intention was here
           // Sort phases by phase creation time
           const sortedPhases = Object.entries(groupedByPhase).sort(
             ([phaseIdA], [phaseIdB]) =>
