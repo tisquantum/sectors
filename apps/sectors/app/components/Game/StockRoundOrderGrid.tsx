@@ -34,6 +34,7 @@ import { LineChart } from "@tremor/react";
 import SpotMarketTable from "./SpotMarketTable";
 import DerivativesTable from "./DerivativesTable";
 import OrderResults from "./OrderResults";
+import { useDrawer } from "../Drawer.context";
 
 function isOrderInputOpenPlayerOrderCounter(
   playerOrdersConcealed: PlayerOrderConcealed[],
@@ -55,6 +56,7 @@ const StockRoundOrderGrid = ({
   handleOrder?: (company: Company, isIpo?: boolean) => void;
   forwardedRef?: HTMLDivElement | null;
 }) => {
+  const { closeDrawer } = useDrawer();
   const { gameId, currentPhase, gameState, authPlayer } = useGame();
   const { data: companies, isLoading } =
     trpc.company.listCompaniesWithRelations.useQuery({
@@ -140,6 +142,9 @@ const StockRoundOrderGrid = ({
         currentPhase,
         setIsOrderInputOpen
       );
+    }
+    if (currentPhase?.name !== PhaseName.STOCK_ACTION_ORDER) {
+      closeDrawer();
     }
   }, [playerOrdersConcealed, currentPhase]);
   const [isOrderInputOpen, setIsOrderInputOpen] = useState<boolean>(false);
@@ -258,32 +263,35 @@ const StockRoundOrderGrid = ({
                         ).length
                       }`}
                 </h2>
-                <PlayerOrderInput
-                  currentOrder={selectedCompanyOrder.company}
-                  handleCancel={() => {}}
-                  isIpo={selectedCompanyOrder.isIpo} // Pass IPO state here
-                  handlePlayerInputConfirmed={() => {
-                    companyCardButtonClicked();
-                  }} // Callback on input confirmed
-                />
-
-                <div>
-                  <OrderResults
-                    playerOrdersConcealed={orders.filter(
-                      (order) =>
-                        order.companyId === selectedCompanyOrder.company.id
-                    )}
-                    playerOrdersRevealed={
-                      playerOrdersRevealed?.filter(
+                {currentPhase.name === PhaseName.STOCK_ACTION_ORDER && (
+                  <PlayerOrderInput
+                    currentOrder={selectedCompanyOrder.company}
+                    handleCancel={() => {}}
+                    isIpo={selectedCompanyOrder.isIpo} // Pass IPO state here
+                    handlePlayerInputConfirmed={() => {
+                      companyCardButtonClicked();
+                    }} // Callback on input confirmed
+                  />
+                )}
+                {gameState?.playerOrdersConcealed && (
+                  <div>
+                    <OrderResults
+                      playerOrdersConcealed={orders.filter(
                         (order) =>
                           order.companyId === selectedCompanyOrder.company.id
-                      ) || []
-                    }
-                    currentPhase={currentPhase}
-                    phasesOfStockRound={phasesOfStockRound}
-                    isRevealRound={isRevealRound}
-                  />
-                </div>
+                      )}
+                      playerOrdersRevealed={
+                        playerOrdersRevealed?.filter(
+                          (order) =>
+                            order.companyId === selectedCompanyOrder.company.id
+                        ) || []
+                      }
+                      currentPhase={currentPhase}
+                      phasesOfStockRound={phasesOfStockRound}
+                      isRevealRound={isRevealRound}
+                    />
+                  </div>
+                )}
                 <Tabs>
                   <Tab key="drawer-company-info" title="Company Info">
                     <div className="h-96">

@@ -588,12 +588,16 @@ const DistributePrizes = () => {
                   setDistributionData={setDistributionData}
                 />
                 <div className="flex justify-center">
-                  <DebounceButton
-                    onClick={handleFinalizeDistribution}
-                    isLoading={isLoadingSubmission}
-                  >
-                    Finalize Distribution
-                  </DebounceButton>
+                  {isSubmitted ? (
+                    <div>Finalized</div>
+                  ) : (
+                    <DebounceButton
+                      onClick={handleFinalizeDistribution}
+                      isLoading={isLoadingSubmission}
+                    >
+                      Finalize Distribution
+                    </DebounceButton>
+                  )}
                 </div>
               </>
             )}

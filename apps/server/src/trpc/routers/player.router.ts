@@ -60,40 +60,6 @@ export default (trpc: TrpcService, ctx: Context) =>
         const { where } = input;
         return ctx.playersService.playersWithShares(where);
       }),
-    createPlayer: trpc.procedure
-      .input(
-        z.object({
-          nickname: z.string(),
-          cashOnHand: z.number(),
-          userId: z.string(),
-          gameId: z.string(),
-          PlayerStock: z.any().optional(),
-        }),
-      )
-      .mutation(async ({ input }) => {
-        const data: Prisma.PlayerCreateInput = {
-          ...input,
-          marketOrderActions: 0,
-          limitOrderActions: 0,
-          shortOrderActions: 0,
-          marginAccount: 0,
-          User: { connect: { id: input.userId } },
-          Game: { connect: { id: input.gameId } },
-        };
-        const player = await ctx.playersService.createPlayer(data);
-        // Initialize the player as not ready for the game
-        // Initialize the player's ready status to false in the game
-        if (data.Game?.connect?.id || data.Game?.create?.id) {
-          const gameId = data.Game.connect?.id || data.Game.create?.id;
-          if (gameId) {
-            if (!gamePlayerReadyStatus.has(gameId)) {
-              gamePlayerReadyStatus.set(gameId, new Map<string, boolean>());
-            }
-            gamePlayerReadyStatus.get(gameId)!.set(player.id, false);
-          }
-        }
-        return player;
-      }),
 
     updatePlayer: trpc.procedure
       .input(
@@ -110,13 +76,6 @@ export default (trpc: TrpcService, ctx: Context) =>
       .mutation(async ({ input }) => {
         const { id, data } = input;
         return ctx.playersService.updatePlayer({ where: { id }, data });
-      }),
-
-    deletePlayer: trpc.procedure
-      .input(z.object({ id: z.string() }))
-      .mutation(async ({ input }) => {
-        const { id } = input;
-        return ctx.playersService.deletePlayer({ id });
       }),
 
     playerReady: trpc.procedure

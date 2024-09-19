@@ -874,7 +874,7 @@ export const companyActionsDescription: CompanyActionDescription[] = [
     id: 8,
     title: 'Increase Unit Price',
     name: OperatingRoundAction.INCREASE_PRICE,
-    message: `Increase the unit price of the company's product by $${DEFAULT_INCREASE_UNIT_PRICE}. This will increase the company's revenue. The company temporarily loses 1 demand until the following turns Stock Price Adjustment phase.`,
+    message: `Increase the unit price of the company's product by $${DEFAULT_INCREASE_UNIT_PRICE}. The company loses 1 demand.`,
     actionType: 'internal',
   },
   {

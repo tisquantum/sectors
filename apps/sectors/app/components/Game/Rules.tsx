@@ -78,6 +78,12 @@ const overviewRules = (
         on player ownership.
       </li>
       <li>
+        From the second turn onwards, players will be able to influence the
+        <strong>sector priority</strong> order by paying to influence media
+        headlines which impact the sentiment of a sector. If more than one
+        player pays for a headline, the cost is split evenly, rounded down.
+      </li>
+      <li>
         <strong>Stock Round:</strong> Players place orders against companies
         through distinct order mechanisms.
       </li>
@@ -650,9 +656,7 @@ const Rules: FC = () => {
           <OperatingRoundRules />
         </div>
       </div>
-      <div className="mb-8">
-        {companyRules}
-      </div>
+      <div className="mb-8">{companyRules}</div>
       <div className="mb-8">
         <h2 className="text-2xl font-semibold mb-2">Company Actions</h2>
         <div className="text-base space-y-4">

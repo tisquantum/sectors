@@ -43,6 +43,8 @@ import PlayerShares from "./PlayerShares";
 import ShareComponent from "../Company/Share";
 import { Drawer } from "vaul";
 import { toast } from "sonner";
+import DebounceButton from "@sectors/app/components/General/DebounceButton";
+import { useDrawer } from "../Drawer.context";
 
 const RiskAssessment = () => {
   return (
@@ -546,6 +548,7 @@ const PlayerOrderInput = ({
   isIpo: boolean;
   handlePlayerInputConfirmed: () => void;
 }) => {
+  const { closeDrawer } = useDrawer();
   const { gameId, gameState, authPlayer, currentPhase, refetchAuthPlayer } =
     useGame();
   const { data: playerOrders } =
@@ -565,6 +568,12 @@ const PlayerOrderInput = ({
     });
   const [isLoadingPlayerOrder, setIsLoadingPlayerOrder] = useState(false);
   const createPlayerOrder = trpc.playerOrder.createPlayerOrder.useMutation({
+    onSuccess: () => {
+      handlePlayerInputConfirmed();
+      closeDrawer();
+      refetchAuthPlayer();
+      setIsSubmit(true);
+    },
     onSettled: () => {
       setIsLoadingPlayerOrder(false);
     },
@@ -637,9 +646,6 @@ const PlayerOrderInput = ({
       orderType,
       location: isIpo ? ShareLocation.IPO : ShareLocation.OPEN_MARKET,
     });
-    setIsSubmit(true);
-    refetchAuthPlayer();
-    handlePlayerInputConfirmed();
   };
   const handleSelectionChange = (key: React.Key) => {
     switch (key) {
@@ -763,11 +769,12 @@ const PlayerOrderInput = ({
             )}
           </Tabs>
           <div className="flex justify-center gap-2">
-            <Drawer.Close asChild>
-              <Button onClick={handleConfirm} isLoading={isLoadingPlayerOrder}>
-                Confirm
-              </Button>
-            </Drawer.Close>
+            <DebounceButton
+              onClick={handleConfirm}
+              isLoading={isLoadingPlayerOrder}
+            >
+              Confirm
+            </DebounceButton>
             <Drawer.Close asChild>
               <Button onClick={handleCancel}>Cancel</Button>
             </Drawer.Close>

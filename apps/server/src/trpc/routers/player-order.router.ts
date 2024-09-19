@@ -257,7 +257,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           );
           //get player
           const player = await ctx.playerService.player({ id: playerId });
-          await ctx.gameLogService.createGameLog({
+          ctx.gameLogService.createGameLog({
             game: { connect: { id: ctxMiddleware.gameId } },
             content: `Player ${player?.nickname} created an order.`,
           });

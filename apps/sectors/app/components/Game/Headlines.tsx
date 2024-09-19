@@ -198,7 +198,9 @@ const HeadlineComponent = ({
       {currentPhase?.name == PhaseName.START_TURN && (
         <div>
           {submitComplete ? (
-            <div className="bg-slate-600 bordered-md p-2">Headline purchased</div>
+            <div className="bg-slate-600 bordered-md p-2">
+              Headline purchased
+            </div>
           ) : (
             <DebounceButton
               onClick={handlePurchaseHeadline}
@@ -290,7 +292,9 @@ const Headlines = () => {
       <SectorPriority />
       <p className="text-xl text-gray-700 font-light mb-6">
         The following headlines are being pushed, put money on a headline to
-        influence the medias narrative.
+        influence the medias narrative. If more than one player elects to
+        purchase a headline, the cost is split amongst all players on that
+        headline.
       </p>
       {isLoading && <div>Loading...</div>}
       {isError && <div>Error loading headlines</div>}

@@ -10,6 +10,11 @@ Sectors ends in one of two ways:
 - **Bank Breaks:** The bank *"breaks"* as it reaches or goes below 0. As soon as this happens, the remainder of the turn is played out and this is the last turn of the game.
 - **Total Turns Exceeded:** If the game runs through its maximum turn length, the game ends on the final turn.
 
+### Win Condition
+{: #win-condition }
+
+At the end of the game, the player with the highest **net worth** is the winner.  The **net worth** of a player is determined by adding the cash on hand and the value of all shares multiplied by their respective company stock price.
+
 ### Game Flow
 {: #game-flow }
 
@@ -24,13 +29,15 @@ If a player is ready, they can elect to "ready up," which will signal they have 
 
 - **Influence Round:** This round only occurs once at the beginning of the game. It determines initial **player priority** order. Each player will, in secret, perform an influence bid. Each player starts with 100 "influence" points. For each point the player does not spend on their influence bid, they will retain $1. Player priority is then determined in descending order of influence points spent on the bid. In the case of tied bids, priority order is determined randomly.
 - **Tranche Distribution:** Tranche packages are made for offer every three turns. These are rewards which are distributed based on player ownership.
+- **Headline Phase:** From the second turn onwards, players will be able to influence the **sector priority** order by paying to influence media headlines which impact the sentiment of a sector.  If more than one player pays for a headline, the cost is split evenly, rounded down. 
 - **Stock Round:** Players place orders against companies through distinct order mechanisms.
 - **Operation Round:** Players vote on company operations, and companies generate revenue by attracting customers.
+- **End Turn Upkeep:** Players will pax taxes and divest accordingly.  Sectors will receive customers.
 
 ## Players
 {: #players }
 
-**Players** take the role of investors. The goal of every player is to earn as much capital as possible through cash on hand and ownership of shares. The **net worth** of a player is determined by adding the cash on hand and the value of all shares multiplied by their respective company stock price. At the end of the game, the player with the highest **net worth** is the winner.
+**Players** take the role of investors. The goal of every player is to earn as much capital as possible through cash on hand and ownership of shares.
 
 During the game, players will have agency to place orders in the **spot market** and **derivatives market** to buy or sell against companies in the game. As **shareholders**, players will have agency to place votes for a company as to how it will distribute revenue and act during an operating round. Players will also have agency in selecting **tranche** packages which are distributed to players and companies in the game.
 
@@ -107,6 +114,7 @@ Given the net difference between BUYS and SELLS for market order quantities of a
 **Profits from Options Contracts:** The profit is the difference between the current market price and the strike price, multiplied by the total shares in the contract. Should the price be equal to or less than the strike price, you will lose the premium paid for the contract.
 
 ## Operating Rounds
+
 {: #operating-rounds }
 
 **Operating Rounds** are where companies run production and shareholders determine company actions.
@@ -174,6 +182,21 @@ Players will vote on how company revenue should be distributed. The vote is weig
 The company's share price will be adjusted by one step by the total amount of revenue distributed to shareholders divided by its current stock price, rounded down. If, however, this price change would bring the company's stock price into a new stock tier, it stops at the beginning of that tier. For example, if a company has a stock price of $10 and distributes $100 of revenue to shareholders, the stock price will move up 10 steps, but because the next stock tier starts at $21, this increase is halted at that price at the beginning of the new tier.
 
 If the company elects to retain revenue, it automatically moves down 1 step in stock price.
+
+## End Turn Upkeep
+{: #end-turn-upkeep }
+
+### Capital Gains
+
+Capital gains are taxes players may pay based on realized income.  That means any income collected from selling shares, collecting dividends, shorting stocks, execising options, or collecting cash rewards from tranches.
+
+Capital gains will be taxed based on the tier the player falls under with their earnings.
+
+### Divestment
+
+Every player is beholden to the certificate limit for the game.  If a player exceeds this certificate limit when this phase occurs, they will be forced to liquidate shares until they reach this limit.  
+
+The player has no agency in what shares will be taken.  Shares will be randomly taken until they the player is at the certifcate limit. 
 
 ## Investor Tranches
 {: #investor-tranches }

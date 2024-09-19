@@ -85,10 +85,10 @@ const GameTopBar = ({
           <PassiveLoading />
         </div>
       )}
-      {currentPhase && (
+      {currentPhase && currentPhase.phaseStartTime && (
         <Timer
           countdownTime={currentPhase.phaseTime / 1000} //convert from seconds to milliseconds
-          startDate={new Date(currentPhase.createdAt)} // attempt to cast to Date
+          startDate={new Date(currentPhase.phaseStartTime)} // attempt to cast to Date
           size={16}
           textSize={1}
           onEnd={() => {}}

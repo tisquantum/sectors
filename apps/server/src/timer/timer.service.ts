@@ -5,6 +5,7 @@ interface Timer {
   gameId: string;
   timeout: NodeJS.Timeout;
   callback: () => void;
+  phaseStartTime: number; // To store the actual start time
 }
 
 @Injectable()
@@ -15,7 +16,8 @@ export class TimerService implements OnModuleDestroy {
   setTimer(
     id: string,
     gameId: string,
-    delay: number,
+    totalDuration: number, // Total phase time in ms
+    phaseStartTime: number, // When the phase was supposed to start
     callback: () => void,
   ): void {
     // If a timer for this gameId already exists, clear it
@@ -24,15 +26,25 @@ export class TimerService implements OnModuleDestroy {
       this.clearTimer(existingTimerId);
     }
 
-    const timeout = setTimeout(() => {
-      callback();
-      this.timers.delete(id);
-      this.gameTimers.delete(gameId);
-    }, delay);
+    const currentTime = Date.now();
+    const elapsedTime = currentTime - phaseStartTime;
+    const remainingTime = Math.max(totalDuration - elapsedTime, 0); // Ensure non-negative time
 
-    this.timers.set(id, { id, gameId, timeout, callback });
-    this.gameTimers.set(gameId, id);
+    if (remainingTime > 0) {
+      const timeout = setTimeout(() => {
+        callback();
+        this.timers.delete(id);
+        this.gameTimers.delete(gameId);
+      }, remainingTime);
+
+      this.timers.set(id, { id, gameId, timeout, callback, phaseStartTime });
+      this.gameTimers.set(gameId, id);
+    } else {
+      // If time has already passed, execute the callback immediately
+      callback();
+    }
   }
+
 
   clearTimer(id: string): void {
     const timer = this.timers.get(id);
