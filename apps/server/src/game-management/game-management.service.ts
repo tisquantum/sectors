@@ -139,6 +139,7 @@ import {
   companyActionsDescription,
   LICENSING_AGREEMENT_UNIT_PRICE_BONUS,
   DEFAULT_SECTOR_AMOUNT,
+  PRIZE_CASH_SUM,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -930,14 +931,24 @@ export class GameManagementService {
     // Create prizes with random distribution of rewards
     const prizePromises: Promise<any>[] = [];
     let prestigeRewardsLeft = 2;
-    const totalCash = 500;
-    const cashPerPrize = Math.floor(totalCash / prizeCount);
-    const remainder = totalCash % prizeCount;
+    const totalCash = PRIZE_CASH_SUM;
+    const cashDistribution: number[] = [];
+    // const remainder = totalCash % prizeCount;
+    let remainingCash = totalCash;
+    // Randomly assign cash to each prize
+    for (let i = 0; i < prizeCount - 1; i++) {
+      // Generate a random cash amount between 0 and the remaining cash for this prize
+      const randomCash = Math.floor(Math.random() * remainingCash);
+      cashDistribution.push(randomCash);
+      remainingCash -= randomCash;
+    }
+    // The last prize gets the remaining cash
+    cashDistribution.push(remainingCash);
 
     for (let i = 0; i < prizeCount; i++) {
       const prize: Prisma.PrizeCreateInput = {
         prestigeAmount: 0,
-        cashAmount: cashPerPrize + (i < remainder ? 1 : 0),
+        cashAmount: cashDistribution[i],
         Game: { connect: { id: gameTurn.gameId } },
         GameTurn: { connect: { id: gameTurn.id } },
         SectorPrizes: {
@@ -2204,9 +2215,9 @@ export class GameManagementService {
 
   /**
    * Calculate income for a turn where income is all transactions that have earned the player money.
-   * @param playerIds 
-   * @param turnId 
-   * @returns 
+   * @param playerIds
+   * @param turnId
+   * @returns
    */
   async getTurnIncome(playerIds: string[], turnId: string) {
     console.log('getTurnIncome turnId', turnId, playerIds);
