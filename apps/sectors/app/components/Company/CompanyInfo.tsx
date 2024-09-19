@@ -188,8 +188,8 @@ const CompanyMoreInfo = ({
             <p className={tooltipParagraphStyle}>
               Prestige tokens. While held, they help prioritize the company for
               production. Can be spent for a bonus. How to earn prestige: If a
-              company sells all of it's supply during an operating round, it
-              earns 1 prestige token.
+              company sells all of it&apos;s supply during an operating round,
+              it earns 1 prestige token.
             </p>
           }
         >
