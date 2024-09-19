@@ -86,6 +86,7 @@ export const B2B_COMPANY_BONUS = 2;
 export const LICENSING_AGREEMENT_UNIT_PRICE_BONUS = 20;
 export const ROOM_MESSAGE_MAX_LENGTH = 150;
 export const DEFAULT_SECTOR_AMOUNT = 3;
+export const PRIZE_CASH_SUM = 300;
 /**
  * Phase times in milliseconds
  */
