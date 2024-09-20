@@ -77,7 +77,7 @@ const PhaseListComponent = () => {
         phase !== PhaseName.STOCK_RESOLVE_LIMIT_ORDER
     );
   }
-  if (!gameState.useOptions) {
+  if (!gameState.useOptionOrders) {
     _phasesInOrder = _phasesInOrder.filter(
       (phase) =>
         phase !== PhaseName.STOCK_ACTION_OPTION_ORDER &&
