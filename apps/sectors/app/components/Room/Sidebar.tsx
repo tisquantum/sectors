@@ -35,6 +35,9 @@ interface GameOptionsState {
   distributionStrategy: DistributionStrategy;
   gameMaxTurns: number;
   playerOrdersConcealed: boolean;
+  useOptionOrders: boolean;
+  useShortOrders: boolean;
+  useLimitOrders: boolean;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
@@ -49,6 +52,9 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
     distributionStrategy: GAME_SETUP_DEFAULT_DISTRIBUTION_STRATEGY,
     gameMaxTurns: GAME_SETUP_DEFAULT_GAME_MAX_TURNS,
     playerOrdersConcealed: GAME_SETUP_DEFAULT_PLAYER_ORDERS_CONCEALED,
+    useOptionOrders: false,
+    useShortOrders: false,
+    useLimitOrders: false,
   });
   const joinRoomMutation = trpc.roomUser.joinRoom.useMutation();
   const leaveRoomMutation = trpc.roomUser.leaveRoom.useMutation();
@@ -92,7 +98,10 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
     bankPoolNumber: number,
     distributionStrategy: DistributionStrategy,
     gameMaxTurns: number,
-    playerOrdersConcealed: boolean
+    playerOrdersConcealed: boolean,
+    useOptionOrders: boolean,
+    useShortOrders: boolean,
+    useLimitOrders: boolean
   ) => {
     //response happens through pusher to all clients.
     startGameMutation.mutate({
@@ -104,6 +113,9 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
       distributionStrategy,
       gameMaxTurns,
       playerOrdersConcealed,
+      useOptionOrders,
+      useShortOrders,
+      useLimitOrders,
     });
   };
 
@@ -143,7 +155,10 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
                       gameOptions.bankPoolNumber,
                       gameOptions.distributionStrategy,
                       gameOptions.gameMaxTurns,
-                      gameOptions.playerOrdersConcealed
+                      gameOptions.playerOrdersConcealed,
+                      gameOptions.useOptionOrders,
+                      gameOptions.useShortOrders,
+                      gameOptions.useLimitOrders
                     );
                   }}
                   radius="none"

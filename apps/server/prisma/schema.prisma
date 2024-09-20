@@ -9,8 +9,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
@@ -668,6 +668,9 @@ model Game {
   overdraft               Boolean                  @default(true) //facilitates overdrafts for player accounts during stock purchase
   isPaused                Boolean                  @default(false)
   playerOrdersConcealed   Boolean                  @default(true) //Conceals player orders until the stock round reveal phase
+  useLimitOrders          Boolean                  @default(true)
+  useShortOrders          Boolean                  @default(true)
+  useOptionOrders         Boolean                  @default(true)
   certificateLimit        Int                      @default(12)
   economyScore            Int                      @default(10)
   nextPrestigeReward      Int?

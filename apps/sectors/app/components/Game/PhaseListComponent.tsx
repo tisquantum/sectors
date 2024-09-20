@@ -5,6 +5,7 @@ import {
   phasesInOrder,
   STOCK_ACTION_SUB_ROUND_MAX,
 } from "@server/data/constants";
+import _ from "lodash";
 
 const StockActionSubRoundIndicator = ({
   current,
@@ -67,6 +68,29 @@ const PhaseListComponent = () => {
         phase !== PhaseName.PRIZE_VOTE_RESOLVE &&
         phase !== PhaseName.PRIZE_DISTRIBUTE_ACTION &&
         phase !== PhaseName.PRIZE_DISTRIBUTE_RESOLVE
+    );
+  }
+  if (!gameState.useLimitOrders) {
+    _phasesInOrder = _phasesInOrder.filter(
+      (phase) =>
+        phase !== PhaseName.STOCK_OPEN_LIMIT_ORDERS &&
+        phase !== PhaseName.STOCK_RESOLVE_LIMIT_ORDER
+    );
+  }
+  if (!gameState.useOptions) {
+    _phasesInOrder = _phasesInOrder.filter(
+      (phase) =>
+        phase !== PhaseName.STOCK_ACTION_OPTION_ORDER &&
+        phase !== PhaseName.STOCK_RESOLVE_OPTION_ORDER &&
+        phase !== PhaseName.STOCK_RESOLVE_PENDING_OPTION_ORDER
+    );
+  }
+  if (!gameState.useShortOrders) {
+    _phasesInOrder = _phasesInOrder.filter(
+      (phase) =>
+        phase !== PhaseName.STOCK_ACTION_SHORT_ORDER &&
+        phase !== PhaseName.STOCK_SHORT_ORDER_INTEREST &&
+        phase !== PhaseName.STOCK_RESOLVE_PENDING_SHORT_ORDER
     );
   }
   return (

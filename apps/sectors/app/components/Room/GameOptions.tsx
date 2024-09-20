@@ -1,5 +1,5 @@
 import React, { useState, useEffect, ReactNode } from "react";
-import { Select, SelectItem, Tooltip } from "@nextui-org/react";
+import { Checkbox, Select, SelectItem, Tooltip } from "@nextui-org/react";
 import { DistributionStrategy } from "@server/prisma/prisma.client";
 import {
   GAME_SETUP_DEFAULT_BANK_POOL_NUMBER,
@@ -23,6 +23,9 @@ type ValueMap = {
   distributionStrategy: { [key: number]: DistributionStrategy };
   gameMaxTurns: { [key: number]: number };
   playerOrdersConcealed: { [key: number]: boolean };
+  useOptionOrders: { [key: number]: boolean };
+  useShortOrders: { [key: number]: boolean };
+  useLimitOrders: { [key: number]: boolean };
 };
 
 type GameOptionsKeys = keyof ValueMap;
@@ -38,6 +41,9 @@ interface GameOptionsState {
   distributionStrategy: DistributionStrategy;
   gameMaxTurns: number;
   playerOrdersConcealed: boolean;
+  useOptionOrders: boolean;
+  useShortOrders: boolean;
+  useLimitOrders: boolean;
 }
 
 const GameOptionDescription: React.FC<{
@@ -66,6 +72,9 @@ const GameOptions: React.FC<GameOptionsProps> = ({ onOptionsChange }) => {
     distributionStrategy: GAME_SETUP_DEFAULT_DISTRIBUTION_STRATEGY,
     gameMaxTurns: GAME_SETUP_DEFAULT_GAME_MAX_TURNS,
     playerOrdersConcealed: GAME_SETUP_DEFAULT_PLAYER_ORDERS_CONCEALED,
+    useOptionOrders: false,
+    useShortOrders: false,
+    useLimitOrders: false,
   });
 
   useEffect(() => {
@@ -103,6 +112,18 @@ const GameOptions: React.FC<GameOptionsProps> = ({ onOptionsChange }) => {
       5: 23,
     },
     playerOrdersConcealed: {
+      1: true,
+      2: false,
+    },
+    useOptionOrders: {
+      1: true,
+      2: false,
+    },
+    useShortOrders: {
+      1: true,
+      2: false,
+    },
+    useLimitOrders: {
       1: true,
       2: false,
     },
@@ -323,6 +344,52 @@ const GameOptions: React.FC<GameOptionsProps> = ({ onOptionsChange }) => {
             No
           </SelectItem>
         </Select>
+      </div>
+      <div className="mb-4 flex flex-col">
+        <GameOptionDescription
+          name="Select Order Types"
+          description={
+            <p className={tooltipParagraphStyle}>
+              Add or remove additional stock order types from the game.
+            </p>
+          }
+        />
+        <Checkbox isSelected={true} isDisabled>
+          Market Orders
+        </Checkbox>
+        <Checkbox
+          isSelected={options.useLimitOrders}
+          onChange={(e) =>
+            setOptions((prevOptions) => ({
+              ...prevOptions,
+              useLimitOrders: e.target.checked,
+            }))
+          }
+        >
+          Limit Orders
+        </Checkbox>
+        <Checkbox
+          isSelected={options.useShortOrders}
+          onChange={(e) =>
+            setOptions((prevOptions) => ({
+              ...prevOptions,
+              useShortOrders: e.target.checked,
+            }))
+          }
+        >
+          Short Orders
+        </Checkbox>
+        <Checkbox
+          isSelected={options.useOptionOrders}
+          onChange={(e) =>
+            setOptions((prevOptions) => ({
+              ...prevOptions,
+              useOptionOrders: e.target.checked,
+            }))
+          }
+        >
+          Options Orders
+        </Checkbox>
       </div>
     </div>
   );
