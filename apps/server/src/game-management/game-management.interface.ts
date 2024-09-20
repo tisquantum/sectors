@@ -9,4 +9,7 @@ export interface StartGameInput {
   distributionStrategy: DistributionStrategy;
   gameMaxTurns?: number;
   playerOrdersConcealed: boolean;
+  useLimitOrders: boolean;
+  useShortOrders: boolean;
+  useOptionOrders: boolean;
 }

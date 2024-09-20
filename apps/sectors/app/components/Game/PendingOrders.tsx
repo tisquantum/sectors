@@ -450,45 +450,49 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
   return (
     <div className="flex flex-col">
       <div className="flex justify-center flex-wrap gap-3 z-0">
-        <Card
-          className={`flex ${
-            currentPhase?.name === PhaseName.STOCK_RESOLVE_LIMIT_ORDER &&
-            "ring-2 ring-blue-500"
-          }`}
-        >
-          <CardHeader className="z-0">
-            Limit Orders Pending Settlement
-          </CardHeader>
-          <CardBody>
-            <PendingLimitOrders
-              limitOrders={limitOrdersPendingSettlement}
-              isResolving={isResolving}
-            />
-          </CardBody>
-        </Card>
-        <div className="flex gap-4 items-center">
-          <div className="flex items-center">
-            <ArrowRightIcon className="size-5" />
-          </div>
-          <div className="flex items-center">
-            <div className="vertical-text">
-              <span>S</span>
-              <span>T</span>
-              <span>O</span>
-              <span>C</span>
-              <span>K</span>
-              <span> </span>
-              <span>R</span>
-              <span>O</span>
-              <span>U</span>
-              <span>N</span>
-              <span>D</span>
+        {gameState.useLimitOrders && (
+          <>
+            <Card
+              className={`flex ${
+                currentPhase?.name === PhaseName.STOCK_RESOLVE_LIMIT_ORDER &&
+                "ring-2 ring-blue-500"
+              }`}
+            >
+              <CardHeader className="z-0">
+                Limit Orders Pending Settlement
+              </CardHeader>
+              <CardBody>
+                <PendingLimitOrders
+                  limitOrders={limitOrdersPendingSettlement}
+                  isResolving={isResolving}
+                />
+              </CardBody>
+            </Card>
+            <div className="flex gap-4 items-center">
+              <div className="flex items-center">
+                <ArrowRightIcon className="size-5" />
+              </div>
+              <div className="flex items-center">
+                <div className="vertical-text">
+                  <span>S</span>
+                  <span>T</span>
+                  <span>O</span>
+                  <span>C</span>
+                  <span>K</span>
+                  <span> </span>
+                  <span>R</span>
+                  <span>O</span>
+                  <span>U</span>
+                  <span>N</span>
+                  <span>D</span>
+                </div>
+              </div>
+              <div className="flex items-center">
+                <ArrowRightIcon className="size-5" />
+              </div>
             </div>
-          </div>
-          <div className="flex items-center">
-            <ArrowRightIcon className="size-5" />
-          </div>
-        </div>
+          </>
+        )}
         <Card
           className={`flex ${
             currentPhase?.name === PhaseName.STOCK_RESOLVE_MARKET_ORDER &&
@@ -503,52 +507,60 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
             />
           </CardBody>
         </Card>
-        <Card
-          className={`flex ${
-            (currentPhase?.name ===
-              PhaseName.STOCK_RESOLVE_PENDING_SHORT_ORDER ||
-              currentPhase?.name === PhaseName.STOCK_SHORT_ORDER_INTEREST) &&
-            "ring-2 ring-blue-500"
-          }`}
-        >
-          <CardHeader>Short Orders</CardHeader>
-          <CardBody>
-            <PendingShortOrders shortOrders={shortOrders} />
-          </CardBody>
-        </Card>
-        <Card
-          className={`flex ${
-            currentPhase?.name === PhaseName.STOCK_RESOLVE_OPTION_ORDER &&
-            "ring-2 ring-blue-500"
-          }`}
-        >
-          <CardHeader className="z-0">Options Contracts</CardHeader>
-          <CardBody>
-            <OpenOptionContracts />
-          </CardBody>
-        </Card>
-        <Card
-          className={`flex ${
-            currentPhase?.name === PhaseName.STOCK_OPEN_LIMIT_ORDERS &&
-            "ring-2 ring-blue-500"
-          }`}
-        >
-          <CardHeader className="z-0">Limit Orders</CardHeader>
-          <CardBody>
-            <PendingLimitOrders limitOrders={limitOrdersPendingToOpen} />
-          </CardBody>
-        </Card>
+        {gameState.useShortOrders && (
+          <Card
+            className={`flex ${
+              (currentPhase?.name ===
+                PhaseName.STOCK_RESOLVE_PENDING_SHORT_ORDER ||
+                currentPhase?.name === PhaseName.STOCK_SHORT_ORDER_INTEREST) &&
+              "ring-2 ring-blue-500"
+            }`}
+          >
+            <CardHeader>Short Orders</CardHeader>
+            <CardBody>
+              <PendingShortOrders shortOrders={shortOrders} />
+            </CardBody>
+          </Card>
+        )}
+        {gameState.useOptionOrders && (
+          <Card
+            className={`flex ${
+              currentPhase?.name === PhaseName.STOCK_RESOLVE_OPTION_ORDER &&
+              "ring-2 ring-blue-500"
+            }`}
+          >
+            <CardHeader className="z-0">Options Contracts</CardHeader>
+            <CardBody>
+              <OpenOptionContracts />
+            </CardBody>
+          </Card>
+        )}
+        {gameState.useLimitOrders && (
+          <Card
+            className={`flex ${
+              currentPhase?.name === PhaseName.STOCK_OPEN_LIMIT_ORDERS &&
+              "ring-2 ring-blue-500"
+            }`}
+          >
+            <CardHeader className="z-0">Limit Orders</CardHeader>
+            <CardBody>
+              <PendingLimitOrders limitOrders={limitOrdersPendingToOpen} />
+            </CardBody>
+          </Card>
+        )}
       </div>
-      <div className="mt-4">
-        <Card>
-          <CardHeader>Purchased and Open Options Contracts</CardHeader>
-          <CardBody>
-            {openOptionContracts?.map((contract, index) => (
-              <OptionContract contract={contract} key={index} />
-            ))}
-          </CardBody>
-        </Card>
-      </div>
+      {gameState.useOptionOrders && (
+        <div className="mt-4">
+          <Card>
+            <CardHeader>Purchased and Open Options Contracts</CardHeader>
+            <CardBody>
+              {openOptionContracts?.map((contract, index) => (
+                <OptionContract contract={contract} key={index} />
+              ))}
+            </CardBody>
+          </Card>
+        </div>
+      )}
       <div className="mt-4">
         <Card>
           <CardHeader>

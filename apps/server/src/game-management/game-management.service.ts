@@ -4980,6 +4980,9 @@ export class GameManagementService {
       distributionStrategy,
       gameMaxTurns,
       playerOrdersConcealed,
+      useOptionOrders,
+      useLimitOrders,
+      useShortOrders,
     } = input;
 
     const gameData: Prisma.GameCreateInput = {
@@ -4997,6 +5000,9 @@ export class GameManagementService {
       gameMaxTurns,
       economyScore: STABLE_ECONOMY_SCORE,
       Room: { connect: { id: roomId } },
+      useOptionOrders,
+      useLimitOrders,
+      useShortOrders,
     };
 
     const jsonData = gameDataJson;
@@ -8623,6 +8629,15 @@ export class GameManagementService {
     const company = await this.companyService.company({ id: companyId });
     if (!company) {
       throw new Error('Company not found');
+    }
+    if (!game.useLimitOrders && orderType === OrderType.LIMIT) {
+      throw new Error('Limit orders are not enabled for this game');
+    }
+    if (!game.useShortOrders && orderType === OrderType.SHORT) {
+      throw new Error('Short orders are not enabled for this game');
+    }
+    if (!game.useOptionOrders && orderType === OrderType.OPTION) {
+      throw new Error('Options are not enabled for this game');
     }
     return this.playerOrderService.createPlayerOrder({
       orderType,

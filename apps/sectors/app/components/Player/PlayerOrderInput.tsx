@@ -733,7 +733,7 @@ const PlayerOrderInput = ({
                 </CardBody>
               </Card>
             </Tab>
-            {!isIpo && (
+            {!isIpo && gameState.useLimitOrders && (
               <Tab key="lo" title={"LIMIT ORDER"} className="w-full">
                 <Card>
                   <CardBody>
@@ -752,7 +752,7 @@ const PlayerOrderInput = ({
                 </Card>
               </Tab>
             )}
-            {!isIpo && (
+            {!isIpo && gameState.useShortOrders && (
               <Tab key="so" title={"SHORT ORDER"} className="w-full">
                 <Card>
                   <CardBody>

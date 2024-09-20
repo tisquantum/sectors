@@ -222,9 +222,11 @@ const StockRoundOrderGrid = ({
             )}
           </div>
         </Tab>
-        <Tab key="derivatives" title="Derivatives">
-          <Derivatives isInteractive={isInteractive} />
-        </Tab>
+        {gameState.useOptionOrders && (
+          <Tab key="derivatives" title="Derivatives">
+            <Derivatives isInteractive={isInteractive} />
+          </Tab>
+        )}
         <Tab key="table-view" title="Table View">
           <div className="p-4 max-w-full scrollbar">
             <h2 className="text-xl font-bold mb-4">Spot Market</h2>
@@ -238,8 +240,12 @@ const StockRoundOrderGrid = ({
               isInteractive={isInteractive}
               isRevealRound={isRevealRound}
             />
-            <h2 className="text-xl font-bold mt-8 mb-4">Derivatives</h2>
-            <DerivativesTable isInteractive={isInteractive} />
+            {gameState.useOptionOrders && (
+              <>
+                <h2 className="text-xl font-bold mt-8 mb-4">Derivatives</h2>
+                <DerivativesTable isInteractive={isInteractive} />
+              </>
+            )}
           </div>
         </Tab>
       </Tabs>

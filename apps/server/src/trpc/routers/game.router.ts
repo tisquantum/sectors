@@ -98,6 +98,9 @@ export default (trpc: TrpcService, ctx: Context) =>
           distributionStrategy: z.nativeEnum(DistributionStrategy),
           gameMaxTurns: z.number(),
           playerOrdersConcealed: z.boolean(),
+          useOptionOrders: z.boolean(),
+          useShortOrders: z.boolean(),
+          useLimitOrders: z.boolean(),
           players: z.any().optional(),
           companies: z.any().optional(),
           Player: z.any().optional(),
@@ -120,6 +123,9 @@ export default (trpc: TrpcService, ctx: Context) =>
             distributionStrategy: input.distributionStrategy,
             gameMaxTurns: input.gameMaxTurns,
             playerOrdersConcealed: input.playerOrdersConcealed,
+            useOptionOrders: input.useOptionOrders,
+            useShortOrders: input.useShortOrders,
+            useLimitOrders: input.useLimitOrders,
           });
         } catch (error) {
           return {
@@ -390,7 +396,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         const { gameId, gameTurnId } = input;
         //get players for game
         const players = await ctx.playerService.players({ where: { gameId } });
-        const playerIds = players.map((player) => player.id); 
+        const playerIds = players.map((player) => player.id);
         return ctx.gameManagementService.getTurnIncome(playerIds, gameTurnId);
       }),
   });
