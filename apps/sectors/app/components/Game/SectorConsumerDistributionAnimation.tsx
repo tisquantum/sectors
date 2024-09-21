@@ -184,7 +184,8 @@ const SectorConsumerDistributionAnimation = ({
           exit={{ opacity: 0, x: 100 }}
           transition={{
             duration: 1,
-            delay: 1 * (maximumConsumersWhoWillVisit - 1),
+            delay: 1,
+            // delay: 1 * (maximumConsumersWhoWillVisit - 1),
           }}
           className="flex flex-col bg-slate-500 rounded-md p-2 m-1"
           style={{ width: 200, minHeight: 100 }} // Fixed width/height

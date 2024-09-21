@@ -17,6 +17,9 @@ import {
   ModalContent,
   ModalFooter,
   ModalHeader,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   Tooltip,
   useDisclosure,
 } from "@nextui-org/react";
@@ -35,6 +38,7 @@ import {
 import { MoneyTransactionByEntityType } from "./MoneyTransactionHistory";
 import WalletInfo from "./WalletInfo";
 import { MAX_SHARE_PERCENTAGE } from "@server/data/constants";
+import PlayerShares from "../Player/PlayerShares";
 
 const BankInfo = () => {
   const { gameState, gameId } = useGame();
@@ -71,7 +75,13 @@ const BankInfo = () => {
 };
 
 const GameGeneralInfo = () => {
-  const { gameState, currentTurn, authPlayer, currentPhase } = useGame();
+  const {
+    gameState,
+    currentTurn,
+    authPlayer,
+    currentPhase,
+    playersWithShares,
+  } = useGame();
   if (!gameState) return notFound();
   const pseudoSpend = authPlayer?.PlayerOrder?.filter(
     (order) =>
@@ -81,17 +91,20 @@ const GameGeneralInfo = () => {
     const orderValue = (order.value || 0) * (order.quantity || 0);
     return order.isSell ? acc - orderValue : acc + orderValue;
   }, 0);
+  const authPlayerWithShares = playersWithShares.find(
+    (player) => player.id === authPlayer?.id
+  );
   return (
     <div className="flex flex-wrap space-x-4 items-center">
       <div className="flex flex-wrap items-center gap-2">
         {authPlayer ? (
           <>
             <PlayerAvatar player={authPlayer} />
-            <div className="flex flex-col">
+            <div className="flex flex-col gap-1">
               <div className="flex items-center text-md font-bold">
                 <WalletInfo player={authPlayer} />{" "}
-                {(currentPhase?.name == PhaseName.STOCK_ACTION_ORDER ||
-                  currentPhase?.name == PhaseName.STOCK_ACTION_RESULT) && (
+                {(currentPhase?.name === PhaseName.STOCK_ACTION_ORDER ||
+                  currentPhase?.name === PhaseName.STOCK_ACTION_RESULT) && (
                   <Tooltip
                     classNames={{ base: baseToolTipStyle }}
                     className={tooltipStyle}
@@ -108,27 +121,52 @@ const GameGeneralInfo = () => {
                   </Tooltip>
                 )}
               </div>
-              <Tooltip
-                classNames={{ base: baseToolTipStyle }}
-                className={tooltipStyle}
-                content={
-                  <div>
-                    <p className={tooltipParagraphStyle}>
-                      The remaining actions you have for order types in a stock
-                      round. Limit Order and Short Order actions only replenish
-                      as existing orders are filled or rejected. Market Orders
-                      replenish each stock round.
-                    </p>
-                  </div>
-                }
-              >
-                <div className="flex items-center text-md">
-                  <RiFunctionAddFill size={24} /> LO{" "}
-                  {authPlayer.limitOrderActions} SO{" "}
-                  {authPlayer.shortOrderActions}
+              {authPlayerWithShares && (
+                <div className="flex gap-1 items-center">
+                  <Popover>
+                    <PopoverTrigger>
+                      <div className="flex items-center gap-1 cursor-pointer">
+                        <RiTicket2Fill size={18} />
+                        {authPlayerWithShares?.Share.length || 0}
+                      </div>
+                    </PopoverTrigger>
+                    <PopoverContent>
+                      <div className="flex">
+                        <PlayerShares playerWithShares={authPlayerWithShares} />
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 </div>
-              </Tooltip>
+              )}
             </div>
+            <Tooltip
+              classNames={{ base: baseToolTipStyle }}
+              className={tooltipStyle}
+              content={
+                <div>
+                  <p className={tooltipParagraphStyle}>
+                    The remaining actions you have for order types in a stock
+                    round. Limit Order and Short Order actions only replenish as
+                    existing orders are filled or rejected. Market Orders
+                    replenish each stock round.
+                  </p>
+                </div>
+              }
+            >
+              <div className="flex items-center text-md">
+                {(gameState?.useLimitOrders ||
+                  gameState?.useShortOrders ||
+                  gameState?.useOptionOrders) && (
+                  <RiFunctionAddFill size={24} />
+                )}
+                {gameState?.useLimitOrders && (
+                  <>LO {authPlayer.limitOrderActions}</>
+                )}
+                {gameState?.useShortOrders && (
+                  <> SO {authPlayer.shortOrderActions} </>
+                )}
+              </div>
+            </Tooltip>
           </>
         ) : (
           <div className="flex justify-center items-center ">

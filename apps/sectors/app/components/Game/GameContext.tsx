@@ -39,6 +39,7 @@ interface GameContextProps {
   currentPhase?: Phase;
   socketChannel: PusherTypes.Channel | null;
   playersWithShares: PlayerWithShares[];
+  refetchPlayersWithShares: () => void;
   refetchAuthPlayer: () => void;
   currentTurn: GameTurn;
   researchDeck: ResearchDeckWithCards;
@@ -112,13 +113,7 @@ export const GameProvider: React.FC<{
     const handleNewPhase = (phaseName: PhaseName) => {
       refetchGameState();
       refetchAuthPlayer();
-      if (
-        phaseName == PhaseName.STOCK_RESOLVE_MARKET_ORDER ||
-        phaseName == PhaseName.OPERATING_PRODUCTION ||
-        phaseName == PhaseName.OPERATING_PRODUCTION_VOTE_RESOLVE
-      ) {
-        refetchPlayersWithShares();
-      }
+      refetchPlayersWithShares();
       if (
         phaseName == PhaseName.END_TURN ||
         phaseName == PhaseName.START_TURN
@@ -180,6 +175,7 @@ export const GameProvider: React.FC<{
         socketChannel: channel,
         refetchAuthPlayer,
         playersWithShares,
+        refetchPlayersWithShares,
         currentTurn,
         researchDeck,
       }}

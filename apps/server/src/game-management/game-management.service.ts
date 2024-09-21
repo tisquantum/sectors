@@ -140,6 +140,7 @@ import {
   LICENSING_AGREEMENT_UNIT_PRICE_BONUS,
   DEFAULT_SECTOR_AMOUNT,
   PRIZE_CASH_SUM,
+  INACTIVE_COMPANY_PER_TURN_DISCOUNT,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -283,6 +284,7 @@ export class GameManagementService {
         await this.handleOpeningNewCompany(phase);
         await this.handleHeadlines(phase);
         await this.handlePrizeRound(phase);
+        await this.discountInactiveCompanies(phase);
         break;
       case PhaseName.HEADLINE_RESOLVE:
         await this.resolveHeadlines(phase);
@@ -365,6 +367,32 @@ export class GameManagementService {
       default:
         return;
     }
+  }
+
+  async discountInactiveCompanies(phase: Phase) {
+    //get all inactive companies
+    const companies = await this.companyService.companiesWithSector({
+      where: { gameId: phase.gameId, status: CompanyStatus.INACTIVE },
+    });
+    //check if all of the shares are still in the ipo
+    const companiesWithAllSharesInIPO = companies.filter((company) => {
+      return company.Share.every(
+        (share) => share.location === ShareLocation.IPO,
+      );
+    });
+    //decrement stock price for each company
+    const companyPromises = companies.map((company) => {
+      return this.companyService.updateCompany({
+        where: { id: company.id },
+        data: {
+          ipoAndFloatPrice: Math.max(
+            5,
+            company.ipoAndFloatPrice - INACTIVE_COMPANY_PER_TURN_DISCOUNT,
+          ),
+        },
+      });
+    });
+    await Promise.all(companyPromises);
   }
 
   async decrementActiveCompanyDemand(phase: Phase) {

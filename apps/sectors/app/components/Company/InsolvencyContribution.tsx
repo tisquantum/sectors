@@ -64,6 +64,7 @@ const InsolvencyContributionComponent = ({
     currentTurn,
     socketChannel: channel,
     refetchAuthPlayer,
+    refetchPlayersWithShares,
   } = useGame();
   const [isLoadingInsolvencyContribution, setIsLoadingInsolvencyContribution] =
     useState(false);
@@ -99,6 +100,7 @@ const InsolvencyContributionComponent = ({
         refetchInsolvencyContributions();
         refetchAuthPlayer();
         refetchPlayerWithShares();
+        refetchPlayersWithShares();
       }
     );
 
@@ -190,7 +192,7 @@ const InsolvencyContributionComponent = ({
                   onClick={() => setCashContribution(authPlayer.cashOnHand)}
                 >
                   All In ($
-                  {Math.max(
+                  {Math.min(
                     authPlayer.cashOnHand,
                     CompanyTierData[company.companyTier].insolvencyShortFall
                   )}
