@@ -128,9 +128,7 @@ const TopBar = () => {
         {/* Mobile Menu */}
         <NavbarMenu className="visible md:invisible">
           <CommonNavLinks onOpen={onOpen} />
-          <NavbarMenuItem>
-            <ThemeSwitcher />
-          </NavbarMenuItem>
+          <NavbarMenuItem>{/* <ThemeSwitcher /> */}</NavbarMenuItem>
           {MemoizedAuthMenu}
         </NavbarMenu>
 
@@ -138,9 +136,9 @@ const TopBar = () => {
         <NavbarContent className="invisible md:visible hidden md:flex">
           <CommonNavLinks onOpen={onOpen} />
           {MemoizedAuthMenu}
-          <NavbarItem className="invisible md:visible">
+          {/* <NavbarItem className="invisible md:visible">
             <ThemeSwitcher />
-          </NavbarItem>
+          </NavbarItem> */}
         </NavbarContent>
       </Navbar>
 
@@ -150,7 +148,7 @@ const TopBar = () => {
           isOpen={isOpen}
           onOpenChange={onOpenChange}
           size="5xl"
-          className="h-5/6"
+          className="h-5/6 bg-slate-800"
         >
           <ModalContent>
             {(onClose) => (

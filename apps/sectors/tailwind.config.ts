@@ -253,7 +253,7 @@ const config: Config = {
   plugins: [
     nextui({
       themes: {
-        purpleDark: {
+        "purple-dark": {
           extend: "dark", // <- inherit default values from dark theme
           colors: {
             background: "#0D001A",
