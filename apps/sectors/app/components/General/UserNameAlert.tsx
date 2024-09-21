@@ -11,8 +11,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../shadcn/AlertDialog";
-import { useRouter, usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useRouter, usePathname } from "next/navigation";
+import { useState } from "react";
 
 const UserNameAlert = () => {
   const { user } = useAuthUser();
@@ -28,19 +28,22 @@ const UserNameAlert = () => {
   const handleContinue = () => {
     // Close the dialog and redirect to /accounts/settings
     setOpen(false);
-    router.push('/account/settings');
+    router.push("/account/settings");
   };
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogContent>
+      <AlertDialogContent className="bg-slate-800">
         <AlertDialogHeader>
-          <AlertDialogTitle>Welcome Anon, Please Make a Name for Yourself</AlertDialogTitle>
+          <AlertDialogTitle>
+            Welcome Anon, Please Make a Name for Yourself
+          </AlertDialogTitle>
           <AlertDialogDescription>
-            Every investor needs a name. Please go to your settings to set up your profile.
+            Every investor needs a name. Please go to your settings to set up
+            your profile.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter>
+        <AlertDialogFooter className="bg-slate-800">
           <AlertDialogCancel>Dismiss</AlertDialogCancel>
           <AlertDialogAction onClick={handleContinue}>
             Go to Settings

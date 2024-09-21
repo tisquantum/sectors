@@ -18,7 +18,7 @@ import {
 } from "@server/data/constants";
 
 const ThroughputLegend = () => (
-  <>
+  <div className="bg-slate-800">
     <Table>
       <TableHeader>
         <TableColumn>Throughput</TableColumn>
@@ -33,7 +33,7 @@ const ThroughputLegend = () => (
               <TableRow
                 key={throughput}
                 className={`text-center ${
-                  index % 2 === 0 ? "bg-black" : "bg-grey-800"
+                  index % 2 === 0 ? "bg-black" : "bg-slate-800"
                 }`}
               >
                 <TableCell>
@@ -64,7 +64,7 @@ const ThroughputLegend = () => (
         }
       </TableBody>
     </Table>
-  </>
+  </div>
 );
 
 export default ThroughputLegend;
