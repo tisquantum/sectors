@@ -17,6 +17,9 @@ import {
   ModalContent,
   ModalFooter,
   ModalHeader,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   Tooltip,
   useDisclosure,
 } from "@nextui-org/react";
@@ -35,6 +38,7 @@ import {
 import { MoneyTransactionByEntityType } from "./MoneyTransactionHistory";
 import WalletInfo from "./WalletInfo";
 import { MAX_SHARE_PERCENTAGE } from "@server/data/constants";
+import PlayerShares from "../Player/PlayerShares";
 
 const BankInfo = () => {
   const { gameState, gameId } = useGame();
@@ -71,7 +75,13 @@ const BankInfo = () => {
 };
 
 const GameGeneralInfo = () => {
-  const { gameState, currentTurn, authPlayer, currentPhase } = useGame();
+  const {
+    gameState,
+    currentTurn,
+    authPlayer,
+    currentPhase,
+    playersWithShares,
+  } = useGame();
   if (!gameState) return notFound();
   const pseudoSpend = authPlayer?.PlayerOrder?.filter(
     (order) =>
@@ -81,6 +91,9 @@ const GameGeneralInfo = () => {
     const orderValue = (order.value || 0) * (order.quantity || 0);
     return order.isSell ? acc - orderValue : acc + orderValue;
   }, 0);
+  const authPlayerWithShares = playersWithShares.find(
+    (player) => player.id === authPlayer?.id
+  );
   return (
     <div className="flex flex-wrap space-x-4 items-center">
       <div className="flex flex-wrap items-center gap-2">
@@ -106,6 +119,18 @@ const GameGeneralInfo = () => {
                   >
                     {"($" + pseudoSpend + ")"}
                   </Tooltip>
+                )}
+                {authPlayerWithShares && (
+                  <div className="flex gap-1 items-center">
+                    <Popover>
+                      <PopoverTrigger>
+                        <RiTicket2Fill size={18} />
+                      </PopoverTrigger>
+                      <PopoverContent>
+                        <PlayerShares playerWithShares={authPlayerWithShares} />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                 )}
               </div>
               <Tooltip
