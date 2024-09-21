@@ -15,8 +15,8 @@ const ClientLayout = ({ children }: { children: React.ReactNode }) => {
   const [queryClient] = useState(() => new QueryClient());
 
   return (
-    <NextUIProvider>
-      <NextThemesProvider attribute="class" defaultTheme="dark">
+    <NextThemesProvider attribute="class" defaultTheme="dark">
+      <NextUIProvider>
         <trpc.Provider client={trpcClient} queryClient={queryClient}>
           <QueryClientProvider client={queryClient}>
             <AuthUserProvider>
@@ -31,8 +31,8 @@ const ClientLayout = ({ children }: { children: React.ReactNode }) => {
             </AuthUserProvider>
           </QueryClientProvider>
         </trpc.Provider>
-      </NextThemesProvider>
-    </NextUIProvider>
+      </NextUIProvider>
+    </NextThemesProvider>
   );
 };
 

@@ -100,11 +100,11 @@ const GameGeneralInfo = () => {
         {authPlayer ? (
           <>
             <PlayerAvatar player={authPlayer} />
-            <div className="flex flex-col">
+            <div className="flex flex-col gap-1">
               <div className="flex items-center text-md font-bold">
                 <WalletInfo player={authPlayer} />{" "}
-                {(currentPhase?.name == PhaseName.STOCK_ACTION_ORDER ||
-                  currentPhase?.name == PhaseName.STOCK_ACTION_RESULT) && (
+                {(currentPhase?.name === PhaseName.STOCK_ACTION_ORDER ||
+                  currentPhase?.name === PhaseName.STOCK_ACTION_RESULT) && (
                   <Tooltip
                     classNames={{ base: baseToolTipStyle }}
                     className={tooltipStyle}
@@ -120,40 +120,53 @@ const GameGeneralInfo = () => {
                     {"($" + pseudoSpend + ")"}
                   </Tooltip>
                 )}
-                {authPlayerWithShares && (
-                  <div className="flex gap-1 items-center">
-                    <Popover>
-                      <PopoverTrigger>
+              </div>
+              {authPlayerWithShares && (
+                <div className="flex gap-1 items-center">
+                  <Popover>
+                    <PopoverTrigger>
+                      <div className="flex items-center gap-1 cursor-pointer">
                         <RiTicket2Fill size={18} />
-                      </PopoverTrigger>
-                      <PopoverContent>
+                        {authPlayerWithShares?.Share.length || 0}
+                      </div>
+                    </PopoverTrigger>
+                    <PopoverContent>
+                      <div className="flex">
                         <PlayerShares playerWithShares={authPlayerWithShares} />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              )}
+            </div>
+            <Tooltip
+              classNames={{ base: baseToolTipStyle }}
+              className={tooltipStyle}
+              content={
+                <div>
+                  <p className={tooltipParagraphStyle}>
+                    The remaining actions you have for order types in a stock
+                    round. Limit Order and Short Order actions only replenish as
+                    existing orders are filled or rejected. Market Orders
+                    replenish each stock round.
+                  </p>
+                </div>
+              }
+            >
+              <div className="flex items-center text-md">
+                {(gameState?.useLimitOrders ||
+                  gameState?.useShortOrders ||
+                  gameState?.useOptionOrders) && (
+                  <RiFunctionAddFill size={24} />
+                )}
+                {gameState?.useLimitOrders && (
+                  <>LO {authPlayer.limitOrderActions}</>
+                )}
+                {gameState?.useShortOrders && (
+                  <> SO {authPlayer.shortOrderActions} </>
                 )}
               </div>
-              <Tooltip
-                classNames={{ base: baseToolTipStyle }}
-                className={tooltipStyle}
-                content={
-                  <div>
-                    <p className={tooltipParagraphStyle}>
-                      The remaining actions you have for order types in a stock
-                      round. Limit Order and Short Order actions only replenish
-                      as existing orders are filled or rejected. Market Orders
-                      replenish each stock round.
-                    </p>
-                  </div>
-                }
-              >
-                <div className="flex items-center text-md">
-                  <RiFunctionAddFill size={24} /> LO{" "}
-                  {authPlayer.limitOrderActions} SO{" "}
-                  {authPlayer.shortOrderActions}
-                </div>
-              </Tooltip>
-            </div>
+            </Tooltip>
           </>
         ) : (
           <div className="flex justify-center items-center ">
