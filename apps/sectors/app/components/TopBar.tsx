@@ -148,7 +148,7 @@ const TopBar = () => {
           isOpen={isOpen}
           onOpenChange={onOpenChange}
           size="5xl"
-          className="h-5/6 bg-slate-800"
+          className="h-5/6 bg-slate-800 text-slate-100"
         >
           <ModalContent>
             {(onClose) => (
