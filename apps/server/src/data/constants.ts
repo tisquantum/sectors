@@ -545,31 +545,31 @@ export const CompanyTierData = {
     operatingCosts: 40,
     supplyMax: 4,
     companyActions: 2,
-    insolvencyShortFall: 400,
+    insolvencyShortFall: 300,
   },
   [CompanyTier.ESTABLISHED]: {
     operatingCosts: 50,
     supplyMax: 5,
     companyActions: 2,
-    insolvencyShortFall: 500,
+    insolvencyShortFall: 400,
   },
   [CompanyTier.ENTERPRISE]: {
     operatingCosts: 80,
     supplyMax: 6,
     companyActions: 3,
-    insolvencyShortFall: 800,
+    insolvencyShortFall: 500,
   },
   [CompanyTier.CONGLOMERATE]: {
     operatingCosts: 100,
     supplyMax: 8,
     companyActions: 3,
-    insolvencyShortFall: 1000,
+    insolvencyShortFall: 600,
   },
   [CompanyTier.TITAN]: {
     operatingCosts: 150,
     supplyMax: 10,
     companyActions: 4,
-    insolvencyShortFall: 1500,
+    insolvencyShortFall: 700,
   },
 };
 

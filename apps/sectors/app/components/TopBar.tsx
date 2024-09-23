@@ -11,12 +11,6 @@ import {
   DropdownMenu,
   DropdownItem,
   Button,
-  Modal,
-  ModalContent,
-  ModalBody,
-  useDisclosure,
-  ModalFooter,
-  ModalHeader,
   NavbarMenuToggle,
   NavbarMenu,
   NavbarMenuItem,
@@ -27,13 +21,12 @@ import DebounceButton from "@sectors/app/components/General/DebounceButton";
 import { createClient } from "@sectors/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import UserAvatar from "./Room/UserAvatar";
-import Rules from "./Game/Rules";
 import { RiFundsFill } from "@remixicon/react";
 import { useState, useMemo, memo } from "react";
 import { User } from "@server/prisma/prisma.client";
 
 // Extracted CommonNavLinks to receive props for the "onOpen" function
-const CommonNavLinks = memo(({ onOpen }: { onOpen: () => void }) => (
+const CommonNavLinks = memo(() => (
   <>
     <NavbarItem>
       <Link href="/rooms">Rooms</Link>
@@ -42,7 +35,9 @@ const CommonNavLinks = memo(({ onOpen }: { onOpen: () => void }) => (
       <Link href="/leaderboard">Leaderboard</Link>
     </NavbarItem>
     <NavbarItem>
-      <Button onPress={onOpen}>Rules</Button>
+      <Link href="https://rules.sectors.gg" target="_blank">
+        Rules
+      </Link>
     </NavbarItem>
   </>
 ));
@@ -93,7 +88,6 @@ const TopBar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const supabase = createClient();
   const router = useRouter();
-  const { isOpen, onOpen, onOpenChange } = useDisclosure();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -127,55 +121,20 @@ const TopBar = () => {
 
         {/* Mobile Menu */}
         <NavbarMenu className="visible md:invisible">
-          <CommonNavLinks onOpen={onOpen} />
+          <CommonNavLinks />
           <NavbarMenuItem>{/* <ThemeSwitcher /> */}</NavbarMenuItem>
           {MemoizedAuthMenu}
         </NavbarMenu>
 
         {/* Desktop Menu */}
         <NavbarContent className="invisible md:visible hidden md:flex">
-          <CommonNavLinks onOpen={onOpen} />
+          <CommonNavLinks />
           {MemoizedAuthMenu}
           {/* <NavbarItem className="invisible md:visible">
             <ThemeSwitcher />
           </NavbarItem> */}
         </NavbarContent>
       </Navbar>
-
-      {/* Conditionally rendering modal only when isOpen is true */}
-      {isOpen && (
-        <Modal
-          isOpen={isOpen}
-          onOpenChange={onOpenChange}
-          size="5xl"
-          className="h-5/6 bg-slate-800 text-slate-100"
-        >
-          <ModalContent>
-            {(onClose) => (
-              <>
-                <ModalHeader>
-                  <div className="container mx-auto px-4">
-                    <h1 className="text-3xl font-bold">Game Rules</h1>
-                  </div>
-                </ModalHeader>
-                <ModalBody className="overflow-y-scroll scrollbar">
-                  <Rules />
-                </ModalBody>
-                <ModalFooter>
-                  <Button
-                    color="primary"
-                    className="text-2xl"
-                    variant="light"
-                    onPress={onClose}
-                  >
-                    Close
-                  </Button>
-                </ModalFooter>
-              </>
-            )}
-          </ModalContent>
-        </Modal>
-      )}
     </>
   );
 };
