@@ -182,7 +182,7 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
       </div>
       <ul className="flex-1">
         {roomUsers.map((roomUser) => (
-          <li key={roomUser.user.id} className="flex items-center mb-4 gap-1">
+          <li key={roomUser.user.id} className="flex flex-wrap items-center mb-4 gap-1">
             <div className="flex items-center mr-1">
               {isSmallDevice ? (
                 <UserAvatar user={roomUser.user} size="sm" />

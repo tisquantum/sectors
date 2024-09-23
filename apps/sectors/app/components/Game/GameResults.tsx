@@ -213,7 +213,7 @@ const GameResults = ({
         isOpen={isOpen}
         onOpenChange={onOpenChange}
         size="full"
-        className="h-5/6"
+        className="h-5/6 dark bg-slate-900 text-foreground"
       >
         <ModalContent>
           {(onClose) => (

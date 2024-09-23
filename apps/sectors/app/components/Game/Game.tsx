@@ -242,7 +242,7 @@ const Game = ({ gameId }: { gameId: string }) => {
         onOpenChange={toggleDrawer}
         direction="right"
       >
-        <div className="relative flex flex-col lg:flex-row flex-grow w-full overflow-y scrollbar lg:overflow-hidden">
+        <div className="relative flex flex-col lg:flex-row flex-grow w-full overflow-y scrollbar lg:overflow-hidden bg-background">
           <GameSidebar />
           {/* <motion.div
         className="absolute inset-0 z-10 pointer-events-none"

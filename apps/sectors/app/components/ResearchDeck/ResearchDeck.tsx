@@ -12,7 +12,10 @@ import {
 import { Card } from "@server/prisma/prisma.client";
 import { useGame } from "../Game/GameContext";
 import { motion } from "framer-motion";
-import { baseToolTipStyle, tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
+import {
+  baseToolTipStyle,
+  tooltipStyle,
+} from "@sectors/app/helpers/tailwind.helpers";
 
 const ResearchDeck = () => {
   //TODO: Add descript state for companies
@@ -72,7 +75,12 @@ const ResearchDeck = () => {
         ))}
       </div>
 
-      <Modal size="4xl" isOpen={isOpen} onOpenChange={onOpenChange}>
+      <Modal
+        size="4xl"
+        isOpen={isOpen}
+        onOpenChange={onOpenChange}
+        className="dark bg-slate-900 text-foreground"
+      >
         <ModalContent>
           {(onClose) => (
             <>

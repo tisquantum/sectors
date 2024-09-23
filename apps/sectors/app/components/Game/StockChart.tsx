@@ -374,7 +374,7 @@ const StockChart = () => {
       </Tabs>
       {selectedCompany && chartData && (
         <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
-          <ModalContent>
+          <ModalContent className="dark text-foreground bg-slate-900">
             {(onClose) => (
               <>
                 <ModalHeader>

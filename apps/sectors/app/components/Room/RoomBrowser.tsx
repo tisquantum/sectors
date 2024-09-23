@@ -75,7 +75,7 @@ export default function RoomBrowser() {
   });
 
   return (
-    <div className="container mx-auto p-1">
+    <div className="container mx-auto p-1 bg-background">
       <div className="flex items-center justify-between content-center my-4">
         <h1 className="text-2xl font-bold">Rooms</h1>
         <Button color="primary" onClick={handleRefresh}>
