@@ -10,10 +10,76 @@ import DebounceButton from "../General/DebounceButton";
 import { useEffect, useState } from "react";
 import { useGame } from "../Game/GameContext";
 import { EVENT_NEW_INVOLVENCY_CONTRIBUTION } from "@server/pusher/pusher.types";
-import { InsolvencyContribution } from "@server/prisma/prisma.client";
-import { CompanyTierData } from "@server/data/constants";
+import {
+  BANKRUPTCY_SHARE_PERCENTAGE_RETAINED,
+  CompanyTierData,
+} from "@server/data/constants";
 import ShareComponent from "./Share";
-import { insolvencyAndBankruptcy } from "../Game/Rules";
+
+const insolvencyAndBankruptcy = (
+  <>
+    <h3 className="font-semibold">Insolvency and Bankruptcy</h3>
+    <h4 className="font-semibold">Insolvency Contributions</h4>
+    <p>
+      Should the company fall to 0 dollars due to company actions or operational
+      fees, the company will become INSOLVENT. The next time that company would
+      operate, instead of the typical ACTIVE operating round actions, the
+      company enters an INSOLVENCY action phase. All shareholders of the company
+      can then contribute <strong>cash</strong> or <strong>shares</strong> to
+      help the company avoid bankruptcy.
+    </p>
+    <ul className="list-disc pl-5">
+      <li>
+        All cash contributions are immediately given directly to the company
+        treasury. All share contributions are immediately sold, and the cash
+        profit is transferred to the company treasury.
+      </li>
+      <li>
+        Shares handed over are sold at market rates. The share price of the
+        company will move share price steps down equal to the net negative of
+        all shares sold <strong>after</strong> the contribution action phase is
+        completed. Therefore, every share sold during the insolvency phase will
+        be equivalent to the share price of the company entering that phase.
+      </li>
+    </ul>
+    <h4 className="font-semibold">Reactivating the Company</h4>
+    <p>
+      For the company to become <strong>active</strong> again, the total
+      liquidity generated from contributions must meet or exceed the
+      company&apos;s <strong>shortfall</strong> cash value for its tier.
+    </p>
+    <h4 className="font-semibold">Transparency of Contributions</h4>
+    <p>
+      All contributions made during insolvency are <strong>public</strong> and
+      take effect <strong>immediately</strong> as soon as they are made.
+    </p>
+    <h4 className="font-semibold">
+      If the Company Fails to Meet Its Shortfall
+    </h4>
+    <ul className="list-disc pl-5">
+      <li>
+        Following the opportunity for insolvency actions, the company will{" "}
+        <strong>permanently close</strong> if it cannot meet or exceed its
+        shortfall cash value.
+        <ul className="list-disc pl-5">
+          <li>
+            Players holding shares will receive{" "}
+            <strong>{BANKRUPTCY_SHARE_PERCENTAGE_RETAINED}%</strong> of the
+            market value for their shares.
+          </li>
+          <li>
+            The company will be <strong>delisted</strong> from the stock market.
+          </li>
+          <li>The company will no longer be able to perform actions.</li>
+          <li>
+            The company will be removed from any considerations made in the
+            stock sector.
+          </li>
+        </ul>
+      </li>
+    </ul>
+  </>
+);
 
 const InsolvencyGauge = ({
   insolvencyContributions,
