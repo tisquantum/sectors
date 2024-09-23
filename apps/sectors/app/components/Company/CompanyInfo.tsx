@@ -510,7 +510,7 @@ const CompanyInfo = ({
           </div>
         </div>
       </div>
-      <Modal isOpen={isOpen} onOpenChange={onOpenChange} className="h-full">
+      <Modal isOpen={isOpen} onOpenChange={onOpenChange} className="dark bg-slate-900 text-foreground h-full">
         <ModalContent>
           {(onClose) => (
             <>

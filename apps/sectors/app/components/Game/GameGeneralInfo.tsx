@@ -48,7 +48,7 @@ const BankInfo = () => {
       <div className="flex gap-1 items-center cursor-pointer" onClick={onOpen}>
         <RiBankFill size={18} /> ${gameState.bankPoolNumber}
       </div>
-      <Modal isOpen={isOpen} onOpenChange={onOpenChange} className="h-full">
+      <Modal isOpen={isOpen} onOpenChange={onOpenChange} className="dark bg-slate-900 text-foreground">
         <ModalContent>
           {(onClose) => (
             <>

@@ -33,7 +33,7 @@ const UserNameAlert = () => {
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogContent className="bg-slate-800 text-slate-100">
+      <AlertDialogContent className="dark bg-slate-900 text-foreground">
         <AlertDialogHeader>
           <AlertDialogTitle>
             Welcome Anon, Please Make a Name for Yourself
@@ -43,7 +43,7 @@ const UserNameAlert = () => {
             your profile.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter className="bg-slate-800 text-slate-100">
+        <AlertDialogFooter className="dark bg-slate-800 text-foreground0">
           <AlertDialogCancel>Dismiss</AlertDialogCancel>
           <AlertDialogAction onClick={handleContinue}>
             Go to Settings
