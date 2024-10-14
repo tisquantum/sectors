@@ -10,28 +10,31 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { Toaster } from "sonner";
 import UserNameAlert from "./components/General/UserNameAlert";
+import ThemeProvider from "./components/ThemeProvider.context";
 
 const ClientLayout = ({ children }: { children: React.ReactNode }) => {
   const [queryClient] = useState(() => new QueryClient());
 
   return (
     <NextUIProvider>
-      <main className="dark text-foreground bg-background">
-        <trpc.Provider client={trpcClient} queryClient={queryClient}>
-          <QueryClientProvider client={queryClient}>
-            <AuthUserProvider>
-              <PusherProvider>
-                <div className="flex flex-col h-screen text-foreground bg-background">
-                  <UserNameAlert />
-                  <TopBar />
-                  <Toaster />
-                  {children}
-                </div>
-              </PusherProvider>
-            </AuthUserProvider>
-          </QueryClientProvider>
-        </trpc.Provider>
-      </main>
+      <ThemeProvider> {/* Wrap the app with your ThemeProvider */}
+        <main className="dark text-foreground bg-background">
+          <trpc.Provider client={trpcClient} queryClient={queryClient}>
+            <QueryClientProvider client={queryClient}>
+              <AuthUserProvider>
+                <PusherProvider>
+                  <div className="flex flex-col h-screen text-foreground bg-background">
+                    <UserNameAlert />
+                    <TopBar />
+                    <Toaster />
+                    {children}
+                  </div>
+                </PusherProvider>
+              </AuthUserProvider>
+            </QueryClientProvider>
+          </trpc.Provider>
+        </main>
+      </ThemeProvider>
     </NextUIProvider>
   );
 };
