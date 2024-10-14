@@ -65,9 +65,9 @@ export default function Leaderboard() {
                 </TableRow>
               )) || (
                 <TableRow>
-                  <TableCell>nothing</TableCell>
-                  <TableCell>nothing</TableCell>
-                  <TableCell>nothing</TableCell>
+                  <TableCell>Loading...</TableCell>
+                  <TableCell>Loading...</TableCell>
+                  <TableCell>Loading...</TableCell>
                 </TableRow>
               )}
             </TableBody>
