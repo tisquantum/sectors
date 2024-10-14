@@ -60,7 +60,7 @@ const AuthMenu = memo(
         {loading ? (
           <Button>Loading...</Button>
         ) : user ? (
-          <Dropdown>
+          <Dropdown className="bg-primary">
             <DropdownTrigger>
               <Button>
                 <UserAvatar user={user} size="sm" /> {user.name}

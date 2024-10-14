@@ -13,7 +13,7 @@ Sectors ends in one of two ways:
 ### Win Condition
 {: #win-condition }
 
-At the end of the game, the player with the highest **net worth** is the winner.  The **net worth** of a player is determined by adding the cash on hand and the value of all shares multiplied by their respective company stock price.
+At the end of the game, the player with the highest **net worth** is the winner. The **net worth** of a player is determined by adding the cash on hand and the value of all their shares.  The value of a share is equivalent to the stock price of it's associated company.
 
 ### Game Flow
 {: #game-flow }
