@@ -8,6 +8,22 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [emailError, setEmailError] = useState("");
+
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setEmail(value);
+    if (value && !validateEmail(value)) {
+      setEmailError("Please enter a valid email address.");
+    } else {
+      setEmailError("");
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,6 +52,8 @@ export default function LoginPage() {
     setIsLoading(false);
   };
 
+  const isFormValid = email && password && !emailError;
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-500">
       <div className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
@@ -52,11 +70,13 @@ export default function LoginPage() {
               id="email"
               name="email"
               type="email"
-              required
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={handleEmailChange}
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:shadow-outline"
             />
+            {emailError && (
+              <p className="text-red-500 text-xs italic">{emailError}</p>
+            )}
           </div>
           <div className="mb-6">
             <label
@@ -69,7 +89,6 @@ export default function LoginPage() {
               id="password"
               name="password"
               type="password"
-              required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-800 mb-3 leading-tight focus:outline-none focus:shadow-outline"
@@ -79,7 +98,7 @@ export default function LoginPage() {
             <DebounceButton
               type="submit"
               className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-              disabled={isSubmitting}
+              isDisabled={isSubmitting || !isFormValid}
               isLoading={isLoading}
             >
               {isSubmitting ? "Logging in..." : "Log in"}
@@ -88,7 +107,7 @@ export default function LoginPage() {
               type="button"
               onClick={handleSignup}
               className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-              disabled={isSubmitting}
+              isDisabled={isSubmitting || !isFormValid}
               isLoading={isLoading}
             >
               {isSubmitting ? "Signing up..." : "Sign up"}
