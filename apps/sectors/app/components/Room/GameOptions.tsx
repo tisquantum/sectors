@@ -156,6 +156,9 @@ const GameOptions: React.FC<GameOptionsProps> = ({ onOptionsChange }) => {
             handleSelectChange("bankPoolNumber", Number(e.target.value))
           }
           defaultSelectedKeys={["3"]}
+          popoverProps={{
+            color: "primary",
+          }}
         >
           <SelectItem key={1} value={1}>
             7,500 (Quick Game)
@@ -190,6 +193,9 @@ const GameOptions: React.FC<GameOptionsProps> = ({ onOptionsChange }) => {
             handleSelectChange("startingCashOnHand", Number(e.target.value))
           }
           defaultSelectedKeys={["2"]}
+          popoverProps={{
+            color: "primary",
+          }}
         >
           <SelectItem key={1} value={1}>
             200 (Business Elite)
@@ -218,6 +224,9 @@ const GameOptions: React.FC<GameOptionsProps> = ({ onOptionsChange }) => {
             handleSelectChange("consumerPoolNumber", Number(e.target.value))
           }
           defaultSelectedKeys={["2"]}
+          popoverProps={{
+            color: "primary",
+          }}
         >
           <SelectItem key={1} value={1}>
             50 (Cut-throat)
@@ -273,6 +282,9 @@ const GameOptions: React.FC<GameOptionsProps> = ({ onOptionsChange }) => {
             handleSelectChange("distributionStrategy", Number(e.target.value))
           }
           defaultSelectedKeys={["3"]}
+          popoverProps={{
+            color: "primary",
+          }}
         >
           {/* <SelectItem key={1} value={1}>
             Fair Split
@@ -301,6 +313,9 @@ const GameOptions: React.FC<GameOptionsProps> = ({ onOptionsChange }) => {
             handleSelectChange("gameMaxTurns", Number(e.target.value))
           }
           defaultSelectedKeys={["3"]}
+          popoverProps={{
+            color: "primary",
+          }}
         >
           <SelectItem key={1} value={1}>
             8
@@ -336,6 +351,9 @@ const GameOptions: React.FC<GameOptionsProps> = ({ onOptionsChange }) => {
             handleSelectChange("playerOrdersConcealed", Number(e.target.value))
           }
           defaultSelectedKeys={["2"]}
+          popoverProps={{
+            color: "primary",
+          }}
         >
           <SelectItem key={1} value={1}>
             Yes
