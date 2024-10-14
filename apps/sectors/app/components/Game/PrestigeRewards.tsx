@@ -7,6 +7,10 @@ import { useMemo } from "react";
 import { useGame } from "./GameContext";
 import PrestigeIcon from "./PrestigeIcon";
 import { RiSparkling2Fill } from "@remixicon/react";
+import {
+  baseToolTipStyle,
+  tooltipStyle,
+} from "@sectors/app/helpers/tailwind.helpers";
 interface PrestigeRewardsProps {
   layout?: "minimalist" | "grid";
 }
@@ -48,6 +52,8 @@ const PrestigeRewards: React.FC<PrestigeRewardsProps> = ({
               <p>{reward.description}</p>
             </div>
           }
+          classNames={{ base: baseToolTipStyle }}
+          className={tooltipStyle}
         >
           <motion.div
             className={`${

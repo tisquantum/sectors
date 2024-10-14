@@ -8,6 +8,10 @@ import { useGame } from "./GameContext";
 import { sectorColors } from "@server/data/gameData";
 import { sectorPriority } from "@server/data/constants";
 import SectorComponent from "../Sector/Sector";
+import {
+  baseToolTipStyle,
+  tooltipStyle,
+} from "@sectors/app/helpers/tailwind.helpers";
 
 const SectorComponentAnimation = ({
   sector,
@@ -123,7 +127,11 @@ const EndTurnSectorConsumerDistributionAnimation = ({
         <div className="flex gap-2">
           {/* Consumer Pool Section */}
           <div className="flex relative">
-            <Tooltip content="The number of consumers available to purchase goods and services each turn.">
+            <Tooltip
+              content="The number of consumers available to purchase goods and services each turn."
+              classNames={{ base: baseToolTipStyle }}
+              className={tooltipStyle}
+            >
               <div className="flex gap-2 text-xl">
                 <span>Consumer Pool</span>
                 <span>{currentConsumerPool + gameState.economyScore}</span>
@@ -133,7 +141,11 @@ const EndTurnSectorConsumerDistributionAnimation = ({
 
           {/* Economy Score Section */}
           <div className="flex relative">
-            <Tooltip content="The economy score reflects the overall economic status.">
+            <Tooltip
+              classNames={{ base: baseToolTipStyle }}
+              className={tooltipStyle}
+              content="The economy score reflects the overall economic status."
+            >
               <div className="flex gap-2 text-xl">
                 <span>Economy Score</span>
                 <span>{economyScore}</span>
