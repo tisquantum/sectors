@@ -13,6 +13,10 @@ import { useMemo } from "react";
 import { hashStringToColor } from "@sectors/app/helpers";
 import PlayerOverview from "./PlayerOverview";
 import { useGame } from "../Game/GameContext";
+import {
+  baseToolTipStyle,
+  tooltipStyle,
+} from "@sectors/app/helpers/tailwind.helpers";
 
 const PlayerAvatar = ({
   player,
@@ -48,7 +52,11 @@ const PlayerAvatar = ({
   const playerWithShares = playersWithShares.find((p) => p.id === player.id);
   return (
     <div className="flex flex-col items-center">
-      <Tooltip content={player.nickname}>
+      <Tooltip
+        classNames={{ base: baseToolTipStyle }}
+        className={tooltipStyle}
+        content={player.nickname}
+      >
         <Popover placement="bottom">
           <PopoverTrigger>
             <div className="flex items-center cursor-pointer">

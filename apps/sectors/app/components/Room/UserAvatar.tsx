@@ -3,6 +3,10 @@ import { Player, User } from "@server/prisma/prisma.client";
 import { lorelei } from "@dicebear/collection";
 import { createAvatar } from "@dicebear/core";
 import React, { useMemo } from "react";
+import {
+  baseToolTipStyle,
+  tooltipStyle,
+} from "@sectors/app/helpers/tailwind.helpers";
 
 function hashStringToColor(str: string): string {
   // Simple hash function to generate a consistent hash from a string
@@ -58,7 +62,11 @@ const UserAvatar = ({
 
   return (
     <div className="flex flex-col items-center">
-      <Tooltip content={user.name}>
+      <Tooltip
+        classNames={{ base: baseToolTipStyle }}
+        className={tooltipStyle}
+        content={user.name}
+      >
         <div className="flex items-center">
           {badgeContent ? (
             <Badge
