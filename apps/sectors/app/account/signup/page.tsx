@@ -1,9 +1,9 @@
 "use client";
 import { useState } from "react";
-import { login } from "./actions";
+import { signup } from "../login/actions";
 import DebounceButton from "@sectors/app/components/General/DebounceButton";
 
-export default function LoginPage() {
+export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -25,7 +25,7 @@ export default function LoginPage() {
     }
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setIsSubmitting(true);
@@ -34,7 +34,7 @@ export default function LoginPage() {
     formData.append("email", email);
     formData.append("password", password);
 
-    await login(formData);
+    await signup(formData);
     setIsSubmitting(false);
     setIsLoading(false);
   };
@@ -44,8 +44,8 @@ export default function LoginPage() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-500">
       <div className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-        <h3 className="text-lg text-black font-bold mb-4">Login</h3>
-        <form onSubmit={handleLogin}>
+        <h3 className="text-lg text-black font-bold mb-4">Sign up</h3>
+        <form onSubmit={handleSignup}>
           <div className="mb-4">
             <label
               htmlFor="email"
@@ -88,22 +88,15 @@ export default function LoginPage() {
               isDisabled={isSubmitting || !isFormValid}
               isLoading={isLoading}
             >
-              {isSubmitting ? "Logging in..." : "Log in"}
+              {isSubmitting ? "Signing up..." : "Sign up"}
             </DebounceButton>
           </div>
           <div className="text-center mt-4">
             <a
               className="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800"
-              href="/account/forgot-password"
+              href="/account/login"
             >
-              Forgot Password?
-            </a>
-            <br />
-            <a
-              className="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800"
-              href="/account/signup"
-            >
-              Don't have an account? Sign up
+              Already have an account? Log in
             </a>
           </div>
         </form>
