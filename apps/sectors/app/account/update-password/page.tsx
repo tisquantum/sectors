@@ -26,7 +26,7 @@ const ResetPasswordPage = () => {
       } else {
         setMessage("Password updated successfully");
         // Optionally redirect to login page or show a success message
-        router.push("/login");
+        router.push("/account/login");
       }
     } catch (error) {
       setMessage("Unexpected error");

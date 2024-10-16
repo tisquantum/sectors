@@ -22,7 +22,7 @@ export default async function Home() {
           <p>
             To start or join a game, you must create an account or log in if you
             already have one. Click{" "}
-            <a href="/login" className="text-blue-500 underline">
+            <a href="/account/login" className="text-blue-500 underline">
               here
             </a>{" "}
             to do so.

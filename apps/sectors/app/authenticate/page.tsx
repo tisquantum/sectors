@@ -19,7 +19,7 @@ export default function Authenticate() {
           router.replace("/rooms");
         } else {
           // No user found, redirect to login
-          router.replace("/login");
+          router.replace("/account/login");
         }
 
         setLoading(false); // Stop loading

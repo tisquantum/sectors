@@ -72,9 +72,14 @@ const AuthMenu = memo(
             </DropdownMenu>
           </Dropdown>
         ) : (
-          <Link href="/account/login">
-            <DebounceButton>Log in</DebounceButton>
-          </Link>
+          <div className="flex gap-1">
+            <Link href="/account/login">
+              <DebounceButton>Log in</DebounceButton>
+            </Link>
+            <Link href="/account/signup">
+              <DebounceButton>Sign Up</DebounceButton>
+            </Link>
+          </div>
         )}
       </NavbarItem>
     );
