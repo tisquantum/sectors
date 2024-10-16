@@ -21,7 +21,7 @@ import DebounceButton from "@sectors/app/components/General/DebounceButton";
 import { createClient } from "@sectors/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import UserAvatar from "./Room/UserAvatar";
-import { RiFundsFill } from "@remixicon/react";
+import { RiDiscordFill, RiFundsFill } from "@remixicon/react";
 import { useState, useMemo, memo } from "react";
 import { User } from "@server/prisma/prisma.client";
 
@@ -37,6 +37,11 @@ const CommonNavLinks = memo(() => (
     <NavbarItem>
       <Link href="https://rules.sectors.gg" target="_blank">
         Rules
+      </Link>
+    </NavbarItem>
+    <NavbarItem className="flex items-center">
+      <Link href="https://discord.gg/Tdghbrx9">
+        <RiDiscordFill />
       </Link>
     </NavbarItem>
   </>
