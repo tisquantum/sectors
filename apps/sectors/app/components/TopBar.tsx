@@ -40,7 +40,7 @@ const CommonNavLinks = memo(() => (
       </Link>
     </NavbarItem>
     <NavbarItem className="flex items-center">
-      <Link href="https://discord.gg/Tdghbrx9" target="_blank">
+      <Link href={process.env.NEXT_PUBLIC_DISCORD_LINK} target="_blank">
         <RiDiscordFill />
       </Link>
     </NavbarItem>
