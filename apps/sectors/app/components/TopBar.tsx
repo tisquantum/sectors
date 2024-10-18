@@ -40,7 +40,7 @@ const CommonNavLinks = memo(() => (
       </Link>
     </NavbarItem>
     <NavbarItem className="flex items-center">
-      <Link href="https://discord.gg/Tdghbrx9">
+      <Link href={process.env.NEXT_PUBLIC_DISCORD_LINK} target="_blank">
         <RiDiscordFill />
       </Link>
     </NavbarItem>
@@ -81,7 +81,7 @@ const AuthMenu = memo(
             <Link href="/account/login">
               <DebounceButton>Log in</DebounceButton>
             </Link>
-            <Link href="/account/signup">
+            <Link href="/account/sign-up">
               <DebounceButton>Sign Up</DebounceButton>
             </Link>
           </div>

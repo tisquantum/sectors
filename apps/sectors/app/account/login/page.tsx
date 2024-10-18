@@ -101,7 +101,7 @@ export default function LoginPage() {
             <br />
             <a
               className="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800"
-              href="/account/signup"
+              href="/account/sign-up"
             >
               Don&apos;t have an account? Sign up
             </a>
