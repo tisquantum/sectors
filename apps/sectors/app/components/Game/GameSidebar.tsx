@@ -1,4 +1,5 @@
 import { trpc } from "@sectors/app/trpc";
+import { motion } from "framer-motion";
 import TabView from "./TabView";
 import { useGame } from "./GameContext";
 import PlayerAvatar from "../Player/PlayerAvatar";
@@ -97,9 +98,18 @@ const GameSidebar = () => {
             </div>
             {playerPriorities?.length === playerReadiness?.length &&
             playerReadiness?.every((pr) => pr.isReady) ? (
-              <div className="bg-green-600 p-2 rounded-md w-full">
-                All Players Ready
-              </div>
+              <motion.div
+                className="bg-green-600 p-2 rounded-md w-full text-center text-white"
+                initial={{ opacity: 0.8, scale: 0.95 }}
+                animate={{ opacity: [0.8, 1], scale: [0.95, 1] }}
+                transition={{
+                  duration: 0.8,
+                  repeat: Infinity,
+                  repeatType: "reverse",
+                }}
+              >
+                All Players Ready - Loading ...
+              </motion.div>
             ) : (
               authPlayer &&
               playerReadiness && (
@@ -143,9 +153,18 @@ const GameSidebar = () => {
 
             {gameState.Player.length === playerReadiness?.length &&
             playerReadiness?.every((pr) => pr.isReady) ? (
-              <div className="bg-green-600 p-2 rounded-md w-full">
-                All Players Ready
-              </div>
+              <motion.div
+                className="bg-green-600 p-2 rounded-md w-full text-center text-white"
+                initial={{ opacity: 0.8, scale: 0.95 }}
+                animate={{ opacity: [0.8, 1], scale: [0.95, 1] }}
+                transition={{
+                  duration: 0.8,
+                  repeat: Infinity,
+                  repeatType: "reverse",
+                }}
+              >
+                All Players Ready - Loading ...
+              </motion.div>
             ) : (
               authPlayer &&
               playerReadiness && (
