@@ -194,12 +194,14 @@ If the company elects to retain revenue, it automatically moves down 1 step in s
 {: #end-turn-upkeep }
 
 ### Capital Gains
+{: #capital-gains }
 
 Capital gains are taxes players pay based on realized income on the given turn.  That means any income collected from selling shares, collecting dividends, shorting stocks, execising options, or collecting cash rewards from tranches.
 
 Capital gains will be taxed based on the tier the player falls under with their earnings.
 
 ### Divestment
+{: #divestment }
 
 Every player is beholden to the certificate limit for the game.  If a player exceeds this certificate limit when this phase occurs, they will be forced to liquidate shares until they reach this limit.  
 
@@ -244,7 +246,7 @@ All contributions made during insolvency are **public** and take effect **immedi
 {: #if-the-company-fails-to-meet-its-shortfall }
 
 - Following the opportunity for insolvency actions, the company will **permanently close** if it cannot meet or exceed its shortfall cash value.
-  - Players holding shares will receive **[BANKRUPTCY_SHARE_PERCENTAGE_RETAINED]%** of the market value for their shares.
+  - Players holding shares will receive **10%** of the market value for their shares.
   - The company will be **delisted** from the stock market.
   - The company will no longer be able to perform actions.
   - The company will be removed from any considerations made in the stock sector.
