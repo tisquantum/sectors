@@ -15,7 +15,6 @@ sidebar:
     url: "#stock-rounds"
   - name: "Operating Rounds"
     url: "#operating-rounds"
-  - name: "Stock Market"
   - name: "Investor Tranches"
     url: "#investor-tranches"
   - name: "Insolvency and Bankruptcy"
