@@ -137,7 +137,7 @@ Each sector requires companies to sell some percentage of shares from its IPO be
 ### Throughput
 {: #throughput }
 
-Measures company efficiency.
+Measures company efficiency.  Throughput rewards or penalties are given during the Operating Round Production phase.
 
 - Calculated by subtracting the company demand score from its supply score.
 - The closer to 0, the more efficient the company is operating.
