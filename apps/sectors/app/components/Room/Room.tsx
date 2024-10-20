@@ -33,37 +33,25 @@ const RoomComponent = ({ room }: { room: RoomWithUsersAndGames }) => {
   const [error, setError] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [gameId, setGameId] = useState<string | null>(null);
-  const { id } = room;
-  if (!user) return null;
-
-  const handleJoin = (roomId: number) => {
-    joinRoomMutation.mutate({
-      roomId,
-      userId: user.id,
+  const { data: messages, isLoading: isLoadingMessages } =
+    trpc.roomMessage.listRoomMessages.useQuery({
+      where: { roomId: room?.id },
     });
-  };
+  const createRoomMessageMutation =
+    trpc.roomMessage.createRoomMessage.useMutation();
   const {
     data: roomUsers,
     isLoading: isLoadingRoomUsers,
     status: roomUsersStatus,
     refetch: refetchRoomUsers,
   } = trpc.roomUser.listRoomUsers.useQuery({
-    where: { roomId: id },
+    where: { roomId: room?.id },
   });
-
-  const { data: messages, isLoading: isLoadingMessages } =
-    trpc.roomMessage.listRoomMessages.useQuery({
-      where: { roomId: id },
-    });
-
-  const createRoomMessageMutation =
-    trpc.roomMessage.createRoomMessage.useMutation();
-
   useEffect(() => {
     if (roomUsersStatus === "success") {
       //check roomUsers for user
       const userInRoom = roomUsers?.find(
-        (roomUser) => roomUser.user.id === user.id
+        (roomUser) => roomUser.user.id === user?.id
       );
       if (!userInRoom) {
         handleJoin(room.id);
@@ -74,7 +62,7 @@ const RoomComponent = ({ room }: { room: RoomWithUsersAndGames }) => {
   useEffect(() => {
     if (!pusher) return;
 
-    const channel = pusher.subscribe(getRoomChannelId(id));
+    const channel = pusher.subscribe(getRoomChannelId(room?.id));
 
     channel.bind(EVENT_ROOM_JOINED, (data: RoomUserWithUser) => {
       refetchRoomUsers();
@@ -110,7 +98,16 @@ const RoomComponent = ({ room }: { room: RoomWithUsersAndGames }) => {
       channel.unbind(EVENT_ROOM_KICK);
       channel.unsubscribe();
     };
-  }, [pusher, id, isLoadingRoomUsers, isLoadingMessages]);
+  }, [pusher, room?.id, isLoadingRoomUsers, isLoadingMessages]);
+
+  if (!user) return null;
+
+  const handleJoin = (roomId: number) => {
+    joinRoomMutation.mutate({
+      roomId,
+      userId: user.id,
+    });
+  };
 
   if (isLoadingRoomUsers || isLoadingMessages) {
     return <div>Loading Inner Component...</div>;
@@ -126,7 +123,7 @@ const RoomComponent = ({ room }: { room: RoomWithUsersAndGames }) => {
 
   const handleSendMessage = (content: string) => {
     createRoomMessageMutation.mutate({
-      roomId: id,
+      roomId: room?.id,
       userId: user.id,
       content,
       timestamp: new Date().toISOString(),
