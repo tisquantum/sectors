@@ -19,7 +19,7 @@ const GameTopBar = ({
   isTimerAtZero?: boolean;
 }) => {
   const [currentView, setCurrentView] = useState<string>("action");
-  const { currentPhase } = useGame();
+  const { currentPhase, gameState } = useGame();
 
   const handleViewChange = (view: string) => {
     setCurrentView(view);
@@ -85,15 +85,17 @@ const GameTopBar = ({
           <PassiveLoading />
         </div>
       )}
-      {currentPhase && currentPhase.phaseStartTime && (
-        <Timer
-          countdownTime={currentPhase.phaseTime / 1000} //convert from seconds to milliseconds
-          startDate={new Date(currentPhase.phaseStartTime)} // attempt to cast to Date
-          size={16}
-          textSize={1}
-          onEnd={() => {}}
-        />
-      )}
+      {currentPhase &&
+        currentPhase.phaseStartTime &&
+        !gameState.isTimerless && (
+          <Timer
+            countdownTime={currentPhase.phaseTime / 1000} //convert from seconds to milliseconds
+            startDate={new Date(currentPhase.phaseStartTime)} // attempt to cast to Date
+            size={16}
+            textSize={1}
+            onEnd={() => {}}
+          />
+        )}
       <GameGeneralInfo />
       <Button onClick={handleTogglePhaseList}>
         {friendlyPhaseName(currentPhase?.name)}

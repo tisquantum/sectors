@@ -1,5 +1,6 @@
 export const EVENT_ROOM_JOINED = 'room-joined';
 export const EVENT_ROOM_LEFT = 'room-left';
+export const EVENT_ROOM_KICK = 'room-kick';
 export const EVENT_ROOM_MESSAGE = 'room-message';
 export const EVENT_ROOM_CREATED = 'room-created';
 export const EVENT_PLAYER_JOINED = 'player-joined';

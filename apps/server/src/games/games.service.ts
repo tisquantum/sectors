@@ -123,4 +123,13 @@ export class GamesService {
       },
     });
   }
+
+  async isTimerless(gameId: string): Promise<boolean> {
+    const game = await this.prisma.game.findUnique({
+      where: {
+        id: gameId,
+      },
+    });
+    return game?.isTimerless || false;
+  }
 }

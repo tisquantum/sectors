@@ -60,6 +60,7 @@ const GameSidebar = () => {
   if (isLoadingPlayerReadinessData) {
     return <div>Loading...</div>;
   }
+  console.log("playerReadiness", playerReadiness);
   return (
     <div className="w-auto max-w-full lg:max-w-md bg-background text-white relative flex flex-col md:h-[calc(100vh-64px)]">
       <div className="text-white p-4">
@@ -139,6 +140,42 @@ const GameSidebar = () => {
                 <UserAvatar user={roomUser.user} />
               </div>
             ))}
+
+            {gameState.Player.length === playerReadiness?.length &&
+            playerReadiness?.every((pr) => pr.isReady) ? (
+              <div className="bg-green-600 p-2 rounded-md w-full">
+                All Players Ready
+              </div>
+            ) : (
+              authPlayer &&
+              playerReadiness && (
+                <DebounceButton
+                  color="primary"
+                  className={`${
+                    playerReadiness.find((pr) => pr.playerId === authPlayer.id)
+                      ?.isReady
+                      ? "bg-slate-600"
+                      : "bg-green-600"
+                  } p-2 w-full`}
+                  onClick={() => {
+                    setIsLoadingPlayerReadiness(true);
+                    useSetPlayerReadinessMutation.mutate({
+                      gameId: gameState.id,
+                      playerId: authPlayer.id,
+                      isReady: !playerReadiness.find(
+                        (pr) => pr.playerId === authPlayer.id
+                      )?.isReady,
+                    });
+                  }}
+                  isLoading={isLoadingPlayerReadiness}
+                >
+                  {playerReadiness.find((pr) => pr.playerId === authPlayer.id)
+                    ?.isReady
+                    ? "Not Ready Yet"
+                    : "Ready Up"}
+                </DebounceButton>
+              )
+            )}
           </div>
         )}
       </div>

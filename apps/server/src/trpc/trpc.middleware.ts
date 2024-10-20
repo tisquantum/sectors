@@ -4,6 +4,7 @@ import { TRPCError } from '@trpc/server';
 import { Context } from './trpc.context';
 import { phaseTimes } from '@server/data/constants';
 import { PlayersService } from '@server/players/players.service';
+import { GamesService } from '@server/games/games.service';
 
 // Middleware to check phase restrictions
 // export const checkPhase = async ({
@@ -87,7 +88,7 @@ export const checkIsPlayerActionBasedOnAuth = async (
   playerService: PlayersService,
 ) => {
   const { ctx, input, next } = opts;
-  //TODO: This isn't going to work as it's just grabbing a player based on the user id, 
+  //TODO: This isn't going to work as it's just grabbing a player based on the user id,
   //we need something more specific, probably data including in the JWT
   const player = await playerService.player({ userId: ctx.user.id });
   if (!player) {
@@ -114,6 +115,7 @@ export const checkIsPlayerActionBasedOnAuth = async (
 export const checkSubmissionTime = async (
   opts: any,
   phaseService: PhaseService,
+  gameService: GamesService,
 ) => {
   const { ctx, input, next } = opts;
   const submissionStamp = Date.now();
@@ -124,6 +126,14 @@ export const checkSubmissionTime = async (
       message: 'Game ID is required',
     });
   }
+  //because this looks at "current phase", do we need something to look at _the_ phase
+  // the action is being performed in?  is current phase reliable for this check?
+  const isTimerless = await gameService.isTimerless(ctx.gameId);
+  if (isTimerless) {
+    return next();
+  }
+  //isn't there a chance for this to be true if the phase we're actually trying to 
+  //look at is over? what if the next phase starts and the player is acting on action not relative to that phase?  it's valid in the middleware
   //get current phase
   const phase = await phaseService.currentPhase(ctx.gameId || input.gameId);
   if (!phase) {
@@ -133,7 +143,7 @@ export const checkSubmissionTime = async (
       message: 'Phase not found',
     });
   }
-  if(!phase.phaseStartTime) {
+  if (!phase.phaseStartTime) {
     console.error('Phase start time not found');
     throw new TRPCError({
       code: 'INTERNAL_SERVER_ERROR',

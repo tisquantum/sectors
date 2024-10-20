@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { RoomService } from '@server/rooms/rooms.service';
 import { TrpcService } from '../trpc.service';
 import { Prisma } from '@prisma/client';
+import { ROOM_NAME_CHAR_LIMIT } from '@server/data/constants';
 
 type Context = {
   roomService: RoomService;
@@ -53,6 +54,10 @@ export default (trpc: TrpcService, ctx: Context) =>
         const data: Prisma.RoomCreateInput = {
           name,
         };
+        //ensure char limit does not exceed 30 characters
+        if (name.length > ROOM_NAME_CHAR_LIMIT) {
+          throw new Error('Room name must be less than 30 characters');
+        }
         if (gameId) {
           data.game = {
             connect: { id: gameId },

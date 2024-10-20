@@ -21,6 +21,7 @@ type Context = {
   phaseService: PhaseService;
   pusherService: PusherService;
   gameManagementService: GameManagementService;
+  gamesService: GamesService;
 };
 
 export default (trpc: TrpcService, ctx: Context) =>
@@ -72,7 +73,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         }),
       )
       .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
-      .use(async (opts) => checkSubmissionTime(opts, ctx.phaseService))
+      .use(async (opts) => checkSubmissionTime(opts, ctx.phaseService, ctx.gamesService))
       .mutation(async ({ input, ctx: ctxMiddleware }) => {
         if (!ctxMiddleware.gameId) {
           //throw

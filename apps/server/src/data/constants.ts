@@ -12,13 +12,16 @@ import {
   StockTier,
 } from '@prisma/client';
 import { companyPriorityOrderOperations } from './helpers';
-export const GAME_SETUP_DEFAULT_BANK_POOL_NUMBER = 12000;
+export const GAME_SETUP_DEFAULT_BANK_POOL_NUMBER = 7500;
 export const GAME_SETUP_DEFAULT_CONSUMER_POOL_NUMBER = 75;
 export const GAME_SETUP_DEFAULT_STARTING_CASH_ON_HAND = 300;
 export const GAME_SETUP_DEFAULT_DISTRIBUTION_STRATEGY =
   DistributionStrategy.PRIORITY;
-export const GAME_SETUP_DEFAULT_GAME_MAX_TURNS = 15;
+export const GAME_SETUP_DEFAULT_GAME_MAX_TURNS = 8;
 export const GAME_SETUP_DEFAULT_PLAYER_ORDERS_CONCEALED = false;
+export const GAME_SETUP_TIMERLESS = false;
+
+export const ROOM_NAME_CHAR_LIMIT = 30;
 
 export const USER_NAME_MAX_LENGTH = 20;
 
@@ -86,18 +89,18 @@ export const B2B_COMPANY_BONUS = 2;
 export const LICENSING_AGREEMENT_UNIT_PRICE_BONUS = 20;
 export const ROOM_MESSAGE_MAX_LENGTH = 150;
 export const DEFAULT_SECTOR_AMOUNT = 3;
-export const PRIZE_CASH_SUM = 300;
+export const PRIZE_CASH_SUM = 100;
 export const INACTIVE_COMPANY_PER_TURN_DISCOUNT = 5;
 /**
  * Phase times in milliseconds
  */
 export const phaseTimes = {
-  [PhaseName.INFLUENCE_BID_ACTION]: 40 * 1000,
+  [PhaseName.INFLUENCE_BID_ACTION]: 55 * 1000,
   [PhaseName.INFLUENCE_BID_REVEAL]: 10 * 1000,
   [PhaseName.INFLUENCE_BID_RESOLVE]: 15 * 1000,
   [PhaseName.STOCK_RESOLVE_LIMIT_ORDER]: 15 * 1000,
   [PhaseName.STOCK_MEET]: 30 * 1000,
-  [PhaseName.STOCK_ACTION_ORDER]: 45 * 1000,
+  [PhaseName.STOCK_ACTION_ORDER]: 55 * 1000,
   [PhaseName.STOCK_ACTION_RESULT]: 10 * 1000,
   [PhaseName.STOCK_ACTION_REVEAL]: 12 * 1000,
   [PhaseName.STOCK_RESOLVE_MARKET_ORDER]: 12 * 1000,
@@ -110,11 +113,11 @@ export const phaseTimes = {
   [PhaseName.STOCK_OPEN_LIMIT_ORDERS]: 10 * 1000,
   [PhaseName.STOCK_RESULTS_OVERVIEW]: 15 * 1000,
   [PhaseName.OPERATING_PRODUCTION]: 15 * 1000,
-  [PhaseName.OPERATING_PRODUCTION_VOTE]: 45 * 1000,
+  [PhaseName.OPERATING_PRODUCTION_VOTE]: 50 * 1000,
   [PhaseName.OPERATING_PRODUCTION_VOTE_RESOLVE]: 10 * 1000,
   [PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT]: 15 * 1000,
   [PhaseName.OPERATING_MEET]: 30 * 1000,
-  [PhaseName.OPERATING_ACTION_COMPANY_VOTE]: 30 * 1000,
+  [PhaseName.OPERATING_ACTION_COMPANY_VOTE]: 40 * 1000,
   [PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT]: 10 * 1000,
   [PhaseName.OPERATING_COMPANY_VOTE_RESOLVE]: 10 * 1000,
   [PhaseName.CAPITAL_GAINS]: 12 * 1000,
@@ -122,7 +125,7 @@ export const phaseTimes = {
   [PhaseName.SECTOR_NEW_COMPANY]: 10 * 1000,
   [PhaseName.START_TURN]: 30 * 1000,
   [PhaseName.END_TURN]: 20 * 1000,
-  [PhaseName.PRIZE_VOTE_ACTION]: 50 * 1000,
+  [PhaseName.PRIZE_VOTE_ACTION]: 55 * 1000,
   [PhaseName.PRIZE_VOTE_RESOLVE]: 12 * 1000,
   [PhaseName.PRIZE_DISTRIBUTE_ACTION]: 50 * 1000,
   [PhaseName.PRIZE_DISTRIBUTE_RESOLVE]: 12 * 1000,

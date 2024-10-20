@@ -5011,6 +5011,7 @@ export class GameManagementService {
       useOptionOrders,
       useLimitOrders,
       useShortOrders,
+      isTimerless,
     } = input;
 
     const gameData: Prisma.GameCreateInput = {
@@ -5031,6 +5032,7 @@ export class GameManagementService {
       useOptionOrders,
       useLimitOrders,
       useShortOrders,
+      isTimerless,
     };
 
     const jsonData = gameDataJson;
@@ -5278,13 +5280,15 @@ export class GameManagementService {
           data: { capitalInjectionRewards: capitalInjections },
         });
       }
-      // Start the timer for advancing to the next phase
-      //TODO: Once the game is fully implemented, we can start the timer service again.  Something is wrong with it right now.
-      await this.startPhaseTimer({
-        phase: newPhase,
-        gameId: game.id,
-        influenceRoundId: influenceRound.id,
-      });
+      if (!game.isTimerless) {
+        // Start the timer for advancing to the next phase
+        //TODO: Once the game is fully implemented, we can start the timer service again.  Something is wrong with it right now.
+        await this.startPhaseTimer({
+          phase: newPhase,
+          gameId: game.id,
+          influenceRoundId: influenceRound.id,
+        });
+      }
       return game;
     } catch (error) {
       console.error('Error starting game:', error);
@@ -5813,14 +5817,15 @@ export class GameManagementService {
         '',
     });
     console.log('determineIfNewRoundAndStartPhase TTE', Date.now() - startTime);
-
-    await this.startPhaseTimer({
-      phase: nextPhase,
-      gameId,
-      stockRoundId: nextPhase.stockRoundId || undefined,
-      operatingRoundId: nextPhase.operatingRoundId || undefined,
-      influenceRoundId: nextPhase.influenceRoundId || undefined,
-    });
+    if (!gameState.isTimerless) {
+      await this.startPhaseTimer({
+        phase: nextPhase,
+        gameId,
+        stockRoundId: nextPhase.stockRoundId || undefined,
+        operatingRoundId: nextPhase.operatingRoundId || undefined,
+        influenceRoundId: nextPhase.influenceRoundId || undefined,
+      });
+    }
   }
 
   /**
@@ -8931,16 +8936,21 @@ export class GameManagementService {
           this.readinessStore[gameId].length === players.length &&
           this.readinessStore[gameId].every((p) => p.isReady)
         ) {
-          //end current phase timer
-          this.endPhaseTimer(gameId);
           //get game
           const game = await this.gamesService.game({ id: gameId });
+
           if (!game) {
             throw new Error('Game not found');
           }
           if (!game.currentPhaseId) {
             throw new Error('Current phase not found');
           }
+
+          if (!game.isTimerless) {
+            //end current phase timer
+            this.endPhaseTimer(gameId);
+          }
+
           //get the phase
           const phase = await this.phaseService.phase({
             id: game.currentPhaseId,
