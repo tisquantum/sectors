@@ -316,11 +316,11 @@ Some actions have a fixed price, while others have tiered costs. During an Opera
 #### General Actions
 {: #general-actions }
 
-These actions are available to every company every operating round action phase.
+These actions are available to every company every operating round action phase.  Note any company that follows a pattern of PRICE A | PRICE B | PRICE C is a "first come, first serve" action.  The first company to take that action will pay the leftmost price, the second company will pay the middle price and any companies after will pay the rightmost price. 
 
 - **Large Marketing Campaign**
   - The sector receives an additional 3 consumers. Your company receives +4 demand that decays by 1 per production phase.
-  - Cash Cost: $220
+  - Cash Cost: $300 | $450 | $600
 
 - **Small Marketing Campaign**
   - The company receives +3 demand that decays by 1 per production phase.
@@ -344,7 +344,7 @@ These actions are available to every company every operating round action phase.
 
 - **Share Issue**
   - Issue 2 shares to the open market.
-  - Cash Cost: $50
+  - Cash Cost: $[Share Price]
 
 - **Increase Unit Price**
   - Increase the unit price of the company's product by 10. This will increase the company's revenue. Be careful, as consumers choose the company with the cheapest product in the sector first!
@@ -356,7 +356,7 @@ These actions are available to every company every operating round action phase.
 
 - **Spend Prestige**
   - Purchase the current prestige track item at its cost to receive the reward on the prestige track and move it forward by 1. If the company does not have enough prestige, move the prestige track forward by 1.
-  - Cash Cost: $0
+  - Prestige Cost: Variable (See Prestige Track)
 
 - **Loan**
   - Take out a loan of $250 to increase cash on hand. Be careful, loans must be paid back with interest at 0.1% per turn. This action can only be taken once per game.
@@ -364,11 +364,11 @@ These actions are available to every company every operating round action phase.
 
 - **Lobby**
   - Lobby the government to force demand in your favor. Boost the sector's demand by 3. This demand will decay by 1 per stock price adjustment phase.
-  - Cash Cost: $120
+  - Cash Cost: $150 | $300 | $500
 
 - **Outsource**
   - The company outsources production. Increase supply by 3, which decays by 1 once per turn. Lose all prestige tokens. A company may only ever have up to twice the maximum supply its company tier allows.
-  - Cash Cost: $200
+  - Cash Cost: $200 | $300 | $400
 
 - **Veto**
   - The company does nothing this turn. Pick this to ensure the company will not act on any other proposal. Additionally, the next turn, this company's operating costs are 50% less.
