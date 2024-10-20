@@ -673,6 +673,7 @@ model Game {
   useOptionOrders         Boolean                  @default(true)
   certificateLimit        Int                      @default(12)
   economyScore            Int                      @default(10)
+  isTimerless             Boolean                  @default(false)
   nextPrestigeReward      Int?
   gameMaxTurns            Int?
   capitalInjectionRewards Int[] //track Capital Injection rewards, should we instate prestige rewards on game creation instead and put this there?

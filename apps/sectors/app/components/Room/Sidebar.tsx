@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { DistributionStrategy, Room, User } from "@server/prisma/prisma.client";
-import { Avatar } from "@nextui-org/react";
+import { Avatar, Tooltip } from "@nextui-org/react";
 import { trpc } from "@sectors/app/trpc";
 import { useAuthUser } from "@sectors/app/components/AuthUser.context";
 import GameOptions from "./GameOptions";
@@ -23,6 +23,12 @@ import {
   GAME_SETUP_DEFAULT_PLAYER_ORDERS_CONCEALED,
   GAME_SETUP_DEFAULT_STARTING_CASH_ON_HAND,
 } from "@server/data/constants";
+import { RiUserUnfollowFill } from "@remixicon/react";
+import {
+  baseToolTipStyle,
+  tooltipParagraphStyle,
+  tooltipStyle,
+} from "@sectors/app/helpers/tailwind.helpers";
 interface SidebarProps {
   roomUsers: RoomUserWithUser[];
   room: RoomWithUsersAndGames;
@@ -38,6 +44,7 @@ interface GameOptionsState {
   useOptionOrders: boolean;
   useShortOrders: boolean;
   useLimitOrders: boolean;
+  isTimerless: boolean;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
@@ -45,6 +52,7 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
   const router = useRouter();
   const [startGameIsSubmitted, setStartGameIsSubmitted] = useState(false);
   const [isLoadingStartGame, setIsLoadingStartGame] = useState(false);
+  const [loadingState, setLoadingState] = useState<Record<number, boolean>>({});
   const [gameOptions, setGameOptions] = useState<GameOptionsState>({
     bankPoolNumber: GAME_SETUP_DEFAULT_BANK_POOL_NUMBER,
     consumerPoolNumber: GAME_SETUP_DEFAULT_CONSUMER_POOL_NUMBER,
@@ -55,9 +63,11 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
     useOptionOrders: false,
     useShortOrders: false,
     useLimitOrders: false,
+    isTimerless: false,
   });
   const joinRoomMutation = trpc.roomUser.joinRoom.useMutation();
   const leaveRoomMutation = trpc.roomUser.leaveRoom.useMutation();
+  const kickUserRoomMutation = trpc.roomUser.kickUser.useMutation();
   const startGameMutation = trpc.game.startGame.useMutation({
     onSettled: () => {
       setIsLoadingStartGame(false);
@@ -101,7 +111,8 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
     playerOrdersConcealed: boolean,
     useOptionOrders: boolean,
     useShortOrders: boolean,
-    useLimitOrders: boolean
+    useLimitOrders: boolean,
+    isTimerless: boolean
   ) => {
     //response happens through pusher to all clients.
     startGameMutation.mutate({
@@ -116,11 +127,27 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
       useOptionOrders,
       useShortOrders,
       useLimitOrders,
+      isTimerless,
     });
   };
 
   const handleGameOptionsChange = (options: GameOptionsState) => {
     setGameOptions(options);
+  };
+
+  const handleKickUser = (roomUser: RoomUserWithUser) => {
+    setLoadingState((prev) => ({ ...prev, [roomUser.user.id]: true }));
+    kickUserRoomMutation.mutate(
+      {
+        userId: roomUser.user.id,
+        roomId: room.id,
+      },
+      {
+        onSettled: () => {
+          setLoadingState((prev) => ({ ...prev, [roomUser.user.id]: false }));
+        },
+      }
+    );
   };
 
   return (
@@ -158,7 +185,8 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
                       gameOptions.playerOrdersConcealed,
                       gameOptions.useOptionOrders,
                       gameOptions.useShortOrders,
-                      gameOptions.useLimitOrders
+                      gameOptions.useLimitOrders,
+                      gameOptions.isTimerless
                     );
                   }}
                   radius="none"
@@ -182,7 +210,10 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
       </div>
       <ul className="flex-1">
         {roomUsers.map((roomUser) => (
-          <li key={roomUser.user.id} className="flex flex-wrap items-center mb-4 gap-1">
+          <li
+            key={roomUser.user.id}
+            className="flex flex-wrap items-center mb-4 gap-1"
+          >
             <div className="flex items-center mr-1">
               {isSmallDevice ? (
                 <UserAvatar user={roomUser.user} size="sm" />
@@ -194,6 +225,25 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
               {roomUser.user.name}
             </span>
             {roomUser.roomHost && <BeakerIcon className="size-5" />}
+            {room.game.length == 0 &&
+              roomHostAuthUser?.roomHost &&
+              !roomUser.roomHost && (
+                <Tooltip
+                  classNames={{ base: baseToolTipStyle }}
+                  className={tooltipStyle}
+                  content={<p className={tooltipParagraphStyle}>Kick User</p>}
+                >
+                  <div>
+                    <DebounceButton
+                      color="danger"
+                      onClick={() => handleKickUser(roomUser)}
+                      className="ml-2"
+                    >
+                      <RiUserUnfollowFill className="size-5" />
+                    </DebounceButton>
+                  </div>
+                </Tooltip>
+              )}
           </li>
         ))}
       </ul>

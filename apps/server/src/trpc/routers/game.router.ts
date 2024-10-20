@@ -101,6 +101,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           useOptionOrders: z.boolean(),
           useShortOrders: z.boolean(),
           useLimitOrders: z.boolean(),
+          isTimerless: z.boolean().optional(),
           players: z.any().optional(),
           companies: z.any().optional(),
           Player: z.any().optional(),
@@ -126,6 +127,7 @@ export default (trpc: TrpcService, ctx: Context) =>
             useOptionOrders: input.useOptionOrders,
             useShortOrders: input.useShortOrders,
             useLimitOrders: input.useLimitOrders,
+            isTimerless: input.isTimerless || false,
           });
         } catch (error) {
           return {
@@ -277,7 +279,9 @@ export default (trpc: TrpcService, ctx: Context) =>
     coverShort: trpc.procedure
       .input(z.object({ shortId: z.number(), gameId: z.string() }))
       .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
-      .use(async (opts) => checkSubmissionTime(opts, ctx.phaseService))
+      .use(async (opts) =>
+        checkSubmissionTime(opts, ctx.phaseService, ctx.gamesService),
+      )
       .mutation(async ({ input }) => {
         try {
           console.log('input short id', input);
@@ -299,7 +303,9 @@ export default (trpc: TrpcService, ctx: Context) =>
     prizeDistribution: trpc.procedure
       .input(prizeDistributionInputSchema)
       .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
-      .use(async (opts) => checkSubmissionTime(opts, ctx.phaseService))
+      .use(async (opts) =>
+        checkSubmissionTime(opts, ctx.phaseService, ctx.gamesService),
+      )
       .mutation(async ({ input, ctx: ctxMiddleware }) => {
         const { distributionData } = input;
         if (!distributionData) {

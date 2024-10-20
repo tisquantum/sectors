@@ -12,4 +12,5 @@ export interface StartGameInput {
   useLimitOrders: boolean;
   useShortOrders: boolean;
   useOptionOrders: boolean;
+  isTimerless: boolean;
 }

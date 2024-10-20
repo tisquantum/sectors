@@ -5,11 +5,13 @@ import { PhaseService } from '@server/phase/phase.service';
 import { PhaseName } from '@prisma/client';
 import { checkIsPlayerAction, checkSubmissionTime } from '../trpc.middleware';
 import { PlayersService } from '@server/players/players.service';
+import { GamesService } from '@server/games/games.service';
 
 type Context = {
   influenceRoundVotesService: InfluenceRoundVotesService;
   phaseService: PhaseService;
   playerService: PlayersService;
+  gamesService: GamesService;
 };
 
 export default (trpc: TrpcService, ctx: Context) =>
@@ -69,7 +71,9 @@ export default (trpc: TrpcService, ctx: Context) =>
         }),
       )
       .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
-      .use(async (opts) => checkSubmissionTime(opts, ctx.phaseService))
+      .use(async (opts) =>
+        checkSubmissionTime(opts, ctx.phaseService, ctx.gamesService),
+      )
       .mutation(async ({ input, ctx: ctxMiddleware }) => {
         const { influenceRoundId, playerId, influence, gameId } = input;
         const data = {

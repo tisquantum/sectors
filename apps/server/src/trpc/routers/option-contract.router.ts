@@ -6,12 +6,14 @@ import { GameManagementService } from '@server/game-management/game-management.s
 import { checkIsPlayerAction, checkSubmissionTime } from '../trpc.middleware';
 import { PhaseService } from '@server/phase/phase.service';
 import { PlayersService } from '@server/players/players.service';
+import { GamesService } from '@server/games/games.service';
 
 type Context = {
   optionContractService: OptionContractService;
   gameManagementService: GameManagementService;
   phaseService: PhaseService;
   playerService: PlayersService;
+  gamesService: GamesService;
 };
 
 export default (trpc: TrpcService, ctx: Context) =>
@@ -97,7 +99,9 @@ export default (trpc: TrpcService, ctx: Context) =>
     exerciseOptionContract: trpc.procedure
       .input(z.object({ contractId: z.number(), gameId: z.string() }))
       .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
-      .use(async (opts) => checkSubmissionTime(opts, ctx.phaseService))
+      .use(async (opts) =>
+        checkSubmissionTime(opts, ctx.phaseService, ctx.gamesService),
+      )
       .mutation(async ({ input }) => {
         const { contractId } = input;
         return ctx.gameManagementService.exerciseOptionContract(contractId);

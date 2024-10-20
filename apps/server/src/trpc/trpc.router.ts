@@ -191,6 +191,7 @@ export class TrpcRouter {
       operatingRoundVoteService: this.operatingRoundVoteService,
       playerService: this.playersService,
       phaseService: this.phaseService,
+      gamesService: this.gamesService,
     }),
     stockRound: stockRoundRouter(this.trpc, {
       stockRoundService: this.stockRoundService,
@@ -199,6 +200,7 @@ export class TrpcRouter {
       revenueDistributionVoteService: this.revenueDistributionVoteService,
       phaseService: this.phaseService,
       playerService: this.playersService,
+      gamesService: this.gamesService,
     }),
     companyAction: companyActionRouter(this.trpc, {
       companyActionService: this.companyActionService,
@@ -222,6 +224,7 @@ export class TrpcRouter {
       influenceRoundVotesService: this.influenceRoundVotesService,
       phaseService: this.phaseService,
       playerService: this.playersService,
+      gamesService: this.gamesService,
     }),
     playerPriority: playerPriorityRouter(this.trpc, {
       playerPriorityService: this.playerPriorityService,
@@ -231,6 +234,7 @@ export class TrpcRouter {
       gameManagementService: this.gameManagementService,
       phaseService: this.phaseService,
       playerService: this.playersService,
+      gamesService: this.gamesService,
     }),
     transactions: transactionRouter(this.trpc, {
       transactionService: this.transactionService,
@@ -250,6 +254,7 @@ export class TrpcRouter {
       playerService: this.playersService,
       pusherService: this.pusherService,
       gameManagementService: this.gameManagementService,
+      gamesService: this.gamesService,
     }),
     prizes: prizesRouter(this.trpc, {
       prizeService: this.prizeService,
@@ -259,6 +264,7 @@ export class TrpcRouter {
       phaseService: this.phaseService,
       playersService: this.playersService,
       pusherService: this.pusherService,
+      gamesService: this.gamesService,
     }),
     headlines: headlineRouter(this.trpc, {
       headlineService: this.headlineService,
@@ -268,6 +274,7 @@ export class TrpcRouter {
       playerService: this.playersService,
       pusherService: this.pusherService,
       phaseService: this.phaseService,
+      gamesService: this.gamesService,
     }),
   });
 

@@ -8,6 +8,7 @@ import {
   GAME_SETUP_DEFAULT_GAME_MAX_TURNS,
   GAME_SETUP_DEFAULT_PLAYER_ORDERS_CONCEALED,
   GAME_SETUP_DEFAULT_STARTING_CASH_ON_HAND,
+  GAME_SETUP_TIMERLESS,
 } from "@server/data/constants";
 import { RiInformation2Fill } from "@remixicon/react";
 import {
@@ -26,6 +27,7 @@ type ValueMap = {
   useOptionOrders: { [key: number]: boolean };
   useShortOrders: { [key: number]: boolean };
   useLimitOrders: { [key: number]: boolean };
+  isTimerless: { [key: number]: boolean };
 };
 
 type GameOptionsKeys = keyof ValueMap;
@@ -44,6 +46,7 @@ interface GameOptionsState {
   useOptionOrders: boolean;
   useShortOrders: boolean;
   useLimitOrders: boolean;
+  isTimerless: boolean;
 }
 
 const GameOptionDescription: React.FC<{
@@ -75,6 +78,7 @@ const GameOptions: React.FC<GameOptionsProps> = ({ onOptionsChange }) => {
     useOptionOrders: false,
     useShortOrders: false,
     useLimitOrders: false,
+    isTimerless: GAME_SETUP_TIMERLESS,
   });
 
   useEffect(() => {
@@ -127,6 +131,10 @@ const GameOptions: React.FC<GameOptionsProps> = ({ onOptionsChange }) => {
       1: true,
       2: false,
     },
+    isTimerless: {
+      1: true,
+      2: false,
+    },
   };
 
   const handleSelectChange = (name: GameOptionsKeys, key: number) => {
@@ -155,7 +163,7 @@ const GameOptions: React.FC<GameOptionsProps> = ({ onOptionsChange }) => {
           onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
             handleSelectChange("bankPoolNumber", Number(e.target.value))
           }
-          defaultSelectedKeys={["3"]}
+          defaultSelectedKeys={["1"]}
           popoverProps={{
             color: "primary",
           }}
@@ -312,7 +320,7 @@ const GameOptions: React.FC<GameOptionsProps> = ({ onOptionsChange }) => {
           onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
             handleSelectChange("gameMaxTurns", Number(e.target.value))
           }
-          defaultSelectedKeys={["3"]}
+          defaultSelectedKeys={["1"]}
           popoverProps={{
             color: "primary",
           }}
@@ -408,6 +416,34 @@ const GameOptions: React.FC<GameOptionsProps> = ({ onOptionsChange }) => {
         >
           Options Orders
         </Checkbox>
+      </div>
+      <div className="mb-4 flex flex-col">
+        <GameOptionDescription
+          name="Timerless Game"
+          description={
+            <p className={tooltipParagraphStyle}>
+              Determines if the game will run without a timer.
+            </p>
+          }
+        />
+        <Select
+          size="lg"
+          className="max-w-xs"
+          onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+            handleSelectChange("isTimerless", Number(e.target.value))
+          }
+          defaultSelectedKeys={["2"]}
+          popoverProps={{
+            color: "primary",
+          }}
+        >
+          <SelectItem key={1} value={1}>
+            Yes
+          </SelectItem>
+          <SelectItem key={2} value={2}>
+            No
+          </SelectItem>
+        </Select>
       </div>
     </div>
   );

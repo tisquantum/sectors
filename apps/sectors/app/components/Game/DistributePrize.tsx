@@ -80,7 +80,7 @@ const DistributePrize = ({
   const [selectedPlayer, setSelectedPlayer] = useState<string>("");
   const [cashAmount, setCashAmount] = useState<number>(0);
   const [selectedCompany, setSelectedCompany] = useState<string>("");
-  const [prestigeAmount, setPrestigeAmount] = useState<number>(0);
+  const [prestigeAmount, setPrestigeAmount] = useState<number>(1);
   const [selectedSectorCompany, setSelectedSectorCompany] = useState<
     Record<string, string>
   >({});
@@ -127,7 +127,7 @@ const DistributePrize = ({
       ]);
       // Reset state after adding
       setSelectedCompany("");
-      setPrestigeAmount(0);
+      setPrestigeAmount(1);
     }
   };
 
@@ -177,10 +177,16 @@ const DistributePrize = ({
               {selectedPlayer && (
                 <>
                   <div className="flex flex-wrap gap-2">
-                    {[25, 50, 75, 100, 125, 150, 175, 200].map((amount) => (
+                    {[5, 10, 25, 50, 75, 100].map((amount) => (
                       <DebounceButton
                         key={amount}
-                        onClick={() => setCashAmount(amount)}
+                        onClick={() =>
+                          setCashAmount(
+                            amount > (prize.cashAmount || 0)
+                              ? prize.cashAmount || 0
+                              : amount
+                          )
+                        }
                         disabled={amount > (prize.cashAmount || 0)}
                         className={`${
                           cashAmount === amount ? "ring-2 ring-blue-500" : ""
@@ -253,7 +259,7 @@ const DistributePrize = ({
                     onChange={(event) =>
                       setPrestigeAmount(Number(event.target.value))
                     }
-                    min={0}
+                    min={1}
                     max={prize.prestigeAmount}
                   />
                   <DebounceButton onClick={handleAddPrestigeDistribution}>
