@@ -459,9 +459,9 @@ These actions are specific to the company sector and are given out during the Tr
 
 - **Timing:** At the end of each turn, consumers rotate between sectors.
 - **Mechanism:**
-  - Consumers are "spooled" out across sectors until the total economy score is exhausted.
-  - The number of consumers moving into each sector is equivalent to the sector's base demand score.
-  - Sectors operate in a **priority order**, moving from left to right based on a pre-defined ranking.
+  - A number of consumers are taken from the **global consumer pool** that is equivalent to or as many as can be taken to equal the current **economy score**.
+  - Consumers are "spooled" out across sectors until the total economy score is exhausted.  Consumers are spooled out in **sector priority order**
+  - The number of consumers moving into each sector is equivalent to the sector's demand score.
 
 ## Game Phases
 {: #game-phases }
