@@ -9,33 +9,17 @@ import {
 } from "@nextui-org/react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
-import CompanyActionVote from "./CompanyActionVote";
 import { trpc } from "@sectors/app/trpc";
 import { useGame } from "../Game/GameContext";
 import {
-  ACTION_ISSUE_SHARE_AMOUNT,
   CompanyActionCosts,
   CompanyActionPrestigeCosts,
   companyActionsDescription,
   CompanyTierData,
-  DEFAULT_DECREASE_UNIT_PRICE,
-  DEFAULT_INCREASE_UNIT_PRICE,
   GeneralCompanyActionCosts,
-  getCompanyActionOperatingRoundTurnOrder,
-  LARGE_MARKETING_CAMPAIGN_DEMAND,
-  LOAN_AMOUNT,
-  LOAN_INTEREST_RATE,
-  LOBBY_DEMAND_BOOST,
-  MARKETING_CONSUMER_BONUS,
-  OURSOURCE_SUPPLY_BONUS,
-  PRESTIGE_ACTION_TOKEN_COST,
   SectorEffects,
-  SMALL_MARKETING_CAMPAIGN_DEMAND,
-  STRATEGIC_RESERVE_REVENUE_MULTIPLIER_PERCENTAGE,
-  SURGE_PRICING_REVENUE_MULTIPLIER_PERCENTAGE,
 } from "@server/data/constants";
 import {
-  Company,
   CompanyAction,
   CompanyStatus,
   OperatingRoundAction,
@@ -44,7 +28,6 @@ import {
 } from "@server/prisma/prisma.client";
 import {
   CompanyWithRelations,
-  CompanyWithSector,
   OperatingRoundVoteWithPlayer,
 } from "@server/prisma/prisma.types";
 import ShareHolders from "./ShareHolders";

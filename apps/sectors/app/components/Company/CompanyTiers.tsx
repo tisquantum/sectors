@@ -1,4 +1,8 @@
-import { RiBox2Fill, RiExpandUpDownFill, RiGovernmentFill } from "@remixicon/react";
+import {
+  RiBox2Fill,
+  RiExpandUpDownFill,
+  RiGovernmentFill,
+} from "@remixicon/react";
 import { CompanyTierData } from "@server/data/constants";
 import { Company, CompanyTier } from "@server/prisma/prisma.client";
 
@@ -14,6 +18,7 @@ const CompanyTiers = ({ company }: { company?: Company }) => {
             <th className="py-2 px-4 border-b">Operating Costs</th>
             <th className="py-2 px-4 border-b">Supply Max</th>
             <th className="py-2 px-4 border-b">Company Actions/OR</th>
+            <th className="py-2 px-4 border-b">Insolvency Shortfall</th>
           </tr>
         </thead>
         <tbody>
@@ -41,6 +46,11 @@ const CompanyTiers = ({ company }: { company?: Company }) => {
                 <div className="py-2 px-4 flex justify-center items-center">
                   <RiGovernmentFill className="text-gray-500 mr-2" />
                   <span>{data.companyActions}</span>
+                </div>
+              </td>
+              <td>
+                <div className="py-2 px-4 flex justify-center items-center">
+                  <span>${data.insolvencyShortFall}</span>
                 </div>
               </td>
             </tr>
