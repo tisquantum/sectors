@@ -183,7 +183,22 @@ export function determineNextGamePhase(
       };
     case PhaseName.STOCK_RESULTS_OVERVIEW:
       return {
-        phaseName: PhaseName.OPERATING_PRODUCTION,
+        phaseName: PhaseName.OPERATING_ACTION_COMPANY_VOTE,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.OPERATING_ACTION_COMPANY_VOTE:
+      return {
+        phaseName: PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT:
+      return {
+        phaseName: PhaseName.OPERATING_COMPANY_VOTE_RESOLVE,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.OPERATING_COMPANY_VOTE_RESOLVE:
+      return {
+        phaseName: PhaseName.OPERATING_ACTION_COMPANY_VOTE,
         roundType: RoundType.OPERATING,
       };
     case PhaseName.OPERATING_PRODUCTION:
@@ -203,22 +218,7 @@ export function determineNextGamePhase(
       };
     case PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT:
       return {
-        phaseName: PhaseName.OPERATING_ACTION_COMPANY_VOTE,
-        roundType: RoundType.OPERATING,
-      };
-    case PhaseName.OPERATING_ACTION_COMPANY_VOTE:
-      return {
-        phaseName: PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT,
-        roundType: RoundType.OPERATING,
-      };
-    case PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT:
-      return {
-        phaseName: PhaseName.OPERATING_COMPANY_VOTE_RESOLVE,
-        roundType: RoundType.OPERATING,
-      };
-    case PhaseName.OPERATING_COMPANY_VOTE_RESOLVE:
-      return {
-        phaseName: PhaseName.OPERATING_ACTION_COMPANY_VOTE,
+        phaseName: PhaseName.CAPITAL_GAINS,
         roundType: RoundType.OPERATING,
       };
     //if you are over some threshold on stocks, you must pay a tax.

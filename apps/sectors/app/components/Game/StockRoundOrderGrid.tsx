@@ -298,7 +298,7 @@ const StockRoundOrderGrid = ({
                     />
                   </div>
                 )}
-                <Tabs>
+                <Tabs className="mt-4">
                   <Tab key="drawer-company-info" title="Company Info">
                     <div className="h-96">
                       <CompanyInfo

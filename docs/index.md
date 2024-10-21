@@ -349,11 +349,11 @@ These actions are available to every company every operating round action phase.
   - Cash Cost: $[Share Price]
 
 - **Increase Unit Price**
-  - Increase the unit price of the company's product by 10. This will increase the company's revenue. Be careful, as consumers choose the company with the cheapest product in the sector first!
+  - Increase the unit price of the company's product by 10. The company loses 1 demand.
   - Cash Cost: $0
 
 - **Decrease Unit Price**
-  - Decrease the unit price of the company's product by 10. This will decrease the company's revenue.
+  - Decrease the unit price of the company's product by 10.
   - Cash Cost: $0
 
 - **Spend Prestige**
@@ -440,7 +440,7 @@ These actions are specific to the company sector and are given out during the Tr
   - Would the company stock price be stopped by a new price tier, allow it to move up at least 3 spaces further.
 
 - **Carbon Credit**
-  - This company's throughput can never be less than 1.
+  - This company's throughput can never be less than -1 or greater than 1.
 
 ## End Turn Events
 {: #end-turn-events }

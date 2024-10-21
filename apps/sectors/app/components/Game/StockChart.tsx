@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import {
-  Avatar,
-  AvatarGroup,
   Divider,
   Modal,
   ModalBody,
@@ -12,7 +11,6 @@ import {
   useDisclosure,
 } from "@nextui-org/react";
 import {
-  CompanyTierData,
   stockGridPrices,
   StockTierChartRange,
   stockTierChartRanges,
@@ -22,25 +20,12 @@ import { useGame } from "./GameContext";
 import { sectorColors, sectorColorVariants } from "@server/data/gameData";
 import { CompanyWithSectorAndStockHistory } from "@server/prisma/prisma.types";
 import { LineChart } from "@tremor/react";
+import { CompanyStatus, StockTier } from "@server/prisma/prisma.client";
 import {
-  Company,
-  CompanyStatus,
-  PhaseName,
-  StockTier,
-} from "@server/prisma/prisma.client";
-import {
-  RiBox2Fill,
   RiCheckboxBlankCircleFill,
   RiCheckboxCircleFill,
-  RiExpandUpDownFill,
   RiFundsFill,
-  RiHandCoinFill,
-  RiIncreaseDecreaseFill,
-  RiPriceTag3Fill,
   RiSailboatFill,
-  RiSparkling2Fill,
-  RiStarFill,
-  RiSwap3Fill,
 } from "@remixicon/react";
 import "./StockChart.css";
 import CompanyInfo from "../Company/CompanyInfo";
@@ -131,11 +116,14 @@ const TierSharesFulfilled = ({
 };
 
 const StockChart = () => {
-  const { gameId } = useGame();
-  const { data: companies, isLoading } =
-    trpc.company.listCompaniesWithSectorAndStockHistory.useQuery({
-      where: { gameId },
-    });
+  const { gameId, currentPhase } = useGame();
+  const {
+    data: companies,
+    isLoading,
+    refetch,
+  } = trpc.company.listCompaniesWithSectorAndStockHistory.useQuery({
+    where: { gameId },
+  });
   const [selectedCompany, setSelectedCompany] = useState<
     CompanyWithSectorAndStockHistory | undefined
   >(undefined);
@@ -155,6 +143,9 @@ const StockChart = () => {
       setChartData(data);
     }
   }, [selectedCompany]);
+  useEffect(() => {
+    refetch();
+  }, [currentPhase?.name]);
 
   if (isLoading) return <div>Loading...</div>;
   if (companies == undefined) return null;
@@ -286,8 +277,14 @@ const StockChart = () => {
                     {companiesOnCell.length > 0 && (
                       <div className="flex flex-col mt-2 gap-2">
                         {companiesOnCell.map((company) => (
-                          <div
+                          <motion.div
                             key={company.id}
+                            layout
+                            transition={{
+                              type: "spring",
+                              stiffness: 500,
+                              damping: 30,
+                            }}
                             className={`relative flex flex-col items-center shadow-md rounded-md p-1 cursor-pointer border-2 border-slate-700 ${
                               company.status === CompanyStatus.INACTIVE
                                 ? "red-stripes"
@@ -299,7 +296,7 @@ const StockChart = () => {
                               opacity:
                                 company.status === CompanyStatus.BANKRUPT
                                   ? 0.7
-                                  : 1, // Reduce opacity if BANKRUPT
+                                  : 1,
                             }}
                             onClick={() => handleCompanySelect(company.id)}
                           >
@@ -315,7 +312,7 @@ const StockChart = () => {
                               </div>
                             ) : (
                               <div className="ml-2 p-1 rounded-md text-small text-green-800 flex bg-green-500">
-                                <RiSailboatFill size={18} className="ml-2" />
+                                <RiSailboatFill size={18} />
                                 <span className="ml-1">
                                   %{company.Sector.sharePercentageToFloat}
                                 </span>
@@ -328,7 +325,6 @@ const StockChart = () => {
                               tierSharesFulfilled={company.tierSharesFulfilled}
                               tier={tier}
                             />
-
                             {company.status === CompanyStatus.BANKRUPT && (
                               <div className="absolute inset-0 bg-gray-600 bg-opacity-30 flex items-center justify-center rounded-md">
                                 <div className="flex flex-col">
@@ -336,10 +332,10 @@ const StockChart = () => {
                                     className="text-black text-sm font-bold transform rotate-40"
                                     style={{
                                       display: "inline-block",
-                                      color: "black", // Adjust the color if needed to match a stamped look
-                                      border: "2px solid black", // Optional: add a border to enhance the stamped effect
-                                      padding: "2px 6px", // Optional: add padding to create some space around the text
-                                      transform: "rotate(40deg)", // Rotate the text 45 degrees clockwise
+                                      color: "black",
+                                      border: "2px solid black",
+                                      padding: "2px 6px",
+                                      transform: "rotate(40deg)",
                                     }}
                                   >
                                     BANKRUPT
@@ -347,7 +343,7 @@ const StockChart = () => {
                                 </div>
                               </div>
                             )}
-                          </div>
+                          </motion.div>
                         ))}
                       </div>
                     )}

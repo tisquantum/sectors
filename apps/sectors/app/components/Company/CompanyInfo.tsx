@@ -55,7 +55,7 @@ import {
   CompanyWithSector,
   ShareWithPlayer,
 } from "@server/prisma/prisma.types";
-import { BarList } from "@tremor/react";
+import { BarList, LineChart } from "@tremor/react";
 import ThroughputLegend from "../Game/ThroughputLegend";
 import { trpc } from "@sectors/app/trpc";
 import CompanyTiers from "./CompanyTiers";
@@ -66,6 +66,7 @@ import { useEffect } from "react";
 import ShareComponent from "./Share";
 import { renderLocationShortHand } from "@sectors/app/helpers";
 import PlayerAvatar from "../Player/PlayerAvatar";
+import { CompanyLineChart } from "./CompanyLineChart";
 
 const buildBarChart = (shares: ShareWithPlayer[]) => {
   //group shares by location and sum the quantity
@@ -386,10 +387,17 @@ const CompanyInfo = ({
                   </p>
                 }
               >
-                <div className="flex items-center">
-                  <RiFundsFill size={20} />
-                  <span>${company.currentStockPrice}</span>
-                </div>
+                <Popover>
+                  <PopoverTrigger>
+                    <div className="flex items-center cursor-pointer">
+                      <RiFundsFill size={20} />
+                      <span>${company.currentStockPrice}</span>
+                    </div>
+                  </PopoverTrigger>
+                  <PopoverContent>
+                    <CompanyLineChart companyId={company.id} />
+                  </PopoverContent>
+                </Popover>
               </Tooltip>
             </div>
             <div className="flex gap-1">
@@ -510,7 +518,11 @@ const CompanyInfo = ({
           </div>
         </div>
       </div>
-      <Modal isOpen={isOpen} onOpenChange={onOpenChange} className="dark bg-slate-900 text-foreground h-full">
+      <Modal
+        isOpen={isOpen}
+        onOpenChange={onOpenChange}
+        className="dark bg-slate-900 text-foreground h-full"
+      >
         <ModalContent>
           {(onClose) => (
             <>

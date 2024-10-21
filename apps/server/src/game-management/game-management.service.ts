@@ -326,6 +326,10 @@ export class GameManagementService {
       case PhaseName.STOCK_RESOLVE_PENDING_SHORT_ORDER:
         await this.resolvePendingShortOrders(phase);
         break;
+      case PhaseName.STOCK_RESULTS_OVERVIEW:
+        //"lock" company actions for the next series of company action phases
+        await this.lockCompanyActions(phase);
+        break;
       case PhaseName.OPERATING_PRODUCTION:
         await this.resolveOperatingProduction(phase);
         break;
@@ -340,8 +344,6 @@ export class GameManagementService {
         await this.decrementSectorDemandBonus(phase);
         await this.decrementCompanyTemporarySupplyBonus(phase);
         await this.decrementActiveCompanyDemand(phase);
-        //"lock" company actions for the next series of company action phases
-        await this.lockCompanyActions(phase);
         break;
       case PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT:
         await this.resolveCompanyVotes(phase);
@@ -2201,6 +2203,7 @@ export class GameManagementService {
       let taxAmount = totalIncome * (tier.taxPercentage / 100);
       //round tax amount down
       taxAmount = Math.floor(taxAmount);
+      console.log('taxAmount', playerId, taxAmount);
       //get player
       const player = players.find((p) => p.id === playerId);
       //if player is not found, skip the player
@@ -2239,36 +2242,42 @@ export class GameManagementService {
         );
       }
     }
+    //resolve promises
+    await Promise.all(playerUpdatePromises);
+    await Promise.all(gameLogPromises);
+    //create capital gains entries
+    await this.capitalGainsService.createManyCapitalGains(capitalGainsUpdates);
   }
 
   /**
    * Calculate income for a turn where income is all transactions that have earned the player money.
    * @param playerIds
    * @param turnId
-   * @returns
+   * @returns Array of player incomes
    */
   async getTurnIncome(playerIds: string[], turnId: string) {
     console.log('getTurnIncome turnId', turnId, playerIds);
-    //get players
+
+    // Fetch players
     const players = await this.playersService.players({
       where: { id: { in: playerIds } },
     });
-    if (!players) {
+
+    if (!players || players.length === 0) {
       throw new Error('Players not found');
     }
-    const entityIds = players
-      .filter((player) => player.entityId !== null)
-      .map((player) => player.entityId) as string[];
 
-    //get all transactions from the current turn and only of the selected transaction types.
+    const entityIds = players
+      .map((player) => player.entityId)
+      .filter(Boolean) as string[]; // Ensure no null or undefined values
+
+    // Fetch transactions for the turn and filter by types
     const transactions = await this.transactionService.listTransactions({
       where: {
         gameTurnId: turnId,
         toEntity: {
-          entityType: EntityType.PLAYER, // Ensure toEntity is of type PLAYER
-          id: {
-            in: entityIds,
-          },
+          entityType: EntityType.PLAYER,
+          id: { in: entityIds },
         },
         OR: [
           { transactionSubType: TransactionSubType.DIVIDEND },
@@ -2279,31 +2288,35 @@ export class GameManagementService {
         ],
       },
     });
+
     console.log('getTurnIncome transactions', transactions);
-    if (!transactions) {
-      throw new Error('Transactions not found');
+
+    if (!transactions || transactions.length === 0) {
+      throw new Error('No relevant transactions found for the turn.');
     }
-    //group transactions by player id
+
+    // Group transactions by player entityId
     const groupedTransactions = transactions.reduce<{
       [key: string]: Transaction[];
     }>((acc, transaction) => {
-      if (!acc[transaction.fromEntityId]) {
-        acc[transaction.fromEntityId] = [];
+      const playerId = transaction.toEntity?.Player?.id;
+      if (!playerId) return acc;
+
+      if (!acc[playerId]) {
+        acc[playerId] = [];
       }
-      acc[transaction.fromEntityId].push(transaction);
+      acc[playerId].push(transaction);
       return acc;
     }, {});
-    //group playerId by total transaction amount
+
+    // Calculate total income per player
     return Object.entries(groupedTransactions).map(
       ([playerId, transactions]) => {
         const totalIncome = transactions.reduce(
           (acc, transaction) => acc + transaction.amount,
           0,
         );
-        return {
-          playerId,
-          totalIncome,
-        };
+        return { playerId, totalIncome };
       },
     );
   }
@@ -5352,31 +5365,16 @@ export class GameManagementService {
     return this.gamesService.getGameState(gameId);
   }
 
-  /**
-   * Arg data here stipulates data for the next phase with phaseName and companyId
-   *
-   * @param param0
-   * @returns
-   */
-  public async determineIfNewRoundAndStartPhase({
+  public async determineIfNewRoundAndStartRound({
     gameId,
     gameState,
     phaseName,
-    roundType,
     stockRoundId,
     operatingRoundId,
     influenceRoundId,
+    roundType,
     companyId,
-  }: {
-    gameId: string;
-    gameState: GameState;
-    phaseName: PhaseName;
-    roundType: RoundType;
-    stockRoundId?: number;
-    operatingRoundId?: number;
-    influenceRoundId?: number;
-    companyId?: string;
-  }) {
+  }: any) {
     let currentPhaseTime = Date.now();
     const currentPhase = await this.phaseService.phase({
       id: gameState.currentPhaseId || '',
@@ -5493,7 +5491,37 @@ export class GameManagementService {
         : undefined;
     const _influenceRoundId =
       roundType === RoundType.INFLUENCE ? influenceRoundId : undefined;
-
+    return {
+      stockRoundId: _stockRoundId,
+      operatingRoundId: _operatingRoundId,
+      influenceRoundId: _influenceRoundId,
+    };
+  }
+  /**
+   * Arg data here stipulates data for the next phase with phaseName and companyId
+   *
+   * @param param0
+   * @returns
+   */
+  public async determineIfNewRoundAndStartPhase({
+    gameId,
+    gameState,
+    phaseName,
+    roundType,
+    stockRoundId,
+    operatingRoundId,
+    influenceRoundId,
+    companyId,
+  }: {
+    gameId: string;
+    gameState: GameState;
+    phaseName: PhaseName;
+    roundType: RoundType;
+    stockRoundId?: number;
+    operatingRoundId?: number;
+    influenceRoundId?: number;
+    companyId?: string;
+  }) {
     //ensure player ready up is reset for next phase
     this.resetPlayerReadiness(gameId);
 
@@ -5501,9 +5529,9 @@ export class GameManagementService {
       gameId,
       phaseName,
       roundType,
-      stockRoundId: _stockRoundId,
-      operatingRoundId: _operatingRoundId,
-      influenceRoundId: _influenceRoundId,
+      stockRoundId: stockRoundId,
+      operatingRoundId: operatingRoundId,
+      influenceRoundId: influenceRoundId,
       companyId,
       gameState,
     });
@@ -5790,6 +5818,27 @@ export class GameManagementService {
       return;
     }
 
+    const determinedNextPhase = determineNextGamePhase(phase.name);
+
+    let adjustedPhase = await this.findNextPhaseThatShouldBePlayed(
+      determinedNextPhase,
+      phase,
+      gameState,
+      stockRound?.stockActionSubRound,
+    );
+
+    //start new round if necessary
+    const roundPhaseIds = await this.determineIfNewRoundAndStartRound({
+      gameId,
+      gameState,
+      phaseName: phase.name,
+      stockRoundId: phase.stockRoundId || undefined,
+      operatingRoundId: phase.operatingRoundId || undefined,
+      influenceRoundId: phase.influenceRoundId || undefined,
+      roundType: adjustedPhase.roundType || undefined,
+      companyId: phase.companyId || undefined,
+    });
+
     const stockActionSubRound = stockRound?.stockActionSubRound;
     let startTimeHandleNextPhase = Date.now();
     console.log('handleNextPhase', startTimeHandleNextPhase);
@@ -5808,9 +5857,9 @@ export class GameManagementService {
       gameState,
       phaseName: nameAndRoundTypeAndCompanyForNextPhase.phaseName,
       roundType: nameAndRoundTypeAndCompanyForNextPhase.roundType,
-      stockRoundId: phase.stockRoundId || undefined,
-      operatingRoundId: phase.operatingRoundId || undefined,
-      influenceRoundId: phase.influenceRoundId || undefined,
+      stockRoundId: roundPhaseIds.stockRoundId || undefined,
+      operatingRoundId: roundPhaseIds.operatingRoundId || undefined,
+      influenceRoundId: roundPhaseIds.influenceRoundId || undefined,
       companyId:
         nameAndRoundTypeAndCompanyForNextPhase.companyId ||
         phase?.companyId ||
@@ -5856,7 +5905,7 @@ export class GameManagementService {
     });
 
     let nextPhaseTimer = Date.now();
-    let nextPhase = await this.adjustPhaseBasedOnGameState(
+    let nextPhase = await this.findNextPhaseThatShouldBePlayed(
       determinedNextPhase,
       phase,
       gameState,
@@ -5873,7 +5922,7 @@ export class GameManagementService {
           gameState,
         )) || undefined;
       if (!companyId) {
-        nextPhase.phaseName = PhaseName.CAPITAL_GAINS;
+        nextPhase.phaseName = PhaseName.OPERATING_PRODUCTION;
       }
     } else {
       companyId = phase.companyId || undefined;
@@ -5893,7 +5942,7 @@ export class GameManagementService {
    * @param gameId - ID of the game.
    * @returns The adjusted next phase object.
    */
-  private async adjustPhaseBasedOnGameState(
+  private async findNextPhaseThatShouldBePlayed(
     nextPhase: {
       phaseName: PhaseName;
       roundType: RoundType;
