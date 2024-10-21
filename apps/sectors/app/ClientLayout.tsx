@@ -26,7 +26,7 @@ const ClientLayout = ({ children }: { children: React.ReactNode }) => {
                   <div className="flex flex-col h-screen text-foreground bg-background">
                     <UserNameAlert />
                     <TopBar />
-                    <Toaster />
+                    <Toaster duration={10000} />
                     {children}
                   </div>
                 </PusherProvider>

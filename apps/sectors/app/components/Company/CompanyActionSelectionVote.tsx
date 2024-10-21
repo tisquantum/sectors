@@ -1,10 +1,14 @@
 import {
   Avatar,
+  Button,
   Card,
   CardBody,
   CardFooter,
   CardHeader,
   Chip,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   Tooltip,
 } from "@nextui-org/react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -35,12 +39,12 @@ import { sectorColors } from "@server/data/gameData";
 import PlayerAvatar from "../Player/PlayerAvatar";
 import CompanyInfo from "./CompanyInfo";
 import PrestigeRewards from "../Game/PrestigeRewards";
-import Button from "@sectors/app/components/General/DebounceButton";
 import DebounceButton from "@sectors/app/components/General/DebounceButton";
 import {
   RiArrowLeftFill,
   RiArrowRightFill,
   RiCloseCircleFill,
+  RiGlasses2Fill,
   RiLockFill,
   RiSparkling2Fill,
 } from "@remixicon/react";
@@ -68,7 +72,7 @@ const CompanyActionSelectionVote = ({
   companyActions?: CompanyAction[];
   allCompanyActions?: CompanyAction[];
 }) => {
-  const { currentPhase, authPlayer, gameId } = useGame();
+  const { currentPhase, authPlayer, gameId, researchDeck } = useGame();
   const [isLoadingSelectionVote, setIsLoadingSelectionVote] = useState(false);
   const [submitComplete, setSubmitComplete] = useState(false);
   const [selectedActions, setSelectedActions] = useState<
@@ -341,6 +345,28 @@ const CompanyActionSelectionVote = ({
                               </div>
                             )}
                           </div>
+                          {action.name === OperatingRoundAction.RESEARCH && (
+                            <Popover>
+                              <PopoverTrigger>
+                                <Button>
+                                  <RiGlasses2Fill />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent>
+                                <div className="grid grid-cols-3 gap-4">
+                                  {researchDeck.cards.map((card) => (
+                                    <div
+                                      key={card.id}
+                                      className="p-4 bg-gray-700 rounded-md text-white"
+                                    >
+                                      <h3 className="text-lg">{card.name}</h3>
+                                      <p>{card.description}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          )}
                           {action.name === OperatingRoundAction.LOAN && (
                             <span>One time only</span>
                           )}

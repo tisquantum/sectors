@@ -8,6 +8,7 @@ import {
   RiBankFill,
   RiTicket2Fill,
   RiDiscountPercentFill,
+  RiScalesFill,
 } from "@remixicon/react";
 import {
   Avatar,
@@ -39,6 +40,7 @@ import { MoneyTransactionByEntityType } from "./MoneyTransactionHistory";
 import WalletInfo from "./WalletInfo";
 import { MAX_SHARE_PERCENTAGE } from "@server/data/constants";
 import PlayerShares from "../Player/PlayerShares";
+import { calculateNetWorth } from "@server/data/helpers";
 
 const BankInfo = () => {
   const { gameState, gameId } = useGame();
@@ -48,7 +50,11 @@ const BankInfo = () => {
       <div className="flex gap-1 items-center cursor-pointer" onClick={onOpen}>
         <RiBankFill size={18} /> ${gameState.bankPoolNumber}
       </div>
-      <Modal isOpen={isOpen} onOpenChange={onOpenChange} className="dark bg-slate-900 text-foreground">
+      <Modal
+        isOpen={isOpen}
+        onOpenChange={onOpenChange}
+        className="dark bg-slate-900 text-foreground"
+      >
         <ModalContent>
           {(onClose) => (
             <>
@@ -136,6 +142,13 @@ const GameGeneralInfo = () => {
                       </div>
                     </PopoverContent>
                   </Popover>
+                  <div className="flex gap-1 items-center content-center">
+                    <RiScalesFill className="h-5 w-5" /> $
+                    {calculateNetWorth(
+                      authPlayerWithShares.cashOnHand,
+                      authPlayerWithShares.Share
+                    )}
+                  </div>
                 </div>
               )}
             </div>

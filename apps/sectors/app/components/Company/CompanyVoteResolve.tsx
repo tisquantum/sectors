@@ -81,7 +81,6 @@ const CompanyVoteResolve = () => {
           )[0]
         : null;
 
-    const costDiv = <span>Action Cost: ${companyAction.cost}</span>;
     const actionName = (
       <h4>
         Action Name:{" "}
@@ -183,7 +182,6 @@ const CompanyVoteResolve = () => {
         {actionName}
         {actionContent}
         {actionDescription}
-        {costDiv}
       </div>
     );
   };
@@ -194,7 +192,19 @@ const CompanyVoteResolve = () => {
         <CompanyInfo companyId={company.id} showBarChart />
         <div className="border-b-2 border-gray-200 my-4"></div>
         {companyActions.map((companyAction) => (
-          <div key={companyAction.id} className="mb-4">
+          <div
+            key={companyAction.id}
+            className="w-full mb-6 p-4 border border-gray-300 rounded-lg shadow-md bg-white dark:bg-slate-800 transition-all duration-300 hover:shadow-lg"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
+                {companyAction.action}
+              </h3>
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                ${companyAction.cost}
+              </span>
+            </div>
+            <div className="border-t border-gray-200 my-2"></div>
             {renderAction(companyAction)}
           </div>
         ))}

@@ -236,9 +236,9 @@ function generateHeadlineCost(
   headlineType: HeadlineType,
 ): number {
   // Implement your logic to determine cost
-  if (headlineType.endsWith('_1')) return 100;
-  if (headlineType.endsWith('_2')) return 200;
-  if (headlineType.endsWith('_3')) return 300;
+  if (headlineType.endsWith('_1')) return 30;
+  if (headlineType.endsWith('_2')) return 50;
+  if (headlineType.endsWith('_3')) return 80;
   return 0;
 }
 

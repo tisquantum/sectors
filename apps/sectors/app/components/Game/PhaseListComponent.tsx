@@ -14,14 +14,19 @@ const StockActionSubRoundIndicator = ({
   current: number;
   max: number;
 }) => {
+  const { currentPhase } = useGame();
   const circles = [];
+  let _current = current;
+  if (currentPhase?.name == PhaseName.STOCK_ACTION_RESULT) {
+    _current = current - 1;
+  }
 
   for (let i = 0; i <= max; i++) {
     circles.push(
       <div
         key={i}
         className={`items-center justify-center content-center w-4 h-4 rounded-full mr-1 ${
-          i <= current ? "bg-yellow-500" : "bg-slate-400"
+          i <= _current ? "bg-yellow-500" : "bg-slate-400"
         }`}
       ></div>
     );
