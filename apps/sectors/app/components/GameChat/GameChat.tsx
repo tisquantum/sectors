@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { forwardRef, useEffect, useRef, useState } from "react";
 import MessagePane from "../Room/MessagePane";
 import SendMessage from "../Room/SendMessage";
 import {
@@ -24,93 +24,103 @@ interface AtListProps {
   players: Player[];
   onSelectPlayer: (player: Player) => void;
   onClose: () => void;
+  showAtList: boolean;
 }
 
-const AtList: React.FC<AtListProps> = ({
-  players,
-  onSelectPlayer,
-  onClose,
-}) => {
-  const atListRef = useRef<HTMLDivElement | null>(null);
-  const [atListHeight, setAtListHeight] = useState(0);
-  const [caretPosition, setCaretPosition] = useState(0);
-  const [focusedIndex, setFocusedIndex] = useState<number>(0);
+const AtList = forwardRef<HTMLTextAreaElement, AtListProps>(
+  ({ players, onSelectPlayer, onClose, showAtList }, sendMessageRef) => {
+    const atListRef = useRef<HTMLDivElement | null>(null);
+    const [atListHeight, setAtListHeight] = useState(0);
+    const [caretPosition, setCaretPosition] = useState(0);
+    const [sendMessageTop, setSendMessageTop] = useState(0);
+    const [focusedIndex, setFocusedIndex] = useState<number>(0);
 
-  // Calculate the height of the AtList when it mounts
-  useEffect(() => {
-    if (atListRef.current) {
-      setAtListHeight(atListRef.current.clientHeight);
-      atListRef.current.focus(); // Set focus on AtList when it mounts
-    }
-  }, [players]);
-
-  // Close AtList if clicked outside of it
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    // Get the height and position of the SendMessage component
+    useEffect(() => {
       if (
-        atListRef.current &&
-        !atListRef.current.contains(event.target as Node)
+        sendMessageRef &&
+        "current" in sendMessageRef &&
+        sendMessageRef.current
       ) {
-        onClose(); // Close AtList if clicked outside
+        const rect = sendMessageRef.current.getBoundingClientRect();
+        setSendMessageTop(rect.top);
+      }
+    }, [showAtList]);
+
+    // Calculate the height of AtList when it mounts
+    useEffect(() => {
+      if (atListRef.current) {
+        setAtListHeight(atListRef.current.clientHeight);
+        atListRef.current.focus(); // Set focus on AtList when it mounts
+      }
+    }, [players.length]);
+
+    // Close AtList if clicked outside of it
+    useEffect(() => {
+      const handleClickOutside = (event: MouseEvent) => {
+        if (
+          atListRef.current &&
+          !atListRef.current.contains(event.target as Node)
+        ) {
+          onClose();
+        }
+      };
+
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }, [onClose]);
+
+    // Handle keyboard navigation
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setFocusedIndex((prevIndex) => (prevIndex + 1) % players.length);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setFocusedIndex((prevIndex) =>
+          prevIndex === 0 ? players.length - 1 : prevIndex - 1
+        );
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        onClose(); // Close the AtList
       }
     };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [onClose]);
-
-  // Handle keyboard navigation
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setFocusedIndex((prevIndex) => (prevIndex + 1) % players.length); // Move focus down
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setFocusedIndex((prevIndex) =>
-        prevIndex === 0 ? players.length - 1 : prevIndex - 1
-      ); // Move focus up
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      onSelectPlayer(players[focusedIndex]); // Select the focused player
-      onClose(); // Close the AtList
-    } else if (e.key === "Escape") {
-      e.preventDefault();
-      onClose(); // Close the AtList
-    }
-  };
-
-  return (
-    <div
-      ref={atListRef}
-      tabIndex={-1} // Make the div focusable for keyboard navigation
-      className="absolute bg-slate-800 border border-gray-300 shadow-lg rounded p-2"
-      style={{
-        top: `calc(0px - ${atListHeight}px)`, // Align the bottom of the AtList with the top of SendMessage
-        left: caretPosition,
-        zIndex: 10,
-        width: "200px",
-        overflowY: "auto", // Enable scrolling if the content overflows
-      }}
-      onKeyDown={handleKeyDown}
-    >
-      {players?.map((player, index) => (
-        <div
-          key={player.id}
-          className={`p-1 hover:bg-sky-700 cursor-pointer ${
-            index === focusedIndex ? "bg-gray-500" : ""
-          }`}
-          onClick={() => onSelectPlayer(player)}
-        >
-          <div className="flex gap-1 items-center">
-            <PlayerAvatar player={player} /> {player.nickname}
+    console.log("atListHeight", atListHeight, sendMessageTop);
+    return (
+      <div
+        ref={atListRef}
+        tabIndex={-1} // Make the div focusable for keyboard navigation
+        className="absolute bg-slate-800 border border-gray-300 shadow-lg rounded p-2"
+        style={{
+          top: `${sendMessageTop - atListHeight * 1.5}px`, // Align the bottom of the AtList with the top of SendMessage
+          left: caretPosition,
+          zIndex: 10,
+          width: "200px",
+          overflowY: "auto", // Enable scrolling if the content overflows
+        }}
+        onKeyDown={handleKeyDown}
+      >
+        {players?.map((player, index) => (
+          <div
+            key={player.id}
+            className={`p-1 hover:bg-sky-700 cursor-pointer ${
+              index === focusedIndex ? "bg-gray-500" : ""
+            }`}
+            onClick={() => onSelectPlayer(player)}
+          >
+            <div className="flex gap-1 items-center">
+              <PlayerAvatar player={player} /> {player.nickname}
+            </div>
           </div>
-        </div>
-      ))}
-    </div>
-  );
-};
+        ))}
+      </div>
+    );
+  }
+);
+
+AtList.displayName = "AtList";
 
 const GameChat = ({
   roomId,
@@ -228,6 +238,8 @@ const GameChat = ({
           players={players}
           onSelectPlayer={handleSelectPlayer}
           onClose={() => setShowAtList(false)}
+          showAtList={showAtList}
+          ref={sendMessageRef}
         />
       )}
 

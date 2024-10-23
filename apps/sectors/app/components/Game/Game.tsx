@@ -220,7 +220,10 @@ const Game = ({ gameId }: { gameId: string }) => {
       <CompanyActionSlider withResult />
     ) : currentRoundData?.phase.name ===
       PhaseName.OPERATING_COMPANY_VOTE_RESOLVE ? (
-      <CompanyVoteResolve />
+      <div className="flex flex-col items-center justify-between h-full w-full gap-2">
+        <CompanyActionSlider withResult />
+        <CompanyVoteResolve />
+      </div>
     ) : currentRoundData?.phase.name === PhaseName.CAPITAL_GAINS ? (
       <CapitalGains />
     ) : currentRoundData?.phase.name === PhaseName.DIVESTMENT ? (
