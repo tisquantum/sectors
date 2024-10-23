@@ -189,8 +189,6 @@ const CompanyVoteResolve = () => {
   return (
     <div className="flex flex-col h-full w-full">
       <div className="flex flex-col justify-center items-center">
-        <CompanyInfo companyId={company.id} showBarChart />
-        <div className="border-b-2 border-gray-200 my-4"></div>
         {companyActions.map((companyAction) => (
           <div
             key={companyAction.id}

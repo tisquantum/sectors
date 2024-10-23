@@ -45,14 +45,14 @@ const GameTopBar = ({
           onClick={() => handleViewChange("pending")}
           size="sm"
         >
-          Pending Orders
+          Orders
         </Button>
         <Button
           className={getButtonClass("chart")}
           onClick={() => handleViewChange("chart")}
           size="sm"
         >
-          Stock Chart
+          Chart
         </Button>
         <Button
           className={getButtonClass("markets")}

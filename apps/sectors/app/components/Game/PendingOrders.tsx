@@ -567,8 +567,8 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
             <div className="flex flex-col justify-start gap-2">
               <h3>Distribution Strategy</h3>
               <p>
-                When shares are contested in a stock round, they are resolved
-                according to the distribution strategy.
+                Shares are resolved in a sub stock round according to the
+                distribution strategy.
               </p>
             </div>
           </CardHeader>
@@ -606,8 +606,9 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
               <div className="flex flex-col gap-2">
                 <span>Priority</span>
                 <p>
-                  Orders are filled in priority. If there are not enough shares
-                  to resolve the order, the order is rejected.
+                  Orders are filled in ascending player priority order. If there
+                  are not enough shares to resolve the order, the order is
+                  rejected.
                 </p>
               </div>
             ) : (

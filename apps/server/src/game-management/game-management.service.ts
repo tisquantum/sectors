@@ -170,6 +170,7 @@ import { PusherService } from 'nestjs-pusher';
 import {
   EVENT_GAME_ENDED,
   EVENT_NEW_PHASE,
+  EVENT_PLAYER_READINESS_CHANGED,
   getGameChannelId,
 } from '@server/pusher/pusher.types';
 import { OperatingRoundService } from '@server/operating-round/operating-round.service';
@@ -277,7 +278,7 @@ export class GameManagementService {
    * @param phase
    * @returns
    */
-  async handlePhase(phase: Phase) {
+  async handlePhase(phase: Phase, game: Game) {
     switch (phase.name) {
       case PhaseName.START_TURN:
         await this.determinePriorityOrderBasedOnNetWorth(phase);
@@ -306,6 +307,12 @@ export class GameManagementService {
         break;
       case PhaseName.STOCK_ACTION_RESULT:
         await this.handleNewSubStockActionRound(phase);
+        if (game.isTimerless) {
+          await this.handlePhaseTransition({
+            phase,
+            gameId: phase.gameId,
+          });
+        }
         break;
       case PhaseName.STOCK_ACTION_REVEAL:
         await this.handleStockActionReveal(phase);
@@ -329,6 +336,12 @@ export class GameManagementService {
       case PhaseName.STOCK_RESULTS_OVERVIEW:
         //"lock" company actions for the next series of company action phases
         await this.lockCompanyActions(phase);
+        if (game.isTimerless) {
+          await this.handlePhaseTransition({
+            phase,
+            gameId: phase.gameId,
+          });
+        }
         break;
       case PhaseName.OPERATING_PRODUCTION:
         await this.resolveOperatingProduction(phase);
@@ -344,9 +357,21 @@ export class GameManagementService {
         await this.decrementSectorDemandBonus(phase);
         await this.decrementCompanyTemporarySupplyBonus(phase);
         await this.decrementActiveCompanyDemand(phase);
+        if (game.isTimerless) {
+          await this.handlePhaseTransition({
+            phase,
+            gameId: phase.gameId,
+          });
+        }
         break;
       case PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT:
         await this.resolveCompanyVotes(phase);
+        if (game.isTimerless) {
+          await this.handlePhaseTransition({
+            phase,
+            gameId: phase.gameId,
+          });
+        }
         break;
       case PhaseName.OPERATING_COMPANY_VOTE_RESOLVE:
         await this.resolveCompanyAction(phase);
@@ -4634,6 +4659,11 @@ export class GameManagementService {
    * @param phase
    */
   async resolveCompanyVotes(phase: Phase) {
+    //get the game
+    const game = await this.gamesService.game({ id: phase.gameId });
+    if (!game) {
+      throw new Error('Game not found');
+    }
     // Get the company from the phase
     const company = await this.companyService.company({
       id: phase.companyId || '',
@@ -4795,8 +4825,45 @@ export class GameManagementService {
           (actionVotes[vote.actionVoted] || 0) + vote.weight;
       }
 
-      const sortedActions = Object.entries(actionVotes)
-        .sort(([, aVotes], [, bVotes]) => (bVotes || 0) - (aVotes || 0))
+      //get player priority for current turn
+      const playerPriorities =
+        await this.playerPriorityService.listPlayerPriorities({
+          where: { gameTurnId: game.currentTurn },
+        });
+
+      const getLowestPlayerPriorityForAction = (
+        action: OperatingRoundAction,
+      ) => {
+        const relevantVotes = votes.filter(
+          (vote) => vote.actionVoted === action,
+        );
+        const priorities = relevantVotes.map(
+          (vote) =>
+            playerPriorities.find((p) => p.playerId === vote.playerId)
+              ?.priority || Infinity,
+        );
+        return Math.min(...priorities);
+      };
+
+      // Sort actions based on votes and resolve ties using player priorities
+      let sortedActions = Object.entries(actionVotes)
+        .sort(([aAction, aVotes], [bAction, bVotes]) => {
+          const voteDifference = (bVotes || 0) - (aVotes || 0);
+
+          if (voteDifference === 0) {
+            // Resolve tie by checking the lowest player priority for each action
+            const aLowestPriority = getLowestPlayerPriorityForAction(
+              aAction as OperatingRoundAction,
+            );
+            const bLowestPriority = getLowestPlayerPriorityForAction(
+              bAction as OperatingRoundAction,
+            );
+
+            return aLowestPriority - bLowestPriority;
+          }
+
+          return voteDifference;
+        })
         .slice(0, companyActionCount)
         .map(([action]) => action as OperatingRoundAction);
 
@@ -5683,7 +5750,7 @@ export class GameManagementService {
     console.log('startPhase update game TTE', Date.now() - updateGameTime);
     try {
       let handlePhaseTime = Date.now();
-      await this.handlePhase(phase);
+      await this.handlePhase(phase, game);
       console.log('startPhase handle phase TTE', Date.now() - handlePhaseTime);
     } catch (error) {
       console.error('Error during phase:', error);
@@ -5875,6 +5942,11 @@ export class GameManagementService {
         influenceRoundId: nextPhase.influenceRoundId || undefined,
       });
     }
+    //poll again for player readiness
+    this.pusherService.trigger(
+      getGameChannelId(gameId),
+      EVENT_PLAYER_READINESS_CHANGED,
+    );
   }
 
   /**
