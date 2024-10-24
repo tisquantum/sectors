@@ -74,7 +74,7 @@ const RoomComponent = ({ room }: { room: RoomWithUsersAndGames }) => {
 
     channel.bind(EVENT_ROOM_MESSAGE, (data: RoomMessageWithRoomUser) => {
       // Ensure timestamp remains a string in the cache
-      refetchRoomUsers();
+      handleRoomMessage(data, room?.id);
     });
 
     channel.bind(EVENT_ROOM_KICK, (data: RoomUser) => {
@@ -108,7 +108,15 @@ const RoomComponent = ({ room }: { room: RoomWithUsersAndGames }) => {
       userId: user.id,
     });
   };
-
+  const handleRoomMessage = (data: RoomMessageWithRoomUser, roomId: number) => {
+    utils.roomMessage.listRoomMessages.setData(
+      { where: { roomId } },
+      (oldData: RoomMessageWithRoomUser[] | undefined) => [
+        ...(oldData || []),
+        { ...data, timestamp: new Date(data.timestamp).toISOString() },
+      ]
+    );
+  };
   if (isLoadingRoomUsers || isLoadingMessages) {
     return <div>Loading Inner Component...</div>;
   }

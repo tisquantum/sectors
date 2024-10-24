@@ -10,9 +10,98 @@ import Button from "@sectors/app/components/General/DebounceButton";
 import UserAvatar from "./UserAvatar";
 import { GameStatus } from "@server/prisma/prisma.client";
 import { renderGameStatusColor } from "@sectors/app/helpers";
+import { useGame } from "../Game/GameContext";
+import {
+  RiBankFill,
+  RiCheckFill,
+  RiClockwiseFill,
+  RiCloseCircleFill,
+  RiDiscFill,
+  RiListOrdered2,
+  RiTeamFill,
+  RiTimeFill,
+} from "@remixicon/react";
 interface RoomListProps {
   room: RoomWithUsersAndGames;
+  gameId?: string;
 }
+
+const GameMeta = ({ gameId }: { gameId: string }) => {
+  const { data: game, isLoading } = trpc.game.getGame.useQuery({ id: gameId });
+  if (isLoading) return null;
+  if (!game) return null;
+  return (
+    <div className="grid grid-cols-3 gap-1 p-2 bg-gray-800 text-white rounded-md shadow-lg">
+      {game.isTimerless ? (
+        <div className="flex items-center gap-2">
+          <RiClockwiseFill className="text-yellow-400" />
+          <span>No Timer</span>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2">
+          <RiTimeFill className="text-yellow-400" />
+          <span>Timed</span>
+        </div>
+      )}
+
+      <div className="flex items-center gap-2">
+        <RiListOrdered2 className="text-green-400" />
+        <span>
+          {game.GameTurn[game.GameTurn.length - 1].turn +
+            " of " +
+            game.gameMaxTurns}
+        </span>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <RiBankFill className="text-red-400" />
+        <span>${game.bankPoolNumber}</span>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <RiTeamFill className="text-yellow-400" />
+        <span>{game.consumerPoolNumber}</span>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <RiDiscFill className="text-blue-400" />
+        <span>{game.distributionStrategy}</span>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <RiCheckFill className="text-green-400" />
+        <span>MO</span>
+      </div>
+
+      <div className="flex items-center gap-2">
+        {game.useLimitOrders ? (
+          <RiCheckFill className="text-green-400" />
+        ) : (
+          <RiCloseCircleFill className="text-red-400" />
+        )}
+        <span>LO</span>
+      </div>
+
+      <div className="flex items-center gap-2">
+        {game.useShortOrders ? (
+          <RiCheckFill className="text-green-400" />
+        ) : (
+          <RiCloseCircleFill className="text-red-400" />
+        )}
+        <span>SO</span>
+      </div>
+
+      <div className="flex items-center gap-2">
+        {game.useOptionOrders ? (
+          <RiCheckFill className="text-green-400" />
+        ) : (
+          <RiCloseCircleFill className="text-red-400" />
+        )}
+        <span>OO</span>
+      </div>
+    </div>
+  );
+};
 
 const RoomListItem: React.FC<RoomListProps> = ({ room }) => {
   const { user } = useAuthUser();
@@ -27,10 +116,9 @@ const RoomListItem: React.FC<RoomListProps> = ({ room }) => {
     });
     router.push(`/rooms/${roomId}`);
   };
-
   return (
     <div className="flex flex-wrap items-center justify-between p-4 bg-gray-500 rounded-lg mb-4 gap-2">
-      <div className="flex items-center">
+      <div className="flex items-center gap-3">
         <AvatarGroup isBordered max={5}>
           {room.users &&
             room.users.length > 0 &&
@@ -38,13 +126,11 @@ const RoomListItem: React.FC<RoomListProps> = ({ room }) => {
               <UserAvatar key={data.user.id} user={data.user} size="sm" />
             ))}
         </AvatarGroup>
-        <h2 className="ml-4 text-lg font-bold">{room.name}</h2>
-        <Chip
-          color={renderGameStatusColor(room.game?.[0]?.gameStatus)}
-          className="ml-4"
-        >
+        <h2 className="text-lg font-bold">{room.name}</h2>
+        <Chip color={renderGameStatusColor(room.game?.[0]?.gameStatus)}>
           {room.game?.[0]?.gameStatus || GameStatus.PENDING}
         </Chip>
+        {room.game?.[0]?.id && <GameMeta gameId={room.game[0].id} />}
       </div>
       <Button color="primary" onClick={() => handleJoin(room.id)}>
         Join

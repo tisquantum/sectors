@@ -9,6 +9,8 @@ import {
   RiTicket2Fill,
   RiDiscountPercentFill,
   RiScalesFill,
+  RiDiscFill,
+  RiListOrdered2,
 } from "@remixicon/react";
 import {
   Avatar,
@@ -276,7 +278,9 @@ const GameGeneralInfo = () => {
         }
       >
         <div>
-          <div className="text-lg font-bold">Turn</div>
+          <div className="text-lg font-bold">
+            <RiListOrdered2 />
+          </div>
           <div>
             {currentTurn.turn ?? "0"} of {gameState.gameMaxTurns}
           </div>
@@ -319,7 +323,9 @@ const GameGeneralInfo = () => {
         }
       >
         <div>
-          <div className="text-lg font-bold">Distribution</div>
+          <div className="text-lg font-bold">
+            <RiDiscFill />
+          </div>
           <div>
             {friendlyDistributionStrategyName(gameState.distributionStrategy)}
           </div>
