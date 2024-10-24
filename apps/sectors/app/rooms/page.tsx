@@ -16,7 +16,7 @@ export default function RoomBrowserPage() {
   // Optional: Chat Toggle Logic for Mobile
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
   return (
-    <div className="flex flex-col md:flex-row bg-black h-screen">
+    <div className="flex flex-col md:flex-row bg-black h-[calc(100vh-65px)]">
       {/* GlobalChat: Hidden on small screens, sidebar on larger screens */}
       <div className="hidden md:block basis-1/4 h-full overflow-y-auto">
         <GlobalChat classes={"top-[60px] left-0 h-[calc(100vh-65px)] w-full"} />
