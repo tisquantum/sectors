@@ -118,7 +118,7 @@ const RoomListItem: React.FC<RoomListProps> = ({ room }) => {
   };
   return (
     <div className="flex flex-wrap items-center justify-between p-4 bg-gray-500 rounded-lg mb-4 gap-2">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col md:flex-row items-center gap-3">
         <AvatarGroup isBordered max={5}>
           {room.users &&
             room.users.length > 0 &&
