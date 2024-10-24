@@ -19,7 +19,7 @@ import { RoomUser } from "@server/prisma/prisma.client";
 import MessagePane from "../Room/MessagePane";
 import SendMessage from "../Room/SendMessage";
 
-const GlobalChat = () => {
+const GlobalChat = ({ classes }: { classes: string }) => {
   const { user } = useAuthUser();
   const { pusher } = usePusher();
   const utils = trpc.useUtils();
@@ -113,11 +113,17 @@ const GlobalChat = () => {
   return (
     <>
       {user && (
-        <div className="flex flex-col fixed top-[60px] left-0 h-[calc(100vh)]">
-          <h3>Global</h3>
-          {messages && <MessagePane messages={messages} />}
-          <div className="sticky bottom-0 bg-background flex items-center">
-            <SendMessage onSendMessage={handleSendMessage} />
+        <div className={classes}>
+          <div className="flex flex-col h-full">
+            <h3>Global</h3>
+            {/* Ensure MessagePane has scrollable content */}
+            <div className="flex-1 overflow-y-auto">
+              {messages && <MessagePane messages={messages} />}
+            </div>
+            {/* Keep the send input properly pinned at the bottom */}
+            <div className="sticky bottom-0 bg-background flex items-center">
+              <SendMessage onSendMessage={handleSendMessage} />
+            </div>
           </div>
         </div>
       )}
