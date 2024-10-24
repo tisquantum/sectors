@@ -6,6 +6,7 @@ import { useState } from "react";
 import { isActivePhase } from "@server/data/helpers";
 import Button from "@sectors/app/components/General/DebounceButton";
 import { friendlyPhaseName } from "@sectors/app/helpers";
+import { RiClockwiseFill } from "@remixicon/react";
 
 const PassiveLoading = () => <Spinner color="secondary" />;
 
@@ -96,6 +97,12 @@ const GameTopBar = ({
             onEnd={() => {}}
           />
         )}
+      {gameState.isTimerless && (
+        <div className="flex flex-col items-center">
+          <RiClockwiseFill className="text-yellow-400" />
+          <span>No Timer</span>
+        </div>
+      )}
       <GameGeneralInfo />
       <Button onClick={handleTogglePhaseList}>
         {friendlyPhaseName(currentPhase?.name)}

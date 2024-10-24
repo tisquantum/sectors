@@ -50,7 +50,8 @@ const BankInfo = () => {
   return (
     <>
       <div className="flex gap-1 items-center cursor-pointer" onClick={onOpen}>
-        <RiBankFill size={18} /> ${gameState.bankPoolNumber}
+        <RiBankFill className="text-red-400" size={18} /> $
+        {gameState.bankPoolNumber}
       </div>
       <Modal
         isOpen={isOpen}
@@ -200,7 +201,7 @@ const GameGeneralInfo = () => {
           }
         >
           <div className="flex items-center gap-2">
-            <RiTeamFill size={18} />
+            <RiTeamFill className="text-yellow-400" size={18} />
             {gameState.consumerPoolNumber}
           </div>
         </Tooltip>
@@ -277,9 +278,9 @@ const GameGeneralInfo = () => {
           </div>
         }
       >
-        <div>
+        <div className="flex flex-col items-center">
           <div className="text-lg font-bold">
-            <RiListOrdered2 />
+            <RiListOrdered2 className="text-green-400" />
           </div>
           <div>
             {currentTurn.turn ?? "0"} of {gameState.gameMaxTurns}
@@ -322,9 +323,9 @@ const GameGeneralInfo = () => {
           )
         }
       >
-        <div>
+        <div className="flex flex-col items-center">
           <div className="text-lg font-bold">
-            <RiDiscFill />
+            <RiDiscFill className="text-blue-400" />
           </div>
           <div>
             {friendlyDistributionStrategyName(gameState.distributionStrategy)}

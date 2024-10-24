@@ -9,7 +9,10 @@ import { useRouter } from "next/navigation";
 import Button from "@sectors/app/components/General/DebounceButton";
 import UserAvatar from "./UserAvatar";
 import { GameStatus } from "@server/prisma/prisma.client";
-import { renderGameStatusColor } from "@sectors/app/helpers";
+import {
+  friendlyDistributionStrategyName,
+  renderGameStatusColor,
+} from "@sectors/app/helpers";
 import { useGame } from "../Game/GameContext";
 import {
   RiBankFill,
@@ -65,7 +68,9 @@ const GameMeta = ({ gameId }: { gameId: string }) => {
 
       <div className="flex items-center gap-2">
         <RiDiscFill className="text-blue-400" />
-        <span>{game.distributionStrategy}</span>
+        <span>
+          {friendlyDistributionStrategyName(game.distributionStrategy)}
+        </span>
       </div>
 
       <div className="flex items-center gap-2">
