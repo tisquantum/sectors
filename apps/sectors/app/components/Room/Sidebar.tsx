@@ -151,7 +151,7 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
   };
 
   return (
-    <div className="w-1/4 bg-gray-800 text-white p-6 flex flex-col relative overflow-y-auto scrollbar">
+    <div className="w-1/5 lg:w-1/4 bg-gray-800 text-white p-1 lg:p-6 flex flex-col relative overflow-y-auto scrollbar">
       <div className="mb-6">
         {room.game.length == 0 && !roomHostAuthUser?.roomHost && (
           <Button
@@ -204,15 +204,15 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
             className="w-full"
             onClick={() => router.push(`/games/${room.game[0].id}`)}
           >
-            Join Game In Progress
+            Join Game
           </Button>
         )}
       </div>
-      <ul className="flex-1">
+      <ul className="flex-1 flex flex-col">
         {roomUsers.map((roomUser) => (
           <li
             key={roomUser.user.id}
-            className="flex flex-wrap items-center mb-4 gap-1"
+            className="flex flex-wrap items-center justify-start mb-4 gap-1"
           >
             <div className="flex items-center mr-1">
               {isSmallDevice ? (

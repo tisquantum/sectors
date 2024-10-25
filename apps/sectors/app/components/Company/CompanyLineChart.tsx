@@ -28,7 +28,7 @@ export const CompanyLineChart = ({ companyId }: { companyId: string }) => {
     steps: stockHistory.stepsMoved,
   }));
   return (
-    <div className="flex flex-col justify-center items-center h-[400px] w-[500px]">
+    <div className="flex flex-col justify-center items-center h-[400px] w-[330px] lg:w-[500px]">
       {company.name}
       <LineChart
         data={chartData}
