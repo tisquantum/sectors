@@ -37,11 +37,7 @@ const PrestigeRewards: React.FC<PrestigeRewardsProps> = ({
 
   return (
     <div
-      className={`p-6 bg-gray-800 rounded-lg shadow-md ${
-        layout === "grid"
-          ? "grid grid-cols-3 gap-6"
-          : "flex flex-row items-center overflow-x-scroll gap-3"
-      }`}
+      className={`flex flex-row w-full items-center overflow-x-auto gap-3 p-6 bg-gray-800 rounded-lg shadow-md lg:grid lg:grid-cols-3 lg:gap-6`}
     >
       {prestigeTrack.map((reward, index) => (
         <Tooltip

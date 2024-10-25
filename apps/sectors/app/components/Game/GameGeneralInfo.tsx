@@ -11,6 +11,7 @@ import {
   RiScalesFill,
   RiDiscFill,
   RiListOrdered2,
+  RiCurrencyFill,
 } from "@remixicon/react";
 import {
   Avatar,
@@ -110,7 +111,7 @@ const GameGeneralInfo = () => {
           <>
             <PlayerAvatar player={authPlayer} />
             <div className="flex flex-col gap-1">
-              <div className="flex items-center text-md font-bold">
+              <div className="flex gap-1 items-center text-md font-bold">
                 <WalletInfo player={authPlayer} />{" "}
                 {(currentPhase?.name === PhaseName.STOCK_ACTION_ORDER ||
                   currentPhase?.name === PhaseName.STOCK_ACTION_RESULT) && (
@@ -129,6 +130,15 @@ const GameGeneralInfo = () => {
                     {"($" + pseudoSpend + ")"}
                   </Tooltip>
                 )}
+                {authPlayerWithShares && (
+                  <div className="flex gap-1 items-center content-center">
+                    <RiScalesFill className="h-5 w-5" /> $
+                    {calculateNetWorth(
+                      authPlayerWithShares.cashOnHand,
+                      authPlayerWithShares.Share
+                    )}
+                  </div>
+                )}
               </div>
               {authPlayerWithShares && (
                 <div className="flex gap-1 items-center">
@@ -145,13 +155,10 @@ const GameGeneralInfo = () => {
                       </div>
                     </PopoverContent>
                   </Popover>
-                  <div className="flex gap-1 items-center content-center">
-                    <RiScalesFill className="h-5 w-5" /> $
-                    {calculateNetWorth(
-                      authPlayerWithShares.cashOnHand,
-                      authPlayerWithShares.Share
-                    )}
-                  </div>
+                  <span className="flex items-center content-center">
+                    <RiCurrencyFill className="h-6 w-6" /> $
+                    {calculateNetWorth(0, authPlayerWithShares.Share)}
+                  </span>
                 </div>
               )}
             </div>

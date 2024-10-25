@@ -38,7 +38,15 @@ import Divestment from "./Divestment";
 import InfluenceBid from "./InfluenceBid";
 import ExerciseOptionOrders from "./ExerciseOptionOrders";
 import CoverShortOrders from "./CoverShortOrders";
-import { Button, Spinner, useDisclosure } from "@nextui-org/react";
+import {
+  Button,
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  Spinner,
+  useDisclosure,
+} from "@nextui-org/react";
 import { isActivePhase } from "@server/data/helpers";
 import GameResults from "./GameResults";
 import { Drawer } from "vaul";
@@ -131,6 +139,12 @@ const Game = ({ gameId }: { gameId: string }) => {
   const constraintsRef = useRef(null);
   const [isTimerAtZero, setIsTimerAtZero] = useState(false);
   const { isOpen, onOpen, onClose, onOpenChange } = useDisclosure();
+  const {
+    isOpen: isSidebarModalOpen,
+    onOpen: openSidebarModal,
+    onClose: closeSidebarModal,
+    onOpenChange: onSidebarModalOpenChange,
+  } = useDisclosure();
   const gameActionContainerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     onOpen();
@@ -246,7 +260,9 @@ const Game = ({ gameId }: { gameId: string }) => {
         direction="right"
       >
         <div className="relative flex flex-col lg:flex-row flex-grow w-full overflow-y scrollbar lg:overflow-hidden bg-background">
-          <GameSidebar />
+          <div className="hidden lg:block">
+            <GameSidebar />
+          </div>
           {/* <motion.div
         className="absolute inset-0 z-10 pointer-events-none"
         ref={constraintsRef}
@@ -263,7 +279,7 @@ const Game = ({ gameId }: { gameId: string }) => {
             {gameState.gameStatus == GameStatus.FINISHED && (
               <Button
                 color="primary"
-                className="h-44 w-[90%] bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg transform transition-transform duration-300 hover:scale-90 hover:shadow-2xl"
+                className="h-44 bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg transform transition-transform duration-300 hover:scale-90 hover:shadow-2xl"
                 onPress={onOpen}
               >
                 <div className="flex flex-col gap-2 items-center">
@@ -324,6 +340,28 @@ const Game = ({ gameId }: { gameId: string }) => {
               </AnimatePresence>
             </div>
           </div>
+          <div className="fixed bottom-4 right-4 lg:hidden">
+            <Button
+              className="bg-blue-500 text-white p-3 rounded-full shadow-lg"
+              onPress={() => openSidebarModal()}
+            >
+              Overview
+            </Button>
+          </div>
+          <Modal
+            isOpen={isSidebarModalOpen}
+            onOpenChange={onSidebarModalOpenChange}
+            size="full"
+          >
+            <ModalContent>
+              <ModalBody className="h-full">
+                <GameSidebar />
+              </ModalBody>
+              <ModalFooter>
+                <Button onPress={() => closeSidebarModal()}>Close</Button>
+              </ModalFooter>
+            </ModalContent>
+          </Modal>
         </div>
       </Drawer.Root>
     </>

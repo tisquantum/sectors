@@ -49,7 +49,7 @@ const TabView = ({
           <GameLog />
         </Card>
       </Tab>
-      <Tab key="close" title="Close"></Tab>
+      <Tab key="close" title="Close" className="hidden lg:block"></Tab>
     </Tabs>
   );
 };

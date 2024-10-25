@@ -54,12 +54,12 @@ const EndTurnEconomy = () => {
   return (
     <div className="flex flex-col justify-center items-center content-center">
       <h1 className="text-2xl">Economy</h1>
-      <div className="flex flex-col gap-2 text-xl">
+      <div className="flex flex-col gap-2 text-xl w-full">
         {currentPhase?.name == PhaseName.END_TURN ? (
           <EndTurnSectorConsumerDistributionAnimation sectors={sectors} />
         ) : (
-          <div className="flex flex-col items-center gap-1">
-            <div className="flex relative">
+          <div className="flex flex-col flex-wrap items-center gap-1">
+            <div className="flex flex-wrap relative">
               <Tooltip
                 classNames={{ base: baseToolTipStyle }}
                 className={tooltipStyle}
@@ -120,7 +120,7 @@ const EndTurnEconomy = () => {
                 </div>
               </Tooltip>
             </div>
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-3">
               {sectors.map((sector, index) => (
                 <EconomySector
                   key={sector.id}
@@ -134,9 +134,7 @@ const EndTurnEconomy = () => {
         )}
         <div className="flex flex-col justify-center items-center gap-2 text-xl">
           <h3>Prestige Track</h3>
-          <div className="flex gap-2 text-xl">
-            <PrestigeRewards />
-          </div>
+          <PrestigeRewards />
         </div>
         <div className="flex flex-col justify-center items-center gap-2 text-xl">
           <h3>Research Deck</h3>
