@@ -36,7 +36,7 @@ const PlayerOverview = ({
                 classNames={{ base: baseToolTipStyle }}
                 className={tooltipStyle}
                 content={
-                  <p>Share value total: the total value of all shares owned.</p>
+                  <p>Portfolio value: the total value of all shares owned.</p>
                 }
               >
                 <span className="flex items-center content-center">

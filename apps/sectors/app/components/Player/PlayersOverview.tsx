@@ -85,7 +85,7 @@ const PlayersOverview = ({ gameId }: { gameId: string }) => {
                   className={tooltipStyle}
                   content={
                     <p>
-                      Share value total: the total value of all shares owned.
+                      Portfolio Value: the total value of all shares owned.
                     </p>
                   }
                 >

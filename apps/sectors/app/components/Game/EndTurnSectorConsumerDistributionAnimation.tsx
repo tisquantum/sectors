@@ -200,7 +200,7 @@ const EndTurnSectorConsumerDistributionAnimation = ({
       </div>
 
       {/* Sectors with Consumers Moving */}
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-3">
         {sectors.map((sector, index) => (
           <SectorComponentAnimation
             key={sector.id}
