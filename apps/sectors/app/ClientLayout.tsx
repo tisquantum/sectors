@@ -23,7 +23,7 @@ const ClientLayout = ({ children }: { children: React.ReactNode }) => {
             <QueryClientProvider client={queryClient}>
               <AuthUserProvider>
                 <PusherProvider>
-                  <div className="flex flex-col h-screen text-foreground bg-background">
+                  <div className="flex flex-col h-[calc(100vh+65px)] text-foreground bg-background">
                     <UserNameAlert />
                     <TopBar />
                     <Toaster duration={10000} />

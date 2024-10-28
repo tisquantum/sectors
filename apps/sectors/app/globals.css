@@ -17,6 +17,9 @@
 }
 
 html, body {
+  scrollbar-width: thin;
+  scrollbar-color: black;
+
   color: rgb(var(--foreground-rgb));
   background: linear-gradient(
       to bottom,
