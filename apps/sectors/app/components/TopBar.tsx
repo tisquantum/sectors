@@ -114,7 +114,7 @@ const TopBar = () => {
 
   return (
     <>
-      <Navbar isBordered onMenuOpenChange={setIsMenuOpen}>
+      <Navbar isBordered shouldHideOnScroll onMenuOpenChange={setIsMenuOpen}>
         <NavbarBrand>
           <Link href="/">
             <div className="flex gap-1 justify-center content-center items-center text-slate-100">
