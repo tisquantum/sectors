@@ -20,7 +20,7 @@ export const GAME_SETUP_DEFAULT_DISTRIBUTION_STRATEGY =
   DistributionStrategy.PRIORITY;
 export const GAME_SETUP_DEFAULT_GAME_MAX_TURNS = 8;
 export const GAME_SETUP_DEFAULT_PLAYER_ORDERS_CONCEALED = false;
-export const GAME_SETUP_TIMERLESS = false;
+export const GAME_SETUP_DEFAULT_TIMERLESS = true;
 
 export const ROOM_NAME_CHAR_LIMIT = 30;
 

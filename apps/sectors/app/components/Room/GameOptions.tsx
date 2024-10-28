@@ -8,7 +8,7 @@ import {
   GAME_SETUP_DEFAULT_GAME_MAX_TURNS,
   GAME_SETUP_DEFAULT_PLAYER_ORDERS_CONCEALED,
   GAME_SETUP_DEFAULT_STARTING_CASH_ON_HAND,
-  GAME_SETUP_TIMERLESS,
+  GAME_SETUP_DEFAULT_TIMERLESS,
 } from "@server/data/constants";
 import { RiInformation2Fill } from "@remixicon/react";
 import {
@@ -78,7 +78,7 @@ const GameOptions: React.FC<GameOptionsProps> = ({ onOptionsChange }) => {
     useOptionOrders: false,
     useShortOrders: false,
     useLimitOrders: false,
-    isTimerless: GAME_SETUP_TIMERLESS,
+    isTimerless: GAME_SETUP_DEFAULT_TIMERLESS,
   });
 
   useEffect(() => {
@@ -432,7 +432,7 @@ const GameOptions: React.FC<GameOptionsProps> = ({ onOptionsChange }) => {
           onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
             handleSelectChange("isTimerless", Number(e.target.value))
           }
-          defaultSelectedKeys={["2"]}
+          defaultSelectedKeys={["1"]}
           popoverProps={{
             color: "primary",
           }}

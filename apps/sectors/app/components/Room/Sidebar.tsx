@@ -22,6 +22,7 @@ import {
   GAME_SETUP_DEFAULT_GAME_MAX_TURNS,
   GAME_SETUP_DEFAULT_PLAYER_ORDERS_CONCEALED,
   GAME_SETUP_DEFAULT_STARTING_CASH_ON_HAND,
+  GAME_SETUP_DEFAULT_TIMERLESS,
 } from "@server/data/constants";
 import { RiUserUnfollowFill } from "@remixicon/react";
 import {
@@ -63,7 +64,7 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
     useOptionOrders: false,
     useShortOrders: false,
     useLimitOrders: false,
-    isTimerless: false,
+    isTimerless: GAME_SETUP_DEFAULT_TIMERLESS,
   });
   const joinRoomMutation = trpc.roomUser.joinRoom.useMutation();
   const leaveRoomMutation = trpc.roomUser.leaveRoom.useMutation();
