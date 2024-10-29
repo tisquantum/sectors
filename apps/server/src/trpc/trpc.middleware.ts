@@ -135,6 +135,7 @@ export const checkSubmissionTime = async (
   //isn't there a chance for this to be true if the phase we're actually trying to 
   //look at is over? what if the next phase starts and the player is acting on action not relative to that phase?  it's valid in the middleware
   //get current phase
+  //the input needs to have phaseId, phaseName and gameTurn that we cross-reference with currentPhase, if it is not equivalent, the middleware should fail
   const phase = await phaseService.currentPhase(ctx.gameId || input.gameId);
   if (!phase) {
     console.error('Phase not found');
