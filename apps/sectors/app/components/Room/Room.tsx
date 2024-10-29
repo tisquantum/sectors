@@ -154,15 +154,15 @@ const RoomComponent = ({ room }: { room: RoomWithUsersAndGames }) => {
             </Drawer.Content>
           </Drawer.Portal>
           {roomUsers && (
-            <div className="hidden lg:block">
+            <div className="hidden h-full lg:block lg:w-1/4 bg-gray-800">
               <Sidebar roomUsers={roomUsers} room={room} />
             </div>
           )}
           <div className="flex flex-col flex-grow bg-gray-100">
             <div className="bg-gray-800 text-white p-2 md:p-4 flex gap-2 items-center">
               <h1 className="text-md md:text-xl font-bold">{room.name}</h1>
-              <Button>
-                <Drawer.Trigger className="lg:hidden">Info</Drawer.Trigger>
+              <Button className="block lg:hidden">
+                <Drawer.Trigger>Info</Drawer.Trigger>
               </Button>
             </div>
             {messages && <MessagePane messages={messages} />}

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { TrpcService } from '../trpc.service';
-import { Prisma } from '@prisma/client';
+import { PhaseName, Prisma } from '@prisma/client';
 import { OptionContractService } from '@server/option-contract/option-contract.service';
 import { GameManagementService } from '@server/game-management/game-management.service';
 import { checkIsPlayerAction, checkSubmissionTime } from '../trpc.middleware';
@@ -100,7 +100,7 @@ export default (trpc: TrpcService, ctx: Context) =>
       .input(z.object({ contractId: z.number(), gameId: z.string() }))
       .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
       .use(async (opts) =>
-        checkSubmissionTime(opts, ctx.phaseService, ctx.gamesService),
+        checkSubmissionTime(PhaseName.STOCK_ACTION_OPTION_ORDER, opts, ctx.phaseService, ctx.gamesService),
       )
       .mutation(async ({ input }) => {
         const { contractId } = input;
