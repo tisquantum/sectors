@@ -23,6 +23,8 @@ import SendMessage from "./SendMessage";
 import { useAuthUser } from "@sectors/app/components/AuthUser.context";
 import CountdownModal from "../Modal/CountdownModal";
 import { useRouter } from "next/navigation";
+import { Drawer } from "vaul";
+import { Button } from "@nextui-org/react";
 
 const RoomComponent = ({ room }: { room: RoomWithUsersAndGames }) => {
   const { user } = useAuthUser();
@@ -144,16 +146,30 @@ const RoomComponent = ({ room }: { room: RoomWithUsersAndGames }) => {
 
   return (
     <>
-      <div className="flex h-screen overflow-hidden">
-        {roomUsers && <Sidebar roomUsers={roomUsers} room={room} />}
-        <div className="flex flex-col flex-grow bg-gray-100">
-          <div className="bg-gray-800 text-white p-2 md:p-4">
-            <h1 className="text-md md:text-xl font-bold">{room.name}</h1>
+      <Drawer.Root direction="left">
+        <div className="flex h-screen overflow-hidden">
+          <Drawer.Portal>
+            <Drawer.Content className="lg:hidden z-50 bg-slate-900 flex flex-col rounded-t-[10px] h-full w-full fixed top-0 left-0">
+              {roomUsers && <Sidebar roomUsers={roomUsers} room={room} />}
+            </Drawer.Content>
+          </Drawer.Portal>
+          {roomUsers && (
+            <div className="hidden h-full lg:block lg:w-1/4 bg-gray-800">
+              <Sidebar roomUsers={roomUsers} room={room} />
+            </div>
+          )}
+          <div className="flex flex-col flex-grow bg-gray-100">
+            <div className="bg-gray-800 text-white p-2 md:p-4 flex gap-2 items-center">
+              <h1 className="text-md md:text-xl font-bold">{room.name}</h1>
+              <Button className="block lg:hidden">
+                <Drawer.Trigger>Info</Drawer.Trigger>
+              </Button>
+            </div>
+            {messages && <MessagePane messages={messages} />}
+            <SendMessage onSendMessage={handleSendMessage} />
           </div>
-          {messages && <MessagePane messages={messages} />}
-          <SendMessage onSendMessage={handleSendMessage} />
         </div>
-      </div>
+      </Drawer.Root>
       <CountdownModal
         title={"Game Started"}
         countdownTime={5}

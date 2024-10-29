@@ -1,4 +1,4 @@
-import { Phase } from '@prisma/client';
+import { Phase, PhaseName } from '@prisma/client';
 import { PhaseService } from '@server/phase/phase.service';
 import { TRPCError } from '@trpc/server';
 import { Context } from './trpc.context';
@@ -113,6 +113,7 @@ export const checkIsPlayerActionBasedOnAuth = async (
 };
 
 export const checkSubmissionTime = async (
+  phaseName: PhaseName,
   opts: any,
   phaseService: PhaseService,
   gameService: GamesService,
@@ -129,12 +130,10 @@ export const checkSubmissionTime = async (
   //because this looks at "current phase", do we need something to look at _the_ phase
   // the action is being performed in?  is current phase reliable for this check?
   const isTimerless = await gameService.isTimerless(ctx.gameId);
-  if (isTimerless) {
-    return next();
-  }
-  //isn't there a chance for this to be true if the phase we're actually trying to 
+  //isn't there a chance for this to be true if the phase we're actually trying to
   //look at is over? what if the next phase starts and the player is acting on action not relative to that phase?  it's valid in the middleware
   //get current phase
+  //the input needs to have phaseId, phaseName and gameTurn that we cross-reference with currentPhase, if it is not equivalent, the middleware should fail
   const phase = await phaseService.currentPhase(ctx.gameId || input.gameId);
   if (!phase) {
     console.error('Phase not found');
@@ -142,6 +141,16 @@ export const checkSubmissionTime = async (
       code: 'INTERNAL_SERVER_ERROR',
       message: 'Phase not found',
     });
+  }
+  if (phase.name !== phaseName) {
+    console.error('Phase does not match');
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'Phase does not match',
+    });
+  }
+  if (isTimerless) {
+    return next();
   }
   if (!phase.phaseStartTime) {
     console.error('Phase start time not found');

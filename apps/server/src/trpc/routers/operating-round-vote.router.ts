@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { OperatingRoundVoteService } from '@server/operating-round-vote/operating-round-vote.service';
 import { TrpcService } from '../trpc.service';
-import { Prisma, OperatingRoundAction } from '@prisma/client';
+import { Prisma, OperatingRoundAction, PhaseName } from '@prisma/client';
 import { checkIsPlayerAction, checkSubmissionTime } from '../trpc.middleware';
 import { PhaseService } from '@server/phase/phase.service';
 import { PlayersService } from '@server/players/players.service';
@@ -62,7 +62,12 @@ export default (trpc: TrpcService, ctx: Context) =>
       )
       .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
       .use(async (opts) =>
-        checkSubmissionTime(opts, ctx.phaseService, ctx.gamesService),
+        checkSubmissionTime(
+          PhaseName.OPERATING_ACTION_COMPANY_VOTE,
+          opts,
+          ctx.phaseService,
+          ctx.gamesService,
+        ),
       )
       .mutation(async ({ input, ctx: ctxMiddleware }) => {
         const { operatingRoundId, playerId, companyId, gameId, ...rest } =

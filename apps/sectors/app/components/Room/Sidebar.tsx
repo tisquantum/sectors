@@ -152,7 +152,7 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
   };
 
   return (
-    <div className="w-1/5 lg:w-1/4 bg-gray-800 text-white p-1 lg:p-6 flex flex-col relative overflow-y-auto scrollbar">
+    <div className="w-full bg-gray-800 text-white p-1 lg:p-6 flex flex-col relative overflow-y-auto scrollbar">
       <div className="mb-6">
         {room.game.length == 0 && !roomHostAuthUser?.roomHost && (
           <Button

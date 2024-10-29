@@ -72,7 +72,12 @@ export default (trpc: TrpcService, ctx: Context) =>
       )
       .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
       .use(async (opts) =>
-        checkSubmissionTime(opts, ctx.phaseService, ctx.gamesService),
+        checkSubmissionTime(
+          PhaseName.INFLUENCE_BID_ACTION,
+          opts,
+          ctx.phaseService,
+          ctx.gamesService,
+        ),
       )
       .mutation(async ({ input, ctx: ctxMiddleware }) => {
         const { influenceRoundId, playerId, influence, gameId } = input;

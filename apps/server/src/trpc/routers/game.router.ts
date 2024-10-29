@@ -280,7 +280,12 @@ export default (trpc: TrpcService, ctx: Context) =>
       .input(z.object({ shortId: z.number(), gameId: z.string() }))
       .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
       .use(async (opts) =>
-        checkSubmissionTime(opts, ctx.phaseService, ctx.gamesService),
+        checkSubmissionTime(
+          PhaseName.STOCK_ACTION_SHORT_ORDER,
+          opts,
+          ctx.phaseService,
+          ctx.gamesService,
+        ),
       )
       .mutation(async ({ input }) => {
         try {
@@ -304,7 +309,12 @@ export default (trpc: TrpcService, ctx: Context) =>
       .input(prizeDistributionInputSchema)
       .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
       .use(async (opts) =>
-        checkSubmissionTime(opts, ctx.phaseService, ctx.gamesService),
+        checkSubmissionTime(
+          PhaseName.PRIZE_DISTRIBUTE_ACTION,
+          opts,
+          ctx.phaseService,
+          ctx.gamesService,
+        ),
       )
       .mutation(async ({ input, ctx: ctxMiddleware }) => {
         const { distributionData } = input;

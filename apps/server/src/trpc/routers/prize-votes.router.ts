@@ -15,6 +15,7 @@ import {
   getGameChannelId,
 } from '@server/pusher/pusher.types';
 import { GamesService } from '@server/games/games.service';
+import { PhaseName } from '@prisma/client';
 
 type Context = {
   prizeVotesService: PrizeVotesService;
@@ -37,7 +38,12 @@ export default (trpc: TrpcService, ctx: Context) =>
       )
       .use(async (opts) => checkIsPlayerAction(opts, ctx.playersService))
       .use(async (opts) =>
-        checkSubmissionTime(opts, ctx.phaseService, ctx.gamesService),
+        checkSubmissionTime(
+          PhaseName.PRIZE_VOTE_ACTION,
+          opts,
+          ctx.phaseService,
+          ctx.gamesService,
+        ),
       )
       .mutation(async ({ input, ctx: ctxMiddleware }) => {
         const { gameTurnId, prizeId } = input;

@@ -232,7 +232,12 @@ export default (trpc: TrpcService, ctx: Context) =>
       )
       .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
       .use(async (opts) =>
-        checkSubmissionTime(opts, ctx.phaseService, ctx.gameService),
+        checkSubmissionTime(
+          PhaseName.STOCK_ACTION_ORDER,
+          opts,
+          ctx.phaseService,
+          ctx.gameService,
+        ),
       )
       .mutation(async ({ input, ctx: ctxMiddleware }) => {
         console.log('playerOrderInput', input);
