@@ -10,7 +10,7 @@ const CompanyTiers = ({ company }: { company?: Company }) => {
   const companyTiers = CompanyTierData;
 
   return (
-    <div className="p-4 rounded-lg shadow-md">
+    <div className="p-4 rounded-lg shadow-md max-w-full">
       <table className="rounded-lg">
         <thead>
           <tr className="text-gray-200">

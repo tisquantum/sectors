@@ -199,8 +199,7 @@ const CompanyInfoTable = ({
           </>
         );
       case "Your Shares":
-        return (
-          authPlayer ? 
+        return authPlayer ? (
           <span>
             {
               company.Share.filter(
@@ -208,10 +207,8 @@ const CompanyInfoTable = ({
               ).length
             }
           </span>
-          :
-          <span>
-            0
-          </span>
+        ) : (
+          <span>0</span>
         );
       case "Unit Price":
         return (
@@ -281,8 +278,10 @@ const CompanyInfoTable = ({
         return company.hasLoan ? (
           <>
             <RiBankCard2Fill size={20} /> $
-            {(LOAN_AMOUNT + LOAN_AMOUNT * LOAN_INTEREST_RATE) *
-              LOAN_INTEREST_RATE}
+            {Math.floor(
+              (LOAN_AMOUNT + LOAN_AMOUNT * LOAN_INTEREST_RATE) *
+                LOAN_INTEREST_RATE
+            )}
           </>
         ) : (
           "No Loan"

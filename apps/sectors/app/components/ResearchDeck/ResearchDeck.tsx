@@ -50,7 +50,7 @@ const ResearchDeck = () => {
             whileTap={{ scale: 0.95 }}
             onClick={() => setSelectedCompany(companyId)}
           >
-            <h2 className="text-lg font-semibold mb-2">
+            <h2 className="text-base lg:text-lg font-semibold mb-2">
               {companies.find((company) => company.id === companyId)?.name ||
                 "Company"}
             </h2>
@@ -64,7 +64,7 @@ const ResearchDeck = () => {
                 >
                   <div
                     key={card.id}
-                    className="p-2 bg-gray-700 rounded-md text-white"
+                    className="text-sm lg:text-base p-2 bg-gray-700 rounded-md text-white"
                   >
                     {card.name}
                   </div>

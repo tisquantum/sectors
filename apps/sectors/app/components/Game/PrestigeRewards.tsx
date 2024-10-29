@@ -67,7 +67,7 @@ const PrestigeRewards: React.FC<PrestigeRewardsProps> = ({
               <div className="w-6 h-6">
                 <PrestigeIcon prestigeType={reward.type} />
               </div>
-              <div className="flex gap-1">
+              <div className="flex gap-1 text-sm lg:text-base">
                 <RiSparkling2Fill className="ml-2 size-4 text-yellow-500" />{" "}
                 {reward.cost}
               </div>
@@ -75,7 +75,9 @@ const PrestigeRewards: React.FC<PrestigeRewardsProps> = ({
                 renderCapitalInjection(index, reward)}
             </div>
             {layout === "grid" && (
-              <div className="mt-2 text-center text-md">{reward.name}</div>
+              <div className="mt-2 text-center text-sm lg:text-base">
+                {reward.name}
+              </div>
             )}
           </motion.div>
         </Tooltip>
