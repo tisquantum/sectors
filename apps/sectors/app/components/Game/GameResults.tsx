@@ -220,7 +220,7 @@ const GameResults = ({
             <>
               <ModalHeader>
                 <div className="container mx-auto px-4">
-                  <h1 className="text-3xl font-bold">Game Results</h1>
+                  <h1 className="text-xl lg:text-3xl font-bold">Game Results</h1>
                 </div>
               </ModalHeader>
               <ModalBody className="overflow-y-scroll scrollbar">
@@ -230,7 +230,7 @@ const GameResults = ({
               <ModalFooter>
                 <Button
                   color="primary"
-                  className="text-2xl"
+                  className="text-lg lg:text-2xl"
                   variant="light"
                   onPress={onClose}
                 >

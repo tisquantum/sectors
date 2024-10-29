@@ -53,8 +53,8 @@ const EndTurnEconomy = () => {
   }
   return (
     <div className="flex flex-col justify-center items-center content-center">
-      <h1 className="text-2xl">Economy</h1>
-      <div className="flex flex-col gap-2 text-xl w-full">
+      <h1 className="text-lg lg:text-2xl">Economy</h1>
+      <div className="flex flex-col gap-2 text-base lg:text-xl w-full">
         {currentPhase?.name == PhaseName.END_TURN ? (
           <EndTurnSectorConsumerDistributionAnimation sectors={sectors} />
         ) : (

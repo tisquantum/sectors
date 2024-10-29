@@ -6,6 +6,7 @@ import ShareComponent from "../Company/Share";
 import { trpc } from "@sectors/app/trpc";
 import { OrderStatus } from "@server/prisma/prisma.client";
 import { OptionContractMinimal } from "../Game/OptionContractMinimal";
+import { useGame } from "../Game/GameContext";
 
 const playerCompanies = [
   {
@@ -42,6 +43,7 @@ const PlayerShares = ({
   playerWithShares: PlayerWithShares;
   withAdvancedOrderTypes?: boolean;
 }) => {
+  const { gameState } = useGame();
   const {
     data: optionsOrders,
     isLoading,
@@ -148,39 +150,43 @@ const PlayerShares = ({
       {withAdvancedOrderTypes && (
         <>
           <div className="w-full border-t border-gray-300 my-4"></div>
-          <div className="flex flex-col gap-2">
-            <div className="text-lg">Short Orders</div>
-            {shortSharesAggregation &&
-              Object.entries(shortSharesAggregation).map(
-                ([shortOrderId, aggregation]) => (
-                  <div key={shortOrderId} className="flex flex-col gap-2">
-                    <ShareComponent
-                      name={aggregation.company?.stockSymbol || ""}
-                      quantity={aggregation.totalShares}
-                      price={aggregation.totalValue / aggregation.totalShares}
-                    />
-                  </div>
-                )
-              )}
-          </div>
-          <div className="flex flex-col gap-2">
-            <div className="text-lg">Options Orders</div>
-            {optionsOrders &&
-              optionsOrders.map((order) => {
-                return (
-                  <div key={order.id} className="flex flex-col gap-2">
-                    {order.OptionContract && order.Company && (
-                      <OptionContractMinimal
-                        contract={{
-                          ...order.OptionContract,
-                          Company: order.Company,
-                        }}
+          {gameState?.useShortOrders && (
+            <div className="flex flex-col gap-2">
+              <div className="text-base lg:text-lg">Short Orders</div>
+              {shortSharesAggregation &&
+                Object.entries(shortSharesAggregation).map(
+                  ([shortOrderId, aggregation]) => (
+                    <div key={shortOrderId} className="flex flex-col gap-2">
+                      <ShareComponent
+                        name={aggregation.company?.stockSymbol || ""}
+                        quantity={aggregation.totalShares}
+                        price={aggregation.totalValue / aggregation.totalShares}
                       />
-                    )}
-                  </div>
-                );
-              })}
-          </div>
+                    </div>
+                  )
+                )}
+            </div>
+          )}
+          {gameState?.useOptionOrders && (
+            <div className="flex flex-col gap-2">
+              <div className="text-base lg:text-lg">Options Orders</div>
+              {optionsOrders &&
+                optionsOrders.map((order) => {
+                  return (
+                    <div key={order.id} className="flex flex-col gap-2">
+                      {order.OptionContract && order.Company && (
+                        <OptionContractMinimal
+                          contract={{
+                            ...order.OptionContract,
+                            Company: order.Company,
+                          }}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+            </div>
+          )}
         </>
       )}
     </div>
