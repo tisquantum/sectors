@@ -22,7 +22,7 @@ The game is played over turns, each turn is separated into distinct rounds. The 
 
 Each phase has a given amount of time before it will end and the next phase will begin. If the phase is actionable, players will have an opportunity, given they are eligible, to perform some action or set of actions. Actions conducted in sector phases are performed **simultaneously**. Players are never forced to place an action. If players do not act within the given timer, they are considered not to have acted in that phase.
 
-If a player is ready, they can elect to "ready up," which will signal they have nothing else they wish to do or observe in the current phase. If all players of the game ready up, that phase is considered finished regardless of the time remaining in that phase.
+If a player is ready, they can elect to "ready up," which will signal they have nothing else they wish to do or observe in the current phase. If all players of the game ready up, that phase is considered ended regardless of the time remaining in that phase.
 
 ### Sections of the Game
 {: #sections-of-the-game }
