@@ -142,7 +142,7 @@ const CompanyMoreInfo = ({
   showingProductionResults?: boolean;
 }) => {
   return (
-    <div className="flex gap-1 justify-start my-2">
+    <div className="flex gap-1 my-2">
       <div
         className="flex flex-col px-2 rounded-md"
         style={{ backgroundColor: sectorColors[company.Sector.name] }}
@@ -187,7 +187,7 @@ const CompanyMoreInfo = ({
           </Tooltip>
         </div>
       </div>
-      <div className="grid grid-cols-2 items-center">
+      <div className="flex flex-wrap items-center">
         <Tooltip
           classNames={{ base: baseToolTipStyle }}
           className={tooltipStyle}
@@ -201,7 +201,7 @@ const CompanyMoreInfo = ({
           }
         >
           <div className="flex items-center">
-            <RiSparkling2Fill className="ml-2 size-4 text-yellow-500" />
+            <RiSparkling2Fill size={18} className="ml-2 size-4 text-yellow-500" />
             <span className="ml-1">{company.prestigeTokens}</span>
           </div>
         </Tooltip>
