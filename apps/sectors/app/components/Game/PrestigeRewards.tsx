@@ -38,7 +38,9 @@ const PrestigeRewards: React.FC<PrestigeRewardsProps> = ({
 
   return (
     <div
-      className={`flex flex-row w-full items-center overflow-x-auto gap-3 p-6 bg-gray-800 rounded-lg shadow-md lg:grid lg:grid-cols-3 lg:gap-6`}
+      className={`flex flex-row w-full items-center overflow-x-auto gap-2 p-2 bg-gray-800 rounded-lg shadow-md scrollbar ${
+        layout == "grid" && "lg:grid lg:grid-cols-3 lg:gap-3"
+      }`}
     >
       {prestigeTrack.map((reward, index) => {
         // Conditional rendering based on `onlyShowCurrent`
@@ -61,8 +63,8 @@ const PrestigeRewards: React.FC<PrestigeRewardsProps> = ({
             <motion.div
               className={`${
                 layout === "grid"
-                  ? "flex flex-col items-center p-3 bg-gray-700 rounded-lg text-white hover:bg-gray-600"
-                  : "flex flex-col items-center p-3 text-white"
+                  ? "flex flex-col items-center p-1 bg-gray-700 rounded-lg text-white hover:bg-gray-600"
+                  : "flex flex-col items-center p-1 text-white"
               } ${
                 (gameState.nextPrestigeReward || 0) === index &&
                 "ring-2 ring-blue-500"
@@ -70,8 +72,8 @@ const PrestigeRewards: React.FC<PrestigeRewardsProps> = ({
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
             >
-              <div className="flex gap-2 items-center">
-                <div className="w-6 h-6">
+              <div className="flex gap-1 items-center">
+                <div className="w-5 h-5">
                   <PrestigeIcon prestigeType={reward.type} />
                 </div>
                 <div className="flex flex-col items-center justify-center">

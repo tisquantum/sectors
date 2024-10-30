@@ -460,20 +460,20 @@ export const throughputRewardOrPenalty = (
 };
 
 export const GeneralCompanyActionCosts = {
-  [OperatingRoundAction.LICENSING_AGREEMENT]: [300, 400, 500],
-  [OperatingRoundAction.MARKETING]: [300, 400, 500],
-  [OperatingRoundAction.OUTSOURCE]: [200, 300, 400],
-  [OperatingRoundAction.LOBBY]: [150, 200, 300],
+  [OperatingRoundAction.LICENSING_AGREEMENT]: [150, 200, 250],
+  [OperatingRoundAction.MARKETING]: [125, 175, 225],
+  [OperatingRoundAction.OUTSOURCE]: [200, 250, 300],
+  [OperatingRoundAction.LOBBY]: [100, 150, 200],
 };
 
 export const CompanyActionCosts = {
   [OperatingRoundAction.DOWNSIZE]: 50,
   [OperatingRoundAction.EXPANSION]: 150,
-  [OperatingRoundAction.MARKETING_SMALL_CAMPAIGN]: 100,
+  [OperatingRoundAction.MARKETING_SMALL_CAMPAIGN]: 75,
   [OperatingRoundAction.MERGE]: 1000,
   [OperatingRoundAction.RESEARCH]: 25,
   [OperatingRoundAction.SHARE_BUYBACK]: 0,
-  [OperatingRoundAction.SHARE_ISSUE]: 50,
+  [OperatingRoundAction.SHARE_ISSUE]: 25,
   [OperatingRoundAction.PRODUCTION]: 0,
   [OperatingRoundAction.SPEND_PRESTIGE]: 0,
   [OperatingRoundAction.VETO]: 0,

@@ -478,19 +478,25 @@ const CompanyActionSelectionVote = ({
 
   return (
     <div className="flex flex-col gap-3 p-5">
-      <h1 className="text-2xl">{company.name} Shareholder Meeting</h1>
+      <h1 className="text-lg lg:text-2xl">
+        {company.name} Shareholder Meeting
+      </h1>
       <div className="flex gap-1">
-        <span className={`text-lg text-[${sectorColors[company.Sector.name]}]`}>
+        <span
+          className={`text-base lg:text-lg text-[${
+            sectorColors[company.Sector.name]
+          }]`}
+        >
           {company.Sector.name}
         </span>
         {company.status === CompanyStatus.INSOLVENT && (
           <Chip color="danger">
-            <span className="text-lg">Insolvent</span>
+            <span className="text-base lg:text-lg">Insolvent</span>
           </Chip>
         )}
         {company.status === CompanyStatus.ACTIVE && (
           <Chip color="success">
-            <span className="text-lg">Active</span>
+            <span className="text-base lg:text-lg">Active</span>
           </Chip>
         )}
       </div>
@@ -531,7 +537,7 @@ const CompanyActionSelectionVote = ({
                 </DebounceButton>
               ) : null}
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
               {availableActions.map((action) => {
                 const currentCost = () => {
                   const companyActionCost = companyActions?.find(
@@ -597,8 +603,8 @@ const CompanyActionSelectionVote = ({
                     `}
                     >
                       <CardHeader>
-                        <div className="flex flex-col gap-1 w-full">
-                          <div className="flex gap-1 justify-between items-start">
+                        <div className="flex flex-col w-full">
+                          <div className="flex gap-1 justify-between items-center">
                             <div className="flex items-center gap-1">
                               <span className="font-bold">{action.title}</span>
                             </div>
@@ -641,14 +647,6 @@ const CompanyActionSelectionVote = ({
                                 </Popover>
                               )}
                             </div>
-                            {CompanyActionPrestigeCosts[action.name] > 0 && (
-                              <div className="flex">
-                                <RiSparkling2Fill />
-                                <span>
-                                  {CompanyActionPrestigeCosts[action.name]}
-                                </span>
-                              </div>
-                            )}
                           </div>
                         </div>
                       </CardHeader>
@@ -657,10 +655,7 @@ const CompanyActionSelectionVote = ({
                           {renderSymbolDisplay(action.name)}
                           {action.name ===
                             OperatingRoundAction.SPEND_PRESTIGE && (
-                            <PrestigeRewards
-                              layout="minimalist"
-                              onlyShowCurrent
-                            />
+                            <PrestigeRewards layout="minimalist" />
                           )}
                           {action.name === OperatingRoundAction.LOAN && (
                             <Chip className="mt-2" color="warning">
@@ -708,11 +703,11 @@ const CompanyActionSelectionVote = ({
                                 <RiCloseCircleFill />
                               </Button>
                             )}
-                          <div className="flex justify-end gap-2">
+                          <div className="flex flex-wrap justify-end gap-2">
                             {companyCosts().map((cost) => (
                               <span
                                 key={cost} // Add a unique key for each item
-                                className={`px-2 py-1 rounded-md ${
+                                className={`px-2 py-1 rounded-md text-sm xl:text-base ${
                                   cost === currentCost()
                                     ? "bg-blue-500 text-white font-semibold"
                                     : "bg-gray-200 text-gray-700 hover:bg-gray-300"
@@ -721,6 +716,14 @@ const CompanyActionSelectionVote = ({
                                 ${cost}
                               </span>
                             ))}
+                            {CompanyActionPrestigeCosts[action.name] > 0 && (
+                              <div className="flex gap-1 items-center">
+                                <RiSparkling2Fill />
+                                <span className="text-sm xl:text-base">
+                                  {CompanyActionPrestigeCosts[action.name]}
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </CardFooter>
@@ -898,7 +901,7 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
             {collectedCompanies.map((company, index) => (
               <div
                 key={company.id}
-                className={`flex items-center justify-center p-2 w-14 h-14 rounded-full text-white text-sm font-bold ${
+                className={`flex items-center justify-center p-2 w-14 h-14 rounded-full text-white text-xs lg:text-sm font-bold ${
                   currentCompany === company.id
                     ? `${
                         company.status === CompanyStatus.INSOLVENT
