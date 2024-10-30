@@ -18,8 +18,6 @@ const ClientLayout = ({ children }: { children: React.ReactNode }) => {
   return (
     <NextUIProvider>
       <ThemeProvider>
-        {" "}
-        {/* Wrap the app with your ThemeProvider */}
         <main className="dark text-foreground bg-background h-[100vh]">
           <trpc.Provider client={trpcClient} queryClient={queryClient}>
             <QueryClientProvider client={queryClient}>
