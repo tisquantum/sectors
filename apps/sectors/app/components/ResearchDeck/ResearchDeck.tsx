@@ -46,7 +46,7 @@ const ResearchDeck = () => {
         <Button onPress={onOpen}>Show Deck</Button>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="flex flex-wrap gap-2">
         {Object.entries(cardsGroupedByCompany).map(([companyId, cards]) => (
           <motion.div
             key={companyId}

@@ -17,13 +17,15 @@ const ClientLayout = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <NextUIProvider>
-      <ThemeProvider> {/* Wrap the app with your ThemeProvider */}
-        <main className="dark text-foreground bg-background">
+      <ThemeProvider>
+        {" "}
+        {/* Wrap the app with your ThemeProvider */}
+        <main className="dark text-foreground bg-background h-[100vh]">
           <trpc.Provider client={trpcClient} queryClient={queryClient}>
             <QueryClientProvider client={queryClient}>
               <AuthUserProvider>
                 <PusherProvider>
-                  <div className="flex flex-col text-foreground bg-background">
+                  <div className="flex flex-col text-foreground bg-background h-[100vh]">
                     <UserNameAlert />
                     <TopBar />
                     <Toaster duration={10000} />
