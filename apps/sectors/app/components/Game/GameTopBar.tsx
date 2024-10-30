@@ -6,7 +6,7 @@ import { useState } from "react";
 import { isActivePhase } from "@server/data/helpers";
 import Button from "@sectors/app/components/General/DebounceButton";
 import { friendlyPhaseName } from "@sectors/app/helpers";
-import { RiClockwiseFill } from "@remixicon/react";
+import { RiClockwiseFill, RiTextWrap } from "@remixicon/react";
 import PlayerPriorities from "./PlayerPriorities";
 
 const PassiveLoading = () => <Spinner color="secondary" />;
@@ -110,7 +110,10 @@ const GameTopBar = ({
         )}
         <GameGeneralInfo />
         <Button onClick={handleTogglePhaseList}>
-          {friendlyPhaseName(currentPhase?.name)}
+          <div className="flex items-center gap-1">
+            <RiTextWrap className="text-yellow-400" />
+            {friendlyPhaseName(currentPhase?.name)}
+          </div>
         </Button>
       </div>
     </div>

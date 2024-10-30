@@ -4,6 +4,7 @@ import {
   GameStatus,
   OrderType,
   PhaseName,
+  ResearchCardEffect,
   Sector,
   ShareLocation,
 } from "@server/prisma/prisma.client";
@@ -197,6 +198,51 @@ export function renderOrderTypeShortHand(orderType: OrderType) {
       return "OO";
     default:
       return orderType;
+  }
+}
+
+export function friendlyResearchName(cardEffect: ResearchCardEffect) {
+  switch (cardEffect) {
+    case ResearchCardEffect.ARTIFICIAL_INTELLIGENCE:
+      return "Artificial Intelligence";
+    case ResearchCardEffect.AUTOMATION:
+      return "Automation";
+    case ResearchCardEffect.CLINICAL_TRIAL:
+      return "Clinical Trial";
+    case ResearchCardEffect.CORPORATE_ESPIONAGE:
+      return "Corporate Espionage";
+    case ResearchCardEffect.DIVERSIFICATION:
+      return "Diversification";
+    case ResearchCardEffect.ECOMMERCE:
+      return "E-Commerce";
+    case ResearchCardEffect.ECONOMIES_OF_SCALE:
+      return "Economies of Scale";
+    case ResearchCardEffect.ENERGY_SAVING:
+      return "Energy Saving";
+    case ResearchCardEffect.GLOBALIZATION:
+      return "Globalization";
+    case ResearchCardEffect.GOVERNMENT_GRANT:
+      return "Government Grant";
+    case ResearchCardEffect.INNOVATION:
+      return "Innovation";
+    case ResearchCardEffect.MARKET_EXPANSION:
+      return "Market Expansion";
+    case ResearchCardEffect.NEW_ALLOY:
+      return "New Alloy";
+    case ResearchCardEffect.NO_DISCERNIBLE_FINDINGS:
+      return "No Discernible Findings";
+    case ResearchCardEffect.PRODUCT_DEVELOPMENT:
+      return "Product Development";
+    case ResearchCardEffect.QUALITY_CONTROL:
+      return "Quality Control";
+    case ResearchCardEffect.RENEWABLE_ENERGY:
+      return "Renewable Energy";
+    case ResearchCardEffect.ROBOTICS:
+      return "Robotics";
+    case ResearchCardEffect.SPECIALIZATION:
+      return "Specialization";
+    default:
+      return "Unknown";
   }
 }
 

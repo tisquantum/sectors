@@ -40,19 +40,19 @@ const SectorComponentAnimation = ({
           }
         </div>
       )}
-      <div className="text-xl">{sector.name}</div>
-      <div className="text-xl flex gap-2">
+      <div className="text-base lg:text-xl">{sector.name}</div>
+      <div className="text-base lg:text-xl flex gap-2">
         <RiHandCoinFill /> {sector.demand + (sector.demandBonus || 0)}
       </div>
-      <div>Consumers {cumulativeConsumers + consumersMoving}</div>
+      <div className="text-base lg:text-xl">Consumers {cumulativeConsumers + consumersMoving}</div>
 
       {/* Static Consumers */}
-      <div className="grid grid-cols-5 gap-2">
+      <div className="grid grid-cols-5 gap-1">
         {Array(cumulativeConsumers)
           .fill(0)
           .map((_, index) => (
             <div key={`static-${index}`}>
-              <RiTeamFill size={30} />
+              <RiTeamFill size={24} />
             </div>
           ))}
 
@@ -66,7 +66,7 @@ const SectorComponentAnimation = ({
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
-              <RiTeamFill size={30} />
+              <RiTeamFill size={24} />
             </motion.div>
           ))}
       </div>
@@ -132,7 +132,7 @@ const EndTurnSectorConsumerDistributionAnimation = ({
               classNames={{ base: baseToolTipStyle }}
               className={tooltipStyle}
             >
-              <div className="flex gap-2 text-xl">
+              <div className="flex gap-2 text-base lg:text-xl">
                 <span>Consumer Pool</span>
                 <span>{currentConsumerPool + gameState.economyScore}</span>
               </div>
@@ -146,14 +146,14 @@ const EndTurnSectorConsumerDistributionAnimation = ({
               className={tooltipStyle}
               content="The economy score reflects the overall economic status."
             >
-              <div className="flex gap-2 text-xl">
+              <div className="flex gap-2 text-base lg:text-xl">
                 <span>Economy Score</span>
                 <span>{economyScore}</span>
               </div>
             </Tooltip>
           </div>
         </div>
-        <ul className="flex flex-wrap space-x-2">
+        <ul className="flex flex-wrap space-x-1">
           {Array.from({
             length: gameState.consumerPoolNumber + economyScore,
           }).map((_, index) => (
@@ -193,7 +193,7 @@ const EndTurnSectorConsumerDistributionAnimation = ({
                 }
               }}
             >
-              <RiTeamFill size={30} />
+              <RiTeamFill size={24} />
             </motion.li>
           ))}
         </ul>

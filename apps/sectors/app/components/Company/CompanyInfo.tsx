@@ -17,6 +17,7 @@ import {
 import {
   RiBankCard2Fill,
   RiBox2Fill,
+  RiBuilding3Fill,
   RiExpandUpDownFill,
   RiFundsBoxFill,
   RiFundsFill,
@@ -26,7 +27,9 @@ import {
   RiIncreaseDecreaseFill,
   RiPriceTag3Fill,
   RiSailboatFill,
+  RiShapesFill,
   RiSparkling2Fill,
+  RiStackFill,
   RiTeamFill,
   RiUserFill,
   RiWallet3Fill,
@@ -144,7 +147,10 @@ const CompanyMoreInfo = ({
         className="flex flex-col px-2 rounded-md"
         style={{ backgroundColor: sectorColors[company.Sector.name] }}
       >
-        <span>{company.Sector.name}</span>
+        <div className="flex items-center gap-1">
+          <RiShapesFill size={18} />
+          <span>{company.Sector.name}</span>
+        </div>
         <div className="flex items-center gap-1">
           <Tooltip
             classNames={{ base: baseToolTipStyle }}
@@ -372,7 +378,8 @@ const CompanyInfo = ({
         <div className="flex flex-col gap-1">
           <div className="flex flex-col gap-1">
             <div className="flex flex-start gap-1 items-center justify-between">
-              <div className="flex gap-1 text-lg font-bold">
+              <div className="flex items-center gap-1 text-base lg:text-lg font-bold">
+                <RiBuilding3Fill size={18} />
                 <span>{company.name} </span>
               </div>
             </div>
@@ -389,7 +396,7 @@ const CompanyInfo = ({
               >
                 <Popover>
                   <PopoverTrigger>
-                    <div className="flex items-center cursor-pointer">
+                    <div className="flex items-center gap-1 cursor-pointer">
                       <RiFundsFill size={20} />
                       <span>${company.currentStockPrice}</span>
                     </div>
@@ -403,7 +410,10 @@ const CompanyInfo = ({
             <div className="flex gap-1">
               <Popover>
                 <PopoverTrigger>
-                  <span className="cursor-pointer">{company.companyTier}</span>
+                  <div className="flex items-center gap-1 cursor-pointer">
+                    <RiStackFill size={20} />
+                    <span>{company.companyTier}</span>
+                  </div>
                 </PopoverTrigger>
                 <PopoverContent>
                   <div className="flex flex-col gap-2">
@@ -435,7 +445,7 @@ const CompanyInfo = ({
                   </p>
                 }
               >
-                <span className="flex items-center">
+                <span className="flex items-center gap-1">
                   <RiPriceTag3Fill size={20} /> ${company.unitPrice}
                 </span>
               </Tooltip>
@@ -448,9 +458,9 @@ const CompanyInfo = ({
                   </p>
                 }
               >
-                <span className="flex items-center" onClick={onOpen}>
-                  <RiWallet3Fill size={20} /> ${company.cashOnHand}
-                </span>
+                <div className="flex items-center gap-1" onClick={onOpen}>
+                  <RiWallet3Fill size={20} /> <span>${company.cashOnHand}</span>
+                </div>
               </Tooltip>
               <Tooltip
                 classNames={{ base: baseToolTipStyle }}
@@ -462,8 +472,8 @@ const CompanyInfo = ({
                   </p>
                 }
               >
-                <span
-                  className={`flex items-center ${
+                <div
+                  className={`flex items-center gap-1 ${
                     company.status == CompanyStatus.ACTIVE
                       ? "text-green-500"
                       : company.status == CompanyStatus.INACTIVE
@@ -474,11 +484,11 @@ const CompanyInfo = ({
                   {(company.status == CompanyStatus.INACTIVE ||
                     company.status == CompanyStatus.ACTIVE) && (
                     <>
-                      <RiSailboatFill size={20} />{" "}
-                      {company.Sector.sharePercentageToFloat}%
+                      <RiSailboatFill size={20} />
+                      <span>{company.Sector.sharePercentageToFloat}%</span>
                     </>
                   )}
-                </span>
+                </div>
               </Tooltip>
               {companyHasPassiveAction && (
                 <PassiveEffect

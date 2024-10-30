@@ -133,7 +133,11 @@ const RoomListItem: React.FC<RoomListProps> = ({ room }) => {
         </AvatarGroup>
         <h2 className="text-lg font-bold">{room.name}</h2>
         <Chip color={renderGameStatusColor(room.game?.[0]?.gameStatus)}>
-          {room.game?.[0]?.gameStatus || GameStatus.PENDING}
+          {room.game?.[0]?.gameStatus
+            ? room.game?.[0]?.gameStatus == "FINISHED"
+              ? "COMPLETED"
+              : room.game?.[0]?.gameStatus
+            : GameStatus.PENDING}
         </Chip>
         {room.game?.[0]?.id && <GameMeta gameId={room.game[0].id} />}
       </div>

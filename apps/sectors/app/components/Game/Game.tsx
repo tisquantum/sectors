@@ -284,7 +284,7 @@ const Game = ({ gameId }: { gameId: string }) => {
               >
                 <div className="flex flex-col gap-2 items-center">
                   <span className="text-2xl font-bold animate-pulse">
-                    Game Is Finished!
+                    Game Has Ended!
                   </span>
                   <span className="text-xl font-medium">View Game Results</span>
                 </div>
@@ -340,7 +340,7 @@ const Game = ({ gameId }: { gameId: string }) => {
               </AnimatePresence>
             </div>
           </div>
-          <div className="fixed bottom-4 right-4 lg:hidden">
+          <div className="z-50 fixed bottom-4 right-4 lg:hidden">
             <Button
               className="bg-blue-500 text-white p-3 rounded-full shadow-lg"
               onPress={() => openSidebarModal()}
