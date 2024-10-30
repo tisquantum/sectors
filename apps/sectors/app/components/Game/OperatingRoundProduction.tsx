@@ -98,7 +98,7 @@ const OperatingRoundProduction = () => {
             <h2 className="text-lg font-semibold mb-2">Operations Priority</h2>
             <CompanyPriorityList companies={companiesWithSector} />
           </div>
-          <div>
+          <div className="bg-slate-800">
             <ThroughputLegend />
           </div>
         </div>

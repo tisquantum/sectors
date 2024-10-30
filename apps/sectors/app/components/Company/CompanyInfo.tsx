@@ -254,25 +254,29 @@ const CompanyMoreInfo = ({
                 Throughput. The companies demand minus it&apos;s supply. The
                 closer to zero, the more efficient the company is operating.
               </p>
-              <div className="flex flex-col gap-2">
-                <ThroughputLegend />
-              </div>
             </div>
           }
         >
-          <div className="flex items-center">
-            <RiIncreaseDecreaseFill size={18} className="ml-2" />
-            <div className="ml-1 flex">
-              <span>
-                {calculateDemand(company.demandScore, company.baseDemand) -
-                  calculateCompanySupply(
-                    company.supplyMax,
-                    company.supplyBase,
-                    company.supplyCurrent
-                  )}
-              </span>
-            </div>
-          </div>
+          <Popover backdrop="blur" className="max-w-[calc(100vw-20px)]">
+            <PopoverTrigger>
+              <div className="flex items-center cursor-pointer">
+                <RiIncreaseDecreaseFill size={18} className="ml-2" />
+                <div className="ml-1 flex">
+                  <span>
+                    {calculateDemand(company.demandScore, company.baseDemand) -
+                      calculateCompanySupply(
+                        company.supplyMax,
+                        company.supplyBase,
+                        company.supplyCurrent
+                      )}
+                  </span>
+                </div>
+              </div>
+            </PopoverTrigger>
+            <PopoverContent>
+              <ThroughputLegend />
+            </PopoverContent>
+          </Popover>
         </Tooltip>
         <Tooltip
           classNames={{ base: baseToolTipStyle }}
@@ -408,7 +412,7 @@ const CompanyInfo = ({
               </Tooltip>
             </div>
             <div className="flex gap-1">
-              <Popover>
+              <Popover backdrop="blur" className="max-w-[calc(100vw-20px)]">
                 <PopoverTrigger>
                   <div className="flex items-center gap-1 cursor-pointer">
                     <RiStackFill size={20} />
@@ -416,9 +420,7 @@ const CompanyInfo = ({
                   </div>
                 </PopoverTrigger>
                 <PopoverContent>
-                  <div className="flex flex-col gap-2">
-                    <CompanyTiers company={company} />
-                  </div>
+                  <CompanyTiers company={company} />
                 </PopoverContent>
               </Popover>
               |
