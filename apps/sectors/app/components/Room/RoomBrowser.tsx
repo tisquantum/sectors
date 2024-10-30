@@ -153,7 +153,7 @@ function RoomBrowserContent({
             color={renderGameStatusColor(status)}
             onClick={() => handleChipClick(status)}
           >
-            {status}
+            {status == "FINISHED" ? "COMPLETED" : status}
           </Chip>
         ))}
         <div className="flex items-center gap-2">

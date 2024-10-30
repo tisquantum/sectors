@@ -12,6 +12,7 @@ import {
   RiDiscFill,
   RiListOrdered2,
   RiCurrencyFill,
+  RiTextWrap,
 } from "@remixicon/react";
 import {
   Avatar,
@@ -44,6 +45,7 @@ import WalletInfo from "./WalletInfo";
 import { MAX_SHARE_PERCENTAGE } from "@server/data/constants";
 import PlayerShares from "../Player/PlayerShares";
 import { calculateNetWorth } from "@server/data/helpers";
+import SymbolLegend from "./SymbolLegend";
 
 const BankInfo = () => {
   const { gameState, gameId } = useGame();
@@ -339,6 +341,14 @@ const GameGeneralInfo = () => {
           </div>
         </div>
       </Tooltip>
+      <Popover>
+        <PopoverTrigger>
+          <Button>Icon Legend</Button>
+        </PopoverTrigger>
+        <PopoverContent>
+          <SymbolLegend />
+        </PopoverContent>
+      </Popover>
     </div>
   );
 };

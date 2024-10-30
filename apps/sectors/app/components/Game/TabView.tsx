@@ -7,6 +7,7 @@ import GameLog from "./GameLog";
 import GameChat from "../GameChat/GameChat";
 import { useGame } from "./GameContext";
 import { Key, useState } from "react";
+import { RiShapesFill, RiUserFill } from "@remixicon/react";
 
 const TabView = ({
   isVertical,
@@ -34,12 +35,28 @@ const TabView = ({
       <Tab key="chat" title="Chat">
         <GameChat roomId={gameState.roomId} gameName={gameState.name} />
       </Tab>
-      <Tab key="players" title="Players" className={tabStyle}>
+      <Tab
+        key="players"
+        title={
+          <div className="flex gap-1 items-center">
+            <RiUserFill size={16} /> <span>Players</span>
+          </div>
+        }
+        className={tabStyle}
+      >
         <Card className="h-[calc(100vh-288px)] overflow-y-auto scrollbar">
           <PlayersOverview gameId={gameId} />
         </Card>
       </Tab>
-      <Tab key="sectors" title="Sectors" className={tabStyle}>
+      <Tab
+        key="sectors"
+        title={
+          <div className="flex gap-1 items-center">
+            <RiShapesFill size={16} /> <span>Sectors</span>
+          </div>
+        }
+        className={tabStyle}
+      >
         <Card className="h-[calc(100vh-288px)] overflow-y-auto scrollbar">
           <SectorComponent />
         </Card>

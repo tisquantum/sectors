@@ -1,11 +1,12 @@
 import {
-  Avatar,
   Button,
   Card,
   CardBody,
   CardFooter,
   CardHeader,
   Chip,
+  ChipProps,
+  Kbd,
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -16,12 +17,23 @@ import { useEffect, useState } from "react";
 import { trpc } from "@sectors/app/trpc";
 import { useGame } from "../Game/GameContext";
 import {
+  ACTION_ISSUE_SHARE_AMOUNT,
   CompanyActionCosts,
   CompanyActionPrestigeCosts,
   companyActionsDescription,
   CompanyTierData,
+  DEFAULT_DECREASE_UNIT_PRICE,
+  DEFAULT_INCREASE_UNIT_PRICE,
   GeneralCompanyActionCosts,
+  LARGE_MARKETING_CAMPAIGN_DEMAND,
+  LICENSING_AGREEMENT_UNIT_PRICE_BONUS,
+  LOAN_AMOUNT,
+  LOAN_INTEREST_RATE,
+  LOBBY_DEMAND_BOOST,
+  MARKETING_CONSUMER_BONUS,
+  OURSOURCE_SUPPLY_BONUS,
   SectorEffects,
+  SMALL_MARKETING_CAMPAIGN_DEMAND,
 } from "@server/data/constants";
 import {
   CompanyAction,
@@ -43,10 +55,23 @@ import DebounceButton from "@sectors/app/components/General/DebounceButton";
 import {
   RiArrowLeftFill,
   RiArrowRightFill,
+  RiBox2Fill,
+  RiBuilding3Fill,
   RiCloseCircleFill,
+  RiDiscountPercentFill,
+  RiExpandUpDownFill,
   RiGlasses2Fill,
+  RiHandCoinFill,
+  RiInformation2Fill,
   RiLockFill,
+  RiPercentFill,
+  RiPriceTag3Fill,
+  RiShapesFill,
   RiSparkling2Fill,
+  RiStackFill,
+  RiListOrdered2,
+  RiTicket2Fill,
+  RiWalletFill,
 } from "@remixicon/react";
 import {
   companyPriorityOrderOperations,
@@ -58,6 +83,261 @@ import {
 } from "@sectors/app/helpers/tailwind.helpers";
 import CompanyPriorityList from "./CompanyPriorityOperatingRound";
 import InsolvencyContributionComponent from "./InsolvencyContribution";
+import { friendlyResearchName } from "@sectors/app/helpers";
+
+const renderSymbolDisplay = (operatingRoundAction: OperatingRoundAction) => {
+  const IconWithText = ({
+    icon,
+    text,
+  }: {
+    icon: JSX.Element;
+    text: string | number;
+  }) => (
+    <div className="flex items-center gap-2">
+      {icon}
+      <span>{text}</span>
+    </div>
+  );
+
+  const Row = ({
+    children,
+    variant,
+    color,
+  }: {
+    children: React.ReactNode;
+    variant?: ChipProps["variant"];
+    color?: ChipProps["color"];
+  }) => (
+    <Chip variant={variant} color={color}>
+      {children}
+    </Chip>
+  );
+
+  switch (operatingRoundAction) {
+    case OperatingRoundAction.MARKETING:
+      return (
+        <div className="flex items-center flex-wrap gap-2">
+          <Row variant="flat" color="success">
+            <div className="flex items-center gap-1">
+              <RiBuilding3Fill size={18} />
+              <IconWithText
+                icon={<RiHandCoinFill size={18} />}
+                text={`+${LARGE_MARKETING_CAMPAIGN_DEMAND}`}
+              />
+            </div>
+          </Row>
+          <Row variant="flat" color="success">
+            <div className="flex items-center items-center gap-1">
+              <RiShapesFill size={18} />
+              <IconWithText
+                icon={<RiHandCoinFill size={18} />}
+                text={`+${MARKETING_CONSUMER_BONUS}`}
+              />
+            </div>
+          </Row>
+          <Row variant="flat" color="warning">
+            <div className="flex items-center gap-1">
+              <IconWithText icon={<RiBuilding3Fill size={18} />} text={`-1`} />
+              <span>/</span>
+              <RiListOrdered2 size={18} />
+            </div>
+          </Row>
+        </div>
+      );
+
+    case OperatingRoundAction.MARKETING_SMALL_CAMPAIGN:
+      return (
+        <div className="flex items-center flex-wrap gap-2">
+          <Row variant="flat" color="success">
+            <div className="flex items-center gap-1">
+              <RiBuilding3Fill size={18} />
+              <IconWithText
+                icon={<RiHandCoinFill size={18} />}
+                text={`+${SMALL_MARKETING_CAMPAIGN_DEMAND}`}
+              />
+            </div>
+          </Row>
+          <Row variant="flat" color="warning">
+            <div className="flex items-center gap-1">
+              <RiBuilding3Fill size={18} />
+              <IconWithText icon={<RiHandCoinFill size={18} />} text={`-1`} />
+              <span>/</span>
+              <RiListOrdered2 size={18} />
+            </div>
+          </Row>
+        </div>
+      );
+
+    case OperatingRoundAction.RESEARCH:
+      return (
+        <Row variant="flat" color="success">
+          <IconWithText icon={<RiGlasses2Fill size={18} />} text="+1" />
+        </Row>
+      );
+
+    case OperatingRoundAction.EXPANSION:
+      return (
+        <Row variant="flat" color="success">
+          <IconWithText icon={<RiStackFill size={18} />} text="+1" />
+        </Row>
+      );
+
+    case OperatingRoundAction.DOWNSIZE:
+      return (
+        <Row variant="flat" color="success">
+          <IconWithText icon={<RiStackFill size={18} />} text="-1" />
+        </Row>
+      );
+
+    case OperatingRoundAction.SHARE_BUYBACK:
+      return (
+        <Row variant="flat" color="success">
+          <div className="flex items-center gap-1">
+            <span>OM</span> <RiTicket2Fill size={18} /> <span>-1</span>
+          </div>
+        </Row>
+      );
+
+    case OperatingRoundAction.SHARE_ISSUE:
+      return (
+        <Row variant="flat" color="success">
+          <div className="flex items-center gap-1">
+            <span>OM</span> <RiTicket2Fill size={18} />
+            <span>+{ACTION_ISSUE_SHARE_AMOUNT}</span>
+          </div>
+        </Row>
+      );
+
+    case OperatingRoundAction.LOAN:
+      return (
+        <div className="flex items-center flex-wrap gap-2">
+          <Row variant="flat" color="success">
+            <IconWithText
+              icon={
+                <>
+                  <RiBuilding3Fill size={18} /> <RiWalletFill size={18} />
+                </>
+              }
+              text={`$${LOAN_AMOUNT}`}
+            />
+          </Row>
+          <Row variant="flat" color="warning">
+            <div className="flex items-center gap-1">
+              <RiPercentFill size={18} />
+              <span>{LOAN_INTEREST_RATE} /</span> <RiListOrdered2 size={18} />
+            </div>
+          </Row>
+        </div>
+      );
+
+    case OperatingRoundAction.INCREASE_PRICE:
+      return (
+        <Row variant="flat" color="success">
+          <IconWithText
+            icon={<RiPriceTag3Fill size={20} />}
+            text={`+$${DEFAULT_INCREASE_UNIT_PRICE}`}
+          />
+        </Row>
+      );
+
+    case OperatingRoundAction.DECREASE_PRICE:
+      return (
+        <Row variant="flat" color="success">
+          <IconWithText
+            icon={<RiPriceTag3Fill size={20} />}
+            text={`-$${DEFAULT_DECREASE_UNIT_PRICE}`}
+          />
+        </Row>
+      );
+
+    case OperatingRoundAction.LOBBY:
+      return (
+        <div className="flex flex-wrap gap-2">
+          <Row variant="flat" color="success">
+            <IconWithText
+              icon={
+                <>
+                  <RiShapesFill size={18} /> <RiHandCoinFill size={20} />
+                </>
+              }
+              text={`+${LOBBY_DEMAND_BOOST}`}
+            />
+          </Row>
+          <Row variant="flat" color="warning">
+            <div className="flex items-center gap-1">
+              <span>-1</span> <RiShapesFill size={18} />
+              <RiHandCoinFill size={20} /> / <RiListOrdered2 size={18} />
+            </div>
+          </Row>
+        </div>
+      );
+
+    case OperatingRoundAction.OUTSOURCE:
+      return (
+        <div className="flex items-center flex-wrap gap-2">
+          <Row variant="flat" color="success">
+            <IconWithText
+              icon={
+                <>
+                  <RiBuilding3Fill size={18} /> <RiBox2Fill size={18} />
+                </>
+              }
+              text={`+${OURSOURCE_SUPPLY_BONUS} | MAX x2`}
+            />
+          </Row>
+          <Row variant="flat" color="warning">
+            <div className="flex items-center gap-1">
+              <span>-1</span> <RiHandCoinFill size={18} />
+              <span>/</span>
+              <RiListOrdered2 size={18} />
+            </div>
+          </Row>
+          <Row variant="flat" color="danger">
+            <IconWithText icon={<RiSparkling2Fill size={18} />} text="= 0" />
+          </Row>
+        </div>
+      );
+
+    case OperatingRoundAction.LICENSING_AGREEMENT:
+      return (
+        <Row variant="flat" color="success">
+          <IconWithText
+            icon={<RiPriceTag3Fill size={20} />}
+            text={`+${LICENSING_AGREEMENT_UNIT_PRICE_BONUS}`}
+          />
+        </Row>
+      );
+
+    case OperatingRoundAction.EXTRACT:
+    case OperatingRoundAction.MANUFACTURE:
+      return (
+        <Row variant="flat" color="success">
+          <IconWithText
+            icon={
+              <>
+                <RiBuilding3Fill size={18} /> <RiBox2Fill size={18} />
+              </>
+            }
+            text="+1"
+          />
+        </Row>
+      );
+
+    case OperatingRoundAction.VETO:
+      return (
+        <Row variant="flat" color="success">
+          <div className="flex items-center gap-1">
+            <RiExpandUpDownFill size={18} />
+            <RiDiscountPercentFill size={18} />
+            <span>-50</span>
+          </div>
+        </Row>
+      );
+
+    default:
+      return <></>;
+  }
+};
 
 const CompanyActionSelectionVote = ({
   company,
@@ -251,7 +531,7 @@ const CompanyActionSelectionVote = ({
                 </DebounceButton>
               ) : null}
             </div>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
               {availableActions.map((action) => {
                 const currentCost = () => {
                   const companyActionCost = companyActions?.find(
@@ -317,24 +597,49 @@ const CompanyActionSelectionVote = ({
                     `}
                     >
                       <CardHeader>
-                        <div className="flex flex-col w-full">
+                        <div className="flex flex-col gap-1 w-full">
                           <div className="flex gap-1 justify-between items-start">
-                            <span className="basis-5/12	font-bold">
-                              {action.title}
-                            </span>
+                            <div className="flex items-center gap-1">
+                              <span className="font-bold">{action.title}</span>
+                            </div>
                             <div className="flex flex-wrap justify-end gap-1">
-                              {companyCosts().map((cost) => (
-                                <span
-                                  key={cost} // Add a unique key for each item
-                                  className={`px-2 py-1 rounded-md ${
-                                    cost === currentCost()
-                                      ? "bg-blue-500 text-white font-semibold"
-                                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                                  }`}
-                                >
-                                  ${cost}
-                                </span>
-                              ))}
+                              <Popover>
+                                <PopoverTrigger>
+                                  <Button className="cursor-pointer" isIconOnly>
+                                    <RiInformation2Fill />
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent>
+                                  <div className="flex items-center justify-center p-2 max-w-[200px]">
+                                    <p>{action.message}</p>
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                              {action.name ===
+                                OperatingRoundAction.RESEARCH && (
+                                <Popover>
+                                  <PopoverTrigger>
+                                    <Button isIconOnly>
+                                      <RiGlasses2Fill />
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent>
+                                    <div className="grid grid-cols-3 gap-4">
+                                      {researchDeck.cards.map((card) => (
+                                        <div
+                                          key={card.id}
+                                          className="p-4 bg-gray-700 rounded-md text-white"
+                                        >
+                                          <h3 className="text-lg">
+                                            {friendlyResearchName(card.effect)}
+                                          </h3>
+                                          <p>{card.description}</p>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </PopoverContent>
+                                </Popover>
+                              )}
                             </div>
                             {CompanyActionPrestigeCosts[action.name] > 0 && (
                               <div className="flex">
@@ -345,75 +650,79 @@ const CompanyActionSelectionVote = ({
                               </div>
                             )}
                           </div>
-                          {action.name === OperatingRoundAction.RESEARCH && (
-                            <Popover>
-                              <PopoverTrigger>
-                                <Button>
-                                  <RiGlasses2Fill />
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent>
-                                <div className="grid grid-cols-3 gap-4">
-                                  {researchDeck.cards.map((card) => (
-                                    <div
-                                      key={card.id}
-                                      className="p-4 bg-gray-700 rounded-md text-white"
-                                    >
-                                      <h3 className="text-lg">{card.name}</h3>
-                                      <p>{card.description}</p>
-                                    </div>
-                                  ))}
-                                </div>
-                              </PopoverContent>
-                            </Popover>
-                          )}
-                          {action.name === OperatingRoundAction.LOAN && (
-                            <span>One time only</span>
-                          )}
-                          {action.name === OperatingRoundAction.LOAN &&
-                            company.hasLoan && (
-                              <span>Loan has been taken.</span>
-                            )}
                         </div>
                       </CardHeader>
                       <CardBody>
                         <div className="flex flex-col">
-                          {action.message}
+                          {renderSymbolDisplay(action.name)}
                           {action.name ===
                             OperatingRoundAction.SPEND_PRESTIGE && (
-                            <PrestigeRewards layout="minimalist" />
+                            <PrestigeRewards
+                              layout="minimalist"
+                              onlyShowCurrent
+                            />
                           )}
+                          {action.name === OperatingRoundAction.LOAN && (
+                            <Chip className="mt-2" color="warning">
+                              One time only
+                            </Chip>
+                          )}
+                          {action.name === OperatingRoundAction.LOAN &&
+                            company.hasLoan && (
+                              <Chip className="mt-2" color="warning">
+                                Loan has been taken
+                              </Chip>
+                            )}
                         </div>
                       </CardBody>
                       <CardFooter>
-                        {actionVoteResults && (
-                          <div className="flex gap-2">
-                            {actionVoteResults
-                              .filter(
-                                (actionVoteResult) =>
-                                  actionVoteResult.actionVoted === action.name
-                              )
-                              .map((action: OperatingRoundVoteWithPlayer) => (
-                                <PlayerAvatar
-                                  key={action.id}
-                                  badgeContent={action.weight}
-                                  player={action.Player}
-                                />
-                              ))}
-                          </div>
-                        )}
-                        {selectedActions.includes(action.name) &&
-                          companyAllowedActions > 1 &&
-                          currentPhase?.name ===
-                            PhaseName.OPERATING_ACTION_COMPANY_VOTE &&
-                          currentPhase?.companyId === company.id && (
-                            <Button
-                              className="text-red-500"
-                              onClick={() => handleRemoveSelection(action.name)}
-                            >
-                              <RiCloseCircleFill />
-                            </Button>
+                        <div className="flex w-full flex-col gap-2">
+                          {actionVoteResults && (
+                            <div className="flex gap-2">
+                              {actionVoteResults
+                                .filter(
+                                  (actionVoteResult) =>
+                                    actionVoteResult.actionVoted === action.name
+                                )
+                                .map((action: OperatingRoundVoteWithPlayer) => (
+                                  <PlayerAvatar
+                                    key={action.id}
+                                    badgeContent={action.weight}
+                                    player={action.Player}
+                                  />
+                                ))}
+                            </div>
                           )}
+                          {selectedActions.includes(action.name) &&
+                            companyAllowedActions > 1 &&
+                            currentPhase?.name ===
+                              PhaseName.OPERATING_ACTION_COMPANY_VOTE &&
+                            currentPhase?.companyId === company.id && (
+                              <Button
+                                className="text-red-500"
+                                onClick={() =>
+                                  handleRemoveSelection(action.name)
+                                }
+                                isIconOnly
+                              >
+                                <RiCloseCircleFill />
+                              </Button>
+                            )}
+                          <div className="flex justify-end gap-2">
+                            {companyCosts().map((cost) => (
+                              <span
+                                key={cost} // Add a unique key for each item
+                                className={`px-2 py-1 rounded-md ${
+                                  cost === currentCost()
+                                    ? "bg-blue-500 text-white font-semibold"
+                                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                                }`}
+                              >
+                                ${cost}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
                       </CardFooter>
                     </Card>
                   </div>
