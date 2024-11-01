@@ -10,7 +10,7 @@ type Context = {
 export default (trpc: TrpcService, ctx: Context) =>
   trpc.router({
     getCompanyAction: trpc.procedure
-      .input(z.object({ operatingRoundId: z.number(), companyId: z.string() }))
+      .input(z.object({ operatingRoundId: z.string(), companyId: z.string() }))
       .query(async ({ input }) => {
         const { operatingRoundId, companyId } = input;
         const companyAction = await ctx.companyActionService.companyActionFirst(

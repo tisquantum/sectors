@@ -35,7 +35,6 @@ import {
   PRESTIGE_TRACK_LENGTH,
   PrestigeTrack,
   PrestigeTrackItem,
-  STOCK_ACTION_SUB_ROUND_MAX,
   StockTierChartRange,
   companyActionsDescription,
   getStockPriceClosestEqualOrMore,
@@ -54,7 +53,7 @@ import {
 import { get } from 'http';
 interface NextPhaseOptions {
   allCompaniesHaveVoted?: boolean;
-  stockActionSubRound?: number;
+  stockActionSubRoundIsOver?: boolean;
 }
 /**
  * Controls the flow of the game by determining the next phase.
@@ -123,25 +122,24 @@ export function determineNextGamePhase(
         roundType: RoundType.STOCK,
       };
     case PhaseName.STOCK_ACTION_RESULT:
-      if ((options?.stockActionSubRound || 0) <= STOCK_ACTION_SUB_ROUND_MAX) {
-        return {
-          phaseName: PhaseName.STOCK_ACTION_ORDER,
-          roundType: RoundType.STOCK,
-        };
-      } else {
-        return {
-          phaseName: PhaseName.STOCK_ACTION_REVEAL,
-          roundType: RoundType.STOCK,
-        };
-      }
+      return {
+        phaseName: PhaseName.STOCK_ACTION_REVEAL,
+        roundType: RoundType.STOCK,
+      };
     case PhaseName.STOCK_ACTION_REVEAL:
       return {
         phaseName: PhaseName.STOCK_RESOLVE_MARKET_ORDER,
         roundType: RoundType.STOCK,
       };
     case PhaseName.STOCK_RESOLVE_MARKET_ORDER:
+      if (options?.stockActionSubRoundIsOver) {
+        return {
+          phaseName: PhaseName.STOCK_SHORT_ORDER_INTEREST,
+          roundType: RoundType.STOCK,
+        };
+      }
       return {
-        phaseName: PhaseName.STOCK_SHORT_ORDER_INTEREST,
+        phaseName: PhaseName.STOCK_ACTION_ORDER,
         roundType: RoundType.STOCK,
       };
     case PhaseName.STOCK_SHORT_ORDER_INTEREST:
@@ -924,13 +922,16 @@ export function getCompanyActionCost(
  */
 export function sortSectorIdsByPriority(
   sectorIds: string[],
-  sectorPriorities: SectorPriority[]
+  sectorPriorities: SectorPriority[],
 ): string[] {
   // Create a lookup map for sector priorities
-  const priorityMap = sectorPriorities.reduce<{ [key: string]: number }>((map, sp) => {
-    map[sp.sectorId] = sp.priority;
-    return map;
-  }, {});
+  const priorityMap = sectorPriorities.reduce<{ [key: string]: number }>(
+    (map, sp) => {
+      map[sp.sectorId] = sp.priority;
+      return map;
+    },
+    {},
+  );
 
   // Sort the sector IDs based on the priority
   return sectorIds.slice().sort((a, b) => {
@@ -939,4 +940,3 @@ export function sortSectorIdsByPriority(
     return priorityA - priorityB;
   });
 }
-

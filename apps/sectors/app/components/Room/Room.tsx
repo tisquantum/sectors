@@ -161,9 +161,9 @@ const RoomComponent = ({ room }: { room: RoomWithUsersAndGames }) => {
           <div className="flex flex-col flex-grow bg-gray-100">
             <div className="bg-gray-800 text-white p-2 md:p-4 flex gap-2 items-center">
               <h1 className="text-md md:text-xl font-bold">{room.name}</h1>
-              <Button className="block lg:hidden">
-                <Drawer.Trigger>Info</Drawer.Trigger>
-              </Button>
+              <Drawer.Trigger>
+                <Button className="block lg:hidden">Info</Button>
+              </Drawer.Trigger>
             </div>
             {messages && <MessagePane messages={messages} />}
             <SendMessage onSendMessage={handleSendMessage} />

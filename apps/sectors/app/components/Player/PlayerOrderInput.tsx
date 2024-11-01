@@ -462,19 +462,12 @@ const PseudoBalance = ({
   }, [currentPhase?.name]);
   if (isLoading) return null;
   if (!authPlayer) return null;
-  const pseudoSpend = playerOrders ? getPseudoSpend(playerOrders) : 0;
-  const netSpend = pseudoSpend - (runningOrderValue || 0);
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-1">
         <span>Cash On Hand</span>
         <CurrencyDollarIcon className="w-6 h-6 size-3" />
         <span>{authPlayer.cashOnHand}</span>
-      </div>
-      <div className="flex items-center gap-1">
-        <span>Previous Placed Order Cost This Round</span>
-        <CurrencyDollarIcon className="w-6 h-6 size-3" />
-        <span>{netSpend}</span>
       </div>
       <div className="flex items-center gap-1">
         <span>Current Order Cost</span>
@@ -485,7 +478,7 @@ const PseudoBalance = ({
         <span>Remaining Cash</span>
         <CurrencyDollarIcon className="w-6 h-6" />
         <span>
-          {authPlayer.cashOnHand - netSpend + (currentOrderValue || 0)}
+          {authPlayer.cashOnHand - (currentOrderValue || 0)}
         </span>
       </div>
     </div>

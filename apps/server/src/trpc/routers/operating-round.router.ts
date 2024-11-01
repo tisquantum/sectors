@@ -65,7 +65,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         z.object({
           skip: z.number().optional(),
           take: z.number().optional(),
-          cursor: z.number().optional(),
+          cursor: z.string().optional(),
           where: z.any().optional(),
           orderBy: z.any().optional(),
         }),
@@ -131,7 +131,7 @@ export default (trpc: TrpcService, ctx: Context) =>
     updateOperatingRound: trpc.procedure
       .input(
         z.object({
-          id: z.number(),
+          id: z.string(),
           data: z.object({
             roundNumber: z.number().optional(),
             startTime: z.date().optional(),
@@ -149,7 +149,7 @@ export default (trpc: TrpcService, ctx: Context) =>
       }),
 
     deleteOperatingRound: trpc.procedure
-      .input(z.object({ id: z.number() }))
+      .input(z.object({ id: z.string() }))
       .mutation(async ({ input }) => {
         const { id } = input;
         return ctx.operatingRoundService.deleteOperatingRound({ id });

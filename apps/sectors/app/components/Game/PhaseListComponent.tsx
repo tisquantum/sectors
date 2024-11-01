@@ -3,51 +3,11 @@ import { useGame } from "./GameContext";
 import { friendlyPhaseName } from "@sectors/app/helpers";
 import {
   phasesInOrder,
-  STOCK_ACTION_SUB_ROUND_MAX,
 } from "@server/data/constants";
 import _ from "lodash";
 
-const StockActionSubRoundIndicator = ({
-  current,
-  max,
-}: {
-  current: number;
-  max: number;
-}) => {
-  const { currentPhase } = useGame();
-  const circles = [];
-  let _current = current;
-  if (currentPhase?.name == PhaseName.STOCK_ACTION_RESULT) {
-    _current = current - 1;
-  }
-
-  for (let i = 0; i <= max; i++) {
-    circles.push(
-      <div
-        key={i}
-        className={`items-center justify-center content-center w-4 h-4 rounded-full mr-1 ${
-          i <= _current ? "bg-yellow-500" : "bg-slate-400"
-        }`}
-      ></div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col items-center justify-center content-center p-2">
-      <span>STOCK ACTION ROUND </span>
-      <div className="flex items-center justify-center content-center">
-        {circles}
-      </div>
-    </div>
-  );
-};
-
 const PhaseListComponent = () => {
   const { currentPhase, gameState, currentTurn } = useGame();
-  const currentStockActionSubRound = gameState?.StockRound.find(
-    (round) => round.id == currentPhase?.stockRoundId
-  )?.stockActionSubRound;
-  const maxStockActionSubRound = STOCK_ACTION_SUB_ROUND_MAX;
   const getPhaseBorderColor = (phaseName: PhaseName) => {
     switch (phaseName) {
       case PhaseName.STOCK_ACTION_ORDER:
@@ -102,16 +62,6 @@ const PhaseListComponent = () => {
     <div className="flex flex-col gap-2 max-w-[150px] md:max-w-[250px] lg:max-w-[300px] xl:max-w-[450px]">
       {_phasesInOrder.map((phase) => (
         <div key={phase}>
-          {phase === PhaseName.STOCK_ACTION_ORDER && (
-            <div
-              className={`flex items-center bg-slate-900 p-1 border-3 mb-2 justify-center content-center`}
-            >
-              <StockActionSubRoundIndicator
-                current={currentStockActionSubRound ?? 0}
-                max={maxStockActionSubRound}
-              />
-            </div>
-          )}
           <div
             className={`flex items-center p-1 border-3 ${
               phase === currentPhase?.name

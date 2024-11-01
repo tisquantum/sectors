@@ -5,15 +5,19 @@ import { TimerService } from '@server/timer/timer.service';
 
 @Injectable()
 export class PhaseService {
-  constructor(
-    private prisma: PrismaService
-  ) {}
+  constructor(private prisma: PrismaService) {}
 
   async phase(
     phaseWhereUniqueInput: Prisma.PhaseWhereUniqueInput,
   ): Promise<Phase | null> {
     return this.prisma.phase.findUnique({
       where: phaseWhereUniqueInput,
+      include: {
+        GameTurn: true,
+        StockRound: true,
+        OperatingRound: true,
+        StockSubRound: true,
+      },
     });
   }
 

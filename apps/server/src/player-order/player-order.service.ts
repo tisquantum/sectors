@@ -386,6 +386,17 @@ export class PlayerOrderService {
         //   );
         // }
       }*/
+      if (data.isSell) {
+        //check is player has created any other sell orders for this company this stock round
+        const playerSellOrders = playerOrders.filter(
+          (order) => order.isSell && order.companyId === companyId,
+        );
+        if (playerSellOrders.length > 0) {
+          throw new Error(
+            'Player has already placed a sell order for this company this stock round.',
+          );
+        }
+      }
     }
     if (data.orderType === OrderType.LIMIT) {
       //check if player has limit order actions

@@ -53,7 +53,7 @@ export default (trpc: TrpcService, ctx: Context) =>
     createOperatingRoundVote: trpc.procedure
       .input(
         z.object({
-          operatingRoundId: z.number(),
+          operatingRoundId: z.string(),
           playerId: z.string(),
           companyId: z.string(),
           actionVoted: z.nativeEnum(OperatingRoundAction),
@@ -97,7 +97,7 @@ export default (trpc: TrpcService, ctx: Context) =>
       .input(
         z.array(
           z.object({
-            operatingRoundId: z.number(),
+            operatingRoundId: z.string(),
             playerId: z.string(),
             companyId: z.string(),
             actionVoted: z.nativeEnum(OperatingRoundAction),

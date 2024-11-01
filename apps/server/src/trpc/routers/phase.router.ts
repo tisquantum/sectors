@@ -48,8 +48,8 @@ export default (trpc: TrpcService, ctx: Context) =>
           gameId: z.string(),
           gameTurnId: z.string(),
           phaseTime: z.number(),
-          stockRoundId: z.number().optional(),
-          operatingRoundId: z.number().optional(),
+          stockRoundId: z.string().optional(),
+          operatingRoundId: z.string().optional(),
         }),
       )
       .mutation(async ({ input }) => {

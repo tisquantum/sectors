@@ -84,9 +84,9 @@ export const GameProvider: React.FC<{
   );
   const { data: playersWithShares, refetch: refetchPlayersWithShares } =
     trpc.game.getPlayersWithShares.useQuery({ gameId });
-  const [currentPhase, setCurrentPhase] = useState<Phase | undefined>(
-    gameState?.Phase.find((phase) => phase.id === gameState?.currentPhaseId)
-  );
+  const { data: currentPhase, refetch: refetchCurrentPhase } =
+    trpc.phase.getPhase.useQuery({ where: { id: gameState?.currentPhaseId } });
+
   const { refetch: refetchPlayerOrder } =
     trpc.playerOrder.listPlayerOrdersWithCompany.useQuery(
       {
@@ -143,9 +143,7 @@ export const GameProvider: React.FC<{
   }, [gameId, channel]);
 
   useEffect(() => {
-    setCurrentPhase(
-      gameState?.Phase.find((phase) => phase.id === gameState?.currentPhaseId)
-    );
+    refetchCurrentPhase();
   }, [gameState?.Phase, gameState?.currentPhaseId]);
 
   if (

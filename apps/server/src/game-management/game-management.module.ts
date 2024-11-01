@@ -37,6 +37,7 @@ import { PrizeDistributionModule } from '@server/prize-distribution/prize-distri
 import { RoomUserModule } from '@server/room-user/room-user.module';
 import { CompanyActionOrderModule } from '@server/company-action-order/company-action-order.module';
 import { HeadlineModule } from '@server/headline/headline.module';
+import { StockSubRoundModule } from '@server/stock-sub-round/stock-sub-round.module';
 
 @Module({
   imports: [
@@ -77,6 +78,7 @@ import { HeadlineModule } from '@server/headline/headline.module';
     RoomUserModule,
     CompanyActionOrderModule,
     HeadlineModule,
+    StockSubRoundModule,
   ],
   providers: [GameManagementService],
   exports: [GameManagementService],
