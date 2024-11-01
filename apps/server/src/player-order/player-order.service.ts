@@ -326,11 +326,6 @@ export class PlayerOrderService {
 
     // Filter out fields based on order type
     if (data.orderType === OrderType.MARKET) {
-      if (player.marketOrderActions <= 0) {
-        throw new Error('Player has no more market order actions');
-      }
-
-      const spend = getPseudoSpend(playerOrders);
       let orderValue = 0;
       if (game.distributionStrategy === DistributionStrategy.BID_PRIORITY) {
         if (

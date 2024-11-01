@@ -97,7 +97,7 @@ const GameGeneralInfo = () => {
   if (!gameState) return notFound();
   const pseudoSpend = authPlayer?.PlayerOrder?.filter(
     (order) =>
-      order.stockRoundId === gameState.currentStockRoundId &&
+      order.stockSubRoundId === currentPhase?.stockSubRoundId &&
       order.orderType == OrderType.MARKET
   ).reduce((acc, order) => {
     const orderValue = (order.value || 0) * (order.quantity || 0);

@@ -1,9 +1,7 @@
 import { PhaseName } from "@server/prisma/prisma.client";
 import { useGame } from "./GameContext";
 import { friendlyPhaseName } from "@sectors/app/helpers";
-import {
-  phasesInOrder,
-} from "@server/data/constants";
+import { phasesInOrder } from "@server/data/constants";
 import _ from "lodash";
 
 const PhaseListComponent = () => {
@@ -69,7 +67,12 @@ const PhaseListComponent = () => {
                 : getPhaseBorderColor(phase)
             }`}
           >
-            <div>{friendlyPhaseName(phase) || phase}</div>
+            <div>
+              {friendlyPhaseName(phase) || phase}{" "}
+              {phase == PhaseName.STOCK_ACTION_ORDER &&
+                currentPhase?.StockSubRound?.roundNumber &&
+                `(${currentPhase?.StockSubRound?.roundNumber})`}
+            </div>
           </div>
         </div>
       ))}

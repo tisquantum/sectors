@@ -343,3 +343,10 @@ export type HeadlineWithRelations = Headline & {
 export type StockRoundWithStockSubRounds = StockRound & {
   stockSubRounds: StockSubRound[];
 };
+
+export type PhaseWithRelations = Phase & {
+  GameTurn: GameTurn;
+  StockRound: StockRound | null;
+  OperatingRound: OperatingRound | null;
+  StockSubRound: StockSubRound | null;
+};

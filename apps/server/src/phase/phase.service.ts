@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { Prisma, Phase } from '@prisma/client';
 import { TimerService } from '@server/timer/timer.service';
+import { PhaseWithRelations } from '@server/prisma/prisma.types';
 
 @Injectable()
 export class PhaseService {
@@ -9,7 +10,7 @@ export class PhaseService {
 
   async phase(
     phaseWhereUniqueInput: Prisma.PhaseWhereUniqueInput,
-  ): Promise<Phase | null> {
+  ): Promise<PhaseWithRelations | null> {
     return this.prisma.phase.findUnique({
       where: phaseWhereUniqueInput,
       include: {
@@ -27,7 +28,7 @@ export class PhaseService {
     cursor?: Prisma.PhaseWhereUniqueInput;
     where?: Prisma.PhaseWhereInput;
     orderBy?: Prisma.PhaseOrderByWithRelationInput;
-  }): Promise<Phase[]> {
+  }): Promise<PhaseWithRelations[]> {
     const { skip, take, cursor, where, orderBy } = params;
     return this.prisma.phase.findMany({
       skip,
@@ -35,6 +36,12 @@ export class PhaseService {
       cursor,
       where,
       orderBy,
+      include: {
+        GameTurn: true,
+        StockRound: true,
+        OperatingRound: true,
+        StockSubRound: true,
+      },
     });
   }
 

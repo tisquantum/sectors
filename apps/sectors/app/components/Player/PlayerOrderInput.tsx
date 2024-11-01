@@ -445,7 +445,7 @@ const PseudoBalance = ({
   currentOrderValue,
   runningOrderValue,
 }: {
-  stockRoundId: number;
+  stockRoundId: string;
   currentOrderValue?: number;
   runningOrderValue?: number;
 }) => {
@@ -478,7 +478,7 @@ const PseudoBalance = ({
         <span>Remaining Cash</span>
         <CurrencyDollarIcon className="w-6 h-6" />
         <span>
-          {authPlayer.cashOnHand - (currentOrderValue || 0)}
+          {authPlayer.cashOnHand + (currentOrderValue || 0)}
         </span>
       </div>
     </div>
@@ -676,7 +676,7 @@ const PlayerOrderInput = ({
         )}
       </div>
       <PseudoBalance
-        stockRoundId={currentPhase?.stockRoundId ?? 0}
+        stockRoundId={currentPhase?.stockRoundId ?? ''}
         currentOrderValue={currentOrderValue}
         runningOrderValue={runningOrderValue}
       />

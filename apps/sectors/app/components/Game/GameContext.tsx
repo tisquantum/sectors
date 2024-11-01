@@ -19,6 +19,8 @@ import {
 } from "@server/prisma/prisma.client";
 import {
   GameState,
+  PhaseWithRelations,
+  PhaseWithStockRound,
   PlayerWithPlayerOrders,
   PlayerWithShares,
   ResearchDeckWithCards,
@@ -36,7 +38,7 @@ interface GameContextProps {
   gameId: string;
   authPlayer: PlayerWithPlayerOrders | null;
   gameState: GameState;
-  currentPhase?: Phase;
+  currentPhase?: PhaseWithRelations;
   socketChannel: PusherTypes.Channel | null;
   playersWithShares: PlayerWithShares[];
   refetchPlayersWithShares: () => void;
