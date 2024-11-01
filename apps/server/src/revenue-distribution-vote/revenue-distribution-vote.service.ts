@@ -61,7 +61,7 @@ export class RevenueDistributionVoteService {
       where: {
         playerId: data.Player.connect?.id || '',
         companyId: data.Company.connect?.id || '',
-        operatingRoundId: data.OperatingRound.connect?.id || 0,
+        operatingRoundId: data.OperatingRound.connect?.id ||'',
       },
     });
     if (existingVote) {

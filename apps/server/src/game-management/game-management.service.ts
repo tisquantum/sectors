@@ -47,6 +47,7 @@ import {
   HeadlineLocation,
   Headline,
   HeadlineType,
+  StockSubRound,
 } from '@prisma/client';
 import { GamesService } from '@server/games/games.service';
 import { CompanyService } from '@server/company/company.service';
@@ -209,6 +210,7 @@ import { RoomUserService } from '@server/room-user/room-user.service';
 import { CompanyActionOrderService } from '@server/company-action-order/company-action-order.service';
 import { HeadlineService } from '@server/headline/headline.service';
 import { generateHeadlines } from '@server/headline/headline.helpers';
+import { StockSubRoundService } from '@server/stock-sub-round/stock-sub-round.service';
 
 type GroupedByPhase = {
   [key: string]: {
@@ -265,6 +267,7 @@ export class GameManagementService {
     private roomUserService: RoomUserService,
     private companyActionOrderService: CompanyActionOrderService,
     private headlineService: HeadlineService,
+    private stockSubRoundService: StockSubRoundService,
   ) {}
 
   /**
@@ -305,8 +308,10 @@ export class GameManagementService {
       case PhaseName.STOCK_OPEN_LIMIT_ORDERS:
         await this.openLimitOrders(phase);
         break;
-      case PhaseName.STOCK_ACTION_RESULT:
+      case PhaseName.STOCK_ACTION_ORDER:
         await this.handleNewSubStockActionRound(phase);
+        break;
+      case PhaseName.STOCK_ACTION_RESULT:
         if (game.isTimerless) {
           await this.handlePhaseTransition({
             phase,
@@ -319,7 +324,7 @@ export class GameManagementService {
         break;
       case PhaseName.STOCK_RESOLVE_MARKET_ORDER:
         //resolve stock round
-        await this.resolveMarketOrders(phase);
+        await this.resolveMarketOrdersSingleOrderResolve(phase);
         break;
       case PhaseName.STOCK_RESOLVE_PENDING_OPTION_ORDER:
         await this.openOptionsOrders(phase);
@@ -385,7 +390,9 @@ export class GameManagementService {
       case PhaseName.END_TURN:
         await this.adjustEconomyScore(phase);
         await this.resolveCompanyLoans(phase);
-        await this.optionContractGenerate(phase);
+        if(game.useOptionOrders) {
+          await this.optionContractGenerate(phase);
+        }
         const isEndGame = await this.checkAndTriggerEndGame(phase);
         if (!isEndGame) {
           await this.resolveEndTurn(phase);
@@ -2347,9 +2354,12 @@ export class GameManagementService {
   }
 
   async createOperatingRoundCompanyActions(phase: Phase) {
+    if (!phase.operatingRoundId) {
+      throw new Error('Operating round not found');
+    }
     const operatingRound =
       await this.operatingRoundService.operatingRoundWithProductionResults({
-        id: phase.operatingRoundId || 0,
+        id: phase.operatingRoundId,
       });
 
     if (!operatingRound) {
@@ -2364,7 +2374,7 @@ export class GameManagementService {
     // Fetch existing company actions for the current operating round
     const existingCompanyActions = await this.prisma.companyAction.findMany({
       where: {
-        operatingRoundId: phase.operatingRoundId || 0,
+        operatingRoundId: phase.operatingRoundId,
         companyId: {
           in: companies.map((company) => company.id),
         },
@@ -2381,7 +2391,7 @@ export class GameManagementService {
       .filter((company) => !existingCompanyActionCompanyIds.has(company.id))
       .map((company) => ({
         companyId: company.id,
-        operatingRoundId: phase.operatingRoundId || 0,
+        operatingRoundId: phase.operatingRoundId,
       }));
 
     if (companyActions.length === 0) {
@@ -2405,9 +2415,12 @@ export class GameManagementService {
   }
 
   async calculateAndDistributeDividends(phase: Phase) {
+    if (!phase.operatingRoundId) {
+      throw new Error('Operating round not found');
+    }
     const operatingRound =
       await this.operatingRoundService.operatingRoundWithProductionResults({
-        id: phase.operatingRoundId || 0,
+        id: phase.operatingRoundId,
       });
 
     if (!operatingRound) {
@@ -2558,10 +2571,14 @@ export class GameManagementService {
   }
 
   async handleStockActionReveal(phase: Phase) {
+    if (!phase.stockRoundId && !phase.stockSubRoundId) {
+      throw new Error('Stock round ID or stock sub round ID not found');
+    }
     try {
       await this.playerOrderService.updateManyPlayerOrders({
         where: {
-          stockRoundId: phase.stockRoundId || 0,
+          stockRoundId: phase.stockRoundId || '',
+          stockSubRoundId: phase.stockSubRoundId || '',
         },
         data: {
           isConcealed: false,
@@ -2573,18 +2590,39 @@ export class GameManagementService {
   }
 
   async handleNewSubStockActionRound(phase: Phase) {
+    if (!phase.stockRoundId) {
+      throw new Error('Stock round ID not found');
+    }
     //get the stock round
     const stockRound = await this.stockRoundService.stockRound({
-      id: phase.stockRoundId || 0,
+      id: phase.stockRoundId,
     });
     if (!stockRound) {
       throw new Error('Stock round not found');
     }
-    //increment the sub round
-    await this.stockRoundService.updateStockRound({
-      where: { id: stockRound.id },
-      data: { stockActionSubRound: stockRound.stockActionSubRound + 1 },
-    });
+    //get latest stock sub round
+    const latestStockSubRound =
+      await this.stockRoundService.getCurrentSubStockRound(phase.stockRoundId);
+    //create stock sub round
+    try {
+      const subStockRound = await this.stockSubRoundService.createStockSubRound(
+        {
+          roundNumber: latestStockSubRound
+            ? latestStockSubRound?.roundNumber + 1
+            : 1,
+          StockRound: { connect: { id: stockRound.id } },
+          Game: { connect: { id: phase.gameId } },
+          GameTurn: { connect: { id: phase.gameTurnId } },
+        },
+      );
+      //update the phase with the new sub stock round
+      await this.phaseService.updatePhase({
+        where: { id: phase.id },
+        data: { StockSubRound: { connect: { id: subStockRound.id } } },
+      });
+    } catch (error) {
+      console.error('Error creating stock sub round', error);
+    }
   }
 
   /**
@@ -2600,23 +2638,33 @@ export class GameManagementService {
     if (!company) {
       throw new Error('Company not found');
     }
+    if (!phase.operatingRoundId) {
+      throw new Error('Operating round not found');
+    }
+    if (!phase.companyId) {
+      throw new Error('Company ID not found');
+    }
+    if (!phase.gameTurnId) {
+      throw new Error('Game turn ID not found');
+    }
     // Get the company action(s)
     let companyActions = await this.prisma.companyAction.findMany({
       where: {
-        operatingRoundId: phase.operatingRoundId || 0,
-        companyId: phase.companyId || '',
+        operatingRoundId: phase.operatingRoundId,
+        companyId: phase.companyId,
       },
       include: {
         Company: true,
       },
     });
+
     // If no company actions exist, create a VETO action
     if (companyActions.length === 0) {
       const newCompanyAction =
         await this.companyActionService.createCompanyAction({
-          Company: { connect: { id: phase.companyId || '' } },
-          GameTurn: { connect: { id: phase.gameTurnId || '' } },
-          OperatingRound: { connect: { id: phase.operatingRoundId || 0 } },
+          Company: { connect: { id: phase.companyId } },
+          GameTurn: { connect: { id: phase.gameTurnId } },
+          OperatingRound: { connect: { id: phase.operatingRoundId } },
           action: OperatingRoundAction.VETO,
           resolved: true,
         });
@@ -3872,9 +3920,12 @@ export class GameManagementService {
    * @returns
    */
   async adjustStockPrices(phase: Phase) {
+    if (!phase.operatingRoundId) {
+      throw new Error('Operating round not found');
+    }
     const operatingRound =
       await this.operatingRoundService.operatingRoundWithProductionResults({
-        id: phase.operatingRoundId || 0,
+        id: phase.operatingRoundId,
       });
 
     if (!operatingRound) {
@@ -4015,11 +4066,13 @@ export class GameManagementService {
       console.error('Game not found');
       return;
     }
-
+    if (!phase.operatingRoundId) {
+      throw new Error('Operating round not found');
+    }
     const operatingRound =
       await this.operatingRoundService.operatingRoundWithRevenueDistributionVotes(
         {
-          id: phase.operatingRoundId || 0,
+          id: phase.operatingRoundId,
         },
       );
 
@@ -4104,7 +4157,7 @@ export class GameManagementService {
         productionResultsUpdates.push({
           where: {
             id: validVotes[0].productionResultId,
-            operatingRoundId: phase.operatingRoundId || 0,
+            operatingRoundId: phase.operatingRoundId,
           },
           data: {
             revenueDistribution: maxVote as RevenueDistribution,
@@ -4206,6 +4259,9 @@ export class GameManagementService {
     const game = await this.gamesService.game({ id: phase.gameId });
     if (!game) {
       throw new Error('Game not found');
+    }
+    if (!phase.operatingRoundId) {
+      throw new Error('Operating round not found');
     }
 
     let companies = await this.companyService.companiesWithRelations({
@@ -4404,7 +4460,7 @@ export class GameManagementService {
           revenue,
           consumers: consumersMoved,
           companyId: company.id,
-          operatingRoundId: phase.operatingRoundId || 0,
+          operatingRoundId: phase.operatingRoundId,
           throughputResult: throughput,
           steps: throughputOutcome.share_price_steps_down || 0,
         };
@@ -4801,12 +4857,14 @@ export class GameManagementService {
         throw new Error('Company tier not found');
       }
       const companyActionCount: number = companyTier.companyActions;
-
+      if (!phase.operatingRoundId) {
+        throw new Error('Operating round not found');
+      }
       // Collect votes in one query
       const votes = await this.prisma.operatingRoundVote.findMany({
         where: {
           companyId: company.id,
-          operatingRoundId: phase.operatingRoundId || 0,
+          operatingRoundId: phase.operatingRoundId,
           weight: { gt: 0 },
         },
         include: {
@@ -4872,11 +4930,15 @@ export class GameManagementService {
         sortedActions.push(OperatingRoundAction.VETO);
       }
 
+      if (!phase.operatingRoundId) {
+        throw new Error('Operating round not found');
+      }
+
       // Handle company actions in a batch manner
       const existingActions = await this.companyActionService.companyActions({
         where: {
           companyId: company.id,
-          operatingRoundId: phase.operatingRoundId || 0,
+          operatingRoundId: phase.operatingRoundId,
         },
       });
 
@@ -4886,13 +4948,15 @@ export class GameManagementService {
 
       for (const resolvedAction of sortedActions) {
         const existingAction = existingActionMap.get(resolvedAction);
-
         if (!existingAction) {
+          if (!phase.operatingRoundId) {
+            throw new Error('Operating round not found');
+          }
           await this.companyActionService.createCompanyAction({
             action: resolvedAction,
             GameTurn: { connect: { id: phase.gameTurnId } },
             Company: { connect: { id: company.id } },
-            OperatingRound: { connect: { id: phase.operatingRoundId || 0 } },
+            OperatingRound: { connect: { id: phase.operatingRoundId } },
           });
         } else {
           await this.companyActionService.updateCompanyAction({
@@ -4948,10 +5012,13 @@ export class GameManagementService {
     }[] = [];
 
     try {
+      if (!game.currentOperatingRoundId) {
+        throw new Error('Current operating round not found');
+      }
       // Get all action orders of type marketing from the round and group by sector
       marketingOrdersGroupedBySectorId =
         await this.companyActionService.marketingOrdersGroupedBySectorId(
-          game.currentOperatingRoundId || 0,
+          game.currentOperatingRoundId,
         );
     } catch (error) {
       console.error('Error getting marketing orders', error);
@@ -5493,7 +5560,11 @@ export class GameManagementService {
     if (gameState.currentRound !== roundType) {
       //start new round
       if (roundType === RoundType.STOCK) {
-        newStockRound = await this.startStockRound(gameId, gameState);
+        const result = await this.startStockRound(gameId, gameState);
+        console.log('determineIfNewRoundAndStartRound new stock round', result);
+        if (result?.stockRound) {
+          newStockRound = result?.stockRound;
+        }
       } else if (roundType === RoundType.OPERATING) {
         newOperatingRound = await this.startOperatingRound(gameId, gameState);
       } else if (roundType === RoundType.GAME_UPKEEP) {
@@ -5521,7 +5592,10 @@ export class GameManagementService {
       console.log(
         'No current stock round found, this is an assertion basically and we should never get here.',
       );
-      newStockRound = await this.startStockRound(gameId, gameState);
+      const result = await this.startStockRound(gameId, gameState);
+      if (result?.stockRound) {
+        newStockRound = result?.stockRound;
+      }
     }
     //conditional checks that are basically fail states for assertions
     if (
@@ -5576,6 +5650,7 @@ export class GameManagementService {
     phaseName,
     roundType,
     stockRoundId,
+    stockSubRoundId,
     operatingRoundId,
     influenceRoundId,
     companyId,
@@ -5584,8 +5659,9 @@ export class GameManagementService {
     gameState: GameState;
     phaseName: PhaseName;
     roundType: RoundType;
-    stockRoundId?: number;
-    operatingRoundId?: number;
+    stockRoundId?: string;
+    stockSubRoundId?: string;
+    operatingRoundId?: string;
     influenceRoundId?: number;
     companyId?: string;
   }) {
@@ -5597,6 +5673,7 @@ export class GameManagementService {
       phaseName,
       roundType,
       stockRoundId: stockRoundId,
+      stockSubRoundId: stockSubRoundId,
       operatingRoundId: operatingRoundId,
       influenceRoundId: influenceRoundId,
       companyId,
@@ -5607,7 +5684,7 @@ export class GameManagementService {
   public async startStockRound(
     gameId: string,
     gameState?: GameState,
-  ): Promise<StockRound | null> {
+  ): Promise<{ stockRound: StockRound } | null> {
     //get game
     let game;
     if (gameState) {
@@ -5627,7 +5704,7 @@ export class GameManagementService {
         currentStockRoundId: stockRound.id,
       },
     });
-    return stockRound;
+    return { stockRound };
   }
 
   public async startOperatingRound(
@@ -5677,6 +5754,7 @@ export class GameManagementService {
     phaseName,
     roundType,
     stockRoundId,
+    stockSubRoundId,
     operatingRoundId,
     influenceRoundId,
     companyId,
@@ -5685,8 +5763,9 @@ export class GameManagementService {
     gameId: string;
     phaseName: PhaseName;
     roundType: RoundType;
-    stockRoundId?: number;
-    operatingRoundId?: number;
+    stockRoundId?: string;
+    stockSubRoundId?: string;
+    operatingRoundId?: string;
     influenceRoundId?: number;
     companyId?: string;
     gameState?: GameState;
@@ -5727,6 +5806,9 @@ export class GameManagementService {
       Game: { connect: { id: gameId } },
       GameTurn: { connect: { id: game?.currentTurn || '' } },
       StockRound: stockRoundId ? { connect: { id: stockRoundId } } : undefined,
+      StockSubRound: stockSubRoundId
+        ? { connect: { id: stockSubRoundId } }
+        : undefined,
       OperatingRound: operatingRoundId
         ? { connect: { id: operatingRoundId } }
         : undefined,
@@ -5801,9 +5883,10 @@ export class GameManagementService {
           : currentPhase.influenceRoundId
             ? RoundType.INFLUENCE
             : RoundType.GAME_UPKEEP,
-      stockRoundId: game.currentStockRoundId || 0,
-      operatingRoundId: game.currentOperatingRoundId || 0,
-      influenceRoundId: game.InfluenceRound?.[0].id || 0,
+      stockRoundId: game.currentStockRoundId || undefined,
+      stockSubRoundId: currentPhase.stockSubRoundId || undefined,
+      operatingRoundId: game.currentOperatingRoundId || undefined,
+      influenceRoundId: game.InfluenceRound?.[0].id || undefined,
       companyId: currentPhase.companyId || '',
     });
   }
@@ -5825,8 +5908,8 @@ export class GameManagementService {
   }: {
     phase: Phase;
     gameId: string;
-    stockRoundId?: number;
-    operatingRoundId?: number;
+    stockRoundId?: string;
+    operatingRoundId?: string;
     influenceRoundId?: number;
   }) {
     console.log(
@@ -5870,11 +5953,8 @@ export class GameManagementService {
   }) {
     // Fetch necessary data upfront
     let gameStateTime = Date.now();
-    const [gameState, stockRound] = await Promise.all([
+    const [gameState] = await Promise.all([
       this.gamesService.getGameState(gameId),
-      phase.stockRoundId
-        ? this.stockRoundService.stockRound({ id: phase.stockRoundId })
-        : undefined,
     ]);
     console.log('gameState TTE', Date.now() - gameStateTime);
     if (!gameState) {
@@ -5885,13 +5965,22 @@ export class GameManagementService {
       return;
     }
 
-    const determinedNextPhase = determineNextGamePhase(phase.name);
+    let hasOrdersInStockSubRound = false;
+    if (phase.stockSubRoundId) {
+      hasOrdersInStockSubRound = await this.stockSubRoundService.hasOrders(
+        phase.stockSubRoundId,
+      );
+    }
+
+    const determinedNextPhase = determineNextGamePhase(phase.name, {
+      stockActionSubRoundIsOver: !!!hasOrdersInStockSubRound
+    });
 
     let adjustedPhase = await this.findNextPhaseThatShouldBePlayed(
       determinedNextPhase,
       phase,
       gameState,
-      stockRound?.stockActionSubRound,
+      !!!hasOrdersInStockSubRound,
     );
 
     //start new round if necessary
@@ -5906,7 +5995,6 @@ export class GameManagementService {
       companyId: phase.companyId || undefined,
     });
 
-    const stockActionSubRound = stockRound?.stockActionSubRound;
     let startTimeHandleNextPhase = Date.now();
     console.log('handleNextPhase', startTimeHandleNextPhase);
     const nameAndRoundTypeAndCompanyForNextPhase =
@@ -5914,7 +6002,7 @@ export class GameManagementService {
         phase,
         gameId,
         gameState,
-        stockActionSubRound,
+        stockActionSubRoundIsOver: !!!hasOrdersInStockSubRound,
       });
     console.log('handleNextPhase TTE', Date.now() - startTimeHandleNextPhase);
     let startTime = Date.now();
@@ -5925,6 +6013,10 @@ export class GameManagementService {
       phaseName: nameAndRoundTypeAndCompanyForNextPhase.phaseName,
       roundType: nameAndRoundTypeAndCompanyForNextPhase.roundType,
       stockRoundId: roundPhaseIds.stockRoundId || undefined,
+      //TODO: Don't really like this, need to rethink implementation
+      stockSubRoundId: roundPhaseIds.stockRoundId
+        ? phase?.stockSubRoundId || undefined
+        : undefined,
       operatingRoundId: roundPhaseIds.operatingRoundId || undefined,
       influenceRoundId: roundPhaseIds.influenceRoundId || undefined,
       companyId:
@@ -5932,7 +6024,6 @@ export class GameManagementService {
         phase?.companyId ||
         '',
     });
-    console.log('determineIfNewRoundAndStartPhase TTE', Date.now() - startTime);
     if (!gameState.isTimerless) {
       await this.startPhaseTimer({
         phase: nextPhase,
@@ -5961,19 +6052,19 @@ export class GameManagementService {
     phase,
     gameId,
     gameState,
-    stockActionSubRound,
+    stockActionSubRoundIsOver,
   }: {
     phase: Phase;
     gameId: string;
     gameState: GameState;
-    stockActionSubRound?: number;
+    stockActionSubRoundIsOver?: boolean;
   }): Promise<{
     phaseName: PhaseName;
     roundType: RoundType;
     companyId?: string;
   }> {
     const determinedNextPhase = determineNextGamePhase(phase.name, {
-      stockActionSubRound,
+      stockActionSubRoundIsOver,
     });
 
     let nextPhaseTimer = Date.now();
@@ -5981,7 +6072,7 @@ export class GameManagementService {
       determinedNextPhase,
       phase,
       gameState,
-      stockActionSubRound,
+      stockActionSubRoundIsOver,
     );
     console.log('adjustPhaseBasedOnGameState TTE', Date.now() - nextPhaseTimer);
     let companyId: string | undefined;
@@ -6021,7 +6112,7 @@ export class GameManagementService {
     },
     currentPhase: Phase,
     gameState: GameState,
-    stockActionSubRound?: number,
+    stockActionSubRoundIsOver?: boolean,
   ): Promise<{
     phaseName: PhaseName;
     roundType: RoundType;
@@ -6033,7 +6124,7 @@ export class GameManagementService {
 
     while (!doesNextPhaseNeedToBePlayed) {
       nextPhase = determineNextGamePhase(nextPhase.phaseName, {
-        stockActionSubRound,
+        stockActionSubRoundIsOver,
       });
       doesNextPhaseNeedToBePlayed = await this.doesNextPhaseNeedToBePlayed(
         nextPhase.phaseName,
@@ -6818,6 +6909,119 @@ export class GameManagementService {
     }
   }
 
+  async resolveMarketOrdersSingleOrderResolve(phase: Phase) {
+    const game = await this.gamesService.getGameState(phase.gameId);
+    if (!game) {
+      throw new Error('Game not found');
+    }
+    if (phase.stockRoundId && phase.stockSubRoundId) {
+      const playerOrders =
+        await this.playerOrderService.playerOrdersWithPlayerCompany({
+          where: {
+            stockRoundId: phase.stockRoundId,
+            stockSubRoundId: phase.stockSubRoundId,
+          },
+        });
+      if (!playerOrders) {
+        throw new Error('Stock round not found');
+      }
+
+      let marketOrders = playerOrders.filter(
+        (order) =>
+          order.orderType === OrderType.MARKET &&
+          order.orderStatus !== OrderStatus.FILLED,
+      );
+
+      const marketOrderIpoBuyOrders = marketOrders.filter(
+        (order) => order.location == ShareLocation.IPO && !order.isSell,
+      );
+      const marketOrdersNoIpoBuyOrders = marketOrders.filter(
+        (order) => !marketOrderIpoBuyOrders.includes(order),
+      );
+
+      const groupedMarketOrdersNoIpoBuyOrdersByCompany = this.groupByCompany(
+        marketOrdersNoIpoBuyOrders,
+      );
+
+      const groupedMarketOrders = this.groupByCompany(marketOrders);
+
+      try {
+        await this.processMarketOrdersByCompany(
+          groupedMarketOrders,
+          game,
+          phase,
+        );
+      } catch (error) {
+        console.error('Error distributing shares:', error);
+      }
+
+      const players = await this.playersService.players({
+        where: { gameId: phase.gameId },
+      });
+      try {
+        await Promise.all(
+          players.map((player) =>
+            this.playersService.updatePlayer({
+              where: { id: player.id },
+              data: { marketOrderActions: MAX_MARKET_ORDER_ACTIONS },
+            }),
+          ),
+        );
+      } catch (error) {
+        console.error('Error setting market order actions:', error);
+      }
+      //get all orders for the current round that are FILLED and in the OPEN_MARKET,
+      //when calculating net differences we should only take the net for successful orders.
+      const openMarketOrders =
+        await this.playerOrderService.playerOrdersWithPlayerCompany({
+          where: {
+            stockRoundId: phase.stockRoundId,
+            stockSubRoundId: phase.stockSubRoundId,
+            location: ShareLocation.OPEN_MARKET,
+            orderStatus: OrderStatus.FILLED,
+          },
+        });
+
+      //group these orders by company
+      const groupedOpenMarketOrders = this.groupByCompany(openMarketOrders);
+
+      const netDifferences = Object.entries(groupedOpenMarketOrders).map(
+        ([companyId, orders]) => {
+          const buys = orders.filter((order) => !order.isSell);
+          const sells = orders.filter((order) => order.isSell);
+          const buyQuantity = buys.reduce(
+            (acc, order) => acc + (order.quantity || 0),
+            0,
+          );
+          const sellQuantity = sells.reduce(
+            (acc, order) => acc + (order.quantity || 0),
+            0,
+          );
+          let netDifference = buyQuantity - sellQuantity;
+          //if company has price freeze, the minimum net difference is 2
+          if (
+            orders[0].Company.CompanyActions.some(
+              (action) => action.action === OperatingRoundAction.PRICE_FREEZE,
+            )
+          ) {
+            netDifference = Math.min(netDifference, PRIZE_FREEZE_AMOUNT);
+          }
+          return {
+            companyId,
+            netDifference: buyQuantity - sellQuantity,
+            orders,
+          };
+        },
+      );
+      console.log('netDifferences', netDifferences);
+      try {
+        await this.processNetDifferences(netDifferences, phase);
+      } catch (error) {
+        console.error('Error resolving netDifferences iteration:', error);
+      }
+    }
+  }
+
   async resolveMarketOrders(phase: Phase) {
     const game = await this.gamesService.getGameState(phase.gameId);
     if (!game) {
@@ -7007,6 +7211,7 @@ export class GameManagementService {
       }),
     );
   }
+  //TODO: Orders should be processed in player priority order for priority strategy, regardless of order type.
   async processMarketOrdersByCompany(
     groupedMarketOrders: Record<string, PlayerOrderWithPlayerCompany[]>,
     game: Game,
@@ -7210,7 +7415,9 @@ export class GameManagementService {
     gameLogEntries: any[],
     playersWithShares: PlayerWithShares[], //we need this reference because we are now actively checking stock ownership and cash on hand
   ) {
+    console.log('processBidOrdersBidStrategy');
     for (const order of sortedOrders) {
+      console.log('order', order);
       if (remainingShares <= 0) {
         orderStatusUpdates.push({
           where: { id: order.id },
@@ -7409,6 +7616,7 @@ export class GameManagementService {
       gameId: game.id,
       id: { in: playerIds },
     });
+    console.log('sortedOrders', sortedOrders);
     const {
       currentShareIndex: _currentShareIndex,
       remainingShares: _remainingShares,
@@ -8214,9 +8422,12 @@ export class GameManagementService {
       },
     });
 
+    if (!game.currentOperatingRoundId) {
+      throw new Error('Current operating round not found');
+    }
     const currentOperatingRound =
       await this.operatingRoundService.operatingRoundWithCompanyActions({
-        id: game.currentOperatingRoundId || 0,
+        id: game.currentOperatingRoundId,
       });
     if (!currentOperatingRound) {
       throw new Error('Operating round not found');
@@ -8304,21 +8515,28 @@ export class GameManagementService {
         //count limit orders
         return this.limitOrdersRequiringFulfillment(currentPhase?.gameId || '');
       case PhaseName.STOCK_RESOLVE_MARKET_ORDER:
-        return this.stockOrdersRequiredResolution(
-          currentPhase?.stockRoundId || 0,
-        );
+        if (currentPhase?.stockRoundId) {
+          return this.stockOrdersRequiredResolution(currentPhase.stockRoundId);
+        }
+        return;
       case PhaseName.STOCK_SHORT_ORDER_INTEREST:
         return this.stockOrdersOpen(currentPhase?.gameId || '');
       case PhaseName.STOCK_ACTION_SHORT_ORDER:
         return this.stockOrdersOpen(currentPhase?.gameId || '');
       case PhaseName.STOCK_RESOLVE_PENDING_SHORT_ORDER:
-        return this.stockOrdersPending(currentPhase?.stockRoundId || 0);
+        if (currentPhase?.stockRoundId) {
+          return this.stockOrdersPending(currentPhase.stockRoundId);
+        }
+        return;
       case PhaseName.STOCK_OPEN_LIMIT_ORDERS:
-        return this.limitOrdersPending(currentPhase?.stockRoundId || 0);
+        return this.limitOrdersPending(currentPhase?.stockRoundId || '');
       case PhaseName.STOCK_RESOLVE_OPTION_ORDER:
         return this.anyOptionOrdersPurchased(currentPhase?.gameId || '');
       case PhaseName.STOCK_RESOLVE_PENDING_OPTION_ORDER:
-        return this.optionOrdersPending(currentPhase?.stockRoundId || 0);
+        if (currentPhase?.stockRoundId) {
+          return this.optionOrdersPending(currentPhase.stockRoundId);
+        }
+        return;
       case PhaseName.STOCK_ACTION_OPTION_ORDER:
         return this.anyOptionOrdersToBeExercised(currentPhase?.gameId || '');
       default:
@@ -8426,7 +8644,7 @@ export class GameManagementService {
     );
   }
 
-  async optionOrdersPending(stockRoundId: number) {
+  async optionOrdersPending(stockRoundId: string) {
     const playerOrders = await this.playerOrderService.playerOrders({
       where: {
         stockRoundId,
@@ -8437,7 +8655,7 @@ export class GameManagementService {
     return playerOrders.length > 0;
   }
 
-  async limitOrdersPending(stockRoundId: number) {
+  async limitOrdersPending(stockRoundId: string) {
     const playerOrders = await this.playerOrderService.playerOrders({
       where: {
         stockRoundId,
@@ -8448,7 +8666,7 @@ export class GameManagementService {
     return playerOrders.length > 0;
   }
 
-  async stockOrdersPending(stockRoundId: number) {
+  async stockOrdersPending(stockRoundId: string) {
     const playerOrders = await this.playerOrderService.playerOrders({
       where: {
         stockRoundId,
@@ -8470,7 +8688,7 @@ export class GameManagementService {
     return playerOrders.length > 0;
   }
 
-  async stockOrdersRequiredResolution(stockRoundId: number) {
+  async stockOrdersRequiredResolution(stockRoundId: string) {
     const playerOrders = await this.playerOrderService.playerOrders({
       where: {
         stockRoundId,
@@ -8779,6 +8997,11 @@ export class GameManagementService {
     if (!game) {
       throw new Error('Game not found');
     }
+    //get current phase
+    const phase = await this.phaseService.currentPhase(gameId);
+    if (!phase) {
+      throw new Error('Phase not found');
+    }
     //get company associated with order
     const company = await this.companyService.company({ id: companyId });
     if (!company) {
@@ -8793,6 +9016,15 @@ export class GameManagementService {
     if (!game.useOptionOrders && orderType === OrderType.OPTION) {
       throw new Error('Options are not enabled for this game');
     }
+    if (!game.currentStockRoundId) {
+      throw new Error('Stock round not found');
+    }
+    if (!game.currentPhaseId) {
+      throw new Error('Current Phase ID not found');
+    }
+    if (!phase.stockSubRoundId) {
+      throw new Error('Stock sub round not found');
+    }
     return this.playerOrderService.createPlayerOrder({
       orderType,
       location,
@@ -8805,10 +9037,11 @@ export class GameManagementService {
       Player: { connect: { id: playerId } },
       OptionContract: contractId ? { connect: { id: contractId } } : undefined,
       submissionStamp,
-      StockRound: { connect: { id: game.currentStockRoundId || 0 } },
-      Phase: { connect: { id: game.currentPhaseId || '' } },
+      StockRound: { connect: { id: game.currentStockRoundId } },
+      StockSubRound: { connect: { id: phase.stockSubRoundId } },
+      Phase: { connect: { id: game.currentPhaseId } },
       Sector: { connect: { id: company.sectorId } },
-      GameTurn: { connect: { id: game.currentTurn || '' } },
+      GameTurn: { connect: { id: game.currentTurn } },
     });
   }
 

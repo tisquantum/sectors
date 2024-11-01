@@ -39,6 +39,7 @@ type CompanyCardProps = {
   handleCompanySelect: (company: CompanyWithRelations, isIpo: boolean) => void;
 };
 
+//TODO: subround calculations can be refactored with new subround entity
 const CompanyCard: React.FC<CompanyCardProps> = ({
   company,
   orders,
@@ -213,7 +214,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
                   <div className="flex flex-col" key={index}>
                     <div className="flex items-center justify-center">
                       <span className="text-sm text-gray-400">
-                        {groupedIpoOrdersByPhase[index]?.subRound}
+                        {groupedIpoOrdersByPhase[index]?.subRound - 1}
                       </span>
                     </div>
                     <div className="flex items-center justify-center">
@@ -243,7 +244,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
                   <div className="flex flex-col" key={index}>
                     <div className="flex items-center justify-center">
                       <span className="text-sm text-gray-400">
-                        {groupedIpoOrdersByPhase[index]?.subRound}
+                        {groupedIpoOrdersByPhase[index]?.subRound - 1}
                       </span>
                     </div>
                     <div className="flex items-center justify-center">
@@ -306,7 +307,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
                     <div className="flex flex-col" key={index}>
                       <div className="flex items-center justify-center">
                         <span className="text-sm text-gray-400">
-                          {groupedOpenMarketOrdersByPhase[index]?.subRound}
+                          {groupedOpenMarketOrdersByPhase[index]?.subRound - 1}
                         </span>
                       </div>
                       <div className="flex items-center justify-center">
@@ -338,7 +339,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
                     <div className="flex flex-col" key={index}>
                       <div className="flex items-center justify-center">
                         <span className="text-sm text-gray-400">
-                          {groupedOpenMarketOrdersByPhase[index]?.subRound}
+                          {groupedOpenMarketOrdersByPhase[index]?.subRound - 1}
                         </span>
                       </div>
                       <div className="flex items-center justify-center">

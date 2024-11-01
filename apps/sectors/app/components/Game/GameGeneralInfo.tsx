@@ -97,7 +97,7 @@ const GameGeneralInfo = () => {
   if (!gameState) return notFound();
   const pseudoSpend = authPlayer?.PlayerOrder?.filter(
     (order) =>
-      order.stockRoundId === gameState.currentStockRoundId &&
+      order.stockSubRoundId === currentPhase?.stockSubRoundId &&
       order.orderType == OrderType.MARKET
   ).reduce((acc, order) => {
     const orderValue = (order.value || 0) * (order.quantity || 0);
@@ -121,12 +121,10 @@ const GameGeneralInfo = () => {
                     classNames={{ base: baseToolTipStyle }}
                     className={tooltipStyle}
                     content={
-                      <div>
-                        <p className={tooltipParagraphStyle}>
-                          The potential maximum amount of money you&apos;ve
-                          queued for orders this stock round.
-                        </p>
-                      </div>
+                      <p className={tooltipParagraphStyle}>
+                        The potential maximum amount of money you&apos;ve queued
+                        for orders this stock round.
+                      </p>
                     }
                   >
                     {"($" + pseudoSpend + ")"}
@@ -168,14 +166,12 @@ const GameGeneralInfo = () => {
               classNames={{ base: baseToolTipStyle }}
               className={tooltipStyle}
               content={
-                <div>
-                  <p className={tooltipParagraphStyle}>
-                    The remaining actions you have for order types in a stock
-                    round. Limit Order and Short Order actions only replenish as
-                    existing orders are filled or rejected. Market Orders
-                    replenish each stock round.
-                  </p>
-                </div>
+                <p className={tooltipParagraphStyle}>
+                  The remaining actions you have for order types in a stock
+                  round. Limit Order and Short Order actions only replenish as
+                  existing orders are filled or rejected. Market Orders
+                  replenish each stock round.
+                </p>
               }
             >
               <div className="flex items-center text-md">
@@ -220,11 +216,9 @@ const GameGeneralInfo = () => {
           classNames={{ base: baseToolTipStyle }}
           className={tooltipStyle}
           content={
-            <div>
-              <p className={tooltipParagraphStyle}>
-                The bank pool. Once the bank pool is exhausted, the game ends.
-              </p>
-            </div>
+            <p className={tooltipParagraphStyle}>
+              The bank pool. Once the bank pool is exhausted, the game ends.
+            </p>
           }
         >
           <BankInfo />
@@ -236,12 +230,10 @@ const GameGeneralInfo = () => {
             classNames={{ base: baseToolTipStyle }}
             className={tooltipStyle}
             content={
-              <div>
-                <p className={tooltipParagraphStyle}>
-                  The share limit. If a player exceeds this limit, they must
-                  divest down to the limit.
-                </p>
-              </div>
+              <p className={tooltipParagraphStyle}>
+                The share limit. If a player exceeds this limit, they must
+                divest down to the limit.
+              </p>
             }
           >
             <div className="flex gap-1 items-center">
@@ -254,14 +246,12 @@ const GameGeneralInfo = () => {
             classNames={{ base: baseToolTipStyle }}
             className={tooltipStyle}
             content={
-              <div>
-                <p className={tooltipParagraphStyle}>
-                  The company ownership limit percentage. A player may never own
-                  more shares than this percentage of a company unless they
-                  incidentally fall above this percentage due to company share
-                  issues or share buybacks.
-                </p>
-              </div>
+              <p className={tooltipParagraphStyle}>
+                The company ownership limit percentage. A player may never own
+                more shares than this percentage of a company unless they
+                incidentally fall above this percentage due to company share
+                issues or share buybacks.
+              </p>
             }
           >
             <div className="flex gap-1 items-center">
@@ -278,13 +268,11 @@ const GameGeneralInfo = () => {
         classNames={{ base: baseToolTipStyle }}
         className={tooltipStyle}
         content={
-          <div>
-            <p className={tooltipParagraphStyle}>
-              The current turn out of the maximum turns in the game. The game
-              ends in one of two ways, either the bank pool is exhausted or the
-              maximum turns are reached.
-            </p>
-          </div>
+          <p className={tooltipParagraphStyle}>
+            The current turn out of the maximum turns in the game. The game ends
+            in one of two ways, either the bank pool is exhausted or the maximum
+            turns are reached.
+          </p>
         }
       >
         <div className="flex flex-col items-center">
@@ -303,18 +291,13 @@ const GameGeneralInfo = () => {
           gameState.distributionStrategy ==
           DistributionStrategy.BID_PRIORITY ? (
             <p className={tooltipParagraphStyle}>
-              <p>
-                Bids are placed in priority according to the highest ask price
-                of the market order. This ask price is quoted per share. If
-                there are not enough shares to resolve the order, it is
-                rejected.
-              </p>
-              <p>
-                If shares are still contested (ie: a tie-breaker for players who
-                purchase the same amount of shares), they are resolved by
-                priority where the player with the lowest player priority takes
-                precedence.
-              </p>
+              Bids are placed in priority according to the highest ask price of
+              the market order. This ask price is quoted per share. If there are
+              not enough shares to resolve the order, it is rejected.
+              <br />
+              If shares are still contested (ie: a tie-breaker for players who
+              purchase the same amount of shares), they are resolved by priority
+              where the player with the lowest player priority takes precedence.
             </p>
           ) : gameState.distributionStrategy ==
             DistributionStrategy.PRIORITY ? (

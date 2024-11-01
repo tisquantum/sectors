@@ -61,7 +61,7 @@ export class CompanyActionService {
   }
 
   async marketingOrdersGroupedBySectorId(
-    operatingRoundId: number,
+    operatingRoundId: string,
   ): Promise<MarketingCountGroupedBySectorId[]> {
     //get all marketing orders
     let marketingOrders;
@@ -148,7 +148,7 @@ export class CompanyActionService {
       id: number;
       companyId?: string;
       action?: OperatingRoundAction;
-      operatingRoundId?: number;
+      operatingRoundId?: string;
       resolved?: boolean;
       gameTurnId?: string;
       actedOn?: boolean;
@@ -159,7 +159,7 @@ export class CompanyActionService {
       const data: {
         companyId?: string;
         action?: OperatingRoundAction;
-        operatingRoundId?: number;
+        operatingRoundId?: string;
         resolved?: boolean;
         gameTurnId?: string;
         actedOn?: boolean;

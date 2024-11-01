@@ -263,18 +263,6 @@ const Game = ({ gameId }: { gameId: string }) => {
           <div className="hidden lg:block">
             <GameSidebar />
           </div>
-          {/* <motion.div
-        className="absolute inset-0 z-10 pointer-events-none"
-        ref={constraintsRef}
-      >
-        <motion.div
-          drag
-          dragConstraints={constraintsRef}
-          className="absolute pointer-events-auto"
-        >
-          <TabView gameId={gameId} />
-        </motion.div>
-      </motion.div> */}
           <div className="flex flex-col relative w-full">
             {gameState.gameStatus == GameStatus.FINISHED && (
               <Button

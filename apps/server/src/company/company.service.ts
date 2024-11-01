@@ -184,7 +184,7 @@ export class CompanyService {
   }
 
   async companiesWithCompanyActionsWithActionsFilteredByOperatingRoundId(
-    operatingRoundId: number,
+    operatingRoundId: string,
     params: {
       skip?: number;
       take?: number;

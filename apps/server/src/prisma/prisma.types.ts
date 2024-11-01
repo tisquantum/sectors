@@ -40,6 +40,7 @@ import {
   ShortOrder,
   StockHistory,
   StockRound,
+  StockSubRound,
   Transaction,
   TransactionsOnShares,
   User,
@@ -337,4 +338,15 @@ export type HeadlineWithRelations = Headline & {
   company: Company | null;
   sector: Sector | null;
   playerHeadlines: PlayerHeadlineWithPlayer[];
+};
+
+export type StockRoundWithStockSubRounds = StockRound & {
+  stockSubRounds: StockSubRound[];
+};
+
+export type PhaseWithRelations = Phase & {
+  GameTurn: GameTurn;
+  StockRound: StockRound | null;
+  OperatingRound: OperatingRound | null;
+  StockSubRound: StockSubRound | null;
 };

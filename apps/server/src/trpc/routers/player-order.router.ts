@@ -50,7 +50,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         z.object({
           skip: z.number().optional(),
           take: z.number().optional(),
-          cursor: z.number().optional(),
+          cursor: z.string().optional(),
           where: z.any().optional(),
           orderBy: z.any().optional(),
         }),
@@ -71,7 +71,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         z.object({
           skip: z.number().optional(),
           take: z.number().optional(),
-          cursor: z.number().optional(),
+          cursor: z.string().optional(),
           where: z.any().optional(),
           orderBy: z.any().optional(),
         }),
@@ -91,7 +91,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         z.object({
           skip: z.number().optional(),
           take: z.number().optional(),
-          cursor: z.number().optional(),
+          cursor: z.string().optional(),
           where: z.any().optional(),
           orderBy: z.any().optional(),
         }),
@@ -111,7 +111,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         z.object({
           skip: z.number().optional(),
           take: z.number().optional(),
-          cursor: z.number().optional(),
+          cursor: z.string().optional(),
           where: z.any().optional(),
           orderBy: z.any().optional(),
           gameId: z.string(),
@@ -181,7 +181,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         z.object({
           skip: z.number().optional(),
           take: z.number().optional(),
-          cursor: z.number().optional(),
+          cursor: z.string().optional(),
           where: z.any().optional(),
           orderBy: z.any().optional(),
         }),
@@ -202,7 +202,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         z.object({
           skip: z.number().optional(),
           take: z.number().optional(),
-          cursor: z.number().optional(),
+          cursor: z.string().optional(),
           where: z.any().optional(),
           orderBy: z.any().optional(),
         }),
@@ -289,7 +289,7 @@ export default (trpc: TrpcService, ctx: Context) =>
     updatePlayerOrder: trpc.procedure
       .input(
         z.object({
-          id: z.number(),
+          id: z.string(),
           data: z.object({
             stockRoundId: z.number().optional(),
             playerId: z.string().optional(),

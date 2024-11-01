@@ -68,7 +68,7 @@ const StockRoundOrderGrid = ({
     refetch: refetchPlayerOrdersConcealed,
   } = trpc.playerOrder.listPlayerOrdersConcealed.useQuery(
     {
-      where: { stockRoundId: gameState?.currentStockRoundId },
+      where: { stockRoundId: currentPhase?.stockRoundId },
     },
     {
       enabled: currentPhase?.name == PhaseName.STOCK_ACTION_REVEAL,
@@ -81,7 +81,7 @@ const StockRoundOrderGrid = ({
   } = trpc.playerOrder.listPlayerOrdersConcealed.useQuery(
     {
       where: {
-        stockRoundId: gameState?.currentStockRoundId,
+        stockRoundId: currentPhase?.stockRoundId,
         OR: [
           { orderType: OrderType.MARKET },
           { orderType: OrderType.LIMIT },
@@ -151,11 +151,12 @@ const StockRoundOrderGrid = ({
   const [selectedCompanyOrder, setSelectedCompanyOrder] = useState<
     { company: CompanyWithRelations; isIpo: boolean } | undefined
   >(undefined);
-  if (isLoading) return null;
-  if (isLoadingPhases) return null;
-  if (companies == undefined) return notFound();
-  if (currentPhase == undefined) return notFound();
-  if (phasesOfStockRound == undefined) return notFound();
+  if (isLoading) return <div>Loading...</div>;
+  if (isLoadingPhases) return <div>Loading...</div>;
+  if (!companies) return <div>No companies found</div>;
+  if (!currentPhase) return <div>No current phase found</div>;
+  if (!gameState) return <div>No game state found</div>;
+  if (!phasesOfStockRound) return <div>No phases of stock round found</div>;
   const isRevealRound = currentPhase?.name === PhaseName.STOCK_ACTION_REVEAL;
   const orders = playerOrdersConcealed ?? [];
   const companiesBySector = organizeCompaniesBySector(companies);

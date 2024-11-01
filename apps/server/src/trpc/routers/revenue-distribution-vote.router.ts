@@ -89,7 +89,7 @@ export default (trpc: TrpcService, ctx: Context) =>
     createRevenueDistributionVote: trpc.procedure
       .input(
         z.object({
-          operatingRoundId: z.number(),
+          operatingRoundId: z.string(),
           productionResultId: z.number(),
           playerId: z.string(),
           companyId: z.string(),
