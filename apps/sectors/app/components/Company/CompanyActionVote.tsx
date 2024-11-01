@@ -30,7 +30,7 @@ const CompanyActionVote = ({ company }: { company?: Company }) => {
     setIsLoading(true);
     try {
       await createOperatingRoundVote.mutate({
-        operatingRoundId: currentPhase?.operatingRoundId || 0,
+        operatingRoundId: currentPhase?.operatingRoundId || '',
         playerId: authPlayer.id,
         companyId: company.id,
         actionVoted: selected,

@@ -25,7 +25,7 @@ const DistributeSelection = ({
 }: {
   company: Company & { Sector: Sector };
   productionResult: ProductionResult;
-  operatingRoundId: number;
+  operatingRoundId: string;
 }) => {
   const { authPlayer, gameId } = useGame();
   const [isSubmit, setIsSubmit] = useState(false);
