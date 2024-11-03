@@ -306,6 +306,11 @@ Because certain company actions impact the company priority order, before the fi
 
 Every third turn, a new GROWTH company is opened in the sector with the highest average stock price across ACTIVE and INSOLVENT companies. If a sector has no INACTIVE, INSOLVENT or ACTIVE company, a STARTUP company is opened in that sector.
 
+### Company Awards Tracks
+{: #company-awards }
+
+There are three company awards tracks which award the company a passive effect and 2 prestige tokens. If a company reaches the end of a track and has already received the passive effect they will only receive 2 prestige tokens.  The marketing award track is advanced by placing SMALL MARKETING CAMPAIGN or LARGE MARKETING CAMPAIGN actions.  The research track is advanced by placing RESEARCH actions. The catalyst award track is advanced by placing LARGE MARKETING CAMPAIGN or LOBBY actions.
+
 ### Company Actions
 {: #company-actions }
 
