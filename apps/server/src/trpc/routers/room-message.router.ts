@@ -10,6 +10,7 @@ import {
 import { RoomMessageWithRoomUser } from '@server/prisma/prisma.types';
 import { checkIsUserAction } from '../trpc.middleware';
 import { ROOM_MESSAGE_MAX_LENGTH } from '@server/data/constants';
+import { TRPCError } from '@trpc/server';
 
 type Context = {
   roomMessageService: RoomMessageService;
@@ -63,16 +64,16 @@ export default (trpc: TrpcService, ctx: Context) =>
       .mutation(async ({ input }) => {
         const { roomId, userId, content, timestamp } = input;
         if (!content) {
-          return {
-            success: false,
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
             message: 'Content is required',
-          };
+          });
         }
         if (content.length > ROOM_MESSAGE_MAX_LENGTH) {
-          return {
-            success: false,
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
             message: `Content must be less than ${ROOM_MESSAGE_MAX_LENGTH} characters`,
-          };
+          });
         }
         try {
           const roomMessage = await ctx.roomMessageService.createRoomMessage({

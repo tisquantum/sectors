@@ -25,6 +25,7 @@ import CountdownModal from "../Modal/CountdownModal";
 import { useRouter } from "next/navigation";
 import { Drawer } from "vaul";
 import { Button } from "@nextui-org/react";
+import { toast } from "sonner";
 
 const RoomComponent = ({ room }: { room: RoomWithUsersAndGames }) => {
   const { user } = useAuthUser();
@@ -40,7 +41,11 @@ const RoomComponent = ({ room }: { room: RoomWithUsersAndGames }) => {
       where: { roomId: room?.id },
     });
   const createRoomMessageMutation =
-    trpc.roomMessage.createRoomMessage.useMutation();
+    trpc.roomMessage.createRoomMessage.useMutation({
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
   const {
     data: roomUsers,
     isLoading: isLoadingRoomUsers,
