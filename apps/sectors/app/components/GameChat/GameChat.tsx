@@ -20,6 +20,7 @@ import { usePusher } from "../Pusher.context";
 import { Player, RoomUser } from "@server/prisma/prisma.client";
 import UserAvatar from "../Room/UserAvatar";
 import PlayerAvatar from "../Player/PlayerAvatar";
+import { toast } from "sonner";
 interface AtListProps {
   players: Player[];
   onSelectPlayer: (player: Player) => void;
@@ -150,7 +151,11 @@ const GameChat = ({
     });
 
   const createRoomMessageMutation =
-    trpc.roomMessage.createRoomMessage.useMutation();
+    trpc.roomMessage.createRoomMessage.useMutation({
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
 
   useEffect(() => {
     if (!pusher) return;

@@ -18,6 +18,7 @@ import {
 import { RoomUser } from "@server/prisma/prisma.client";
 import MessagePane from "../Room/MessagePane";
 import SendMessage from "../Room/SendMessage";
+import { toast, Toaster } from "sonner";
 
 const GlobalChat = ({ classes }: { classes: string }) => {
   const { user } = useAuthUser();
@@ -29,7 +30,11 @@ const GlobalChat = ({ classes }: { classes: string }) => {
       where: { roomId: GLOBAL_ROOM_ID },
     });
   const createRoomMessageMutation =
-    trpc.roomMessage.createRoomMessage.useMutation();
+    trpc.roomMessage.createRoomMessage.useMutation({
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
   const {
     data: roomUsers,
     isLoading: isLoadingRoomUsers,
@@ -115,6 +120,7 @@ const GlobalChat = ({ classes }: { classes: string }) => {
       {user && (
         <div className={classes}>
           <div className="flex flex-col h-full">
+            <Toaster duration={10000} />
             <h3>Global</h3>
             {/* Ensure MessagePane has scrollable content */}
             <div className="flex-1 overflow-y-auto">
