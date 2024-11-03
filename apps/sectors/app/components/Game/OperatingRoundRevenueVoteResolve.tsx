@@ -245,7 +245,7 @@ const OperatingRoundRevenueVoteResolve = () => {
                           avatar={
                             <PlayerAvatar
                               player={vote.Player}
-                              badgeContent={vote.weight}
+                              badgeContent={vote.weight.toString()}
                             />
                           }
                         >

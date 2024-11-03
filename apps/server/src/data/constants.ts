@@ -92,9 +92,11 @@ export const ROOM_MESSAGE_MAX_LENGTH = 150;
 export const DEFAULT_SECTOR_AMOUNT = 3;
 export const PRIZE_CASH_SUM = 100;
 export const INACTIVE_COMPANY_PER_TURN_DISCOUNT = 5;
-export const AWARD_TRACK_SPACES_RESEARCH = 3;
-export const AWARD_TRACK_SPACES_CATALYST = 3;
-export const AWARD_TRACK_SPACES_MARKETING = 4;
+export const AWARD_TRACK_SPACES_RESEARCH = 4;
+export const AWARD_TRACK_SPACES_CATALYST = 5;
+export const AWARD_TRACK_SPACES_MARKETING = 6;
+export const AWARD_PRESTIGE_BONUS = 2;
+export const OUTSOURCE_PRESTIGE_PENALTY = 1;
 
 /**
  * Phase times in milliseconds
@@ -622,27 +624,27 @@ export const CapitalGainsTiers = [
   {
     minNetWorth: 100,
     maxNetWorth: 200,
-    taxPercentage: 2,
+    taxPercentage: 5,
   },
   {
     minNetWorth: 200,
     maxNetWorth: 300,
-    taxPercentage: 3,
+    taxPercentage: 6,
   },
   {
     minNetWorth: 300,
     maxNetWorth: 400,
-    taxPercentage: 4,
+    taxPercentage: 7,
   },
   {
     minNetWorth: 400,
     maxNetWorth: 500,
-    taxPercentage: 5,
+    taxPercentage: 8,
   },
   {
     minNetWorth: 500,
     maxNetWorth: Number.MAX_SAFE_INTEGER,
-    taxPercentage: 7,
+    taxPercentage: 10,
   },
 ];
 
@@ -917,7 +919,7 @@ export const companyActionsDescription: CompanyActionDescription[] = [
     id: 13,
     title: 'Outsource',
     name: OperatingRoundAction.OUTSOURCE,
-    message: `The company outsources production.  Increase supply by ${OURSOURCE_SUPPLY_BONUS} that decays once per turn.  Lose all prestige tokens. A company may only ever have up to twice of the maximum supply it's company tier allows.`,
+    message: `The company outsources production.  Increase supply by ${OURSOURCE_SUPPLY_BONUS} that decays once per turn.  Lose ${OUTSOURCE_PRESTIGE_PENALTY} prestige tokens. A company may only ever have up to twice of the maximum supply it's company tier allows.`,
     actionType: 'general',
   },
   {
@@ -1049,7 +1051,8 @@ export const companyActionsDescription: CompanyActionDescription[] = [
     id: 29,
     title: 'Carbon Credit',
     name: OperatingRoundAction.CARBON_CREDIT,
-    message: 'This companies throughput can never be less than -1 or greater than 1.',
+    message:
+      'This companies throughput can never be less than -1 or greater than 1.',
     actionType: 'sector-passive',
   },
 ];

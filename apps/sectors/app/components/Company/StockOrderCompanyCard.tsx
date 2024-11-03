@@ -214,7 +214,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
                   <div className="flex flex-col" key={index}>
                     <div className="flex items-center justify-center">
                       <span className="text-sm text-gray-400">
-                        {groupedIpoOrdersByPhase[index]?.subRound - 1}
+                        {groupedIpoOrdersByPhase[index]?.subRound}
                       </span>
                     </div>
                     <div className="flex items-center justify-center">
@@ -244,7 +244,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
                   <div className="flex flex-col" key={index}>
                     <div className="flex items-center justify-center">
                       <span className="text-sm text-gray-400">
-                        {groupedIpoOrdersByPhase[index]?.subRound - 1}
+                        {groupedIpoOrdersByPhase[index]?.subRound}
                       </span>
                     </div>
                     <div className="flex items-center justify-center">
@@ -307,7 +307,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
                     <div className="flex flex-col" key={index}>
                       <div className="flex items-center justify-center">
                         <span className="text-sm text-gray-400">
-                          {groupedOpenMarketOrdersByPhase[index]?.subRound - 1}
+                          {groupedOpenMarketOrdersByPhase[index]?.subRound}
                         </span>
                       </div>
                       <div className="flex items-center justify-center">
@@ -339,7 +339,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
                     <div className="flex flex-col" key={index}>
                       <div className="flex items-center justify-center">
                         <span className="text-sm text-gray-400">
-                          {groupedOpenMarketOrdersByPhase[index]?.subRound - 1}
+                          {groupedOpenMarketOrdersByPhase[index]?.subRound}
                         </span>
                       </div>
                       <div className="flex items-center justify-center">

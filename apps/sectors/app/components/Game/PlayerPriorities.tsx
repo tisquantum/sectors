@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { useGame } from "./GameContext";
 import { EVENT_PLAYER_READINESS_CHANGED } from "@server/pusher/pusher.types";
 import { PlayerReadiness } from "@server/data/constants";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import PlayerAvatar from "../Player/PlayerAvatar";
 import DebounceButton from "../General/DebounceButton";
 import UserAvatar from "../Room/UserAvatar";
@@ -19,12 +19,20 @@ const PlayerPriorities = () => {
     trpc.roomUser.listRoomUsers.useQuery({
       where: { roomId: gameState.roomId },
     });
-  const { data: playerPriorities, refetch: refetchPlayerPriority } =
-    trpc.playerPriority.listPlayerPriorities.useQuery({
-      where: { gameTurnId: currentPhase?.gameTurnId },
-    });
+  console.log("currentPhase", currentPhase);
+  //TODO: If current phase is undefined and we rely solely on that for a query, the data will select all!
+  //TODO: This is a bug that needs to be addressed anywhere we make assumption on data from hooks.
+  const { data: playerPrioritiesData, refetch: refetchPlayerPriority } =
+    trpc.playerPriority.listPlayerPriorities.useQuery(
+      {
+        where: { gameTurnId: currentPhase?.gameTurnId },
+      },
+      {
+        enabled: !!currentPhase?.gameTurnId,
+      }
+    );
   const {
-    data: playerReadiness,
+    data: playerReadinessData,
     isLoading: isLoadingPlayerReadinessData,
     refetch: refetchPlayerReadiness,
   } = trpc.game.listPlayerReadiness.useQuery({
@@ -38,9 +46,21 @@ const PlayerPriorities = () => {
         setIsLoadingPlayerReadiness(false);
       },
     });
+
+  const playerPriorities = useMemo(
+    () => playerPrioritiesData,
+    [playerPrioritiesData]
+  );
+  const playerReadiness = useMemo(
+    () => playerReadinessData,
+    [playerReadinessData]
+  );
+
   useEffect(() => {
-    refetchPlayerPriority();
-    refetchPlayerReadiness();
+    if (currentPhase) {
+      refetchPlayerPriority();
+      refetchPlayerReadiness();
+    }
   }, [currentPhase?.name]);
   useEffect(() => {
     if (!channel) return;
@@ -53,13 +73,10 @@ const PlayerPriorities = () => {
       channel.unbind(EVENT_PLAYER_READINESS_CHANGED);
     };
   }, [channel, isLoadingPlayerReadinessData]);
-  if (isLoadingRoomUsers) {
+  if (isLoadingRoomUsers || isLoadingPlayerReadinessData) {
     return <div>Loading...</div>;
   }
-  if (isLoadingPlayerReadinessData) {
-    return <div>Loading...</div>;
-  }
-  console.log("playerReadiness", playerReadiness);
+  console.log("playerPriorities", playerPriorities);
   return (
     <div className="flex">
       {(playerPriorities?.length || 0) > 0 ? (

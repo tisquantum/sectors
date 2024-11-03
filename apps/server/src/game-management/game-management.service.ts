@@ -143,6 +143,8 @@ import {
   DEFAULT_SECTOR_AMOUNT,
   PRIZE_CASH_SUM,
   INACTIVE_COMPANY_PER_TURN_DISCOUNT,
+  OUTSOURCE_PRESTIGE_PENALTY,
+  AWARD_PRESTIGE_BONUS,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -423,12 +425,6 @@ export class GameManagementService {
         track.companyAwardTrackSpaces.length - 1
       ];
     });
-    const allCompaniesThatHaveReachedLastSpace = lastSpaces.map((space) => {
-      return space.companySpaces.map((companySpace) => companySpace.companyId);
-    });
-    //flatten this
-    const allCompaniesThatHaveReachedLastSpaceFlat =
-      allCompaniesThatHaveReachedLastSpace.flat();
     //filter all companies that have not received awards
     const companiesThatHaventReceivedAward = lastSpaces.map((space) => {
       return space.companySpaces.filter((companySpace) => {
@@ -454,14 +450,15 @@ export class GameManagementService {
         });
       });
     await Promise.all(companyPassiveEffectPromises);
-    //all companies get +1 prestige
-    const companyPrestigePromises =
-      allCompaniesThatHaveReachedLastSpaceFlat.map((companyId) => {
+    //companies get prestige bonus
+    const companyPrestigePromises = companiesThatHaventReceivedAwardFlat.map(
+      (companySpace) => {
         this.companyService.updateCompany({
-          where: { id: companyId },
-          data: { prestigeTokens: { increment: 1 } },
+          where: { id: companySpace.companyId },
+          data: { prestigeTokens: { increment: AWARD_PRESTIGE_BONUS } },
         });
-      });
+      },
+    );
     await Promise.all(companyPrestigePromises);
   }
 
@@ -3247,7 +3244,7 @@ export class GameManagementService {
           company.supplyCurrent + OURSOURCE_SUPPLY_BONUS,
           companyTierMaxSupply * 2,
         ),
-        prestigeTokens: 0,
+        prestigeTokens: company.prestigeTokens - OUTSOURCE_PRESTIGE_PENALTY,
       },
     });
   }

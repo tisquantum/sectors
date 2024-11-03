@@ -962,13 +962,13 @@ export function isAtSpaceLimit(
   awardType: AwardTrackType,
   currentSpace: number,
 ) {
-  switch(awardType) {
+  switch (awardType) {
     case AwardTrackType.CATALYST:
-      return currentSpace >= AWARD_TRACK_SPACES_CATALYST;
+      return currentSpace >= AWARD_TRACK_SPACES_CATALYST - 1;
     case AwardTrackType.MARKETING:
-      return currentSpace >= AWARD_TRACK_SPACES_MARKETING;
+      return currentSpace >= AWARD_TRACK_SPACES_MARKETING - 1;
     case AwardTrackType.RESEARCH:
-      return currentSpace >= AWARD_TRACK_SPACES_RESEARCH;
+      return currentSpace >= AWARD_TRACK_SPACES_RESEARCH - 1;
     default:
       return false;
   }

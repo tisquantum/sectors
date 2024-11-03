@@ -262,7 +262,10 @@ const StockRoundOrderGrid = ({
             <div className="flex flex-col gap-4">
               {companyAwardTracks &&
                 companyAwardTracks.map((awardTrack) => (
-                  <CompanyAwardTrack companyAwardTrackId={awardTrack.id} />
+                  <CompanyAwardTrack
+                    key={awardTrack.id}
+                    companyAwardTrackId={awardTrack.id}
+                  />
                 ))}
             </div>
           </div>

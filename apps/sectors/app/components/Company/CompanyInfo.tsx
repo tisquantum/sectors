@@ -22,6 +22,7 @@ import {
   RiFundsBoxFill,
   RiFundsFill,
   RiGameFill,
+  RiGlasses2Fill,
   RiGovernmentFill,
   RiHandCoinFill,
   RiIncreaseDecreaseFill,
@@ -70,6 +71,7 @@ import ShareComponent from "./Share";
 import { renderLocationShortHand } from "@sectors/app/helpers";
 import PlayerAvatar from "../Player/PlayerAvatar";
 import { CompanyLineChart } from "./CompanyLineChart";
+import CompanyResearchCards from "./CompanyResearchCards";
 
 const buildBarChart = (shares: ShareWithPlayer[]) => {
   //group shares by location and sum the quantity
@@ -201,7 +203,10 @@ const CompanyMoreInfo = ({
           }
         >
           <div className="flex items-center">
-            <RiSparkling2Fill size={18} className="ml-2 size-4 text-yellow-500" />
+            <RiSparkling2Fill
+              size={18}
+              className="ml-2 size-4 text-yellow-500"
+            />
             <span className="ml-1">{company.prestigeTokens}</span>
           </div>
         </Tooltip>
@@ -338,6 +343,28 @@ const CompanyMoreInfo = ({
           </Tooltip>
         )}
       </div>
+      <Tooltip
+        classNames={{ base: baseToolTipStyle }}
+        className={tooltipStyle}
+        content={
+          <p className={tooltipParagraphStyle}>
+            The research cards this company owns.
+          </p>
+        }
+      >
+        <div className="flex items-center">
+          <Popover>
+            <PopoverTrigger>
+              <Button className="p-0 m-0" isIconOnly>
+                <RiGlasses2Fill size={18} />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent>
+              <CompanyResearchCards companyId={company.id} />
+            </PopoverContent>
+          </Popover>
+        </div>
+      </Tooltip>
     </div>
   );
 };

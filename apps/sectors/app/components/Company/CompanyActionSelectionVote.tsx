@@ -10,6 +10,8 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
+  Tab,
+  Tabs,
   Tooltip,
 } from "@nextui-org/react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -32,6 +34,7 @@ import {
   LOBBY_DEMAND_BOOST,
   MARKETING_CONSUMER_BONUS,
   OURSOURCE_SUPPLY_BONUS,
+  OUTSOURCE_PRESTIGE_PENALTY,
   SectorEffects,
   SMALL_MARKETING_CAMPAIGN_DEMAND,
 } from "@server/data/constants";
@@ -72,6 +75,7 @@ import {
   RiListOrdered2,
   RiTicket2Fill,
   RiWalletFill,
+  RiBuilding2Fill,
 } from "@remixicon/react";
 import {
   companyPriorityOrderOperations,
@@ -84,6 +88,8 @@ import {
 import CompanyPriorityList from "./CompanyPriorityOperatingRound";
 import InsolvencyContributionComponent from "./InsolvencyContribution";
 import { friendlyResearchName } from "@sectors/app/helpers";
+import CompanyAwardTrack from "./CompanyAwardTrack";
+import TabView from "../Game/TabView";
 
 const renderSymbolDisplay = (operatingRoundAction: OperatingRoundAction) => {
   const IconWithText = ({
@@ -137,7 +143,9 @@ const renderSymbolDisplay = (operatingRoundAction: OperatingRoundAction) => {
           </Row>
           <Row variant="flat" color="warning">
             <div className="flex items-center gap-1">
-              <IconWithText icon={<RiBuilding3Fill size={18} />} text={`-1`} />
+              <RiBuilding2Fill size={18} />
+              <RiShapesFill size={18} />
+              <IconWithText icon={<RiHandCoinFill size={18} />} text={`-1`} />
               <span>/</span>
               <RiListOrdered2 size={18} />
             </div>
@@ -293,7 +301,10 @@ const renderSymbolDisplay = (operatingRoundAction: OperatingRoundAction) => {
             </div>
           </Row>
           <Row variant="flat" color="danger">
-            <IconWithText icon={<RiSparkling2Fill size={18} />} text="= 0" />
+            <IconWithText
+              icon={<RiSparkling2Fill size={18} />}
+              text={`-${OUTSOURCE_PRESTIGE_PENALTY}`}
+            />
           </Row>
         </div>
       );
@@ -788,6 +799,12 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
   const [currentCompany, setCurrentCompany] = useState<string | undefined>(
     undefined
   );
+  const { data: companyAwardTracks, isLoading: isLoadingCompanyAwardTracks } =
+    trpc.companyAwardTrack.listCompanyAwardTracks.useQuery({
+      where: {
+        gameId,
+      },
+    });
   useEffect(() => {
     if (companies && currentPhase) {
       setCurrentCompany(
@@ -806,6 +823,7 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
   if (!currentPhase) return <div>No current phase found</div>;
   if (currentTurnIsLoading) return <div>Loading...</div>;
   if (!currentTurnWithRelations) return <div>No turn found</div>;
+  if (isLoadingCompanyAwardTracks) return <div>Loading...</div>;
   if (error) return <div>Error: {error.message}</div>;
   if (withResult && isLoadingCompanyVoteResults) return <div>Loading...</div>;
   if (withResult && !companyVoteResults) return <div>No results found</div>;
@@ -886,70 +904,87 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
   );
   console.log("collectedCompanies", collectedCompanies);
   return (
-    <div className="flex flex-col gap-1 flex-grow relative">
-      <div className="flex flex-col gap-2 justify-center items-center">
-        <Tooltip
-          classNames={{ base: baseToolTipStyle }}
-          className={tooltipStyle}
-          content={<CompanyPriorityList companies={companies} />}
-        >
-          <h2>Turn Order</h2>
-        </Tooltip>
-        <div className="flex flex-col gap-2 justify-center items-center">
-          {showLock && <RiLockFill />}
-          <div className="flex gap-2">
-            {collectedCompanies.map((company, index) => (
-              <div
-                key={company.id}
-                className={`flex items-center justify-center p-2 w-14 h-14 rounded-full text-white text-xs lg:text-sm font-bold ${
-                  currentCompany === company.id
-                    ? `${
-                        company.status === CompanyStatus.INSOLVENT
-                          ? "bg-rose-500"
-                          : "bg-blue-500"
-                      }`
-                    : company.status === CompanyStatus.INSOLVENT
-                    ? "bg-rose-500"
-                    : "bg-gray-500"
-                }`}
+    <div className="flex flex-col gap-4">
+      <Tabs>
+        <Tab key="company-selection" title="Company Vote">
+          <div className="flex flex-col gap-1 flex-grow relative">
+            <div className="flex flex-col gap-2 justify-center items-center">
+              <Tooltip
+                classNames={{ base: baseToolTipStyle }}
+                className={tooltipStyle}
+                content={<CompanyPriorityList companies={companies} />}
               >
-                {company.stockSymbol}
+                <h2>Turn Order</h2>
+              </Tooltip>
+              <div className="flex flex-col gap-2 justify-center items-center">
+                {showLock && <RiLockFill />}
+                <div className="flex gap-2">
+                  {collectedCompanies.map((company, index) => (
+                    <div
+                      key={company.id}
+                      className={`flex items-center justify-center p-2 w-14 h-14 rounded-full text-white text-xs lg:text-sm font-bold ${
+                        currentCompany === company.id
+                          ? `${
+                              company.status === CompanyStatus.INSOLVENT
+                                ? "bg-rose-500"
+                                : "bg-blue-500"
+                            }`
+                          : company.status === CompanyStatus.INSOLVENT
+                          ? "bg-rose-500"
+                          : "bg-gray-500"
+                      }`}
+                    >
+                      {company.stockSymbol}
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={handlePrevious}>
+                    <RiArrowLeftFill />
+                  </Button>
+                  <Button onClick={handleNext}>
+                    <RiArrowRightFill />
+                  </Button>
+                </div>
               </div>
-            ))}
+            </div>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={currentCompany}
+                initial={{ opacity: 0, x: 200 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -200 }}
+                className={`flex justify-center items-center`}
+              >
+                <div className="flex flex-col justify-center items-center">
+                  <CompanyActionSelectionVote
+                    company={companies.find(
+                      (company) => company.id === currentCompany
+                    )}
+                    actionVoteResults={companyVoteResults?.operatingRoundVote.filter(
+                      (vote) => vote.companyId === currentCompany
+                    )}
+                    companyActions={currentCompanyActions}
+                    withResult={withResult}
+                    allCompanyActions={companyActions}
+                  />
+                </div>
+              </motion.div>
+            </AnimatePresence>
           </div>
-          <div className="flex gap-2">
-            <Button onClick={handlePrevious}>
-              <RiArrowLeftFill />
-            </Button>
-            <Button onClick={handleNext}>
-              <RiArrowRightFill />
-            </Button>
+        </Tab>
+        <Tab key="company-award" title="Company Awards">
+          <div className="flex flex-col gap-4">
+            {companyAwardTracks &&
+              companyAwardTracks.map((awardTrack) => (
+                <CompanyAwardTrack
+                  key={awardTrack.id}
+                  companyAwardTrackId={awardTrack.id}
+                />
+              ))}
           </div>
-        </div>
-      </div>
-      <AnimatePresence mode="wait" initial={false}>
-        <motion.div
-          key={currentCompany}
-          initial={{ opacity: 0, x: 200 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -200 }}
-          className={`flex justify-center items-center`}
-        >
-          <div className="flex flex-col justify-center items-center">
-            <CompanyActionSelectionVote
-              company={companies.find(
-                (company) => company.id === currentCompany
-              )}
-              actionVoteResults={companyVoteResults?.operatingRoundVote.filter(
-                (vote) => vote.companyId === currentCompany
-              )}
-              companyActions={currentCompanyActions}
-              withResult={withResult}
-              allCompanyActions={companyActions}
-            />
-          </div>
-        </motion.div>
-      </AnimatePresence>
+        </Tab>
+      </Tabs>
     </div>
   );
 };

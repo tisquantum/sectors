@@ -170,7 +170,11 @@ const HeadlineComponent = ({
               animate={{ x: 0, opacity: 1 }}
               transition={{ delay: 0.4 }}
             >
-              <CompanyComponent company={headline.company} />
+              {headline.company && headline.sector && (
+                <CompanyComponent
+                  company={{ ...headline.company, Sector: headline.sector }}
+                />
+              )}
             </motion.div>
           )}
 

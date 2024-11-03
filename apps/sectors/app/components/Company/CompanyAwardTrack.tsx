@@ -37,7 +37,7 @@ const CompanyAwardTrack = ({
   if (!awardTrack || !awardTrackSpaces) return;
   return (
     <div className="flex flex-col items-center p-6 rounded-lg shadow-lg">
-      <h2 className="text-2xl font-bold mb-4">
+      <h2 className="text-lg lg:text-2xl font-bold mb-4">
         {awardTrack.awardTrackName} Award Track
       </h2>
       <div className="flex flex-wrap gap-4 border-2 border-dashed border-gray-400 p-4 rounded-lg">
