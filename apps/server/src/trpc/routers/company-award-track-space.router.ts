@@ -1,26 +1,25 @@
 import { z } from 'zod';
-import { HeadlineService } from '@server/headline/headline.service';
 import { TrpcService } from '../trpc.service';
-import { HeadlineType, Prisma } from '@prisma/client';
+import { CompanyAwardTrackSpaceService } from '@server/company-award-track-space/company-award-track-space.service';
 
 type Context = {
-  headlineService: HeadlineService;
+  companyAwardTrackSpaceService: CompanyAwardTrackSpaceService;
 };
 
 export default (trpc: TrpcService, ctx: Context) =>
   trpc.router({
-    getHeadline: trpc.procedure
+    getCompanyAwardTrackSpace: trpc.procedure
       .input(z.object({ id: z.string() }))
       .query(async ({ input }) => {
         const { id } = input;
-        const headline = await ctx.headlineService.getHeadline({ id });
-        if (!headline) {
-          throw new Error('Headline not found');
+        const space = await ctx.companyAwardTrackSpaceService.getCompanyAwardTrackSpaceById(id);
+        if (!space) {
+          throw new Error('CompanyAwardTrackSpace not found');
         }
-        return headline;
+        return space;
       }),
 
-    listHeadlines: trpc.procedure
+    listCompanyAwardTrackSpaces: trpc.procedure
       .input(
         z.object({
           skip: z.number().optional(),
@@ -32,7 +31,7 @@ export default (trpc: TrpcService, ctx: Context) =>
       )
       .query(async ({ input }) => {
         const { skip, take, cursor, where, orderBy } = input;
-        return ctx.headlineService.listHeadlines({
+        return ctx.companyAwardTrackSpaceService.listCompanyAwardTrackSpaces({
           skip,
           take,
           cursor: cursor ? { id: cursor } : undefined,
@@ -40,5 +39,4 @@ export default (trpc: TrpcService, ctx: Context) =>
           orderBy,
         });
       }),
-
   });

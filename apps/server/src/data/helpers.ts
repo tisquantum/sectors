@@ -1,4 +1,5 @@
 import {
+  AwardTrackType,
   Card,
   Company,
   CompanyStatus,
@@ -27,6 +28,9 @@ import {
 } from '@server/prisma/prisma.types';
 import {
   AUTOMATION_EFFECT_OPERATIONS_REDUCTION,
+  AWARD_TRACK_SPACES_CATALYST,
+  AWARD_TRACK_SPACES_MARKETING,
+  AWARD_TRACK_SPACES_RESEARCH,
   BOOM_CYCLE_STOCK_CHART_BONUS,
   CompanyActionCosts,
   DEFAULT_RESEARCH_DECK_SIZE,
@@ -88,8 +92,8 @@ export function determineNextGamePhase(
       };
     case PhaseName.HEADLINE_RESOLVE:
       return {
-        phaseName: PhaseName.PRIZE_VOTE_ACTION,
-        roundType: RoundType.INFLUENCE,
+        phaseName: PhaseName.STOCK_RESOLVE_LIMIT_ORDER,
+        roundType: RoundType.STOCK,
       };
     case PhaseName.PRIZE_VOTE_ACTION:
       return {
@@ -939,4 +943,54 @@ export function sortSectorIdsByPriority(
     const priorityB = priorityMap[b] ?? Number.MAX_VALUE;
     return priorityA - priorityB;
   });
+}
+
+export function getSpacesForAwardTrackType(awardType: AwardTrackType) {
+  switch (awardType) {
+    case AwardTrackType.CATALYST:
+      return AWARD_TRACK_SPACES_CATALYST;
+    case AwardTrackType.MARKETING:
+      return AWARD_TRACK_SPACES_MARKETING;
+    case AwardTrackType.RESEARCH:
+      return AWARD_TRACK_SPACES_RESEARCH;
+    default:
+      return 0;
+  }
+}
+
+export function isAtSpaceLimit(
+  awardType: AwardTrackType,
+  currentSpace: number,
+) {
+  switch(awardType) {
+    case AwardTrackType.CATALYST:
+      return currentSpace >= AWARD_TRACK_SPACES_CATALYST;
+    case AwardTrackType.MARKETING:
+      return currentSpace >= AWARD_TRACK_SPACES_MARKETING;
+    case AwardTrackType.RESEARCH:
+      return currentSpace >= AWARD_TRACK_SPACES_RESEARCH;
+    default:
+      return false;
+  }
+}
+
+export function getPassiveEffectForSector(sector: SectorName) {
+  switch (sector) {
+    case SectorName.HEALTHCARE:
+      return OperatingRoundAction.FASTTRACK_APPROVAL;
+    case SectorName.TECHNOLOGY:
+      return OperatingRoundAction.INNOVATION_SURGE;
+    case SectorName.ENERGY:
+      return OperatingRoundAction.CARBON_CREDIT;
+    case SectorName.CONSUMER_DEFENSIVE:
+      return OperatingRoundAction.STEADY_DEMAND;
+    case SectorName.CONSUMER_CYCLICAL:
+      return OperatingRoundAction.BOOM_CYCLE;
+    case SectorName.INDUSTRIALS:
+      return OperatingRoundAction.MANUFACTURE;
+    case SectorName.MATERIALS:
+      return OperatingRoundAction.EXTRACT;
+    default:
+      return OperatingRoundAction.VETO;
+  }
 }

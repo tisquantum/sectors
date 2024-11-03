@@ -3,6 +3,7 @@ import {
   RiBuilding3Fill,
   RiExpandUpDownFill,
   RiFundsFill,
+  RiGameFill,
   RiGlasses2Fill,
   RiHandCoinFill,
   RiListOrdered2,
@@ -12,6 +13,7 @@ import {
   RiShapesFill,
   RiSparkling2Fill,
   RiStackFill,
+  RiTeamFill,
   RiTextWrap,
   RiTicket2Fill,
   RiWallet3Fill,
@@ -31,7 +33,7 @@ const LegendItem = ({
 );
 
 const SymbolLegend = () => (
-  <div className="grid grid-cols-2 gap-1">
+  <div className="grid grid-cols-3 gap-1">
     <LegendItem symbol={<RiListOrdered2 />} label="Game Turn" />
     <LegendItem symbol={<RiTextWrap />} label="Game Phase" />
     <LegendItem symbol={<RiShapesFill />} label="Sector" />
@@ -48,6 +50,8 @@ const SymbolLegend = () => (
     <LegendItem symbol={<RiSparkling2Fill />} label="Prestige" />
     <LegendItem symbol={<RiWallet3Fill />} label="Cash on Hand" />
     <LegendItem symbol={<RiFundsFill />} label="Stock Price" />
+    <LegendItem symbol={<RiGameFill />} label="Passive Effect" />
+    <LegendItem symbol={<RiTeamFill />} label="Consumer" />
   </div>
 );
 

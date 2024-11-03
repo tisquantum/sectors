@@ -54,7 +54,7 @@ export const DEFAULT_RESEARCH_DECK_SIZE = 12;
 
 export const GOVERNMENT_GRANT_AMOUNT = 500;
 
-export const MARKETING_CONSUMER_BONUS = 3;
+export const MARKETING_CONSUMER_BONUS = 2;
 export const LARGE_MARKETING_CAMPAIGN_DEMAND = 4;
 export const SMALL_MARKETING_CAMPAIGN_DEMAND = 3;
 
@@ -72,7 +72,7 @@ export const AUTOMATION_EFFECT_OPERATIONS_REDUCTION = 20;
 export const CAPITAL_INJECTION_STARTER = 200;
 export const CAPITAL_INJECTION_BOOSTER = 100;
 export const CORPORATE_ESPIONAGE_PRESTIGE_REDUCTION = 2;
-export const LOBBY_DEMAND_BOOST = 3;
+export const LOBBY_DEMAND_BOOST = 4;
 export const ACTION_ISSUE_SHARE_AMOUNT = 2;
 export const BANKRUPTCY_SHARE_PERCENTAGE_RETAINED = 10;
 export const OURSOURCE_SUPPLY_BONUS = 3;
@@ -92,6 +92,10 @@ export const ROOM_MESSAGE_MAX_LENGTH = 150;
 export const DEFAULT_SECTOR_AMOUNT = 3;
 export const PRIZE_CASH_SUM = 100;
 export const INACTIVE_COMPANY_PER_TURN_DISCOUNT = 5;
+export const AWARD_TRACK_SPACES_RESEARCH = 3;
+export const AWARD_TRACK_SPACES_CATALYST = 3;
+export const AWARD_TRACK_SPACES_MARKETING = 4;
+
 /**
  * Phase times in milliseconds
  */
@@ -825,7 +829,7 @@ export const companyActionsDescription: CompanyActionDescription[] = [
     id: 1,
     title: 'Large Marketing Campaign',
     name: OperatingRoundAction.MARKETING,
-    message: `The sector receives an additional ${MARKETING_CONSUMER_BONUS} consumers. Your company receives +${LARGE_MARKETING_CAMPAIGN_DEMAND} demand that decays 1 per production phase.`,
+    message: `Your company receives +${LARGE_MARKETING_CAMPAIGN_DEMAND} demand that decays 1 per production phase. The sector receives an additional ${MARKETING_CONSUMER_BONUS} demand that decays 1 per production phase.`,
     actionType: 'general',
   },
   {

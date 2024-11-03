@@ -44,6 +44,8 @@ import { CompanyActionOrderService } from '@server/company-action-order/company-
 import { HeadlineService } from '@server/headline/headline.service';
 import { PlayerHeadlineService } from '@server/player-headline/player-headline.service';
 import { StockSubRoundService } from '@server/stock-sub-round/stock-sub-round.service';
+import { CompanyAwardTrackService } from '@server/company-award-track/company-award-track.service';
+import { CompanyAwardTrackSpaceService } from '@server/company-award-track-space/company-award-track-space.service';
 
 @Module({
   imports: [PrismaModule],
@@ -95,6 +97,8 @@ import { StockSubRoundService } from '@server/stock-sub-round/stock-sub-round.se
     HeadlineService,
     PlayerHeadlineService,
     StockSubRoundService,
+    CompanyAwardTrackService,
+    CompanyAwardTrackSpaceService,
   ],
 })
 export class TrpcModule {}

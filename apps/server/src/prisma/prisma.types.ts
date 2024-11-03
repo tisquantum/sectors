@@ -4,6 +4,9 @@ import {
   Company,
   CompanyAction,
   CompanyActionOrder,
+  CompanyAwardTrack,
+  CompanyAwardTrackSpace,
+  CompanySpace,
   Entity,
   Game,
   GameLog,
@@ -349,4 +352,16 @@ export type PhaseWithRelations = Phase & {
   StockRound: StockRound | null;
   OperatingRound: OperatingRound | null;
   StockSubRound: StockSubRound | null;
+};
+
+export type CompanySpaceWithCompany = CompanySpace & {
+  Company: CompanyWithSectorOnly;
+};
+
+export type AwardTrackSpaceWithRelations = CompanyAwardTrackSpace & {
+  companySpaces: CompanySpaceWithCompany[];
+};
+
+export type AwardTrackWithRelations = CompanyAwardTrack & {
+  companyAwardTrackSpaces: AwardTrackSpaceWithRelations[];
 };

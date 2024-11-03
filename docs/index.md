@@ -49,12 +49,12 @@ Player priority determines how any ties are resolved in relation to the player. 
 ## Stock Rounds
 {: #stock-rounds }
 
-**The Stock Round** is the first major section of each turn and provides the mechanisms for players to build their stock portfolio and earn (or lose!) money in investments. The Stock Round is broken down into a number of *"sub-rounds"* where players can place one order in each round. The order is placed in the "Place Stock Orders" phase. Player orders are submitted simultaneously and in secret. Players have 4 distinct order mechanisms: Market Orders, Limit Orders, Short Orders, and Options Contracts.
+**The Stock Round** is the first major section of each turn and provides the mechanisms for players to build their stock portfolio and earn (or lose!) money in investments. The Stock Round is broken down into a number of *"sub-rounds"* where players can place one order in each round.  These sub-rounds continue until no players place an order in a given round. The order is placed in the "Place Stock Orders" phase. Player orders are submitted simultaneously and in secret. Players have 4 distinct order mechanisms: Market Orders, Limit Orders, Short Orders, and Options Contracts.
 
 ### Order Mechanisms
 {: #order-mechanisms }
 
-*Note: Unless otherwise stated, a player may elect to place an order for any amount of shares when it comes to making an order, regardless if they have the cash on hand to do so.  Only until the action is **resolved** will the bank look into the players cash on hand.  In this way, players can cascade SELLS and BUYS to fulfill orders where they might otherwise not have the initial cash on hand to do so.*
+*Note: Unless otherwise stated, a player may elect to place an order for any amount of shares when it comes to making an order, regardless if they have the cash on hand to do so.  Only until the action is **resolved** will the bank look into the players cash on hand.*
 
 **Market Orders** 
 Buy or sell shares at the current market price. Market Orders are resolved immediately proceeding stock action phases. Market Orders are placed against the IPO or OPEN MARKET.

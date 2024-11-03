@@ -199,6 +199,7 @@ model Company {
   Entity                   Entity?                   @relation(fields: [entityId], references: [id])
   entityId                 String?                   @unique
   Headline                 Headline[]
+  companySpaces            CompanySpace[]
 }
 
 enum CompanyTier {
@@ -728,6 +729,7 @@ model Game {
   StockHistory            StockHistory[]
   Prizes                  Prize[]
   PlayerHeadline          PlayerHeadline[]
+  CompanyAwardTrack       CompanyAwardTrack[]
 }
 
 model SectorPriority {
@@ -1141,4 +1143,43 @@ model SectorPrize {
   Sector    Sector   @relation(fields: [sectorId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model CompanyAwardTrack {
+  id                      String                   @id @default(uuid()) @db.Uuid
+  gameId                  String
+  awardTrackType          AwardTrackType
+  awardTrackName          String
+  Game                    Game                     @relation(fields: [gameId], references: [id])
+  companyAwardTrackSpaces CompanyAwardTrackSpace[]
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+}
+
+enum AwardTrackType {
+  RESEARCH
+  MARKETING
+  CATALYST //sector
+}
+
+model CompanyAwardTrackSpace {
+  id                    String            @id @default(uuid()) @db.Uuid
+  gameId                String
+  awardTrackId          String            @db.Uuid
+  awardTrackSpaceNumber Int
+  companySpaces         CompanySpace[]
+  CompanyAwardTrack     CompanyAwardTrack @relation(fields: [awardTrackId], references: [id])
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+}
+
+model CompanySpace {
+  id                       String                 @id @default(uuid()) @db.Uuid
+  companyId                String
+  companyAwardTrackSpaceId String                 @db.Uuid
+  receivedAward            Boolean                @default(false)
+  Company                  Company                @relation(fields: [companyId], references: [id])
+  CompanyAwardTrackSpace   CompanyAwardTrackSpace @relation(fields: [companyAwardTrackSpaceId], references: [id])
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
 }
