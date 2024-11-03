@@ -48,6 +48,7 @@ import {
   Headline,
   HeadlineType,
   StockSubRound,
+  AwardTrackType,
 } from '@prisma/client';
 import { GamesService } from '@server/games/games.service';
 import { CompanyService } from '@server/company/company.service';
@@ -142,6 +143,8 @@ import {
   DEFAULT_SECTOR_AMOUNT,
   PRIZE_CASH_SUM,
   INACTIVE_COMPANY_PER_TURN_DISCOUNT,
+  OUTSOURCE_PRESTIGE_PENALTY,
+  AWARD_PRESTIGE_BONUS,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -166,6 +169,7 @@ import {
   calculateStartingCompanyCount,
   getCompanyActionCost,
   sortSectorIdsByPriority,
+  getPassiveEffectForSector,
 } from '@server/data/helpers';
 import { PusherService } from 'nestjs-pusher';
 import {
@@ -211,6 +215,8 @@ import { CompanyActionOrderService } from '@server/company-action-order/company-
 import { HeadlineService } from '@server/headline/headline.service';
 import { generateHeadlines } from '@server/headline/headline.helpers';
 import { StockSubRoundService } from '@server/stock-sub-round/stock-sub-round.service';
+import { CompanyAwardTrackService } from '@server/company-award-track/company-award-track.service';
+import { CompanyAwardTrackSpaceService } from '@server/company-award-track-space/company-award-track-space.service';
 
 type GroupedByPhase = {
   [key: string]: {
@@ -268,6 +274,8 @@ export class GameManagementService {
     private companyActionOrderService: CompanyActionOrderService,
     private headlineService: HeadlineService,
     private stockSubRoundService: StockSubRoundService,
+    private companyAwardTrackService: CompanyAwardTrackService,
+    private companyAwardTrackSpaceService: CompanyAwardTrackSpaceService,
   ) {}
 
   /**
@@ -390,7 +398,8 @@ export class GameManagementService {
       case PhaseName.END_TURN:
         await this.adjustEconomyScore(phase);
         await this.resolveCompanyLoans(phase);
-        if(game.useOptionOrders) {
+        await this.resolveCompanyAwards(phase);
+        if (game.useOptionOrders) {
           await this.optionContractGenerate(phase);
         }
         const isEndGame = await this.checkAndTriggerEndGame(phase);
@@ -401,6 +410,56 @@ export class GameManagementService {
       default:
         return;
     }
+  }
+
+  async resolveCompanyAwards(phase: Phase) {
+    //check all tracks to see if any companies have reached the end
+    //get all tracks for game id
+    const companyAwardTracks =
+      await this.companyAwardTrackService.listCompanyAwardTracksWithRelations({
+        where: { gameId: phase.gameId },
+      });
+    //get the last space of each track
+    const lastSpaces = companyAwardTracks.map((track) => {
+      return track.companyAwardTrackSpaces[
+        track.companyAwardTrackSpaces.length - 1
+      ];
+    });
+    //filter all companies that have not received awards
+    const companiesThatHaventReceivedAward = lastSpaces.map((space) => {
+      return space.companySpaces.filter((companySpace) => {
+        return companySpace.receivedAward === false;
+      });
+    });
+    //flatten this
+    const companiesThatHaventReceivedAwardFlat =
+      companiesThatHaventReceivedAward.flat();
+    //iterate over companies and apply passive effect
+    const companyPassiveEffectPromises =
+      companiesThatHaventReceivedAwardFlat.map(async (companySpace) => {
+        this.applyPassiveEffect({
+          companyId: companySpace.companyId,
+          effectName: getPassiveEffectForSector(
+            companySpace.Company.Sector.sectorName,
+          ),
+        });
+        //update companySpace to received award
+        return this.prisma.companySpace.update({
+          where: { id: companySpace.id },
+          data: { receivedAward: true },
+        });
+      });
+    await Promise.all(companyPassiveEffectPromises);
+    //companies get prestige bonus
+    const companyPrestigePromises = companiesThatHaventReceivedAwardFlat.map(
+      (companySpace) => {
+        this.companyService.updateCompany({
+          where: { id: companySpace.companyId },
+          data: { prestigeTokens: { increment: AWARD_PRESTIGE_BONUS } },
+        });
+      },
+    );
+    await Promise.all(companyPrestigePromises);
   }
 
   async discountInactiveCompanies(phase: Phase) {
@@ -2625,6 +2684,48 @@ export class GameManagementService {
     }
   }
 
+  async moveCompanyForwardOnCompanyAwardTrack(
+    companyId: string,
+    gameId: string,
+    awardTrackType: AwardTrackType,
+  ) {
+    //get award track of type with game id
+    const awardTracks =
+      await this.companyAwardTrackService.listCompanyAwardTracks({
+        where: { gameId, awardTrackType },
+      });
+    if (!awardTracks || awardTracks.length === 0) {
+      console.error('No award tracks found');
+      return;
+    }
+    const awardTrackFound = awardTracks[0];
+    //get the spaces for the award track
+    const awardTrackSpaces =
+      await this.companyAwardTrackSpaceService.listCompanyAwardTrackSpaces({
+        where: { awardTrackId: awardTrackFound.id },
+      });
+    if (!awardTrackSpaces || awardTrackSpaces.length === 0) {
+      console.error('No award track spaces found');
+      return;
+    }
+    //get the companyspace
+    const companySpace =
+      await this.companyAwardTrackSpaceService.findSpaceForCompany(
+        awardTrackFound.id,
+        companyId,
+      );
+    if (!companySpace) {
+      console.error('Company space not found');
+      return;
+    }
+    //move company forward on space
+    return this.companyAwardTrackSpaceService.moveCompanyForwardOnSpace(
+      companyId,
+      companySpace,
+      awardTrackFound.awardTrackType,
+    );
+  }
+
   /**
    * Resolve the company action.
    *
@@ -2697,8 +2798,23 @@ export class GameManagementService {
           break;
         case OperatingRoundAction.MARKETING:
           await this.resolveMarketingAction(companyAction);
+          await this.moveCompanyForwardOnCompanyAwardTrack(
+            company.id,
+            phase.gameId,
+            AwardTrackType.MARKETING,
+          );
+          await this.moveCompanyForwardOnCompanyAwardTrack(
+            company.id,
+            phase.gameId,
+            AwardTrackType.CATALYST,
+          );
           break;
         case OperatingRoundAction.MARKETING_SMALL_CAMPAIGN:
+          await this.moveCompanyForwardOnCompanyAwardTrack(
+            company.id,
+            phase.gameId,
+            AwardTrackType.MARKETING,
+          );
           await this.resolveMarketingSmallCampaignAction(companyAction);
           break;
         case OperatingRoundAction.SHARE_BUYBACK:
@@ -2721,12 +2837,22 @@ export class GameManagementService {
           break;
         case OperatingRoundAction.RESEARCH:
           await this.research(companyAction);
+          await this.moveCompanyForwardOnCompanyAwardTrack(
+            company.id,
+            phase.gameId,
+            AwardTrackType.RESEARCH,
+          );
           break;
         case OperatingRoundAction.LOAN:
           await this.companyLoan(companyAction);
           break;
         case OperatingRoundAction.LOBBY:
           await this.lobbyCompany(companyAction);
+          await this.moveCompanyForwardOnCompanyAwardTrack(
+            company.id,
+            phase.gameId,
+            AwardTrackType.CATALYST,
+          );
           break;
         case OperatingRoundAction.OUTSOURCE:
           await this.outsourceCompany(companyAction);
@@ -3118,7 +3244,7 @@ export class GameManagementService {
           company.supplyCurrent + OURSOURCE_SUPPLY_BONUS,
           companyTierMaxSupply * 2,
         ),
-        prestigeTokens: 0,
+        prestigeTokens: company.prestigeTokens - OUTSOURCE_PRESTIGE_PENALTY,
       },
     });
   }
@@ -3879,14 +4005,8 @@ export class GameManagementService {
       //add consumers to sector
       await this.sectorService.updateSector({
         where: { id: sector.id },
-        data: { consumers: sector.consumers + MARKETING_CONSUMER_BONUS },
-      });
-      //subtract consumers from game
-      await this.gamesService.updateGameState({
-        where: { id: game.id },
         data: {
-          consumerPoolNumber:
-            game.consumerPoolNumber - MARKETING_CONSUMER_BONUS,
+          demandBonus: (sector.demandBonus || 0) + MARKETING_CONSUMER_BONUS,
         },
       });
     } catch (error) {
@@ -5427,6 +5547,9 @@ export class GameManagementService {
           data: { capitalInjectionRewards: capitalInjections },
         });
       }
+      //create the rewards tracks
+      this.createAwardsTracks(game.id);
+
       if (!game.isTimerless) {
         // Start the timer for advancing to the next phase
         //TODO: Once the game is fully implemented, we can start the timer service again.  Something is wrong with it right now.
@@ -5441,6 +5564,24 @@ export class GameManagementService {
       console.error('Error starting game:', error);
       throw new Error('Failed to start the game');
     }
+  }
+
+  async createAwardsTracks(gameId: string) {
+    this.companyAwardTrackService.createAwardTrackAndSpaces(
+      gameId,
+      'Research',
+      AwardTrackType.RESEARCH,
+    );
+    this.companyAwardTrackService.createAwardTrackAndSpaces(
+      gameId,
+      'Marketing',
+      AwardTrackType.MARKETING,
+    );
+    this.companyAwardTrackService.createAwardTrackAndSpaces(
+      gameId,
+      'Catalyst',
+      AwardTrackType.CATALYST,
+    );
   }
 
   async createResearchDeck(gameId: string) {
@@ -5973,7 +6114,7 @@ export class GameManagementService {
     }
 
     const determinedNextPhase = determineNextGamePhase(phase.name, {
-      stockActionSubRoundIsOver: !!!hasOrdersInStockSubRound
+      stockActionSubRoundIsOver: !!!hasOrdersInStockSubRound,
     });
 
     let adjustedPhase = await this.findNextPhaseThatShouldBePlayed(
@@ -9150,6 +9291,10 @@ export class GameManagementService {
     });
   }
 
+  /**
+   * Grants a company the passive action.
+   * @param param0
+   */
   async applyPassiveEffect({
     companyId,
     effectName,
@@ -9157,7 +9302,7 @@ export class GameManagementService {
   }: {
     companyId: string;
     effectName: OperatingRoundAction;
-    prize: PrizeWithSectorPrizes;
+    prize?: PrizeWithSectorPrizes;
   }) {
     //get company
     const company = await this.companyService.company({
@@ -9197,38 +9342,41 @@ export class GameManagementService {
       resolved: true,
       isPassive: true,
     });
-    //remove this action if it exists from any companies in the same sector except this one
-    const companiesInSector = await this.companyService.companies({
-      where: {
-        sectorId: company.sectorId,
-        id: { not: companyId },
-      },
-    });
-    //see if any companies in the sector have taken this action
-    const sectorActions = await this.companyActionService.companyActions({
-      where: {
-        companyId: { in: companiesInSector.map((c) => c.id) },
-        action: effectName,
-      },
-    });
-    //if so, remove the action
-    if (sectorActions.length > 0) {
-      await this.companyActionService.deleteCompanyAction({
-        id: sectorActions[0].id,
-      });
-    }
+    //TODO: Removing this for now, tentatively.  All companies in a sector can gain the action now.
+    // //remove this action if it exists from any companies in the same sector except this one
+    // const companiesInSector = await this.companyService.companies({
+    //   where: {
+    //     sectorId: company.sectorId,
+    //     id: { not: companyId },
+    //   },
+    // });
+    // //see if any companies in the sector have taken this action
+    // const sectorActions = await this.companyActionService.companyActions({
+    //   where: {
+    //     companyId: { in: companiesInSector.map((c) => c.id) },
+    //     action: effectName,
+    //   },
+    // });
+    // //if so, remove the action
+    // if (sectorActions.length > 0) {
+    //   await this.companyActionService.deleteCompanyAction({
+    //     id: sectorActions[0].id,
+    //   });
+    // }
     //game log
     await this.gameLogService.createGameLog({
       game: { connect: { id: game.id } },
       content: `${company.name} has taken the passive effect ${effectName}`,
     });
-    //create prize distribution
-    await this.prizeDistributionService.createPrizeDistribution({
-      passiveEffect: effectName,
-      distributionType: PrizeDistributionType.PASSIVE_EFFECT,
-      Company: { connect: { id: companyId } },
-      Prize: { connect: { id: prize.id } },
-    });
+    if (prize) {
+      //create prize distribution
+      await this.prizeDistributionService.createPrizeDistribution({
+        passiveEffect: effectName,
+        distributionType: PrizeDistributionType.PASSIVE_EFFECT,
+        Company: { connect: { id: companyId } },
+        Prize: { connect: { id: prize.id } },
+      });
+    }
   }
   async getPrizesCurrentTurnForPlayer(
     playerId: string,

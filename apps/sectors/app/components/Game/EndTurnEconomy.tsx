@@ -2,7 +2,12 @@ import { useGame } from "./GameContext";
 import "./EndTurnEconomy.css";
 import { sectorColors } from "@server/data/gameData";
 import { CompanyStatus, PhaseName, Sector } from "@server/prisma/prisma.client";
-import { RiHandCoinFill, RiTeamFill } from "@remixicon/react";
+import {
+  RiGlasses2Fill,
+  RiHandCoinFill,
+  RiSparkling2Fill,
+  RiTeamFill,
+} from "@remixicon/react";
 import PrestigeRewards from "./PrestigeRewards";
 import ResearchDeck from "../ResearchDeck/ResearchDeck";
 import { Tooltip } from "@nextui-org/react";
@@ -93,8 +98,8 @@ const EndTurnEconomy = () => {
                   </div>
                 }
               >
-                <div className="flex gap-2 text-xl">
-                  <span>Consumer Pool</span>
+                <div className="flex gap-1 items-center text-base lg:text-xl">
+                  <RiTeamFill /> <span>Consumer Pool</span>
                   <span>{gameState.consumerPoolNumber}</span>
                 </div>
               </Tooltip>
@@ -113,7 +118,7 @@ const EndTurnEconomy = () => {
                   </p>
                 }
               >
-                <div className="flex gap-2 text-xl">
+                <div className="flex gap-1 text-base lg:text-xl">
                   <span>Economy Score</span>
                   <span>{gameState.economyScore}</span>
                 </div>
@@ -131,12 +136,16 @@ const EndTurnEconomy = () => {
             </div>
           </div>
         )}
-        <div className="flex flex-col justify-center items-center gap-2 text-xl">
-          <h3>Prestige Track</h3>
+        <div className="flex flex-col justify-center items-center gap-1 text-base lg:text-xl">
+          <h3 className="flex items-center gap-1">
+            <RiSparkling2Fill /> <span>Prestige Track</span>
+          </h3>
           <PrestigeRewards />
         </div>
-        <div className="flex flex-col justify-center items-center gap-2 text-xl">
-          <h3>Research Deck</h3>
+        <div className="flex flex-col justify-center items-center gap-1 text-base lg:text-xl">
+          <h3 className="flex items-center gap-1">
+            <RiGlasses2Fill /> <span>Research Deck</span>
+          </h3>
           <div className="flex gap-2 text-xl">
             <ResearchDeck />
           </div>

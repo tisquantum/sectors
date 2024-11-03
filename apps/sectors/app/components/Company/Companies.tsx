@@ -1,11 +1,6 @@
 "use client";
 
-import { Company } from "@server/prisma/prisma.client";
 import CompaniesAccordion from "./CompaniesAccordion";
-import {
-  CompanyWithRelations,
-  CompanyWithSector,
-} from "@server/prisma/prisma.types";
 import { trpc } from "@sectors/app/trpc";
 
 // const Companies: React.FC<{ companies: Company[] }> = ({ companies }) => {

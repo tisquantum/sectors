@@ -76,6 +76,10 @@ import { HeadlineService } from '@server/headline/headline.service';
 import headlineRouter from './routers/headline.router';
 import playerHeadlineRouter from './routers/player-headline.router';
 import { PlayerHeadlineService } from '@server/player-headline/player-headline.service';
+import { CompanyAwardTrackService } from '@server/company-award-track/company-award-track.service';
+import { CompanyAwardTrackSpaceService } from '@server/company-award-track-space/company-award-track-space.service';
+import companyAwardTrackRouter from './routers/company-award-track.router';
+import companyAwardTrackSpaceRouter from './routers/company-award-track-space.router';
 @Injectable()
 export class TrpcRouter {
   constructor(
@@ -118,6 +122,8 @@ export class TrpcRouter {
     private readonly companyActionOrderService: CompanyActionOrderService,
     private readonly headlineService: HeadlineService,
     private readonly playerHeadlineService: PlayerHeadlineService,
+    private readonly companyAwardTrackService: CompanyAwardTrackService,
+    private readonly companyAwardTrackSpaceService: CompanyAwardTrackSpaceService,
   ) {}
 
   appRouter = this.trpc.router({
@@ -275,6 +281,12 @@ export class TrpcRouter {
       pusherService: this.pusherService,
       phaseService: this.phaseService,
       gamesService: this.gamesService,
+    }),
+    companyAwardTrack: companyAwardTrackRouter(this.trpc, {
+      companyAwardTrackService: this.companyAwardTrackService,
+    }),
+    companyAwardTrackSpace: companyAwardTrackSpaceRouter(this.trpc, {
+      companyAwardTrackSpaceService: this.companyAwardTrackSpaceService,
     }),
   });
 

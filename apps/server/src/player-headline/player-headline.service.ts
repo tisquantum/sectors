@@ -70,7 +70,7 @@ export class PlayerHeadlineService {
       costPerPlayer = headline?.cost;
     } else {
       costPerPlayer = Math.floor(
-        headline?.cost / headline?.playerHeadlines.length,
+        headline?.cost / (headline?.playerHeadlines.length + 1),
       );
     }
     //get player

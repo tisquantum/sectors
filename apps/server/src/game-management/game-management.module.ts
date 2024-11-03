@@ -38,6 +38,8 @@ import { RoomUserModule } from '@server/room-user/room-user.module';
 import { CompanyActionOrderModule } from '@server/company-action-order/company-action-order.module';
 import { HeadlineModule } from '@server/headline/headline.module';
 import { StockSubRoundModule } from '@server/stock-sub-round/stock-sub-round.module';
+import { CompanyAwardTrackModule } from '@server/company-award-track/company-award-track.module';
+import { CompanyAwardTrackSpaceModule } from '@server/company-award-track-space/company-award-track-space.module';
 
 @Module({
   imports: [
@@ -79,6 +81,8 @@ import { StockSubRoundModule } from '@server/stock-sub-round/stock-sub-round.mod
     CompanyActionOrderModule,
     HeadlineModule,
     StockSubRoundModule,
+    CompanyAwardTrackModule,
+    CompanyAwardTrackSpaceModule,
   ],
   providers: [GameManagementService],
   exports: [GameManagementService],

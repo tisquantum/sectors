@@ -49,6 +49,8 @@ import { SectorPriorityModule } from './sector-priority/sector-priority.module';
 import { HeadlineModule } from './headline/headline.module';
 import { PlayerHeadlineModule } from './player-headline/player-headline.module';
 import { StockSubRoundModule } from './stock-sub-round/stock-sub-round.module';
+import { CompanyAwardTrackModule } from './company-award-track/company-award-track.module';
+import { CompanyAwardTrackSpaceModule } from './company-award-track-space/company-award-track-space.module';
 
 const yourPusherOptions = {
   cluster: process.env.PUSHER_CLUSTER ?? 'CLUSTER',
@@ -114,6 +116,8 @@ const chunkingOptions = {
     HeadlineModule,
     PlayerHeadlineModule,
     StockSubRoundModule,
+    CompanyAwardTrackModule,
+    CompanyAwardTrackSpaceModule,
   ],
   controllers: [AppController],
   providers: [AppService],
