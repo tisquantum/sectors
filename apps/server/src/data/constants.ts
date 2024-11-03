@@ -11,7 +11,7 @@ import {
   SectorName,
   StockTier,
 } from '@prisma/client';
-export const GLOBAL_ROOM_ID = 3;
+export const GLOBAL_ROOM_ID = 4;
 export const GAME_SETUP_DEFAULT_BANK_POOL_NUMBER = 7500;
 export const GAME_SETUP_DEFAULT_CONSUMER_POOL_NUMBER = 75;
 export const GAME_SETUP_DEFAULT_STARTING_CASH_ON_HAND = 300;
