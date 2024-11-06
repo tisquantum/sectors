@@ -15,14 +15,15 @@ datasource db {
 }
 
 model User {
-  id            String         @id @default(uuid()) @db.Uuid
-  authUserId    String         @unique @default(uuid()) @db.Uuid
-  name          String         @default("anon")
-  RoomUser      RoomUser[]
-  player        Player[]
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  PlayerResults PlayerResult[]
+  id              String            @id @default(uuid()) @db.Uuid
+  authUserId      String            @unique @default(uuid()) @db.Uuid
+  name            String            @default("anon")
+  RoomUser        RoomUser[]
+  player          Player[]
+  playerExecutive ExecutivePlayer[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  PlayerResults   PlayerResult[]
 }
 
 model Room {
@@ -1182,4 +1183,193 @@ model CompanySpace {
   CompanyAwardTrackSpace   CompanyAwardTrackSpace @relation(fields: [companyAwardTrackSpaceId], references: [id])
   createdAt                DateTime               @default(now())
   updatedAt                DateTime               @updatedAt
+}
+
+// new game time
+
+model ExecutiveGame {
+  id                     String                   @id @default(uuid()) @db.Uuid
+  name                   String
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  gameTurn               ExecutiveGameTurn[]
+  players                ExecutivePlayer[]
+  executiveCards         ExecutiveCard[]
+  influence              Influence[]
+  ExecutiveVictoryPoint  ExecutiveVictoryPoint[]
+  ExecutiveAgenda        ExecutiveAgenda[]
+  ExecutiveInfluenceVote ExecutiveInfluenceVote[]
+  ExecutiveTrick         ExecutiveTrick[]
+  VoteMarker             VoteMarker[]
+}
+
+model ExecutiveGameTurn {
+  id        String                   @id @default(uuid()) @db.Uuid
+  gameId    String
+  turnType  TurnType
+  game      ExecutiveGame            @relation(fields: [gameId], references: [id])
+  tricks    ExecutiveTrick[]
+  influence ExecutiveInfluenceVote[]
+  createdAt DateTime                 @default(now())
+  updatedAt DateTime                 @updatedAt
+}
+
+model ExecutiveInfluenceVote {
+  id                  String             @id @default(uuid()) @db.Uuid
+  gameId              String
+  playerId            String
+  influence           Influence[]
+  game                ExecutiveGame      @relation(fields: [gameId], references: [id])
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  ExecutiveGameTurn   ExecutiveGameTurn? @relation(fields: [executiveGameTurnId], references: [id])
+  executiveGameTurnId String?            @db.Uuid
+}
+
+model ExecutiveTrick {
+  id            String            @id @default(uuid()) @db.Uuid
+  gameId        String
+  turnId        String
+  trickWinnerId String
+  game          ExecutiveGame     @relation(fields: [gameId], references: [id])
+  turn          ExecutiveGameTurn @relation(fields: [turnId], references: [id])
+  cards         ExecutiveCard[]
+  winner        ExecutivePlayer   @relation(fields: [trickWinnerId], references: [id])
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+}
+
+enum TurnType {
+  INFLUENCE
+  TRICK
+}
+
+enum CardLocation {
+  DECK
+  TRUMP
+  DISCARD
+  TRICK
+  HAND
+  GIFT
+  BRIBE
+}
+
+model ExecutivePlayer {
+  id               String                  @id @default(uuid()) @db.Uuid
+  gameId           String
+  userId           String                  @db.Uuid
+  voteMarker       VoteMarker[]
+  victoryPoints    ExecutiveVictoryPoint[]
+  hand             ExecutiveCard[]
+  game             ExecutiveGame           @relation(fields: [gameId], references: [id])
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  user             User                    @relation(fields: [userId], references: [id])
+  ofInfluence      Influence[]             @relation("OF_PLAYER")
+  ownedByInfluence Influence[]             @relation("OWNED_BY_PLAYER")
+  agendas          ExecutiveAgenda[]
+  ExecutiveTrick   ExecutiveTrick[]
+}
+
+model VoteMarker {
+  id        String          @id @default(uuid()) @db.Uuid
+  gameId    String
+  playerId  String
+  game      ExecutiveGame   @relation(fields: [gameId], references: [id])
+  player    ExecutivePlayer @relation(fields: [playerId], references: [id])
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+}
+
+model ExecutiveAgenda {
+  id          String          @id @default(uuid()) @db.Uuid
+  gameId      String          @db.Uuid
+  playerId    String          @db.Uuid
+  agendaType  Agenda
+  description String
+  game        ExecutiveGame   @relation(fields: [gameId], references: [id])
+  player      ExecutivePlayer @relation(fields: [playerId], references: [id])
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+enum Agenda {
+  CEO_THREE_PLAYERS
+  FIRST_LEFT_CEO
+  SECOND_LEFT_CEO
+  THIRD_LEFT_CEO
+  BECOME_CEO_NO_SHARE
+  FOREIGN_INVESTOR_CEO
+  BECOME_CEO_WITH_FOREIGN_INVESTOR
+}
+
+model ExecutiveVictoryPoint {
+  id               String           @id @default(uuid()) @db.Uuid
+  gameId           String
+  playerId         String
+  victoryPointType VictoryPointType
+  victoryPoint     Int
+  game             ExecutiveGame    @relation(fields: [gameId], references: [id])
+  player           ExecutivePlayer  @relation(fields: [playerId], references: [id])
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+}
+
+enum VictoryPointType {
+  GIFT //1
+  VOTE //2
+  RELATIONSHIP //3
+  AGENDA //4
+}
+
+enum InfluenceType {
+  CEO
+  PLAYER
+}
+
+enum InfluenceLocation {
+  OF_PLAYER
+  BRIBE
+  RELATIONSHIP
+  OWNED_BY_PLAYER
+}
+
+model Influence {
+  id                       String                  @id @default(uuid()) @db.Uuid
+  gameId                   String
+  ofPlayerId               String?
+  Game                     ExecutiveGame           @relation(fields: [gameId], references: [id])
+  ofPlayer                 ExecutivePlayer?        @relation("OF_PLAYER", fields: [ofPlayerId], references: [id])
+  ownedByPlayerId          String?
+  ownedByPlayer            ExecutivePlayer?        @relation("OWNED_BY_PLAYER", fields: [ownedByPlayerId], references: [id])
+  influenceType            InfluenceType
+  influenceLocation        InfluenceLocation
+  createdAt                DateTime                @default(now())
+  updatedAt                DateTime                @updatedAt
+  ExecutiveInfluenceVote   ExecutiveInfluenceVote? @relation(fields: [executiveInfluenceVoteId], references: [id])
+  executiveInfluenceVoteId String?                 @db.Uuid
+}
+
+model ExecutiveCard {
+  id               String           @id @default(uuid()) @db.Uuid
+  gameId           String
+  playerId         String?
+  deckIndex        Int?
+  cardValue        Int
+  cardLocation     CardLocation
+  isLocked         Boolean          @default(false)
+  cardRank         CardRank
+  Game             ExecutiveGame    @relation(fields: [gameId], references: [id])
+  player           ExecutivePlayer? @relation(fields: [playerId], references: [id])
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  ExecutiveTrick   ExecutiveTrick?  @relation(fields: [executiveTrickId], references: [id])
+  executiveTrickId String?          @db.Uuid
+}
+
+enum CardRank {
+  DIAMOND
+  HEART
+  CLUB
+  SPADE
 }
