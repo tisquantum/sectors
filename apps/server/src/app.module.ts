@@ -55,6 +55,8 @@ import { ExecutiveGameModule } from './executive-game/executive-game.module';
 import { ExecutiveGameManagementModule } from './executive-game-management/executive-game-management.module';
 import { ExecutivePlayerModule } from './executive-player/executive-player.module';
 import { ExecutiveCardModule } from './executive-card/executive-card.module';
+import { ExecutiveInfluenceBidModule } from './executive-influence-bid/executive-influence-bid.module';
+import { ExecutiveInfluenceModule } from './executive-influence/executive-influence.module';
 
 const yourPusherOptions = {
   cluster: process.env.PUSHER_CLUSTER ?? 'CLUSTER',
@@ -126,6 +128,8 @@ const chunkingOptions = {
     ExecutiveGameManagementModule,
     ExecutivePlayerModule,
     ExecutiveCardModule,
+    ExecutiveInfluenceBidModule,
+    ExecutiveInfluenceModule,
   ],
   controllers: [AppController],
   providers: [AppService],

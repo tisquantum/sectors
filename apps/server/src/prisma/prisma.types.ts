@@ -1,4 +1,5 @@
 import {
+  Agenda,
   CapitalGains,
   Card,
   Company,
@@ -8,11 +9,17 @@ import {
   CompanyAwardTrackSpace,
   CompanySpace,
   Entity,
+  ExecutiveAgenda,
+  ExecutiveCard,
+  ExecutivePlayer,
+  ExecutiveTrick,
+  ExecutiveVictoryPoint,
   Game,
   GameLog,
   GameRecord,
   GameTurn,
   Headline,
+  Influence,
   InfluenceRound,
   InfluenceVote,
   InsolvencyContribution,
@@ -364,4 +371,15 @@ export type AwardTrackSpaceWithRelations = CompanyAwardTrackSpace & {
 
 export type AwardTrackWithRelations = CompanyAwardTrack & {
   companyAwardTrackSpaces: AwardTrackSpaceWithRelations[];
+};
+
+
+export type ExecutivePlayerWithRelations = ExecutivePlayer & {
+  user: User;
+  victoryPoints: ExecutiveVictoryPoint[];
+  cards: ExecutiveCard[];
+  selfInfluence: Influence[];
+  ownedByInfluence: Influence[];
+  agendas: ExecutiveAgenda[];
+  executiveTricks: ExecutiveTrick[];
 };

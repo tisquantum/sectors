@@ -2,10 +2,11 @@
 
 import React, { useEffect, useState } from "react";
 import { DistributionStrategy, Room, User } from "@server/prisma/prisma.client";
-import { Avatar, Tooltip } from "@nextui-org/react";
+import { Avatar, Tab, Tabs, Tooltip } from "@nextui-org/react";
 import { trpc } from "@sectors/app/trpc";
 import { useAuthUser } from "@sectors/app/components/AuthUser.context";
 import GameOptions from "./GameOptions";
+import ExectutiveGameOptions from "../Executives/GameOptions";
 import {
   RoomUserWithUser,
   RoomWithUsersAndGames,
@@ -54,6 +55,7 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
   const [startGameIsSubmitted, setStartGameIsSubmitted] = useState(false);
   const [isLoadingStartGame, setIsLoadingStartGame] = useState(false);
   const [loadingState, setLoadingState] = useState<Record<number, boolean>>({});
+  const [isSectorsGame, setIsSectorsGame] = useState(true);
   const [gameOptions, setGameOptions] = useState<GameOptionsState>({
     bankPoolNumber: GAME_SETUP_DEFAULT_BANK_POOL_NUMBER,
     consumerPoolNumber: GAME_SETUP_DEFAULT_CONSUMER_POOL_NUMBER,
@@ -166,7 +168,14 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
         {roomHostAuthUser?.roomHost && (
           <>
             {room.game.length == 0 && (
-              <GameOptions onOptionsChange={handleGameOptionsChange} />
+              <Tabs>
+                <Tab title="Play Sectors">
+                  <GameOptions onOptionsChange={handleGameOptionsChange} />
+                </Tab>
+                <Tab title="Play The Executives">
+                  <ExectutiveGameOptions />
+                </Tab>
+              </Tabs>
             )}
             {room.game.length == 0 &&
               (startGameIsSubmitted ? (

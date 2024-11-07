@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
-import { Prisma, ExecutiveCard, CardLocation, CardRank } from '@prisma/client';
+import { Prisma, ExecutiveCard, CardLocation, CardSuit } from '@prisma/client';
 
 @Injectable()
 export class ExecutiveCardService {
   constructor(private prisma: PrismaService) {}
 
+  // Retrieve the deck for a game by filtering for cards with the DECK location
   async getDeck(gameId: string): Promise<ExecutiveCard[]> {
     return this.listExecutiveCards({
       where: {
@@ -20,22 +21,18 @@ export class ExecutiveCardService {
    * @param gameId 
    */
   async createDeck(gameId: string): Promise<ExecutiveCard[]> {
-    // Define an array to hold the new deck of cards
     const deck: Prisma.ExecutiveCardCreateManyInput[] = [];
   
-    // Create four suits, each with ranks from 1 to 10
-    let index = 0;
-    for (const rank of Object.values(CardRank)) {
+    // Create cards for each rank and value
+    for (const rank of Object.values(CardSuit)) {
       for (let cardValue = 1; cardValue <= 10; cardValue++) {
         deck.push({
           gameId,
           cardValue,
-          deckIndex: index,
           cardLocation: CardLocation.DECK,
-          cardRank: rank as CardRank,
-          isLocked: false,  // Assuming cards are unlocked by default
+          cardSuit: rank as CardSuit,
+          isLocked: false,
         });
-        index++;
       }
     }
   
@@ -45,92 +42,38 @@ export class ExecutiveCardService {
       skipDuplicates: true,
     });
   
-    // Return the newly created deck for confirmation
     return this.getDeck(gameId);
   }
 
-  //shuffle the deck
+  // Shuffle the deck in memory
   async shuffleDeck(gameId: string): Promise<ExecutiveCard[]> {
     // Retrieve the current deck for the game
     const executiveCards = await this.getDeck(gameId);
   
     // Shuffle the deck array in memory
     const shuffledDeck = executiveCards.sort(() => Math.random() - 0.5);
-  
-    // Update deckIndex for each card in the shuffled deck
-    const updatedDeck = shuffledDeck.map((card, index) => ({
-      ...card,
-      deckIndex: index,
-    }));
-  
-    // Update the deckIndex for each card in the database
-    await Promise.all(
-      updatedDeck.map((card) =>
-        this.prisma.executiveCard.update({
-          where: { id: card.id },
-          data: { deckIndex: card.deckIndex },
-        })
-      )
-    );
-  
-    // Return the updated shuffled deck
-    return this.getDeck(gameId);
+
+    return shuffledDeck;
   }
 
+  // Draw cards from the top of the in-memory shuffled deck
   async drawCards(gameId: string, cardsToDraw: number): Promise<ExecutiveCard[]> {
-    // Retrieve the current deck, ordered by deckIndex
-    const deck = await this.prisma.executiveCard.findMany({
-      where: {
-        gameId,
-        cardLocation: CardLocation.DECK,
-      },
-      orderBy: {
-        deckIndex: 'asc',
-      },
-      take: cardsToDraw,
-    });
+    // Retrieve the current deck
+    let deck = await this.getDeck(gameId);
   
-    // If there are fewer cards than requested, only those available are drawn
-    if (deck.length === 0) {
-      throw new Error('No cards left in the deck');
+    // If the deck is empty or fewer cards than requested are available, throw an error
+    if (deck.length < cardsToDraw) {
+      throw new Error('Not enough cards left in the deck');
     }
+
+    // Draw the specified number of cards
+    const drawnCards = deck.slice(0, cardsToDraw);
   
-    // Update each drawn card's location (e.g., moving it to HAND or another location)
-    const drawnCards = await Promise.all(
-      deck.map((card) =>
-        this.prisma.executiveCard.update({
-          where: { id: card.id },
-          data: {deckIndex: null, // Removing deckIndex as it’s no longer in the deck
-          },
-        })
-      )
-    );
-  
-    // Update the deck indexes of remaining cards in the deck
-    const remainingDeck = await this.prisma.executiveCard.findMany({
-      where: {
-        gameId,
-        cardLocation: CardLocation.DECK,
-      },
-      orderBy: {
-        deckIndex: 'asc',
-      },
-    });
-  
-    await Promise.all(
-      remainingDeck.map((card, index) =>
-        this.prisma.executiveCard.update({
-          where: { id: card.id },
-          data: { deckIndex: index },
-        })
-      )
-    );
-  
+    // Return the drawn cards
     return drawnCards;
   }
-  
 
-  // Retrieve a specific ExecutiveCard by unique input
+  // Helper function to retrieve a specific ExecutiveCard by unique input
   async getExecutiveCard(
     executiveCardWhereUniqueInput: Prisma.ExecutiveCardWhereUniqueInput,
   ): Promise<ExecutiveCard | null> {
@@ -143,7 +86,7 @@ export class ExecutiveCardService {
     });
   }
 
-  // List all ExecutiveCards with optional filtering, pagination, and sorting
+  // Helper function to list ExecutiveCards with filtering, pagination, and sorting
   async listExecutiveCards(params: {
     skip?: number;
     take?: number;
@@ -191,6 +134,14 @@ export class ExecutiveCardService {
     return this.prisma.executiveCard.update({
       data,
       where,
+    });
+  }
+
+  async updateExecutiveCards(
+    data: Prisma.ExecutiveCardUpdateInput[],
+  ): Promise<Prisma.BatchPayload> {
+    return this.prisma.executiveCard.updateMany({
+      data,
     });
   }
 
