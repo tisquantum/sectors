@@ -34,6 +34,8 @@ import {
 interface SidebarProps {
   roomUsers: RoomUserWithUser[];
   room: RoomWithUsersAndGames;
+  isSectorsGame: boolean;
+  setIsSectorsGame: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 interface GameOptionsState {
@@ -49,13 +51,17 @@ interface GameOptionsState {
   isTimerless: boolean;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
+const Sidebar: React.FC<SidebarProps> = ({
+  roomUsers,
+  room,
+  isSectorsGame,
+  setIsSectorsGame,
+}) => {
   const { user } = useAuthUser();
   const router = useRouter();
   const [startGameIsSubmitted, setStartGameIsSubmitted] = useState(false);
   const [isLoadingStartGame, setIsLoadingStartGame] = useState(false);
   const [loadingState, setLoadingState] = useState<Record<number, boolean>>({});
-  const [isSectorsGame, setIsSectorsGame] = useState(true);
   const [gameOptions, setGameOptions] = useState<GameOptionsState>({
     bankPoolNumber: GAME_SETUP_DEFAULT_BANK_POOL_NUMBER,
     consumerPoolNumber: GAME_SETUP_DEFAULT_CONSUMER_POOL_NUMBER,
@@ -72,6 +78,12 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
   const leaveRoomMutation = trpc.roomUser.leaveRoom.useMutation();
   const kickUserRoomMutation = trpc.roomUser.kickUser.useMutation();
   const startGameMutation = trpc.game.startGame.useMutation({
+    onSettled: () => {
+      setIsLoadingStartGame(false);
+      setStartGameIsSubmitted(true);
+    },
+  });
+  const startExecutiveGameMutation = trpc.executiveGame.startGame.useMutation({
     onSettled: () => {
       setIsLoadingStartGame(false);
       setStartGameIsSubmitted(true);
@@ -134,6 +146,13 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
     });
   };
 
+  const handleExecutiveStartGame = (roomId: number, gameName: string) => {
+    startExecutiveGameMutation.mutate({
+      roomId,
+      gameName,
+    });
+  };
+
   const handleGameOptionsChange = (options: GameOptionsState) => {
     setGameOptions(options);
   };
@@ -168,7 +187,7 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
         {roomHostAuthUser?.roomHost && (
           <>
             {room.game.length == 0 && (
-              <Tabs>
+              <Tabs onSelectionChange={(index) => setIsSectorsGame(index == 0)}>
                 <Tab title="Play Sectors">
                   <GameOptions onOptionsChange={handleGameOptionsChange} />
                 </Tab>
@@ -185,19 +204,21 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
                   color="secondary"
                   onClick={() => {
                     setIsLoadingStartGame(true);
-                    handleStartGame(
-                      room.id,
-                      gameOptions.startingCashOnHand,
-                      gameOptions.consumerPoolNumber,
-                      gameOptions.bankPoolNumber,
-                      gameOptions.distributionStrategy,
-                      gameOptions.gameMaxTurns,
-                      gameOptions.playerOrdersConcealed,
-                      gameOptions.useOptionOrders,
-                      gameOptions.useShortOrders,
-                      gameOptions.useLimitOrders,
-                      gameOptions.isTimerless
-                    );
+                    isSectorsGame
+                      ? handleStartGame(
+                          room.id,
+                          gameOptions.startingCashOnHand,
+                          gameOptions.consumerPoolNumber,
+                          gameOptions.bankPoolNumber,
+                          gameOptions.distributionStrategy,
+                          gameOptions.gameMaxTurns,
+                          gameOptions.playerOrdersConcealed,
+                          gameOptions.useOptionOrders,
+                          gameOptions.useShortOrders,
+                          gameOptions.useLimitOrders,
+                          gameOptions.isTimerless
+                        )
+                      : handleExecutiveStartGame(room.id, room.name);
                   }}
                   radius="none"
                   className="w-full rounded-b-md"

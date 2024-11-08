@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { usePusher } from "@sectors/app/components/Pusher.context";
 import { Room, RoomUser, User } from "@server/prisma/prisma.client";
 import {
+  EVENT_EXECUTIVE_GAME_STARTED,
   EVENT_GAME_STARTED,
   EVENT_ROOM_JOINED,
   EVENT_ROOM_KICK,
@@ -35,6 +36,7 @@ const RoomComponent = ({ room }: { room: RoomWithUsersAndGames }) => {
   const joinRoomMutation = trpc.roomUser.joinRoom.useMutation();
   const [error, setError] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [isSectorsGame, setIsSectorsGame] = useState(true);
   const [gameId, setGameId] = useState<string | null>(null);
   const { data: messages, isLoading: isLoadingMessages } =
     trpc.roomMessage.listRoomMessages.useQuery({
@@ -97,12 +99,19 @@ const RoomComponent = ({ room }: { room: RoomWithUsersAndGames }) => {
       setGameId(data.gameId);
     });
 
+    channel.bind(EVENT_EXECUTIVE_GAME_STARTED, (data: { gameId: string }) => {
+      setIsSectorsGame(false);
+      setIsOpen(true);
+      setGameId(data.gameId);
+    });
+
     return () => {
       channel.unbind(EVENT_ROOM_JOINED);
       channel.unbind(EVENT_ROOM_LEFT);
       channel.unbind(EVENT_ROOM_MESSAGE);
       channel.unbind(EVENT_GAME_STARTED);
       channel.unbind(EVENT_ROOM_KICK);
+      channel.unbind(EVENT_EXECUTIVE_GAME_STARTED);
       channel.unsubscribe();
     };
   }, [pusher, room?.id, isLoadingRoomUsers, isLoadingMessages]);
@@ -146,7 +155,12 @@ const RoomComponent = ({ room }: { room: RoomWithUsersAndGames }) => {
   };
 
   const handleGameStart = () => {
-    router.push(`/games/${gameId}`);
+    console.log("isSectorsGame", isSectorsGame);
+    if (isSectorsGame) {
+      router.push(`/games/${gameId}`);
+    } else {
+      router.push(`/games/executives/${gameId}`);
+    }
   };
 
   return (
@@ -155,12 +169,24 @@ const RoomComponent = ({ room }: { room: RoomWithUsersAndGames }) => {
         <div className="flex h-screen overflow-hidden">
           <Drawer.Portal>
             <Drawer.Content className="lg:hidden z-50 bg-slate-900 flex flex-col rounded-t-[10px] h-full w-full fixed top-0 left-0">
-              {roomUsers && <Sidebar roomUsers={roomUsers} room={room} />}
+              {roomUsers && (
+                <Sidebar
+                  roomUsers={roomUsers}
+                  room={room}
+                  isSectorsGame={isSectorsGame}
+                  setIsSectorsGame={setIsSectorsGame}
+                />
+              )}
             </Drawer.Content>
           </Drawer.Portal>
           {roomUsers && (
             <div className="hidden h-full lg:block lg:w-1/4 bg-gray-800">
-              <Sidebar roomUsers={roomUsers} room={room} />
+              <Sidebar
+                roomUsers={roomUsers}
+                room={room}
+                isSectorsGame={isSectorsGame}
+                setIsSectorsGame={setIsSectorsGame}
+              />
             </div>
           )}
           <div className="flex flex-col flex-grow bg-gray-100">

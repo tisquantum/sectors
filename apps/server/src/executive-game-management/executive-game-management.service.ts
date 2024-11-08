@@ -3,15 +3,25 @@ import {
   CardLocation,
   CardSuit,
   ExecutiveCard,
+  ExecutiveGameTurn,
+  ExecutivePhase,
+  ExecutivePhaseName,
   ExecutivePlayer,
   InfluenceLocation,
+  TurnType,
 } from '@prisma/client';
 import { ExecutiveCardService } from '@server/executive-card/executive-card.service';
 import { ExecutiveGameService } from '@server/executive-game/executive-game.service';
 import { ExecutiveInfluenceBidService } from '@server/executive-influence-bid/executive-influence-bid.service';
 import { ExecutiveInfluenceService } from '@server/executive-influence/executive-influence.service';
+import { ExecutivePhaseService } from '@server/executive-phase/executive-phase.service';
 import { ExecutivePlayerService } from '@server/executive-player/executive-player.service';
 import { PrismaService } from '@server/prisma/prisma.service';
+import {
+  EVENT_EXECUTIVE_GAME_STARTED,
+  getRoomChannelId,
+} from '@server/pusher/pusher.types';
+import { PusherService } from 'nestjs-pusher';
 
 export const ROUND_1_CARD_HAND_SIZE = 1;
 export const ROUND_2_CARD_HAND_SIZE = 2;
@@ -23,64 +33,122 @@ export const BRIBE_CARD_HAND_SIZE = 1;
 export class ExecutiveGameManagementService {
   constructor(
     private prisma: PrismaService,
+    private pusher: PusherService,
     private gameService: ExecutiveGameService,
     private playerService: ExecutivePlayerService,
     private cardService: ExecutiveCardService,
     private influenceService: ExecutiveInfluenceService,
     private influenceBidService: ExecutiveInfluenceBidService,
+    private phaseService: ExecutivePhaseService,
   ) {}
 
   async startGame(roomId: number, gameName: string) {
     //create the game
-    const game = await this.gameService.createExecutiveGame({ name: gameName });
+    const game = await this.gameService.createExecutiveGame({
+      name: gameName,
+      Room: { connect: { id: roomId } },
+    });
     //add players to the game
     const players = await this.addPlayersToGame(game.id, roomId);
     //create the cards and add them to the deck
     await this.cardService.createDeck(game.id);
-    // Draw enough cards for both hands and bribes for each player
-    const totalCardsNeeded =
-      players.length * ROUND_1_CARD_HAND_SIZE +
-      players.length * BRIBE_CARD_HAND_SIZE;
-    const cards = await this.cardService.drawCards(game.id, totalCardsNeeded);
 
-    // Divide cards into hands and bribes
-    const handCards = cards.slice(0, players.length * ROUND_1_CARD_HAND_SIZE);
-    const bribeCards = cards.slice(players.length * ROUND_1_CARD_HAND_SIZE);
+    //create turn 1
+    const turn = await this.prisma.executiveGameTurn.create({
+      data: {
+        game: { connect: { id: game.id } },
+        turnNumber: 1,
+        turnType: TurnType.TRICK,
+      },
+    });
 
-    // Assign hand and bribe cards to each player
-    for (let i = 0; i < players.length; i++) {
-      const playerId = players[i].id;
+    this.startPhase(game.id, turn.id, ExecutivePhaseName.START_GAME);
 
-      // Get hand and bribe cards for the current player
-      const playerHandCards = handCards.slice(
-        i * ROUND_1_CARD_HAND_SIZE,
-        (i + 1) * ROUND_1_CARD_HAND_SIZE,
-      );
-      const playerBribeCards = bribeCards.slice(
-        i * BRIBE_CARD_HAND_SIZE,
-        (i + 1) * BRIBE_CARD_HAND_SIZE,
-      );
+    this.pusher.trigger(
+      getRoomChannelId(roomId),
+      EVENT_EXECUTIVE_GAME_STARTED,
+      { gameId: game.id },
+    );
+  }
 
-      // Update hand cards
-      await this.cardService.updateExecutiveCards(
-        playerHandCards.map((card) => ({
-          ...card,
-          cardLocation: CardLocation.HAND,
-          playerId,
-        })),
-      );
-
-      // Update bribe cards
-      await this.cardService.updateExecutiveCards(
-        playerBribeCards.map((card) => ({
-          ...card,
-          cardLocation: CardLocation.BRIBE,
-          playerId,
-        })),
-      );
+  getCardHandSizeForTurn(turnNumber: number) {
+    switch (turnNumber) {
+      case 1:
+        return ROUND_1_CARD_HAND_SIZE;
+      case 2:
+        return ROUND_2_CARD_HAND_SIZE;
+      case 3:
+        return ROUND_3_CARD_HAND_SIZE;
+      case 4:
+        return ROUND_4_CARD_HAND_SIZE;
+      default:
+        return 0;
     }
   }
 
+  async resolvePhase(
+    gameTurn: ExecutiveGameTurn,
+    phaseName: ExecutivePhaseName,
+  ) {
+    switch (phaseName) {
+      case ExecutivePhaseName.DEAL_CARDS:
+        await this.dealCards(
+          gameTurn.gameId,
+          this.getCardHandSizeForTurn(gameTurn.turnNumber),
+        );
+        break;
+      default:
+        return;
+    }
+  }
+
+  async startPhase(
+    gameId: string,
+    gameTurnId: string,
+    currentPhaseName: ExecutivePhaseName,
+  ) {
+    const newPhaseName =
+      this.determineNextExecutivePhaseTrick(currentPhaseName);
+    if (!newPhaseName) {
+      throw new Error('Next phase not found');
+    }
+    return await this.prisma.executivePhase.create({
+      data: {
+        phaseName: newPhaseName,
+        gameTurn: {
+          connect: { id: gameTurnId },
+        },
+        game: {
+          connect: { id: gameId },
+        },
+      },
+    });
+  }
+
+  determineNextExecutivePhaseTrick(phaseName: ExecutivePhaseName) {
+    switch (phaseName) {
+      case ExecutivePhaseName.START_GAME:
+        return ExecutivePhaseName.DEAL_CARDS;
+      case ExecutivePhaseName.DEAL_CARDS:
+        return ExecutivePhaseName.MOVE_COO_AND_GENERAL_COUNSEL;
+      case ExecutivePhaseName.MOVE_COO_AND_GENERAL_COUNSEL:
+        return ExecutivePhaseName.INFLUENCE_BID;
+      //loop
+      case ExecutivePhaseName.INFLUENCE_BID:
+        return ExecutivePhaseName.INFLUENCE_BID_SELECTION;
+      case ExecutivePhaseName.INFLUENCE_BID_SELECTION:
+        return ExecutivePhaseName.INFLUENCE_BID;
+      //loop
+      case ExecutivePhaseName.SELECT_TRICK:
+        return ExecutivePhaseName.REVEAL_TRICK;
+      case ExecutivePhaseName.REVEAL_TRICK:
+        return ExecutivePhaseName.SELECT_TRICK;
+      case ExecutivePhaseName.RESOLVE_TRICK:
+        return ExecutivePhaseName.DEAL_CARDS;
+      default:
+        return null;
+    }
+  }
   async submitInfluenceBid(
     gameId: string,
     playerIdFrom: string,
@@ -352,15 +420,50 @@ export class ExecutiveGameManagementService {
     }
   }
 
-  async dealCards(gameId: string) {
-    const deck = await this.cardService.getDeck(gameId);
+  async dealCards(gameId: string, handSize: number) {
     const players = await this.playerService.listExecutivePlayers({
       where: {
         gameId,
       },
     });
+    // Draw enough cards for both hands and bribes for each player
+    const totalCardsNeeded =
+      players.length * handSize + players.length * BRIBE_CARD_HAND_SIZE;
+    const cards = await this.cardService.drawCards(gameId, totalCardsNeeded);
 
-    const shuffledDeck = await this.cardService.shuffleDeck(gameId);
+    // Divide cards into hands and bribes
+    const handCards = cards.slice(0, players.length * handSize);
+    const bribeCards = cards.slice(players.length * handSize);
+
+    // Assign hand and bribe cards to each player
+    for (let i = 0; i < players.length; i++) {
+      const playerId = players[i].id;
+
+      // Get hand and bribe cards for the current player
+      const playerHandCards = handCards.slice(i * handSize, (i + 1) * handSize);
+      const playerBribeCards = bribeCards.slice(
+        i * BRIBE_CARD_HAND_SIZE,
+        (i + 1) * BRIBE_CARD_HAND_SIZE,
+      );
+
+      // Update hand cards
+      await this.cardService.updateExecutiveCards(
+        playerHandCards.map((card) => ({
+          ...card,
+          cardLocation: CardLocation.HAND,
+          playerId,
+        })),
+      );
+
+      // Update bribe cards
+      await this.cardService.updateExecutiveCards(
+        playerBribeCards.map((card) => ({
+          ...card,
+          cardLocation: CardLocation.BRIBE,
+          playerId,
+        })),
+      );
+    }
   }
 
   async addPlayersToGame(
@@ -377,9 +480,10 @@ export class ExecutiveGameManagementService {
     });
 
     return await this.playerService.createManyExecutivePlayers(
-      users.map((user) => ({
+      users.map((user, index) => ({
         userId: user.userId,
         gameId,
+        seatIndex: index,
       })),
     );
   }

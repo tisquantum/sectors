@@ -17,6 +17,7 @@ export const EVENT_NEW_INVOLVENCY_CONTRIBUTION = 'new-insolvency-contribution';
 export const EVENT_NEW_PRIZE_VOTE = 'new-prize-vote';
 export const EVENT_PLAYER_READINESS_CHANGED = 'event-player-readiness-changed';
 export const EVENT_NEW_PLAYER_HEADLINE = 'new-player-headline';
+export const EVENT_EXECUTIVE_GAME_STARTED = 'executive-game-started';
 export interface EVENT_NEW_PLAYER_ORDER_PLAYER_ID__PAYLOAD {
   playerId: string;
 }

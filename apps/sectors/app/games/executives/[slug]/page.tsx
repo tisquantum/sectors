@@ -8,5 +8,9 @@ export default async function GamePage({
 }) {
   const gameId = params.slug;
 
-  return <GameBoard />;
+  return (
+    <div className="h-[100vh] w-full overflow-y-auto">
+      <GameBoard gameId={gameId} />
+    </div>
+  );
 }

@@ -7,6 +7,7 @@ import { ExecutiveInfluenceBidModule } from '@server/executive-influence-bid/exe
 import { ExecutivePlayerModule } from '@server/executive-player/executive-player.module';
 import { ExecutiveCardModule } from '@server/executive-card/executive-card.module';
 import { ExecutiveInfluenceModule } from '@server/executive-influence/executive-influence.module';
+import { ExecutivePhaseModule } from '@server/executive-phase/executive-phase.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { ExecutiveInfluenceModule } from '@server/executive-influence/executive-
     ExecutivePlayerModule,
     ExecutiveCardModule,
     ExecutiveInfluenceModule,
+    ExecutivePhaseModule,
   ],
   providers: [ExecutiveGameManagementService],
   exports: [ExecutiveGameManagementService],

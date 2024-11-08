@@ -46,10 +46,7 @@ export class ExecutiveCardService {
   }
 
   // Shuffle the deck in memory
-  async shuffleDeck(gameId: string): Promise<ExecutiveCard[]> {
-    // Retrieve the current deck for the game
-    const executiveCards = await this.getDeck(gameId);
-  
+  async shuffle(executiveCards: ExecutiveCard[]): Promise<ExecutiveCard[]> {
     // Shuffle the deck array in memory
     const shuffledDeck = executiveCards.sort(() => Math.random() - 0.5);
 
@@ -60,7 +57,8 @@ export class ExecutiveCardService {
   async drawCards(gameId: string, cardsToDraw: number): Promise<ExecutiveCard[]> {
     // Retrieve the current deck
     let deck = await this.getDeck(gameId);
-  
+    //shuffle deck
+    deck = await this.shuffle(deck);
     // If the deck is empty or fewer cards than requested are available, throw an error
     if (deck.length < cardsToDraw) {
       throw new Error('Not enough cards left in the deck');

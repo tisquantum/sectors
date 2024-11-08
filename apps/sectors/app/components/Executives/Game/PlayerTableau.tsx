@@ -1,29 +1,13 @@
-import { Avatar, Badge } from "@nextui-org/react";
-import { RiShakeHandsFill } from "@remixicon/react";
 import { CardSuit } from "@server/prisma/prisma.client";
 import PlayingCard from "./Card";
 import Relationship from "./Relationship";
 import Influence from "./Influence";
-
-const CardStack = ({ count }: { count: number }) => {
-  return (
-    <div className="flex flex-row gap-1">
-      <Badge size="lg" content={count.toString()} color="secondary">
-        <Avatar
-          radius="md"
-          size="lg"
-          color="warning"
-          icon={<RiShakeHandsFill />}
-        />
-      </Badge>
-    </div>
-  );
-};
+import { CardStack } from "./CardStack";
 
 const Hand = () => {
   return (
     <div>
-      <CardStack count={5} />
+      {/* <CardStack cards={5} /> */}
     </div>
   );
 };
@@ -66,7 +50,7 @@ export const PlayerTableau = () => {
             <div className="absolute -top-3 left-3 bg-white px-2 font-bold text-gray-800 rounded-md">
               RELATIONSHIPS
             </div>
-            <div className="flex flex-col gap-2 items-center">
+            <div className="flex flex-col gap-2 items-center mt-2">
               <Relationship />
               <Relationship />
               <Relationship />
@@ -90,7 +74,7 @@ export const PlayerTableau = () => {
           <div className="absolute -top-3 left-3 bg-white px-2 font-bold text-gray-800 rounded-md">
             INFLUENCE
           </div>
-          <div className="flex flex-wrap gap-2 items-center">
+          <div className="flex flex-wrap gap-2 items-center mt-2">
             <Influence influenceCount={3} />
             <Influence influenceCount={1} />
             <Influence influenceCount={6} />
@@ -100,7 +84,7 @@ export const PlayerTableau = () => {
           <div className="absolute -top-3 left-3 bg-white px-2 font-bold text-gray-800 rounded-md">
             VOTES
           </div>
-          <div className="flex flex-wrap gap-2 items-center">
+          <div className="flex flex-wrap gap-2 items-center mt-2">
             <Influence influenceCount={2} />
             <Influence influenceCount={1} />
           </div>

@@ -46,10 +46,16 @@ import { PlayerHeadlineService } from '@server/player-headline/player-headline.s
 import { StockSubRoundService } from '@server/stock-sub-round/stock-sub-round.service';
 import { CompanyAwardTrackService } from '@server/company-award-track/company-award-track.service';
 import { CompanyAwardTrackSpaceService } from '@server/company-award-track-space/company-award-track-space.service';
+import { ExecutiveGameService } from '@server/executive-game/executive-game.service';
+import { ExecutiveCardService } from '@server/executive-card/executive-card.service';
+import { ExecutiveInfluenceBidService } from '@server/executive-influence-bid/executive-influence-bid.service';
+import { ExecutiveInfluenceService } from '@server/executive-influence/executive-influence.service';
+import { ExecutivePlayerService } from '@server/executive-player/executive-player.service';
+import { ExecutiveGameManagementService } from '@server/executive-game-management/executive-game-management.service';
+import { ExecutivePhaseService } from '@server/executive-phase/executive-phase.service';
 
 @Module({
   imports: [PrismaModule],
-  controllers: [],
   providers: [
     TrpcService,
     TrpcRouter,
@@ -99,6 +105,13 @@ import { CompanyAwardTrackSpaceService } from '@server/company-award-track-space
     StockSubRoundService,
     CompanyAwardTrackService,
     CompanyAwardTrackSpaceService,
+    ExecutiveGameService,
+    ExecutivePlayerService,
+    ExecutiveCardService,
+    ExecutiveInfluenceBidService,
+    ExecutiveInfluenceService,
+    ExecutiveGameManagementService,
+    ExecutivePhaseService,
   ],
 })
 export class TrpcModule {}

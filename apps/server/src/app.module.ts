@@ -57,6 +57,7 @@ import { ExecutivePlayerModule } from './executive-player/executive-player.modul
 import { ExecutiveCardModule } from './executive-card/executive-card.module';
 import { ExecutiveInfluenceBidModule } from './executive-influence-bid/executive-influence-bid.module';
 import { ExecutiveInfluenceModule } from './executive-influence/executive-influence.module';
+import { ExecutivePhaseModule } from './executive-phase/executive-phase.module';
 
 const yourPusherOptions = {
   cluster: process.env.PUSHER_CLUSTER ?? 'CLUSTER',
@@ -130,6 +131,7 @@ const chunkingOptions = {
     ExecutiveCardModule,
     ExecutiveInfluenceBidModule,
     ExecutiveInfluenceModule,
+    ExecutivePhaseModule,
   ],
   controllers: [AppController],
   providers: [AppService],
