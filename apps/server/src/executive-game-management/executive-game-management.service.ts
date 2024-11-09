@@ -19,6 +19,7 @@ import {
   ROUND_2_CARD_HAND_SIZE,
   ROUND_3_CARD_HAND_SIZE,
   ROUND_4_CARD_HAND_SIZE,
+  TOTAL_TRICK_TURNS,
 } from '@server/data/executive_constants';
 import { ExecutiveCardService } from '@server/executive-card/executive-card.service';
 import { ExecutiveGameTurnService } from '@server/executive-game-turn/executive-game-turn.service';
@@ -51,6 +52,204 @@ export class ExecutiveGameManagementService {
     private phaseService: ExecutivePhaseService,
     private gameTurnService: ExecutiveGameTurnService,
   ) {}
+
+  async resolvePhase(
+    gameTurn: ExecutiveGameTurn,
+    phaseName: ExecutivePhaseName,
+  ) {
+    switch (phaseName) {
+      case ExecutivePhaseName.START_GAME:
+        await this.nextPhase(gameTurn.gameId, gameTurn.id, phaseName);
+        return;
+      case ExecutivePhaseName.DEAL_CARDS:
+        await this.dealCards(
+          gameTurn.gameId,
+          this.getCardHandSizeForTurn(gameTurn.turnNumber),
+        );
+        await this.nextPhase(gameTurn.gameId, gameTurn.id, phaseName);
+        break;
+      case ExecutivePhaseName.MOVE_COO_AND_GENERAL_COUNSEL:
+        await this.resolveMoveCOOAndGeneralCounsel(gameTurn.gameId);
+        await this.nextPhase(gameTurn.gameId, gameTurn.id, phaseName);
+        break;
+      case ExecutivePhaseName.INFLUENCE_BID:
+        await this.determineInfluenceBidder(gameTurn.gameId);
+        await this.pingPlayers(gameTurn.gameId);
+        break;
+      case ExecutivePhaseName.INFLUENCE_BID_SELECTION:
+        await this.determineInfluenceSelector(gameTurn.id);
+        break;
+      case ExecutivePhaseName.START_TRICK:
+        await this.startTrick(gameTurn.gameId, gameTurn.id);
+        await this.nextPhase(gameTurn.gameId, gameTurn.id, phaseName);
+        break;
+      case ExecutivePhaseName.SELECT_TRICK:
+        await this.determineTrickBidder(gameTurn.id);
+        await this.pingPlayers(gameTurn.gameId);
+        break;
+      case ExecutivePhaseName.RESOLVE_TRICK:
+        await this.resolveTrickWinner(gameTurn.id);
+        await this.startNewTurn(gameTurn.gameId, gameTurn.id);
+        break;
+      default:
+        return;
+    }
+  }
+
+  async startNewTurn(gameId: string, currentGameTurnId: string) {
+    //get the game turn
+    const currentGameTurn = await this.gameTurnService.getExecutiveGameTurn({
+      id: currentGameTurnId,
+    });
+    if (!currentGameTurn) {
+      throw new Error('Game turn not found');
+    }
+    //get all game turns for game
+    const gameTurns = await this.gameTurnService.listExecutiveGameTurns({
+      where: {
+        gameId,
+      },
+    });
+    let newTurn: ExecutiveGameTurn | null = null;
+    //if there have been 4 turns, proceed to a voting turn
+    if (gameTurns.length === TOTAL_TRICK_TURNS) {
+      //create a new game turn
+      newTurn = await this.gameTurnService.createExecutiveGameTurn({
+        game: { connect: { id: gameId } },
+        turnNumber: currentGameTurn.turnNumber + 1,
+        turnType: TurnType.INFLUENCE,
+      });
+    } else {
+      //create a new game turn
+      newTurn = await this.gameTurnService.createExecutiveGameTurn({
+        game: { connect: { id: gameId } },
+        turnNumber: currentGameTurn.turnNumber + 1,
+        turnType: TurnType.TRICK,
+      });
+    }
+    if (!newTurn) {
+      throw new Error('New turn not found');
+    }
+    if (newTurn.turnType === TurnType.INFLUENCE) {
+      //start the new phase
+      await this.startPhase(gameId, newTurn.id, ExecutivePhaseName.START_VOTE);
+    } else {
+      //start the new phase
+      await this.startPhase(gameId, newTurn.id, ExecutivePhaseName.START_TURN);
+    }
+    //TODO: logic for end game
+  }
+
+  async determineTrickBidder(gameTurnId: string) {
+    //get the game turn
+    const gameTurn = await this.gameTurnService.getExecutiveGameTurn({
+      id: gameTurnId,
+    });
+    if (!gameTurn) {
+      throw new Error('Game turn not found');
+    }
+    //get the players
+    const players = await this.playerService.listExecutivePlayers({
+      where: {
+        gameId: gameTurn.gameId,
+      },
+    });
+    if (!players) {
+      throw new Error('Players not found');
+    }
+    //get the latest trick being played this turn
+    const trick = await this.prisma.executiveTrick.findFirst({
+      where: {
+        turnId: gameTurnId,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      include: {
+        trickCards: true,
+      },
+    });
+    if (!trick) {
+      throw new Error('Trick not found');
+    }
+    //if the trick has cards played equal to the number of players, start the next phase
+    if (trick.trickCards.length === players.length) {
+      await this.nextPhase(
+        gameTurn.gameId,
+        gameTurnId,
+        ExecutivePhaseName.RESOLVE_TRICK,
+      );
+    }
+    //get the current phase
+    const currentPhase = await this.phaseService.getCurrentPhase(
+      gameTurn.gameId,
+    );
+    if (!currentPhase) {
+      throw new Error('Current phase not found');
+    }
+    //get the previous phase
+    const previousPhase = await this.phaseService.getPreviousPhase({
+      gameId: gameTurn.gameId,
+      gameTurnId,
+      phaseName: ExecutivePhaseName.SELECT_TRICK,
+    });
+    let nextPlayer: ExecutivePlayer | null = null;
+    if (!previousPhase) {
+      //get the COO player
+      nextPlayer = await this.playerService.findExecutivePlayer({
+        gameId: gameTurn.gameId,
+        isCOO: true,
+      });
+      if (!nextPlayer) {
+        throw new Error('COO not found');
+      }
+    } else {
+      if (!previousPhase.activePlayerId) {
+        throw new Error('Active player not found');
+      }
+      //get the player
+      const previousPlayer = await this.playerService.getExecutivePlayer({
+        id: previousPhase.activePlayerId,
+      });
+      if (!previousPlayer) {
+        throw new Error('Previous player not found');
+      }
+      //get the next player
+      nextPlayer = await this.findNewActivePlayer(
+        previousPlayer,
+        players,
+        previousPhase,
+      );
+      if (nextPlayer.isCOO) {
+        //we have gone around the table and the bidding selection is done, move to trick taking
+        await this.startPhase(
+          gameTurn.gameId,
+          gameTurn.id,
+          ExecutivePhaseName.RESOLVE_TRICK,
+        );
+      }
+    }
+    if (!nextPlayer) {
+      throw new Error('Next player not found');
+    }
+    //update the phase
+    await this.phaseService.updateExecutivePhase({
+      where: { id: currentPhase.id },
+      data: {
+        player: { connect: { id: nextPlayer.id } },
+      },
+    });
+  }
+
+  async startTrick(gameId: string, gameTurnId: string) {
+    //create the trick
+    await this.prisma.executiveTrick.create({
+      data: {
+        game: { connect: { id: gameId } },
+        turn: { connect: { id: gameTurnId } },
+      },
+    });
+  }
 
   async startGame(roomId: number, gameName: string) {
     //create the game
@@ -120,37 +319,6 @@ export class ExecutiveGameManagementService {
     }
   }
 
-  async resolvePhase(
-    gameTurn: ExecutiveGameTurn,
-    phaseName: ExecutivePhaseName,
-  ) {
-    switch (phaseName) {
-      case ExecutivePhaseName.START_GAME:
-        await this.nextPhase(gameTurn.gameId, gameTurn.id, phaseName);
-        return;
-      case ExecutivePhaseName.DEAL_CARDS:
-        await this.dealCards(
-          gameTurn.gameId,
-          this.getCardHandSizeForTurn(gameTurn.turnNumber),
-        );
-        await this.nextPhase(gameTurn.gameId, gameTurn.id, phaseName);
-        break;
-      case ExecutivePhaseName.MOVE_COO_AND_GENERAL_COUNSEL:
-        await this.resolveMoveCOOAndGeneralCounsel(gameTurn.gameId);
-        await this.nextPhase(gameTurn.gameId, gameTurn.id, phaseName);
-        break;
-      case ExecutivePhaseName.INFLUENCE_BID:
-        await this.determineInfluenceBidder(gameTurn.gameId);
-        await this.pingPlayers(gameTurn.gameId);
-        break;
-      case ExecutivePhaseName.INFLUENCE_BID_SELECTION:
-        await this.determineInfluenceSelector(gameTurn.id);
-        break;
-      default:
-        return;
-    }
-  }
-
   async determineInfluenceSelector(gameTurnId: string) {
     //get the game turn
     const gameTurn = await this.gameTurnService.getExecutiveGameTurn({
@@ -207,6 +375,14 @@ export class ExecutiveGameManagementService {
         players,
         currentPhase,
       );
+      if (nextPlayer.isCOO) {
+        //we have gone around the table and the bidding selection is done, move to trick taking
+        await this.startPhase(
+          gameTurn.gameId,
+          gameTurn.id,
+          ExecutivePhaseName.START_TRICK,
+        );
+      }
     }
     if (!nextPlayer) {
       throw new Error('Next player not found');
@@ -413,12 +589,12 @@ export class ExecutiveGameManagementService {
       case ExecutivePhaseName.INFLUENCE_BID_SELECTION:
         return ExecutivePhaseName.INFLUENCE_BID_SELECTION;
       //loop
+      case ExecutivePhaseName.START_TRICK:
+        return ExecutivePhaseName.SELECT_TRICK;
       case ExecutivePhaseName.SELECT_TRICK:
-        return ExecutivePhaseName.REVEAL_TRICK;
-      case ExecutivePhaseName.REVEAL_TRICK:
         return ExecutivePhaseName.SELECT_TRICK;
       case ExecutivePhaseName.RESOLVE_TRICK:
-        return ExecutivePhaseName.DEAL_CARDS;
+        return ExecutivePhaseName.START_TURN;
       default:
         return null;
     }
@@ -921,5 +1097,54 @@ export class ExecutiveGameManagementService {
         ExecutivePhaseName.INFLUENCE_BID,
       );
     }
+  }
+
+  async makeNextPlayerActive(
+    gameTurnId: string,
+    currentActivePlayerId: string,
+  ) {
+    //get the game
+    const gameTurn = await this.gameTurnService.getExecutiveGameTurn({
+      id: gameTurnId,
+    });
+    if (!gameTurn) {
+      throw new Error('Game turn not found');
+    }
+    //get all players
+    const players = await this.playerService.listExecutivePlayers({
+      where: {
+        gameId: gameTurn.gameId,
+      },
+    });
+    if (!players) {
+      throw new Error('Players not found');
+    }
+    //get the current phase
+    const currentPhase = await this.phaseService.getCurrentPhase(
+      gameTurn.gameId,
+    );
+    if (!currentPhase) {
+      throw new Error('Current phase not found');
+    }
+    //get the current player
+    const currentPlayer = await this.playerService.getExecutivePlayer({
+      id: currentActivePlayerId,
+    });
+    if (!currentPlayer) {
+      throw new Error('Current player not found');
+    }
+    //get the next player
+    const nextPlayer = await this.findNewActivePlayer(
+      currentPlayer,
+      players,
+      currentPhase,
+    );
+    //update the phase
+    await this.phaseService.updateExecutivePhase({
+      where: { id: currentPhase.id },
+      data: {
+        player: { connect: { id: nextPlayer.id } },
+      },
+    });
   }
 }

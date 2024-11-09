@@ -1,12 +1,14 @@
 import { z } from 'zod';
 import { TrpcService } from '../trpc.service';
 import { ExecutiveInfluenceService } from '@server/executive-influence/executive-influence.service';
-import { InfluenceLocation } from '@prisma/client';
+import { ExecutivePhaseName, InfluenceLocation } from '@prisma/client';
 import { ExecutiveInfluenceBidService } from '@server/executive-influence-bid/executive-influence-bid.service';
+import { ExecutiveGameManagementService } from '@server/executive-game-management/executive-game-management.service';
 
 type Context = {
   executiveInfluenceService: ExecutiveInfluenceService;
   executiveInfluenceBidService: ExecutiveInfluenceBidService;
+  executiveGameManagementService: ExecutiveGameManagementService;
 };
 
 export default (trpc: TrpcService, ctx: Context) =>
@@ -91,7 +93,13 @@ export default (trpc: TrpcService, ctx: Context) =>
           executiveInfluenceBid,
           targetLocation,
         );
-
+        const executiveBid = await ctx.executiveInfluenceBidService.getExecutiveInfluenceBid({
+          id: executiveInfluenceBidId,
+        });
+        if (!executiveBid) {
+          throw new Error('Executive Influence Bid not found');
+        }
+        await ctx.executiveGameManagementService.nextPhase(executiveBid.gameId, executiveBid.executiveGameTurnId, ExecutivePhaseName.INFLUENCE_BID_SELECTION);
         return { success: true };
       }),
   });

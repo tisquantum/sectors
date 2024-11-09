@@ -120,6 +120,39 @@ export class ExecutiveInfluenceService {
       },
     });
 
-    //TODO: Clean up influence bids by sending all bids back to the player or 'expiring' them somehow, including influencebid bridge table data 
+    //update this bid as isSelected
+    await this.prisma.executiveInfluenceBid.update({
+      where: {
+        id: executiveInfluenceBid.id,
+      },
+      data: {
+        isSelected: true,
+      },
+    });
+
+    //Get all other influence bids that have toPlayer, gameId and are not selected
+    const otherBids = await this.prisma.executiveInfluenceBid.findMany({
+      where: {
+        executiveGameTurnId: executiveInfluenceBid.executiveGameTurnId,
+        toPlayerId: executiveInfluenceBid.toPlayerId,
+        isSelected: false,
+      },
+    });
+
+    //move all their influence back to of_player
+    const influencePromises = otherBids.map((bid) => {
+      return this.prisma.influence.updateMany({
+        where: {
+          id: {
+            in: influenceBids.map((influenceBid) => influenceBid.influenceId),
+          },
+        },
+        data: {
+          ownedByPlayerId: bid.fromPlayerId,
+          influenceLocation: InfluenceLocation.OF_PLAYER,
+        },
+      });
+    });
+    Promise.all(influencePromises);
   }
 }

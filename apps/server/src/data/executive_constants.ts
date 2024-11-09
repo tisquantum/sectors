@@ -6,3 +6,4 @@ export const BRIBE_CARD_HAND_SIZE = 1;
 export const INFLUENCE_PLAYER_STARTING = 8;
 export const INFLUENCE_CEO_STARTING = 10;
 export const RELATIONSHIP_TRACK_LENGTH = 3;
+export const TOTAL_TRICK_TURNS = 4;

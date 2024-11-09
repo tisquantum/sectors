@@ -1263,9 +1263,11 @@ enum ExecutivePhaseName {
   INFLUENCE_BID
   INFLUENCE_BID_SELECTION
   REVEAL_TRUMP
+  START_TRICK
   SELECT_TRICK
   REVEAL_TRICK
   RESOLVE_TRICK
+  START_VOTE
   VOTE
   RESOLVE_VOTE
   RESOLVE_AGENDA
@@ -1286,6 +1288,7 @@ model ExecutiveInfluenceBid {
   updatedAt           DateTime          @updatedAt
   ExecutiveGameTurn   ExecutiveGameTurn @relation(fields: [executiveGameTurnId], references: [id])
   executiveGameTurnId String            @db.Uuid
+  isSelected          Boolean           @default(false)
 }
 
 model ExecutiveInfluenceVote {
@@ -1304,11 +1307,11 @@ model ExecutiveTrick {
   id            String            @id @default(uuid()) @db.Uuid
   gameId        String            @db.Uuid
   turnId        String            @db.Uuid
-  trickWinnerId String            @db.Uuid
+  trickWinnerId String?           @db.Uuid
   game          ExecutiveGame     @relation(fields: [gameId], references: [id])
   turn          ExecutiveGameTurn @relation(fields: [turnId], references: [id])
   trickCards    TrickCard[]
-  winner        ExecutivePlayer   @relation(fields: [trickWinnerId], references: [id])
+  winner        ExecutivePlayer?  @relation(fields: [trickWinnerId], references: [id])
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 }
