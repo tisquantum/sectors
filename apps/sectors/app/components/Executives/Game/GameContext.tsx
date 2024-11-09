@@ -1,8 +1,39 @@
-import { ReactNode, useEffect } from "react";
+"use client";
+
+import { createContext, ReactNode, useContext, useEffect } from "react";
 import { useAuthUser } from "../../AuthUser.context";
 import { usePusherSubscription } from "@sectors/app/hooks/pusher";
-import { ExecutivePhaseName } from "@server/prisma/prisma.client";
+import {
+  ExecutiveGameTurn,
+  ExecutivePhase,
+  ExecutivePhaseName,
+  ExecutivePlayer,
+} from "@server/prisma/prisma.client";
 import { trpc } from "@sectors/app/trpc";
+import { EVENT_EXECUTIVE_NEW_PHASE, EVENT_PING_PLAYERS } from "@server/pusher/pusher.types";
+import { ExecutiveGameWithRelations, ExecutivePlayerWithRelations } from "@server/prisma/prisma.types";
+import * as PusherTypes from "pusher-js";
+
+interface GameContextProps {
+  gameId: string;
+  authPlayer: ExecutivePlayerWithRelations | null;
+  isAuthPlayerPhasing: boolean;
+  gameState: ExecutiveGameWithRelations;
+  currentPhase?: ExecutivePhase;
+  socketChannel: PusherTypes.Channel | null;
+  refetchAuthPlayer: () => void;
+  currentTurn: ExecutiveGameTurn;
+}
+
+const GameContext = createContext<GameContextProps | undefined>(undefined);
+
+export const useExecutiveGame = (): GameContextProps => {
+  const context = useContext(GameContext);
+  if (!context) {
+    throw new Error("useGame must be used within a GameProvider");
+  }
+  return context;
+};
 
 export const GameProvider: React.FC<{
   gameId: string;
@@ -19,12 +50,26 @@ export const GameProvider: React.FC<{
     id: gameId,
   });
   const {
+    data: currentTurn,
+    refetch: refetchCurrentTurn,
+    isLoading: currentTurnIsLoading,
+  } = trpc.executiveGameTurn.getLatestTurn.useQuery({
+    gameId: gameId,
+  });
+  const {
+    data: currentPhase,
+    refetch: refetchCurrentPhase,
+    isLoading: isLoadingCurrentPhase,
+  } = trpc.executivePhase.getCurrentPhase.useQuery({
+    gameId: gameId,
+  });
+  const {
     data: player,
     isLoading,
     isError,
     refetch: refetchAuthPlayer,
-  } = trpc.player.getPlayer.useQuery(
-    { where: { userId: user?.id, gameId: gameId } },
+  } = trpc.executivePlayer.getExecutivePlayerByUserIdAndGameId.useQuery(
+    { userId: user?.id || "", gameId: gameId },
     { enabled: !!user }
   );
   useEffect(() => {
@@ -34,57 +79,50 @@ export const GameProvider: React.FC<{
     const handleNewPhase = (phaseName: ExecutivePhaseName) => {
       refetchGameState();
       refetchAuthPlayer();
-    //   if (
-    //     phaseName == PhaseName.END_TURN ||
-    //     phaseName == PhaseName.START_TURN
-    //   ) {
-    //     refetchCurrentTurn();
-    //   }
+      if (
+        phaseName == ExecutivePhaseName.START_TURN ||
+        phaseName == ExecutivePhaseName.END_TURN
+      ) {
+        refetchCurrentTurn();
+      }
     };
-
 
     const handleGameEnded = () => {
       refetchGameState();
     };
 
-    channel.bind(EVENT_NEW_PHASE, handleNewPhase);
-    channel.bind(EVENT_NEW_PLAYER_ORDER_PLAYER_ID, handleNewPlayerOrder);
-    channel.bind(EVENT_GAME_ENDED, handleGameEnded);
+    channel.bind(EVENT_EXECUTIVE_NEW_PHASE, handleNewPhase);
+    channel.bind(EVENT_PING_PLAYERS, handleNewPhase);
 
     return () => {
-      channel.unbind(EVENT_NEW_PHASE, handleNewPhase);
-      channel.unbind(EVENT_NEW_PLAYER_ORDER_PLAYER_ID, handleNewPlayerOrder);
+      channel.unbind(EVENT_EXECUTIVE_NEW_PHASE, handleNewPhase);
     };
   }, [gameId, channel]);
 
   useEffect(() => {
     refetchCurrentPhase();
-  }, [gameState?.Phase, gameState?.currentPhaseId]);
+  }, [gameState?.phases.length]);
 
-  if (
-    isLoading ||
-    gameStateIsLoading ||
-    currentTurnIsLoading ||
-    researchDeckIsLoading
-  )
+  if (isLoading || currentTurnIsLoading) {
     return <div>Loading...</div>;
-  if (isError || gameStateIsError)
-    return <div>Error...</div>;
-  if (
-    player === undefined ||
-    !gameState 
-  )
-    return null;
+  }
+  if (!currentTurn) {
+    return <div>No current turn</div>;
+  }
+  if (isError || gameStateIsError) return <div>Error...</div>;
+  if (player === undefined || !gameState) return null;
+  const isAuthPlayerPhasing = player.id === currentPhase?.activePlayerId;
   return (
     <GameContext.Provider
       value={{
         gameId,
         authPlayer: player,
         gameState,
-        //currentPhase,
         socketChannel: channel,
         refetchAuthPlayer,
-        //currentTurn,
+        currentPhase,
+        currentTurn,
+        isAuthPlayerPhasing,
       }}
     >
       {children}

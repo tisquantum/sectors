@@ -84,4 +84,20 @@ export class ExecutivePhaseService {
       },
     });
   }
+
+  async getPreviousPhase(gameId: string): Promise<ExecutivePhase | null> {
+    return this.prisma.executivePhase.findFirst({
+      where: {
+        gameId,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      skip: 1,
+      include: {
+        game: true,
+        gameTurn: true,
+      },
+    });
+  }
 }

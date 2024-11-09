@@ -92,6 +92,8 @@ import executiveInfluenceRouter from './routers/executive-influence.router';
 import { ExecutiveGameManagementService } from '@server/executive-game-management/executive-game-management.service';
 import executivePhaseRouter from './routers/executive-phase.router';
 import { ExecutivePhaseService } from '@server/executive-phase/executive-phase.service';
+import { ExecutiveGameTurnService } from '@server/executive-game-turn/executive-game-turn.service';
+import executiveGameTurnRouter from './routers/executive-game-turn.router';
 @Injectable()
 export class TrpcRouter {
   constructor(
@@ -138,6 +140,7 @@ export class TrpcRouter {
     private readonly companyAwardTrackSpaceService: CompanyAwardTrackSpaceService,
     private readonly executiveGameManagementService: ExecutiveGameManagementService,
     private readonly executiveGameService: ExecutiveGameService,
+    private readonly executiveGameTurnService: ExecutiveGameTurnService,
     private readonly executivePlayerService: ExecutivePlayerService,
     private readonly executiveCardService: ExecutiveCardService,
     private readonly executiveInfluenceService: ExecutiveInfluenceService,
@@ -310,6 +313,9 @@ export class TrpcRouter {
     executiveGame: executiveGameRouter(this.trpc, {
       executiveGameService: this.executiveGameService,
       executiveGameManagementService: this.executiveGameManagementService,
+    }),
+    executiveGameTurn: executiveGameTurnRouter(this.trpc, {
+      executiveGameTurnService: this.executiveGameTurnService,
     }),
     executivePlayer: executivePlayerRouter(this.trpc, {
       executivePlayerService: this.executivePlayerService,

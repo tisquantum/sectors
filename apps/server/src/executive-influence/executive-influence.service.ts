@@ -60,6 +60,15 @@ export class ExecutiveInfluenceService {
     });
   }
 
+  async createManyInfluence(
+    data: Prisma.InfluenceCreateManyInput[],
+  ): Promise<Prisma.BatchPayload> {
+    return this.prisma.influence.createMany({
+      data,
+      skipDuplicates: true,
+    });
+  }
+
   // Update an existing Influence
   async updateInfluence(params: {
     where: Prisma.InfluenceWhereUniqueInput;
@@ -94,7 +103,7 @@ export class ExecutiveInfluenceService {
 
     const influenceBids = await this.prisma.influenceBid.findMany({
       where: {
-        influenceBidId: executiveInfluenceBid.id,
+        executiveInfluenceBidId: executiveInfluenceBid.id,
       },
     });
 

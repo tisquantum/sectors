@@ -1193,6 +1193,7 @@ model ExecutiveGame {
   name                   String
   createdAt              DateTime                 @default(now())
   updatedAt              DateTime                 @updatedAt
+  gameStatus             ExecutiveGameStatus      @default(PENDING)
   phases                 ExecutivePhase[]
   gameTurn               ExecutiveGameTurn[]
   players                ExecutivePlayer[]
@@ -1206,6 +1207,13 @@ model ExecutiveGame {
   ExecutiveInfluenceBid  ExecutiveInfluenceBid[]
   roomId                 Int
   Room                   Room                     @relation(fields: [roomId], references: [id])
+}
+
+enum ExecutiveGameStatus {
+  PENDING
+  ACTIVE
+  PAUSED
+  FINISHED
 }
 
 model ExecutiveGameTurn {
@@ -1223,18 +1231,22 @@ model ExecutiveGameTurn {
 }
 
 model ExecutivePhase {
-  id         String             @id @default(uuid()) @db.Uuid
-  gameId     String             @db.Uuid
-  gameTurnId String             @db.Uuid
-  phaseName  ExecutivePhaseName
-  game       ExecutiveGame      @relation(fields: [gameId], references: [id])
-  gameTurn   ExecutiveGameTurn  @relation(fields: [gameTurnId], references: [id])
-  createdAt  DateTime           @default(now())
-  updatedAt  DateTime           @updatedAt
+  id             String             @id @default(uuid()) @db.Uuid
+  gameId         String             @db.Uuid
+  gameTurnId     String             @db.Uuid
+  activePlayerId String?            @db.Uuid
+  phaseName      ExecutivePhaseName
+  player         ExecutivePlayer?   @relation(fields: [activePlayerId], references: [id])
+  game           ExecutiveGame      @relation(fields: [gameId], references: [id])
+  gameTurn       ExecutiveGameTurn  @relation(fields: [gameTurnId], references: [id])
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
 }
 
 enum ExecutivePhaseName {
   START_GAME
+  START_TURN
+  END_TURN
   MOVE_COO_AND_GENERAL_COUNSEL
   DEAL_CARDS
   INFLUENCE_BID
@@ -1253,10 +1265,12 @@ enum ExecutivePhaseName {
 model ExecutiveInfluenceBid {
   id                  String             @id @default(uuid()) @db.Uuid
   gameId              String             @db.Uuid
-  playerId            String             @db.Uuid
+  toPlayerId          String             @db.Uuid
+  fromPlayerId        String             @db.Uuid
   influenceBids       InfluenceBid[]
   game                ExecutiveGame      @relation(fields: [gameId], references: [id])
-  player              ExecutivePlayer    @relation(fields: [playerId], references: [id])
+  toPlayer            ExecutivePlayer    @relation("INFLUENCE_BID_TO_PLAYER", fields: [toPlayerId], references: [id])
+  fromPlayer          ExecutivePlayer    @relation("INFLUENCE_BID_FROM_PLAYER", fields: [fromPlayerId], references: [id])
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
   ExecutiveGameTurn   ExecutiveGameTurn? @relation(fields: [executiveGameTurnId], references: [id])
@@ -1317,24 +1331,27 @@ enum CardLocation {
 }
 
 model ExecutivePlayer {
-  id                     String                  @id @default(uuid()) @db.Uuid
-  gameId                 String                  @db.Uuid
-  userId                 String                  @db.Uuid
-  seatIndex              Int
-  isCOO                  Boolean                 @default(false)
-  isGeneralCounsel       Boolean                 @default(false)
-  voteMarker             VoteMarker[]
-  victoryPoints          ExecutiveVictoryPoint[]
-  cards                  ExecutiveCard[]
-  game                   ExecutiveGame           @relation(fields: [gameId], references: [id])
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
-  user                   User                    @relation(fields: [userId], references: [id])
-  selfInfluence          Influence[]             @relation("OF_PLAYER")
-  ownedByInfluence       Influence[]             @relation("OWNED_BY_PLAYER")
-  agendas                ExecutiveAgenda[]
-  executiveTricks        ExecutiveTrick[]
-  executiveInfluenceBids ExecutiveInfluenceBid[]
+  id                               String                  @id @default(uuid()) @db.Uuid
+  gameId                           String                  @db.Uuid
+  userId                           String                  @db.Uuid
+  nickname                         String                  @default("executive-anon")
+  seatIndex                        Int
+  isCOO                            Boolean                 @default(false)
+  isGeneralCounsel                 Boolean                 @default(false)
+  voteMarker                       VoteMarker[]
+  victoryPoints                    ExecutiveVictoryPoint[]
+  cards                            ExecutiveCard[]
+  game                             ExecutiveGame           @relation(fields: [gameId], references: [id])
+  createdAt                        DateTime                @default(now())
+  updatedAt                        DateTime                @updatedAt
+  user                             User                    @relation(fields: [userId], references: [id])
+  selfInfluence                    Influence[]             @relation("OF_PLAYER")
+  ownedByInfluence                 Influence[]             @relation("OWNED_BY_PLAYER")
+  agendas                          ExecutiveAgenda[]
+  executiveTricks                  ExecutiveTrick[]
+  executiveInfluenceBidsToPlayer   ExecutiveInfluenceBid[] @relation("INFLUENCE_BID_TO_PLAYER")
+  executiveInfluenceBidsFromPlayer ExecutiveInfluenceBid[] @relation("INFLUENCE_BID_FROM_PLAYER")
+  executivePhases                  ExecutivePhase[]
 }
 
 model VoteMarker {
@@ -1394,6 +1411,7 @@ enum InfluenceType {
 }
 
 enum InfluenceLocation {
+  CEO
   OF_PLAYER
   BRIBE
   RELATIONSHIP
@@ -1420,7 +1438,6 @@ model Influence {
 model InfluenceBid {
   id                      String                 @id @default(uuid()) @db.Uuid
   influenceId             String                 @db.Uuid
-  influenceBidId          String                 @db.Uuid
   createdAt               DateTime               @default(now())
   updatedAt               DateTime               @updatedAt
   Influence               Influence              @relation(fields: [influenceId], references: [id])

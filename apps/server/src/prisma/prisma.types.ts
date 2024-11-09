@@ -11,6 +11,10 @@ import {
   Entity,
   ExecutiveAgenda,
   ExecutiveCard,
+  ExecutiveGame,
+  ExecutiveGameTurn,
+  ExecutiveInfluenceBid,
+  ExecutivePhase,
   ExecutivePlayer,
   ExecutiveTrick,
   ExecutiveVictoryPoint,
@@ -20,6 +24,7 @@ import {
   GameTurn,
   Headline,
   Influence,
+  InfluenceBid,
   InfluenceRound,
   InfluenceVote,
   InsolvencyContribution,
@@ -373,7 +378,6 @@ export type AwardTrackWithRelations = CompanyAwardTrack & {
   companyAwardTrackSpaces: AwardTrackSpaceWithRelations[];
 };
 
-
 export type ExecutivePlayerWithRelations = ExecutivePlayer & {
   user: User;
   victoryPoints: ExecutiveVictoryPoint[];
@@ -382,4 +386,22 @@ export type ExecutivePlayerWithRelations = ExecutivePlayer & {
   ownedByInfluence: Influence[];
   agendas: ExecutiveAgenda[];
   executiveTricks: ExecutiveTrick[];
+};
+
+export type ExecutiveGameWithRelations = ExecutiveGame & {
+  players: ExecutivePlayer[];
+  influence: Influence[];
+  ExecutiveVictoryPoint: ExecutiveVictoryPoint[];
+  ExecutiveAgenda: ExecutiveAgenda[];
+  executiveCards: ExecutiveCard[];
+  phases: ExecutivePhase[];
+  gameTurn: ExecutiveGameTurn[];
+};
+
+export type InfluenceBidWithInfluence = InfluenceBid & { Influence: Influence };
+
+export type ExecutiveInfluenceBidWithRelations = ExecutiveInfluenceBid & {
+  player: ExecutivePlayer;
+  ExecutiveGameTurn: ExecutiveGameTurn | null;
+  influenceBids: InfluenceBidWithInfluence[];
 };

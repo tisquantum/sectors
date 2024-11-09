@@ -13,7 +13,24 @@ export default (trpc: TrpcService, ctx: Context) =>
       .input(z.object({ id: z.string() }))
       .query(async ({ input }) => {
         const { id } = input;
-        const player = await ctx.executivePlayerService.getExecutivePlayer({ id });
+        const player = await ctx.executivePlayerService.getExecutivePlayer({
+          id,
+        });
+        if (!player) {
+          throw new Error('ExecutivePlayer not found');
+        }
+        return player;
+      }),
+
+    getExecutivePlayerByUserIdAndGameId: trpc.procedure
+      .input(z.object({ userId: z.string(), gameId: z.string() }))
+      .query(async ({ input }) => {
+        const { userId, gameId } = input;
+        const player =
+          await ctx.executivePlayerService.getExecutivePlayerByUserIdAndGameId(
+            userId,
+            gameId,
+          );
         if (!player) {
           throw new Error('ExecutivePlayer not found');
         }
@@ -29,7 +46,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           cursor: z.string().optional(),
           where: z.any().optional(),
           orderBy: z.any().optional(),
-        })
+        }),
       )
       .query(async ({ input }) => {
         const { skip, take, cursor, where, orderBy } = input;

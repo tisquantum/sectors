@@ -18,11 +18,11 @@ export class ExecutiveCardService {
 
   /**
    * Create a deck with four ranks of 1-10
-   * @param gameId 
+   * @param gameId
    */
   async createDeck(gameId: string): Promise<ExecutiveCard[]> {
     const deck: Prisma.ExecutiveCardCreateManyInput[] = [];
-  
+
     // Create cards for each rank and value
     for (const rank of Object.values(CardSuit)) {
       for (let cardValue = 1; cardValue <= 10; cardValue++) {
@@ -35,13 +35,13 @@ export class ExecutiveCardService {
         });
       }
     }
-  
+
     // Use Prisma to create all cards in the deck
     await this.prisma.executiveCard.createMany({
       data: deck,
       skipDuplicates: true,
     });
-  
+
     return this.getDeck(gameId);
   }
 
@@ -54,7 +54,10 @@ export class ExecutiveCardService {
   }
 
   // Draw cards from the top of the in-memory shuffled deck
-  async drawCards(gameId: string, cardsToDraw: number): Promise<ExecutiveCard[]> {
+  async drawCards(
+    gameId: string,
+    cardsToDraw: number,
+  ): Promise<ExecutiveCard[]> {
     // Retrieve the current deck
     let deck = await this.getDeck(gameId);
     //shuffle deck
@@ -66,7 +69,7 @@ export class ExecutiveCardService {
 
     // Draw the specified number of cards
     const drawnCards = deck.slice(0, cardsToDraw);
-  
+
     // Return the drawn cards
     return drawnCards;
   }
@@ -106,8 +109,40 @@ export class ExecutiveCardService {
     });
   }
 
+  async listConcealedCards(where: {
+    playerId: string;
+  }): Promise<Partial<ExecutiveCard>[]> {
+    // Fetch all cards for the player
+    const allCards = await this.prisma.executiveCard.findMany({
+      where: {
+        playerId: where.playerId,
+      },
+    });
+
+    // Conceal cardValue and cardSuit if the card is in HAND
+    const concealedCards = allCards.map((card) => {
+      if (card.cardLocation === CardLocation.HAND) {
+        return {
+          id: card.id,
+          gameId: card.gameId,
+          playerId: card.playerId,
+          cardLocation: card.cardLocation,
+          isLocked: card.isLocked,
+          createdAt: card.createdAt,
+          updatedAt: card.updatedAt,
+        };
+      }
+      // Return full card data for non-HAND cards
+      return card;
+    });
+
+    return concealedCards;
+  }
+
   // Create a new ExecutiveCard
-  async createExecutiveCard(data: Prisma.ExecutiveCardCreateInput): Promise<ExecutiveCard> {
+  async createExecutiveCard(
+    data: Prisma.ExecutiveCardCreateInput,
+  ): Promise<ExecutiveCard> {
     return this.prisma.executiveCard.create({
       data,
     });
@@ -135,11 +170,14 @@ export class ExecutiveCardService {
     });
   }
 
-  async updateExecutiveCards(
-    data: Prisma.ExecutiveCardUpdateInput[],
-  ): Promise<Prisma.BatchPayload> {
+  async updateManyExecutiveCards(params: {
+    where: Prisma.ExecutiveCardWhereInput;
+    data: Prisma.ExecutiveCardUncheckedUpdateManyInput;
+  }): Promise<Prisma.BatchPayload> {
+    const { where, data } = params;
     return this.prisma.executiveCard.updateMany({
       data,
+      where,
     });
   }
 

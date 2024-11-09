@@ -25,6 +25,27 @@ export class ExecutivePlayerService {
     });
   }
 
+  async getExecutivePlayerByUserIdAndGameId(
+    userId: string,
+    gameId: string,
+  ): Promise<ExecutivePlayerWithRelations | null> {
+    return this.prisma.executivePlayer.findFirst({
+      where: {
+        userId,
+        gameId,
+      },
+      include: {
+        user: true,
+        victoryPoints: true,
+        cards: true,
+        selfInfluence: true,
+        ownedByInfluence: true,
+        agendas: true,
+        executiveTricks: true,
+      },
+    });
+  }
+
   // List all ExecutivePlayers with optional filtering, pagination, and sorting
   async listExecutivePlayers(params: {
     skip?: number;

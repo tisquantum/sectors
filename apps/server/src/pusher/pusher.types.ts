@@ -18,9 +18,12 @@ export const EVENT_NEW_PRIZE_VOTE = 'new-prize-vote';
 export const EVENT_PLAYER_READINESS_CHANGED = 'event-player-readiness-changed';
 export const EVENT_NEW_PLAYER_HEADLINE = 'new-player-headline';
 export const EVENT_EXECUTIVE_GAME_STARTED = 'executive-game-started';
+export const EVENT_EXECUTIVE_NEW_PHASE = 'executive-new-phase';
+export const EVENT_PING_PLAYERS = 'ping-players';
 export interface EVENT_NEW_PLAYER_ORDER_PLAYER_ID__PAYLOAD {
   playerId: string;
 }
 export const CHANNEL_ROOM_GLOBAL = 'room-global';
 export const getRoomChannelId = (roomId: number) => `room-${roomId}`;
 export const getGameChannelId = (gameId: string) => `game-${gameId}`;
+export const getExecutiveGameChannelId = (gameId: string) => `executive-game-${gameId}`;

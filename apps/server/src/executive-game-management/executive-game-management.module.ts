@@ -8,17 +8,20 @@ import { ExecutivePlayerModule } from '@server/executive-player/executive-player
 import { ExecutiveCardModule } from '@server/executive-card/executive-card.module';
 import { ExecutiveInfluenceModule } from '@server/executive-influence/executive-influence.module';
 import { ExecutivePhaseModule } from '@server/executive-phase/executive-phase.module';
+import { ExecutiveGameTurnModule } from '@server/executive-game-turn/executive-game-turn.module';
 
 @Module({
   imports: [
     PrismaModule,
     PusherModule,
     ExecutiveGameModule,
+    ExecutiveGameTurnModule,
     ExecutiveInfluenceBidModule,
     ExecutivePlayerModule,
     ExecutiveCardModule,
     ExecutiveInfluenceModule,
     ExecutivePhaseModule,
+    ExecutiveGameTurnModule,
   ],
   providers: [ExecutiveGameManagementService],
   exports: [ExecutiveGameManagementService],

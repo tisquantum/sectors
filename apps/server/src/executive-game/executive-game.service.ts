@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { Prisma, ExecutiveGame } from '@prisma/client';
+import { ExecutiveGameWithRelations } from '@server/prisma/prisma.types';
 
 @Injectable()
 export class ExecutiveGameService {
@@ -9,7 +10,7 @@ export class ExecutiveGameService {
   // Retrieve a specific ExecutiveGame by unique input
   async getExecutiveGame(
     executiveGameWhereUniqueInput: Prisma.ExecutiveGameWhereUniqueInput,
-  ): Promise<ExecutiveGame | null> {
+  ): Promise<ExecutiveGameWithRelations | null> {
     return this.prisma.executiveGame.findUnique({
       where: executiveGameWhereUniqueInput,
       include: {
@@ -18,6 +19,8 @@ export class ExecutiveGameService {
         influence: true,
         ExecutiveVictoryPoint: true,
         ExecutiveAgenda: true,
+        phases: true,
+        gameTurn: true
       },
     });
   }

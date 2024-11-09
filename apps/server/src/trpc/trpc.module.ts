@@ -53,6 +53,7 @@ import { ExecutiveInfluenceService } from '@server/executive-influence/executive
 import { ExecutivePlayerService } from '@server/executive-player/executive-player.service';
 import { ExecutiveGameManagementService } from '@server/executive-game-management/executive-game-management.service';
 import { ExecutivePhaseService } from '@server/executive-phase/executive-phase.service';
+import { ExecutiveGameTurnService } from '@server/executive-game-turn/executive-game-turn.service';
 
 @Module({
   imports: [PrismaModule],
@@ -106,6 +107,7 @@ import { ExecutivePhaseService } from '@server/executive-phase/executive-phase.s
     CompanyAwardTrackService,
     CompanyAwardTrackSpaceService,
     ExecutiveGameService,
+    ExecutiveGameTurnService,
     ExecutivePlayerService,
     ExecutiveCardService,
     ExecutiveInfluenceBidService,

@@ -47,9 +47,25 @@ export default (trpc: TrpcService, ctx: Context) =>
       .input(z.object({ roomId: z.number(), gameName: z.string() }))
       .mutation(async ({ input }) => {
         const { roomId, gameName } = input;
-        await ctx.executiveGameManagementService.startGame(
-          roomId,
-          gameName,
+        await ctx.executiveGameManagementService.startGame(roomId, gameName);
+      }),
+    createInfluenceBid: trpc.procedure
+      .input(
+        z.object({
+          fromPlayerId: z.string(),
+          toPlayerId: z.string(),
+          influenceAmount: z.number(),
+        }),
+      )
+      .mutation(async ({ input }) => {
+        const { fromPlayerId, toPlayerId, influenceAmount } = input;
+        await ctx.executiveGameManagementService.createExecutiveInfluenceBidFromClient(
+          {
+            fromPlayerId,
+            toPlayerId,
+            influenceAmount,
+          },
         );
+        return { success: true };
       }),
   });

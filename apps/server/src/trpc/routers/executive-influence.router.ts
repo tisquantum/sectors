@@ -47,6 +47,27 @@ export default (trpc: TrpcService, ctx: Context) =>
         });
       }),
 
+    listInfluenceBids: trpc.procedure
+      .input(
+        z.object({
+          skip: z.number().optional(),
+          take: z.number().optional(),
+          cursor: z.string().optional(),
+          where: z.any().optional(),
+          orderBy: z.any().optional(),
+        }),
+      )
+      .query(async ({ input }) => {
+        const { skip, take, cursor, where, orderBy } = input;
+        return ctx.executiveInfluenceBidService.listExecutiveInfluenceBids({
+          skip,
+          take,
+          cursor: cursor ? { id: cursor } : undefined,
+          where,
+          orderBy,
+        });
+      }),
+
     // Move InfluenceBid to Player
     moveInfluenceBidToPlayer: trpc.procedure
       .input(

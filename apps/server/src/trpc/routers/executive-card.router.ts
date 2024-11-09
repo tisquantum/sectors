@@ -41,7 +41,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           cursor: z.string().optional(),
           where: z.any().optional(),
           orderBy: z.any().optional(),
-        })
+        }),
       )
       .query(async ({ input }) => {
         const { skip, take, cursor, where, orderBy } = input;
@@ -52,5 +52,18 @@ export default (trpc: TrpcService, ctx: Context) =>
           where,
           orderBy,
         });
+      }),
+
+    listConcealedCards: trpc.procedure
+      .input(
+        z.object({
+          where: z.object({
+            playerId: z.string(),
+          }),
+        }),
+      )
+      .query(async ({ input }) => {
+        const { where } = input;
+        return ctx.executiveCardService.listConcealedCards(where);
       }),
   });

@@ -1,22 +1,38 @@
+"use client";
+import { useExecutiveGame } from "./GameContext";
+import PlayerAvatar from "../Player/PlayerAvatar";
 import { Avatar } from "@nextui-org/react";
-import { RiUser2Fill } from "@remixicon/react";
+const Relationship = ({
+  playerId,
+  influenceCount,
+}: {
+  playerId?: string;
+  influenceCount: number;
+}) => {
+  const { gameState } = useExecutiveGame();
+  const player = playerId
+    ? gameState.players.find((player) => player.id === playerId)
+    : null;
+  // Create an array of 3 slots, filling up with player avatars based on influenceCount
+  const slots = Array.from({ length: 3 }).map((_, index) => {
+    return index < influenceCount ? "filled" : "empty";
+  });
 
-const Relationship = () => {
   return (
     <div className="flex items-center gap-4">
-      <div className="flex items-center relative">
-        <Avatar size="md" color="primary" icon={<RiUser2Fill />} />
-        <div className="absolute top-1/2 left-full w-10 h-0.5 bg-gray-300 dotted-line"></div>
-      </div>
-
-      <div className="flex items-center relative">
-        <Avatar size="md" color="primary" icon={<RiUser2Fill />} />
-        <div className="absolute top-1/2 left-full w-10 h-0.5 bg-gray-300 dotted-line"></div>
-      </div>
-
-      <div className="flex items-center relative">
-        <Avatar name="+3" />
-      </div>
+      {slots.map((status, index) => (
+        <div key={index} className="flex items-center relative">
+          {status === "filled" && player ? (
+            <PlayerAvatar player={player} />
+          ) : (
+            <Avatar />
+          )}
+          {/* Show dotted line except for the last slot */}
+          {index < slots.length - 1 && (
+            <div className="absolute top-1/2 left-full w-10 h-0.5 bg-gray-300 dotted-line"></div>
+          )}
+        </div>
+      ))}
     </div>
   );
 };

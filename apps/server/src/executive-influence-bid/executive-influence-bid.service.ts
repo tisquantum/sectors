@@ -1,6 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
-import { Prisma, ExecutiveInfluenceBid, Influence } from '@prisma/client';
+import {
+  Prisma,
+  ExecutiveInfluenceBid,
+  Influence,
+  InfluenceLocation,
+} from '@prisma/client';
+import { ExecutiveInfluenceBidWithRelations } from '@server/prisma/prisma.types';
 
 @Injectable()
 export class ExecutiveInfluenceBidService {
@@ -28,7 +34,7 @@ export class ExecutiveInfluenceBidService {
     cursor?: Prisma.ExecutiveInfluenceBidWhereUniqueInput;
     where?: Prisma.ExecutiveInfluenceBidWhereInput;
     orderBy?: Prisma.ExecutiveInfluenceBidOrderByWithRelationInput;
-  }): Promise<ExecutiveInfluenceBid[]> {
+  }): Promise<ExecutiveInfluenceBidWithRelations[]> {
     const { skip, take, cursor, where, orderBy } = params;
     return this.prisma.executiveInfluenceBid.findMany({
       skip,
@@ -37,10 +43,13 @@ export class ExecutiveInfluenceBidService {
       where,
       orderBy,
       include: {
-        game: true,
         player: true,
         ExecutiveGameTurn: true,
-        influenceBids: true,
+        influenceBids: {
+          include: {
+            Influence: true,
+          },
+        },
       },
     });
   }
@@ -50,19 +59,33 @@ export class ExecutiveInfluenceBidService {
     data: Prisma.ExecutiveInfluenceBidCreateInput,
     influence: Influence[],
   ): Promise<ExecutiveInfluenceBid> {
-    const influenceBid = await this.prisma.executiveInfluenceBid.create({
-      data,
-    });
+    const executiveInfluenceBid =
+      await this.prisma.executiveInfluenceBid.create({
+        data,
+      });
 
     //create influence bids
     await this.prisma.influenceBid.createMany({
       data: influence.map((influence) => ({
         influenceId: influence.id,
-        influenceBidId: influenceBid.id,
+        executiveInfluenceBidId: executiveInfluenceBid.id,
       })),
     });
 
-    return influenceBid;
+    //update all influence to location BRIBE
+    await this.prisma.influence.updateMany({
+      where: {
+        id: {
+          in: influence.map((influence) => influence.id),
+        },
+      },
+      data: {
+        ownedByPlayerId: null,
+        influenceLocation: InfluenceLocation.BRIBE,
+      },
+    });
+
+    return executiveInfluenceBid;
   }
 
   // Update an existing ExecutiveInfluenceBid
