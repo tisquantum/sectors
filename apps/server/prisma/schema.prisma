@@ -1221,6 +1221,7 @@ model ExecutiveGameTurn {
   gameId         String                   @db.Uuid
   turnNumber     Int
   phases         ExecutivePhase[]
+  playerPasses   ExecutivePlayerPass[]
   turnType       TurnType
   game           ExecutiveGame            @relation(fields: [gameId], references: [id])
   tricks         ExecutiveTrick[]
@@ -1228,6 +1229,16 @@ model ExecutiveGameTurn {
   influenceVotes ExecutiveInfluenceVote[]
   createdAt      DateTime                 @default(now())
   updatedAt      DateTime                 @updatedAt
+}
+
+model ExecutivePlayerPass {
+  id         String            @id @default(uuid()) @db.Uuid
+  playerId   String            @db.Uuid
+  gameTurnId String            @db.Uuid
+  player     ExecutivePlayer   @relation(fields: [playerId], references: [id])
+  gameTurn   ExecutiveGameTurn @relation(fields: [gameTurnId], references: [id])
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
 }
 
 model ExecutivePhase {
@@ -1263,18 +1274,18 @@ enum ExecutivePhaseName {
 }
 
 model ExecutiveInfluenceBid {
-  id                  String             @id @default(uuid()) @db.Uuid
-  gameId              String             @db.Uuid
-  toPlayerId          String             @db.Uuid
-  fromPlayerId        String             @db.Uuid
+  id                  String            @id @default(uuid()) @db.Uuid
+  gameId              String            @db.Uuid
+  toPlayerId          String            @db.Uuid
+  fromPlayerId        String            @db.Uuid
   influenceBids       InfluenceBid[]
-  game                ExecutiveGame      @relation(fields: [gameId], references: [id])
-  toPlayer            ExecutivePlayer    @relation("INFLUENCE_BID_TO_PLAYER", fields: [toPlayerId], references: [id])
-  fromPlayer          ExecutivePlayer    @relation("INFLUENCE_BID_FROM_PLAYER", fields: [fromPlayerId], references: [id])
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
-  ExecutiveGameTurn   ExecutiveGameTurn? @relation(fields: [executiveGameTurnId], references: [id])
-  executiveGameTurnId String?            @db.Uuid
+  game                ExecutiveGame     @relation(fields: [gameId], references: [id])
+  toPlayer            ExecutivePlayer   @relation("INFLUENCE_BID_TO_PLAYER", fields: [toPlayerId], references: [id])
+  fromPlayer          ExecutivePlayer   @relation("INFLUENCE_BID_FROM_PLAYER", fields: [fromPlayerId], references: [id])
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  ExecutiveGameTurn   ExecutiveGameTurn @relation(fields: [executiveGameTurnId], references: [id])
+  executiveGameTurnId String            @db.Uuid
 }
 
 model ExecutiveInfluenceVote {
@@ -1352,6 +1363,7 @@ model ExecutivePlayer {
   executiveInfluenceBidsToPlayer   ExecutiveInfluenceBid[] @relation("INFLUENCE_BID_TO_PLAYER")
   executiveInfluenceBidsFromPlayer ExecutiveInfluenceBid[] @relation("INFLUENCE_BID_FROM_PLAYER")
   executivePhases                  ExecutivePhase[]
+  ExecutivePlayerPass              ExecutivePlayerPass[]
 }
 
 model VoteMarker {

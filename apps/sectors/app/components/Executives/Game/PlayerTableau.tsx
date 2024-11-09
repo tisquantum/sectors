@@ -2,6 +2,7 @@
 import {
   CardLocation,
   CardSuit,
+  ExecutivePhaseName,
   InfluenceLocation,
 } from "@server/prisma/prisma.client";
 import PlayingCard from "./Card";
@@ -11,15 +12,28 @@ import { CardStack } from "./CardStack";
 import { trpc } from "@sectors/app/trpc";
 import PlayerAvatar from "../Player/PlayerAvatar";
 import { useExecutiveGame } from "./GameContext";
-import { Avatar, AvatarGroup } from "@nextui-org/react";
+import { Avatar, AvatarGroup, Radio, RadioGroup } from "@nextui-org/react";
 import { RELATIONSHIP_TRACK_LENGTH } from "@server/data/executive_constants";
 import { ActionWrapper } from "./ActionWrapper";
 import { InfluenceInput } from "../Player/InfluenceInput";
 import { useState } from "react";
 import { CardList } from "./CardList";
 import { InfluenceBidWithInfluence } from "@server/prisma/prisma.types";
+import DebounceButton from "../../General/DebounceButton";
+import { PlayerPassed } from "../Player/PlayerPassed";
 
-const InfluenceBids = ({ playerId }: { playerId: string }) => {
+//TODO: Add green border to active area on tableau
+const InfluenceBids = ({
+  toPlayerId,
+  currentTurnId,
+  isInteractive,
+}: {
+  toPlayerId: string;
+  currentTurnId: string;
+  isInteractive?: boolean;
+}) => {
+  const [influenceDestination, setInfluenceDestination] =
+    useState<InfluenceLocation>(InfluenceLocation.OWNED_BY_PLAYER);
   const {
     data: executiveInfluenceBids,
     isLoading,
@@ -27,9 +41,12 @@ const InfluenceBids = ({ playerId }: { playerId: string }) => {
     refetch,
   } = trpc.executiveInfluence.listInfluenceBids.useQuery({
     where: {
-      playerId,
+      toPlayerId,
+      executiveGameTurnId: currentTurnId,
     },
   });
+  const moveInfluenceBidToPlayer =
+    trpc.executiveInfluence.moveInfluenceBidToPlayer.useMutation();
   if (isLoading) {
     return <div>Loading...</div>;
   }
@@ -38,6 +55,9 @@ const InfluenceBids = ({ playerId }: { playerId: string }) => {
   }
   if (!executiveInfluenceBids) {
     return <div>No bids found</div>;
+  }
+  if (executiveInfluenceBids.length === 0) {
+    return <div>No bids</div>;
   }
   //group influenceBids by playerIds
   const flattenedInfluenceBids = executiveInfluenceBids.flatMap(
@@ -64,10 +84,62 @@ const InfluenceBids = ({ playerId }: { playerId: string }) => {
   return (
     <div className="flex flex-row gap-2">
       {Object.keys(influenceBidsGrouped).map((bid) => (
-        <Influence
-          playerId={bid}
-          influenceCount={influenceBidsGrouped[bid].length}
-        />
+        <>
+          {isInteractive ? (
+            <ActionWrapper
+              acceptCallback={() => {
+                return new Promise<void>((resolve) => {
+                  moveInfluenceBidToPlayer.mutate(
+                    {
+                      executiveInfluenceBidId:
+                        influenceBidsGrouped[bid][0].executiveInfluenceBidId ||
+                        "",
+                      targetLocation: influenceDestination,
+                    },
+                    {
+                      onSettled: () => {
+                        resolve(); // Resolve the promise here
+                      },
+                    }
+                  );
+                });
+              }}
+              optionsNode={
+                <div className="flex flex-col gap-2 justify-center items-center">
+                  <Influence
+                    playerId={bid}
+                    influenceCount={influenceBidsGrouped[bid].length}
+                  />
+                  <RadioGroup
+                    label="Select Where To Move Influence"
+                    color="warning"
+                    value={influenceDestination}
+                    onValueChange={(value) =>
+                      setInfluenceDestination(value as InfluenceLocation)
+                    }
+                  >
+                    <Radio value={InfluenceLocation.OWNED_BY_PLAYER}>
+                      Influence
+                    </Radio>
+                    <Radio value={InfluenceLocation.RELATIONSHIP}>
+                      Relationship
+                    </Radio>
+                  </RadioGroup>
+                </div>
+              }
+            >
+              <Influence
+                playerId={bid}
+                influenceCount={influenceBidsGrouped[bid].length}
+              />
+            </ActionWrapper>
+          ) : (
+            <Influence
+              playerId={bid}
+              influenceCount={influenceBidsGrouped[bid].length}
+            />
+          )}
+        </>
       ))}
     </div>
   );
@@ -187,7 +259,7 @@ const PlayerInfluence = ({ playerId }: { playerId: string }) => {
   }, {} as Record<string, (typeof playerInfluence)[0][]>);
 
   return (
-    <div>
+    <div className="flex flex-wrap gap-2">
       {Object.entries(groupedPlayerInfluence).map(
         ([selfPlayerId, influences]) => (
           <div key={selfPlayerId} className="flex gap-1">
@@ -249,7 +321,7 @@ const Bribe = ({
   isInteractive?: boolean;
 }) => {
   const { authPlayer } = useExecutiveGame();
-  const [influenceValue, setInfluenceValue] = useState(0);
+  const [influenceValue, setInfluenceValue] = useState(1);
   const createInfluenceBidMutation =
     trpc.executiveGame.createInfluenceBid.useMutation();
   if (!authPlayer) {
@@ -264,7 +336,7 @@ const Bribe = ({
   }
   console.log("selfInfluenceAuthPlayerOwns", selfInfluenceAuthPlayerOwns);
   const maxInfluence = selfInfluenceAuthPlayerOwns.length;
-  const minInfluence = Math.min(1, selfInfluenceAuthPlayerOwns.length);
+  const minInfluence = 1;
   const {
     data: playerHand,
     isLoading,
@@ -294,18 +366,21 @@ const Bribe = ({
           isInteractive ? (
             <ActionWrapper
               acceptCallback={() => {
-                createInfluenceBidMutation.mutate(
-                  {
-                    fromPlayerId: authPlayer.id,
-                    toPlayerId: playerId,
-                    influenceAmount: influenceValue,
-                  },
-                  {
-                    onSettled: () => {
-                      setInfluenceValue(0);
+                return new Promise<void>((resolve) => {
+                  createInfluenceBidMutation.mutate(
+                    {
+                      fromPlayerId: authPlayer.id,
+                      toPlayerId: playerId,
+                      influenceAmount: influenceValue,
                     },
-                  }
-                );
+                    {
+                      onSettled: () => {
+                        setInfluenceValue(1);
+                        resolve(); // Resolve the promise here
+                      },
+                    }
+                  );
+                });
               }}
               optionsNode={
                 <InfluenceInput
@@ -337,6 +412,11 @@ export const PlayerTableau = ({ playerId }: { playerId: string }) => {
   if (!player) {
     return <div>Player not found</div>;
   }
+  if (!currentPhase) {
+    return <div>Phase not found</div>;
+  }
+  const isAuthPlayerAndPhasing =
+    isAuthPlayerPhasing && player.id == authPlayer?.id;
   return (
     <div
       className={`flex flex-col gap-3 p-5 rounded-md ${
@@ -346,23 +426,36 @@ export const PlayerTableau = ({ playerId }: { playerId: string }) => {
       }`}
     >
       <div className="flex flex-row gap-3">
-        <div className="flex gap-2">
-          <AvatarGroup>
-            <PlayerAvatar
-              player={player}
-              badgeContent={player.seatIndex.toString()}
-            />
-            {player.isCOO && <Avatar size="md" name="COO" />}
-            {player.isGeneralCounsel && <Avatar size="md" name="GC" />}
-          </AvatarGroup>
+        <div className="flex flex-row gap-2">
+          <div className="flex flex-col gap-2 items-center justify-center">
+            <AvatarGroup>
+              <PlayerAvatar
+                player={player}
+                badgeContent={player.seatIndex.toString()}
+              />
+              {player.isCOO && <Avatar size="md" name="COO" />}
+              {player.isGeneralCounsel && <Avatar size="md" name="GC" />}
+            </AvatarGroup>
+            {currentPhase.phaseName == ExecutivePhaseName.INFLUENCE_BID && (
+              <PlayerPassed playerId={player.id} />
+            )}
+          </div>
         </div>
         <div>
-          <div className="relative border-2 border-dotted border-gray-600 rounded-lg p-4">
+          <div
+            className={`relative border-2 border-dotted ${
+              isAuthPlayerAndPhasing ? "border-success-500" : "border-gray-600"
+            } rounded-lg p-4`}
+          >
             <div className="absolute -top-3 left-3 bg-white px-2 font-bold text-gray-800 rounded-md">
-              Bids
+              BIDS
             </div>
             <div className="pt-2">
-              <InfluenceBids playerId={player.id} />
+              <InfluenceBids
+                toPlayerId={player.id}
+                currentTurnId={currentPhase.gameTurnId}
+                isInteractive={isAuthPlayerAndPhasing}
+              />
             </div>
           </div>
         </div>

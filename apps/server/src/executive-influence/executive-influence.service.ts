@@ -115,9 +115,11 @@ export class ExecutiveInfluenceService {
         },
       },
       data: {
-        ownedByPlayerId: executiveInfluenceBid.playerId,
+        ownedByPlayerId: executiveInfluenceBid.toPlayerId,
         influenceLocation: targetLocation,
       },
     });
+
+    //TODO: Clean up influence bids by sending all bids back to the player or 'expiring' them somehow, including influencebid bridge table data 
   }
 }

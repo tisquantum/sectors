@@ -20,7 +20,23 @@ export class ExecutiveInfluenceBidService {
       where: executiveInfluenceBidWhereUniqueInput,
       include: {
         game: true,
-        player: true,
+        toPlayer: true,
+        fromPlayer: true,
+        ExecutiveGameTurn: true,
+        influenceBids: true,
+      },
+    });
+  }
+
+  async findExecutiveInfluenceBid(
+    where: Prisma.ExecutiveInfluenceBidWhereInput,
+  ): Promise<ExecutiveInfluenceBid | null> {
+    return this.prisma.executiveInfluenceBid.findFirst({
+      where,
+      include: {
+        game: true,
+        toPlayer: true,
+        fromPlayer: true,
         ExecutiveGameTurn: true,
         influenceBids: true,
       },
@@ -43,7 +59,8 @@ export class ExecutiveInfluenceBidService {
       where,
       orderBy,
       include: {
-        player: true,
+        toPlayer: true,
+        fromPlayer: true,
         ExecutiveGameTurn: true,
         influenceBids: {
           include: {

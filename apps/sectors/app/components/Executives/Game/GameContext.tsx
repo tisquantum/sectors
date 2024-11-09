@@ -10,8 +10,15 @@ import {
   ExecutivePlayer,
 } from "@server/prisma/prisma.client";
 import { trpc } from "@sectors/app/trpc";
-import { EVENT_EXECUTIVE_NEW_PHASE, EVENT_PING_PLAYERS } from "@server/pusher/pusher.types";
-import { ExecutiveGameWithRelations, ExecutivePlayerWithRelations } from "@server/prisma/prisma.types";
+import {
+  EVENT_EXECUTIVE_NEW_PHASE,
+  EVENT_PING_PLAYERS,
+} from "@server/pusher/pusher.types";
+import {
+  ExecutiveGameTurnWithRelations,
+  ExecutiveGameWithRelations,
+  ExecutivePlayerWithRelations,
+} from "@server/prisma/prisma.types";
 import * as PusherTypes from "pusher-js";
 
 interface GameContextProps {
@@ -22,7 +29,7 @@ interface GameContextProps {
   currentPhase?: ExecutivePhase;
   socketChannel: PusherTypes.Channel | null;
   refetchAuthPlayer: () => void;
-  currentTurn: ExecutiveGameTurn;
+  currentTurn: ExecutiveGameTurnWithRelations;
 }
 
 const GameContext = createContext<GameContextProps | undefined>(undefined);

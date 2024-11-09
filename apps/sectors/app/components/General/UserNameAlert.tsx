@@ -43,7 +43,7 @@ const UserNameAlert = () => {
             your profile.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter className="dark bg-slate-800 text-foreground0">
+        <AlertDialogFooter className="dark flex justify-center items-center bg-slate-900 text-foreground0">
           <AlertDialogCancel>Dismiss</AlertDialogCancel>
           <AlertDialogAction onClick={handleContinue}>
             Go to Settings

@@ -46,6 +46,23 @@ export class ExecutivePlayerService {
     });
   }
 
+  async findExecutivePlayer(
+    where: Prisma.ExecutivePlayerWhereInput,
+  ): Promise<ExecutivePlayer | null> {
+    return this.prisma.executivePlayer.findFirst({
+      where,
+      include: {
+        user: true,
+        victoryPoints: true,
+        cards: true,
+        selfInfluence: true,
+        ownedByInfluence: true,
+        agendas: true,
+        executiveTricks: true,
+      },
+    });
+  }
+
   // List all ExecutivePlayers with optional filtering, pagination, and sorting
   async listExecutivePlayers(params: {
     skip?: number;

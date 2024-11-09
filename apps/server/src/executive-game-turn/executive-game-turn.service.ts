@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { Prisma, ExecutiveGameTurn } from '@prisma/client';
+import { ExecutiveGameTurnWithRelations } from '@server/prisma/prisma.types';
 
 @Injectable()
 export class ExecutiveGameTurnService {
@@ -13,11 +14,11 @@ export class ExecutiveGameTurnService {
     return this.prisma.executiveGameTurn.findUnique({
       where: executiveGameTurnWhereUniqueInput,
       include: {
-        game: true,
         phases: true,
         tricks: true,
         influenceBids: true,
         influenceVotes: true,
+        playerPasses: true,
       },
     });
   }
@@ -29,7 +30,7 @@ export class ExecutiveGameTurnService {
     cursor?: Prisma.ExecutiveGameTurnWhereUniqueInput;
     where?: Prisma.ExecutiveGameTurnWhereInput;
     orderBy?: Prisma.ExecutiveGameTurnOrderByWithRelationInput;
-  }): Promise<ExecutiveGameTurn[]> {
+  }): Promise<ExecutiveGameTurnWithRelations[]> {
     const { skip, take, cursor, where, orderBy } = params;
     return this.prisma.executiveGameTurn.findMany({
       skip,
@@ -38,24 +39,28 @@ export class ExecutiveGameTurnService {
       where,
       orderBy,
       include: {
-        game: true,
         phases: true,
         tricks: true,
         influenceBids: true,
         influenceVotes: true,
+        playerPasses: true,
       },
     });
   }
 
   // Create a new ExecutiveGameTurn
-  async createExecutiveGameTurn(data: Prisma.ExecutiveGameTurnCreateInput): Promise<ExecutiveGameTurn> {
+  async createExecutiveGameTurn(
+    data: Prisma.ExecutiveGameTurnCreateInput,
+  ): Promise<ExecutiveGameTurn> {
     return this.prisma.executiveGameTurn.create({
       data,
     });
   }
 
   // Create multiple ExecutiveGameTurns
-  async createManyExecutiveGameTurns(data: Prisma.ExecutiveGameTurnCreateManyInput[]): Promise<Prisma.BatchPayload> {
+  async createManyExecutiveGameTurns(
+    data: Prisma.ExecutiveGameTurnCreateManyInput[],
+  ): Promise<Prisma.BatchPayload> {
     return this.prisma.executiveGameTurn.createMany({
       data,
       skipDuplicates: true,
@@ -84,7 +89,9 @@ export class ExecutiveGameTurnService {
   }
 
   // Retrieve the latest game turn for a specific game
-  async getLatestTurn(gameId: string): Promise<ExecutiveGameTurn | null> {
+  async getLatestTurn(
+    gameId: string,
+  ): Promise<ExecutiveGameTurnWithRelations | null> {
     return this.prisma.executiveGameTurn.findFirst({
       where: { gameId },
       orderBy: { turnNumber: 'desc' },
@@ -94,6 +101,7 @@ export class ExecutiveGameTurnService {
         tricks: true,
         influenceBids: true,
         influenceVotes: true,
+        playerPasses: true,
       },
     });
   }

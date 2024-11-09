@@ -55,34 +55,27 @@ const PlayerAvatar = ({
         className={tooltipStyle}
         content={player.nickname}
       >
-        <Popover placement="bottom">
-          <PopoverTrigger>
-            <div className="flex items-center cursor-pointer">
-              {badgeContent ? (
-                <Badge color="secondary" content={badgeContent}>
-                  <Avatar
-                    color="success"
-                    isBordered={currentPhase?.activePlayerId == player.id}
-                    size={size}
-                    name={player.nickname}
-                    src={avatar}
-                  />
-                </Badge>
-              ) : (
-                <Avatar
-                  color="success"
-                  isBordered={currentPhase?.activePlayerId == player.id}
-                  size={size}
-                  name={player.nickname}
-                  src={avatar}
-                />
-              )}
-            </div>
-          </PopoverTrigger>
-          <PopoverContent className="p-0 m-0">
-            <div>test</div>
-          </PopoverContent>
-        </Popover>
+        <div className="flex items-center cursor-pointer">
+          {badgeContent ? (
+            <Badge color="secondary" content={badgeContent}>
+              <Avatar
+                color="success"
+                isBordered={currentPhase?.activePlayerId == player.id}
+                size={size}
+                name={player.nickname}
+                src={avatar}
+              />
+            </Badge>
+          ) : (
+            <Avatar
+              color="success"
+              isBordered={currentPhase?.activePlayerId == player.id}
+              size={size}
+              name={player.nickname}
+              src={avatar}
+            />
+          )}
+        </div>
       </Tooltip>
       {showNameLabel && <span>{player.nickname}</span>}
     </div>

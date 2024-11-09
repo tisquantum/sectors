@@ -68,4 +68,22 @@ export default (trpc: TrpcService, ctx: Context) =>
         );
         return { success: true };
       }),
+    playerPass: trpc.procedure
+      .input(z.object({ playerId: z.string() }))
+      .mutation(async ({ input }) => {
+        const { playerId } = input;
+        console.log('playerPass', playerId);
+        await ctx.executiveGameManagementService.playerPass(playerId);
+        return { success: true };
+      }),
+
+    selectInfluenceBid: trpc.procedure
+      .input(z.object({ influenceBidId: z.string() }))
+      .mutation(async ({ input }) => {
+        const { influenceBidId } = input;
+        // await ctx.executiveGameManagementService.selectInfluenceBid(
+        //   influenceBidId,
+        // );
+        return { success: true };
+      }),
   });

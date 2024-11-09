@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
-import { Prisma, ExecutivePhase } from '@prisma/client';
+import { Prisma, ExecutivePhase, ExecutivePhaseName } from '@prisma/client';
 
 @Injectable()
 export class ExecutivePhaseService {
@@ -42,7 +42,9 @@ export class ExecutivePhaseService {
   }
 
   // Create a new ExecutivePhase
-  async createExecutivePhase(data: Prisma.ExecutivePhaseCreateInput): Promise<ExecutivePhase> {
+  async createExecutivePhase(
+    data: Prisma.ExecutivePhaseCreateInput,
+  ): Promise<ExecutivePhase> {
     return this.prisma.executivePhase.create({
       data,
     });
@@ -85,10 +87,20 @@ export class ExecutivePhaseService {
     });
   }
 
-  async getPreviousPhase(gameId: string): Promise<ExecutivePhase | null> {
+  async getPreviousPhase({
+    gameId,
+    gameTurnId,
+    phaseName,
+  }: {
+    gameId: string;
+    gameTurnId?: string;
+    phaseName?: ExecutivePhaseName;
+  }): Promise<ExecutivePhase | null> {
     return this.prisma.executivePhase.findFirst({
       where: {
         gameId,
+        gameTurnId: gameTurnId ? gameTurnId : undefined,
+        phaseName: phaseName ? phaseName : undefined,
       },
       orderBy: {
         createdAt: 'desc',
