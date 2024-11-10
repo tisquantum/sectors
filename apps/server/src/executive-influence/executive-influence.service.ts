@@ -23,7 +23,7 @@ export class ExecutiveInfluenceService {
         Game: true,
         selfPlayer: true,
         ownedByPlayer: true,
-        ExecutiveInfluenceVote: true,
+        ExecutivePlayerVote: true,
         influenceBids: true,
       },
     });
@@ -48,7 +48,7 @@ export class ExecutiveInfluenceService {
         Game: true,
         selfPlayer: true,
         ownedByPlayer: true,
-        ExecutiveInfluenceVote: true,
+        ExecutivePlayerVote: true,
         influenceBids: true,
       },
     });
@@ -135,13 +135,22 @@ export class ExecutiveInfluenceService {
       influenceBids = selectedInfluenceBids;
     }
 
+    //count all influence currently on relationship track
+    const relationshipInfluenceCount = await this.prisma.influence.count({
+      where: {
+        ownedByPlayerId: executiveInfluenceBid.toPlayerId,
+        influenceLocation: InfluenceLocation.RELATIONSHIP,
+      },
+    });
+    const remainingRelationshipToFill =
+      RELATIONSHIP_TRACK_LENGTH - relationshipInfluenceCount;
     if (
       targetLocation == InfluenceLocation.RELATIONSHIP &&
-      influenceBids.length > RELATIONSHIP_TRACK_LENGTH
+      influenceBids.length > remainingRelationshipToFill
     ) {
       //the remaining influence will be moved to OWNED_BY_PLAYER
       const remainingInfluenceBids = influenceBids.slice(
-        RELATIONSHIP_TRACK_LENGTH,
+        remainingRelationshipToFill,
       );
       await this.prisma.influence.updateMany({
         where: {
@@ -156,7 +165,7 @@ export class ExecutiveInfluenceService {
           influenceLocation: InfluenceLocation.OWNED_BY_PLAYER,
         },
       });
-      influenceBids = influenceBids.slice(0, RELATIONSHIP_TRACK_LENGTH);
+      influenceBids = influenceBids.slice(0, remainingRelationshipToFill);
     }
     //update all influence with new player owner
     await this.prisma.influence.updateMany({

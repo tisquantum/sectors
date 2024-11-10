@@ -13,7 +13,7 @@ export const GameTopBar = () => {
         <div className="flex items-center gap-2">
           <RiListOrdered2 className="text-green-400 text-xl" />
           <span className="text-lg font-semibold">
-            Turn {currentTurn.turnNumber ?? "0"} of 4
+            Turn {currentTurn.turnNumber ?? "0"} of 5
           </span>
         </div>
         <div className="flex items-center gap-2 text-md font-medium">

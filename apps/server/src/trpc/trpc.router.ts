@@ -94,6 +94,8 @@ import executivePhaseRouter from './routers/executive-phase.router';
 import { ExecutivePhaseService } from '@server/executive-phase/executive-phase.service';
 import { ExecutiveGameTurnService } from '@server/executive-game-turn/executive-game-turn.service';
 import executiveGameTurnRouter from './routers/executive-game-turn.router';
+import { ExecutiveInfluenceVoteRoundService } from '@server/executive-influence-vote-round/executive-influence-vote-round.service';
+import executiveInfluenceVoteRoundRouter from './routers/executive-influence-vote-round.router';
 @Injectable()
 export class TrpcRouter {
   constructor(
@@ -146,6 +148,7 @@ export class TrpcRouter {
     private readonly executiveInfluenceService: ExecutiveInfluenceService,
     private readonly executiveInfluenceBidService: ExecutiveInfluenceBidService,
     private readonly executivePhaseService: ExecutivePhaseService,
+    private readonly executiveInfluenceVoteRound: ExecutiveInfluenceVoteRoundService,
   ) {}
 
   appRouter = this.trpc.router({
@@ -332,6 +335,9 @@ export class TrpcRouter {
     }),
     executivePhase: executivePhaseRouter(this.trpc, {
       executivePhaseService: this.executivePhaseService,
+    }),
+    executiveInfluenceVoteRound: executiveInfluenceVoteRoundRouter(this.trpc, {
+      executiveInfluenceVoteRoundService: this.executiveInfluenceVoteRound,
     }),
   });
 

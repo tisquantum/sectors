@@ -121,6 +121,17 @@ export class ExecutivePlayerService {
     });
   }
 
+  async updateManyExecutivePlayers(params: {
+    where: Prisma.ExecutivePlayerWhereInput;
+    data: Prisma.ExecutivePlayerUpdateManyMutationInput;
+  }): Promise<Prisma.BatchPayload> {
+    const { where, data } = params;
+    return this.prisma.executivePlayer.updateMany({
+      data,
+      where,
+    });
+  }
+
   // Delete an ExecutivePlayer
   async deleteExecutivePlayer(
     where: Prisma.ExecutivePlayerWhereUniqueInput,

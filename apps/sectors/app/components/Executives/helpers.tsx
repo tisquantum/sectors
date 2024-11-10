@@ -83,6 +83,11 @@ export function friendlyPhaseName(phaseName: ExecutivePhaseName | undefined): {
         name: "Reveal Trump",
         description: "The trump card is revealed, affecting the current trick.",
       };
+    case ExecutivePhaseName.START_VOTE:
+      return {
+        name: "Start Vote",
+        description: "Players prepare to vote on the current agenda or action.",
+      };
     case ExecutivePhaseName.RESOLVE_VOTE:
       return {
         name: "Resolve Vote",

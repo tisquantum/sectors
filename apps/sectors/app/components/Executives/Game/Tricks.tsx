@@ -28,7 +28,7 @@ export const Tricks = ({
             {trick.trickCards.map((card) => {
               // Find the player associated with the card
               const player = players.find(
-                (player) => player.id === card.card.playerId
+                (player) => player.id === card.playerId
               );
 
               return (

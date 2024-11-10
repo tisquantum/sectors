@@ -45,6 +45,7 @@ export class ExecutiveGameTurnService {
             trickCards: {
               include: {
                 card: true,
+                player: true,
               },
             },
           },
@@ -111,6 +112,7 @@ export class ExecutiveGameTurnService {
             trickCards: {
               include: {
                 card: true,
+                player: true,
               },
             },
           },

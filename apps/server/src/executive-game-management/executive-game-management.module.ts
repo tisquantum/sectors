@@ -9,6 +9,7 @@ import { ExecutiveCardModule } from '@server/executive-card/executive-card.modul
 import { ExecutiveInfluenceModule } from '@server/executive-influence/executive-influence.module';
 import { ExecutivePhaseModule } from '@server/executive-phase/executive-phase.module';
 import { ExecutiveGameTurnModule } from '@server/executive-game-turn/executive-game-turn.module';
+import { ExecutiveInfluenceVoteRoundModule } from '@server/executive-influence-vote-round/executive-influence-vote-round.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { ExecutiveGameTurnModule } from '@server/executive-game-turn/executive-g
     ExecutiveInfluenceModule,
     ExecutivePhaseModule,
     ExecutiveGameTurnModule,
+    ExecutiveInfluenceVoteRoundModule,
   ],
   providers: [ExecutiveGameManagementService],
   exports: [ExecutiveGameManagementService],

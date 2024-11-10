@@ -412,6 +412,7 @@ export type ExecutiveInfluenceBidWithRelations = ExecutiveInfluenceBid & {
 
 export type TrickCardWithRelations = TrickCard & {
   card: ExecutiveCard;
+  player: ExecutivePlayer;
 };
 
 export type ExecutiveTrickWithRelations = ExecutiveTrick & {

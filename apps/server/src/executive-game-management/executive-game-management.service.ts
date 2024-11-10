@@ -26,6 +26,7 @@ import { ExecutiveCardService } from '@server/executive-card/executive-card.serv
 import { ExecutiveGameTurnService } from '@server/executive-game-turn/executive-game-turn.service';
 import { ExecutiveGameService } from '@server/executive-game/executive-game.service';
 import { ExecutiveInfluenceBidService } from '@server/executive-influence-bid/executive-influence-bid.service';
+import { ExecutiveInfluenceVoteRoundService } from '@server/executive-influence-vote-round/executive-influence-vote-round.service';
 import { ExecutiveInfluenceService } from '@server/executive-influence/executive-influence.service';
 import { ExecutivePhaseService } from '@server/executive-phase/executive-phase.service';
 import { ExecutivePlayerService } from '@server/executive-player/executive-player.service';
@@ -53,6 +54,7 @@ export class ExecutiveGameManagementService {
     private influenceBidService: ExecutiveInfluenceBidService,
     private phaseService: ExecutivePhaseService,
     private gameTurnService: ExecutiveGameTurnService,
+    private influenceVoteRoundService: ExecutiveInfluenceVoteRoundService,
   ) {}
 
   async resolvePhase(
@@ -102,9 +104,40 @@ export class ExecutiveGameManagementService {
         await this.resolveTrickWinner(gameTurn.id);
         await this.newTrickOrTurn(gameTurn.gameId, gameTurn.id);
         break;
+      case ExecutivePhaseName.START_VOTE:
+        await this.createVoteRound(gameTurn.gameId, gameTurn.id);
+        await this.selectInitialVoter(gameTurn.gameId, gameTurn.id);
+        await this.nextPhase(gameTurn.gameId, gameTurn.id, phaseName);
+        break;
       default:
         return;
     }
+  }
+
+  async createVoteRound(gameId: string, gameTurnId: string) {
+    //create executive influence vote
+    await this.influenceVoteRoundService.createVoteRound({
+      game: { connect: { id: gameId } },
+      ExecutiveGameTurn: { connect: { id: gameTurnId } },
+    });
+  }
+
+  async selectInitialVoter(gameId: string, gameTurnId: string) {
+    //get the coo
+    const coo = await this.playerService.findExecutivePlayer({
+      gameId,
+      isCOO: true,
+    });
+    if (!coo) {
+      throw new Error('COO not found');
+    }
+    //start the vote phase
+    await this.startPhase({
+      gameId,
+      gameTurnId,
+      phaseName: ExecutivePhaseName.VOTE,
+      activePlayerId: coo.id,
+    });
   }
 
   determineNextExecutivePhaseTrick(phaseName: ExecutivePhaseName) {
@@ -119,6 +152,8 @@ export class ExecutiveGameManagementService {
         return ExecutivePhaseName.INFLUENCE_BID;
       case ExecutivePhaseName.START_TRICK:
         return ExecutivePhaseName.SELECT_TRICK;
+      case ExecutivePhaseName.START_VOTE:
+        return ExecutivePhaseName.VOTE;
       default:
         console.error('No next phase found, this is an assertion basically.');
         return null;
@@ -131,7 +166,12 @@ export class ExecutiveGameManagementService {
       where: {
         gameId,
         cardLocation: {
-          in: [CardLocation.TRICK, CardLocation.TRUMP, CardLocation.BRIBE],
+          in: [
+            CardLocation.TRICK,
+            CardLocation.TRUMP,
+            CardLocation.BRIBE,
+            CardLocation.HAND,
+          ],
         },
       },
     });
@@ -283,7 +323,10 @@ export class ExecutiveGameManagementService {
     const previousSelectTrickOfExecutiveTrickPhase = trick.phases
       .filter((phase) => phase.phaseName === ExecutivePhaseName.SELECT_TRICK)
       .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())[0];
-
+    console.log(
+      'determineTrickBidder previousSelectTrickOfExecutiveTrickPhase',
+      previousSelectTrickOfExecutiveTrickPhase,
+    );
     let nextPlayer: ExecutivePlayer | null = null;
     if (!previousSelectTrickOfExecutiveTrickPhase) {
       //get the COO player
@@ -921,12 +964,19 @@ export class ExecutiveGameManagementService {
       );
       //if there is a lead card, check if the player is following the lead
       if (leadCard) {
-        //does playerHandNotSelectedCard contain a card that follows the lead
-        const doesSelectionViolateFollowSuitRule = viablePlayableCards.some(
-          (handCard) => handCard.cardSuit === leadCard.card.cardSuit,
-        );
-        if (doesSelectionViolateFollowSuitRule) {
-          throw new Error('Player must follow the lead');
+        //does the playing card follow the lead?
+        if (card.cardSuit !== leadCard.card.cardSuit) {
+          //does playerHandNotSelectedCard contain a card that follows the lead
+          const doesSelectionViolateFollowSuitRule = viablePlayableCards.some(
+            (handCard) => handCard.cardSuit === leadCard.card.cardSuit,
+          );
+          if (doesSelectionViolateFollowSuitRule) {
+            console.error(
+              'Player must follow the lead - played from gift.',
+              viablePlayableCards,
+            );
+            throw new Error('Player must follow the lead - played from gift.');
+          }
         }
       }
     }
@@ -948,6 +998,7 @@ export class ExecutiveGameManagementService {
         data: {
           trick: { connect: { id: trick.id } },
           card: { connect: { id: cardId } },
+          player: { connect: { id: playerId } },
           isLead: !!!leadCard,
           gameTurnId,
         },
@@ -1091,6 +1142,21 @@ export class ExecutiveGameManagementService {
       console.error('error', error);
       throw new Error('Trick winner not found');
     }
+    //remove ceo from the previous trick winner
+    await this.playerService.updateManyExecutivePlayers({
+      where: { gameId: executiveTrick.gameId },
+      data: {
+        isCOO: false,
+      },
+    });
+
+    //make the trick winner the new coo
+    await this.playerService.updateExecutivePlayer({
+      where: { id: trickLeader.playerId },
+      data: {
+        isCOO: true,
+      },
+    });
   }
 
   async getTrickLeader(

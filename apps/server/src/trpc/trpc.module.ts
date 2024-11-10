@@ -114,6 +114,7 @@ import { ExecutiveGameTurnService } from '@server/executive-game-turn/executive-
     ExecutiveInfluenceService,
     ExecutiveGameManagementService,
     ExecutivePhaseService,
+    ExecutiveInfluenceService,
   ],
 })
 export class TrpcModule {}
