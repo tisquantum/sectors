@@ -137,7 +137,7 @@ function RoomBrowserContent({
   });
 
   return (
-    <div className="container mx-auto p-1 bg-background">
+    <div className="h-full flex flex-col p-1 bg-background">
       <div className="flex items-center justify-between my-4">
         <h1 className="text-2xl font-bold">Rooms</h1>
         <Button color="primary" onClick={handleRefresh}>
@@ -182,7 +182,7 @@ function RoomBrowserContent({
           </button>
         )}
       </div>
-      <div className="grid grid-flow-row auto-rows-max">
+      <div className="grid grid-flow-row auto-rows-max overflow-y-auto">
         {filteredRooms.map((room) => (
           <RoomListItem room={room} key={room.id} />
         ))}

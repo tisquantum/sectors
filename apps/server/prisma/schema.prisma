@@ -1242,16 +1242,18 @@ model ExecutivePlayerPass {
 }
 
 model ExecutivePhase {
-  id             String             @id @default(uuid()) @db.Uuid
-  gameId         String             @db.Uuid
-  gameTurnId     String             @db.Uuid
-  activePlayerId String?            @db.Uuid
-  phaseName      ExecutivePhaseName
-  player         ExecutivePlayer?   @relation(fields: [activePlayerId], references: [id])
-  game           ExecutiveGame      @relation(fields: [gameId], references: [id])
-  gameTurn       ExecutiveGameTurn  @relation(fields: [gameTurnId], references: [id])
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
+  id               String             @id @default(uuid()) @db.Uuid
+  gameId           String             @db.Uuid
+  gameTurnId       String             @db.Uuid
+  activePlayerId   String?            @db.Uuid
+  phaseName        ExecutivePhaseName
+  player           ExecutivePlayer?   @relation(fields: [activePlayerId], references: [id])
+  game             ExecutiveGame      @relation(fields: [gameId], references: [id])
+  gameTurn         ExecutiveGameTurn  @relation(fields: [gameTurnId], references: [id])
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  ExecutiveTrick   ExecutiveTrick?    @relation(fields: [executiveTrickId], references: [id])
+  executiveTrickId String?            @db.Uuid
 }
 
 enum ExecutivePhaseName {
@@ -1311,6 +1313,7 @@ model ExecutiveTrick {
   game          ExecutiveGame     @relation(fields: [gameId], references: [id])
   turn          ExecutiveGameTurn @relation(fields: [turnId], references: [id])
   trickCards    TrickCard[]
+  phases        ExecutivePhase[]
   winner        ExecutivePlayer?  @relation(fields: [trickWinnerId], references: [id])
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt

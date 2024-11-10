@@ -444,8 +444,7 @@ const Bribe = ({
   playerId: string;
   isInteractive?: boolean;
 }) => {
-  const { authPlayer, pingCounter, currentPhase } =
-    useExecutiveGame();
+  const { authPlayer, pingCounter, currentPhase } = useExecutiveGame();
   const [influenceValue, setInfluenceValue] = useState(1);
   const createInfluenceBidMutation =
     trpc.executiveGame.createInfluenceBid.useMutation();
@@ -606,6 +605,28 @@ export const PlayerTableau = ({ playerId }: { playerId: string }) => {
       <div className="flex flex-row gap-3 mt-2">
         <div className="flex flex-col gap-4">
           <div className="flex gap-2 justify-center">
+            {/* BRIBE Section */}
+            <div
+              className={`relative border-2 border-dotted ${
+                isAuthPlayerPhasing &&
+                player.id != authPlayer?.id &&
+                currentPhase?.phaseName == ExecutivePhaseName.INFLUENCE_BID
+                  ? "border-success-500"
+                  : "border-gray-600"
+              } rounded-lg p-4`}
+            >
+              <div className="absolute -top-3 left-3 bg-white px-2 font-bold text-gray-800 rounded-md">
+                BRIBE
+              </div>
+              <div className="pt-2">
+                <Bribe
+                  playerId={player.id}
+                  isInteractive={
+                    isAuthPlayerPhasing && player.id != authPlayer?.id
+                  }
+                />
+              </div>
+            </div>
             {/* HAND Section */}
             <div
               className={`relative border-2 border-dotted  ${
@@ -626,29 +647,6 @@ export const PlayerTableau = ({ playerId }: { playerId: string }) => {
                     isAuthPlayerAndPhasing &&
                     player.id == authPlayer?.id &&
                     currentPhase?.phaseName == ExecutivePhaseName.SELECT_TRICK
-                  }
-                />
-              </div>
-            </div>
-
-            {/* BRIBE Section */}
-            <div
-              className={`relative border-2 border-dotted ${
-                isAuthPlayerPhasing &&
-                player.id != authPlayer?.id &&
-                currentPhase?.phaseName == ExecutivePhaseName.INFLUENCE_BID
-                  ? "border-success-500"
-                  : "border-gray-600"
-              } rounded-lg p-4`}
-            >
-              <div className="absolute -top-3 left-3 bg-white px-2 font-bold text-gray-800 rounded-md">
-                BRIBE
-              </div>
-              <div className="pt-2">
-                <Bribe
-                  playerId={player.id}
-                  isInteractive={
-                    isAuthPlayerPhasing && player.id != authPlayer?.id
                   }
                 />
               </div>

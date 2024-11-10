@@ -141,11 +141,11 @@ export default (trpc: TrpcService, ctx: Context) =>
           });
         }
         try {
-          await ctx.executiveGameManagementService.startPhase(
-            executiveBid.gameId,
-            executiveBid.executiveGameTurnId,
-            ExecutivePhaseName.INFLUENCE_BID_SELECTION,
-          );
+          await ctx.executiveGameManagementService.startPhase({
+            gameId: executiveBid.gameId,
+            gameTurnId: executiveBid.executiveGameTurnId,
+            phaseName: ExecutivePhaseName.INFLUENCE_BID_SELECTION,
+          });
         } catch (error) {
           console.error('nextPhase error', error);
           throw new TRPCError({
@@ -178,11 +178,11 @@ export default (trpc: TrpcService, ctx: Context) =>
           });
         }
         try {
-          await ctx.executiveGameManagementService.startPhase(
+          await ctx.executiveGameManagementService.startPhase({
             gameId,
             gameTurnId,
-            ExecutivePhaseName.INFLUENCE_BID_SELECTION,
-          );
+            phaseName: ExecutivePhaseName.INFLUENCE_BID_SELECTION,
+          });
         } catch (error) {
           console.error('nextPhase error', error);
           throw new TRPCError({
