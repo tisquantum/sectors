@@ -42,6 +42,7 @@ import {
 } from '@server/pusher/pusher.types';
 import { timeStamp } from 'console';
 import { PusherService } from 'nestjs-pusher';
+import { max } from 'rxjs';
 
 @Injectable()
 export class ExecutiveGameManagementService {
@@ -112,10 +113,44 @@ export class ExecutiveGameManagementService {
         break;
       case ExecutivePhaseName.RESOLVE_VOTE:
         await this.resolveVote(gameTurn.id);
+        await this.nextVoteRoundOrEndGame(gameTurn.gameId, gameTurn.id);
         break;
       default:
         return;
     }
+  }
+
+  async nextVoteRoundOrEndGame(gameId: string, gameTurnId: string) {
+    const gameTurn = await this.gameTurnService.getExecutiveGameTurn({
+      id: gameTurnId,
+    });
+    if (!gameTurn) {
+      throw new Error('Game turn not found');
+    }
+    //get players
+    const players = await this.playerService.listExecutivePlayers({
+      where: {
+        gameId,
+      },
+    });
+    if (!players) {
+      throw new Error('Players not found');
+    }
+    //get the vote rounds
+    const voteRounds = await this.influenceVoteRoundService.listVoteRounds({
+      where: {
+        gameId,
+      },
+    });
+    if (voteRounds.length < players.length) {
+      await this.nextPhase(gameId, gameTurnId, ExecutivePhaseName.RESOLVE_VOTE);
+    } else {
+      await this.endGame(gameId, gameTurnId);
+    }
+  }
+
+  async endGame(gameId: string, gameTurnId: string) {
+    //TODO: Distribute points and end game
   }
 
   async resolveVote(gameTurnId: string) {
@@ -156,8 +191,28 @@ export class ExecutiveGameManagementService {
         maxInfluenceKey = key;
       }
     }
+    //get all players who voted for the max influence
+    const winningPlayers = voteRound.playerVotes.filter((playerVote) =>
+      playerVote.influence.some(
+        (influence) =>
+          (influence.influenceType === InfluenceType.CEO &&
+            maxInfluenceKey === 'CEO') ||
+          (influence.selfPlayerId === maxInfluenceKey &&
+            influence.influenceType === InfluenceType.PLAYER),
+      ),
+    );
     //TODO: need to figure out how to store the winner and distribute those winner influence as VOTES under a player
-    return;
+    const voteMarkers = await this.prisma.voteMarker.createManyAndReturn({
+      data: winningPlayers.map((player) => ({
+        influenceVoteRoundId: voteRound.id,
+        owningPlayerId: player.playerId,
+        gameId: voteRound.gameId,
+        votedPlayedId: maxInfluenceKey != 'CEO' ? maxInfluenceKey : null,
+        isCeo: maxInfluenceKey === 'CEO',
+      })),
+    });
+    console.log('voteMarkers', voteMarkers);
+    return voteMarkers;
   }
 
   async createVoteRound(gameId: string, gameTurnId: string) {
@@ -200,6 +255,8 @@ export class ExecutiveGameManagementService {
         return ExecutivePhaseName.SELECT_TRICK;
       case ExecutivePhaseName.START_VOTE:
         return ExecutivePhaseName.VOTE;
+      case ExecutivePhaseName.RESOLVE_VOTE:
+        return ExecutivePhaseName.START_VOTE;
       default:
         console.error('No next phase found, this is an assertion basically.');
         return null;
@@ -312,7 +369,6 @@ export class ExecutiveGameManagementService {
         phaseName: ExecutivePhaseName.START_TURN,
       });
     }
-    //TODO: logic for end game
   }
 
   async determineTrickBidder(gameTurnId: string) {
