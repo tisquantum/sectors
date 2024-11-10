@@ -223,3 +223,13 @@ $$;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure handle_new_user();
+
+-- EXECUTIVES
+
+Should bribes be left on the table for that trick round if they are not taken?
+
+I think so!  It's a powerful "sacrifice" for influence then.
+
+CEO or COO starts for accepting bids? Or just next player to left.
+
+Tricks and Trick history need to show the lead and trump data as well.
