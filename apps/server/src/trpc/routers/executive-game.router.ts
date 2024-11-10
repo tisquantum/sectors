@@ -116,7 +116,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         );
         return { success: true };
       }),
-      createPlayerVoteRound: trpc.procedure
+    createPlayerVote: trpc.procedure
       .input(
         z.object({
           playerId: z.string(),
@@ -125,8 +125,23 @@ export default (trpc: TrpcService, ctx: Context) =>
       )
       .mutation(async ({ input }) => {
         const { playerId, influenceIds } = input;
-        const voteRound = await ctx.executiveGameManagementService.createPlayerVote(influenceIds, playerId);
-        await ctx.executiveGameManagementService.moveToNextVoter(voteRound.id);
+        const voteRound =
+          await ctx.executiveGameManagementService.createPlayerVote(
+            influenceIds,
+            playerId,
+          );
+        try {
+          await ctx.executiveGameManagementService.moveToNextVoter(
+            voteRound.id,
+            playerId,
+          );
+        } catch (error) {
+          console.error('nextVoter error', error);
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Next voter error',
+          });
+        }
         return { success: true };
       }),
   });

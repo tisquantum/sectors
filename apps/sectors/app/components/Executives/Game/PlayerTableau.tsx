@@ -327,6 +327,8 @@ const PlayerInfluence = ({
   isInteractive?: boolean;
 }) => {
   const { pingCounter, currentPhase } = useExecutiveGame();
+  const createPlayerVoteMutation =
+    trpc.executiveGame.createPlayerVote.useMutation();
   const {
     data: playerInfluence,
     isLoading,
@@ -343,6 +345,7 @@ const PlayerInfluence = ({
   useEffect(() => {
     refetch();
   }, [pingCounter, currentPhase?.id]);
+  const [influenceToSubmit, setInfluenceToSubmit] = useState(1);
   if (isLoading) {
     return <div>Loading...</div>;
   }
@@ -380,10 +383,36 @@ const PlayerInfluence = ({
               <ActionWrapper
                 acceptCallback={() => {
                   return new Promise<void>((resolve) => {
-                    console.log("Influence selected", influences);
-                    resolve(); // Resolve the promise here
+                    createPlayerVoteMutation.mutate(
+                      {
+                        influenceIds: influences.map(
+                          (influence) => influence.id
+                        ),
+                        playerId,
+                      },
+                      {
+                        onSettled: () => {
+                          console.log("Influence selected", influences);
+                          resolve(); // Resolve the promise here
+                        },
+                        onError: (error) => {
+                          toast.error(
+                            "Error creating player vote: " + error.message
+                          );
+                        },
+                      }
+                    );
                   });
                 }}
+                optionsNode={
+                  <InfluenceInput
+                    setInfluenceValue={setInfluenceToSubmit}
+                    influenceValue={influenceToSubmit.toString()}
+                    influenceMin={1}
+                    influenceMax={influences.length}
+                    title="Select Influence"
+                  />
+                }
               >
                 <Influence
                   playerId={selfPlayerId}
@@ -405,10 +434,35 @@ const PlayerInfluence = ({
             <ActionWrapper
               acceptCallback={() => {
                 return new Promise<void>((resolve) => {
-                  console.log("Influence selected", ceoInfluence);
-                  resolve(); // Resolve the promise here
+                  createPlayerVoteMutation.mutate(
+                    {
+                      influenceIds: ceoInfluence.map(
+                        (influence) => influence.id
+                      ),
+                      playerId,
+                    },
+                    {
+                      onSettled: () => {
+                        resolve(); // Resolve the promise here
+                      },
+                      onError: (error) => {
+                        toast.error(
+                          "Error creating player vote: " + error.message
+                        );
+                      },
+                    }
+                  );
                 });
               }}
+              optionsNode={
+                <InfluenceInput
+                  setInfluenceValue={setInfluenceToSubmit}
+                  influenceValue={influenceToSubmit.toString()}
+                  influenceMin={1}
+                  influenceMax={ceoInfluence.length}
+                  title="Select Influence"
+                />
+              }
             >
               <Badge color="success" content={ceoInfluence.length.toString()}>
                 <Avatar name="CEO" size="sm" />
@@ -751,7 +805,9 @@ export const PlayerTableau = ({ playerId }: { playerId: string }) => {
             <div className="absolute -top-3 left-3 bg-white px-2 font-bold text-gray-800 rounded-md">
               VOTES
             </div>
-            <div className="flex flex-wrap gap-2 items-center mt-2"></div>
+            <div className="flex flex-wrap gap-2 items-center mt-2">
+              <Votes />
+            </div>
           </div>
         </div>
       </div>

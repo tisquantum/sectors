@@ -5,15 +5,17 @@ export const InfluenceInput = ({
   setInfluenceValue,
   influenceMin,
   influenceMax,
+  title = "Bid Influence",
 }: {
   influenceValue: string;
   setInfluenceValue: (value: number) => void;
   influenceMin: number;
   influenceMax: number;
+  title?: string;
 }) => {
   return (
     <div className="flex flex-col items-center gap-2">
-      <span>Bid Influence</span>
+      <span>{title}</span>
       <Input
         type="number"
         value={influenceValue}

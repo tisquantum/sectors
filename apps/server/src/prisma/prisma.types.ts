@@ -14,7 +14,6 @@ import {
   ExecutiveGame,
   ExecutiveGameTurn,
   ExecutiveInfluenceBid,
-  ExecutiveInfluenceVote,
   ExecutiveInfluenceVoteRound,
   ExecutivePhase,
   ExecutivePlayer,
@@ -64,6 +63,7 @@ import {
   TransactionsOnShares,
   TrickCard,
   User,
+  VoteMarker,
 } from '@prisma/client';
 
 export type RoomMessageWithRoomUser = RoomMessage & {
@@ -425,7 +425,7 @@ export type ExecutiveGameTurnWithRelations = ExecutiveGameTurn & {
   phases: ExecutivePhase[];
   tricks: ExecutiveTrickWithRelations[];
   influenceBids: ExecutiveInfluenceBid[];
-  influenceVotes: ExecutiveInfluenceVote[];
+  influenceVotes: ExecutiveInfluenceVoteRound[];
   playerPasses: ExecutivePlayerPass[];
 };
 
@@ -433,6 +433,12 @@ export type ExecutivePlayerVoteWithRelations = ExecutivePlayerVote & {
   influence: Influence[];
 };
 
-export type ExecutiveInfluenceVoteRoundWithRelations = ExecutiveInfluenceVoteRound & {
-  playerVotes: ExecutivePlayerVoteWithRelations[];
+export type ExecutiveInfluenceVoteRoundWithRelations =
+  ExecutiveInfluenceVoteRound & {
+    playerVotes: ExecutivePlayerVoteWithRelations[];
+  };
+
+export type VoteMarkerWithRelations = VoteMarker & {
+  owningPlayer: ExecutivePlayer;
+  votedPlayer: ExecutivePlayer | null;
 };

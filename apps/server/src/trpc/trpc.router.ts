@@ -96,6 +96,8 @@ import { ExecutiveGameTurnService } from '@server/executive-game-turn/executive-
 import executiveGameTurnRouter from './routers/executive-game-turn.router';
 import { ExecutiveInfluenceVoteRoundService } from '@server/executive-influence-vote-round/executive-influence-vote-round.service';
 import executiveInfluenceVoteRoundRouter from './routers/executive-influence-vote-round.router';
+import executiveVoteMarkerRouter from './routers/executive-vote-marker.router';
+import { PrismaService } from '@server/prisma/prisma.service';
 @Injectable()
 export class TrpcRouter {
   constructor(
@@ -149,6 +151,7 @@ export class TrpcRouter {
     private readonly executiveInfluenceBidService: ExecutiveInfluenceBidService,
     private readonly executivePhaseService: ExecutivePhaseService,
     private readonly executiveInfluenceVoteRoundService: ExecutiveInfluenceVoteRoundService,
+    private readonly prismaService: PrismaService,
   ) {}
 
   appRouter = this.trpc.router({
@@ -339,6 +342,9 @@ export class TrpcRouter {
     }),
     executiveInfluenceVoteRound: executiveInfluenceVoteRoundRouter(this.trpc, {
       executiveInfluenceVoteRoundService: this.executiveInfluenceVoteRoundService,
+    }),
+    executiveVoteMarker: executiveVoteMarkerRouter(this.trpc, {
+      prismaService: this.prismaService,
     }),
   });
 
