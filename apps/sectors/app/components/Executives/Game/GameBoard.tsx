@@ -50,7 +50,7 @@ const GameBoard = ({ gameId }: { gameId: string }) => {
 
   return (
     <>
-      <div className="grid grid-rows-3 h-full">
+      <div className="grid grid-rows-3 h-full gap-2">
         {/* Top row */}
         <div className="flex items-center justify-center gap-4">
           {sortedPlayers.length === 5 && (

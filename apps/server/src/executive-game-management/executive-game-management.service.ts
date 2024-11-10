@@ -64,7 +64,7 @@ export class ExecutiveGameManagementService {
         await this.nextPhase(gameTurn.gameId, gameTurn.id, phaseName);
         return;
       case ExecutivePhaseName.START_TURN:
-        await this.boardCleanup(gameTurn.id);
+        await this.boardCleanup(gameTurn.gameId);
         await this.nextPhase(gameTurn.gameId, gameTurn.id, phaseName);
         break;
       case ExecutivePhaseName.DEAL_CARDS:
@@ -113,6 +113,7 @@ export class ExecutiveGameManagementService {
         },
       },
     });
+    console.log('boardCleanup cardsInPlay', cardsInPlay);
     //move all cards back to deck and update player to null
     await Promise.all(
       cardsInPlay.map((card) =>
@@ -1022,23 +1023,33 @@ export class ExecutiveGameManagementService {
     if (!ceoInfluence) {
       throw new Error('CEO influence not found');
     }
-    //update the influence
-    await this.influenceService.updateInfluence({
-      where: { id: ceoInfluence[0].id },
-      data: {
-        ownedByPlayer: { connect: { id: trickLeader.playerId } },
-        influenceLocation: InfluenceLocation.OWNED_BY_PLAYER,
-      },
-    });
-    //update the trick winner
-    await this.prisma.executiveTrick.update({
-      where: {
-        id: executiveTrick.id,
-      },
-      data: {
-        trickWinnerId: trickLeader.playerId,
-      },
-    });
+    try {
+      //update the influence
+      await this.influenceService.updateInfluence({
+        where: { id: ceoInfluence[0].id },
+        data: {
+          ownedByPlayer: { connect: { id: trickLeader.playerId } },
+          influenceLocation: InfluenceLocation.OWNED_BY_PLAYER,
+        },
+      });
+    } catch (error) {
+      console.error('error', error);
+      throw new Error('Influence not found');
+    }
+    try {
+      //update the trick winner
+      await this.prisma.executiveTrick.update({
+        where: {
+          id: executiveTrick.id,
+        },
+        data: {
+          trickWinnerId: trickLeader.playerId,
+        },
+      });
+    } catch (error) {
+      console.error('error', error);
+      throw new Error('Trick winner not found');
+    }
   }
 
   async getTrickLeader(

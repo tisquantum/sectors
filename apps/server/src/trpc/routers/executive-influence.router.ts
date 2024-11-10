@@ -11,7 +11,7 @@ type Context = {
   executiveInfluenceService: ExecutiveInfluenceService;
   executiveInfluenceBidService: ExecutiveInfluenceBidService;
   executiveGameManagementService: ExecutiveGameManagementService;
-  executiveCardService: ExecutiveCardService,
+  executiveCardService: ExecutiveCardService;
 };
 
 export default (trpc: TrpcService, ctx: Context) =>
@@ -96,11 +96,14 @@ export default (trpc: TrpcService, ctx: Context) =>
           await ctx.executiveInfluenceService.moveInfluenceBidToPlayer(
             executiveInfluenceBid,
             targetLocation,
-            isBidLocked
+            isBidLocked,
           );
         } catch (error) {
           console.error('moveInfluenceBidToPlayer error', error);
-          throw new TRPCError(error);
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Move Influence Bid to Player error',
+          });
         }
         console.log('executiveInfluenceBid', executiveInfluenceBid);
         //exchange the bribe card and move gifts for player
@@ -112,9 +115,12 @@ export default (trpc: TrpcService, ctx: Context) =>
           );
         } catch (error) {
           console.error('exchangeBribe error', error);
-          throw new TRPCError(error);
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Exchange Bribe error',
+          });
         }
-        
+
         let executiveBid;
         try {
           executiveBid =
@@ -123,11 +129,14 @@ export default (trpc: TrpcService, ctx: Context) =>
             });
         } catch (error) {
           console.error('getExecutiveInfluenceBid error', error);
-          throw new TRPCError(error);
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Get Executive Influence Bid error',
+          });
         }
         if (!executiveBid) {
           throw new TRPCError({
-            code: 'NOT_FOUND',
+            code: 'INTERNAL_SERVER_ERROR',
             message: 'Executive Influence Bid not found',
           });
         }
@@ -139,7 +148,10 @@ export default (trpc: TrpcService, ctx: Context) =>
           );
         } catch (error) {
           console.error('nextPhase error', error);
-          throw new TRPCError(error);
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Next phase error',
+          });
         }
         return { success: true };
       }),
@@ -156,11 +168,14 @@ export default (trpc: TrpcService, ctx: Context) =>
         try {
           await ctx.executiveInfluenceService.moveInfluenceBackToOwningPlayers(
             gameTurnId,
-            toPlayerId
+            toPlayerId,
           );
         } catch (error) {
           console.error('moveInfluenceBackToOwningPlayers error', error);
-          throw new TRPCError(error);
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Move influence back to owning players error',
+          });
         }
         try {
           await ctx.executiveGameManagementService.startPhase(
@@ -170,7 +185,10 @@ export default (trpc: TrpcService, ctx: Context) =>
           );
         } catch (error) {
           console.error('nextPhase error', error);
-          throw new TRPCError(error);
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Next phase error',
+          });
         }
         return { success: true };
       }),

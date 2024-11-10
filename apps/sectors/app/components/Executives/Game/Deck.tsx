@@ -8,7 +8,7 @@ import { ExecutiveCard } from "@server/prisma/prisma.client";
 import { useEffect } from "react";
 
 export const Deck = () => {
-  const { gameId, pingCounter } = useExecutiveGame();
+  const { gameId, pingCounter, currentPhase } = useExecutiveGame();
   const {
     data: deck,
     isLoading,
@@ -19,7 +19,7 @@ export const Deck = () => {
   });
   useEffect(() => {
     refetch();
-  }, [pingCounter]);
+  }, [pingCounter, currentPhase?.id]);
   if (isLoading) {
     return <div>Loading...</div>;
   }
@@ -56,7 +56,7 @@ export const Deck = () => {
       <Popover triggerType="grid" backdrop="blur">
         <PopoverTrigger>
           <div>
-            <CardStack cards={deck.length} renderFull />
+            <CardStack cards={deck.length} />
           </div>
         </PopoverTrigger>
         <PopoverContent>

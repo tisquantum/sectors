@@ -4,6 +4,7 @@ import {
   CardSuit,
   ExecutivePhaseName,
   InfluenceLocation,
+  InfluenceType,
 } from "@server/prisma/prisma.client";
 import PlayingCard from "./Card";
 import Relationship from "./Relationship";
@@ -15,6 +16,7 @@ import { useExecutiveGame } from "./GameContext";
 import {
   Avatar,
   AvatarGroup,
+  Badge,
   Radio,
   RadioGroup,
   Switch,
@@ -359,6 +361,10 @@ const PlayerInfluence = ({ playerId }: { playerId: string }) => {
   }, {} as Record<string, (typeof playerInfluence)[0][]>);
   console.log("groupedPlayerInfluence", groupedPlayerInfluence);
   console.log("playerInfluence", playerInfluence);
+  //filter all influence of type ceo
+  const ceoInfluence = playerInfluence.filter(
+    (influence) => influence.influenceType === InfluenceType.CEO
+  );
   return (
     <div className="flex flex-wrap gap-2">
       {Object.entries(groupedPlayerInfluence).map(
@@ -370,6 +376,13 @@ const PlayerInfluence = ({ playerId }: { playerId: string }) => {
             />
           </div>
         )
+      )}
+      {ceoInfluence.length > 0 && (
+        <div className="flex gap-1">
+          <Badge color="success" content={ceoInfluence.length.toString()}>
+            <Avatar name="CEO" size="sm" />
+          </Badge>
+        </div>
       )}
     </div>
   );
@@ -431,10 +444,22 @@ const Bribe = ({
   playerId: string;
   isInteractive?: boolean;
 }) => {
-  const { authPlayer, pingCounter, currentPhase } = useExecutiveGame();
+  const { authPlayer, pingCounter, currentPhase } =
+    useExecutiveGame();
   const [influenceValue, setInfluenceValue] = useState(1);
   const createInfluenceBidMutation =
     trpc.executiveGame.createInfluenceBid.useMutation();
+  const {
+    data: bribeCards,
+    isLoading,
+    isError,
+    refetch,
+  } = trpc.executiveCard.listExecutiveCards.useQuery({
+    where: {
+      playerId,
+      cardLocation: CardLocation.BRIBE,
+    },
+  });
   useEffect(() => {
     refetch();
   }, [pingCounter, currentPhase?.id]);
@@ -451,19 +476,7 @@ const Bribe = ({
   console.log("selfInfluenceAuthPlayerOwns", selfInfluenceAuthPlayerOwns);
   const maxInfluence = selfInfluenceAuthPlayerOwns.length;
   const minInfluence = 1;
-  const {
-    data: playerHand,
-    isLoading,
-    isError,
-    refetch,
-  } = trpc.executiveCard.listConcealedCards.useQuery({
-    where: {
-      playerId,
-    },
-  });
-  const bribeCards = playerHand?.filter(
-    (card) => card.cardLocation === "BRIBE"
-  );
+
   if (isLoading) {
     return <div>Loading...</div>;
   }
