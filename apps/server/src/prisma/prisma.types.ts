@@ -15,9 +15,11 @@ import {
   ExecutiveGameTurn,
   ExecutiveInfluenceBid,
   ExecutiveInfluenceVote,
+  ExecutiveInfluenceVoteRound,
   ExecutivePhase,
   ExecutivePlayer,
   ExecutivePlayerPass,
+  ExecutivePlayerVote,
   ExecutiveTrick,
   ExecutiveVictoryPoint,
   Game,
@@ -425,4 +427,12 @@ export type ExecutiveGameTurnWithRelations = ExecutiveGameTurn & {
   influenceBids: ExecutiveInfluenceBid[];
   influenceVotes: ExecutiveInfluenceVote[];
   playerPasses: ExecutivePlayerPass[];
+};
+
+export type ExecutivePlayerVoteWithRelations = ExecutivePlayerVote & {
+  influence: Influence[];
+};
+
+export type ExecutiveInfluenceVoteRoundWithRelations = ExecutiveInfluenceVoteRound & {
+  playerVotes: ExecutivePlayerVoteWithRelations[];
 };

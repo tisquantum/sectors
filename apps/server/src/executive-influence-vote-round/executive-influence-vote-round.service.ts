@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { Prisma, ExecutiveInfluenceVoteRound } from '@prisma/client';
+import { ExecutiveInfluenceVoteRoundWithRelations } from '@server/prisma/prisma.types';
 
 @Injectable()
 export class ExecutiveInfluenceVoteRoundService {
@@ -9,13 +10,33 @@ export class ExecutiveInfluenceVoteRoundService {
   // Retrieve a specific ExecutiveInfluenceVoteRound by unique input
   async getVoteRound(
     where: Prisma.ExecutiveInfluenceVoteRoundWhereUniqueInput,
-  ): Promise<ExecutiveInfluenceVoteRound | null> {
+  ): Promise<ExecutiveInfluenceVoteRoundWithRelations | null> {
     return this.prisma.executiveInfluenceVoteRound.findUnique({
       where,
       include: {
-        game: true,
-        playerVotes: true,
-        ExecutiveGameTurn: true,
+        playerVotes: {
+          include: {
+            influence: true,
+          },
+        },
+      },
+    });
+  }
+
+  async findLatestVoteRound(
+    where: Prisma.ExecutiveInfluenceVoteRoundWhereInput,
+  ): Promise<ExecutiveInfluenceVoteRoundWithRelations | null> {
+    return this.prisma.executiveInfluenceVoteRound.findFirst({
+      where,
+      include: {
+        playerVotes: {
+          include: {
+            influence: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
       },
     });
   }
@@ -27,7 +48,7 @@ export class ExecutiveInfluenceVoteRoundService {
     cursor?: Prisma.ExecutiveInfluenceVoteRoundWhereUniqueInput;
     where?: Prisma.ExecutiveInfluenceVoteRoundWhereInput;
     orderBy?: Prisma.ExecutiveInfluenceVoteRoundOrderByWithRelationInput;
-  }): Promise<ExecutiveInfluenceVoteRound[]> {
+  }): Promise<ExecutiveInfluenceVoteRoundWithRelations[]> {
     const { skip, take, cursor, where, orderBy } = params;
     return this.prisma.executiveInfluenceVoteRound.findMany({
       skip,
@@ -36,9 +57,11 @@ export class ExecutiveInfluenceVoteRoundService {
       where,
       orderBy,
       include: {
-        game: true,
-        playerVotes: true,
-        ExecutiveGameTurn: true,
+        playerVotes: {
+          include: {
+            influence: true,
+          },
+        },
       },
     });
   }

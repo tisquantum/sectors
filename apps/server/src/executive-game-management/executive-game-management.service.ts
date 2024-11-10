@@ -5,6 +5,7 @@ import {
   ExecutiveCard,
   ExecutiveGameStatus,
   ExecutiveGameTurn,
+  ExecutiveInfluenceVoteRound,
   ExecutivePhase,
   ExecutivePhaseName,
   ExecutivePlayer,
@@ -109,9 +110,54 @@ export class ExecutiveGameManagementService {
         await this.selectInitialVoter(gameTurn.gameId, gameTurn.id);
         await this.nextPhase(gameTurn.gameId, gameTurn.id, phaseName);
         break;
+      case ExecutivePhaseName.RESOLVE_VOTE:
+        await this.resolveVote(gameTurn.id);
+        break;
       default:
         return;
     }
+  }
+
+  async resolveVote(gameTurnId: string) {
+    //get the latest game vote
+    const voteRound = await this.influenceVoteRoundService.findLatestVoteRound({
+      executiveGameTurnId: gameTurnId,
+    });
+    if (!voteRound) {
+      throw new Error('Vote round not found');
+    }
+    //get the votes
+    const votesInfluenceFlattened = voteRound.playerVotes.flatMap(
+      (playerVote) => playerVote.influence,
+    );
+    //see what is the most influence of selfPlayerId OR influenceType of CEO
+
+    // Group influence counts by `selfPlayerId` and `CEO` type
+    const influenceCounts: Record<string, number> = {};
+
+    votesInfluenceFlattened.forEach((influence) => {
+      if (influence.influenceType === InfluenceType.CEO) {
+        // Use 'CEO' as the key for CEO influence
+        influenceCounts['CEO'] = (influenceCounts['CEO'] || 0) + 1;
+      } else if (influence.selfPlayerId) {
+        // Use `selfPlayerId` as the key for player influence
+        const key = influence.selfPlayerId;
+        influenceCounts[key] = (influenceCounts[key] || 0) + 1;
+      }
+    });
+
+    // Determine the highest influence count
+    let maxInfluenceKey = null;
+    let maxInfluenceCount = 0;
+
+    for (const [key, count] of Object.entries(influenceCounts)) {
+      if (count > maxInfluenceCount) {
+        maxInfluenceCount = count;
+        maxInfluenceKey = key;
+      }
+    }
+    //TODO: need to figure out how to store the winner and distribute those winner influence as VOTES under a player
+    return;
   }
 
   async createVoteRound(gameId: string, gameTurnId: string) {
@@ -1421,7 +1467,7 @@ export class ExecutiveGameManagementService {
   async findNewActivePlayer(
     previousPlayer: ExecutivePlayer,
     players: ExecutivePlayer[],
-    currentPhase: ExecutivePhase,
+    currentPhase?: ExecutivePhase,
   ): Promise<ExecutivePlayer> {
     const newActivePlayerSeatIndex =
       previousPlayer.seatIndex + 1 >= players.length
@@ -1482,5 +1528,109 @@ export class ExecutiveGameManagementService {
         player: { connect: { id: nextPlayer.id } },
       },
     });
+  }
+
+  async createPlayerVote(
+    influenceIds: string[],
+    playerId: string,
+  ): Promise<ExecutiveInfluenceVoteRound> {
+    //get the player
+    const player = await this.playerService.getExecutivePlayer({
+      id: playerId,
+    });
+    if (!player) {
+      throw new Error('Player not found');
+    }
+    //get the current vote round
+    const currentVoteRound =
+      await this.influenceVoteRoundService.findLatestVoteRound({
+        gameId: player.gameId,
+      });
+    if (!currentVoteRound) {
+      throw new Error('Vote round not found');
+    }
+    //if player has already voted, throw an error
+    if (
+      currentVoteRound.playerVotes.some((vote) => vote.playerId === playerId)
+    ) {
+      throw new Error('Player has already voted');
+    }
+    //get the influence
+    const influences = await this.influenceService.listInfluences({
+      where: {
+        id: { in: influenceIds },
+        ownedByPlayerId: playerId,
+      },
+    });
+    if (!influences) {
+      throw new Error('Influences not found');
+    }
+    //ensure all influence is of the same selfPlayerId or type CEO
+    const firstSelfPlayerId = influences.find(
+      (influence) => influence.selfPlayerId,
+    )?.selfPlayerId;
+
+    // Check if all influences are either CEO or have the same selfPlayerId
+    const isAllCeoOrSamePlayerId = influences.every(
+      (influence) =>
+        influence.influenceType === InfluenceType.CEO ||
+        (firstSelfPlayerId && influence.selfPlayerId === firstSelfPlayerId),
+    );
+
+    if (!isAllCeoOrSamePlayerId) {
+      throw new Error(
+        'All influence must be of type CEO or have the same selfPlayerId',
+      );
+    }
+    //create the player vote
+    await this.prisma.executivePlayerVote.create({
+      data: {
+        player: { connect: { id: playerId } },
+        influence: { connect: influenceIds.map((id) => ({ id })) },
+        influenceVoteRound: { connect: { id: currentVoteRound.id } },
+      },
+    });
+    return currentVoteRound;
+  }
+
+  async moveToNextVoter(voteRoundId: string, playerId: string) {
+    //get the current player
+    const player = await this.playerService.getExecutivePlayer({
+      id: playerId,
+    });
+    if (!player) {
+      throw new Error('Player not found');
+    }
+    //get all players
+    const players = await this.playerService.listExecutivePlayers({
+      where: {
+        gameId: player.gameId,
+      },
+    });
+    if (!players) {
+      throw new Error('Players not found');
+    }
+    //get game
+    const gameTurn = await this.gameTurnService.getLatestTurn(player.gameId);
+    if (!gameTurn) {
+      throw new Error('Game turn not found');
+    }
+    const newPlayer = await this.findNewActivePlayer(player, players);
+    if (newPlayer.isCOO) {
+      //we've gone around the table, now resolve the vote
+      await this.startPhase({
+        gameId: player.gameId,
+        gameTurnId: gameTurn.id,
+        phaseName: ExecutivePhaseName.RESOLVE_VOTE,
+      });
+    } else {
+      //update the phase
+      await this.startPhase({
+        gameId: player.gameId,
+        gameTurnId: gameTurn.id,
+        phaseName: ExecutivePhaseName.VOTE,
+        activePlayerId: newPlayer.id,
+      });
+    }
   }
 }

@@ -319,7 +319,13 @@ const Gifts = ({
   );
 };
 
-const PlayerInfluence = ({ playerId }: { playerId: string }) => {
+const PlayerInfluence = ({
+  playerId,
+  isInteractive,
+}: {
+  playerId: string;
+  isInteractive?: boolean;
+}) => {
   const { pingCounter, currentPhase } = useExecutiveGame();
   const {
     data: playerInfluence,
@@ -370,18 +376,49 @@ const PlayerInfluence = ({ playerId }: { playerId: string }) => {
       {Object.entries(groupedPlayerInfluence).map(
         ([selfPlayerId, influences]) => (
           <div key={selfPlayerId} className="flex gap-1">
-            <Influence
-              playerId={selfPlayerId}
-              influenceCount={influences.length}
-            />
+            {isInteractive ? (
+              <ActionWrapper
+                acceptCallback={() => {
+                  return new Promise<void>((resolve) => {
+                    console.log("Influence selected", influences);
+                    resolve(); // Resolve the promise here
+                  });
+                }}
+              >
+                <Influence
+                  playerId={selfPlayerId}
+                  influenceCount={influences.length}
+                />
+              </ActionWrapper>
+            ) : (
+              <Influence
+                playerId={selfPlayerId}
+                influenceCount={influences.length}
+              />
+            )}
           </div>
         )
       )}
       {ceoInfluence.length > 0 && (
         <div className="flex gap-1">
-          <Badge color="success" content={ceoInfluence.length.toString()}>
-            <Avatar name="CEO" size="sm" />
-          </Badge>
+          {isInteractive ? (
+            <ActionWrapper
+              acceptCallback={() => {
+                return new Promise<void>((resolve) => {
+                  console.log("Influence selected", ceoInfluence);
+                  resolve(); // Resolve the promise here
+                });
+              }}
+            >
+              <Badge color="success" content={ceoInfluence.length.toString()}>
+                <Avatar name="CEO" size="sm" />
+              </Badge>
+            </ActionWrapper>
+          ) : (
+            <Badge color="success" content={ceoInfluence.length.toString()}>
+              <Avatar name="CEO" size="sm" />
+            </Badge>
+          )}
         </div>
       )}
     </div>
@@ -687,12 +724,27 @@ export const PlayerTableau = ({ playerId }: { playerId: string }) => {
               />
             </div>
           </div>
-          <div className="relative border-2 border-dotted border-gray-600 rounded-lg p-4">
+          <div
+            className={`relative border-2 border-dotted ${
+              isAuthPlayerAndPhasing &&
+              player.id == authPlayer?.id &&
+              currentPhase?.phaseName == ExecutivePhaseName.VOTE
+                ? "border-success-500"
+                : "border-gray-600"
+            } border-gray-600 rounded-lg p-4`}
+          >
             <div className="absolute -top-3 left-3 bg-white px-2 font-bold text-gray-800 rounded-md">
               INFLUENCE
             </div>
             <div className="flex flex-wrap gap-2 items-center mt-2">
-              <PlayerInfluence playerId={player.id} />
+              <PlayerInfluence
+                playerId={player.id}
+                isInteractive={
+                  isAuthPlayerAndPhasing &&
+                  player.id == authPlayer?.id &&
+                  currentPhase?.phaseName == ExecutivePhaseName.SELECT_TRICK
+                }
+              />
             </div>
           </div>
           <div className="relative border-2 border-dotted border-gray-600 rounded-lg p-4">

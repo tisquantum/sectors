@@ -148,7 +148,7 @@ export class TrpcRouter {
     private readonly executiveInfluenceService: ExecutiveInfluenceService,
     private readonly executiveInfluenceBidService: ExecutiveInfluenceBidService,
     private readonly executivePhaseService: ExecutivePhaseService,
-    private readonly executiveInfluenceVoteRound: ExecutiveInfluenceVoteRoundService,
+    private readonly executiveInfluenceVoteRoundService: ExecutiveInfluenceVoteRoundService,
   ) {}
 
   appRouter = this.trpc.router({
@@ -317,6 +317,7 @@ export class TrpcRouter {
       executiveGameService: this.executiveGameService,
       executiveGameManagementService: this.executiveGameManagementService,
       executiveGameTurnService: this.executiveGameTurnService,
+      executiveInfluenceVoteRoundService: this.executiveInfluenceVoteRoundService,
     }),
     executiveGameTurn: executiveGameTurnRouter(this.trpc, {
       executiveGameTurnService: this.executiveGameTurnService,
@@ -337,7 +338,7 @@ export class TrpcRouter {
       executivePhaseService: this.executivePhaseService,
     }),
     executiveInfluenceVoteRound: executiveInfluenceVoteRoundRouter(this.trpc, {
-      executiveInfluenceVoteRoundService: this.executiveInfluenceVoteRound,
+      executiveInfluenceVoteRoundService: this.executiveInfluenceVoteRoundService,
     }),
   });
 

@@ -4,11 +4,13 @@ import { ExecutiveGameService } from '@server/executive-game/executive-game.serv
 import { ExecutiveGameManagementService } from '@server/executive-game-management/executive-game-management.service';
 import { ExecutiveGameTurnService } from '@server/executive-game-turn/executive-game-turn.service';
 import { TRPCError } from '@trpc/server';
+import { ExecutiveInfluenceVoteRoundService } from '@server/executive-influence-vote-round/executive-influence-vote-round.service';
 
 type Context = {
   executiveGameService: ExecutiveGameService;
   executiveGameManagementService: ExecutiveGameManagementService;
   executiveGameTurnService: ExecutiveGameTurnService;
+  executiveInfluenceVoteRoundService: ExecutiveInfluenceVoteRoundService;
 };
 
 export default (trpc: TrpcService, ctx: Context) =>
@@ -90,10 +92,17 @@ export default (trpc: TrpcService, ctx: Context) =>
         return { success: true };
       }),
     playTrick: trpc.procedure
-      .input(z.object({ playerId: z.string(), cardId: z.string(), gameId: z.string() }))
+      .input(
+        z.object({
+          playerId: z.string(),
+          cardId: z.string(),
+          gameId: z.string(),
+        }),
+      )
       .mutation(async ({ input }) => {
         const { playerId, cardId, gameId } = input;
-        const currentTurn = await ctx.executiveGameTurnService.getLatestTurn(gameId);
+        const currentTurn =
+          await ctx.executiveGameTurnService.getLatestTurn(gameId);
         if (!currentTurn) {
           throw new TRPCError({
             code: 'NOT_FOUND',
@@ -103,8 +112,21 @@ export default (trpc: TrpcService, ctx: Context) =>
         await ctx.executiveGameManagementService.playCardIntoTrick(
           cardId,
           playerId,
-          currentTurn.id
+          currentTurn.id,
         );
+        return { success: true };
+      }),
+      createPlayerVoteRound: trpc.procedure
+      .input(
+        z.object({
+          playerId: z.string(),
+          influenceIds: z.array(z.string()),
+        }),
+      )
+      .mutation(async ({ input }) => {
+        const { playerId, influenceIds } = input;
+        const voteRound = await ctx.executiveGameManagementService.createPlayerVote(influenceIds, playerId);
+        await ctx.executiveGameManagementService.moveToNextVoter(voteRound.id);
         return { success: true };
       }),
   });
