@@ -2,10 +2,13 @@ import { z } from 'zod';
 import { TrpcService } from '../trpc.service';
 import { ExecutiveGameService } from '@server/executive-game/executive-game.service';
 import { ExecutiveGameManagementService } from '@server/executive-game-management/executive-game-management.service';
+import { ExecutiveGameTurnService } from '@server/executive-game-turn/executive-game-turn.service';
+import { TRPCError } from '@trpc/server';
 
 type Context = {
   executiveGameService: ExecutiveGameService;
   executiveGameManagementService: ExecutiveGameManagementService;
+  executiveGameTurnService: ExecutiveGameTurnService;
 };
 
 export default (trpc: TrpcService, ctx: Context) =>
@@ -84,6 +87,24 @@ export default (trpc: TrpcService, ctx: Context) =>
         // await ctx.executiveGameManagementService.selectInfluenceBid(
         //   influenceBidId,
         // );
+        return { success: true };
+      }),
+    playTrick: trpc.procedure
+      .input(z.object({ playerId: z.string(), cardId: z.string(), gameId: z.string() }))
+      .mutation(async ({ input }) => {
+        const { playerId, cardId, gameId } = input;
+        const currentTurn = await ctx.executiveGameTurnService.getLatestTurn(gameId);
+        if (!currentTurn) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'No turn found',
+          });
+        }
+        await ctx.executiveGameManagementService.playCardIntoTrick(
+          cardId,
+          playerId,
+          currentTurn.id
+        );
         return { success: true };
       }),
   });

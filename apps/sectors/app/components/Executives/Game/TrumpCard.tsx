@@ -2,9 +2,10 @@ import { trpc } from "@sectors/app/trpc";
 import PlayingCard from "./Card";
 import { useExecutiveGame } from "./GameContext";
 import { CardLocation } from "@server/prisma/prisma.client";
+import { useEffect } from "react";
 
 export const TrumpCard = () => {
-  const { gameId } = useExecutiveGame();
+  const { gameId, currentPhase, pingCounter } = useExecutiveGame();
   const {
     data: trumpCard,
     isLoading,
@@ -16,6 +17,9 @@ export const TrumpCard = () => {
       cardLocation: CardLocation.TRUMP,
     },
   });
+  useEffect(() => {
+    refetch();
+  }, [pingCounter, currentPhase?.id]);
   if (isLoading) {
     return <div>Loading...</div>;
   }

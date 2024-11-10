@@ -55,7 +55,7 @@ const PlayerAvatar = ({
         className={tooltipStyle}
         content={player.nickname}
       >
-        <div className="flex items-center cursor-pointer">
+        <div className="flex items-center">
           {badgeContent ? (
             <Badge color="secondary" content={badgeContent}>
               <Avatar

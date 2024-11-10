@@ -2,9 +2,10 @@ import { trpc } from "@sectors/app/trpc";
 import { useExecutiveGame } from "./GameContext";
 import { InfluenceLocation, InfluenceType } from "@server/prisma/prisma.client";
 import { Avatar, Badge } from "@nextui-org/react";
+import { useEffect } from "react";
 
 export const CeoInfluence = () => {
-  const { gameId } = useExecutiveGame();
+  const { gameId, pingCounter, currentPhase } = useExecutiveGame();
   const {
     data: ceoInfluence,
     isLoading,
@@ -17,6 +18,9 @@ export const CeoInfluence = () => {
       influenceLocation: InfluenceLocation.CEO,
     },
   });
+  useEffect(() => {
+    refetch();
+  }, [pingCounter, currentPhase?.id]);
   if (isLoading) {
     return <div>Loading...</div>;
   }

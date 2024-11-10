@@ -87,6 +87,14 @@ export class ExecutiveCardService {
     });
   }
 
+  async findExecutiveCard(
+    where: Prisma.ExecutiveCardWhereInput,
+  ): Promise<ExecutiveCard | null> {
+    return this.prisma.executiveCard.findFirst({
+      where,
+    });
+  }
+
   // Helper function to list ExecutiveCards with filtering, pagination, and sorting
   async listExecutiveCards(params: {
     skip?: number;
@@ -187,6 +195,43 @@ export class ExecutiveCardService {
   ): Promise<ExecutiveCard> {
     return this.prisma.executiveCard.delete({
       where,
+    });
+  }
+
+  /**
+   *
+   *
+   * @param bribePlayerId  //the player who OWNS the bribe card
+   * @param giftPlayerId  // the player who has bid influence been selected by the bribe owner
+   * @param isLocked
+   * @returns
+   */
+  async exchangeBribe(
+    bribePlayerId: string,
+    giftPlayerId: string,
+    isLocked: boolean,
+  ): Promise<ExecutiveCard> {
+    //get gift card from player
+    const bribeCard = await this.prisma.executiveCard.findFirst({
+      where: {
+        playerId: bribePlayerId,
+        cardLocation: CardLocation.BRIBE,
+      },
+    });
+    //if no gift card throw error
+    if (!bribeCard) {
+      throw new Error('No gift card found');
+    }
+    //move the bribe card to the other player as a gift
+    return this.prisma.executiveCard.update({
+      where: {
+        id: bribeCard.id,
+      },
+      data: {
+        playerId: giftPlayerId,
+        cardLocation: CardLocation.GIFT,
+        isLocked,
+      },
     });
   }
 }

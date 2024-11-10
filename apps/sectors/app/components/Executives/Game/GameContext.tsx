@@ -1,6 +1,12 @@
 "use client";
 
-import { createContext, ReactNode, useContext, useEffect } from "react";
+import {
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import { useAuthUser } from "../../AuthUser.context";
 import { usePusherSubscription } from "@sectors/app/hooks/pusher";
 import {
@@ -30,6 +36,7 @@ interface GameContextProps {
   socketChannel: PusherTypes.Channel | null;
   refetchAuthPlayer: () => void;
   currentTurn: ExecutiveGameTurnWithRelations;
+  pingCounter: number;
 }
 
 const GameContext = createContext<GameContextProps | undefined>(undefined);
@@ -47,7 +54,9 @@ export const GameProvider: React.FC<{
   children: ReactNode;
 }> = ({ gameId, children }) => {
   const { user } = useAuthUser();
+  const [isAuthPlayerPhasing, setIsAuthPlayerPhasing] = useState(false);
   const channel = usePusherSubscription(gameId);
+  const [pingCounter, setPingCounter] = useState(0);
   const {
     data: gameState,
     refetch: refetchGameState,
@@ -86,20 +95,27 @@ export const GameProvider: React.FC<{
     const handleNewPhase = (phaseName: ExecutivePhaseName) => {
       refetchGameState();
       refetchAuthPlayer();
-      if (
-        phaseName == ExecutivePhaseName.START_TURN ||
-        phaseName == ExecutivePhaseName.END_TURN
-      ) {
-        refetchCurrentTurn();
-      }
+      refetchCurrentPhase();
+      refetchCurrentTurn();
     };
 
     const handleGameEnded = () => {
       refetchGameState();
     };
 
-    channel.bind(EVENT_EXECUTIVE_NEW_PHASE, handleNewPhase);
-    channel.bind(EVENT_PING_PLAYERS, handleNewPhase);
+    channel.bind(
+      EVENT_EXECUTIVE_NEW_PHASE,
+      ({ phaseName }: { phaseName: ExecutivePhaseName }) => {
+        console.log("New phase", phaseName);
+        handleNewPhase(phaseName);
+      }
+    );
+    channel.bind(EVENT_PING_PLAYERS, () => {
+      if (currentPhase?.phaseName) {
+        handleNewPhase(currentPhase.phaseName);
+      }
+      setPingCounter((prev) => prev + 1);
+    });
 
     return () => {
       channel.unbind(EVENT_EXECUTIVE_NEW_PHASE, handleNewPhase);
@@ -110,6 +126,13 @@ export const GameProvider: React.FC<{
     refetchCurrentPhase();
   }, [gameState?.phases.length]);
 
+  useEffect(() => {
+    if (!currentPhase) {
+      return;
+    }
+    setIsAuthPlayerPhasing(player?.id === currentPhase?.activePlayerId);
+  }, [currentPhase?.id, player]);
+
   if (isLoading || currentTurnIsLoading) {
     return <div>Loading...</div>;
   }
@@ -118,7 +141,6 @@ export const GameProvider: React.FC<{
   }
   if (isError || gameStateIsError) return <div>Error...</div>;
   if (player === undefined || !gameState) return null;
-  const isAuthPlayerPhasing = player.id === currentPhase?.activePlayerId;
   return (
     <GameContext.Provider
       value={{
@@ -130,6 +152,7 @@ export const GameProvider: React.FC<{
         currentPhase,
         currentTurn,
         isAuthPlayerPhasing,
+        pingCounter,
       }}
     >
       {children}

@@ -7,6 +7,7 @@ import {
   ExecutiveInfluenceBid,
   InfluenceLocation,
 } from '@prisma/client';
+import { RELATIONSHIP_TRACK_LENGTH } from '@server/data/executive_constants';
 
 @Injectable()
 export class ExecutiveInfluenceService {
@@ -93,6 +94,7 @@ export class ExecutiveInfluenceService {
   async moveInfluenceBidToPlayer(
     executiveInfluenceBid: ExecutiveInfluenceBid,
     targetLocation: InfluenceLocation,
+    isBidLocked: boolean,
   ) {
     if (
       targetLocation != InfluenceLocation.OWNED_BY_PLAYER &&
@@ -101,12 +103,61 @@ export class ExecutiveInfluenceService {
       throw new Error('Invalid target location');
     }
 
-    const influenceBids = await this.prisma.influenceBid.findMany({
+    let influenceBids = await this.prisma.influenceBid.findMany({
       where: {
         executiveInfluenceBidId: executiveInfluenceBid.id,
       },
     });
 
+    if (isBidLocked) {
+      const halfLength = Math.floor(influenceBids.length / 2);
+
+      // Split the influence bids into two parts
+      const selectedInfluenceBids = influenceBids.slice(0, halfLength);
+      const remainingInfluenceBids = influenceBids.slice(halfLength);
+
+      // Update the influence bids that are being moved back to the player
+      await this.prisma.influence.updateMany({
+        where: {
+          id: {
+            in: remainingInfluenceBids.map(
+              (influenceBid) => influenceBid.influenceId,
+            ),
+          },
+        },
+        data: {
+          ownedByPlayerId: executiveInfluenceBid.fromPlayerId,
+          influenceLocation: InfluenceLocation.OF_PLAYER,
+        },
+      });
+
+      // Update `influenceBids` to only include the selected bids
+      influenceBids = selectedInfluenceBids;
+    }
+
+    if (
+      targetLocation == InfluenceLocation.RELATIONSHIP &&
+      influenceBids.length > RELATIONSHIP_TRACK_LENGTH
+    ) {
+      //the remaining influence will be moved to OWNED_BY_PLAYER
+      const remainingInfluenceBids = influenceBids.slice(
+        RELATIONSHIP_TRACK_LENGTH,
+      );
+      await this.prisma.influence.updateMany({
+        where: {
+          id: {
+            in: remainingInfluenceBids.map(
+              (influenceBid) => influenceBid.influenceId,
+            ),
+          },
+        },
+        data: {
+          ownedByPlayerId: executiveInfluenceBid.toPlayerId,
+          influenceLocation: InfluenceLocation.OWNED_BY_PLAYER,
+        },
+      });
+      influenceBids = influenceBids.slice(0, RELATIONSHIP_TRACK_LENGTH);
+    }
     //update all influence with new player owner
     await this.prisma.influence.updateMany({
       where: {
@@ -130,12 +181,25 @@ export class ExecutiveInfluenceService {
       },
     });
 
+    await this.moveInfluenceBackToOwningPlayers(
+      executiveInfluenceBid.executiveGameTurnId,
+      executiveInfluenceBid.toPlayerId,
+    );
+  }
+
+  async moveInfluenceBackToOwningPlayers(
+    executiveGameTurnId: string,
+    toPlayerId: string,
+  ) {
     //Get all other influence bids that have toPlayer, gameId and are not selected
     const otherBids = await this.prisma.executiveInfluenceBid.findMany({
       where: {
-        executiveGameTurnId: executiveInfluenceBid.executiveGameTurnId,
-        toPlayerId: executiveInfluenceBid.toPlayerId,
+        executiveGameTurnId: executiveGameTurnId,
+        toPlayerId: toPlayerId,
         isSelected: false,
+      },
+      include: {
+        influenceBids: true,
       },
     });
 
@@ -144,7 +208,9 @@ export class ExecutiveInfluenceService {
       return this.prisma.influence.updateMany({
         where: {
           id: {
-            in: influenceBids.map((influenceBid) => influenceBid.influenceId),
+            in: bid.influenceBids.map(
+              (influenceBid) => influenceBid.influenceId,
+            ),
           },
         },
         data: {
@@ -153,6 +219,6 @@ export class ExecutiveInfluenceService {
         },
       });
     });
-    Promise.all(influencePromises);
+    return Promise.all(influencePromises);
   }
 }

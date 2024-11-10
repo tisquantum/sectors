@@ -4,11 +4,14 @@ import { ExecutiveInfluenceService } from '@server/executive-influence/executive
 import { ExecutivePhaseName, InfluenceLocation } from '@prisma/client';
 import { ExecutiveInfluenceBidService } from '@server/executive-influence-bid/executive-influence-bid.service';
 import { ExecutiveGameManagementService } from '@server/executive-game-management/executive-game-management.service';
+import { TRPCError } from '@trpc/server';
+import { ExecutiveCardService } from '@server/executive-card/executive-card.service';
 
 type Context = {
   executiveInfluenceService: ExecutiveInfluenceService;
   executiveInfluenceBidService: ExecutiveInfluenceBidService;
   executiveGameManagementService: ExecutiveGameManagementService;
+  executiveCardService: ExecutiveCardService,
 };
 
 export default (trpc: TrpcService, ctx: Context) =>
@@ -76,30 +79,99 @@ export default (trpc: TrpcService, ctx: Context) =>
         z.object({
           executiveInfluenceBidId: z.string(),
           targetLocation: z.nativeEnum(InfluenceLocation),
+          isBidLocked: z.boolean(),
         }),
       )
       .mutation(async ({ input }) => {
-        const { executiveInfluenceBidId, targetLocation } = input;
+        const { executiveInfluenceBidId, targetLocation, isBidLocked } = input;
         const executiveInfluenceBid =
           await ctx.executiveInfluenceBidService.getExecutiveInfluenceBid({
             id: executiveInfluenceBidId,
           });
-
+        console.log('executiveInfluenceBid', executiveInfluenceBid);
         if (!executiveInfluenceBid) {
           throw new Error('Executive Influence Bid not found');
         }
-
-        await ctx.executiveInfluenceService.moveInfluenceBidToPlayer(
-          executiveInfluenceBid,
-          targetLocation,
-        );
-        const executiveBid = await ctx.executiveInfluenceBidService.getExecutiveInfluenceBid({
-          id: executiveInfluenceBidId,
-        });
-        if (!executiveBid) {
-          throw new Error('Executive Influence Bid not found');
+        try {
+          await ctx.executiveInfluenceService.moveInfluenceBidToPlayer(
+            executiveInfluenceBid,
+            targetLocation,
+            isBidLocked
+          );
+        } catch (error) {
+          console.error('moveInfluenceBidToPlayer error', error);
+          throw new TRPCError(error);
         }
-        await ctx.executiveGameManagementService.nextPhase(executiveBid.gameId, executiveBid.executiveGameTurnId, ExecutivePhaseName.INFLUENCE_BID_SELECTION);
+        console.log('executiveInfluenceBid', executiveInfluenceBid);
+        //exchange the bribe card and move gifts for player
+        try {
+          await ctx.executiveCardService.exchangeBribe(
+            executiveInfluenceBid.toPlayerId,
+            executiveInfluenceBid.fromPlayerId,
+            isBidLocked,
+          );
+        } catch (error) {
+          console.error('exchangeBribe error', error);
+          throw new TRPCError(error);
+        }
+        
+        let executiveBid;
+        try {
+          executiveBid =
+            await ctx.executiveInfluenceBidService.getExecutiveInfluenceBid({
+              id: executiveInfluenceBidId,
+            });
+        } catch (error) {
+          console.error('getExecutiveInfluenceBid error', error);
+          throw new TRPCError(error);
+        }
+        if (!executiveBid) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Executive Influence Bid not found',
+          });
+        }
+        try {
+          await ctx.executiveGameManagementService.startPhase(
+            executiveBid.gameId,
+            executiveBid.executiveGameTurnId,
+            ExecutivePhaseName.INFLUENCE_BID_SELECTION,
+          );
+        } catch (error) {
+          console.error('nextPhase error', error);
+          throw new TRPCError(error);
+        }
+        return { success: true };
+      }),
+    takeNoInfluenceBid: trpc.procedure
+      .input(
+        z.object({
+          gameId: z.string(),
+          gameTurnId: z.string(),
+          toPlayerId: z.string(),
+        }),
+      )
+      .mutation(async ({ input }) => {
+        const { gameId, gameTurnId, toPlayerId } = input;
+        try {
+          await ctx.executiveInfluenceService.moveInfluenceBackToOwningPlayers(
+            gameTurnId,
+            toPlayerId
+          );
+        } catch (error) {
+          console.error('moveInfluenceBackToOwningPlayers error', error);
+          throw new TRPCError(error);
+        }
+        try {
+          await ctx.executiveGameManagementService.startPhase(
+            gameId,
+            gameTurnId,
+            ExecutivePhaseName.INFLUENCE_BID_SELECTION,
+          );
+        } catch (error) {
+          console.error('nextPhase error', error);
+          throw new TRPCError(error);
+        }
         return { success: true };
       }),
   });

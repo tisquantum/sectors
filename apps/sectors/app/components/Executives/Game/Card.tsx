@@ -1,5 +1,5 @@
 import { Avatar } from "@nextui-org/react";
-import { RiLock2Fill, RiLockFill } from "@remixicon/react";
+import { RiLock2Fill } from "@remixicon/react";
 import { CardSuit } from "@server/prisma/prisma.client";
 import { ClubIcon, DiamondIcon, HeartIcon, SpadeIcon } from "lucide-react";
 
@@ -7,10 +7,12 @@ const PlayingCard = ({
   cardNumber,
   cardSuit,
   isLocked,
+  isBordered
 }: {
   cardNumber: number;
   cardSuit: CardSuit;
   isLocked?: boolean;
+  isBordered?: boolean;
 }) => {
   const renderColorBySuit = (cardSuit: CardSuit) => {
     switch (cardSuit) {
@@ -42,6 +44,7 @@ const PlayingCard = ({
   };
   return (
     <Avatar
+      isBordered={isBordered}
       radius="md"
       size="lg"
       color={renderColorBySuit(cardSuit)}

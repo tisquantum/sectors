@@ -60,6 +60,7 @@ import {
   StockSubRound,
   Transaction,
   TransactionsOnShares,
+  TrickCard,
   User,
 } from '@prisma/client';
 
@@ -409,9 +410,17 @@ export type ExecutiveInfluenceBidWithRelations = ExecutiveInfluenceBid & {
   influenceBids: InfluenceBidWithInfluence[];
 };
 
+export type TrickCardWithRelations = TrickCard & {
+  card: ExecutiveCard;
+};
+
+export type ExecutiveTrickWithRelations = ExecutiveTrick & {
+  trickCards: TrickCardWithRelations[];
+};
+
 export type ExecutiveGameTurnWithRelations = ExecutiveGameTurn & {
   phases: ExecutivePhase[];
-  tricks: ExecutiveTrick[];
+  tricks: ExecutiveTrickWithRelations[];
   influenceBids: ExecutiveInfluenceBid[];
   influenceVotes: ExecutiveInfluenceVote[];
   playerPasses: ExecutivePlayerPass[];

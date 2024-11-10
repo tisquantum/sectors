@@ -40,7 +40,15 @@ export class ExecutiveGameTurnService {
       orderBy,
       include: {
         phases: true,
-        tricks: true,
+        tricks: {
+          include: {
+            trickCards: {
+              include: {
+                card: true,
+              },
+            },
+          },
+        },
         influenceBids: true,
         influenceVotes: true,
         playerPasses: true,
@@ -98,7 +106,15 @@ export class ExecutiveGameTurnService {
       include: {
         game: true,
         phases: true,
-        tricks: true,
+        tricks: {
+          include: {
+            trickCards: {
+              include: {
+                card: true,
+              },
+            },
+          },
+        },
         influenceBids: true,
         influenceVotes: true,
         playerPasses: true,

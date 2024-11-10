@@ -5,9 +5,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@nextui-org/react";
 import { CardList } from "./CardList";
 import { useExecutiveGame } from "./GameContext";
 import { ExecutiveCard } from "@server/prisma/prisma.client";
+import { useEffect } from "react";
 
 export const Deck = () => {
-  const { gameId } = useExecutiveGame();
+  const { gameId, pingCounter } = useExecutiveGame();
   const {
     data: deck,
     isLoading,
@@ -16,6 +17,9 @@ export const Deck = () => {
   } = trpc.executiveCard.getDeck.useQuery({
     gameId,
   });
+  useEffect(() => {
+    refetch();
+  }, [pingCounter]);
   if (isLoading) {
     return <div>Loading...</div>;
   }

@@ -63,6 +63,16 @@ export function friendlyPhaseName(phaseName: ExecutivePhaseName | undefined): {
         name: "Resolve Leadership",
         description: "Leadership decisions are resolved.",
       };
+    case ExecutivePhaseName.START_TRICK:
+      return {
+        name: "Start Trick",
+        description: "The start of a new trick for all players.",
+      };
+    case ExecutivePhaseName.SELECT_TRICK:
+      return {
+        name: "Select Trick",
+        description: "Players select a card to play for the current trick.",
+      };
     case ExecutivePhaseName.RESOLVE_TRICK:
       return {
         name: "Resolve Trick",
@@ -94,5 +104,19 @@ export function friendlyPhaseName(phaseName: ExecutivePhaseName | undefined): {
         name: "Unknown Phase",
         description: "The current phase is not recognized.",
       };
+  }
+}
+
+export function turnPhaseDisplayTrump(phaseName: ExecutivePhaseName): boolean {
+  switch (phaseName) {
+    case ExecutivePhaseName.START_TRICK:
+    case ExecutivePhaseName.SELECT_TRICK:
+    case ExecutivePhaseName.RESOLVE_TRICK:
+    case ExecutivePhaseName.REVEAL_TRUMP:
+    case ExecutivePhaseName.REVEAL_TRICK:
+    case ExecutivePhaseName.END_TURN:
+      return true;
+    default:
+      return false;
   }
 }
