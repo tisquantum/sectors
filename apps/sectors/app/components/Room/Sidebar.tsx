@@ -192,7 +192,6 @@ const Sidebar: React.FC<SidebarProps> = ({
             {room.game.length == 0 && (
               <Tabs
                 onSelectionChange={(key) => {
-                  console.log("key", key);
                   setIsSectorsGame(key == "sectors");
                 }}
               >
