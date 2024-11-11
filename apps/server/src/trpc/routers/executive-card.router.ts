@@ -20,6 +20,17 @@ export default (trpc: TrpcService, ctx: Context) =>
         return deck;
       }),
 
+    getDeckCardCount: trpc.procedure
+      .input(z.object({ gameId: z.string() }))
+      .query(async ({ input }) => {
+        const { gameId } = input;
+        const deck = await ctx.executiveCardService.getDeckCardCount(gameId);
+        if (!deck) {
+          throw new Error('Deck not found');
+        }
+        return deck;
+      }),
+
     // Retrieve a specific ExecutiveCard by unique input
     getExecutiveCard: trpc.procedure
       .input(z.object({ id: z.string() }))

@@ -16,6 +16,15 @@ export class ExecutiveCardService {
     });
   }
 
+  async getDeckCardCount(gameId: string): Promise<number> {
+    return this.prisma.executiveCard.count({
+      where: {
+        gameId,
+        cardLocation: CardLocation.DECK,
+      },
+    });
+  }
+
   /**
    * Create a deck with four ranks of 1-10
    * @param gameId

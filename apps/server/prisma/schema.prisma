@@ -1302,6 +1302,7 @@ model ExecutiveInfluenceVoteRound {
   updatedAt           DateTime              @updatedAt
   ExecutiveGameTurn   ExecutiveGameTurn?    @relation(fields: [executiveGameTurnId], references: [id])
   executiveGameTurnId String?               @db.Uuid
+  VoteMarker          VoteMarker[]
 }
 
 model ExecutivePlayerVote {
@@ -1388,16 +1389,18 @@ model ExecutivePlayer {
 }
 
 model VoteMarker {
-  id             String           @id @default(uuid()) @db.Uuid
-  gameId         String           @db.Uuid
-  owningPlayerId String           @db.Uuid
-  game           ExecutiveGame    @relation(fields: [gameId], references: [id])
-  owningPlayer   ExecutivePlayer  @relation("owningPlayer", fields: [owningPlayerId], references: [id])
-  votedPlayedId  String?          @db.Uuid
-  votedPlayer    ExecutivePlayer? @relation("votedPlayer", fields: [votedPlayedId], references: [id])
-  isCeo          Boolean          @default(false)
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  id                   String                       @id @default(uuid()) @db.Uuid
+  gameId               String                       @db.Uuid
+  owningPlayerId       String                       @db.Uuid
+  game                 ExecutiveGame                @relation(fields: [gameId], references: [id])
+  owningPlayer         ExecutivePlayer              @relation("owningPlayer", fields: [owningPlayerId], references: [id])
+  votedPlayedId        String?                      @db.Uuid
+  votedPlayer          ExecutivePlayer?             @relation("votedPlayer", fields: [votedPlayedId], references: [id])
+  isCeo                Boolean                      @default(false)
+  createdAt            DateTime                     @default(now())
+  updatedAt            DateTime                     @updatedAt
+  influenceVoteRoundId String?                      @db.Uuid
+  influenceVoteRound   ExecutiveInfluenceVoteRound? @relation(fields: [influenceVoteRoundId], references: [id])
 }
 
 model ExecutiveAgenda {

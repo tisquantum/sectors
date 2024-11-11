@@ -102,7 +102,7 @@ export function friendlyPhaseName(phaseName: ExecutivePhaseName | undefined): {
       return {
         name: "Vote",
         description:
-          "Players cast their votes on the current agenda or action.",
+          "Select influence to use to create a vote concensus.  The player or ceo with the most influence will win the vote.",
       };
     default:
       return {

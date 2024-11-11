@@ -2,6 +2,7 @@
 import {
   CardLocation,
   CardSuit,
+  ExecutiveCard,
   ExecutivePhaseName,
   InfluenceLocation,
   InfluenceType,
@@ -32,6 +33,7 @@ import { PlayerPassed } from "../Player/PlayerPassed";
 import { toast } from "sonner";
 import { RiLock2Fill, RiLockUnlockFill } from "@remixicon/react";
 import { TakeNoBid } from "../Player/TakeNoBid";
+import { Votes } from "../Player/Votes";
 
 //TODO: Add green border to active area on tableau
 const InfluenceBids = ({
@@ -238,7 +240,6 @@ const Relationships = ({ playerId }: { playerId: string }) => {
     </div>
   );
 };
-
 const Gifts = ({
   playerId,
   isInteractive,
@@ -275,7 +276,7 @@ const Gifts = ({
     return <div>No gifts.</div>;
   }
   return (
-    <div>
+    <div className="pt-2 flex flex-wrap gap-2">
       {playerGifts.map((gift) => (
         <>
           {isInteractive && !!!gift.isLocked ? (
@@ -387,7 +388,7 @@ const PlayerInfluence = ({
                       {
                         influenceIds: influences.map(
                           (influence) => influence.id
-                        ),
+                        ).splice(0, influenceToSubmit),
                         playerId,
                       },
                       {
@@ -414,10 +415,12 @@ const PlayerInfluence = ({
                   />
                 }
               >
-                <Influence
-                  playerId={selfPlayerId}
-                  influenceCount={influences.length}
-                />
+                <div className="cursor-pointer">
+                  <Influence
+                    playerId={selfPlayerId}
+                    influenceCount={influences.length}
+                  />
+                </div>
               </ActionWrapper>
             ) : (
               <Influence
@@ -464,9 +467,11 @@ const PlayerInfluence = ({
                 />
               }
             >
-              <Badge color="success" content={ceoInfluence.length.toString()}>
-                <Avatar name="CEO" size="sm" />
-              </Badge>
+              <div className="cursor-pointer">
+                <Badge color="success" content={ceoInfluence.length.toString()}>
+                  <Avatar name="CEO" size="sm" />
+                </Badge>
+              </div>
             </ActionWrapper>
           ) : (
             <Badge color="success" content={ceoInfluence.length.toString()}>
@@ -710,12 +715,14 @@ export const PlayerTableau = ({ playerId }: { playerId: string }) => {
                 BRIBE
               </div>
               <div className="pt-2">
-                <Bribe
-                  playerId={player.id}
-                  isInteractive={
-                    isAuthPlayerPhasing && player.id != authPlayer?.id
-                  }
-                />
+                {player.id && (
+                  <Bribe
+                    playerId={player.id}
+                    isInteractive={
+                      isAuthPlayerPhasing && player.id != authPlayer?.id
+                    }
+                  />
+                )}
               </div>
             </div>
             {/* HAND Section */}
@@ -732,14 +739,16 @@ export const PlayerTableau = ({ playerId }: { playerId: string }) => {
                 HAND
               </div>
               <div className="pt-2">
-                <Hand
-                  playerId={player.id}
-                  isInteractive={
-                    isAuthPlayerAndPhasing &&
-                    player.id == authPlayer?.id &&
-                    currentPhase?.phaseName == ExecutivePhaseName.SELECT_TRICK
-                  }
-                />
+                {player.id && (
+                  <Hand
+                    playerId={player.id}
+                    isInteractive={
+                      isAuthPlayerAndPhasing &&
+                      player.id == authPlayer?.id &&
+                      currentPhase?.phaseName == ExecutivePhaseName.SELECT_TRICK
+                    }
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -768,14 +777,16 @@ export const PlayerTableau = ({ playerId }: { playerId: string }) => {
               GIFTS
             </div>
             <div className="flex flex-wrap gap-1">
-              <Gifts
-                playerId={player.id}
-                isInteractive={
-                  isAuthPlayerAndPhasing &&
-                  player.id == authPlayer?.id &&
-                  currentPhase?.phaseName == ExecutivePhaseName.SELECT_TRICK
-                }
-              />
+              {player.id && (
+                <Gifts
+                  playerId={player.id}
+                  isInteractive={
+                    isAuthPlayerAndPhasing &&
+                    player.id == authPlayer?.id &&
+                    currentPhase?.phaseName == ExecutivePhaseName.SELECT_TRICK
+                  }
+                />
+              )}
             </div>
           </div>
           <div
@@ -796,7 +807,7 @@ export const PlayerTableau = ({ playerId }: { playerId: string }) => {
                 isInteractive={
                   isAuthPlayerAndPhasing &&
                   player.id == authPlayer?.id &&
-                  currentPhase?.phaseName == ExecutivePhaseName.SELECT_TRICK
+                  currentPhase?.phaseName == ExecutivePhaseName.VOTE
                 }
               />
             </div>
@@ -806,7 +817,7 @@ export const PlayerTableau = ({ playerId }: { playerId: string }) => {
               VOTES
             </div>
             <div className="flex flex-wrap gap-2 items-center mt-2">
-              <Votes />
+              <Votes gameId={gameState.id} />
             </div>
           </div>
         </div>

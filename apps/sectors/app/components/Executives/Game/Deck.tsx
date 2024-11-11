@@ -10,11 +10,11 @@ import { useEffect } from "react";
 export const Deck = () => {
   const { gameId, pingCounter, currentPhase } = useExecutiveGame();
   const {
-    data: deck,
+    data: deckCount,
     isLoading,
     isError,
     refetch,
-  } = trpc.executiveCard.getDeck.useQuery({
+  } = trpc.executiveCard.getDeckCardCount.useQuery({
     gameId,
   });
   useEffect(() => {
@@ -26,10 +26,10 @@ export const Deck = () => {
   if (isError) {
     return <div>Error</div>;
   }
-  if (!deck) {
+  if (!deckCount) {
     return <div>No deck found</div>;
   }
-  if (deck.length === 0) {
+  if (deckCount === 0) {
     return (
       <div className="relative border-2 border-dotted border-gray-600 rounded-lg p-4">
         <div className="absolute -top-3 left-3 bg-white px-2 font-bold text-gray-800 rounded-md">
@@ -39,30 +39,30 @@ export const Deck = () => {
     );
   }
   //sort deck by cardValue and cardSuit
-  deck.sort((a: ExecutiveCard, b: ExecutiveCard) => {
-    //sort by suit first
-    if (a.cardSuit < b.cardSuit) return -1;
-    if (a.cardSuit > b.cardSuit) return 1;
-    //then sort by value
-    if (a.cardValue < b.cardValue) return -1;
-    if (a.cardValue > b.cardValue) return 1;
-    return 0;
-  });
+  // deck.sort((a: ExecutiveCard, b: ExecutiveCard) => {
+  //   //sort by suit first
+  //   if (a.cardSuit < b.cardSuit) return -1;
+  //   if (a.cardSuit > b.cardSuit) return 1;
+  //   //then sort by value
+  //   if (a.cardValue < b.cardValue) return -1;
+  //   if (a.cardValue > b.cardValue) return 1;
+  //   return 0;
+  // });
   return (
     <div className="relative border-2 border-dotted border-gray-600 rounded-lg p-4">
       <div className="absolute -top-3 left-3 bg-white px-2 font-bold text-gray-800 rounded-md">
         DECK
       </div>
-      <Popover triggerType="grid" backdrop="blur">
-        <PopoverTrigger>
-          <div>
-            <CardStack cards={deck.length} />
-          </div>
-        </PopoverTrigger>
+      {/* <Popover triggerType="grid" backdrop="blur">
+        <PopoverTrigger> */}
+      <div className="pt-2">
+        <CardStack cards={deckCount} />
+      </div>
+      {/* </PopoverTrigger>
         <PopoverContent>
           <CardList cards={deck} isGrid />
         </PopoverContent>
-      </Popover>
+      </Popover> */}
     </div>
   );
 };

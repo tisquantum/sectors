@@ -10,6 +10,7 @@ import { Tricks } from "./Tricks";
 import { TrickHistory } from "./TrickHistory";
 import { ExecutivePhaseName } from "@server/prisma/prisma.client";
 import { Popover, PopoverContent, PopoverTrigger } from "@nextui-org/react";
+import { RoundVotes } from "./RoundVotes";
 
 const GameBoard = ({ gameId }: { gameId: string }) => {
   const { gameState, authPlayer, currentPhase, currentTurn } =
@@ -73,8 +74,11 @@ const GameBoard = ({ gameId }: { gameId: string }) => {
           </div>
           <div className="flex flex-row gap-2 items-center justify-center">
             <Deck />
-            {(authPlayer.isGeneralCounsel ||
-              turnPhaseDisplayTrump(currentPhase.phaseName)) && <TrumpCard />}
+            {gameId &&
+              (authPlayer.isGeneralCounsel ||
+                turnPhaseDisplayTrump(currentPhase.phaseName)) && (
+                <TrumpCard gameId={gameId} />
+              )}
             <CeoInfluence />
             <div className="flex flex-col gap-1 items-center justify-center">
               {turnPhaseDisplayTrump(currentPhase.phaseName) && (
@@ -88,7 +92,7 @@ const GameBoard = ({ gameId }: { gameId: string }) => {
                   <div className="absolute -top-3 left-3 bg-white px-2 font-bold text-gray-800 rounded-md">
                     TRICKS
                   </div>
-                  <Tricks gameTurn={currentTurn} />
+                  {currentTurn && <Tricks gameTurn={currentTurn} />}
                 </div>
               )}
               <Popover>
@@ -101,6 +105,21 @@ const GameBoard = ({ gameId }: { gameId: string }) => {
                   <TrickHistory gameId={gameId} />
                 </PopoverContent>
               </Popover>
+            </div>
+
+            <div className="flex items-center justify-center">
+              <div
+                className={`relative border-2 border-dotted  ${
+                  currentPhase?.phaseName == ExecutivePhaseName.VOTE
+                    ? "border-success-500"
+                    : "border-gray-600"
+                } rounded-lg p-4`}
+              >
+                <div className="absolute -top-3 left-3 bg-white px-2 font-bold text-gray-800 rounded-md">
+                  VOTES
+                </div>
+                {gameId && <RoundVotes gameId={gameId} />}
+              </div>
             </div>
           </div>
           <div className="flex items-center justify-center">

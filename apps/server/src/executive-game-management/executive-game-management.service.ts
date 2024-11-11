@@ -109,7 +109,6 @@ export class ExecutiveGameManagementService {
       case ExecutivePhaseName.START_VOTE:
         await this.createVoteRound(gameTurn.gameId, gameTurn.id);
         await this.selectInitialVoter(gameTurn.gameId, gameTurn.id);
-        await this.nextPhase(gameTurn.gameId, gameTurn.id, phaseName);
         break;
       case ExecutivePhaseName.RESOLVE_VOTE:
         await this.resolveVote(gameTurn.id);
