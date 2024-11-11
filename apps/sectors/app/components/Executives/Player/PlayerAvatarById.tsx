@@ -45,13 +45,12 @@ export const PlayerAvatarById = ({
         return 128;
     }
   };
-  const avatar = useMemo(() => {
-    return createAvatar(lorelei, {
-      size: getSize(size),
-      seed: player.nickname,
-      backgroundColor: [hashStringToColor(player.nickname)],
-    }).toDataUri();
-  }, []);
+  const avatar = createAvatar(lorelei, {
+    size: getSize(size),
+    seed: player.nickname,
+    backgroundColor: [hashStringToColor(player.nickname)],
+  }).toDataUri();
+
   return (
     <div className="flex flex-col items-center">
       <Tooltip
