@@ -408,7 +408,7 @@ const PlayerInfluence = ({
                 }}
                 optionsNode={
                   <InfluenceInput
-                    setInfluenceValue={setInfluenceToSubmit}
+                    setInfluenceValue={(value) => setInfluenceToSubmit(value)}
                     influenceValue={influenceToSubmit.toString()}
                     influenceMin={1}
                     influenceMax={influences.length}
@@ -460,7 +460,7 @@ const PlayerInfluence = ({
               }}
               optionsNode={
                 <InfluenceInput
-                  setInfluenceValue={setInfluenceToSubmit}
+                  setInfluenceValue={(value) => setInfluenceToSubmit(value)}
                   influenceValue={influenceToSubmit.toString()}
                   influenceMin={1}
                   influenceMax={ceoInfluence.length}
