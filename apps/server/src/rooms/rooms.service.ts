@@ -20,7 +20,7 @@ export class RoomService {
       where: {
         ...roomWhereUniqueInput,
         NOT: {
-          id: GLOBAL_ROOM_ID,
+          id: parseFloat(GLOBAL_ROOM_ID),
         },
       },
       include: {
@@ -49,7 +49,7 @@ export class RoomService {
       where: {
         ...where,
         NOT: {
-          id: GLOBAL_ROOM_ID,
+          id: parseFloat(GLOBAL_ROOM_ID),
         },
       },
       orderBy,
