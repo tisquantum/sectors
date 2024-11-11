@@ -37,6 +37,20 @@ export default (trpc: TrpcService, ctx: Context) =>
         return player;
       }),
 
+    getExecutivePlayerWithAgendas: trpc.procedure
+      .input(z.object({ id: z.string() }))
+      .query(async ({ input }) => {
+        const { id } = input;
+        const player =
+          await ctx.executivePlayerService.getExecutivePlayerAndAgendas({
+            id,
+          });
+        if (!player) {
+          throw new Error('ExecutivePlayer not found');
+        }
+        return player;
+      }),
+
     // List all ExecutivePlayers with optional filtering, pagination, and sorting
     listExecutivePlayers: trpc.procedure
       .input(

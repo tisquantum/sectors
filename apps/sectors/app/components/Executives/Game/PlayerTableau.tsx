@@ -34,6 +34,7 @@ import { toast } from "sonner";
 import { RiLock2Fill, RiLockUnlockFill } from "@remixicon/react";
 import { TakeNoBid } from "../Player/TakeNoBid";
 import { Votes } from "../Player/Votes";
+import { Agendas } from "../Player/Agenda";
 
 //TODO: Add green border to active area on tableau
 const InfluenceBids = ({
@@ -386,9 +387,9 @@ const PlayerInfluence = ({
                   return new Promise<void>((resolve) => {
                     createPlayerVoteMutation.mutate(
                       {
-                        influenceIds: influences.map(
-                          (influence) => influence.id
-                        ).splice(0, influenceToSubmit),
+                        influenceIds: influences
+                          .map((influence) => influence.id)
+                          .splice(0, influenceToSubmit),
                         playerId,
                       },
                       {
@@ -822,6 +823,9 @@ export const PlayerTableau = ({ playerId }: { playerId: string }) => {
           </div>
         </div>
       </div>
+      {authPlayer?.id && player.id == authPlayer.id && (
+        <Agendas playerId={authPlayer.id} />
+      )}
     </div>
   );
 };

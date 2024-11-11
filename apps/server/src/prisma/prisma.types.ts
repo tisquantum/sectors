@@ -393,6 +393,10 @@ export type ExecutivePlayerWithRelations = ExecutivePlayer & {
   executiveTricks: ExecutiveTrick[];
 };
 
+export type ExecutivePlayerWithCards = ExecutivePlayer & {
+  cards: ExecutiveCard[];
+};
+
 export type ExecutiveGameWithRelations = ExecutiveGame & {
   players: ExecutivePlayer[];
   influence: Influence[];
@@ -431,6 +435,10 @@ export type ExecutiveGameTurnWithRelations = ExecutiveGameTurn & {
 
 export type ExecutivePlayerVoteWithRelations = ExecutivePlayerVote & {
   influence: Influence[];
+};
+
+export type ExecutivePlayerWithAgendas = ExecutivePlayer & {
+  agendas: ExecutiveAgenda[];
 };
 
 export type ExecutiveInfluenceVoteRoundWithRelations =

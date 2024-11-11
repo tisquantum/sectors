@@ -19,13 +19,6 @@ export class ExecutiveInfluenceService {
   ): Promise<Influence | null> {
     return this.prisma.influence.findUnique({
       where: influenceWhereUniqueInput,
-      include: {
-        Game: true,
-        selfPlayer: true,
-        ownedByPlayer: true,
-        ExecutivePlayerVote: true,
-        influenceBids: true,
-      },
     });
   }
 
@@ -44,13 +37,6 @@ export class ExecutiveInfluenceService {
       cursor,
       where,
       orderBy,
-      include: {
-        Game: true,
-        selfPlayer: true,
-        ownedByPlayer: true,
-        ExecutivePlayerVote: true,
-        influenceBids: true,
-      },
     });
   }
 
