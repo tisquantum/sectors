@@ -1455,6 +1455,7 @@ enum InfluenceLocation {
   BRIBE
   RELATIONSHIP
   OWNED_BY_PLAYER
+  VOTE
 }
 
 model Influence {
