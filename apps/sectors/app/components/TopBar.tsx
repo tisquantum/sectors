@@ -24,6 +24,7 @@ import UserAvatar from "./Room/UserAvatar";
 import { RiDiscordFill, RiFundsFill } from "@remixicon/react";
 import { useState, useMemo, memo } from "react";
 import { User } from "@server/prisma/prisma.client";
+import { HandshakeIcon } from "lucide-react";
 
 // Extracted CommonNavLinks to receive props for the "onOpen" function
 const CommonNavLinks = memo(() => (
@@ -117,9 +118,15 @@ const TopBar = () => {
       <Navbar isBordered shouldHideOnScroll onMenuOpenChange={setIsMenuOpen}>
         <NavbarBrand>
           <Link href="/">
-            <div className="flex gap-1 justify-center content-center items-center text-slate-100">
-              <span>SECTORS</span>
-              <RiFundsFill color="#17a34a" />
+            <div className="flex flex-col gap-1">
+              <div className="flex gap-1 justify-center content-center items-center text-slate-100">
+                <span>SECTORS</span>
+                <RiFundsFill color="#17a34a" />
+              </div>
+              <div className="flex gap-1 justify-center content-center items-center text-slate-100">
+                <span>THE EXECUTIVES</span>
+                <HandshakeIcon color="#5072A7" />
+              </div>
             </div>
           </Link>
         </NavbarBrand>

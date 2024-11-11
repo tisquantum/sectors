@@ -1,6 +1,7 @@
 import { Avatar, Badge, Card, CardBody } from "@nextui-org/react";
 import { RiShakeHandsFill } from "@remixicon/react";
 import { ExecutiveCard } from "@server/prisma/prisma.client";
+import { HandshakeIcon } from "lucide-react";
 
 export const CardStack = ({
   cards,
@@ -40,7 +41,7 @@ export const CardStack = ({
             radius="md"
             size="lg"
             color="warning"
-            icon={<RiShakeHandsFill />}
+            icon={<HandshakeIcon />}
           />
         </Badge>
       )}
