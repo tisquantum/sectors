@@ -228,6 +228,7 @@ export class ExecutiveGameManagementService {
         influenceCounts[key] = (influenceCounts[key] || 0) + 1;
       }
     });
+    console.log('influenceCounts', influenceCounts);
 
     // Determine the highest influence count
     let maxInfluenceKey = null;
@@ -1725,6 +1726,22 @@ export class ExecutiveGameManagementService {
         influenceVoteRound: { connect: { id: currentVoteRound.id } },
       },
     });
+    //remove the influence from the player
+    const influencePromises = influences.map((influence) => {
+      return this.influenceService.updateInfluence({
+        where: { id: influence.id },
+        data: {
+          ownedByPlayer: { disconnect: true },
+          influenceLocation: InfluenceLocation.VOTE,
+        },
+      });
+    });
+    try {
+      await Promise.all(influencePromises);
+    } catch (error) {
+      console.error('error', error);
+      throw new Error('Influence not found');
+    }
     return currentVoteRound;
   }
 
