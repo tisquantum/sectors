@@ -25,7 +25,6 @@ import { useAuthUser } from "@sectors/app/components/AuthUser.context";
 import CountdownModal from "../Modal/CountdownModal";
 import { useRouter } from "next/navigation";
 import { Drawer } from "vaul";
-import { Button } from "@nextui-org/react";
 import { toast } from "sonner";
 
 const RoomComponent = ({ room }: { room: RoomWithUsersAndGames }) => {
@@ -165,18 +164,21 @@ const RoomComponent = ({ room }: { room: RoomWithUsersAndGames }) => {
 
   return (
     <>
-      <Drawer.Root direction="left">
+      <Drawer.Root>
         <div className="flex h-screen overflow-hidden">
           <Drawer.Portal>
             <Drawer.Content className="lg:hidden z-50 bg-slate-900 flex flex-col rounded-t-[10px] h-full w-full fixed top-0 left-0">
-              {roomUsers && (
-                <Sidebar
-                  roomUsers={roomUsers}
-                  room={room}
-                  isSectorsGame={isSectorsGame}
-                  setIsSectorsGame={setIsSectorsGame}
-                />
-              )}
+              <div className="relative p-2 flex flex-col overflow-y-auto">
+                <div className="h-[20px]"></div>
+                {roomUsers && (
+                  <Sidebar
+                    roomUsers={roomUsers}
+                    room={room}
+                    isSectorsGame={isSectorsGame}
+                    setIsSectorsGame={setIsSectorsGame}
+                  />
+                )}
+              </div>
             </Drawer.Content>
           </Drawer.Portal>
           {roomUsers && (
@@ -193,7 +195,9 @@ const RoomComponent = ({ room }: { room: RoomWithUsersAndGames }) => {
             <div className="bg-gray-800 text-white p-2 md:p-4 flex gap-2 items-center">
               <h1 className="text-md md:text-xl font-bold">{room.name}</h1>
               <Drawer.Trigger>
-                <Button className="block lg:hidden">Info</Button>
+                <div className="block lg:hidden p-2 rounded-medium bg-slate-800">
+                  Info
+                </div>
               </Drawer.Trigger>
             </div>
             {messages && <MessagePane messages={messages} />}
