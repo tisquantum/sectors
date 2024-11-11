@@ -190,8 +190,12 @@ const Sidebar: React.FC<SidebarProps> = ({
         {roomHostAuthUser?.roomHost && (
           <>
             {room.game.length == 0 && (
-              <Tabs onSelectionChange={(index) => setIsSectorsGame(index == 0)}>
-                <Tab title="Play Sectors">
+              <Tabs
+                onSelectionChange={(key) => {
+                  setIsSectorsGame(key == "sectors");
+                }}
+              >
+                <Tab title="Play Sectors" key="sectors">
                   <GameOptions onOptionsChange={handleGameOptionsChange} />
                 </Tab>
                 <Tab
@@ -201,6 +205,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                       <span>Play The Executives</span>
                     </div>
                   }
+                  key="executives"
                 >
                   <ExectutiveGameOptions />
                 </Tab>
