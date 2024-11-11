@@ -393,6 +393,10 @@ export type ExecutivePlayerWithRelations = ExecutivePlayer & {
   executiveTricks: ExecutiveTrick[];
 };
 
+export type ExecutivePlayerWithCards = ExecutivePlayer & {
+  cards: ExecutiveCard[];
+};
+
 export type ExecutiveGameWithRelations = ExecutiveGame & {
   players: ExecutivePlayer[];
   influence: Influence[];

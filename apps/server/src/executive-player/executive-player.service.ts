@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { Prisma, ExecutivePlayer } from '@prisma/client';
-import { ExecutivePlayerWithRelations } from '@server/prisma/prisma.types';
+import {
+  ExecutivePlayerWithCards,
+  ExecutivePlayerWithRelations,
+} from '@server/prisma/prisma.types';
 
 @Injectable()
 export class ExecutivePlayerService {
@@ -25,6 +28,16 @@ export class ExecutivePlayerService {
     });
   }
 
+  async getExecutivePlayerWithCards(
+    executivePlayerWhereUniqueInput: Prisma.ExecutivePlayerWhereUniqueInput,
+  ): Promise<ExecutivePlayerWithCards | null> {
+    return this.prisma.executivePlayer.findUnique({
+      where: executivePlayerWhereUniqueInput,
+      include: {
+        cards: true,
+      },
+    });
+  }
   async getExecutivePlayerByUserIdAndGameId(
     userId: string,
     gameId: string,
@@ -70,7 +83,7 @@ export class ExecutivePlayerService {
     cursor?: Prisma.ExecutivePlayerWhereUniqueInput;
     where?: Prisma.ExecutivePlayerWhereInput;
     orderBy?: Prisma.ExecutivePlayerOrderByWithRelationInput;
-  }): Promise<ExecutivePlayer[]> {
+  }): Promise<ExecutivePlayerWithRelations[]> {
     const { skip, take, cursor, where, orderBy } = params;
     return this.prisma.executivePlayer.findMany({
       skip,
@@ -81,15 +94,31 @@ export class ExecutivePlayerService {
       include: {
         victoryPoints: true,
         cards: true,
-        game: true,
         user: true,
         selfInfluence: true,
         ownedByInfluence: true,
         agendas: true,
+        executiveTricks: true,
       },
     });
   }
 
+  async listExecutivePlayersNoRelations(params: {
+    skip?: number;
+    take?: number;
+    cursor?: Prisma.ExecutivePlayerWhereUniqueInput;
+    where?: Prisma.ExecutivePlayerWhereInput;
+    orderBy?: Prisma.ExecutivePlayerOrderByWithRelationInput;
+  }): Promise<ExecutivePlayer[]> {
+    const { skip, take, cursor, where, orderBy } = params;
+    return this.prisma.executivePlayer.findMany({
+      skip,
+      take,
+      cursor,
+      where,
+      orderBy,
+    });
+  }
   // Create a new ExecutivePlayer
   async createExecutivePlayer(
     data: Prisma.ExecutivePlayerCreateInput,
