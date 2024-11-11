@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { DistributionStrategy, Room, User } from "@server/prisma/prisma.client";
+import React, { useState } from "react";
+import { DistributionStrategy } from "@server/prisma/prisma.client";
 import { Avatar, Tab, Tabs, Tooltip } from "@nextui-org/react";
 import { trpc } from "@sectors/app/trpc";
 import { useAuthUser } from "@sectors/app/components/AuthUser.context";
@@ -11,7 +11,7 @@ import {
   RoomUserWithUser,
   RoomWithUsersAndGames,
 } from "@server/prisma/prisma.types";
-import { BeakerIcon, SunIcon } from "@heroicons/react/24/solid";
+import { BeakerIcon } from "@heroicons/react/24/solid";
 import { useRouter } from "next/navigation";
 import UserAvatar from "./UserAvatar";
 import Button from "../General/DebounceButton";
@@ -31,6 +31,9 @@ import {
   tooltipParagraphStyle,
   tooltipStyle,
 } from "@sectors/app/helpers/tailwind.helpers";
+import { ConstructionIcon } from "lucide-react";
+
+const constructionYellow = "#FFCC00";
 interface SidebarProps {
   roomUsers: RoomUserWithUser[];
   room: RoomWithUsersAndGames;
@@ -191,7 +194,14 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <Tab title="Play Sectors">
                   <GameOptions onOptionsChange={handleGameOptionsChange} />
                 </Tab>
-                <Tab title="Play The Executives">
+                <Tab
+                  title={
+                    <div className="flex items-center space-x-2">
+                      <ConstructionIcon color={constructionYellow} />
+                      <span>Play The Executives</span>
+                    </div>
+                  }
+                >
                   <ExectutiveGameOptions />
                 </Tab>
               </Tabs>

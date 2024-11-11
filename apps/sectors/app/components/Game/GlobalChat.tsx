@@ -21,13 +21,14 @@ import SendMessage from "../Room/SendMessage";
 import { toast, Toaster } from "sonner";
 
 const GlobalChat = ({ classes }: { classes: string }) => {
+  const globalRoomId = parseFloat(GLOBAL_ROOM_ID);
   const { user } = useAuthUser();
   const { pusher } = usePusher();
   const utils = trpc.useUtils();
   const joinRoomMutation = trpc.roomUser.joinRoom.useMutation();
   const { data: messages, isLoading: isLoadingMessages } =
     trpc.roomMessage.listRoomMessages.useQuery({
-      where: { roomId: GLOBAL_ROOM_ID },
+      where: { roomId: globalRoomId },
     });
   const createRoomMessageMutation =
     trpc.roomMessage.createRoomMessage.useMutation({
@@ -41,7 +42,7 @@ const GlobalChat = ({ classes }: { classes: string }) => {
     status: roomUsersStatus,
     refetch: refetchRoomUsers,
   } = trpc.roomUser.listRoomUsers.useQuery({
-    where: { roomId: GLOBAL_ROOM_ID },
+    where: { roomId: globalRoomId },
   });
   useEffect(() => {
     if (roomUsersStatus === "success") {
@@ -50,7 +51,7 @@ const GlobalChat = ({ classes }: { classes: string }) => {
         (roomUser) => roomUser.user.id === user?.id
       );
       if (!userInRoom) {
-        handleJoin(GLOBAL_ROOM_ID);
+        handleJoin(globalRoomId);
       }
     }
   }, [roomUsersStatus]);
@@ -58,7 +59,7 @@ const GlobalChat = ({ classes }: { classes: string }) => {
   useEffect(() => {
     if (!pusher) return;
 
-    const channel = pusher.subscribe(getRoomChannelId(GLOBAL_ROOM_ID));
+    const channel = pusher.subscribe(getRoomChannelId(globalRoomId));
 
     channel.bind(EVENT_ROOM_JOINED, (data: RoomUserWithUser) => {
       refetchRoomUsers();
@@ -70,7 +71,7 @@ const GlobalChat = ({ classes }: { classes: string }) => {
 
     channel.bind(EVENT_ROOM_MESSAGE, (data: RoomMessageWithRoomUser) => {
       // Ensure timestamp remains a string in the cache
-      handleRoomMessage(data, GLOBAL_ROOM_ID);
+      handleRoomMessage(data, globalRoomId);
     });
 
     return () => {
@@ -78,7 +79,7 @@ const GlobalChat = ({ classes }: { classes: string }) => {
       channel.unbind(EVENT_ROOM_MESSAGE);
       channel.unsubscribe();
     };
-  }, [pusher, GLOBAL_ROOM_ID, isLoadingRoomUsers, isLoadingMessages]);
+  }, [pusher, globalRoomId, isLoadingRoomUsers, isLoadingMessages]);
 
   const handleRoomMessage = (data: RoomMessageWithRoomUser, roomId: number) => {
     utils.roomMessage.listRoomMessages.setData(
@@ -108,7 +109,7 @@ const GlobalChat = ({ classes }: { classes: string }) => {
 
   const handleSendMessage = (content: string) => {
     createRoomMessageMutation.mutate({
-      roomId: GLOBAL_ROOM_ID,
+      roomId: globalRoomId,
       userId: user.id,
       content,
       timestamp: new Date().toISOString(),
