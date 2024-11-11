@@ -80,6 +80,24 @@ import { CompanyAwardTrackService } from '@server/company-award-track/company-aw
 import { CompanyAwardTrackSpaceService } from '@server/company-award-track-space/company-award-track-space.service';
 import companyAwardTrackRouter from './routers/company-award-track.router';
 import companyAwardTrackSpaceRouter from './routers/company-award-track-space.router';
+import { ExecutiveGameService } from '@server/executive-game/executive-game.service';
+import { ExecutiveInfluenceService } from '@server/executive-influence/executive-influence.service';
+import { ExecutiveCardService } from '@server/executive-card/executive-card.service';
+import { ExecutiveInfluenceBidService } from '@server/executive-influence-bid/executive-influence-bid.service';
+import { ExecutivePlayerService } from '@server/executive-player/executive-player.service';
+import executiveGameRouter from './routers/executive-game.router';
+import executivePlayerRouter from './routers/executive-player.router';
+import executiveCardRouter from './routers/executive-card.router';
+import executiveInfluenceRouter from './routers/executive-influence.router';
+import { ExecutiveGameManagementService } from '@server/executive-game-management/executive-game-management.service';
+import executivePhaseRouter from './routers/executive-phase.router';
+import { ExecutivePhaseService } from '@server/executive-phase/executive-phase.service';
+import { ExecutiveGameTurnService } from '@server/executive-game-turn/executive-game-turn.service';
+import executiveGameTurnRouter from './routers/executive-game-turn.router';
+import { ExecutiveInfluenceVoteRoundService } from '@server/executive-influence-vote-round/executive-influence-vote-round.service';
+import executiveInfluenceVoteRoundRouter from './routers/executive-influence-vote-round.router';
+import executiveVoteMarkerRouter from './routers/executive-vote-marker.router';
+import { PrismaService } from '@server/prisma/prisma.service';
 @Injectable()
 export class TrpcRouter {
   constructor(
@@ -124,6 +142,16 @@ export class TrpcRouter {
     private readonly playerHeadlineService: PlayerHeadlineService,
     private readonly companyAwardTrackService: CompanyAwardTrackService,
     private readonly companyAwardTrackSpaceService: CompanyAwardTrackSpaceService,
+    private readonly executiveGameManagementService: ExecutiveGameManagementService,
+    private readonly executiveGameService: ExecutiveGameService,
+    private readonly executiveGameTurnService: ExecutiveGameTurnService,
+    private readonly executivePlayerService: ExecutivePlayerService,
+    private readonly executiveCardService: ExecutiveCardService,
+    private readonly executiveInfluenceService: ExecutiveInfluenceService,
+    private readonly executiveInfluenceBidService: ExecutiveInfluenceBidService,
+    private readonly executivePhaseService: ExecutivePhaseService,
+    private readonly executiveInfluenceVoteRoundService: ExecutiveInfluenceVoteRoundService,
+    private readonly prismaService: PrismaService,
   ) {}
 
   appRouter = this.trpc.router({
@@ -287,6 +315,36 @@ export class TrpcRouter {
     }),
     companyAwardTrackSpace: companyAwardTrackSpaceRouter(this.trpc, {
       companyAwardTrackSpaceService: this.companyAwardTrackSpaceService,
+    }),
+    executiveGame: executiveGameRouter(this.trpc, {
+      executiveGameService: this.executiveGameService,
+      executiveGameManagementService: this.executiveGameManagementService,
+      executiveGameTurnService: this.executiveGameTurnService,
+      executiveInfluenceVoteRoundService: this.executiveInfluenceVoteRoundService,
+    }),
+    executiveGameTurn: executiveGameTurnRouter(this.trpc, {
+      executiveGameTurnService: this.executiveGameTurnService,
+    }),
+    executivePlayer: executivePlayerRouter(this.trpc, {
+      executivePlayerService: this.executivePlayerService,
+    }),
+    executiveCard: executiveCardRouter(this.trpc, {
+      executiveCardService: this.executiveCardService,
+    }),
+    executiveInfluence: executiveInfluenceRouter(this.trpc, {
+      executiveInfluenceService: this.executiveInfluenceService,
+      executiveInfluenceBidService: this.executiveInfluenceBidService,
+      executiveGameManagementService: this.executiveGameManagementService,
+      executiveCardService: this.executiveCardService,
+    }),
+    executivePhase: executivePhaseRouter(this.trpc, {
+      executivePhaseService: this.executivePhaseService,
+    }),
+    executiveInfluenceVoteRound: executiveInfluenceVoteRoundRouter(this.trpc, {
+      executiveInfluenceVoteRoundService: this.executiveInfluenceVoteRoundService,
+    }),
+    executiveVoteMarker: executiveVoteMarkerRouter(this.trpc, {
+      prismaService: this.prismaService,
     }),
   });
 

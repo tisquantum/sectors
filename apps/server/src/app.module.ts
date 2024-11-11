@@ -51,6 +51,15 @@ import { PlayerHeadlineModule } from './player-headline/player-headline.module';
 import { StockSubRoundModule } from './stock-sub-round/stock-sub-round.module';
 import { CompanyAwardTrackModule } from './company-award-track/company-award-track.module';
 import { CompanyAwardTrackSpaceModule } from './company-award-track-space/company-award-track-space.module';
+import { ExecutiveGameModule } from './executive-game/executive-game.module';
+import { ExecutiveGameManagementModule } from './executive-game-management/executive-game-management.module';
+import { ExecutivePlayerModule } from './executive-player/executive-player.module';
+import { ExecutiveCardModule } from './executive-card/executive-card.module';
+import { ExecutiveInfluenceBidModule } from './executive-influence-bid/executive-influence-bid.module';
+import { ExecutiveInfluenceModule } from './executive-influence/executive-influence.module';
+import { ExecutivePhaseModule } from './executive-phase/executive-phase.module';
+import { ExecutiveGameTurnModule } from './executive-game-turn/executive-game-turn.module';
+import { ExecutiveInfluenceVoteRoundModule } from './executive-influence-vote-round/executive-influence-vote-round.module';
 
 const yourPusherOptions = {
   cluster: process.env.PUSHER_CLUSTER ?? 'CLUSTER',
@@ -118,6 +127,15 @@ const chunkingOptions = {
     StockSubRoundModule,
     CompanyAwardTrackModule,
     CompanyAwardTrackSpaceModule,
+    ExecutiveGameModule,
+    ExecutiveGameManagementModule,
+    ExecutivePlayerModule,
+    ExecutiveCardModule,
+    ExecutiveInfluenceBidModule,
+    ExecutiveInfluenceModule,
+    ExecutivePhaseModule,
+    ExecutiveGameTurnModule,
+    ExecutiveInfluenceVoteRoundModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,4 +1,5 @@
 import {
+  Agenda,
   CapitalGains,
   Card,
   Company,
@@ -8,11 +9,25 @@ import {
   CompanyAwardTrackSpace,
   CompanySpace,
   Entity,
+  ExecutiveAgenda,
+  ExecutiveCard,
+  ExecutiveGame,
+  ExecutiveGameTurn,
+  ExecutiveInfluenceBid,
+  ExecutiveInfluenceVoteRound,
+  ExecutivePhase,
+  ExecutivePlayer,
+  ExecutivePlayerPass,
+  ExecutivePlayerVote,
+  ExecutiveTrick,
+  ExecutiveVictoryPoint,
   Game,
   GameLog,
   GameRecord,
   GameTurn,
   Headline,
+  Influence,
+  InfluenceBid,
   InfluenceRound,
   InfluenceVote,
   InsolvencyContribution,
@@ -46,7 +61,9 @@ import {
   StockSubRound,
   Transaction,
   TransactionsOnShares,
+  TrickCard,
   User,
+  VoteMarker,
 } from '@prisma/client';
 
 export type RoomMessageWithRoomUser = RoomMessage & {
@@ -364,4 +381,64 @@ export type AwardTrackSpaceWithRelations = CompanyAwardTrackSpace & {
 
 export type AwardTrackWithRelations = CompanyAwardTrack & {
   companyAwardTrackSpaces: AwardTrackSpaceWithRelations[];
+};
+
+export type ExecutivePlayerWithRelations = ExecutivePlayer & {
+  user: User;
+  victoryPoints: ExecutiveVictoryPoint[];
+  cards: ExecutiveCard[];
+  selfInfluence: Influence[];
+  ownedByInfluence: Influence[];
+  agendas: ExecutiveAgenda[];
+  executiveTricks: ExecutiveTrick[];
+};
+
+export type ExecutiveGameWithRelations = ExecutiveGame & {
+  players: ExecutivePlayer[];
+  influence: Influence[];
+  ExecutiveVictoryPoint: ExecutiveVictoryPoint[];
+  ExecutiveAgenda: ExecutiveAgenda[];
+  executiveCards: ExecutiveCard[];
+  phases: ExecutivePhase[];
+  gameTurn: ExecutiveGameTurn[];
+};
+
+export type InfluenceBidWithInfluence = InfluenceBid & { Influence: Influence };
+
+export type ExecutiveInfluenceBidWithRelations = ExecutiveInfluenceBid & {
+  toPlayer: ExecutivePlayer;
+  fromPlayer: ExecutivePlayer;
+  ExecutiveGameTurn: ExecutiveGameTurn | null;
+  influenceBids: InfluenceBidWithInfluence[];
+};
+
+export type TrickCardWithRelations = TrickCard & {
+  card: ExecutiveCard;
+  player: ExecutivePlayer;
+};
+
+export type ExecutiveTrickWithRelations = ExecutiveTrick & {
+  trickCards: TrickCardWithRelations[];
+};
+
+export type ExecutiveGameTurnWithRelations = ExecutiveGameTurn & {
+  phases: ExecutivePhase[];
+  tricks: ExecutiveTrickWithRelations[];
+  influenceBids: ExecutiveInfluenceBid[];
+  influenceVotes: ExecutiveInfluenceVoteRound[];
+  playerPasses: ExecutivePlayerPass[];
+};
+
+export type ExecutivePlayerVoteWithRelations = ExecutivePlayerVote & {
+  influence: Influence[];
+};
+
+export type ExecutiveInfluenceVoteRoundWithRelations =
+  ExecutiveInfluenceVoteRound & {
+    playerVotes: ExecutivePlayerVoteWithRelations[];
+  };
+
+export type VoteMarkerWithRelations = VoteMarker & {
+  owningPlayer: ExecutivePlayer;
+  votedPlayer: ExecutivePlayer | null;
 };

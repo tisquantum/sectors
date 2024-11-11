@@ -49,7 +49,7 @@ interface GameOptionsState {
   isTimerless: boolean;
 }
 
-const GameOptionDescription: React.FC<{
+export const GameOptionDescription: React.FC<{
   name: string;
   description: ReactNode;
 }> = ({ name, description }) => (
