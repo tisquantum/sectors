@@ -437,6 +437,10 @@ export type ExecutivePlayerVoteWithRelations = ExecutivePlayerVote & {
   influence: Influence[];
 };
 
+export type ExecutivePlayerWithAgendas = ExecutivePlayer & {
+  agendas: ExecutiveAgenda[];
+};
+
 export type ExecutiveInfluenceVoteRoundWithRelations =
   ExecutiveInfluenceVoteRound & {
     playerVotes: ExecutivePlayerVoteWithRelations[];

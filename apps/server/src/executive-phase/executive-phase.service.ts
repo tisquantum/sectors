@@ -12,10 +12,6 @@ export class ExecutivePhaseService {
   ): Promise<ExecutivePhase | null> {
     return this.prisma.executivePhase.findUnique({
       where: executivePhaseWhereUniqueInput,
-      include: {
-        game: true,
-        gameTurn: true,
-      },
     });
   }
 
@@ -34,10 +30,6 @@ export class ExecutivePhaseService {
       cursor,
       where,
       orderBy,
-      include: {
-        game: true,
-        gameTurn: true,
-      },
     });
   }
 
@@ -80,10 +72,6 @@ export class ExecutivePhaseService {
       orderBy: {
         createdAt: 'desc',
       },
-      include: {
-        game: true,
-        gameTurn: true,
-      },
     });
   }
 
@@ -106,10 +94,6 @@ export class ExecutivePhaseService {
         createdAt: 'desc',
       },
       skip: 1,
-      include: {
-        game: true,
-        gameTurn: true,
-      },
     });
   }
 }

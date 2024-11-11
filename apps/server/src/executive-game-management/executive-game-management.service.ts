@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import {
+  Agenda,
   CardLocation,
   CardSuit,
   ExecutiveCard,
@@ -535,6 +536,67 @@ export class ExecutiveGameManagementService {
     });
   }
 
+  getAgendaDescription(agendaType: Agenda) {
+    switch (agendaType) {
+      case Agenda.BECOME_CEO_NO_SHARE:
+        return 'Become CEO without sharing the position.';
+      case Agenda.FOREIGN_INVESTOR_CEO:
+        return 'Foreign Investor must become CEO.';
+      case Agenda.BECOME_CEO_WITH_FOREIGN_INVESTOR:
+        return 'Become CEO along with the Foreign Investor.';
+      case Agenda.CEO_THREE_PLAYERS:
+        return 'Three players must become CEO.';
+      case Agenda.FIRST_LEFT_CEO:
+        return 'The player to the left of you must become CEO.';
+      case Agenda.SECOND_LEFT_CEO:
+        return 'The player two to the left of you must become CEO.';
+      case Agenda.THIRD_LEFT_CEO:
+        return 'The player three to the left of you must become CEO.';
+      default:
+        return 'Unknown Agenda';
+    }
+  }
+
+  // Utility function to shuffle the array (Fisher-Yates shuffle)
+  shuffleArray<T>(array: T[]): T[] {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+  }
+
+  async createExecutiveAgendas(gameId: string, players: ExecutivePlayer[]) {
+    const agendaOrder = [
+      Agenda.BECOME_CEO_NO_SHARE,
+      Agenda.FOREIGN_INVESTOR_CEO,
+      Agenda.BECOME_CEO_WITH_FOREIGN_INVESTOR,
+      Agenda.CEO_THREE_PLAYERS,
+      Agenda.FIRST_LEFT_CEO,
+      Agenda.SECOND_LEFT_CEO,
+      Agenda.THIRD_LEFT_CEO,
+    ];
+
+    // Shuffle the players to randomize the order
+    const shuffledPlayers = this.shuffleArray(players);
+
+    // Limit the agenda types to the number of players
+    const agendasToAssign = agendaOrder.slice(0, shuffledPlayers.length);
+
+    // Create agenda data
+    const agendaData = agendasToAssign.map((agendaType, index) => ({
+      gameId,
+      agendaType,
+      description: this.getAgendaDescription(agendaType),
+      playerId: shuffledPlayers[index].id,
+    }));
+
+    // Create executive agendas in the database
+    await this.prisma.executiveAgenda.createMany({
+      data: agendaData,
+    });
+  }
+
   async startGame(roomId: number, gameName: string) {
     //create the game
     const game = await this.gameService.createExecutiveGame({
@@ -567,6 +629,9 @@ export class ExecutiveGameManagementService {
       ...playerInfluence,
       ...ceoInfluence,
     ]);
+
+    //create agends
+    await this.createExecutiveAgendas(game.id, players);
 
     //create the cards and add them to the deck
     await this.cardService.createDeck(game.id);

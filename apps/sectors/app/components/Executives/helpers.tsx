@@ -1,4 +1,4 @@
-import { ExecutivePhaseName } from "@server/prisma/prisma.client";
+import { Agenda, ExecutivePhaseName } from "@server/prisma/prisma.client";
 export function friendlyPhaseName(phaseName: ExecutivePhaseName | undefined): {
   name: string;
   description: string;
@@ -40,7 +40,8 @@ export function friendlyPhaseName(phaseName: ExecutivePhaseName | undefined): {
     case ExecutivePhaseName.INFLUENCE_BID:
       return {
         name: "Influence Bid",
-        description: "Select any other players bribe and place a bid from your influence pool.  Only a single bid can be placed on a bribe per turn.",
+        description:
+          "Select any other players bribe and place a bid from your influence pool.  Only a single bid can be placed on a bribe per turn.",
       };
     case ExecutivePhaseName.INFLUENCE_BID_SELECTION:
       return {
@@ -123,5 +124,26 @@ export function turnPhaseDisplayTrump(phaseName: ExecutivePhaseName): boolean {
       return true;
     default:
       return false;
+  }
+}
+
+export function friendlyAgendaName(agendaType: Agenda): string {
+  switch (agendaType) {
+    case Agenda.BECOME_CEO_NO_SHARE:
+      return "Become CEO - No Share";
+    case Agenda.BECOME_CEO_WITH_FOREIGN_INVESTOR:
+      return "Become CEO - With Foreign Investor";
+    case Agenda.CEO_THREE_PLAYERS:
+      return "CEO - Three Players";
+    case Agenda.FIRST_LEFT_CEO:
+      return "Player Left CEO";
+    case Agenda.FOREIGN_INVESTOR_CEO:
+      return "Foreign Investor CEO";
+    case Agenda.SECOND_LEFT_CEO:
+      return "Second Left CEO";
+    case Agenda.THIRD_LEFT_CEO:
+      return "Third Left CEO";
+    default:
+      return "Unknown Agenda";
   }
 }

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { Prisma, ExecutivePlayer } from '@prisma/client';
 import {
+  ExecutivePlayerWithAgendas,
   ExecutivePlayerWithCards,
   ExecutivePlayerWithRelations,
 } from '@server/prisma/prisma.types';
@@ -24,6 +25,17 @@ export class ExecutivePlayerService {
         ownedByInfluence: true,
         agendas: true,
         executiveTricks: true,
+      },
+    });
+  }
+
+  async getExecutivePlayerAndAgendas(
+    executivePlayerWhereUniqueInput: Prisma.ExecutivePlayerWhereUniqueInput,
+  ): Promise<ExecutivePlayerWithAgendas | null> {
+    return this.prisma.executivePlayer.findUnique({
+      where: executivePlayerWhereUniqueInput,
+      include: {
+        agendas: true,
       },
     });
   }
