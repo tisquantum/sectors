@@ -42,6 +42,10 @@ export default (trpc: TrpcService, ctx: Context) =>
           cursor: cursor ? { id: cursor } : undefined,
           where,
           orderBy,
+          include: {
+            owningPlayer: true,
+            votedPlayer: true,
+          },
         }) as Promise<VoteMarkerWithRelations[]>;
       }),
   });

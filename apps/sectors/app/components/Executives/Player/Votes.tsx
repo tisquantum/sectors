@@ -1,6 +1,7 @@
 import { trpc } from "@sectors/app/trpc";
 import PlayerAvatar from "./PlayerAvatar";
 import { Avatar } from "@nextui-org/react";
+import { PlayerAvatarById } from "./PlayerAvatarById";
 
 export const Votes = ({ gameId }: { gameId: string }) => {
   const {
@@ -25,16 +26,14 @@ export const Votes = ({ gameId }: { gameId: string }) => {
     return <div>No votes found</div>;
   }
   return (
-    <div>
+    <div className="flex flex-wrap items-center gap-1">
       {votes.map((vote) => (
-        <div key={vote.id} className="flex items-center space-x-2">
+        <div key={vote.id} className="flex items-center">
           {vote.isCeo ? (
             <Avatar name="CEO" size="sm" />
           ) : vote.votedPlayer ? (
             <PlayerAvatar player={vote.votedPlayer} size="sm" />
-          ) : (
-            <div className="text-sm font-semibold">Abstain</div>
-          )}
+          ) : null}
         </div>
       ))}
     </div>
