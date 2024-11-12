@@ -25,6 +25,7 @@ export class RoomService {
       },
       include: {
         game: true,
+        executiveGame: true,
         users: {
           include: {
             user: true, // Assuming RoomUser has a relation to User
@@ -60,6 +61,7 @@ export class RoomService {
           },
         },
         game: true,
+        executiveGame: true,
       },
     });
   }

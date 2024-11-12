@@ -20,10 +20,12 @@ import {
   RiClockwiseFill,
   RiCloseCircleFill,
   RiDiscFill,
+  RiFundsFill,
   RiListOrdered2,
   RiTeamFill,
   RiTimeFill,
 } from "@remixicon/react";
+import { HandshakeIcon } from "lucide-react";
 interface RoomListProps {
   room: RoomWithUsersAndGames;
   gameId?: string;
@@ -132,13 +134,40 @@ const RoomListItem: React.FC<RoomListProps> = ({ room }) => {
             ))}
         </AvatarGroup>
         <h2 className="text-lg font-bold">{room.name}</h2>
-        <Chip color={renderGameStatusColor(room.game?.[0]?.gameStatus)}>
-          {room.game?.[0]?.gameStatus
-            ? room.game?.[0]?.gameStatus == "FINISHED"
-              ? "COMPLETED"
-              : room.game?.[0]?.gameStatus
-            : GameStatus.PENDING}
-        </Chip>
+        <div className="flex flex-col gap-1 items-center space-x-4">
+          {/* Sectors Game Status */}
+          {room.game?.length > 0 && (
+            <div className="flex items-center space-x-2">
+              <Chip color={renderGameStatusColor(room.game?.[0]?.gameStatus)}>
+                {room.game?.[0]?.gameStatus === "FINISHED"
+                  ? "COMPLETED"
+                  : room.game?.[0]?.gameStatus || GameStatus.PENDING}
+              </Chip>
+              <div className="flex justify-center items-center bg-slate-800 rounded-medium p-2">
+                <RiFundsFill color="#17a34a" />
+              </div>
+            </div>
+          )}
+
+          {/* Executive Game Status */}
+          {room.executiveGame?.length > 0 && (
+            <div className="flex items-center space-x-2">
+              <Chip
+                color={renderGameStatusColor(
+                  room.executiveGame?.[0]?.gameStatus
+                )}
+              >
+                {room.executiveGame?.[0]?.gameStatus === "FINISHED"
+                  ? "COMPLETED"
+                  : room.executiveGame?.[0]?.gameStatus || GameStatus.PENDING}
+              </Chip>
+              <div className="flex justify-center items-center bg-slate-800 rounded-medium p-2">
+                <HandshakeIcon color="#5072A7" />
+              </div>
+            </div>
+          )}
+        </div>
+
         {room.game?.[0]?.id && <GameMeta gameId={room.game[0].id} />}
       </div>
       <Button color="primary" onClick={() => handleJoin(room.id)}>

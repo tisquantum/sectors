@@ -44,6 +44,7 @@ export const RoundVotes = ({ gameId }: { gameId: string }) => {
           influence.influenceType === InfluenceType.CEO
             ? "ceo"
             : influence.selfPlayerId;
+
         if (!key) return acc;
 
         if (!acc[key]) {
@@ -53,9 +54,11 @@ export const RoundVotes = ({ gameId }: { gameId: string }) => {
         return acc;
       }, {} as Record<string, Influence[]>);
 
+      // Include the playerId who cast the vote
       return Object.entries(grouped).map(([key, influences]) => ({
         key,
         influences,
+        playerId: playerVote.playerId, // Capturing the player who cast the vote
       }));
     });
 
@@ -68,59 +71,58 @@ export const RoundVotes = ({ gameId }: { gameId: string }) => {
         <div key={`round-${round} mt-2`}>
           <h3 className="text-lg font-bold">Round {round}</h3>
           <div className="flex flex-row gap-3 mt-2">
-            {groupedInfluences.map(({ key, influences }) => {
-              if (!influences[0].ownedByPlayerId) {
-                return <div key="no-owner">No owner</div>;
-              }
-              // Check if this group is for CEO influence
-              if (key === "ceo") {
+            {groupedInfluences.map(
+              ({ key, influences, playerId: playerIdOwner }) => {
+                if (!playerIdOwner) {
+                  return <div key="no-owner">No owner</div>;
+                }
+                // Check if this group is for CEO influence
+                if (key === "ceo") {
+                  return (
+                    <div key="ceo" className="cursor-pointer">
+                      <Badge
+                        className="bottom-[-7px]"
+                        color="success"
+                        placement="bottom-left"
+                        content={
+                          <PlayerAvatarById
+                            playerId={playerIdOwner}
+                            size="sm"
+                          />
+                        }
+                      >
+                        <Badge
+                          color="success"
+                          content={influences.length.toString()}
+                        >
+                          <Avatar name="CEO" size="sm" />
+                        </Badge>
+                      </Badge>
+                    </div>
+                  );
+                }
+
+                // For regular player influence
+                const playerId = key;
                 return (
-                  <div key="ceo" className="cursor-pointer">
+                  <div key={playerId} className="flex items-center space-x-2">
                     <Badge
                       className="bottom-[-7px]"
                       color="success"
                       placement="bottom-left"
                       content={
-                        <PlayerAvatarById
-                          playerId={influences[0].ownedByPlayerId}
-                          size="sm"
-                        />
+                        <PlayerAvatarById playerId={playerIdOwner} size="sm" />
                       }
                     >
-                      <Badge
-                        color="success"
-                        content={influences.length.toString()}
-                      >
-                        <Avatar name="CEO" size="sm" />
-                      </Badge>
+                      <InfluenceComponent
+                        playerId={playerId}
+                        influenceCount={influences.length}
+                      />
                     </Badge>
                   </div>
                 );
               }
-
-              // For regular player influence
-              const playerId = key;
-              return (
-                <div key={playerId} className="flex items-center space-x-2">
-                  <Badge
-                    className="bottom-[-7px]"
-                    color="success"
-                    placement="bottom-left"
-                    content={
-                      <PlayerAvatarById
-                        playerId={influences[0].ownedByPlayerId}
-                        size="sm"
-                      />
-                    }
-                  >
-                    <InfluenceComponent
-                      playerId={playerId}
-                      influenceCount={influences.length}
-                    />
-                  </Badge>
-                </div>
-              );
-            })}
+            )}
           </div>
         </div>
       ))}

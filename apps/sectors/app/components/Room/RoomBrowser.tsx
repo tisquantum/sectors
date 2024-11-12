@@ -128,11 +128,19 @@ function RoomBrowserContent({
     const matchesSearch = room.name
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
-    const gameStatus = room.game?.[0]?.gameStatus || "PENDING";
+
+    // Check both game statuses
+    const gameStatus =
+      room.game?.[0]?.gameStatus ||
+      room.executiveGame?.[0]?.gameStatus ||
+      "PENDING";
     const matchesStatus = selectedStatus ? gameStatus === selectedStatus : true;
+
+    // Check if the user is part of the room
     const matchesUser = yourRoomsOnly
       ? room.users.some((roomUser) => roomUser.user.id === user?.id)
       : true;
+
     return matchesSearch && matchesStatus && matchesUser;
   });
 
