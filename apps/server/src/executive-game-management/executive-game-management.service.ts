@@ -544,9 +544,9 @@ export class ExecutiveGameManagementService {
       case Agenda.FOREIGN_INVESTOR_CEO:
         return 'Foreign Investor must become CEO.';
       case Agenda.BECOME_CEO_WITH_FOREIGN_INVESTOR:
-        return 'Become CEO along with the Foreign Investor.';
+        return 'Become co-CEO along with the Foreign Investor.';
       case Agenda.CEO_THREE_PLAYERS:
-        return 'Three players must become CEO.';
+        return 'Amongst the Foreign Investor and Players, three must become co-CEO.';
       case Agenda.FIRST_LEFT_CEO:
         return 'The player to the left of you must become CEO.';
       case Agenda.SECOND_LEFT_CEO:

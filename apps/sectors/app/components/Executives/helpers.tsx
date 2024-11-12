@@ -134,7 +134,7 @@ export function friendlyAgendaName(agendaType: Agenda): string {
     case Agenda.BECOME_CEO_WITH_FOREIGN_INVESTOR:
       return "Become CEO - With Foreign Investor";
     case Agenda.CEO_THREE_PLAYERS:
-      return "CEO - Three Players";
+      return "Three CEOs";
     case Agenda.FIRST_LEFT_CEO:
       return "Player Left CEO";
     case Agenda.FOREIGN_INVESTOR_CEO:
