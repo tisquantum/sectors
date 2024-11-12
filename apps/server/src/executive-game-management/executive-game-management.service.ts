@@ -256,7 +256,7 @@ export class ExecutiveGameManagementService {
         influenceVoteRoundId: voteRound.id,
         owningPlayerId: player.playerId,
         gameId: voteRound.gameId,
-        votedPlayedId: maxInfluenceKey != 'CEO' ? maxInfluenceKey : null,
+        votedPlayerId: maxInfluenceKey != 'CEO' ? maxInfluenceKey : null,
         isCeo: maxInfluenceKey === 'CEO',
       })),
     });
