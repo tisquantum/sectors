@@ -130,6 +130,7 @@ export type GameState = Game & {
 export type RoomWithUsersAndGames = Room & {
   users: { user: User }[];
   game: Game[];
+  executiveGame: ExecutiveGame[];
 };
 
 export type PlayerOrderHiddenFields =

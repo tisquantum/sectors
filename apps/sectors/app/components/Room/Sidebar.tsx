@@ -211,6 +211,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 </Tab>
               </Tabs>
             )}
+
             {room.game.length == 0 &&
               (startGameIsSubmitted ? (
                 <div>Start Game Submitted</div>
@@ -244,15 +245,28 @@ const Sidebar: React.FC<SidebarProps> = ({
               ))}
           </>
         )}
-        {room.game.length > 0 && (
-          <Button
-            color="primary"
-            className="w-full"
-            onClick={() => router.push(`/games/${room.game[0].id}`)}
-          >
-            Join Game
-          </Button>
-        )}
+        <div className="flex flex-col gap-2 mt-2">
+          {room.game.length > 0 && (
+            <Button
+              color="primary"
+              className="w-full"
+              onClick={() => router.push(`/games/${room.game[0].id}`)}
+            >
+              Join Sectors Game
+            </Button>
+          )}
+          {room.executiveGame.length > 0 && (
+            <Button
+              color="primary"
+              className="w-full"
+              onClick={() =>
+                router.push(`/games/executives/${room.executiveGame[0].id}`)
+              }
+            >
+              Join Executives Game
+            </Button>
+          )}
+        </div>
       </div>
       <ul className="flex-1 flex flex-col">
         {roomUsers.map((roomUser) => (

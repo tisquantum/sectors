@@ -440,9 +440,9 @@ const PlayerInfluence = ({
                 return new Promise<void>((resolve) => {
                   createPlayerVoteMutation.mutate(
                     {
-                      influenceIds: ceoInfluence.map(
-                        (influence) => influence.id
-                      ),
+                      influenceIds: ceoInfluence
+                        .map((influence) => influence.id)
+                        .splice(0, influenceToSubmit),
                       playerId,
                     },
                     {
