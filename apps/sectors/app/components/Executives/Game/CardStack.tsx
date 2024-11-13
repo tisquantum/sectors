@@ -11,7 +11,7 @@ export const CardStack = ({
   renderFull?: boolean;
 }) => {
   return (
-    <div className="flex items-center justify-center cursor-pointer">
+    <div className="flex items-center justify-center">
       {renderFull ? (
         <div className="relative w-[120px] h-[160px]">
           {[...Array(5)].map((_, index) => (

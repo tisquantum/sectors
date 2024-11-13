@@ -29,7 +29,6 @@ const GameBoard = ({ gameId }: { gameId: string }) => {
   if (!authPlayer) {
     return <div>Auth player not found</div>;
   }
-  console.log("authPlayer", authPlayer);
   // Determine player seating order based on seatIndex
   const authPlayerId = authPlayer.id;
   let sortedPlayers = players.sort((a, b) => a.seatIndex - b.seatIndex);
@@ -51,7 +50,7 @@ const GameBoard = ({ gameId }: { gameId: string }) => {
 
   return (
     <>
-      <div className="grid grid-rows-3 h-full gap-2">
+      <div className="hidden xl:block grid gap-2">
         {/* Top row */}
         <div className="flex items-center justify-center gap-4">
           {sortedPlayers.length === 5 && (
@@ -133,6 +132,61 @@ const GameBoard = ({ gameId }: { gameId: string }) => {
         {/* Bottom row (auth player centered) */}
         <div className="flex items-center justify-center">
           {renderPlayerTableau(authPlayerId)}
+        </div>
+      </div>
+
+      {/* Layout for smaller screens */}
+      <div className="block xl:hidden flex flex-col gap-2">
+        {/* Player List */}
+        <div className="flex flex-col items-center gap-2">
+          {sortedPlayers.map((player) => (
+            <div
+              key={player.id}
+              className={`w-full p-2 rounded-lg ${
+                player.id === authPlayerId
+                  ? "bg-secondary-100 text-white"
+                  : "bg-gray-900"
+              }`}
+            >
+              {renderPlayerTableau(player.id)}
+            </div>
+          ))}
+        </div>
+
+        {/* Controls Section */}
+        <div className="flex flex-col justify-center items-center gap-2">
+          <div className="flex flex-row items-center justify-between p-2 gap-2">
+            <Deck />
+            {turnPhaseDisplayTrump(currentPhase.phaseName) && (
+              <TrumpCard gameId={gameId} />
+            )}
+            <CeoInfluence />
+          </div>
+
+          {/* Popovers for Tricks and Votes */}
+          <div className="flex flex-row items-center justify-around gap-2">
+            <Popover>
+              <PopoverTrigger>
+                <div className="bg-primary p-1 font-bold text-gray-200 rounded-md cursor-pointer">
+                  Trick History
+                </div>
+              </PopoverTrigger>
+              <PopoverContent>
+                <TrickHistory gameId={gameId} />
+              </PopoverContent>
+            </Popover>
+
+            <Popover>
+              <PopoverTrigger>
+                <div className="bg-primary p-1 font-bold text-gray-200 rounded-md cursor-pointer">
+                  Votes
+                </div>
+              </PopoverTrigger>
+              <PopoverContent>
+                <RoundVotes gameId={gameId} />
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
       </div>
       <Toaster />
