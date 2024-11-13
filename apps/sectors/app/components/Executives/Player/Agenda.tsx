@@ -1,5 +1,6 @@
 import { trpc } from "@sectors/app/trpc";
 import { friendlyAgendaName } from "../helpers";
+import { useExecutiveGame } from "../Game/GameContext";
 
 export const Agendas = ({ playerId }: { playerId: string }) => {
   const {
