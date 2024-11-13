@@ -9,8 +9,8 @@ export const GameTopBar = () => {
   const { currentTurn, currentPhase } = useExecutiveGame();
   const { name, description } = friendlyPhaseName(currentPhase?.phaseName);
   return (
-    <div className="flex justify-center items-center px-6 py-3 bg-gray-900 text-white shadow-lg rounded-lg">
-      <div className="flex flex-row items-center gap-3">
+    <div className="flex justify-center items-center px-6 py-3 bg-gray-900 text-white shadow-lg rounded-lg xl:max-w-[250px]">
+      <div className="flex flex-col items-center gap-3">
         <Popover>
           <PopoverTrigger>
             <div className="text-xs text-gray-200 rounded-medium bg-secondary-500 p-2 cursor-pointer">

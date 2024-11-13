@@ -23,9 +23,9 @@ const Relationship = ({
       {slots.map((status, index) => (
         <div key={index} className="flex items-center relative">
           {status === "filled" && player ? (
-            <PlayerAvatar player={player} />
+            <PlayerAvatar size="sm" player={player} />
           ) : (
-            <Avatar />
+            <Avatar size="sm" />
           )}
           {/* Show dotted line except for the last slot */}
           {index < slots.length - 1 && (

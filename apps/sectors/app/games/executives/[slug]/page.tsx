@@ -13,8 +13,10 @@ export default async function GamePage({
   return (
     <div className="h-[100vh] w-full overflow-y-auto">
       <GameProvider gameId={gameId}>
-        <div className="flex flex-col gap-2">
-          <GameTopBar />
+        <div className="relative flex flex-col gap-2 my-2">
+          <div className="relative xl:absolute xl:top-0 xl:left-2">
+            <GameTopBar />
+          </div>
           <GameBoard gameId={gameId} />
         </div>
       </GameProvider>
