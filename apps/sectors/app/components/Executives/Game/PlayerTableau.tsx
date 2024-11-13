@@ -647,129 +647,173 @@ export const PlayerTableau = ({ playerId }: { playerId: string }) => {
     isAuthPlayerPhasing && player.id == authPlayer?.id;
   return (
     <div
-      className={`flex flex-col gap-3 p-5 rounded-md ${
+      className={`flex flex-col gap-3 p-5 rounded-md items-center justify-center ${
         currentPhase?.activePlayerId == player.id
           ? "border-2 border-success-500"
           : ""
       }`}
     >
-      <div className="flex flex-row gap-3">
-        <div className="flex flex-row gap-2">
-          <div className="flex flex-col gap-2 items-center justify-center">
-            <AvatarGroup>
-              <PlayerAvatar
-                player={player}
-                badgeContent={player.seatIndex.toString()}
-              />
-              {player.isCOO && <Avatar size="md" name="COO" />}
-              {player.isGeneralCounsel && <Avatar size="md" name="GC" />}
-            </AvatarGroup>
-            {currentPhase.phaseName == ExecutivePhaseName.INFLUENCE_BID && (
-              <PlayerPassed playerId={player.id} />
-            )}
-            {isAuthPlayerAndPhasing &&
-              currentPhase.phaseName ==
-                ExecutivePhaseName.INFLUENCE_BID_SELECTION && <TakeNoBid />}
-          </div>
-        </div>
-        <div>
-          <div
-            className={`relative border-2 border-dotted ${
-              isAuthPlayerAndPhasing &&
-              currentPhase?.phaseName ==
-                ExecutivePhaseName.INFLUENCE_BID_SELECTION
-                ? "border-success-500"
-                : "border-gray-600"
-            } rounded-lg p-4`}
-          >
-            <div className="absolute -top-3 left-3 bg-white px-2 font-bold text-gray-800 rounded-md">
-              BIDS
-            </div>
-            <div className="pt-2">
-              <InfluenceBids
-                toPlayerId={player.id}
-                currentTurnId={currentPhase.gameTurnId}
-                isInteractive={
-                  isAuthPlayerAndPhasing &&
-                  currentPhase?.phaseName ==
-                    ExecutivePhaseName.INFLUENCE_BID_SELECTION
-                }
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-      <div className="flex flex-row gap-3 mt-2">
-        <div className="flex flex-col gap-4">
-          <div className="flex gap-2 justify-center">
-            {/* BRIBE Section */}
-            <div
-              className={`relative border-2 border-dotted ${
-                isAuthPlayerPhasing &&
-                player.id != authPlayer?.id &&
-                currentPhase?.phaseName == ExecutivePhaseName.INFLUENCE_BID
-                  ? "border-success-500"
-                  : "border-gray-600"
-              } rounded-lg p-4`}
-            >
-              <div className="absolute -top-3 left-3 bg-white px-2 font-bold text-gray-800 rounded-md">
-                BRIBE
+      <div className="flex flex-row gap-2">
+        <div
+          className={`flex flex-col gap-2
+        }`}
+        >
+          <div className="flex flex-row gap-3 mt-2">
+            <div className="flex flex-col gap-4">
+              <div className="flex gap-2 justify-center">
+                <div className="flex flex-row gap-2">
+                  <div className="flex flex-col gap-2 items-center justify-center">
+                    <AvatarGroup>
+                      <PlayerAvatar
+                        player={player}
+                        badgeContent={player.seatIndex.toString()}
+                      />
+                      {player.isCOO && <Avatar size="md" name="COO" />}
+                      {player.isGeneralCounsel && (
+                        <Avatar size="md" name="GC" />
+                      )}
+                    </AvatarGroup>
+                    {currentPhase.phaseName ==
+                      ExecutivePhaseName.INFLUENCE_BID && (
+                      <PlayerPassed playerId={player.id} />
+                    )}
+                    {isAuthPlayerAndPhasing &&
+                      currentPhase.phaseName ==
+                        ExecutivePhaseName.INFLUENCE_BID_SELECTION && (
+                        <TakeNoBid />
+                      )}
+                  </div>
+                </div>
+                <div
+                  className={`relative border-2 border-dotted ${
+                    isAuthPlayerAndPhasing &&
+                    currentPhase?.phaseName ==
+                      ExecutivePhaseName.INFLUENCE_BID_SELECTION
+                      ? "border-success-500"
+                      : "border-gray-600"
+                  } rounded-lg p-4`}
+                >
+                  <div className="absolute -top-3 left-3 bg-white px-2 font-bold text-gray-800 rounded-md">
+                    BIDS
+                  </div>
+                  <div className="pt-2">
+                    <InfluenceBids
+                      toPlayerId={player.id}
+                      currentTurnId={currentPhase.gameTurnId}
+                      isInteractive={
+                        isAuthPlayerAndPhasing &&
+                        currentPhase?.phaseName ==
+                          ExecutivePhaseName.INFLUENCE_BID_SELECTION
+                      }
+                    />
+                  </div>
+                </div>
+                {/* BRIBE Section */}
+                <div
+                  className={`relative border-2 border-dotted ${
+                    isAuthPlayerPhasing &&
+                    player.id != authPlayer?.id &&
+                    currentPhase?.phaseName == ExecutivePhaseName.INFLUENCE_BID
+                      ? "border-success-500"
+                      : "border-gray-600"
+                  } rounded-lg p-4`}
+                >
+                  <div className="absolute -top-3 left-3 bg-white px-2 font-bold text-gray-800 rounded-md">
+                    BRIBE
+                  </div>
+                  <div className="pt-2">
+                    {player.id && (
+                      <Bribe
+                        playerId={player.id}
+                        isInteractive={
+                          isAuthPlayerPhasing &&
+                          currentPhase?.phaseName ==
+                            ExecutivePhaseName.INFLUENCE_BID &&
+                          player.id != authPlayer?.id
+                        }
+                      />
+                    )}
+                  </div>
+                </div>
+                {/* HAND Section */}
+                <div
+                  className={`relative border-2 border-dotted  ${
+                    isAuthPlayerAndPhasing &&
+                    player.id == authPlayer?.id &&
+                    currentPhase?.phaseName == ExecutivePhaseName.SELECT_TRICK
+                      ? "border-success-500"
+                      : "border-gray-600"
+                  } rounded-lg p-4`}
+                >
+                  <div className="absolute -top-3 left-3 bg-white px-2 font-bold text-gray-800 rounded-md">
+                    HAND
+                  </div>
+                  <div className="pt-2">
+                    {player.id && (
+                      <Hand
+                        playerId={player.id}
+                        isInteractive={
+                          isAuthPlayerAndPhasing &&
+                          player.id == authPlayer?.id &&
+                          currentPhase?.phaseName ==
+                            ExecutivePhaseName.SELECT_TRICK
+                        }
+                      />
+                    )}
+                  </div>
+                </div>
               </div>
-              <div className="pt-2">
-                {player.id && (
-                  <Bribe
-                    playerId={player.id}
-                    isInteractive={
-                      isAuthPlayerPhasing &&
-                      currentPhase?.phaseName ==
-                        ExecutivePhaseName.INFLUENCE_BID &&
-                      player.id != authPlayer?.id
-                    }
-                  />
-                )}
-              </div>
-            </div>
-            {/* HAND Section */}
-            <div
-              className={`relative border-2 border-dotted  ${
-                isAuthPlayerAndPhasing &&
-                player.id == authPlayer?.id &&
-                currentPhase?.phaseName == ExecutivePhaseName.SELECT_TRICK
-                  ? "border-success-500"
-                  : "border-gray-600"
-              } rounded-lg p-4`}
-            >
-              <div className="absolute -top-3 left-3 bg-white px-2 font-bold text-gray-800 rounded-md">
-                HAND
-              </div>
-              <div className="pt-2">
-                {player.id && (
-                  <Hand
-                    playerId={player.id}
-                    isInteractive={
+              <div className="flex flex-row flex-grow gap-3 justify-center items-center">
+                <div className="relative border-2 border-dotted border-gray-600 rounded-lg p-4">
+                  <div className="absolute -top-3 left-3 bg-white px-2 font-bold text-gray-800 rounded-md">
+                    RELATIONSHIPS
+                  </div>
+                  <div className="flex flex-col gap-2 items-center mt-2">
+                    <Relationships playerId={player.id} />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-3">
+                  <div
+                    className={`relative border-2 border-dotted ${
                       isAuthPlayerAndPhasing &&
                       player.id == authPlayer?.id &&
-                      currentPhase?.phaseName == ExecutivePhaseName.SELECT_TRICK
-                    }
-                  />
-                )}
+                      currentPhase?.phaseName == ExecutivePhaseName.VOTE
+                        ? "border-success-500"
+                        : "border-gray-600"
+                    } border-gray-600 rounded-lg p-4`}
+                  >
+                    <div className="absolute -top-3 left-3 bg-white px-2 font-bold text-gray-800 rounded-md">
+                      INFLUENCE
+                    </div>
+                    <div className="flex flex-wrap gap-2 items-center mt-2">
+                      <PlayerInfluence
+                        playerId={player.id}
+                        isInteractive={
+                          isAuthPlayerAndPhasing &&
+                          player.id == authPlayer?.id &&
+                          currentPhase?.phaseName == ExecutivePhaseName.VOTE
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="relative border-2 border-dotted border-gray-600 rounded-lg p-4">
+                    <div className="absolute -top-3 left-3 bg-white px-2 font-bold text-gray-800 rounded-md">
+                      VOTES
+                    </div>
+                    <div className="flex flex-wrap gap-2 items-center mt-2">
+                      <Votes gameId={gameState.id} />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-          <div className="flex flex-row flex-grow gap-3 justify-center items-center">
-            <div className="relative border-2 border-dotted border-gray-600 rounded-lg p-4">
-              <div className="absolute -top-3 left-3 bg-white px-2 font-bold text-gray-800 rounded-md">
-                RELATIONSHIPS
-              </div>
-              <div className="flex flex-col gap-2 items-center mt-2">
-                <Relationships playerId={player.id} />
-              </div>
-            </div>
-          </div>
+          {currentPhase.phaseName == ExecutivePhaseName.GAME_END ||
+            (authPlayer?.id == player.id && <Agendas playerId={player.id} />)}
         </div>
         <div className="flex flex-col gap-3">
           <div
-            className={`relative border-2 border-dotted ${
+            className={`flex-grow relative border-2 border-dotted ${
               isAuthPlayerAndPhasing &&
               player.id == authPlayer?.id &&
               currentPhase?.phaseName == ExecutivePhaseName.SELECT_TRICK
@@ -793,41 +837,8 @@ export const PlayerTableau = ({ playerId }: { playerId: string }) => {
               )}
             </div>
           </div>
-          <div
-            className={`relative border-2 border-dotted ${
-              isAuthPlayerAndPhasing &&
-              player.id == authPlayer?.id &&
-              currentPhase?.phaseName == ExecutivePhaseName.VOTE
-                ? "border-success-500"
-                : "border-gray-600"
-            } border-gray-600 rounded-lg p-4`}
-          >
-            <div className="absolute -top-3 left-3 bg-white px-2 font-bold text-gray-800 rounded-md">
-              INFLUENCE
-            </div>
-            <div className="flex flex-wrap gap-2 items-center mt-2">
-              <PlayerInfluence
-                playerId={player.id}
-                isInteractive={
-                  isAuthPlayerAndPhasing &&
-                  player.id == authPlayer?.id &&
-                  currentPhase?.phaseName == ExecutivePhaseName.VOTE
-                }
-              />
-            </div>
-          </div>
-          <div className="relative border-2 border-dotted border-gray-600 rounded-lg p-4">
-            <div className="absolute -top-3 left-3 bg-white px-2 font-bold text-gray-800 rounded-md">
-              VOTES
-            </div>
-            <div className="flex flex-wrap gap-2 items-center mt-2">
-              <Votes gameId={gameState.id} />
-            </div>
-          </div>
         </div>
       </div>
-      {currentPhase.phaseName == ExecutivePhaseName.GAME_END ||
-        (authPlayer?.id == player.id && <Agendas playerId={player.id} />)}
     </div>
   );
 };
