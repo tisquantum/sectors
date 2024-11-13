@@ -68,8 +68,8 @@ const GameBoard = ({ gameId }: { gameId: string }) => {
         {/* Middle row */}
         <div className="grid grid-cols-3">
           <div className="flex items-center justify-center">
-            {sortedPlayers.length >= 3 &&
-              renderPlayerTableau(sortedPlayers[1].id)}
+              {sortedPlayers.length >= 3 &&
+                renderPlayerTableau(sortedPlayers[1].id)}
           </div>
           <div className="flex flex-row gap-2 items-center justify-center">
             <Deck />
