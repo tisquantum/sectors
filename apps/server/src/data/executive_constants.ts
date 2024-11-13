@@ -7,3 +7,7 @@ export const INFLUENCE_PLAYER_STARTING = 8;
 export const INFLUENCE_CEO_STARTING = 10;
 export const RELATIONSHIP_TRACK_LENGTH = 3;
 export const TOTAL_TRICK_TURNS = 4;
+export const GIFT_POINTS = 1;
+export const VOTE_POINTS = 2;
+export const RELATIONSHIP_POINTS = 3;
+export const AGENDA_POINTS = 4;

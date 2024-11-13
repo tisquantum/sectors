@@ -392,6 +392,8 @@ export type ExecutivePlayerWithRelations = ExecutivePlayer & {
   ownedByInfluence: Influence[];
   agendas: ExecutiveAgenda[];
   executiveTricks: ExecutiveTrick[];
+  voteMarkerVoted: VoteMarker[];
+  voteMarkerOwner: VoteMarker[];
 };
 
 export type ExecutivePlayerWithCards = ExecutivePlayer & {

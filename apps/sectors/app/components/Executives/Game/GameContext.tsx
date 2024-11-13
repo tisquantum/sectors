@@ -131,7 +131,7 @@ export const GameProvider: React.FC<{
       return;
     }
     setIsAuthPlayerPhasing(player?.id === currentPhase?.activePlayerId);
-  }, [currentPhase?.id]);
+  }, [currentPhase?.id, player]);
 
   if (isLoading || currentTurnIsLoading) {
     return <div>Loading...</div>;

@@ -25,6 +25,8 @@ export class ExecutivePlayerService {
         ownedByInfluence: true,
         agendas: true,
         executiveTricks: true,
+        voteMarkerOwner: true,
+        voteMarkerVoted: true,
       },
     });
   }
@@ -67,6 +69,8 @@ export class ExecutivePlayerService {
         ownedByInfluence: true,
         agendas: true,
         executiveTricks: true,
+        voteMarkerVoted: true,
+        voteMarkerOwner: true,
       },
     });
   }
@@ -76,15 +80,6 @@ export class ExecutivePlayerService {
   ): Promise<ExecutivePlayer | null> {
     return this.prisma.executivePlayer.findFirst({
       where,
-      include: {
-        user: true,
-        victoryPoints: true,
-        cards: true,
-        selfInfluence: true,
-        ownedByInfluence: true,
-        agendas: true,
-        executiveTricks: true,
-      },
     });
   }
 
@@ -111,6 +106,8 @@ export class ExecutivePlayerService {
         ownedByInfluence: true,
         agendas: true,
         executiveTricks: true,
+        voteMarkerVoted: true,
+        voteMarkerOwner: true,
       },
     });
   }

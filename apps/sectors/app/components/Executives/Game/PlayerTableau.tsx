@@ -720,7 +720,10 @@ export const PlayerTableau = ({ playerId }: { playerId: string }) => {
                   <Bribe
                     playerId={player.id}
                     isInteractive={
-                      isAuthPlayerPhasing && player.id != authPlayer?.id
+                      isAuthPlayerPhasing &&
+                      currentPhase?.phaseName ==
+                        ExecutivePhaseName.INFLUENCE_BID &&
+                      player.id != authPlayer?.id
                     }
                   />
                 )}
@@ -823,9 +826,8 @@ export const PlayerTableau = ({ playerId }: { playerId: string }) => {
           </div>
         </div>
       </div>
-      {authPlayer?.id && player.id == authPlayer.id && (
-        <Agendas playerId={authPlayer.id} />
-      )}
+      {currentPhase.phaseName == ExecutivePhaseName.GAME_END ||
+        (authPlayer?.id == player.id && <Agendas playerId={player.id} />)}
     </div>
   );
 };

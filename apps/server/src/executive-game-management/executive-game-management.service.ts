@@ -3,6 +3,7 @@ import {
   Agenda,
   CardLocation,
   CardSuit,
+  ExecutiveAgenda,
   ExecutiveCard,
   ExecutiveGameStatus,
   ExecutiveGameTurn,
@@ -15,16 +16,21 @@ import {
   InfluenceLocation,
   InfluenceType,
   TurnType,
+  VictoryPointType,
 } from '@prisma/client';
 import {
+  AGENDA_POINTS,
   BRIBE_CARD_HAND_SIZE,
+  GIFT_POINTS,
   INFLUENCE_CEO_STARTING,
   INFLUENCE_PLAYER_STARTING,
+  RELATIONSHIP_POINTS,
   ROUND_1_CARD_HAND_SIZE,
   ROUND_2_CARD_HAND_SIZE,
   ROUND_3_CARD_HAND_SIZE,
   ROUND_4_CARD_HAND_SIZE,
   TOTAL_TRICK_TURNS,
+  VOTE_POINTS,
 } from '@server/data/executive_constants';
 import { ExecutiveCardService } from '@server/executive-card/executive-card.service';
 import { ExecutiveGameTurnService } from '@server/executive-game-turn/executive-game-turn.service';
@@ -35,7 +41,10 @@ import { ExecutiveInfluenceService } from '@server/executive-influence/executive
 import { ExecutivePhaseService } from '@server/executive-phase/executive-phase.service';
 import { ExecutivePlayerService } from '@server/executive-player/executive-player.service';
 import { PrismaService } from '@server/prisma/prisma.service';
-import { ExecutiveInfluenceBidWithRelations } from '@server/prisma/prisma.types';
+import {
+  ExecutiveInfluenceBidWithRelations,
+  ExecutivePlayerWithRelations,
+} from '@server/prisma/prisma.types';
 import {
   EVENT_EXECUTIVE_GAME_STARTED,
   EVENT_EXECUTIVE_NEW_PHASE,
@@ -149,6 +158,10 @@ export class ExecutiveGameManagementService {
         await this.resolveVote(gameTurn.id);
         await this.nextVoteRoundOrEndGame(gameTurn.gameId, gameTurn.id);
         break;
+      case ExecutivePhaseName.GAME_END:
+        await this.endGame(gameTurn.gameId, gameTurn.id);
+        await this.pingPlayers(gameTurn.gameId);
+        break;
       default:
         return;
     }
@@ -193,12 +206,186 @@ export class ExecutiveGameManagementService {
     if (voteRounds.length < players.length) {
       await this.nextPhase(gameId, gameTurnId, ExecutivePhaseName.RESOLVE_VOTE);
     } else {
-      await this.endGame(gameId, gameTurnId);
+      await this.startPhase({
+        gameId,
+        gameTurnId,
+        phaseName: ExecutivePhaseName.GAME_END,
+      });
     }
   }
 
   async endGame(gameId: string, gameTurnId: string) {
-    //TODO: Distribute points and end game
+    //get all players
+    const players = await this.playerService.listExecutivePlayers({
+      where: {
+        gameId,
+      },
+    });
+    if (!players) {
+      throw new Error('Players not found');
+    }
+    //count gifts
+    const playerGiftsPromises = players.map((player) => {
+      const giftLength = player.cards.filter(
+        (card) => card.cardLocation == CardLocation.GIFT,
+      ).length;
+      return this.prisma.executiveVictoryPoint.create({
+        data: {
+          game: { connect: { id: gameId } },
+          victoryPoint: giftLength * GIFT_POINTS,
+          victoryPointType: VictoryPointType.GIFT,
+          player: { connect: { id: player.id } },
+        },
+      });
+    });
+    //count player votes
+    const playerVotesPointsPromises = players.map((player) => {
+      const voteMarkers = player.voteMarkerOwner.length;
+      return this.prisma.executiveVictoryPoint.create({
+        data: {
+          game: { connect: { id: gameId } },
+          victoryPoint: voteMarkers * VOTE_POINTS,
+          victoryPointType: VictoryPointType.VOTE,
+          player: { connect: { id: player.id } },
+        },
+      });
+    });
+    //relationship points
+    const playerRelationshipPointsPromises = players.map((player) => {
+      const influenceCounts = player.ownedByInfluence
+        .filter(
+          (influence) =>
+            influence.influenceLocation === InfluenceLocation.RELATIONSHIP,
+        )
+        .reduce(
+          (acc, influence) => {
+            if (influence.selfPlayerId) {
+              acc[influence.selfPlayerId] =
+                (acc[influence.selfPlayerId] || 0) + 1;
+            }
+            return acc;
+          },
+          {} as Record<string, number>,
+        );
+
+      const completedSets = Object.values(influenceCounts).filter(
+        (count) => count >= 3,
+      ).length;
+
+      return this.prisma.executiveVictoryPoint.create({
+        data: {
+          game: { connect: { id: gameId } },
+          victoryPoint: completedSets * RELATIONSHIP_POINTS,
+          victoryPointType: VictoryPointType.RELATIONSHIP,
+          player: { connect: { id: player.id } },
+        },
+      });
+    });
+    //find the ceo
+    const voteResults = players
+      .flatMap((player) => player.voteMarkerVoted)
+      .reduce((acc: Record<string, number>, voteMarker) => {
+        if (voteMarker.isCeo) {
+          acc['FOREIGN_INVESTOR'] = (acc['FOREIGN_INVESTOR'] || 0) + 1;
+        } else if (voteMarker.votedPlayerId) {
+          acc[voteMarker.votedPlayerId] =
+            (acc[voteMarker.votedPlayerId] || 0) + 1;
+        }
+        return acc;
+      }, {});
+    const votedCeo = Object.entries(voteResults).reduce(
+      (acc: { playerIds: string[]; count: number }, [playerId, count]) => {
+        if (count > acc.count) {
+          acc.count = count;
+          acc.playerIds = [playerId];
+        } else if (count === acc.count) {
+          acc.playerIds.push(playerId);
+        }
+        return acc;
+      },
+      { playerIds: [], count: 0 },
+    );
+
+    //resolve agenda points
+    const playerAgendaPoints = players.map((player) => {
+      return {
+        playerId: player.id,
+        filledAgenda: this.didPlayerFulfillAgenda(
+          player,
+          players,
+          player.agendas[0],
+          votedCeo.playerIds.filter(
+            (playerId) => playerId !== 'FOREIGN_INVESTOR',
+          ),
+        ),
+      };
+    });
+    //calculate agenda points
+    const agendaPointsPromises = playerAgendaPoints.map((playerAgenda) => {
+      if (playerAgenda.playerId === 'FOREIGN_INVESTOR') {
+        return;
+      }
+      if (playerAgenda.filledAgenda) {
+        return this.prisma.executiveVictoryPoint.create({
+          data: {
+            game: { connect: { id: gameId } },
+            victoryPoint: AGENDA_POINTS,
+            victoryPointType: VictoryPointType.AGENDA,
+            player: { connect: { id: playerAgenda.playerId } },
+          },
+        });
+      }
+    });
+    await Promise.all([
+      ...playerGiftsPromises,
+      ...playerVotesPointsPromises,
+      ...playerRelationshipPointsPromises,
+    ]);
+  }
+
+  didPlayerFulfillAgenda(
+    player: ExecutivePlayerWithRelations,
+    players: ExecutivePlayerWithRelations[],
+    agenda: ExecutiveAgenda,
+    votedCeos: string[],
+  ) {
+    const playerCeoSeatIndexes = players
+      .filter((player) => votedCeos.includes(player.id))
+      .map((player) => player.seatIndex);
+
+    switch (agenda.agendaType) {
+      case Agenda.BECOME_CEO_NO_SHARE:
+        return votedCeos.length == 1 && agenda.playerId === votedCeos[0];
+      case Agenda.FOREIGN_INVESTOR_CEO:
+        return votedCeos.length == 1 && votedCeos[0] === 'FOREIGN_INVESTOR';
+      case Agenda.BECOME_CEO_WITH_FOREIGN_INVESTOR:
+        return (
+          votedCeos.includes('FOREIGN_INVESTOR') &&
+          votedCeos.includes(agenda.playerId)
+        );
+      case Agenda.CEO_THREE_PLAYERS:
+        return votedCeos.length >= 3;
+      case Agenda.FIRST_LEFT_CEO: {
+        const totalPlayers = players.length;
+        const leftSeatIndex =
+          (player.seatIndex - 1 + totalPlayers) % totalPlayers;
+        return playerCeoSeatIndexes.includes(leftSeatIndex);
+      }
+      case Agenda.SECOND_LEFT_CEO: {
+        const totalPlayers = players.length;
+        const secondLeftSeatIndex =
+          (player.seatIndex - 2 + totalPlayers) % totalPlayers;
+        return playerCeoSeatIndexes.includes(secondLeftSeatIndex);
+      }
+      case Agenda.THIRD_LEFT_CEO: {
+        const totalPlayers = players.length;
+        const thirdLeftSeatIndex =
+          (player.seatIndex - 3 + totalPlayers) % totalPlayers;
+        return playerCeoSeatIndexes.includes(thirdLeftSeatIndex);
+      }
+      default:
+        return false;
+    }
   }
 
   async resolveVote(gameTurnId: string) {
