@@ -737,7 +737,7 @@ export const PlayerTableau = ({ playerId }: { playerId: string }) => {
                 </div>
                 {/* HAND Section */}
                 <div
-                  className={`relative border-2 border-dotted  ${
+                  className={`hidden xl:relative border-2 border-dotted  ${
                     isAuthPlayerAndPhasing &&
                     player.id == authPlayer?.id &&
                     currentPhase?.phaseName == ExecutivePhaseName.SELECT_TRICK
@@ -761,6 +761,59 @@ export const PlayerTableau = ({ playerId }: { playerId: string }) => {
                       />
                     )}
                   </div>
+                </div>
+              </div>
+              {/* HAND Section */}
+              <div
+                className={`xl:hidden relative border-2 border-dotted  ${
+                  isAuthPlayerAndPhasing &&
+                  player.id == authPlayer?.id &&
+                  currentPhase?.phaseName == ExecutivePhaseName.SELECT_TRICK
+                    ? "border-success-500"
+                    : "border-gray-600"
+                } rounded-lg p-4`}
+              >
+                <div className="absolute -top-3 left-3 bg-white px-2 font-bold text-gray-800 rounded-md">
+                  HAND
+                </div>
+                <div className="pt-2">
+                  {player.id && (
+                    <Hand
+                      playerId={player.id}
+                      isInteractive={
+                        isAuthPlayerAndPhasing &&
+                        player.id == authPlayer?.id &&
+                        currentPhase?.phaseName ==
+                          ExecutivePhaseName.SELECT_TRICK
+                      }
+                    />
+                  )}
+                </div>
+              </div>
+              <div
+                className={`xl:hidden flex-grow relative border-2 border-dotted ${
+                  isAuthPlayerAndPhasing &&
+                  player.id == authPlayer?.id &&
+                  currentPhase?.phaseName == ExecutivePhaseName.SELECT_TRICK
+                    ? "border-success-500"
+                    : "border-gray-600"
+                } rounded-lg p-4`}
+              >
+                <div className="absolute -top-3 left-3 bg-white px-2 font-bold text-gray-800 rounded-md">
+                  GIFTS
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {player.id && (
+                    <Gifts
+                      playerId={player.id}
+                      isInteractive={
+                        isAuthPlayerAndPhasing &&
+                        player.id == authPlayer?.id &&
+                        currentPhase?.phaseName ==
+                          ExecutivePhaseName.SELECT_TRICK
+                      }
+                    />
+                  )}
                 </div>
               </div>
               <div className="flex flex-row flex-grow gap-3 justify-center items-center">
@@ -811,7 +864,7 @@ export const PlayerTableau = ({ playerId }: { playerId: string }) => {
           {currentPhase.phaseName == ExecutivePhaseName.GAME_END ||
             (authPlayer?.id == player.id && <Agendas playerId={player.id} />)}
         </div>
-        <div className="flex flex-col gap-3">
+        <div className="hidden xl:flex flex-col gap-3">
           <div
             className={`flex-grow relative border-2 border-dotted ${
               isAuthPlayerAndPhasing &&
