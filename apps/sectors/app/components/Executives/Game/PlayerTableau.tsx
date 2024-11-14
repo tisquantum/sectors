@@ -737,7 +737,7 @@ export const PlayerTableau = ({ playerId }: { playerId: string }) => {
                 </div>
                 {/* HAND Section */}
                 <div
-                  className={`hidden xl:relative border-2 border-dotted  ${
+                  className={`hidden xl:flex border-2 border-dotted  ${
                     isAuthPlayerAndPhasing &&
                     player.id == authPlayer?.id &&
                     currentPhase?.phaseName == ExecutivePhaseName.SELECT_TRICK
