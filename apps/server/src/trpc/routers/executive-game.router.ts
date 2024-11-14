@@ -5,6 +5,7 @@ import { ExecutiveGameManagementService } from '@server/executive-game-managemen
 import { ExecutiveGameTurnService } from '@server/executive-game-turn/executive-game-turn.service';
 import { TRPCError } from '@trpc/server';
 import { ExecutiveInfluenceVoteRoundService } from '@server/executive-influence-vote-round/executive-influence-vote-round.service';
+import { timingSafeEqual } from 'crypto';
 
 type Context = {
   executiveGameService: ExecutiveGameService;
@@ -57,13 +58,21 @@ export default (trpc: TrpcService, ctx: Context) =>
     createInfluenceBid: trpc.procedure
       .input(
         z.object({
+          gameId: z.string(),
           fromPlayerId: z.string(),
           toPlayerId: z.string(),
           influenceAmount: z.number(),
         }),
       )
       .mutation(async ({ input }) => {
-        const { fromPlayerId, toPlayerId, influenceAmount } = input;
+        const { gameId, fromPlayerId, toPlayerId, influenceAmount } = input;
+        const isLocked = ctx.executiveGameService.checkLockAndLock(gameId);
+        if (isLocked) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Game is locked',
+          });
+        }
         await ctx.executiveGameManagementService.createExecutiveInfluenceBidFromClient(
           {
             fromPlayerId,
@@ -71,24 +80,23 @@ export default (trpc: TrpcService, ctx: Context) =>
             influenceAmount,
           },
         );
+        ctx.executiveGameService.unlockInput(gameId);
         return { success: true };
       }),
     playerPass: trpc.procedure
-      .input(z.object({ playerId: z.string() }))
+      .input(z.object({ gameId: z.string(), playerId: z.string() }))
       .mutation(async ({ input }) => {
-        const { playerId } = input;
+        const { gameId, playerId } = input;
+        const isLocked = ctx.executiveGameService.checkLockAndLock(gameId);
+        if (isLocked) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Game is locked',
+          });
+        }
         console.log('playerPass', playerId);
-        await ctx.executiveGameManagementService.playerPass(playerId);
-        return { success: true };
-      }),
-
-    selectInfluenceBid: trpc.procedure
-      .input(z.object({ influenceBidId: z.string() }))
-      .mutation(async ({ input }) => {
-        const { influenceBidId } = input;
-        // await ctx.executiveGameManagementService.selectInfluenceBid(
-        //   influenceBidId,
-        // );
+        await ctx.executiveGameManagementService.playerPass(gameId, playerId);
+        ctx.executiveGameService.unlockInput(gameId);
         return { success: true };
       }),
     playTrick: trpc.procedure
@@ -101,6 +109,13 @@ export default (trpc: TrpcService, ctx: Context) =>
       )
       .mutation(async ({ input }) => {
         const { playerId, cardId, gameId } = input;
+        const isLocked = ctx.executiveGameService.checkLockAndLock(gameId);
+        if (isLocked) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Game is locked',
+          });
+        }
         const currentTurn =
           await ctx.executiveGameTurnService.getLatestTurn(gameId);
         if (!currentTurn) {
@@ -114,17 +129,26 @@ export default (trpc: TrpcService, ctx: Context) =>
           playerId,
           currentTurn.id,
         );
+        ctx.executiveGameService.unlockInput(gameId);
         return { success: true };
       }),
     createPlayerVote: trpc.procedure
       .input(
         z.object({
+          gameId: z.string(),
           playerId: z.string(),
           influenceIds: z.array(z.string()),
         }),
       )
       .mutation(async ({ input }) => {
-        const { playerId, influenceIds } = input;
+        const { gameId, playerId, influenceIds } = input;
+        const isLocked = ctx.executiveGameService.checkLockAndLock(gameId);
+        if (isLocked) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Game is locked',
+          });
+        }
         const voteRound =
           await ctx.executiveGameManagementService.createPlayerVote(
             influenceIds,
@@ -142,6 +166,7 @@ export default (trpc: TrpcService, ctx: Context) =>
             message: 'Next voter error',
           });
         }
+        ctx.executiveGameService.unlockInput(gameId);
         return { success: true };
       }),
   });

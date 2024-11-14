@@ -5,6 +5,8 @@ import { ExecutiveGameWithRelations } from '@server/prisma/prisma.types';
 
 @Injectable()
 export class ExecutiveGameService {
+  //lock input for gameId
+  private inputLockCache = new Map<string, boolean>();
   constructor(private prisma: PrismaService) {}
 
   // Retrieve a specific ExecutiveGame by unique input
@@ -86,5 +88,25 @@ export class ExecutiveGameService {
     return this.prisma.executiveGame.delete({
       where,
     });
+  }
+
+  checkLock(gameId: string): boolean {
+    return this.inputLockCache.get(gameId) || false;
+  }
+
+  lockInput(gameId: string): void {
+    this.inputLockCache.set(gameId, true);
+  }
+
+  checkLockAndLock(gameId: string): boolean {
+    if (this.checkLock(gameId)) {
+      return false;
+    }
+    this.lockInput(gameId);
+    return true;
+  }
+
+  unlockInput(gameId: string): void {
+    this.inputLockCache.delete(gameId);
   }
 }

@@ -68,6 +68,7 @@ export class ExecutiveGameManagementService {
       currentGameTurn?: ExecutiveGameTurn | null;
       currentGameTurnId?: string;
       currentTrumpCard?: ExecutiveCard | null;
+      currentPhase?: ExecutivePhase | null;
     }
   >();
 
@@ -1173,6 +1174,11 @@ export class ExecutiveGameManagementService {
       phaseName,
       player: activePlayerId ? { connect: { id: activePlayerId } } : undefined,
     });
+    const currentCache = this.gameCache.get(gameId);
+    this.gameCache.set(gameId, {
+      ...currentCache,
+      currentPhase: phase,
+    });
     const gameTurn =
       await this.gameTurnService.getLatestTurnNoRelations(gameId);
     if (!gameTurn) {
@@ -1244,7 +1250,7 @@ export class ExecutiveGameManagementService {
       (await this.playerService.getExecutivePlayer({
         id: playerIdTo,
       }));
-      
+
     if (!playerTo) {
       throw new Error('Player not found');
     }
@@ -1760,20 +1766,28 @@ export class ExecutiveGameManagementService {
     await this.pusher.trigger(getGameChannelId(gameId), EVENT_PING_PLAYERS, {});
   }
 
-  async playerPass(playerId: string) {
+  async playerPass(gameId: string, playerId: string) {
+    const currentCache = this.gameCache.get(gameId);
     console.log('playerPass playerId', playerId);
-    //get the game
-    const player = await this.playerService.getExecutivePlayer({
-      id: playerId,
-    });
-    if (!player) {
-      throw new Error('Player not found');
+    const players =
+      currentCache?.players ??
+      (await this.playerService.listExecutivePlayers({
+        where: {
+          gameId: gameId,
+        },
+      }));
+    if (!players) {
+      throw new Error('Players not found');
     }
-    const gameTurn = await this.gameTurnService.getLatestTurn(player.gameId);
+    const gameTurn =
+      currentCache?.currentGameTurn ??
+      (await this.gameTurnService.getLatestTurn(gameId));
     if (!gameTurn) {
       throw new Error('Game turn not found');
     }
-    const currentPhase = await this.phaseService.getCurrentPhase(player.gameId);
+    const currentPhase =
+      currentCache?.currentPhase ??
+      (await this.phaseService.getCurrentPhase(gameId));
     //ensure player has not already passed
     const existingPass = await this.prisma.executivePlayerPass.findFirst({
       where: {
@@ -1792,12 +1806,6 @@ export class ExecutiveGameManagementService {
       },
     });
     console.log('pass', pass);
-    //check if all players have passed
-    const players = await this.playerService.listExecutivePlayers({
-      where: {
-        gameId: gameTurn.gameId,
-      },
-    });
     const playerPasses = await this.prisma.executivePlayerPass.findMany({
       where: {
         gameTurnId: gameTurn.id,

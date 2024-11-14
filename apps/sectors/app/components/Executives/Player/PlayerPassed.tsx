@@ -5,8 +5,10 @@ import { RiArrowRightSFill } from "@remixicon/react";
 import DebounceButton from "../../General/DebounceButton";
 
 export const PlayerPassed = ({ playerId }: { playerId: string }) => {
-  const { isAuthPlayerPhasing, authPlayer, currentTurn } = useExecutiveGame();
+  const { gameId, isAuthPlayerPhasing, authPlayer, currentTurn } =
+    useExecutiveGame();
   const passAction = trpc.executiveGame.playerPass.useMutation();
+  if (!gameId) return <div>Game ID not found</div>;
   const playerPasses = currentTurn?.playerPasses || [];
 
   // Check if the player has already passed
@@ -21,7 +23,7 @@ export const PlayerPassed = ({ playerId }: { playerId: string }) => {
           acceptCallback={() => {
             return new Promise<void>((resolve) => {
               passAction.mutate(
-                { playerId },
+                { gameId, playerId },
                 {
                   onSettled: () => {
                     resolve();

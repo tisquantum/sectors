@@ -46,7 +46,7 @@ const InfluenceBids = ({
   currentTurnId: string;
   isInteractive?: boolean;
 }) => {
-  const { pingCounter, currentPhase } = useExecutiveGame();
+  const { pingCounter, currentPhase, gameId } = useExecutiveGame();
   const [influenceDestination, setInfluenceDestination] =
     useState<InfluenceLocation>(InfluenceLocation.OWNED_BY_PLAYER);
   const [isBidLocked, setIsBidLocked] = useState(false);
@@ -66,6 +66,9 @@ const InfluenceBids = ({
   useEffect(() => {
     refetch();
   }, [pingCounter, currentPhase?.id]);
+  if (!gameId) {
+    return <div>Game ID not found</div>;
+  }
   if (isLoading) {
     return <div>Loading...</div>;
   }
@@ -119,6 +122,7 @@ const InfluenceBids = ({
                             .executiveInfluenceBidId || "",
                         targetLocation: influenceDestination,
                         isBidLocked,
+                        gameId,
                       },
                       {
                         onSettled: () => {
@@ -328,7 +332,7 @@ const PlayerInfluence = ({
   playerId: string;
   isInteractive?: boolean;
 }) => {
-  const { pingCounter, currentPhase } = useExecutiveGame();
+  const { pingCounter, currentPhase, gameId } = useExecutiveGame();
   const createPlayerVoteMutation =
     trpc.executiveGame.createPlayerVote.useMutation();
   const {
@@ -348,6 +352,9 @@ const PlayerInfluence = ({
     refetch();
   }, [pingCounter, currentPhase?.id]);
   const [influenceToSubmit, setInfluenceToSubmit] = useState(1);
+  if (!gameId) {
+    return <div>Game ID not found</div>;
+  }
   if (isLoading) {
     return <div>Loading...</div>;
   }
@@ -391,6 +398,7 @@ const PlayerInfluence = ({
                           .map((influence) => influence.id)
                           .splice(0, influenceToSubmit),
                         playerId,
+                        gameId,
                       },
                       {
                         onSettled: () => {
@@ -444,6 +452,7 @@ const PlayerInfluence = ({
                         .map((influence) => influence.id)
                         .splice(0, influenceToSubmit),
                       playerId,
+                      gameId,
                     },
                     {
                       onSettled: () => {
@@ -541,7 +550,7 @@ const Bribe = ({
   playerId: string;
   isInteractive?: boolean;
 }) => {
-  const { authPlayer, pingCounter, currentPhase } = useExecutiveGame();
+  const { authPlayer, pingCounter, currentPhase, gameId } = useExecutiveGame();
   const [influenceValue, setInfluenceValue] = useState(1);
   const createInfluenceBidMutation =
     trpc.executiveGame.createInfluenceBid.useMutation();
@@ -562,7 +571,9 @@ const Bribe = ({
   if (!authPlayer) {
     return <div>No auth player</div>;
   }
-  console.log("authPlayer", authPlayer);
+  if (!gameId) {
+    return <div>Game ID not found</div>;
+  }
   let selfInfluenceAuthPlayerOwns = authPlayer?.selfInfluence.filter(
     (influence) => influence.ownedByPlayerId === influence.selfPlayerId
   );
@@ -595,6 +606,7 @@ const Bribe = ({
                       fromPlayerId: authPlayer.id,
                       toPlayerId: playerId,
                       influenceAmount: influenceValue,
+                      gameId,
                     },
                     {
                       onSettled: () => {
