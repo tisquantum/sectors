@@ -801,7 +801,7 @@ export const PlayerTableau = ({ playerId }: { playerId: string }) => {
                       VOTES
                     </div>
                     <div className="flex flex-wrap gap-2 items-center mt-2">
-                      <Votes gameId={gameState.id} />
+                      <Votes gameId={gameState.id} playerId={playerId} />
                     </div>
                   </div>
                 </div>

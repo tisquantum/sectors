@@ -9,10 +9,18 @@ import { turnPhaseDisplayTrump } from "../helpers";
 import { Tricks } from "./Tricks";
 import { TrickHistory } from "./TrickHistory";
 import { ExecutivePhaseName } from "@server/prisma/prisma.client";
-import { Popover, PopoverContent, PopoverTrigger } from "@nextui-org/react";
+import {
+  Button,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  useDisclosure,
+} from "@nextui-org/react";
 import { RoundVotes } from "./RoundVotes";
+import { GameResultsOverview } from "./GameResults";
 
 const GameBoard = ({ gameId }: { gameId: string }) => {
+  const { isOpen, onOpen, onClose, onOpenChange } = useDisclosure();
   const { gameState, authPlayer, currentPhase, currentTurn } =
     useExecutiveGame();
   const players = gameState.players;
@@ -50,7 +58,23 @@ const GameBoard = ({ gameId }: { gameId: string }) => {
 
   return (
     <>
-      <div className="hidden xl:block grid gap-2">
+      <div className="hidden xl:flex flex-col gap-5">
+        {currentPhase.phaseName == ExecutivePhaseName.GAME_END && (
+          <div className="flex items-center justify-center gap-4">
+            <Button
+              color="primary"
+              className="h-44 max-w-[500px] bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg transform transition-transform duration-300 hover:scale-90 hover:shadow-2xl"
+              onPress={onOpen}
+            >
+              <div className="flex flex-col gap-2 items-center">
+                <span className="text-2xl font-bold animate-pulse">
+                  Game Has Ended!
+                </span>
+                <span className="text-xl font-medium">View Game Results</span>
+              </div>
+            </Button>
+          </div>
+        )}
         {/* Top row */}
         <div className="flex items-center justify-center gap-4">
           {sortedPlayers.length === 5 && (
@@ -68,17 +92,17 @@ const GameBoard = ({ gameId }: { gameId: string }) => {
         {/* Middle row */}
         <div className="grid grid-cols-3">
           <div className="flex items-center justify-center">
-              {sortedPlayers.length >= 3 &&
-                renderPlayerTableau(sortedPlayers[1].id)}
+            {sortedPlayers.length >= 3 &&
+              renderPlayerTableau(sortedPlayers[1].id)}
           </div>
           <div className="flex flex-row gap-2 items-center justify-center">
+            <CeoInfluence />
             <Deck />
             {gameId &&
               (authPlayer.isGeneralCounsel ||
                 turnPhaseDisplayTrump(currentPhase.phaseName)) && (
                 <TrumpCard gameId={gameId} />
               )}
-            <CeoInfluence />
             <div className="flex flex-col gap-1 items-center justify-center">
               {turnPhaseDisplayTrump(currentPhase.phaseName) && (
                 <div
@@ -190,6 +214,14 @@ const GameBoard = ({ gameId }: { gameId: string }) => {
         </div>
       </div>
       <Toaster />
+      {currentPhase.phaseName == ExecutivePhaseName.GAME_END && (
+        <GameResultsOverview
+          isOpen={isOpen}
+          onOpen={onOpen}
+          onClose={onClose}
+          onOpenChange={onOpenChange}
+        />
+      )}
     </>
   );
 };
