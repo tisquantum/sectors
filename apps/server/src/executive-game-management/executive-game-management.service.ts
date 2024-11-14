@@ -65,8 +65,9 @@ export class ExecutiveGameManagementService {
     {
       players?: ExecutivePlayer[];
       influenceBids?: ExecutiveInfluenceBidWithRelations[];
-      currentTurn?: ExecutiveGameTurn | null;
+      currentGameTurn?: ExecutiveGameTurn | null;
       currentGameTurnId?: string;
+      currentTrumpCard?: ExecutiveCard | null;
     }
   >();
 
@@ -103,6 +104,7 @@ export class ExecutiveGameManagementService {
         this.gameCache.set(gameTurn.gameId, {
           ...currentCache,
           currentGameTurnId: gameTurn.id,
+          currentGameTurn: gameTurn,
         });
         await this.boardCleanup(gameTurn.gameId);
         await this.nextPhase(gameTurn.gameId, gameTurn.id, phaseName);
@@ -112,6 +114,7 @@ export class ExecutiveGameManagementService {
           gameTurn.gameId,
           this.getCardHandSizeForTurn(gameTurn.turnNumber),
         );
+        await this.setTrumpCard(gameTurn.gameId);
         await this.nextPhase(gameTurn.gameId, gameTurn.id, phaseName);
         break;
       case ExecutivePhaseName.MOVE_COO_AND_GENERAL_COUNSEL:
@@ -147,8 +150,8 @@ export class ExecutiveGameManagementService {
         }
         break;
       case ExecutivePhaseName.RESOLVE_TRICK:
-        await this.resolveTrickWinner(gameTurn.id);
-        await this.newTrickOrTurn(gameTurn.gameId, gameTurn.id);
+        await this.resolveTrickWinner(gameTurn.id, gameTurn.gameId);
+        await this.newTrickOrTurn(gameTurn.gameId, gameTurn);
         break;
       case ExecutivePhaseName.START_VOTE:
         await this.createVoteRound(gameTurn.gameId, gameTurn.id);
@@ -165,6 +168,20 @@ export class ExecutiveGameManagementService {
       default:
         return;
     }
+  }
+
+  async setTrumpCard(gameId: string) {
+    //get the trump card
+    const trumpCard = await this.cardService.findExecutiveCard({
+      gameId,
+      cardLocation: CardLocation.TRUMP,
+    });
+    //set in local cache
+    const currentCache = this.gameCache.get(gameId);
+    this.gameCache.set(gameId, {
+      ...currentCache,
+      currentTrumpCard: trumpCard,
+    });
   }
 
   async prefetchInfluenceBidData(gameTurnId: string) {
@@ -529,17 +546,11 @@ export class ExecutiveGameManagementService {
     );
   }
 
-  async newTrickOrTurn(gameId: string, gameTurnId: string) {
-    const gameTurn = await this.gameTurnService.getExecutiveGameTurn({
-      id: gameTurnId,
-    });
-    if (!gameTurn) {
-      throw new Error('Game turn not found');
-    }
+  async newTrickOrTurn(gameId: string, gameTurn: ExecutiveGameTurn) {
     //get tricks for game turn
     const executiveTricks = await this.prisma.executiveTrick.findMany({
       where: {
-        turnId: gameTurnId,
+        turnId: gameTurn.id,
       },
     });
     console.log('newTrickOrTurn tricks', executiveTricks);
@@ -548,11 +559,11 @@ export class ExecutiveGameManagementService {
     ) {
       await this.startPhase({
         gameId,
-        gameTurnId,
+        gameTurnId: gameTurn.id,
         phaseName: ExecutivePhaseName.START_TRICK,
       });
     } else {
-      await this.startNewTurn(gameId, gameTurnId);
+      await this.startNewTurn(gameId, gameTurn.id);
     }
   }
 
@@ -833,6 +844,12 @@ export class ExecutiveGameManagementService {
       },
     });
 
+    //set cache data
+    const currentCache = this.gameCache.get(game.id);
+    this.gameCache.set(game.id, {
+      ...currentCache,
+      players,
+    });
     this.startPhase({
       gameId: game.id,
       gameTurnId: turn.id,
@@ -1156,7 +1173,8 @@ export class ExecutiveGameManagementService {
       phaseName,
       player: activePlayerId ? { connect: { id: activePlayerId } } : undefined,
     });
-    const gameTurn = await this.gameTurnService.getLatestTurn(gameId);
+    const gameTurn =
+      await this.gameTurnService.getLatestTurnNoRelations(gameId);
     if (!gameTurn) {
       throw new Error('Game turn not found');
     }
@@ -1192,8 +1210,17 @@ export class ExecutiveGameManagementService {
     playerIdTo: string,
     influenceCount: number,
   ) {
+    //throw error if player is sending to self
+    if (playerIdFrom === playerIdTo) {
+      throw new Error('Cannot send influence to self');
+    }
+    //get the local cache
+    const currentCache = this.gameCache.get(gameId);
+
     //get game turn
-    const gameTurn = await this.gameTurnService.getLatestTurn(gameId);
+    const gameTurn =
+      currentCache?.currentGameTurn ??
+      (await this.gameTurnService.getLatestTurn(gameId));
     if (!gameTurn) {
       throw new Error('Game turn not found');
     }
@@ -1211,9 +1238,13 @@ export class ExecutiveGameManagementService {
     if (selfInfluenceOwned.length < influenceCount) {
       throw new Error('Not enough influence to bid');
     }
-    const playerTo = await this.playerService.getExecutivePlayer({
-      id: playerIdTo,
-    });
+
+    const playerTo =
+      currentCache?.players?.find((player) => player.id === playerIdTo) ??
+      (await this.playerService.getExecutivePlayer({
+        id: playerIdTo,
+      }));
+      
     if (!playerTo) {
       throw new Error('Player not found');
     }
@@ -1412,7 +1443,7 @@ export class ExecutiveGameManagementService {
     }
   }
 
-  async resolveTrickWinner(gameTurnId: string) {
+  async resolveTrickWinner(gameTurnId: string, gameId: string) {
     //get latest trick
     const executiveTrick = await this.prisma.executiveTrick.findFirst({
       where: {
@@ -1442,11 +1473,16 @@ export class ExecutiveGameManagementService {
     const leadCard = executiveTrick.trickCards.find(
       (trickCard) => trickCard.isLead,
     );
+    //get local cache
+    const cache = this.gameCache.get(gameId);
+
     //get the trump card suit
-    const trumpCard = await this.cardService.findExecutiveCard({
-      gameId: executiveTrick.gameId,
-      cardLocation: CardLocation.TRUMP,
-    });
+    const trumpCard =
+      cache?.currentTrumpCard ??
+      (await this.cardService.findExecutiveCard({
+        gameId: executiveTrick.gameId,
+        cardLocation: CardLocation.TRUMP,
+      }));
     console.log('executiveTrick', executiveTrick);
     console.log('leadCard', leadCard);
     console.log('trumpCard', trumpCard);
@@ -1457,7 +1493,7 @@ export class ExecutiveGameManagementService {
       throw new Error('Trump card suit not found');
     }
     //iterate over trickCardsNoTrump and get the highest ranked card of the trump if trump is followed or the highest ranked card of the lead suit if trump is not followed
-    const trickLeader = await this.getTrickLeader(
+    const trickLeader = this.getTrickLeader(
       trickCardsNoTrump.map((trickCard) => trickCard.card),
       leadCard.card.cardSuit,
       trumpCard.cardSuit,
@@ -1523,11 +1559,11 @@ export class ExecutiveGameManagementService {
     });
   }
 
-  async getTrickLeader(
+  getTrickLeader(
     cards: ExecutiveCard[],
     leadCardSuit: CardSuit,
     trumpCardSuit: CardSuit,
-  ): Promise<ExecutiveCard> {
+  ): ExecutiveCard {
     // Separate cards by trump suit and lead suit
     const trumpCards = cards.filter((card) => card.cardSuit === trumpCardSuit);
     const leadSuitCards = cards.filter(

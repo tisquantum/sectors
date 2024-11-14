@@ -124,6 +124,15 @@ export class ExecutiveGameTurnService {
     });
   }
 
+  async getLatestTurnNoRelations(
+    gameId: string,
+  ): Promise<ExecutiveGameTurn | null> {
+    return this.prisma.executiveGameTurn.findFirst({
+      where: { gameId },
+      orderBy: { turnNumber: 'desc' },
+    });
+  }
+
   // Retrieve all turns for a specific game
   async getTurnsForGame(gameId: string): Promise<ExecutiveGameTurn[]> {
     return this.prisma.executiveGameTurn.findMany({
