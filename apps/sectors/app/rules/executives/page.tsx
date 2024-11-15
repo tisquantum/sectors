@@ -79,13 +79,13 @@ export default function ExecutivesRulesPage() {
             <li>
               When a player takes a bribe, they select all of the influence from
               one player. They may either take the full amount of this influence
-              or divide it by half, rounding down, and "lock" the bribe they
-              give to the player. The bribe card is then given to the player who
-              placed the bid of influence on the bribe that was selected. The
-              bribe card is placed in that players gift cards section. If the
-              bribe is locked, it is tilted sideways to indicate it is so. If
-              the bribe was locked the remaining influence is returned to the
-              player who took the bribe.
+              or divide it by half, rounding down, and &quot;lock&quot; the
+              bribe they give to the player. The bribe card is then given to the
+              player who placed the bid of influence on the bribe that was
+              selected. The bribe card is placed in that players gift cards
+              section. If the bribe is locked, it is tilted sideways to indicate
+              it is so. If the bribe was locked the remaining influence is
+              returned to the player who took the bribe.
             </li>
             <li>
               The player who has exchanged their bribe card for influence now
@@ -119,11 +119,11 @@ export default function ExecutivesRulesPage() {
             <li>
               When players play cards into a trick, they may either play from
               their hand or both their hand and their gift cards. The cards from
-              which the player is choosing is their "pool" of cards.
+              which the player is choosing is their &quot;pool&quot; of cards.
             </li>
             <li>
-              The first player to play a trick sets "the lead". The lead suit
-              must be followed by all subsequent players if the cards they are
+              The first player to play a trick sets the lead. The lead suit must
+              be followed by all subsequent players if the cards they are
               selecting from have the lead suit. If a player does not have the
               lead suit, they may play any card from their pooled cards.
             </li>
