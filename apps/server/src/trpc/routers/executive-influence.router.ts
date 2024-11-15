@@ -6,12 +6,14 @@ import { ExecutiveInfluenceBidService } from '@server/executive-influence-bid/ex
 import { ExecutiveGameManagementService } from '@server/executive-game-management/executive-game-management.service';
 import { TRPCError } from '@trpc/server';
 import { ExecutiveCardService } from '@server/executive-card/executive-card.service';
+import { ExecutiveGameService } from '@server/executive-game/executive-game.service';
 
 type Context = {
   executiveInfluenceService: ExecutiveInfluenceService;
   executiveInfluenceBidService: ExecutiveInfluenceBidService;
   executiveGameManagementService: ExecutiveGameManagementService;
   executiveCardService: ExecutiveCardService;
+  executiveGameService: ExecutiveGameService;
 };
 
 export default (trpc: TrpcService, ctx: Context) =>
@@ -80,10 +82,18 @@ export default (trpc: TrpcService, ctx: Context) =>
           executiveInfluenceBidId: z.string(),
           targetLocation: z.nativeEnum(InfluenceLocation),
           isBidLocked: z.boolean(),
+          gameId: z.string(),
         }),
       )
       .mutation(async ({ input }) => {
-        const { executiveInfluenceBidId, targetLocation, isBidLocked } = input;
+        const { executiveInfluenceBidId, targetLocation, isBidLocked, gameId } = input;
+        const isLocked = ctx.executiveGameService.checkLockAndLock(gameId);
+        if (isLocked) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Game is locked',
+          });
+        }
         const executiveInfluenceBid =
           await ctx.executiveInfluenceBidService.getExecutiveInfluenceBid({
             id: executiveInfluenceBidId,
@@ -153,6 +163,7 @@ export default (trpc: TrpcService, ctx: Context) =>
             message: 'Next phase error',
           });
         }
+        ctx.executiveGameService.unlockInput(gameId);
         return { success: true };
       }),
     takeNoInfluenceBid: trpc.procedure
@@ -165,6 +176,13 @@ export default (trpc: TrpcService, ctx: Context) =>
       )
       .mutation(async ({ input }) => {
         const { gameId, gameTurnId, toPlayerId } = input;
+        const isLocked = ctx.executiveGameService.checkLockAndLock(gameId);
+        if (isLocked) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Game is locked',
+          });
+        }
         try {
           await ctx.executiveInfluenceService.moveInfluenceBackToOwningPlayers(
             gameTurnId,
@@ -190,6 +208,7 @@ export default (trpc: TrpcService, ctx: Context) =>
             message: 'Next phase error',
           });
         }
+        ctx.executiveGameService.unlockInput(gameId);
         return { success: true };
       }),
   });

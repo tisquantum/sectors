@@ -320,7 +320,8 @@ export class TrpcRouter {
       executiveGameService: this.executiveGameService,
       executiveGameManagementService: this.executiveGameManagementService,
       executiveGameTurnService: this.executiveGameTurnService,
-      executiveInfluenceVoteRoundService: this.executiveInfluenceVoteRoundService,
+      executiveInfluenceVoteRoundService:
+        this.executiveInfluenceVoteRoundService,
     }),
     executiveGameTurn: executiveGameTurnRouter(this.trpc, {
       executiveGameTurnService: this.executiveGameTurnService,
@@ -336,12 +337,14 @@ export class TrpcRouter {
       executiveInfluenceBidService: this.executiveInfluenceBidService,
       executiveGameManagementService: this.executiveGameManagementService,
       executiveCardService: this.executiveCardService,
+      executiveGameService: this.executiveGameService,
     }),
     executivePhase: executivePhaseRouter(this.trpc, {
       executivePhaseService: this.executivePhaseService,
     }),
     executiveInfluenceVoteRound: executiveInfluenceVoteRoundRouter(this.trpc, {
-      executiveInfluenceVoteRoundService: this.executiveInfluenceVoteRoundService,
+      executiveInfluenceVoteRoundService:
+        this.executiveInfluenceVoteRoundService,
     }),
     executiveVoteMarker: executiveVoteMarkerRouter(this.trpc, {
       prismaService: this.prismaService,

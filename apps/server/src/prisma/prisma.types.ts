@@ -405,7 +405,6 @@ export type ExecutiveGameWithRelations = ExecutiveGame & {
   influence: Influence[];
   ExecutiveVictoryPoint: ExecutiveVictoryPoint[];
   ExecutiveAgenda: ExecutiveAgenda[];
-  executiveCards: ExecutiveCard[];
   phases: ExecutivePhase[];
   gameTurn: ExecutiveGameTurn[];
 };
