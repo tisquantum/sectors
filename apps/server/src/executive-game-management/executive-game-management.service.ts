@@ -1276,24 +1276,32 @@ export class ExecutiveGameManagementService {
   async playCardIntoTrick(
     cardId: string,
     playerId: string,
+    gameId: string,
     gameTurnId: string,
   ) {
-    //get the latest trick for game turn
-    const trick = await this.prisma.executiveTrick.findFirst({
-      where: {
-        turnId: gameTurnId,
-      },
-      include: {
-        trickCards: {
-          include: {
-            card: true,
+    const gameCache = this.gameCache.get(gameId);
+    const [trick, card, player] = await Promise.all([
+      await this.prisma.executiveTrick.findFirst({
+        where: {
+          turnId: gameTurnId,
+        },
+        include: {
+          trickCards: {
+            include: {
+              card: true,
+            },
           },
         },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+        orderBy: {
+          createdAt: 'desc',
+        },
+      }),
+      await this.cardService.getExecutiveCard({ id: cardId }),
+      await this.playerService.getExecutivePlayerWithCards({
+        id: playerId,
+      }),
+    ]);
+
     if (!trick) {
       throw new Error('Trick not found');
     }
@@ -1309,15 +1317,9 @@ export class ExecutiveGameManagementService {
     //get the lead card
     const leadCard = trickCards.find((trickCard) => trickCard.isLead);
     const trumpCard = trickCards.find((trickCard) => trickCard.isTrump);
-    //get the card
-    const card = await this.cardService.getExecutiveCard({ id: cardId });
     if (!card) {
       throw new Error('Card not found');
     }
-    //get the player
-    const player = await this.playerService.getExecutivePlayerWithCards({
-      id: playerId,
-    });
     if (!player) {
       throw new Error('Player not found');
     }
@@ -1325,18 +1327,20 @@ export class ExecutiveGameManagementService {
     if (card.playerId !== playerId) {
       throw new Error('Player does not own the card');
     }
-    //get the player hand
-    const playerHand = player.cards.filter((playerCard) => {
-      return playerCard.cardLocation === CardLocation.HAND;
-    });
-    //get the player gift cards
-    const playerGifts = player.cards.filter((playerCard) => {
-      return playerCard.cardLocation === CardLocation.GIFT;
-    });
-    //all player gift cards not locked
-    const playerGiftsNotLocked = playerGifts.filter(
-      (playerGift) => !playerGift.isLocked,
+    const cardMap = player.cards.reduce(
+      (acc, playerCard) => {
+        if (!acc[playerCard.cardLocation]) {
+          acc[playerCard.cardLocation] = [];
+        }
+        acc[playerCard.cardLocation].push(playerCard);
+        return acc;
+      },
+      {} as Record<string, any[]>,
     );
+
+    const playerHand = cardMap[CardLocation.HAND] || [];
+    const playerGifts = cardMap[CardLocation.GIFT] || [];
+    const playerGiftsNotLocked = playerGifts.filter((gift) => !gift.isLocked);
     //check if card is from hand or from gifts
     if (
       card.cardLocation !== CardLocation.HAND &&
@@ -1422,11 +1426,13 @@ export class ExecutiveGameManagementService {
       throw new Error('Trick card not found');
     }
     //get players
-    const players = await this.playerService.listExecutivePlayersNoRelations({
-      where: {
-        gameId: player.gameId,
-      },
-    });
+    const players =
+      gameCache?.players ??
+      (await this.playerService.listExecutivePlayersNoRelations({
+        where: {
+          gameId: player.gameId,
+        },
+      }));
     if (!players) {
       throw new Error('Players not found');
     }
@@ -1454,23 +1460,31 @@ export class ExecutiveGameManagementService {
   }
 
   async resolveTrickWinner(gameTurnId: string, gameId: string) {
-    //get latest trick
-    const executiveTrick = await this.prisma.executiveTrick.findFirst({
-      where: {
-        turnId: gameTurnId,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      include: {
-        trickCards: {
-          include: {
-            card: true,
+    const [executiveTrick, ceoInfluence] = await Promise.all([
+      await this.prisma.executiveTrick.findFirst({
+        where: {
+          turnId: gameTurnId,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        include: {
+          trickCards: {
+            include: {
+              card: true,
+            },
           },
         },
-      },
-    });
-
+      }),
+      await this.influenceService.listInfluences({
+        where: {
+          gameId: gameId,
+          influenceType: InfluenceType.CEO,
+          influenceLocation: InfluenceLocation.CEO,
+        },
+        take: 1,
+      }),
+    ]);
     if (!executiveTrick) {
       throw new Error('Trick not found');
     }
@@ -1513,15 +1527,6 @@ export class ExecutiveGameManagementService {
       //TODO: This is more of an assertion than an error
       throw new Error('Trick leader not found');
     }
-    //move 1 ceo influence to the trick leader
-    const ceoInfluence = await this.influenceService.listInfluences({
-      where: {
-        gameId: executiveTrick.gameId,
-        influenceType: InfluenceType.CEO,
-        influenceLocation: InfluenceLocation.CEO,
-      },
-      take: 1,
-    });
     if (!ceoInfluence) {
       throw new Error('CEO influence not found');
     }
