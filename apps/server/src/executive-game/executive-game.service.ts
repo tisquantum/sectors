@@ -99,10 +99,10 @@ export class ExecutiveGameService {
 
   checkLockAndLock(gameId: string): boolean {
     if (this.checkLock(gameId)) {
-      return false;
+      return true;
     }
     this.lockInput(gameId);
-    return true;
+    return false;
   }
 
   unlockInput(gameId: string): void {
