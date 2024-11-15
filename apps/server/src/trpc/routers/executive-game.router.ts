@@ -73,13 +73,18 @@ export default (trpc: TrpcService, ctx: Context) =>
             message: 'Game is locked',
           });
         }
-        await ctx.executiveGameManagementService.createExecutiveInfluenceBidFromClient(
-          {
-            fromPlayerId,
-            toPlayerId,
-            influenceAmount,
-          },
-        );
+        try {
+          await ctx.executiveGameManagementService.createExecutiveInfluenceBidFromClient(
+            {
+              fromPlayerId,
+              toPlayerId,
+              influenceAmount,
+            },
+          );
+        } catch (error) {
+          console.error('createInfluenceBid error', error);
+          ctx.executiveGameService.unlockInput(gameId);
+        }
         ctx.executiveGameService.unlockInput(gameId);
         return { success: true };
       }),
@@ -95,7 +100,11 @@ export default (trpc: TrpcService, ctx: Context) =>
           });
         }
         console.log('playerPass', playerId);
-        await ctx.executiveGameManagementService.playerPass(gameId, playerId);
+        try {
+          await ctx.executiveGameManagementService.playerPass(gameId, playerId);
+        } catch (error) {
+          ctx.executiveGameService.unlockInput(gameId);
+        }
         ctx.executiveGameService.unlockInput(gameId);
         return { success: true };
       }),
@@ -116,19 +125,31 @@ export default (trpc: TrpcService, ctx: Context) =>
             message: 'Game is locked',
           });
         }
-        const currentTurn =
-          await ctx.executiveGameTurnService.getLatestTurn(gameId);
+        let currentTurn;
+        try {
+          currentTurn =
+            await ctx.executiveGameTurnService.getLatestTurn(gameId);
+        } catch (error) {
+          console.error('createInfluenceBid error', error);
+          ctx.executiveGameService.unlockInput(gameId);
+        }
         if (!currentTurn) {
+          ctx.executiveGameService.unlockInput(gameId);
+
           throw new TRPCError({
             code: 'NOT_FOUND',
             message: 'No turn found',
           });
         }
-        await ctx.executiveGameManagementService.playCardIntoTrick(
-          cardId,
-          playerId,
-          currentTurn.id,
-        );
+        try {
+          await ctx.executiveGameManagementService.playCardIntoTrick(
+            cardId,
+            playerId,
+            currentTurn.id,
+          );
+        } catch (error) {
+          ctx.executiveGameService.unlockInput(gameId);
+        }
         ctx.executiveGameService.unlockInput(gameId);
         return { success: true };
       }),
@@ -144,23 +165,39 @@ export default (trpc: TrpcService, ctx: Context) =>
         const { gameId, playerId, influenceIds } = input;
         const isLocked = ctx.executiveGameService.checkLockAndLock(gameId);
         if (isLocked) {
+          ctx.executiveGameService.unlockInput(gameId);
+
           throw new TRPCError({
             code: 'FORBIDDEN',
             message: 'Game is locked',
           });
         }
-        const voteRound =
-          await ctx.executiveGameManagementService.createPlayerVote(
+        let voteRound;
+        try {
+          voteRound = await ctx.executiveGameManagementService.createPlayerVote(
             influenceIds,
             playerId,
           );
+        } catch (error) {
+          ctx.executiveGameService.unlockInput(gameId);
+        }
         try {
+          if (!voteRound) {
+            ctx.executiveGameService.unlockInput(gameId);
+
+            throw new TRPCError({
+              code: 'INTERNAL_SERVER_ERROR',
+              message: 'Vote round not found',
+            });
+          }
           await ctx.executiveGameManagementService.moveToNextVoter(
             gameId,
             voteRound.id,
             playerId,
           );
         } catch (error) {
+          ctx.executiveGameService.unlockInput(gameId);
+
           console.error('nextVoter error', error);
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
