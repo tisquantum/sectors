@@ -166,8 +166,8 @@ export default function ExecutivesRulesPage() {
           Investor.
         </p>
         <ul className="list-disc list-inside text-gray-700 space-y-2">
-          <li>Each Gift in tableau: +1 point</li>
-          <li>Each vote token collected: +2 points</li>
+          <li>Each gift: +1 point</li>
+          <li>Each vote token: +2 points</li>
           <li>Each filled relationship: +3 points</li>
           <li>Hidden Agenda fulfilled: +4 points</li>
         </ul>
