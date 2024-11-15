@@ -1572,6 +1572,33 @@ export class ExecutiveGameManagementService {
         isCOO: true,
       },
     });
+    const gameCache = this.gameCache.get(gameId);
+    const players =
+      gameCache?.players ??
+      (await this.playerService.listExecutivePlayersNoRelations({
+        where: {
+          gameId,
+        },
+      }));
+    if (!players) {
+      throw new Error('Players not found');
+    }
+    this.gameCache.set(gameId, {
+      ...gameCache, // Should use gameCache instead of cache
+      players: players.map((player) => {
+        if (player.id === trickLeader.playerId) {
+          return {
+            ...player,
+            isCOO: true,
+          };
+        } else {
+          return {
+            ...player,
+            isCOO: false,
+          };
+        }
+      }),
+    });
   }
 
   getTrickLeader(
