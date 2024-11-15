@@ -145,6 +145,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           await ctx.executiveGameManagementService.playCardIntoTrick(
             cardId,
             playerId,
+            currentTurn.gameId,
             currentTurn.id,
           );
         } catch (error) {
