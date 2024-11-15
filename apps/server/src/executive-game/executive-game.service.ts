@@ -17,7 +17,6 @@ export class ExecutiveGameService {
       where: executiveGameWhereUniqueInput,
       include: {
         players: true,
-        executiveCards: true,
         influence: true,
         ExecutiveVictoryPoint: true,
         ExecutiveAgenda: true,

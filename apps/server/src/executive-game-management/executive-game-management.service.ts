@@ -101,11 +101,18 @@ export class ExecutiveGameManagementService {
         await this.nextPhase(gameTurn.gameId, gameTurn.id, phaseName);
         return;
       case ExecutivePhaseName.START_TURN:
+        const players =
+          await this.playerService.listExecutivePlayersNoRelations({
+            where: {
+              gameId: gameTurn.gameId,
+            },
+          });
         const currentCache = this.gameCache.get(gameTurn.gameId);
         this.gameCache.set(gameTurn.gameId, {
           ...currentCache,
           currentGameTurnId: gameTurn.id,
           currentGameTurn: gameTurn,
+          players: players,
         });
         await this.boardCleanup(gameTurn.gameId);
         await this.nextPhase(gameTurn.gameId, gameTurn.id, phaseName);
@@ -146,7 +153,7 @@ export class ExecutiveGameManagementService {
       case ExecutivePhaseName.SELECT_TRICK:
         console.log('SELECT_TRICK', activePlayerId);
         if (!activePlayerId) {
-          await this.determineTrickBidder(gameTurn.id);
+          await this.determineTrickBidder(gameTurn);
           await this.pingPlayers(gameTurn.gameId);
         }
         break;
@@ -160,7 +167,7 @@ export class ExecutiveGameManagementService {
         break;
       case ExecutivePhaseName.RESOLVE_VOTE:
         await this.resolveVote(gameTurn.id);
-        await this.nextVoteRoundOrEndGame(gameTurn.gameId, gameTurn.id);
+        await this.nextVoteRoundOrEndGame(gameTurn.gameId, gameTurn);
         break;
       case ExecutivePhaseName.GAME_END:
         await this.endGame(gameTurn.gameId, gameTurn.id);
@@ -199,19 +206,16 @@ export class ExecutiveGameManagementService {
     }
   }
 
-  async nextVoteRoundOrEndGame(gameId: string, gameTurnId: string) {
-    const gameTurn = await this.gameTurnService.getExecutiveGameTurn({
-      id: gameTurnId,
-    });
-    if (!gameTurn) {
-      throw new Error('Game turn not found');
-    }
+  async nextVoteRoundOrEndGame(gameId: string, gameTurn: ExecutiveGameTurn) {
+    const gameCache = this.gameCache.get(gameId);
     //get players
-    const players = await this.playerService.listExecutivePlayers({
-      where: {
-        gameId,
-      },
-    });
+    const players =
+      gameCache?.players ??
+      (await this.playerService.listExecutivePlayersNoRelations({
+        where: {
+          gameId,
+        },
+      }));
     if (!players) {
       throw new Error('Players not found');
     }
@@ -222,11 +226,15 @@ export class ExecutiveGameManagementService {
       },
     });
     if (voteRounds.length < players.length) {
-      await this.nextPhase(gameId, gameTurnId, ExecutivePhaseName.RESOLVE_VOTE);
+      await this.nextPhase(
+        gameId,
+        gameTurn.id,
+        ExecutivePhaseName.RESOLVE_VOTE,
+      );
     } else {
       await this.startPhase({
         gameId,
-        gameTurnId,
+        gameTurnId: gameTurn.id,
         phaseName: ExecutivePhaseName.GAME_END,
       });
     }
@@ -619,27 +627,23 @@ export class ExecutiveGameManagementService {
     }
   }
 
-  async determineTrickBidder(gameTurnId: string) {
-    //get the game turn
-    const gameTurn = await this.gameTurnService.getExecutiveGameTurn({
-      id: gameTurnId,
-    });
-    if (!gameTurn) {
-      throw new Error('Game turn not found');
-    }
+  async determineTrickBidder(gameTurn: ExecutiveGameTurn) {
+    const gameCache = this.gameCache.get(gameTurn.gameId);
     //get the players
-    const players = await this.playerService.listExecutivePlayers({
-      where: {
-        gameId: gameTurn.gameId,
-      },
-    });
+    const players =
+      gameCache?.players ??
+      (await this.playerService.listExecutivePlayersNoRelations({
+        where: {
+          gameId: gameTurn.gameId,
+        },
+      }));
     if (!players) {
       throw new Error('Players not found');
     }
     //get the latest trick being played this turn
     const trick = await this.prisma.executiveTrick.findFirst({
       where: {
-        turnId: gameTurnId,
+        turnId: gameTurn.id,
       },
       orderBy: {
         createdAt: 'desc',
@@ -658,7 +662,7 @@ export class ExecutiveGameManagementService {
       console.log('determineTrickBidder trick complete, starting next phase');
       return await this.startPhase({
         gameId: gameTurn.gameId,
-        gameTurnId,
+        gameTurnId: gameTurn.id,
         phaseName: ExecutivePhaseName.RESOLVE_TRICK,
       });
     }
@@ -1599,11 +1603,14 @@ export class ExecutiveGameManagementService {
   }
 
   async dealCards(gameId: string, handSize: number) {
-    const players = await this.playerService.listExecutivePlayers({
-      where: {
-        gameId,
-      },
-    });
+    const gameCache = this.gameCache.get(gameId);
+    const players =
+      gameCache?.players ??
+      (await this.playerService.listExecutivePlayersNoRelations({
+        where: {
+          gameId,
+        },
+      }));
     // Draw enough cards for both hands and bribes for each player
     const totalCardsNeeded =
       players.length * handSize + players.length * BRIBE_CARD_HAND_SIZE;
@@ -1852,50 +1859,6 @@ export class ExecutiveGameManagementService {
     }
     return newActivePlayer;
   }
-  async makeNextPlayerActive(
-    gameTurnId: string,
-    currentActivePlayerId: string,
-  ) {
-    //get the game
-    const gameTurn = await this.gameTurnService.getExecutiveGameTurn({
-      id: gameTurnId,
-    });
-    if (!gameTurn) {
-      throw new Error('Game turn not found');
-    }
-    //get all players
-    const players = await this.playerService.listExecutivePlayers({
-      where: {
-        gameId: gameTurn.gameId,
-      },
-    });
-    if (!players) {
-      throw new Error('Players not found');
-    }
-    //get the current phase
-    const currentPhase = await this.phaseService.getCurrentPhase(
-      gameTurn.gameId,
-    );
-    if (!currentPhase) {
-      throw new Error('Current phase not found');
-    }
-    //get the current player
-    const currentPlayer = await this.playerService.getExecutivePlayer({
-      id: currentActivePlayerId,
-    });
-    if (!currentPlayer) {
-      throw new Error('Current player not found');
-    }
-    //get the next player
-    const nextPlayer = this.findNewActivePlayer(currentPlayer, players);
-    //update the phase
-    await this.phaseService.updateExecutivePhase({
-      where: { id: currentPhase.id },
-      data: {
-        player: { connect: { id: nextPlayer.id } },
-      },
-    });
-  }
 
   async createPlayerVote(
     influenceIds: string[],
@@ -1976,25 +1939,27 @@ export class ExecutiveGameManagementService {
     return currentVoteRound;
   }
 
-  async moveToNextVoter(voteRoundId: string, playerId: string) {
-    //get the current player
-    const player = await this.playerService.getExecutivePlayer({
-      id: playerId,
-    });
-    if (!player) {
-      throw new Error('Player not found');
-    }
+  async moveToNextVoter(gameId: string, voteRoundId: string, playerId: string) {
+    const gameCache = this.gameCache.get(gameId);
     //get all players
-    const players = await this.playerService.listExecutivePlayers({
-      where: {
-        gameId: player.gameId,
-      },
-    });
+    const players =
+      gameCache?.players ??
+      (await this.playerService.listExecutivePlayers({
+        where: {
+          gameId: gameId,
+        },
+      }));
     if (!players) {
       throw new Error('Players not found');
     }
+    const player = players.find((player) => player.id === playerId);
+    if (!player) {
+      throw new Error('Player not found');
+    }
     //get game
-    const gameTurn = await this.gameTurnService.getLatestTurn(player.gameId);
+    const gameTurn =
+      gameCache?.currentGameTurn ??
+      (await this.gameTurnService.getLatestTurn(player.gameId));
     if (!gameTurn) {
       throw new Error('Game turn not found');
     }

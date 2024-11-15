@@ -49,6 +49,7 @@ import {
   HeadlineType,
   StockSubRound,
   AwardTrackType,
+  GameTurn,
 } from '@prisma/client';
 import { GamesService } from '@server/games/games.service';
 import { CompanyService } from '@server/company/company.service';
@@ -234,7 +235,14 @@ interface ShareUpdate {
 @Injectable()
 export class GameManagementService {
   private readinessStore: Record<string, PlayerReadiness[]> = {};
-
+  private gameCache = new Map<
+    string,
+    {
+      currentGameTurn?: GameTurn | null;
+      currentGameTurnId?: string;
+      players?: Player[];
+    }
+  >();
   constructor(
     private prisma: PrismaService,
     private playersService: PlayersService,
@@ -299,10 +307,10 @@ export class GameManagementService {
         await this.discountInactiveCompanies(phase);
         break;
       case PhaseName.HEADLINE_RESOLVE:
-        await this.resolveHeadlines(phase);
+        await this.resolveHeadlines(phase, game.id);
         break;
       case PhaseName.INFLUENCE_BID_RESOLVE:
-        await this.resolveInfluenceBid(phase);
+        await this.resolveInfluenceBid(phase, game.id);
         break;
       case PhaseName.PRIZE_VOTE_RESOLVE:
         await this.resolvePrizeVotes(phase);
@@ -332,7 +340,7 @@ export class GameManagementService {
         break;
       case PhaseName.STOCK_RESOLVE_MARKET_ORDER:
         //resolve stock round
-        await this.resolveMarketOrdersSingleOrderResolve(phase);
+        await this.resolveMarketOrdersSingleOrderResolve(phase, game);
         break;
       case PhaseName.STOCK_RESOLVE_PENDING_OPTION_ORDER:
         await this.openOptionsOrders(phase);
@@ -509,15 +517,10 @@ export class GameManagementService {
     await Promise.all(companyPromises);
   }
 
-  async resolveHeadlines(phase: Phase) {
-    //get game
-    const game = await this.gamesService.game({ id: phase.gameId });
-    if (!game) {
-      throw new Error('Game not found');
-    }
+  async resolveHeadlines(phase: Phase, gameId: string) {
     //get headlines with slots
     const headlines = await this.headlineService.listHeadlines({
-      where: { gameId: game.id, saleSlot: { not: null } },
+      where: { gameId: gameId, saleSlot: { not: null } },
     });
     //for all headlines that have playerHeadlines, attempt to pay for them from player's account
     const playerHeadlines = headlines.filter(
@@ -1933,12 +1936,7 @@ export class GameManagementService {
    * Initial priority order is determined by an influence bid.  Player earn $1 per unspent influence.
    * @param phase
    */
-  async resolveInfluenceBid(phase: Phase) {
-    const game = await this.gamesService.game({ id: phase.gameId });
-    if (!game) {
-      throw new Error('Game not found');
-    }
-
+  async resolveInfluenceBid(phase: Phase, gameId: string) {
     const influenceRoundWithVotes =
       await this.influenceRoundService.getInfluenceRound({
         id: phase.influenceRoundId || 0,
@@ -1948,7 +1946,7 @@ export class GameManagementService {
     }
 
     const players = await this.playersService.players({
-      where: { gameId: game.id },
+      where: { gameId: gameId },
     });
 
     const missingPlayers = players.filter(
@@ -2653,7 +2651,7 @@ export class GameManagementService {
       throw new Error('Stock round ID not found');
     }
     //get the stock round
-    const stockRound = await this.stockRoundService.stockRound({
+    const stockRound = await this.stockRoundService.doesStockRoundExist({
       id: phase.stockRoundId,
     });
     if (!stockRound) {
@@ -2669,7 +2667,7 @@ export class GameManagementService {
           roundNumber: latestStockSubRound
             ? latestStockSubRound?.roundNumber + 1
             : 1,
-          StockRound: { connect: { id: stockRound.id } },
+          StockRound: { connect: { id: phase.stockRoundId } },
           Game: { connect: { id: phase.gameId } },
           GameTurn: { connect: { id: phase.gameTurnId } },
         },
@@ -7050,11 +7048,9 @@ export class GameManagementService {
     }
   }
 
-  async resolveMarketOrdersSingleOrderResolve(phase: Phase) {
-    const game = await this.gamesService.getGameState(phase.gameId);
-    if (!game) {
-      throw new Error('Game not found');
-    }
+  async resolveMarketOrdersSingleOrderResolve(phase: Phase, game: Game) {
+    const gameCache = this.gameCache.get(game.id);
+
     if (phase.stockRoundId && phase.stockSubRoundId) {
       const playerOrders =
         await this.playerOrderService.playerOrdersWithPlayerCompany({
@@ -7095,10 +7091,11 @@ export class GameManagementService {
       } catch (error) {
         console.error('Error distributing shares:', error);
       }
-
-      const players = await this.playersService.players({
-        where: { gameId: phase.gameId },
-      });
+      const players =
+        gameCache?.players ??
+        (await this.playersService.players({
+          where: { gameId: phase.gameId },
+        }));
       try {
         await Promise.all(
           players.map((player) =>

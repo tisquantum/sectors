@@ -14,6 +14,16 @@ export class StockRoundService {
     private stockSubRoundService: StockSubRoundService,
   ) {}
 
+  async doesStockRoundExist(
+    stockRoundWhereUniqueInput: Prisma.StockRoundWhereUniqueInput,
+  ): Promise<boolean> {
+    return Boolean(
+      await this.prisma.stockRound.findUnique({
+        where: stockRoundWhereUniqueInput,
+      }),
+    );
+  }
+  
   async stockRound(
     stockRoundWhereUniqueInput: Prisma.StockRoundWhereUniqueInput,
   ): Promise<StockRoundWithStockSubRounds | null> {

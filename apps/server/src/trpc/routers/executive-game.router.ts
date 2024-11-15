@@ -156,6 +156,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           );
         try {
           await ctx.executiveGameManagementService.moveToNextVoter(
+            gameId,
             voteRound.id,
             playerId,
           );
