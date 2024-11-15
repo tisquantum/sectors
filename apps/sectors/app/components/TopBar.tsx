@@ -37,7 +37,12 @@ const CommonNavLinks = memo(() => (
     </NavbarItem>
     <NavbarItem>
       <Link href="https://rules.sectors.gg" target="_blank">
-        Rules
+        Sectors Rules
+      </Link>
+    </NavbarItem>
+    <NavbarItem>
+      <Link href="/rules/executives" target="_blank">
+        The Executives Rules
       </Link>
     </NavbarItem>
     <NavbarItem className="flex items-center">
@@ -133,18 +138,18 @@ const TopBar = () => {
 
         <NavbarMenuToggle
           aria-label={isMenuOpen ? "Close menu" : "Open menu"}
-          className="visible md:invisible"
+          className="visible lg:invisible"
         />
 
         {/* Mobile Menu */}
-        <NavbarMenu className="visible md:invisible">
+        <NavbarMenu className="visible lg:invisible">
           <CommonNavLinks />
           <NavbarMenuItem>{/* <ThemeSwitcher /> */}</NavbarMenuItem>
           {MemoizedAuthMenu}
         </NavbarMenu>
 
         {/* Desktop Menu */}
-        <NavbarContent className="invisible md:visible hidden md:flex">
+        <NavbarContent className="invisible lg:visible hidden lg:flex">
           <CommonNavLinks />
           {MemoizedAuthMenu}
           {/* <NavbarItem className="invisible md:visible">

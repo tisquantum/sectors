@@ -319,6 +319,10 @@ export class ExecutiveGameManagementService {
         }
         return acc;
       }, {});
+    //for each player in the game, add +1 vote marker of their own type
+    players.forEach((player) => {
+      voteResults[player.id] = (voteResults[player.id] || 0) + 1;
+    });
     const votedCeo = Object.entries(voteResults).reduce(
       (acc: { playerIds: string[]; count: number }, [playerId, count]) => {
         if (count > acc.count) {
