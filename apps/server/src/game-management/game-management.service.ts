@@ -8800,6 +8800,7 @@ export class GameManagementService {
         ipoAndFloatPrice: null,
       },
     });
+    console.log('count', count);
     return count > 0;
   }
 
@@ -9616,7 +9617,12 @@ export class GameManagementService {
       throw new Error('Company not found');
     }
     const gameId = company.gameId;
-    const gameTurnId = this.gameCache.get(gameId)?.currentGameTurnId;
+    const gameTurnId =
+      this.gameCache.get(gameId)?.currentGameTurnId ??
+      (await this.gameTurnService.getCurrentTurn(gameId))?.id;
+    if (!gameTurnId) {
+      throw new Error('Game turn not found');
+    }
     //check if company is inactive
     if (company.status != CompanyStatus.INACTIVE) {
       throw new Error('Company is not inactive');
@@ -9633,6 +9639,18 @@ export class GameManagementService {
     }
     if (ipoPrice < sector.ipoMin || ipoPrice > sector.ipoMax) {
       throw new Error('IPO price is not within sector range');
+    }
+
+    //ensure player has not already cast vote for this company
+    const existingVote = await this.prisma.companyIpoPriceVote.findFirst({
+      where: {
+        playerId,
+        companyId,
+        gameTurnId,
+      },
+    });
+    if (existingVote) {
+      throw new Error('Player has already cast a vote for this company');
     }
     //create the IPO vote
     return await this.prisma.companyIpoPriceVote.create({

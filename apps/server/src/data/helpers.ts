@@ -80,7 +80,7 @@ export function determineNextGamePhase(
   }
   if (phaseName === PhaseName.INFLUENCE_BID_RESOLVE) {
     return {
-      phaseName: PhaseName.STOCK_RESOLVE_LIMIT_ORDER,
+      phaseName: PhaseName.SET_COMPANY_IPO_PRICES,
       roundType: RoundType.STOCK,
     };
   }

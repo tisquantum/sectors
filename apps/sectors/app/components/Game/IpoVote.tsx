@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { stockGridPrices } from "@server/data/constants";
 import { Company, PhaseName, Sector } from "@server/prisma/prisma.client";
 import DebounceButton from "../General/DebounceButton";
@@ -6,6 +6,15 @@ import { trpc } from "@sectors/app/trpc";
 import { useGame } from "./GameContext";
 import { set } from "lodash";
 import PlayerAvatar from "../Player/PlayerAvatar";
+import {
+  Chip,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@nextui-org/react";
+import CompanyInfo from "../Company/CompanyInfo";
+import { RiPriceTag3Fill } from "@remixicon/react";
+import { sectorColors } from "@server/data/gameData";
 
 const CompanyIpoVote = ({
   company,
@@ -16,7 +25,7 @@ const CompanyIpoVote = ({
   sector: Sector;
   isInteractive?: boolean;
 }) => {
-  const { authPlayer, currentTurn, currentPhase } = useGame();
+  const { authPlayer, currentTurn, currentPhase, gameState } = useGame();
   const [isLoadingIpoVoteSubmission, setIsLoadingIpoVoteSubmission] =
     useState(false);
   const [ipoVoteSubmitted, setIpoVoteSubmitted] = useState(false);
@@ -32,20 +41,51 @@ const CompanyIpoVote = ({
     data: ipoVotes,
     isLoading: isLoadingIpoVotes,
     isError: isErrorIpoVotes,
+    refetch: refetchIpoVotes,
   } = trpc.game.getIpoVotesForGameTurn.useQuery({
     gameTurnId: currentTurn.id,
   });
   const [selectedPrice, setSelectedPrice] = useState<number | null>(null);
+  useEffect(() => {
+    refetchIpoVotes();
+  }, [currentPhase?.id]);
+  const { Company, sectors } = gameState;
   const companyIpoPrices = stockGridPrices.filter(
     (price) => price >= sector.ipoMin && price <= sector.ipoMax
   );
   if (!authPlayer) return <div>Not logged in</div>;
   return (
-    <div className="flex flex-col gap-4 p-4 bg-gray-50 rounded-lg shadow-md">
-      <h2 className="text-lg font-semibold text-gray-700">
-        {isInteractive
-          ? `Select IPO Price for ${company.name}`
-          : "IPO Price selections"}
+    <div className="flex flex-col gap-4 p-4 rounded-lg shadow-md">
+      <h2 className="text-lg font-semibold">
+        {isInteractive ? (
+          <div className="flex items-center gap-2">
+            <span>Select IPO Price for</span>
+            <Popover>
+              <PopoverTrigger>
+                <div
+                  className={`flex flex-row items-center justify-center px-2 py-1 rounded-medium gap-2 cursor-pointer
+                    bg-[${
+                      sector.name ? sectorColors[sector.name] : "primary"
+                    }]`}
+                >
+                  <span>{company.name}</span>
+                  <span>|</span>
+                  <span>{sector?.name}</span>
+                  <span>|</span>
+                  <div className="flex gap-1 items-center">
+                    <RiPriceTag3Fill size={18} />
+                    <span>${company.unitPrice}</span>
+                  </div>
+                </div>
+              </PopoverTrigger>
+              <PopoverContent>
+                <CompanyInfo companyId={company.id} />
+              </PopoverContent>
+            </Popover>
+          </div>
+        ) : (
+          "IPO Price selections"
+        )}
       </h2>
 
       {/* Price Grid */}
@@ -67,11 +107,31 @@ const CompanyIpoVote = ({
           ) : (
             <div
               key={price}
-              className="flex flex-wrap gap-2 py-2 px-4 rounded-md text-sm font-medium"
+              className={`flex flex-col items-start gap-2 py-2 px-4 rounded-md text-sm font-medium 
+    ${
+      selectedPrice === price
+        ? "bg-blue-500 text-white border-blue-500"
+        : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
+    }`}
             >
-              ${price}
-              {currentPhase?.name == PhaseName.RESOLVE_SET_COMPANY_IPO_PRICES &&
-                ipoVotes && (
+              <div className="flex items-center justify-between w-full">
+                <span>${price}</span>
+                {currentPhase?.name ===
+                  PhaseName.RESOLVE_SET_COMPANY_IPO_PRICES &&
+                  Company.find((c) => c.id === company.id)?.ipoAndFloatPrice ===
+                    price && (
+                    <Chip color="warning">
+                      <span className="text-xs">IPO SELECTED PRICE</span>
+                    </Chip>
+                  )}
+              </div>
+
+              {/* IPO Votes Section */}
+              {currentPhase?.name ===
+                PhaseName.RESOLVE_SET_COMPANY_IPO_PRICES &&
+                ipoVotes &&
+                !isLoadingIpoVotes &&
+                !isErrorIpoVotes && (
                   <div className="flex flex-wrap gap-1">
                     {ipoVotes
                       .filter(
