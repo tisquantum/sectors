@@ -48,7 +48,7 @@ const PlayersOverview = ({ gameId }: { gameId: string }) => {
               acc[companyId] = { totalShares: 0, totalValue: 0 };
             }
             acc[companyId].totalShares += 1;
-            acc[companyId].totalValue += price;
+            acc[companyId].totalValue += price || 0;
             return acc;
           },
           {}

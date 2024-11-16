@@ -98,7 +98,7 @@ const InsolvencyGauge = ({
       (acc, curr) => acc + curr.shareContribution,
       0
     ) || 0;
-  const totalShareValue = totalShares * company.currentStockPrice;
+  const totalShareValue = totalShares * (company.currentStockPrice || 0);
   const totalValue = totalCash + totalShareValue;
   return (
     <div className="flex flex-col gap-2">

@@ -92,6 +92,16 @@ export function determineNextGamePhase(
       };
     case PhaseName.HEADLINE_RESOLVE:
       return {
+        phaseName: PhaseName.SET_COMPANY_IPO_PRICES,
+        roundType: RoundType.STOCK,
+      };
+    case PhaseName.SET_COMPANY_IPO_PRICES:
+      return {
+        phaseName: PhaseName.RESOLVE_SET_COMPANY_IPO_PRICES,
+        roundType: RoundType.STOCK,
+      };
+    case PhaseName.RESOLVE_SET_COMPANY_IPO_PRICES:
+      return {
         phaseName: PhaseName.STOCK_RESOLVE_LIMIT_ORDER,
         roundType: RoundType.STOCK,
       };
@@ -781,7 +791,7 @@ export function calculateNetWorth(
   return (
     cashOnHand +
     activeShares.reduce(
-      (acc, share) => acc + share.Company.currentStockPrice,
+      (acc, share) => acc + (share.Company.currentStockPrice || 0),
       0,
     )
   );
@@ -868,7 +878,7 @@ export function calculateAverageStockPrice(
 ) {
   return Math.floor(
     companiesInSector.reduce((acc, company) => {
-      return acc + company.currentStockPrice;
+      return acc + (company.currentStockPrice || 0);
     }, 0) / companiesInSector.length,
   );
 }

@@ -101,6 +101,7 @@ model Player {
   PrizeDistributions       PrizeDistribution[]
   RoomUser                 RoomUser?
   PlayerHeadline           PlayerHeadline[]
+  CompanyIpoPriceVote      CompanyIpoPriceVote[]
 }
 
 enum AccountStatus {
@@ -119,7 +120,7 @@ enum OverdraftTier {
 
 model Share {
   id                String                 @id @default(uuid())
-  price             Float
+  price             Int?
   companyId         String
   location          ShareLocation
   gameId            String
@@ -171,11 +172,11 @@ model Company {
   hasEconomiesOfScale      Boolean                   @default(false)
   stockTier                StockTier                 @default(TIER_1)
   tierSharesFulfilled      Int                       @default(0)
-  currentStockPrice        Int                       @default(0)
+  currentStockPrice        Int?                      @default(0)
   cashOnHand               Int                       @default(0)
   mergedWithParent         String?
   mergedWithChildren       String?
-  ipoAndFloatPrice         Int
+  ipoAndFloatPrice         Int?
   companyTier              CompanyTier               @default(INCUBATOR)
   status                   CompanyStatus             @default(INACTIVE)
   Sector                   Sector                    @relation(fields: [sectorId], references: [id])
@@ -202,6 +203,7 @@ model Company {
   entityId                 String?                   @unique
   Headline                 Headline[]
   companySpaces            CompanySpace[]
+  CompanyIpoPriceVote      CompanyIpoPriceVote[]
 }
 
 enum CompanyTier {
@@ -219,6 +221,21 @@ enum CompanyStatus {
   INACTIVE
   INSOLVENT
   BANKRUPT
+}
+
+model CompanyIpoPriceVote {
+  id         Int      @id @default(autoincrement())
+  companyId  String
+  gameId     String
+  playerId   String
+  ipoPrice   Int
+  gameTurnId String
+  Company    Company  @relation(fields: [companyId], references: [id])
+  Game       Game     @relation(fields: [gameId], references: [id])
+  Player     Player   @relation(fields: [playerId], references: [id])
+  GameTurn   GameTurn @relation(fields: [gameTurnId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 model StockHistory {
@@ -299,6 +316,7 @@ model PlayerOrder {
   isSell           Boolean?
   isConcealed      Boolean?        @default(true)
   optionContractId Int?
+  ipoAndFloatPrice Int?
   gameTurnCreated  String
   location         ShareLocation
   orderType        OrderType
@@ -732,6 +750,7 @@ model Game {
   Prizes                  Prize[]
   PlayerHeadline          PlayerHeadline[]
   CompanyAwardTrack       CompanyAwardTrack[]
+  CompanyIpoPriceVote     CompanyIpoPriceVote[]
 }
 
 model SectorPriority {
@@ -834,6 +853,7 @@ model GameTurn {
   prizeDistributions     PrizeDistribution[]
   PlayerHeadline         PlayerHeadline[]
   StockSubRound          StockSubRound[]
+  CompanyIpoPriceVote    CompanyIpoPriceVote[]
 }
 
 model CompanyActionOrder {
@@ -897,6 +917,8 @@ enum PhaseName {
   INFLUENCE_BID_RESOLVE
   START_TURN
   END_TURN
+  SET_COMPANY_IPO_PRICES
+  RESOLVE_SET_COMPANY_IPO_PRICES
   STOCK_RESOLVE_LIMIT_ORDER
   STOCK_MEET
   STOCK_ACTION_ORDER

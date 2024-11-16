@@ -50,6 +50,7 @@ import {
   StockSubRound,
   AwardTrackType,
   GameTurn,
+  CompanyIpoPriceVote,
 } from '@prisma/client';
 import { GamesService } from '@server/games/games.service';
 import { CompanyService } from '@server/company/company.service';
@@ -146,6 +147,7 @@ import {
   INACTIVE_COMPANY_PER_TURN_DISCOUNT,
   OUTSOURCE_PRESTIGE_PENALTY,
   AWARD_PRESTIGE_BONUS,
+  stockGridPrices,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -300,6 +302,11 @@ export class GameManagementService {
   async handlePhase(phase: Phase, game: Game) {
     switch (phase.name) {
       case PhaseName.START_TURN:
+        const gameCache = this.gameCache.get(game.id);
+        this.gameCache.set(game.id, {
+          ...gameCache,
+          currentGameTurnId: phase.gameTurnId,
+        });
         await this.determinePriorityOrderBasedOnNetWorth(phase);
         await this.handleOpeningNewCompany(phase);
         await this.handleHeadlines(phase);
@@ -308,6 +315,9 @@ export class GameManagementService {
         break;
       case PhaseName.HEADLINE_RESOLVE:
         await this.resolveHeadlines(phase, game.id);
+        break;
+      case PhaseName.RESOLVE_SET_COMPANY_IPO_PRICES:
+        await this.resolveSetCompanyAndIpoPrices(phase, game.id);
         break;
       case PhaseName.INFLUENCE_BID_RESOLVE:
         await this.resolveInfluenceBid(phase, game.id);
@@ -420,6 +430,56 @@ export class GameManagementService {
     }
   }
 
+  async resolveSetCompanyAndIpoPrices(phase: Phase, gameId: string) {
+    //get all companies that have no ipo price set
+    const companies = await this.companyService.companiesWithSector({
+      where: { gameId, ipoAndFloatPrice: null },
+    });
+    //get all company ipo price votes
+    const companyIpoVotes = await this.prisma.companyIpoPriceVote.findMany({
+      where: { gameTurnId: phase.gameTurnId },
+    });
+    //group votes by company
+    const groupedVotes = companyIpoVotes.reduce(
+      (acc, vote) => {
+        if (!acc[vote.companyId]) {
+          acc[vote.companyId] = [];
+        }
+        acc[vote.companyId].push(vote);
+        return acc;
+      },
+      {} as Record<string, CompanyIpoPriceVote[]>,
+    );
+    //determine the average ipo price for each company
+    const averageIpoPrices = Object.entries(groupedVotes).map(
+      ([companyId, votes]) => {
+        const total = votes.reduce((acc, vote) => acc + vote.ipoPrice, 0);
+        return { companyId, average: total / votes.length };
+      },
+    );
+    //find the closest price on stockGridPrices
+    const companyIpoPrices = averageIpoPrices.map(({ companyId, average }) => {
+      const closestPrice = stockGridPrices.reduce((acc, price) => {
+        return Math.abs(price - average) < Math.abs(acc - average)
+          ? price
+          : acc;
+      });
+      return { companyId, price: closestPrice };
+    });
+    for (const { companyId, price } of companyIpoPrices) {
+      const company = companies.find((company) => company.id === companyId);
+      if (!company) {
+        console.error('Company not found');
+        throw new Error('Company not found');
+      }
+      this.setIpoPriceAndCreateSharesAndInjectCapital(
+        price,
+        company,
+        phase.gameId,
+      );
+    }
+  }
+
   async resolveCompanyAwards(phase: Phase) {
     //check all tracks to see if any companies have reached the end
     //get all tracks for game id
@@ -488,7 +548,8 @@ export class GameManagementService {
         data: {
           ipoAndFloatPrice: Math.max(
             5,
-            company.ipoAndFloatPrice - INACTIVE_COMPANY_PER_TURN_DISCOUNT,
+            (company.ipoAndFloatPrice || 0) -
+              INACTIVE_COMPANY_PER_TURN_DISCOUNT,
           ),
         },
       });
@@ -3457,7 +3518,7 @@ export class GameManagementService {
       company.gameId,
       company.id,
       game.currentPhaseId || '',
-      company.currentStockPrice,
+      company.currentStockPrice || 0,
       1,
       StockAction.RESEARCH_EFFECT,
     );
@@ -3648,7 +3709,7 @@ export class GameManagementService {
         otherCompany.gameId,
         otherCompany.id,
         prestigeReward.gameTurnId || '',
-        otherCompany.currentStockPrice,
+        otherCompany.currentStockPrice || 0,
         1,
         StockAction.MAGNET_EFFECT,
       );
@@ -3756,7 +3817,7 @@ export class GameManagementService {
       company.gameId,
       company.id,
       game.currentPhaseId || '',
-      company.currentStockPrice,
+      company.currentStockPrice || 0,
       1,
       StockAction.PRESTIGE_REWARD,
     );
@@ -3870,7 +3931,7 @@ export class GameManagementService {
     //update the company cash on hand
     await this.companyService.updateCompany({
       where: { id: company.id },
-      data: { cashOnHand: company.cashOnHand + share.price },
+      data: { cashOnHand: company.cashOnHand + (share.price || 0) },
     });
     return true;
   }
@@ -3909,14 +3970,14 @@ export class GameManagementService {
       });
       cost = getCompanyActionCost(
         companyAction.action,
-        company.currentStockPrice,
+        company.currentStockPrice || 0,
         companyActions.length,
       );
     } else {
       //get the cost of the action
       cost = getCompanyActionCost(
         companyAction.action,
-        company.currentStockPrice,
+        company.currentStockPrice || 0,
       );
     }
 
@@ -4087,12 +4148,12 @@ export class GameManagementService {
           );
           steps = getStepsWithMaxBeingTheNextTierMin(
             revenue,
-            company.currentStockPrice,
+            company.currentStockPrice || 0,
             companyHasBoomCyclePassiveEffect,
           );
           console.log('DIVIDEND_FULL', steps);
           newStockPrice = getStockPriceStepsUp(
-            company.currentStockPrice,
+            company.currentStockPrice || 0,
             steps,
           );
           console.log('DIVIDEND_FULL', newStockPrice);
@@ -4106,19 +4167,19 @@ export class GameManagementService {
           );
           steps = getStepsWithMaxBeingTheNextTierMin(
             Math.floor(revenue / 2),
-            company.currentStockPrice,
+            company.currentStockPrice || 0,
             companyHasBoomCyclePassiveEffect,
           );
           console.log('DIVIDEND_FIFTY_FIFTY', steps);
           newStockPrice = getStockPriceStepsUp(
-            company.currentStockPrice,
+            company.currentStockPrice || 0,
             steps,
           );
           console.log('DIVIDEND_FIFTY_FIFTY', newStockPrice);
           break;
         case RevenueDistribution.RETAINED:
           newStockPrice = getStockPriceWithStepsDown(
-            company.currentStockPrice,
+            company.currentStockPrice || 0,
             1,
           );
           console.log('RETAINED', newStockPrice);
@@ -4806,7 +4867,7 @@ export class GameManagementService {
         game.currentTurn,
         game.currentPhaseId || '',
         contribution.playerId,
-        contribution.shareContribution * company.currentStockPrice,
+        contribution.shareContribution * (company.currentStockPrice || 0),
         EntityType.BANK,
         'Insolvency share contribution',
       );
@@ -4868,7 +4929,8 @@ export class GameManagementService {
       );
       const totalShareValueContributed = shareContributions.reduce(
         (acc, contribution) =>
-          acc + contribution.shareContribution * company.currentStockPrice,
+          acc +
+          contribution.shareContribution * (company.currentStockPrice || 0),
         0,
       );
 
@@ -4911,7 +4973,7 @@ export class GameManagementService {
         if (shares.length > 0) {
           const shareLiquidationPromises = shares.map(async (share) => {
             const shareLiquidationValue = Math.floor(
-              updatedCompany.currentStockPrice *
+              (updatedCompany.currentStockPrice || 0) *
                 (BANKRUPTCY_SHARE_PERCENTAGE_RETAINED / 100),
             );
             this.shareService.deleteShare({ id: share.id });
@@ -5459,9 +5521,9 @@ export class GameManagementService {
           return {
             ...company,
             stockTier: stockTier,
-            ipoAndFloatPrice: ipoPrice,
-            currentStockPrice: ipoPrice,
-            cashOnHand: ipoPrice * DEFAULT_SHARE_DISTRIBUTION,
+            ipoAndFloatPrice: null,
+            currentStockPrice: null,
+            cashOnHand: 0,
             gameId: game.id,
             sectorId: sector.id,
           };
@@ -5470,23 +5532,23 @@ export class GameManagementService {
           await this.companyService.createManyCompanies(newCompanyData);
 
         //iterate through companies and create ipo shares
-        const shares: {
-          companyId: string;
-          price: number;
-          location: ShareLocation;
-          gameId: string;
-        }[] = [];
-        companies.forEach((company) => {
-          for (let i = 0; i < DEFAULT_SHARE_DISTRIBUTION; i++) {
-            shares.push({
-              price: company.ipoAndFloatPrice,
-              location: ShareLocation.IPO,
-              companyId: company.id,
-              gameId: game.id,
-            });
-          }
-        });
-        await this.shareService.createManyShares(shares);
+        // const shares: {
+        //   companyId: string;
+        //   price: number;
+        //   location: ShareLocation;
+        //   gameId: string;
+        // }[] = [];
+        // companies.forEach((company) => {
+        //   for (let i = 0; i < DEFAULT_SHARE_DISTRIBUTION; i++) {
+        //     shares.push({
+        //       price: company.ipoAndFloatPrice,
+        //       location: ShareLocation.IPO,
+        //       companyId: company.id,
+        //       gameId: game.id,
+        //     });
+        //   }
+        // });
+        // await this.shareService.createManyShares(shares);
       } catch (error) {
         console.error('Error starting game:', error);
         throw new Error('Failed to start the game');
@@ -7425,6 +7487,51 @@ export class GameManagementService {
     );
   }
 
+  async setIpoPriceAndCreateSharesAndInjectCapital(
+    ipoPrice: number,
+    company: CompanyWithSector,
+    gameId: string,
+  ) {
+    const sector = company.Sector;
+    if (!sector) {
+      throw new Error('Sector not found');
+    }
+    if (ipoPrice < sector.ipoMin || ipoPrice > sector.ipoMax) {
+      throw new Error('IPO price is not within sector range');
+    }
+    //ensure the price exists on the stockPricesGrid
+    if (!stockGridPrices.includes(ipoPrice)) {
+      throw new Error('IPO price is not a valid stock price');
+    }
+    //set the ipo price, current price of the company and it's cash on hand
+    const companyUpdated = await this.companyService.updateCompany({
+      where: { id: company.id },
+      data: {
+        ipoAndFloatPrice: ipoPrice,
+        currentStockPrice: ipoPrice,
+        cashOnHand: ipoPrice * DEFAULT_SHARE_DISTRIBUTION,
+      },
+    });
+    //create shares
+    //iterate through companies and create ipo shares
+    const shares: {
+      companyId: string;
+      price: number;
+      location: ShareLocation;
+      gameId: string;
+    }[] = [];
+    for (let i = 0; i < DEFAULT_SHARE_DISTRIBUTION; i++) {
+      shares.push({
+        price: ipoPrice,
+        location: ShareLocation.IPO,
+        companyId: company.id,
+        gameId,
+      });
+    }
+    await this.shareService.createManyShares(shares);
+    return companyUpdated;
+  }
+
   async resolveSellOrder(
     order: PlayerOrderWithPlayerCompany,
     companyId: string,
@@ -7907,7 +8014,7 @@ export class GameManagementService {
 
         playerCashUpdates.push({
           playerId: order.playerId,
-          decrement: share.price,
+          decrement: share?.price || 0,
         });
 
         currentShareIndex++;
@@ -8075,7 +8182,7 @@ export class GameManagementService {
           order[0].Player.nickname
         } has bought ${sharesToDistribute} shares of ${
           order[0].Company.name
-        } at $${order[0].Company.currentStockPrice.toFixed(2)}`,
+        } at $${order[0].Company.currentStockPrice?.toFixed(2)}`,
       });
 
       remainingShares -= sharesToDistribute;
@@ -8136,7 +8243,7 @@ export class GameManagementService {
           order.Player.nickname
         } has won a lottery for a share of ${
           order.Company.name
-        } at $${order.Company.currentStockPrice.toFixed(2)}`,
+        } at $${order.Company.currentStockPrice?.toFixed(2)}`,
       });
 
       remainingShares -= 1;
@@ -8198,7 +8305,7 @@ export class GameManagementService {
           order.Player.nickname
         } has bought ${sharesToGive} shares of ${
           order.Company.name
-        } at $${order.Company.currentStockPrice.toFixed(2)}`,
+        } at $${order.Company.currentStockPrice?.toFixed(2)}`,
       });
 
       remainingShares -= sharesToGive;
@@ -8635,6 +8742,9 @@ export class GameManagementService {
     switch (phaseName) {
       case PhaseName.HEADLINE_RESOLVE:
         return this.doesHeadlingResolveNeedToBePlayed(currentPhase.gameId);
+      case PhaseName.SET_COMPANY_IPO_PRICES:
+      case PhaseName.RESOLVE_SET_COMPANY_IPO_PRICES:
+        return this.isThereAnyCompanyIPOPriceToSet(currentPhase.gameId);
       case PhaseName.PRIZE_VOTE_ACTION:
       case PhaseName.PRIZE_VOTE_RESOLVE:
         return this.isPrizeRoundTurn(currentPhase?.gameId || '');
@@ -8680,6 +8790,17 @@ export class GameManagementService {
       default:
         return true;
     }
+  }
+
+  async isThereAnyCompanyIPOPriceToSet(gameId: string): Promise<boolean> {
+    const count = await this.prisma.company.count({
+      where: {
+        gameId,
+        status: CompanyStatus.INACTIVE,
+        ipoAndFloatPrice: null,
+      },
+    });
+    return count > 0;
   }
 
   async doesHeadlingResolveNeedToBePlayed(gameId: string) {
@@ -8776,8 +8897,8 @@ export class GameManagementService {
     return (
       playerOrders.filter(
         (order) =>
-          order.Company.currentStockPrice >=
-          (order.OptionContract?.strikePrice || 0),
+          order.Company.currentStockPrice ||
+          0 >= (order.OptionContract?.strikePrice || 0),
       ).length > 0
     );
   }
@@ -8890,9 +9011,8 @@ export class GameManagementService {
       phaseId: game.currentPhaseId || '',
       playerId: playerOrder.playerId,
       amount:
-        (optionContract.Company.currentStockPrice -
-          (optionContract.strikePrice || 0)) *
-        optionContract.shareCount,
+        (optionContract.Company.currentStockPrice ||
+          0 - (optionContract.strikePrice || 0)) * optionContract.shareCount,
       fromEntity: EntityType.BANK,
       description: `Option contract for ${optionContract.Company.name} exercised`,
       transactionSubType: TransactionSubType.OPTION_CALL_EXERCISE,
@@ -8912,7 +9032,7 @@ export class GameManagementService {
         player.nickname
       } has exercised an option contract for ${
         optionContract.Company.name
-      } at $${optionContract.Company.currentStockPrice.toFixed(2)}`,
+      } at $${optionContract.Company.currentStockPrice?.toFixed(2)}`,
     });
     const updatedOptionContract =
       await this.optionContractService.updateOptionContract({
@@ -8987,7 +9107,7 @@ export class GameManagementService {
       game.currentTurn || '',
       game.currentPhaseId || '',
       player.id,
-      shortOrder.Company.currentStockPrice * shortOrder.Share.length,
+      shortOrder.Company.currentStockPrice || 0 * shortOrder.Share.length,
       EntityType.BANK,
       `Cover short order ${shortOrder.id} for ${shortOrder.Company.name}`,
     );
@@ -9020,7 +9140,7 @@ export class GameManagementService {
       player.gameId,
       shortOrder.companyId,
       game.currentPhaseId || '',
-      shortOrder.Company.currentStockPrice,
+      shortOrder.Company.currentStockPrice || 0,
       steps,
       StockAction.SHORT,
     );
@@ -9053,7 +9173,7 @@ export class GameManagementService {
       game: { connect: { id: player.gameId } },
       content: `Player ${player.nickname} has covered short order ${
         updatedShortOrder.id
-      } for ${shortOrder.Company.name} at $${stockPrice.toFixed(2)}`,
+      } for ${shortOrder.Company.name} at $${stockPrice?.toFixed(2)}`,
     });
   }
   /**
@@ -9117,6 +9237,7 @@ export class GameManagementService {
     playerId,
     contractId,
     submissionStamp,
+    ipoAndFloatPrice,
   }: {
     orderType: 'MARKET' | 'SHORT' | 'LIMIT' | 'OPTION';
     location: 'OPEN_MARKET' | 'IPO' | 'PLAYER' | 'DERIVATIVE_MARKET';
@@ -9128,6 +9249,7 @@ export class GameManagementService {
     companyId: string;
     playerId: string;
     contractId?: number;
+    ipoAndFloatPrice?: number;
     submissionStamp: Date | undefined;
   }) {
     //get game
@@ -9170,6 +9292,7 @@ export class GameManagementService {
       value,
       isSell,
       orderStatus,
+      ipoAndFloatPrice,
       Game: { connect: { id: gameId } },
       Company: { connect: { id: companyId } },
       Player: { connect: { id: playerId } },
@@ -9474,5 +9597,63 @@ export class GameManagementService {
 
   listPlayerReadiness(gameId: string): PlayerReadiness[] {
     return this.readinessStore[gameId] || [];
+  }
+
+  async createIpoVote({
+    playerId,
+    companyId,
+    ipoPrice,
+  }: {
+    playerId: string;
+    companyId: string;
+    ipoPrice: number;
+  }) {
+    //get company
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+    });
+    if (!company) {
+      throw new Error('Company not found');
+    }
+    const gameId = company.gameId;
+    const gameTurnId = this.gameCache.get(gameId)?.currentGameTurnId;
+    //check if company is inactive
+    if (company.status != CompanyStatus.INACTIVE) {
+      throw new Error('Company is not inactive');
+    }
+    if (!stockGridPrices.includes(ipoPrice)) {
+      throw new Error('IPO price is not a valid stock price');
+    }
+    //get sector
+    const sector = await this.prisma.sector.findUnique({
+      where: { id: company.sectorId },
+    });
+    if (!sector) {
+      throw new Error('Sector not found');
+    }
+    if (ipoPrice < sector.ipoMin || ipoPrice > sector.ipoMax) {
+      throw new Error('IPO price is not within sector range');
+    }
+    //create the IPO vote
+    return await this.prisma.companyIpoPriceVote.create({
+      data: {
+        Player: { connect: { id: playerId } },
+        Company: { connect: { id: companyId } },
+        Game: { connect: { id: gameId } },
+        GameTurn: { connect: { id: gameTurnId } },
+        ipoPrice,
+      },
+    });
+  }
+
+  async getIpoVotesForGameTurn(gameTurnId: string) {
+    return await this.prisma.companyIpoPriceVote.findMany({
+      where: {
+        gameTurnId,
+      },
+      include: {
+        Player: true,
+      },
+    });
   }
 }
