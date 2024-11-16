@@ -384,7 +384,7 @@ const CompanyActionSelectionVote = ({
     if (
       getCompanyActionCost(
         actionName,
-        company.currentStockPrice,
+        company.currentStockPrice || 0,
         allCompanyActions?.filter(
           (companyAction) => companyAction.action === actionName
         ).length
@@ -560,7 +560,7 @@ const CompanyActionSelectionVote = ({
                   if (action.actionType == "general") {
                     return getCompanyActionCost(
                       action.name,
-                      company.currentStockPrice,
+                      company.currentStockPrice || 0,
                       allCompanyActions?.filter(
                         (actionName) => actionName.action === action.name
                       ).length
@@ -568,7 +568,7 @@ const CompanyActionSelectionVote = ({
                   } else {
                     return getCompanyActionCost(
                       action.name,
-                      company.currentStockPrice
+                      company.currentStockPrice || 0
                     );
                   }
                 };

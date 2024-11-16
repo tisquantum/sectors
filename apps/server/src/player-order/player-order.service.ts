@@ -23,7 +23,7 @@ import {
   PlayerOrderWithShortOrder,
 } from '@server/prisma/prisma.types';
 import { getPseudoSpend } from '@server/data/helpers';
-import { MAX_SHARE_PERCENTAGE } from '@server/data/constants';
+import { MAX_SHARE_PERCENTAGE, stockGridPrices } from '@server/data/constants';
 import { GameLogService } from '@server/game-log/game-log.service';
 
 @Injectable()

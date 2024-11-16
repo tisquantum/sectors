@@ -24,13 +24,13 @@ const CompanyActionVote = ({ company }: { company?: Company }) => {
     });
   if (!company) return null;
   const handleSubmit = async () => {
-    if(!authPlayer) {
+    if (!authPlayer) {
       return;
     }
     setIsLoading(true);
     try {
       await createOperatingRoundVote.mutate({
-        operatingRoundId: currentPhase?.operatingRoundId || '',
+        operatingRoundId: currentPhase?.operatingRoundId || "",
         playerId: authPlayer.id,
         companyId: company.id,
         actionVoted: selected,
@@ -81,7 +81,10 @@ const CompanyActionVote = ({ company }: { company?: Company }) => {
         {actions
           .filter(
             (action) =>
-              getCompanyActionCost(action.name, company.currentStockPrice) <= company.cashOnHand
+              getCompanyActionCost(
+                action.name,
+                company.currentStockPrice || 0
+              ) <= company.cashOnHand
           )
           .map((action) => (
             <Radio key={action.name} value={action.name}>

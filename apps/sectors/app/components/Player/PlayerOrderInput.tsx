@@ -7,6 +7,8 @@ import {
   Input,
   Radio,
   RadioGroup,
+  Select,
+  SelectItem,
   Slider,
   Tab,
   Tabs,
@@ -30,10 +32,12 @@ import React, {
 import { useGame } from "../Game/GameContext";
 import {
   BORROW_RATE,
+  getSectorValidIpoPrices,
   MAX_LIMIT_ORDER_ACTIONS,
   MAX_MARKET_ORDER_ACTIONS,
   MAX_SHORT_ORDER_ACTIONS,
   MAX_SHORT_ORDER_QUANTITY,
+  stockGridPrices,
 } from "@server/data/constants";
 import { PlayerOrderWithCompany } from "@server/prisma/prisma.types";
 import { getPseudoSpend } from "@server/data/helpers";
@@ -252,6 +256,7 @@ interface TabContentProps {
   isBuy?: boolean;
   sharesInMarket: number;
   minBidValue?: number;
+  company?: Company;
 }
 
 const TabContentMO: React.FC<TabContentProps> = ({
@@ -266,6 +271,7 @@ const TabContentMO: React.FC<TabContentProps> = ({
   isBuy,
   sharesInMarket,
   minBidValue,
+  company,
 }) => {
   const { gameState } = useGame();
   const [shareValue, setShareValue] = useState<number>(1);
@@ -284,6 +290,7 @@ const TabContentMO: React.FC<TabContentProps> = ({
         ordersRemaining={ordersRemaining}
         maxOrders={MAX_MARKET_ORDER_ACTIONS}
       /> */}
+
       <BuyOrSell
         handleSelectionIsBuy={handleSelectionIsBuy}
         isIpo={isIpo}
@@ -477,9 +484,7 @@ const PseudoBalance = ({
       <div className="flex items-center gap-1">
         <span>Remaining Cash</span>
         <CurrencyDollarIcon className="w-6 h-6" />
-        <span>
-          {authPlayer.cashOnHand + (currentOrderValue || 0)}
-        </span>
+        <span>{authPlayer.cashOnHand + (currentOrderValue || 0)}</span>
       </div>
     </div>
   );
@@ -581,6 +586,7 @@ const PlayerOrderInput = ({
   const [orderType, setOrderType] = useState<OrderType>(OrderType.MARKET);
   const [maxValue, setMaxValue] = useState(10);
   const [minValue, setMinValue] = useState(1);
+  const [ipoFloatValue, setIpoFloatValue] = useState<number | null>(null);
   let runningOrderValue = 0;
   if (playerOrders) {
     runningOrderValue = calculateRunningOrderValue(playerOrders);
@@ -619,7 +625,9 @@ const PlayerOrderInput = ({
       setMaxValue(company?.Share.length || 0);
     }
   }, [isBuy, isIpo, company?.Share]);
-
+  const companySector = gameState.sectors.find(
+    (sector) => sector.id === currentOrder.sectorId
+  );
   if (!gameId || !gameState || !authPlayer) return null;
   const currentOrderValue = calculatePseudoOrderValue({
     orderType,
@@ -659,6 +667,9 @@ const PlayerOrderInput = ({
         break;
     }
   };
+  const handleIpoFloatValueChange = (value: number) => {
+    setIpoFloatValue(value);
+  };
   const sharesOwnedInCompany =
     playerWithShares?.Share.filter(
       (share) => share.companyId === currentOrder.id
@@ -671,12 +682,12 @@ const PlayerOrderInput = ({
           <ShareComponent
             name={currentOrder.name}
             quantity={sharesOwnedInCompany}
-            price={currentOrder.currentStockPrice}
+            price={currentOrder.currentStockPrice || 0}
           />
         )}
       </div>
       <PseudoBalance
-        stockRoundId={currentPhase?.stockRoundId ?? ''}
+        stockRoundId={currentPhase?.stockRoundId ?? ""}
         currentOrderValue={currentOrderValue}
         runningOrderValue={runningOrderValue}
       />
@@ -704,13 +715,13 @@ const PlayerOrderInput = ({
                     minValue={minValue}
                     defaultValue={
                       isIpo
-                        ? currentOrder.ipoAndFloatPrice
-                        : currentOrder.currentStockPrice
+                        ? currentOrder.ipoAndFloatPrice || 0
+                        : currentOrder.currentStockPrice || 0
                     }
                     minBidValue={
                       isIpo
-                        ? currentOrder.ipoAndFloatPrice
-                        : currentOrder.currentStockPrice
+                        ? currentOrder.ipoAndFloatPrice || 0
+                        : currentOrder.currentStockPrice || 0
                     }
                     isBuy={isBuy}
                     sharesInMarket={
@@ -722,6 +733,7 @@ const PlayerOrderInput = ({
                             : ShareLocation.OPEN_MARKET)
                       ).length || 0
                     }
+                    company={currentOrder}
                   />
                 </CardBody>
               </Card>
@@ -739,7 +751,7 @@ const PlayerOrderInput = ({
                       minValue={minValue}
                       handleShares={setShare}
                       handleValueChange={setOrderValue}
-                      defaultValue={currentOrder.currentStockPrice}
+                      defaultValue={currentOrder.currentStockPrice || 0}
                     />
                   </CardBody>
                 </Card>

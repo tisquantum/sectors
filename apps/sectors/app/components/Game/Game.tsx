@@ -56,6 +56,7 @@ import DistributePrizes from "./DistributePrize";
 import StartTurnUpdates from "./StartTurnUpdates";
 import GamePlayersRecap from "./GamePlayerRecap";
 import Headlines from "./Headlines";
+import IpoVotes from "./IpoVote";
 
 const determineGameRound = (
   game: GameState
@@ -179,7 +180,12 @@ const Game = ({ gameId }: { gameId: string }) => {
       </div>
     ) : currentRoundData?.phase.name === PhaseName.HEADLINE_RESOLVE ? (
       <Headlines />
-    ) : currentRoundData?.phase.name === PhaseName.PRIZE_VOTE_ACTION ? (
+    ) : currentRoundData?.phase.name === PhaseName.SET_COMPANY_IPO_PRICES ? (
+      <IpoVotes isInteractive />
+    ) : currentRoundData?.phase.name === PhaseName.RESOLVE_SET_COMPANY_IPO_PRICES ? (
+      <IpoVotes />
+    ) :
+    currentRoundData?.phase.name === PhaseName.PRIZE_VOTE_ACTION ? (
       <PrizeRound />
     ) : currentRoundData?.phase.name === PhaseName.PRIZE_VOTE_RESOLVE ? (
       <PrizeRound isRevealRound />

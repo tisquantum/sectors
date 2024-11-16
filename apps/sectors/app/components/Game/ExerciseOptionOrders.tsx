@@ -21,7 +21,8 @@ const ExerciseOptionOrders = () => {
   const exercisableOptionOrders = purchasedOptionOrders.filter(
     (optionContract) => {
       return (
-        optionContract.strikePrice <= optionContract.Company?.currentStockPrice
+        optionContract.strikePrice <=
+        (optionContract.Company?.currentStockPrice || 0)
       );
     }
   );

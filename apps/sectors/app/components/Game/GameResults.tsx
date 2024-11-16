@@ -96,13 +96,17 @@ const GameResultsOverview = () => {
 
   const highestStockPriceCompany = useMemo(() => {
     return gameState?.Company.reduce((highest, company) =>
-      company.currentStockPrice > highest.currentStockPrice ? company : highest
+      (company.currentStockPrice || 0) > (highest.currentStockPrice || 0)
+        ? company
+        : highest
     );
   }, [gameState?.Company]);
 
   const lowestStockPriceCompany = useMemo(() => {
     return gameState?.Company.reduce((lowest, company) =>
-      company.currentStockPrice < lowest.currentStockPrice ? company : lowest
+      (company.currentStockPrice || 0) < (lowest.currentStockPrice || 0)
+        ? company
+        : lowest
     );
   }, [gameState?.Company]);
 
@@ -220,7 +224,9 @@ const GameResults = ({
             <>
               <ModalHeader>
                 <div className="container mx-auto px-4">
-                  <h1 className="text-xl lg:text-3xl font-bold">Game Results</h1>
+                  <h1 className="text-xl lg:text-3xl font-bold">
+                    Game Results
+                  </h1>
                 </div>
               </ModalHeader>
               <ModalBody className="overflow-y-scroll scrollbar">

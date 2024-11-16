@@ -109,6 +109,8 @@ export const phaseTimes = {
   [PhaseName.STOCK_ACTION_ORDER]: 55 * 1000,
   [PhaseName.STOCK_ACTION_RESULT]: 10 * 1000,
   [PhaseName.STOCK_ACTION_REVEAL]: 12 * 1000,
+  [PhaseName.RESOLVE_SET_COMPANY_IPO_PRICES]: 15 * 1000,
+  [PhaseName.SET_COMPANY_IPO_PRICES]: 15 * 1000,
   [PhaseName.STOCK_RESOLVE_MARKET_ORDER]: 12 * 1000,
   [PhaseName.STOCK_SHORT_ORDER_INTEREST]: 12 * 1000,
   [PhaseName.STOCK_ACTION_SHORT_ORDER]: 12 * 1000,
@@ -1061,6 +1063,8 @@ export const phasesInOrder = [
   PhaseName.INFLUENCE_BID_RESOLVE,
   PhaseName.START_TURN,
   PhaseName.HEADLINE_RESOLVE,
+  PhaseName.SET_COMPANY_IPO_PRICES,
+  PhaseName.RESOLVE_SET_COMPANY_IPO_PRICES,
   PhaseName.PRIZE_VOTE_ACTION,
   PhaseName.PRIZE_VOTE_RESOLVE,
   PhaseName.PRIZE_DISTRIBUTE_ACTION,
@@ -1091,3 +1095,11 @@ export const phasesInOrder = [
   PhaseName.DIVESTMENT,
   PhaseName.END_TURN,
 ];
+
+export function getSectorValidIpoPrices(sector: Sector) {
+  const sectorMinIpoPrice = sector.ipoMin;
+  const sectorMaxIpoPrice = sector.ipoMax;
+  return stockGridPrices.filter(
+    (price) => price >= sectorMinIpoPrice && price <= sectorMaxIpoPrice,
+  );
+}
