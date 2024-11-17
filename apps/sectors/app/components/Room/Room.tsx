@@ -126,10 +126,14 @@ const RoomComponent = ({ room }: { room: RoomWithUsersAndGames }) => {
   const handleRoomMessage = (data: RoomMessageWithRoomUser, roomId: number) => {
     utils.roomMessage.listRoomMessages.setData(
       { where: { roomId } },
-      (oldData: RoomMessageWithRoomUser[] | undefined) => [
-        ...(oldData || []),
-        { ...data, timestamp: new Date(data.timestamp).toISOString() },
-      ]
+      (oldData: RoomMessageWithRoomUser[] | undefined) => {
+        const exists = oldData?.some((msg) => msg.id === data.id);
+        if (exists) return oldData;
+        return [
+          ...(oldData || []),
+          { ...data, timestamp: new Date(data.timestamp).toISOString() },
+        ];
+      }
     );
   };
   if (isLoadingRoomUsers || isLoadingMessages) {
