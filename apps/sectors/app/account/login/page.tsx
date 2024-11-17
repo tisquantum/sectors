@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { login } from "./actions";
+import { login, googleSignIn } from "./actions";
 import DebounceButton from "@sectors/app/components/General/DebounceButton";
 
 export default function LoginPage() {
@@ -39,12 +39,20 @@ export default function LoginPage() {
     setIsLoading(false);
   };
 
+  const handleGoogleLogin = async () => {
+    try {
+      await googleSignIn();
+    } catch (error) {
+      console.error("Google Sign-In Error:", error);
+    }
+  };
+
   const isFormValid = email && password && !emailError;
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-500">
-      <div className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-        <h3 className="text-lg text-black font-bold mb-4">Login</h3>
+      <div className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4 w-full max-w-md">
+        <h3 className="text-lg text-black font-bold mb-6 text-center">Login</h3>
         <form onSubmit={handleLogin}>
           <div className="mb-4">
             <label
@@ -62,7 +70,7 @@ export default function LoginPage() {
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:shadow-outline"
             />
             {emailError && (
-              <p className="text-red-500 text-xs italic">{emailError}</p>
+              <p className="text-red-500 text-xs italic mt-2">{emailError}</p>
             )}
           </div>
           <div className="mb-6">
@@ -78,13 +86,13 @@ export default function LoginPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-800 mb-3 leading-tight focus:outline-none focus:shadow-outline"
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-800 leading-tight focus:outline-none focus:shadow-outline"
             />
           </div>
-          <div className="flex items-center justify-center">
+          <div className="flex items-center justify-center mb-4">
             <DebounceButton
               type="submit"
-              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full"
               isDisabled={isSubmitting || !isFormValid}
               isLoading={isLoading}
             >
@@ -100,13 +108,30 @@ export default function LoginPage() {
             </a>
             <br />
             <a
-              className="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800"
+              className="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800 mt-2"
               href="/account/sign-up"
             >
               Don&apos;t have an account? Sign up
             </a>
           </div>
         </form>
+
+        {/* OR Divider */}
+        <div className="flex items-center my-6">
+          <div className="w-full border-t border-gray-300"></div>
+          <div className="text-gray-500 px-3">OR</div>
+          <div className="w-full border-t border-gray-300"></div>
+        </div>
+
+        {/* Google Sign-In Button */}
+        <div className="text-center">
+          <button
+            onClick={handleGoogleLogin}
+            className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full"
+          >
+            Sign in with Google
+          </button>
+        </div>
       </div>
     </div>
   );
