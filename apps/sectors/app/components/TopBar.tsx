@@ -25,6 +25,7 @@ import { RiDiscordFill, RiFundsFill } from "@remixicon/react";
 import { useState, useMemo, memo } from "react";
 import { User } from "@server/prisma/prisma.client";
 import { HandshakeIcon } from "lucide-react";
+import Image from "next/image";
 
 // Extracted CommonNavLinks to receive props for the "onOpen" function
 const CommonNavLinks = memo(() => (
@@ -45,9 +46,21 @@ const CommonNavLinks = memo(() => (
         The Executives Rules
       </Link>
     </NavbarItem>
-    <NavbarItem className="flex items-center">
+    <NavbarItem className="flex items-center cursor-pointer">
       <Link href={process.env.NEXT_PUBLIC_DISCORD_LINK} target="_blank">
         <RiDiscordFill />
+      </Link>
+    </NavbarItem>
+    <NavbarItem className="flex items-center cursor-pointer">
+      <Link href={process.env.NEXT_PUBLIC_BGG_LINK} target="_blank" className="h-[24px] w-[50px]">
+        <Image
+          src={"/icons/board-game-geek-logo.svg"}
+          alt="board-game-geek-logo"
+          width={45}
+          height={75}
+          layout="intrinsic"
+          style={{ display: 'block' }}
+        />
       </Link>
     </NavbarItem>
   </>
