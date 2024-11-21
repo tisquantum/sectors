@@ -31,35 +31,61 @@ import Image from "next/image";
 const CommonNavLinks = memo(() => (
   <>
     <NavbarItem>
-      <Link href="/rooms">Rooms</Link>
+      <Link
+        href="/rooms"
+        className="text-white hover:bg-gray-800 hover:text-primary-400 px-3 py-2 rounded-md transition duration-300"
+      >
+        Rooms
+      </Link>
     </NavbarItem>
     <NavbarItem>
-      <Link href="/leaderboard">Leaderboard</Link>
+      <Link
+        href="/leaderboard"
+        className="text-white hover:bg-gray-800 hover:text-primary-400 px-3 py-2 rounded-md transition duration-300"
+      >
+        Leaderboard
+      </Link>
     </NavbarItem>
     <NavbarItem>
-      <Link href="https://rules.sectors.gg" target="_blank">
+      <Link
+        href="https://rules.sectors.gg"
+        target="_blank"
+        className="text-white hover:bg-gray-800 hover:text-primary-400 px-3 py-2 rounded-md transition duration-300"
+      >
         Sectors Rules
       </Link>
     </NavbarItem>
     <NavbarItem>
-      <Link href="/rules/executives" target="_blank">
+      <Link
+        href="/rules/executives"
+        target="_blank"
+        className="text-white hover:bg-gray-800 hover:text-primary-400 px-3 py-2 rounded-md transition duration-300"
+      >
         The Executives Rules
       </Link>
     </NavbarItem>
     <NavbarItem className="flex items-center cursor-pointer">
-      <Link href={process.env.NEXT_PUBLIC_DISCORD_LINK} target="_blank">
-        <RiDiscordFill />
+      <Link
+        href={process.env.NEXT_PUBLIC_DISCORD_LINK}
+        target="_blank"
+        className="text-gray-200 hover:text-primary-400 transition-transform transform hover:scale-110 p-2"
+      >
+        <RiDiscordFill className="text-2xl" />
       </Link>
     </NavbarItem>
     <NavbarItem className="flex items-center cursor-pointer">
-      <Link href={process.env.NEXT_PUBLIC_BGG_LINK} target="_blank" className="h-[24px] w-[50px]">
+      <Link
+        href={process.env.NEXT_PUBLIC_BGG_LINK}
+        target="_blank"
+        className="p-2 h-[24px] w-[50px] rounded-medium bg-gray-100 hover:bg-primary-400 transition duration-300"
+      >
         <Image
-          src={"/icons/board-game-geek-logo.svg"}
+          src="/icons/board-game-geek-logo.svg"
           alt="board-game-geek-logo"
           width={45}
           height={75}
           layout="intrinsic"
-          style={{ display: 'block' }}
+          className="filter drop-shadow-lg transition-transform transform hover:scale-105"
         />
       </Link>
     </NavbarItem>
@@ -136,12 +162,12 @@ const TopBar = () => {
       <Navbar isBordered shouldHideOnScroll onMenuOpenChange={setIsMenuOpen}>
         <NavbarBrand>
           <Link href="/">
-            <div className="flex flex-col gap-1">
-              <div className="flex gap-1 justify-center content-center items-center text-slate-100">
+            <div className="flex flex-col gap-1 hover:text-primary-400">
+              <div className="flex gap-1 justify-center content-center items-center text-default-900">
                 <span>SECTORS</span>
                 <RiFundsFill color="#17a34a" />
               </div>
-              <div className="flex gap-1 justify-center content-center items-center text-slate-100">
+              <div className="flex gap-1 justify-center content-center items-center text-default-900">
                 <span>THE EXECUTIVES</span>
                 <HandshakeIcon color="#5072A7" />
               </div>
