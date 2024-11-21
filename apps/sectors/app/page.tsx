@@ -1,50 +1,65 @@
-import GlobalChat from "./components/Game/GlobalChat";
+"use client";
+import { RiFundsFill } from "@remixicon/react";
+import { HandshakeIcon } from "lucide-react";
+import { useAuthUser } from "./components/AuthUser.context";
+import { Button } from "@nextui-org/react";
 
-export default async function Home() {
+export default function Home() {
+  const { user } = useAuthUser();
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex flex-row gap-2">
-        <div className="shadow-md rounded-lg p-6">
-          <h1 className="text-3xl font-bold mb-4 text-center">Sectors</h1>
-          <p className="text-lg mb-4">
-            <span className="font-bold">Sectors</span> is a game of stocks and
-            running companies. You play as an influential investor trying to
-            make the most money through clever investments and company
-            management. The winner of the game is the player with the greatest
-            net worth at the end of the game.
-          </p>
-          <div className="mb-4">
-            <p>
-              To see the dedicated rules page, please visit{" "}
-              <a
-                href="https://rules.sectors.gg"
-                className="text-blue-500 underline"
-              >
-                here
-              </a>
-              .
-            </p>
-          </div>
-          <div className="mb-4">
-            <p>
-              To start or join a game, you must create an account or log in if
-              you already have one. Click{" "}
-              <a href="/account/login" className="text-blue-500 underline">
-                here
-              </a>{" "}
-              to do so.
-            </p>
-          </div>
-          <div>
-            <p>
-              To join a game, visit{" "}
-              <a href="/rooms" className="text-blue-500 underline">
-                rooms
-              </a>{" "}
-              and organize a game with other players.
-            </p>
-          </div>
+    <div className="container mx-auto px-4 py-12">
+      <div className="mb-16">
+        <div className="flex gap-2 justify-center items-center text-default-900 text-2xl mb-4">
+          <span>SECTORS</span>
+          <RiFundsFill color="#17a34a" />
         </div>
+        <p className="text-lg text-default-900 text-center max-w-2xl mx-auto mb-8">
+          Sectors is a financial game of stock manipulation where players are
+          investors who will trade stocks and influence the decisions the
+          companies they invest in make.
+        </p>
+        <p className="text-lg text-default-900 text-center max-w-2xl mx-auto mb-8">
+          The winner is the player who collects the most money by the end of a
+          set amount of turns or the bank breaks, whichever should happen first!
+        </p>
+        <div className="flex justify-center gap-8">
+          <Button href="https://rules.sectors.gg" target="_blank">
+            Rules
+          </Button>
+        </div>
+      </div>
+
+      <div className="mb-16">
+        <div className="flex gap-2 justify-center items-center text-default-900 text-2xl mb-4">
+          <span>THE EXECUTIVES</span>
+          <HandshakeIcon color="#5072A7" />
+        </div>
+        <p className="text-lg text-default-900 text-center max-w-2xl mx-auto mb-8">
+          The Executives is a trick-taking game where players, as C-Suite
+          executives, compete to take control of the company from the legacy
+          CEO.
+        </p>
+        <p className="text-lg text-default-900 text-center max-w-2xl mx-auto mb-8">
+          The game involves influence bidding, trick-taking, and concludes with
+          a decisive vote.
+        </p>
+        <div className="flex justify-center gap-8">
+          <Button href="/rules/executives" target="_blank">
+            Rules
+          </Button>
+        </div>
+      </div>
+      <div className="mb-16 flex items-center justify-center gap-2">
+        {user ? (
+          <Button href="/rooms">Join a Game</Button>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <p className="text-lg text-default-900">
+              In order to play you must have an account.
+            </p>
+            <Button href="/account/login">Login / Sign Up</Button>
+          </div>
+        )}
       </div>
     </div>
   );
