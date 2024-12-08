@@ -133,7 +133,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           ctx.executiveGameService.unlockInput(gameId);
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: error.message,
+            message: error instanceof Error ? error.message : 'An unexpected error occurred',
           });
         }
         if (!currentTurn) {
@@ -155,7 +155,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           ctx.executiveGameService.unlockInput(gameId);
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
-            message: error.message,
+            message: error instanceof Error ? error.message : 'An unexpected error occurred',
           });
         }
         ctx.executiveGameService.unlockInput(gameId);
