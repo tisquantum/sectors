@@ -176,6 +176,72 @@ export class ExecutiveGameManagementService {
     }
   }
 
+  async fulfillRelationshipAndMoveInfluence(gameId: string) {
+    //get all players
+    const players = await this.playerService.listExecutivePlayers({
+      where: {
+        gameId,
+      },
+    });
+    if (!players) {
+      throw new Error('Players not found');
+    }
+    const influencePromises = players.map((player) => {
+      const relationshipInfluence = player.ownedByInfluence.filter(
+        (influence) =>
+          influence.influenceLocation === InfluenceLocation.RELATIONSHIP,
+      );
+
+      // Organize the relationships
+      const relationshipCounts = relationshipInfluence.reduce(
+        (acc, influence) => {
+          if (influence.selfPlayerId) {
+            acc[influence.selfPlayerId] =
+              (acc[influence.selfPlayerId] || 0) + 1;
+          }
+          return acc;
+        },
+        {} as Record<string, number>,
+      );
+
+      // Iterate over the relationships and move the influence
+      return Promise.all(
+        Object.entries(relationshipCounts).map(([selfPlayerId, count]) => {
+          if (count < 3) {
+            return this.influenceService.createManyInfluence(
+              Array.from({ length: count }).map(() => ({
+                gameId,
+                selfPlayerId,
+                ownedByPlayerId: selfPlayerId,
+                influenceType: InfluenceType.PLAYER,
+                influenceLocation: InfluenceLocation.OF_PLAYER,
+              })),
+            );
+          } else {
+            return Promise.all([
+              this.influenceService.createManyInfluence(
+                Array.from({ length: count - 1 }).map(() => ({
+                  gameId,
+                  selfPlayerId,
+                  ownedByPlayerId: selfPlayerId,
+                  influenceType: InfluenceType.PLAYER,
+                  influenceLocation: InfluenceLocation.OF_PLAYER,
+                })),
+              ),
+              this.influenceService.createInfluence({
+                Game: { connect: { id: gameId } },
+                selfPlayer: { connect: { id: selfPlayerId } },
+                ownedByPlayer: { connect: { id: player.id } },
+                influenceType: InfluenceType.PLAYER,
+                influenceLocation: InfluenceLocation.OWNED_BY_PLAYER,
+              }),
+            ]);
+          }
+        }),
+      );
+    });
+    await Promise.all(influencePromises);
+  }
   async setTrumpCard(gameId: string) {
     //get the trump card
     const trumpCard = await this.cardService.findExecutiveCard({
@@ -613,6 +679,7 @@ export class ExecutiveGameManagementService {
       throw new Error('New turn not found');
     }
     if (newTurn.turnType === TurnType.INFLUENCE) {
+      await this.fulfillRelationshipAndMoveInfluence(gameId);
       //start the new phase
       await this.startPhase({
         gameId,
@@ -1443,6 +1510,7 @@ export class ExecutiveGameManagementService {
     if (!nextPlayer) {
       throw new Error('Next player not found');
     }
+    console.log('playCardIntoTrick nextPlayer', nextPlayer);
     //if next player is the COO, we've gone around the table, resolve the trick
     if (nextPlayer.isCOO) {
       return await this.startPhase({

@@ -2,6 +2,7 @@
 import { useExecutiveGame } from "./GameContext";
 import PlayerAvatar from "../Player/PlayerAvatar";
 import { Avatar } from "@nextui-org/react";
+import { ArrowDown, ArrowUp, UserMinus, UserPlus } from "lucide-react";
 const Relationship = ({
   playerId,
   influenceCount,
@@ -25,7 +26,12 @@ const Relationship = ({
           {status === "filled" && player ? (
             <PlayerAvatar size="sm" player={player} />
           ) : (
-            <Avatar size="sm" />
+            <Avatar
+              size="sm"
+              icon={
+                index == 2 ? <UserPlus /> : <UserMinus />
+              }
+            />
           )}
           {/* Show dotted line except for the last slot */}
           {index < slots.length - 1 && (
