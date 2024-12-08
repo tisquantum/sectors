@@ -130,8 +130,11 @@ export default (trpc: TrpcService, ctx: Context) =>
           currentTurn =
             await ctx.executiveGameTurnService.getLatestTurn(gameId);
         } catch (error) {
-          console.error('createInfluenceBid error', error);
           ctx.executiveGameService.unlockInput(gameId);
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: error.message,
+          });
         }
         if (!currentTurn) {
           ctx.executiveGameService.unlockInput(gameId);
@@ -150,6 +153,10 @@ export default (trpc: TrpcService, ctx: Context) =>
           );
         } catch (error) {
           ctx.executiveGameService.unlockInput(gameId);
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: error.message,
+          });
         }
         ctx.executiveGameService.unlockInput(gameId);
         return { success: true };

@@ -18,6 +18,7 @@ import {
 } from "@nextui-org/react";
 import { RoundVotes } from "./RoundVotes";
 import { GameResultsOverview } from "./GameResults";
+import NewCeo from "./NewCeo";
 
 const GameBoard = ({ gameId }: { gameId: string }) => {
   const { isOpen, onOpen, onClose, onOpenChange } = useDisclosure();
@@ -55,7 +56,7 @@ const GameBoard = ({ gameId }: { gameId: string }) => {
   const renderPlayerTableau = (playerId: string) => (
     <PlayerTableau key={playerId} playerId={playerId} />
   );
-
+  console.log("currentPhase", currentPhase);
   return (
     <>
       <div className="hidden xl:flex flex-col gap-5">
@@ -96,7 +97,11 @@ const GameBoard = ({ gameId }: { gameId: string }) => {
               renderPlayerTableau(sortedPlayers[1].id)}
           </div>
           <div className="flex flex-row gap-2 items-center justify-center">
-            <CeoInfluence />
+            {currentPhase.phaseName == ExecutivePhaseName.GAME_END ? (
+              <NewCeo gameId={gameId} />
+            ) : (
+              <CeoInfluence />
+            )}
             <Deck />
             {gameId &&
               (authPlayer.isGeneralCounsel ||
@@ -184,7 +189,11 @@ const GameBoard = ({ gameId }: { gameId: string }) => {
             {turnPhaseDisplayTrump(currentPhase.phaseName) && (
               <TrumpCard gameId={gameId} />
             )}
-            <CeoInfluence />
+            {currentPhase.phaseName == ExecutivePhaseName.GAME_END ? (
+              <NewCeo gameId={gameId} />
+            ) : (
+              <CeoInfluence />
+            )}
           </div>
 
           {/* Popovers for Tricks and Votes */}

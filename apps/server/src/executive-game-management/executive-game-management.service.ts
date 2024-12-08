@@ -1386,6 +1386,9 @@ export class ExecutiveGameManagementService {
     //get the lead card
     const leadCard = trickCards.find((trickCard) => trickCard.isLead);
     const trumpCard = trickCards.find((trickCard) => trickCard.isTrump);
+    console.log('playCardIntoTrick leadCard', leadCard);
+    console.log('playCardIntoTrick trumpCard', trumpCard);
+    console.log('playCardIntoTrick card', card);
     if (!card) {
       throw new Error('Card not found');
     }
@@ -1419,6 +1422,7 @@ export class ExecutiveGameManagementService {
     }
     //if card is from hand, look at hand and ensure the player has not played a card that doesn't follow the lead
     if (card.cardLocation === CardLocation.HAND) {
+      console.log('playCardIntoTrick playerHand', playerHand);
       //does card follow the lead
       if (card.cardSuit !== leadCard?.card.cardSuit) {
         //get all cards in hand that are not the selected card
@@ -1433,11 +1437,13 @@ export class ExecutiveGameManagementService {
               (handCard) => handCard.cardSuit === leadCard.card.cardSuit,
             );
           if (doesSelectionViolateFollowSuitRule) {
+            console.error('Player must follow the lead', playerHandNotSelectedCard);
             throw new Error('Player must follow the lead');
           }
         }
       }
     }
+    console.log('playCardIntoTrick playerGiftsNotLocked', playerGiftsNotLocked);
     if (card.cardLocation === CardLocation.GIFT) {
       //ensure card is not locked
       if (card.isLocked) {
@@ -1495,13 +1501,11 @@ export class ExecutiveGameManagementService {
       throw new Error('Trick card not found');
     }
     //get players
-    const players =
-      gameCache?.players ??
-      (await this.playerService.listExecutivePlayersNoRelations({
-        where: {
-          gameId: player.gameId,
-        },
-      }));
+    const players = await this.playerService.listExecutivePlayersNoRelations({
+      where: {
+        gameId: player.gameId,
+      },
+    });
     if (!players) {
       throw new Error('Players not found');
     }

@@ -89,7 +89,6 @@ import CompanyPriorityList from "./CompanyPriorityOperatingRound";
 import InsolvencyContributionComponent from "./InsolvencyContribution";
 import { friendlyResearchName } from "@sectors/app/helpers";
 import CompanyAwardTrack from "./CompanyAwardTrack";
-import TabView from "../Game/TabView";
 
 const renderSymbolDisplay = (operatingRoundAction: OperatingRoundAction) => {
   const IconWithText = ({

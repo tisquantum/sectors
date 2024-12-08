@@ -39,6 +39,7 @@ export const CardList = ({
                         resolve(); // Resolve the promise here
                       },
                       onError: (error) => {
+                        console.error("Error playing trick: ", error);
                         toast.error("Error playing trick: " + error.message);
                       },
                     }
