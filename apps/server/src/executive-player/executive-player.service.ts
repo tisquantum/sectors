@@ -9,13 +9,25 @@ import {
 
 @Injectable()
 export class ExecutivePlayerService {
+  private playerCache = new Map<string, ExecutivePlayerWithRelations>(); // Cache by player ID
+
   constructor(private prisma: PrismaService) {}
 
   // Retrieve a specific ExecutivePlayer by unique input
   async getExecutivePlayer(
     executivePlayerWhereUniqueInput: Prisma.ExecutivePlayerWhereUniqueInput,
   ): Promise<ExecutivePlayerWithRelations | null> {
-    return this.prisma.executivePlayer.findUnique({
+    const playerId = executivePlayerWhereUniqueInput.id;
+
+    if (!playerId) return null;
+
+    // Check the cache first
+    if (this.playerCache.has(playerId)) {
+      return this.playerCache.get(playerId) || null;
+    }
+
+    // Fetch from the database if not in cache
+    const player = await this.prisma.executivePlayer.findUnique({
       where: executivePlayerWhereUniqueInput,
       include: {
         user: true,
@@ -29,34 +41,52 @@ export class ExecutivePlayerService {
         voteMarkerVoted: true,
       },
     });
+
+    if (player) {
+      this.playerCache.set(playerId, player);
+    }
+
+    return player;
   }
 
   async getExecutivePlayerAndAgendas(
     executivePlayerWhereUniqueInput: Prisma.ExecutivePlayerWhereUniqueInput,
   ): Promise<ExecutivePlayerWithAgendas | null> {
-    return this.prisma.executivePlayer.findUnique({
-      where: executivePlayerWhereUniqueInput,
-      include: {
-        agendas: true,
-      },
-    });
+    const player = await this.getExecutivePlayer(executivePlayerWhereUniqueInput);
+    if (!player) return null;
+
+    return {
+      ...player,
+      agendas: player.agendas,
+    };
   }
 
   async getExecutivePlayerWithCards(
     executivePlayerWhereUniqueInput: Prisma.ExecutivePlayerWhereUniqueInput,
   ): Promise<ExecutivePlayerWithCards | null> {
-    return this.prisma.executivePlayer.findUnique({
-      where: executivePlayerWhereUniqueInput,
-      include: {
-        cards: true,
-      },
-    });
+    const player = await this.getExecutivePlayer(executivePlayerWhereUniqueInput);
+    if (!player) return null;
+
+    return {
+      ...player,
+      cards: player.cards,
+    };
   }
+
   async getExecutivePlayerByUserIdAndGameId(
     userId: string,
     gameId: string,
   ): Promise<ExecutivePlayerWithRelations | null> {
-    return this.prisma.executivePlayer.findFirst({
+    const cachedPlayer = [...this.playerCache.values()].find(
+      (player) => player.userId === userId && player.gameId === gameId,
+    );
+
+    if (cachedPlayer) {
+      return cachedPlayer;
+    }
+
+    // Fetch from the database if not cached
+    const player = await this.prisma.executivePlayer.findFirst({
       where: {
         userId,
         gameId,
@@ -73,6 +103,12 @@ export class ExecutivePlayerService {
         voteMarkerOwner: true,
       },
     });
+
+    if (player) {
+      this.playerCache.set(player.id, player);
+    }
+
+    return player;
   }
 
   async findExecutivePlayer(
@@ -92,7 +128,8 @@ export class ExecutivePlayerService {
     orderBy?: Prisma.ExecutivePlayerOrderByWithRelationInput;
   }): Promise<ExecutivePlayerWithRelations[]> {
     const { skip, take, cursor, where, orderBy } = params;
-    return this.prisma.executivePlayer.findMany({
+
+    const players = await this.prisma.executivePlayer.findMany({
       skip,
       take,
       cursor,
@@ -110,6 +147,13 @@ export class ExecutivePlayerService {
         voteMarkerOwner: true,
       },
     });
+
+    // Cache the results
+    players.forEach((player) => {
+      this.playerCache.set(player.id, player);
+    });
+
+    return players;
   }
 
   async listExecutivePlayersNoRelations(params: {
@@ -120,6 +164,7 @@ export class ExecutivePlayerService {
     orderBy?: Prisma.ExecutivePlayerOrderByWithRelationInput;
   }): Promise<ExecutivePlayer[]> {
     const { skip, take, cursor, where, orderBy } = params;
+
     return this.prisma.executivePlayer.findMany({
       skip,
       take,
@@ -128,23 +173,36 @@ export class ExecutivePlayerService {
       orderBy,
     });
   }
+
   // Create a new ExecutivePlayer
   async createExecutivePlayer(
     data: Prisma.ExecutivePlayerCreateInput,
   ): Promise<ExecutivePlayer> {
-    return this.prisma.executivePlayer.create({
+    const player = await this.prisma.executivePlayer.create({
       data,
     });
+
+    // Update cache
+    this.playerCache.set(player.id, player as ExecutivePlayerWithRelations);
+
+    return player;
   }
 
   // Create multiple ExecutivePlayers
   async createManyExecutivePlayers(
     data: Prisma.ExecutivePlayerCreateManyInput[],
   ): Promise<ExecutivePlayer[]> {
-    return this.prisma.executivePlayer.createManyAndReturn({
+    const players = await this.prisma.executivePlayer.createManyAndReturn({
       data,
       skipDuplicates: true,
     });
+
+    // Update cache
+    players.forEach((player) => {
+      this.playerCache.set(player.id, player as ExecutivePlayerWithRelations);
+    });
+
+    return players;
   }
 
   // Update an existing ExecutivePlayer
@@ -153,10 +211,18 @@ export class ExecutivePlayerService {
     data: Prisma.ExecutivePlayerUpdateInput;
   }): Promise<ExecutivePlayer> {
     const { where, data } = params;
-    return this.prisma.executivePlayer.update({
+
+    const updatedPlayer = await this.prisma.executivePlayer.update({
       data,
       where,
     });
+
+    // Update cache
+    if (updatedPlayer.id) {
+      this.playerCache.set(updatedPlayer.id, updatedPlayer as ExecutivePlayerWithRelations);
+    }
+
+    return updatedPlayer;
   }
 
   async updateManyExecutivePlayers(params: {
@@ -164,6 +230,7 @@ export class ExecutivePlayerService {
     data: Prisma.ExecutivePlayerUpdateManyMutationInput;
   }): Promise<Prisma.BatchPayload> {
     const { where, data } = params;
+
     return this.prisma.executivePlayer.updateMany({
       data,
       where,
@@ -174,8 +241,18 @@ export class ExecutivePlayerService {
   async deleteExecutivePlayer(
     where: Prisma.ExecutivePlayerWhereUniqueInput,
   ): Promise<ExecutivePlayer> {
-    return this.prisma.executivePlayer.delete({
+    const deletedPlayer = await this.prisma.executivePlayer.delete({
       where,
     });
+
+    // Remove from cache
+    this.playerCache.delete(deletedPlayer.id);
+
+    return deletedPlayer;
+  }
+
+  // Cache management methods
+  clearCache(): void {
+    this.playerCache.clear();
   }
 }
