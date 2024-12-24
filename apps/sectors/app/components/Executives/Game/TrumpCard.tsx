@@ -5,7 +5,6 @@ import { CardLocation } from "@server/prisma/prisma.client";
 import { useEffect } from "react";
 
 export const TrumpCard = ({ gameId }: { gameId: string }) => {
-  console.log('looking for trump card with gameId', gameId);
   const { currentPhase, pingCounter } = useExecutiveGame();
   const {
     data: trumpCard,
@@ -33,7 +32,6 @@ export const TrumpCard = ({ gameId }: { gameId: string }) => {
   if (trumpCard.length === 0) {
     return <div>No trump card found</div>;
   }
-  console.log("trumpCard", trumpCard);
   return (
     <div className="relative border-2 border-dotted border-gray-600 rounded-lg p-4">
       <div className="absolute -top-3 left-3 bg-white px-2 font-bold text-gray-800 rounded-md">

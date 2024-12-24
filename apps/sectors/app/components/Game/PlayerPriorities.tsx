@@ -19,7 +19,6 @@ const PlayerPriorities = () => {
     trpc.roomUser.listRoomUsers.useQuery({
       where: { roomId: gameState.roomId },
     });
-  console.log("currentPhase", currentPhase);
   //TODO: If current phase is undefined and we rely solely on that for a query, the data will select all!
   //TODO: This is a bug that needs to be addressed anywhere we make assumption on data from hooks.
   const { data: playerPrioritiesData, refetch: refetchPlayerPriority } =
@@ -76,7 +75,6 @@ const PlayerPriorities = () => {
   if (isLoadingRoomUsers || isLoadingPlayerReadinessData) {
     return <div>Loading...</div>;
   }
-  console.log("playerPriorities", playerPriorities);
   return (
     <div className="flex">
       {(playerPriorities?.length || 0) > 0 ? (

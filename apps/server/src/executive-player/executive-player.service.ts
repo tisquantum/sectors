@@ -21,13 +21,7 @@ export class ExecutivePlayerService {
 
     if (!playerId) return null;
 
-    // Check the cache first
-    if (this.playerCache.has(playerId)) {
-      return this.playerCache.get(playerId) || null;
-    }
-
-    // Fetch from the database if not in cache
-    const player = await this.prisma.executivePlayer.findUnique({
+    return this.prisma.executivePlayer.findUnique({
       where: executivePlayerWhereUniqueInput,
       include: {
         user: true,
@@ -41,18 +35,14 @@ export class ExecutivePlayerService {
         voteMarkerVoted: true,
       },
     });
-
-    if (player) {
-      this.playerCache.set(playerId, player);
-    }
-
-    return player;
   }
 
   async getExecutivePlayerAndAgendas(
     executivePlayerWhereUniqueInput: Prisma.ExecutivePlayerWhereUniqueInput,
   ): Promise<ExecutivePlayerWithAgendas | null> {
-    const player = await this.getExecutivePlayer(executivePlayerWhereUniqueInput);
+    const player = await this.getExecutivePlayer(
+      executivePlayerWhereUniqueInput,
+    );
     if (!player) return null;
 
     return {
@@ -64,7 +54,9 @@ export class ExecutivePlayerService {
   async getExecutivePlayerWithCards(
     executivePlayerWhereUniqueInput: Prisma.ExecutivePlayerWhereUniqueInput,
   ): Promise<ExecutivePlayerWithCards | null> {
-    const player = await this.getExecutivePlayer(executivePlayerWhereUniqueInput);
+    const player = await this.getExecutivePlayer(
+      executivePlayerWhereUniqueInput,
+    );
     if (!player) return null;
 
     return {
@@ -77,16 +69,7 @@ export class ExecutivePlayerService {
     userId: string,
     gameId: string,
   ): Promise<ExecutivePlayerWithRelations | null> {
-    const cachedPlayer = [...this.playerCache.values()].find(
-      (player) => player.userId === userId && player.gameId === gameId,
-    );
-
-    if (cachedPlayer) {
-      return cachedPlayer;
-    }
-
-    // Fetch from the database if not cached
-    const player = await this.prisma.executivePlayer.findFirst({
+    return this.prisma.executivePlayer.findFirst({
       where: {
         userId,
         gameId,
@@ -103,12 +86,6 @@ export class ExecutivePlayerService {
         voteMarkerOwner: true,
       },
     });
-
-    if (player) {
-      this.playerCache.set(player.id, player);
-    }
-
-    return player;
   }
 
   async findExecutivePlayer(
@@ -148,11 +125,6 @@ export class ExecutivePlayerService {
       },
     });
 
-    // Cache the results
-    players.forEach((player) => {
-      this.playerCache.set(player.id, player);
-    });
-
     return players;
   }
 
@@ -162,14 +134,18 @@ export class ExecutivePlayerService {
     cursor?: Prisma.ExecutivePlayerWhereUniqueInput;
     where?: Prisma.ExecutivePlayerWhereInput;
     orderBy?: Prisma.ExecutivePlayerOrderByWithRelationInput;
+    gameId?: string; // Add gameId for filtering
   }): Promise<ExecutivePlayer[]> {
-    const { skip, take, cursor, where, orderBy } = params;
+    const { skip, take, cursor, where, orderBy, gameId } = params;
 
     return this.prisma.executivePlayer.findMany({
-      skip,
-      take,
+      skip: skip,
+      take: take,
       cursor,
-      where,
+      where: {
+        ...where,
+        ...(gameId ? { gameId } : {}),
+      },
       orderBy,
     });
   }
@@ -182,9 +158,14 @@ export class ExecutivePlayerService {
       data,
     });
 
-    // Update cache
-    this.playerCache.set(player.id, player as ExecutivePlayerWithRelations);
-
+    //get executive player with relations
+    this.getExecutivePlayer({
+      id: player.id,
+    }).then((player) => {
+      if (!player) return;
+      // Update cache
+      this.playerCache.set(player.id, player as ExecutivePlayerWithRelations);
+    });
     return player;
   }
 
@@ -197,9 +178,18 @@ export class ExecutivePlayerService {
       skipDuplicates: true,
     });
 
-    // Update cache
-    players.forEach((player) => {
-      this.playerCache.set(player.id, player as ExecutivePlayerWithRelations);
+    //get players with relations
+    this.listExecutivePlayers({
+      where: {
+        id: {
+          in: players.map((player) => player.id),
+        },
+      },
+    }).then((players) => {
+      // Update cache
+      players.forEach((player) => {
+        this.playerCache.set(player.id, player as ExecutivePlayerWithRelations);
+      });
     });
 
     return players;
@@ -219,7 +209,10 @@ export class ExecutivePlayerService {
 
     // Update cache
     if (updatedPlayer.id) {
-      this.playerCache.set(updatedPlayer.id, updatedPlayer as ExecutivePlayerWithRelations);
+      this.playerCache.set(
+        updatedPlayer.id,
+        updatedPlayer as ExecutivePlayerWithRelations,
+      );
     }
 
     return updatedPlayer;

@@ -88,6 +88,7 @@ export const GameProvider: React.FC<{
     { userId: user?.id || "", gameId: gameId },
     { enabled: !!user }
   );
+  console.log("player authPlayer", player, isError);
   useEffect(() => {
     if (!channel || !gameId) {
       return;
@@ -106,7 +107,6 @@ export const GameProvider: React.FC<{
     channel.bind(
       EVENT_EXECUTIVE_NEW_PHASE,
       ({ phaseName }: { phaseName: ExecutivePhaseName }) => {
-        console.log("New phase", phaseName);
         handleNewPhase(phaseName);
       }
     );
@@ -125,6 +125,13 @@ export const GameProvider: React.FC<{
   useEffect(() => {
     refetchCurrentPhase();
   }, [gameState?.phases.length]);
+
+  useEffect(() => {
+    console.log("gameState player refetch", gameState);
+    if(gameState && gameState.players.length > 0) {
+      refetchGameState();
+    }
+  }, [gameState?.players.length]);
 
   useEffect(() => {
     if (!currentPhase) {

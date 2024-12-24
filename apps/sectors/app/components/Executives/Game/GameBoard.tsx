@@ -41,6 +41,7 @@ const GameBoard = ({ gameId }: { gameId: string }) => {
   // Determine player seating order based on seatIndex
   const authPlayerId = authPlayer.id;
   let sortedPlayers = players.sort((a, b) => a.seatIndex - b.seatIndex);
+  console.log('sortedPlayers', sortedPlayers, gameState);
   //sort players anchored from authplayerid
   const authPlayerIndex = sortedPlayers.findIndex(
     (player) => player.id === authPlayerId
@@ -56,7 +57,6 @@ const GameBoard = ({ gameId }: { gameId: string }) => {
   const renderPlayerTableau = (playerId: string) => (
     <PlayerTableau key={playerId} playerId={playerId} />
   );
-  console.log("currentPhase", currentPhase);
   return (
     <>
       <div className="hidden xl:flex flex-col gap-5">

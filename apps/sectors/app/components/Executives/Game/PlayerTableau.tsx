@@ -228,7 +228,6 @@ const Relationships = ({ playerId }: { playerId: string }) => {
     }
     return acc;
   }, {} as Record<string, (typeof relationships)[0][]>);
-  console.log("groupedRelationships", groupedRelationships);
   return (
     <div className="flex flex-col gap-2">
       {Array.from({ length: RELATIONSHIP_TRACK_LENGTH }).map((_, index) => {
@@ -377,8 +376,6 @@ const PlayerInfluence = ({
     }
     return acc;
   }, {} as Record<string, (typeof playerInfluence)[0][]>);
-  console.log("groupedPlayerInfluence", groupedPlayerInfluence);
-  console.log("playerInfluence", playerInfluence);
   //filter all influence of type ceo
   const ceoInfluence = playerInfluence.filter(
     (influence) => influence.influenceType === InfluenceType.CEO
@@ -402,7 +399,6 @@ const PlayerInfluence = ({
                       },
                       {
                         onSettled: () => {
-                          console.log("Influence selected", influences);
                           resolve(); // Resolve the promise here
                         },
                         onError: (error) => {
@@ -580,7 +576,6 @@ const Bribe = ({
   if (!selfInfluenceAuthPlayerOwns) {
     selfInfluenceAuthPlayerOwns = [];
   }
-  console.log("selfInfluenceAuthPlayerOwns", selfInfluenceAuthPlayerOwns);
   const maxInfluence = selfInfluenceAuthPlayerOwns.length;
   const minInfluence = 1;
 

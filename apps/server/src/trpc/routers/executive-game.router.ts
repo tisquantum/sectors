@@ -84,6 +84,10 @@ export default (trpc: TrpcService, ctx: Context) =>
         } catch (error) {
           console.error('createInfluenceBid error', error);
           ctx.executiveGameService.unlockInput(gameId);
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: error instanceof Error ? error.message : 'An unexpected error occurred',
+          });
         }
         ctx.executiveGameService.unlockInput(gameId);
         return { success: true };
@@ -104,6 +108,10 @@ export default (trpc: TrpcService, ctx: Context) =>
           await ctx.executiveGameManagementService.playerPass(gameId, playerId);
         } catch (error) {
           ctx.executiveGameService.unlockInput(gameId);
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: error instanceof Error ? error.message : 'An unexpected error occurred',
+          });
         }
         ctx.executiveGameService.unlockInput(gameId);
         return { success: true };

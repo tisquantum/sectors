@@ -139,11 +139,32 @@ export class ExecutiveInfluenceService {
       throw new Error('Invalid target location');
     }
 
+    // Get influence bids, checking cache first
     let influenceBids = await this.prisma.influenceBid.findMany({
       where: {
         executiveInfluenceBidId: executiveInfluenceBid.id,
       },
     });
+
+    const getInfluenceFromCache = (influenceId: string) => {
+      if (this.influenceCache.has(influenceId)) {
+        return this.influenceCache.get(influenceId);
+      }
+      return null;
+    };
+
+    const updateInfluenceInCache = (
+      influenceId: string,
+      updates: Partial<Influence>,
+    ) => {
+      const cachedInfluence = this.influenceCache.get(influenceId);
+      if (cachedInfluence) {
+        this.influenceCache.set(influenceId, {
+          ...cachedInfluence,
+          ...updates,
+        });
+      }
+    };
 
     if (isBidLocked) {
       const halfLength = Math.floor(influenceBids.length / 2);
@@ -169,17 +190,10 @@ export class ExecutiveInfluenceService {
 
       // Update cache for remaining bids
       remainingInfluenceBids.forEach((bid) => {
-        const influenceId = bid.influenceId;
-        if (this.influenceCache.has(influenceId)) {
-          const cachedInfluence = this.influenceCache.get(influenceId);
-          if (cachedInfluence) {
-            this.influenceCache.set(influenceId, {
-              ...cachedInfluence,
-              ownedByPlayerId: executiveInfluenceBid.fromPlayerId,
-              influenceLocation: InfluenceLocation.OF_PLAYER,
-            });
-          }
-        }
+        updateInfluenceInCache(bid.influenceId, {
+          ownedByPlayerId: executiveInfluenceBid.fromPlayerId,
+          influenceLocation: InfluenceLocation.OF_PLAYER,
+        });
       });
 
       // Update influenceBids to only include the selected bids
@@ -221,17 +235,10 @@ export class ExecutiveInfluenceService {
 
       // Update cache for remaining bids
       remainingInfluenceBids.forEach((bid) => {
-        const influenceId = bid.influenceId;
-        if (this.influenceCache.has(influenceId)) {
-          const cachedInfluence = this.influenceCache.get(influenceId);
-          if (cachedInfluence) {
-            this.influenceCache.set(influenceId, {
-              ...cachedInfluence,
-              ownedByPlayerId: executiveInfluenceBid.toPlayerId,
-              influenceLocation: InfluenceLocation.OWNED_BY_PLAYER,
-            });
-          }
-        }
+        updateInfluenceInCache(bid.influenceId, {
+          ownedByPlayerId: executiveInfluenceBid.toPlayerId,
+          influenceLocation: InfluenceLocation.OWNED_BY_PLAYER,
+        });
       });
 
       influenceBids = influenceBids.slice(0, remainingRelationshipToFill);
@@ -252,17 +259,10 @@ export class ExecutiveInfluenceService {
 
     // Update cache for moved bids
     influenceBids.forEach((bid) => {
-      const influenceId = bid.influenceId;
-      if (this.influenceCache.has(influenceId)) {
-        const cachedInfluence = this.influenceCache.get(influenceId);
-        if (cachedInfluence) {
-          this.influenceCache.set(influenceId, {
-            ...cachedInfluence,
-            ownedByPlayerId: executiveInfluenceBid.toPlayerId,
-            influenceLocation: targetLocation,
-          });
-        }
-      }
+      updateInfluenceInCache(bid.influenceId, {
+        ownedByPlayerId: executiveInfluenceBid.toPlayerId,
+        influenceLocation: targetLocation,
+      });
     });
 
     // Mark the bid as selected
@@ -334,6 +334,7 @@ export class ExecutiveInfluenceService {
   }
 
   // Create multiple Influence records
+  // Create multiple Influence records
   async createManyInfluence(
     data: Prisma.InfluenceCreateManyInput[],
   ): Promise<Influence[]> {
@@ -343,26 +344,56 @@ export class ExecutiveInfluenceService {
       skipDuplicates: true,
     });
 
+    // Filter out undefined `id` values
+    const influenceIds = data
+      .map((influence) => influence.id)
+      .filter((id): id is string => !!id);
+
     // Fetch the newly created records
     const createdInfluences = await this.prisma.influence.findMany({
       where: {
         id: {
-          in: data.map((influence) => influence.id), // Use the `id` or other unique field
+          in: influenceIds, // Use only valid `id` values
         },
       },
     });
 
-    // Update cache by gameId if necessary
+    // Update cache by influence ID
+    createdInfluences.forEach((influence) => {
+      this.influenceCache.set(influence.id, influence);
+    });
+
+    // Group influences by gameId and update cache for gameId if necessary
     if (data.length > 0 && data[0].gameId) {
-      const gameId = data[0].gameId;
-      const currentCache = this.influenceCache.get(gameId) || [];
-      this.influenceCache.set(gameId, [...currentCache, ...createdInfluences]);
+      const gameId = data[0].gameId as string; // Ensure `gameId` is properly typed
+      const currentCache = this.getInfluencesByGameId(gameId);
+      const updatedCache = [...currentCache, ...createdInfluences];
+      this.setInfluencesByGameId(gameId, updatedCache);
     }
 
     return createdInfluences;
   }
+
   // Additional method to clear cache (optional)
   clearCache(): void {
     this.influenceCache.clear();
+  }
+
+  private getInfluencesByGameId(gameId: string): Influence[] {
+    // Retrieve all influences for a gameId
+    const influences: Influence[] = [];
+    this.influenceCache.forEach((influence) => {
+      if (influence.gameId === gameId) {
+        influences.push(influence);
+      }
+    });
+    return influences;
+  }
+
+  private setInfluencesByGameId(gameId: string, influences: Influence[]): void {
+    // Update the cache with new influences for a specific gameId
+    influences.forEach((influence) => {
+      this.influenceCache.set(influence.id, influence);
+    });
   }
 }

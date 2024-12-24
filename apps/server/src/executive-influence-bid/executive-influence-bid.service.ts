@@ -10,7 +10,10 @@ import { ExecutiveInfluenceBidWithRelations } from '@server/prisma/prisma.types'
 
 @Injectable()
 export class ExecutiveInfluenceBidService {
-  private executiveInfluenceBidCache = new Map<string, ExecutiveInfluenceBidWithRelations>();
+  private executiveInfluenceBidCache = new Map<
+    string,
+    ExecutiveInfluenceBidWithRelations
+  >();
 
   constructor(private prisma: PrismaService) {}
 
@@ -28,16 +31,21 @@ export class ExecutiveInfluenceBidService {
     }
 
     // Fetch from the database and update the cache
-    const executiveInfluenceBid = await this.prisma.executiveInfluenceBid.findUnique({
-      where: executiveInfluenceBidWhereUniqueInput,
-      include: {
-        game: true,
-        toPlayer: true,
-        fromPlayer: true,
-        ExecutiveGameTurn: true,
-        influenceBids: true,
-      },
-    });
+    const executiveInfluenceBid =
+      await this.prisma.executiveInfluenceBid.findUnique({
+        where: executiveInfluenceBidWhereUniqueInput,
+        include: {
+          game: true,
+          toPlayer: true,
+          fromPlayer: true,
+          ExecutiveGameTurn: true,
+          influenceBids: {
+            include: {
+              Influence: true, // Include the Influence relation to satisfy the type
+            },
+          },
+        },
+      });
 
     if (executiveInfluenceBid) {
       this.executiveInfluenceBidCache.set(bidId, executiveInfluenceBid);
@@ -57,7 +65,11 @@ export class ExecutiveInfluenceBidService {
         toPlayer: true,
         fromPlayer: true,
         ExecutiveGameTurn: true,
-        influenceBids: true,
+        influenceBids: {
+          include: {
+            Influence: true, // Include the Influence relation to satisfy the type
+          },
+        },
       },
     });
   }
@@ -72,23 +84,24 @@ export class ExecutiveInfluenceBidService {
   }): Promise<ExecutiveInfluenceBidWithRelations[]> {
     const { skip, take, cursor, where, orderBy } = params;
 
-    const executiveInfluenceBids = await this.prisma.executiveInfluenceBid.findMany({
-      skip,
-      take,
-      cursor,
-      where,
-      orderBy,
-      include: {
-        toPlayer: true,
-        fromPlayer: true,
-        ExecutiveGameTurn: true,
-        influenceBids: {
-          include: {
-            Influence: true,
+    const executiveInfluenceBids =
+      await this.prisma.executiveInfluenceBid.findMany({
+        skip,
+        take,
+        cursor,
+        where,
+        orderBy,
+        include: {
+          toPlayer: true,
+          fromPlayer: true,
+          ExecutiveGameTurn: true,
+          influenceBids: {
+            include: {
+              Influence: true,
+            },
           },
         },
-      },
-    });
+      });
 
     // Update cache with all retrieved bids
     executiveInfluenceBids.forEach((bid) => {
@@ -105,16 +118,22 @@ export class ExecutiveInfluenceBidService {
     data: Prisma.ExecutiveInfluenceBidCreateInput,
     influence: Influence[],
   ): Promise<ExecutiveInfluenceBidWithRelations> {
-    const executiveInfluenceBid = await this.prisma.executiveInfluenceBid.create({
-      data,
-      include: {
-        game: true,
-        toPlayer: true,
-        fromPlayer: true,
-        ExecutiveGameTurn: true,
-        influenceBids: true,
-      },
-    });
+    // Create the executive influence bid
+    const executiveInfluenceBid =
+      await this.prisma.executiveInfluenceBid.create({
+        data,
+        include: {
+          game: true,
+          toPlayer: true,
+          fromPlayer: true,
+          ExecutiveGameTurn: true,
+          influenceBids: {
+            include: {
+              Influence: true, // Include the Influence relation
+            },
+          },
+        },
+      });
 
     // Create influence bids
     await this.prisma.influenceBid.createMany({
@@ -124,7 +143,7 @@ export class ExecutiveInfluenceBidService {
       })),
     });
 
-    // Update all influence to location BRIBE
+    // Update all influences to location BRIBE
     await this.prisma.influence.updateMany({
       where: {
         id: {
@@ -137,12 +156,37 @@ export class ExecutiveInfluenceBidService {
       },
     });
 
-    // Update cache
-    this.executiveInfluenceBidCache.set(executiveInfluenceBid.id, executiveInfluenceBid);
+    // Refetch the executive influence bid with updated relations
+    const updatedExecutiveInfluenceBid =
+      await this.prisma.executiveInfluenceBid.findUnique({
+        where: { id: executiveInfluenceBid.id },
+        include: {
+          game: true,
+          toPlayer: true,
+          fromPlayer: true,
+          ExecutiveGameTurn: true,
+          influenceBids: {
+            include: {
+              Influence: true, // Ensure Influence relation is included
+            },
+          },
+        },
+      });
 
-    return executiveInfluenceBid;
+    if (!updatedExecutiveInfluenceBid) {
+      throw new Error('Failed to fetch the updated ExecutiveInfluenceBid');
+    }
+
+    // Update cache
+    this.executiveInfluenceBidCache.set(
+      updatedExecutiveInfluenceBid.id,
+      updatedExecutiveInfluenceBid,
+    );
+
+    return updatedExecutiveInfluenceBid;
   }
 
+  // Update an existing ExecutiveInfluenceBid
   // Update an existing ExecutiveInfluenceBid
   async updateExecutiveInfluenceBid(params: {
     where: Prisma.ExecutiveInfluenceBidWhereUniqueInput;
@@ -158,7 +202,11 @@ export class ExecutiveInfluenceBidService {
         toPlayer: true,
         fromPlayer: true,
         ExecutiveGameTurn: true,
-        influenceBids: true,
+        influenceBids: {
+          include: {
+            Influence: true, // Include the Influence relation
+          },
+        },
       },
     });
 

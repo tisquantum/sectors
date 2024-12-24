@@ -901,7 +901,6 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
   const currentCompanyActions = companyActions?.filter(
     (companyAction) => companyAction.companyId === currentCompany
   );
-  console.log("collectedCompanies", collectedCompanies);
   return (
     <div className="flex flex-col gap-4">
       <Tabs>

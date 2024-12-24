@@ -30,10 +30,10 @@ export class ExecutiveGameService {
         gameTurn: true,
       },
     });
-  
+
     // Cache the newly created game
     this.gameCache.set(game.id, game);
-  
+
     return game;
   }
 
@@ -45,7 +45,7 @@ export class ExecutiveGameService {
     orderBy?: Prisma.ExecutiveGameOrderByWithRelationInput;
   }): Promise<ExecutiveGameWithRelations[]> {
     const { skip, take, cursor, where, orderBy } = params;
-  
+
     // Fetch games from the database with all required relations
     const games = await this.prisma.executiveGame.findMany({
       skip,
@@ -63,15 +63,15 @@ export class ExecutiveGameService {
         gameTurn: true, // Include gameTurn
       },
     });
-  
+
     // Update cache with the fetched games
     games.forEach((game) => {
       this.gameCache.set(game.id, game);
     });
-  
+
     return games;
   }
-  
+
   // Retrieve a specific ExecutiveGame
   async getExecutiveGame(
     executiveGameWhereUniqueInput: Prisma.ExecutiveGameWhereUniqueInput,
@@ -83,6 +83,28 @@ export class ExecutiveGameService {
     }
     // Check in-memory cache
     if (this.gameCache.has(gameId)) {
+      //if gameCache has no players, fetch from database
+      if (
+        !this.gameCache.get(gameId)?.players ||
+        this.gameCache.get(gameId)?.players.length === 0
+      ) {
+        console.log('fetching game from database, no players');
+        const game = await this.prisma.executiveGame.findUnique({
+          where: executiveGameWhereUniqueInput,
+          include: {
+            players: true,
+            influence: true,
+            ExecutiveVictoryPoint: true,
+            ExecutiveAgenda: true,
+            phases: true,
+            gameTurn: true,
+          },
+        });
+        if (game) {
+          this.gameCache.set(gameId, game);
+          return game;
+        }
+      }
       return this.gameCache.get(gameId) || null;
     }
 
@@ -152,7 +174,6 @@ export class ExecutiveGameService {
 
     try {
       await Promise.all(updatePromises);
-      console.log('Updates persisted to database:', updates);
     } catch (error) {
       console.error('Failed to persist updates:', error);
     }

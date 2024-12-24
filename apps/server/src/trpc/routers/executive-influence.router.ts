@@ -104,7 +104,6 @@ export default (trpc: TrpcService, ctx: Context) =>
         } catch (error) {
           ctx.executiveGameService.unlockInput(gameId);
         }
-        console.log('executiveInfluenceBid', executiveInfluenceBid);
         if (!executiveInfluenceBid) {
           throw new Error('Executive Influence Bid not found');
         }
@@ -122,7 +121,6 @@ export default (trpc: TrpcService, ctx: Context) =>
             message: 'Move Influence Bid to Player error',
           });
         }
-        console.log('executiveInfluenceBid', executiveInfluenceBid);
         //exchange the bribe card and move gifts for player
         try {
           await ctx.executiveCardService.exchangeBribe(

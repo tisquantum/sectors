@@ -12,6 +12,16 @@ export class ExecutiveCardService {
   async getDeck(gameId: string): Promise<ExecutiveCard[]> {
     // Check cache for the deck
     if (this.cardCache.has(gameId)) {
+      //if deck is empty, look at tdb
+      if (this.cardCache.get(gameId)?.length === 0) {
+        const deck = await this.listExecutiveCards({
+          where: {
+            gameId,
+            cardLocation: CardLocation.DECK,
+          },
+        });
+        return deck;
+      }
       return (
         this.cardCache
           .get(gameId)
@@ -26,9 +36,6 @@ export class ExecutiveCardService {
         cardLocation: CardLocation.DECK,
       },
     });
-
-    // Update cache
-    this.updateCache(gameId, deck);
 
     return deck;
   }
@@ -92,10 +99,6 @@ export class ExecutiveCardService {
 
     // Draw the specified number of cards
     const drawnCards = deck.slice(0, cardsToDraw);
-
-    // Remove drawn cards from cache and update
-    const remainingDeck = deck.slice(cardsToDraw);
-    this.updateCache(gameId, remainingDeck);
 
     return drawnCards;
   }
@@ -168,14 +171,46 @@ export class ExecutiveCardService {
   }): Promise<ExecutiveCard> {
     const { where, data } = params;
 
-    const updatedCard = await this.prisma.executiveCard.update({
-      where,
-      data,
-    });
+    // Check cache for the card
+    let cachedCard = [...this.cardCache.values()]
+      .flat()
+      .find((card) => card.id === where.id);
 
-    // Update cache
+    if (!cachedCard) {
+      // Fallback to fetching from database if not in cache
+      const dbCard = await this.prisma.executiveCard.findUnique({
+        where,
+      });
+
+      if (!dbCard) {
+        throw new Error('Card not found');
+      }
+
+      cachedCard = dbCard; // Ensure cachedCard is assigned a valid value
+    }
+
+    // Resolve data fields for the simulated updated card
+    const updatedCard: ExecutiveCard = {
+      ...cachedCard,
+      ...(data as Partial<ExecutiveCard>), // Cast data to match ExecutiveCard structure
+      updatedAt: new Date(), // Simulate the updated timestamp
+    };
+
+    // Update the cache
     this.updateCardInCache(updatedCard.gameId, updatedCard);
 
+    // Run Prisma update in the background
+    this.prisma.executiveCard
+      .update({
+        where,
+        data,
+      })
+      .catch((err) => {
+        console.error('Failed to update card in database:', err);
+      });
+
+    console.log('updatedCard', updatedCard);
+    // Return the updated card from the cache immediately
     return updatedCard;
   }
 
@@ -242,11 +277,6 @@ export class ExecutiveCardService {
       // Return full card data for non-HAND cards
       return card;
     });
-
-    // Cache the results for this player's game
-    if (allCards.length > 0 && allCards[0].gameId) {
-      this.updateCache(allCards[0].gameId, allCards);
-    }
 
     return concealedCards;
   }
@@ -340,7 +370,7 @@ export class ExecutiveCardService {
       });
       if (matchingCard) return matchingCard;
     }
-  
+
     // Fallback to database if not found in cache
     return this.prisma.executiveCard.findFirst({
       where,
@@ -352,33 +382,35 @@ export class ExecutiveCardService {
     data: Prisma.ExecutiveCardUncheckedUpdateManyInput;
   }): Promise<Prisma.BatchPayload> {
     const { where, data } = params;
-  
+
     // Update records in the database
     const result = await this.prisma.executiveCard.updateMany({
       where,
       data,
     });
-  
+
     // Update the cache
     const updatedCards = await this.prisma.executiveCard.findMany({
       where,
     });
-  
+
     if (updatedCards.length > 0) {
       const gameId = updatedCards[0].gameId;
       const currentCache = this.cardCache.get(gameId) || [];
-  
+
       // Update or replace cards in the cache
-      const updatedCache = currentCache.map((card) =>
-        updatedCards.find((updatedCard) => updatedCard.id === card.id) || card,
+      const updatedCache = currentCache.map(
+        (card) =>
+          updatedCards.find((updatedCard) => updatedCard.id === card.id) ||
+          card,
       );
-  
+
       this.cardCache.set(gameId, updatedCache);
     }
-  
+
     return result;
-  }  
-  
+  }
+
   clearCache(): void {
     this.cardCache.clear();
   }

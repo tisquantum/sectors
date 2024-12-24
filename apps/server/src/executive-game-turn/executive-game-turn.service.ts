@@ -32,10 +32,32 @@ export class ExecutiveGameTurnService {
         playerPasses: true,
       },
     });
-  
+
     return turn;
   }
-  
+
+  async getLatestTurnNoRelations(
+    gameId: string,
+  ): Promise<ExecutiveGameTurn | null> {
+    // Check the cache
+    if (this.turnCache.has(gameId)) {
+      const cachedTurns = this.turnCache.get(gameId) || [];
+      if (cachedTurns.length > 0) {
+        // Return the turn with the highest turnNumber
+        return cachedTurns.reduce((latest, current) =>
+          current.turnNumber > latest.turnNumber ? current : latest,
+        );
+      }
+    }
+
+    // Fallback to database if cache miss or no turns cached
+    const latestTurn = await this.prisma.executiveGameTurn.findFirst({
+      where: { gameId },
+      orderBy: { turnNumber: 'desc' },
+    });
+
+    return latestTurn;
+  }
 
   // List all ExecutiveGameTurns with optional filtering, pagination, and sorting
   async listExecutiveGameTurns(params: {
@@ -46,16 +68,8 @@ export class ExecutiveGameTurnService {
     orderBy?: Prisma.ExecutiveGameTurnOrderByWithRelationInput;
   }): Promise<ExecutiveGameTurnWithRelations[]> {
     const { skip, take, cursor, where, orderBy } = params;
-  
-    // Check cache for gameId
-    if (where?.gameId && this.turnCache.has(where.gameId)) {
-      const cachedTurns = this.turnCache.get(where.gameId) || [];
-      // Apply filtering, sorting, and pagination on cached data
-      return this.applyFiltersAndPagination(cachedTurns, where, orderBy, skip, take);
-    }
-  
-    // Fallback to database
-    const turns = await this.prisma.executiveGameTurn.findMany({
+
+    return this.prisma.executiveGameTurn.findMany({
       skip,
       take,
       cursor,
@@ -78,15 +92,7 @@ export class ExecutiveGameTurnService {
         playerPasses: true,
       },
     });
-  
-    // Update cache
-    if (where?.gameId) {
-      this.turnCache.set(where.gameId, turns);
-    }
-  
-    return turns;
   }
-  
 
   // Create a new ExecutiveGameTurn
   async createExecutiveGameTurn(
@@ -96,7 +102,16 @@ export class ExecutiveGameTurnService {
       data,
       include: {
         phases: true,
-        tricks: true,
+        tricks: {
+          include: {
+            trickCards: {
+              include: {
+                card: true, // Include card to satisfy TrickCardWithRelations
+                player: true, // Include player to satisfy TrickCardWithRelations
+              },
+            },
+          },
+        },
         influenceBids: true,
         influenceVotes: true,
         playerPasses: true,
@@ -110,15 +125,32 @@ export class ExecutiveGameTurnService {
   }
 
   // Update an existing ExecutiveGameTurn
+  // Update an existing ExecutiveGameTurn
   async updateExecutiveGameTurn(params: {
     where: Prisma.ExecutiveGameTurnWhereUniqueInput;
     data: Prisma.ExecutiveGameTurnUpdateInput;
-  }): Promise<ExecutiveGameTurn> {
+  }): Promise<ExecutiveGameTurnWithRelations> {
     const { where, data } = params;
 
     const updatedTurn = await this.prisma.executiveGameTurn.update({
       where,
       data,
+      include: {
+        phases: true,
+        tricks: {
+          include: {
+            trickCards: {
+              include: {
+                card: true,
+                player: true,
+              },
+            },
+          },
+        },
+        influenceBids: true,
+        influenceVotes: true,
+        playerPasses: true,
+      },
     });
 
     // Update the cache
@@ -126,7 +158,7 @@ export class ExecutiveGameTurnService {
       const turns = this.turnCache.get(updatedTurn.gameId) || [];
       this.turnCache.set(
         updatedTurn.gameId,
-        turns.map((turn) => (turn.id === updatedTurn.id ? { ...turn, ...data } : turn)),
+        turns.map((turn) => (turn.id === updatedTurn.id ? updatedTurn : turn)),
       );
     }
 
@@ -152,7 +184,9 @@ export class ExecutiveGameTurnService {
   }
 
   // Retrieve all turns for a specific game
-  async getTurnsForGame(gameId: string): Promise<ExecutiveGameTurnWithRelations[]> {
+  async getTurnsForGame(
+    gameId: string,
+  ): Promise<ExecutiveGameTurnWithRelations[]> {
     // Check the cache
     if (this.turnCache.has(gameId)) {
       return this.turnCache.get(gameId) || [];
@@ -164,9 +198,19 @@ export class ExecutiveGameTurnService {
       orderBy: { turnNumber: 'asc' },
       include: {
         phases: true,
-        tricks: true,
+        tricks: {
+          include: {
+            trickCards: {
+              include: {
+                card: true,
+                player: true,
+              },
+            },
+          },
+        },
         influenceBids: true,
         influenceVotes: true,
+        playerPasses: true, // Ensure playerPasses is included
       },
     });
 
@@ -177,7 +221,10 @@ export class ExecutiveGameTurnService {
   }
 
   // Utility: Add a turn to the cache
-  private addToCache(gameId: string, turn: ExecutiveGameTurnWithRelations): void {
+  private addToCache(
+    gameId: string,
+    turn: ExecutiveGameTurnWithRelations,
+  ): void {
     const turns = this.turnCache.get(gameId) || [];
     this.turnCache.set(gameId, [...turns, turn]);
   }
@@ -206,16 +253,47 @@ export class ExecutiveGameTurnService {
       const [key, order] = Object.entries(orderBy)[0];
       filteredTurns.sort((a, b) =>
         order === 'asc'
-          ? a[key as keyof ExecutiveGameTurnWithRelations] > b[key as keyof ExecutiveGameTurnWithRelations]
+          ? a[key as keyof ExecutiveGameTurnWithRelations] >
+            b[key as keyof ExecutiveGameTurnWithRelations]
             ? 1
             : -1
-          : a[key as keyof ExecutiveGameTurnWithRelations] < b[key as keyof ExecutiveGameTurnWithRelations]
-          ? 1
-          : -1,
+          : a[key as keyof ExecutiveGameTurnWithRelations] <
+              b[key as keyof ExecutiveGameTurnWithRelations]
+            ? 1
+            : -1,
       );
     }
 
     // Apply pagination
-    return filteredTurns.slice(skip || 0, (skip || 0) + (take || filteredTurns.length));
+    return filteredTurns.slice(
+      skip || 0,
+      (skip || 0) + (take || filteredTurns.length),
+    );
+  }
+
+  async getLatestTurn(
+    gameId: string,
+  ): Promise<ExecutiveGameTurnWithRelations | null> {
+    return await this.prisma.executiveGameTurn.findFirst({
+      where: { gameId },
+      orderBy: { turnNumber: 'desc' },
+      include: {
+        game: true,
+        phases: true,
+        tricks: {
+          include: {
+            trickCards: {
+              include: {
+                card: true,
+                player: true,
+              },
+            },
+          },
+        },
+        influenceBids: true,
+        influenceVotes: true,
+        playerPasses: true,
+      },
+    });
   }
 }

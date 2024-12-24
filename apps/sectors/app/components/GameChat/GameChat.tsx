@@ -88,7 +88,6 @@ const AtList = forwardRef<HTMLTextAreaElement, AtListProps>(
         onClose(); // Close the AtList
       }
     };
-    console.log("atListHeight", atListHeight, sendMessageTop);
     return (
       <div
         ref={atListRef}
