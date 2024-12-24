@@ -39,24 +39,10 @@ export class ExecutiveGameTurnService {
   async getLatestTurnNoRelations(
     gameId: string,
   ): Promise<ExecutiveGameTurn | null> {
-    // Check the cache
-    if (this.turnCache.has(gameId)) {
-      const cachedTurns = this.turnCache.get(gameId) || [];
-      if (cachedTurns.length > 0) {
-        // Return the turn with the highest turnNumber
-        return cachedTurns.reduce((latest, current) =>
-          current.turnNumber > latest.turnNumber ? current : latest,
-        );
-      }
-    }
-
-    // Fallback to database if cache miss or no turns cached
-    const latestTurn = await this.prisma.executiveGameTurn.findFirst({
+    return this.prisma.executiveGameTurn.findFirst({
       where: { gameId },
       orderBy: { turnNumber: 'desc' },
     });
-
-    return latestTurn;
   }
 
   // List all ExecutiveGameTurns with optional filtering, pagination, and sorting
@@ -274,11 +260,13 @@ export class ExecutiveGameTurnService {
   async getLatestTurn(
     gameId: string,
   ): Promise<ExecutiveGameTurnWithRelations | null> {
-    return await this.prisma.executiveGameTurn.findFirst({
+    // Start measuring
+    const startTime = performance.now();
+
+    const latestTurn = await this.prisma.executiveGameTurn.findFirst({
       where: { gameId },
       orderBy: { turnNumber: 'desc' },
       include: {
-        game: true,
         phases: true,
         tricks: {
           include: {
@@ -295,5 +283,27 @@ export class ExecutiveGameTurnService {
         playerPasses: true,
       },
     });
+
+    // Stop measuring
+    const endTime = performance.now();
+
+    // Log the duration
+    console.log(`[getLatestTurn] Time taken ${endTime - startTime} ms`);
+
+    return latestTurn;
+  }
+
+  async getLatestTurnId(gameId: string): Promise<string | null> {
+    // Start measuring
+    const startTime = performance.now();
+    const latestTurn = await this.prisma.executiveGameTurn.findFirst({
+      where: { gameId },
+      orderBy: { turnNumber: 'desc' },
+      select: { id: true },
+    });
+    // Stop measuring
+    const endTime = performance.now();
+    console.log(`[getLatestTurnId] Time taken: ${endTime - startTime} ms`);
+    return latestTurn?.id || null;
   }
 }

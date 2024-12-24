@@ -120,10 +120,6 @@ export class ExecutiveCardService {
     // Fetch from database if not cached
     const executiveCard = await this.prisma.executiveCard.findUnique({
       where: executiveCardWhereUniqueInput,
-      include: {
-        Game: true,
-        player: true,
-      },
     });
 
     return executiveCard;
@@ -145,10 +141,6 @@ export class ExecutiveCardService {
       cursor,
       where,
       orderBy,
-      include: {
-        Game: true,
-        player: true,
-      },
     });
   }
 
@@ -209,7 +201,6 @@ export class ExecutiveCardService {
         console.error('Failed to update card in database:', err);
       });
 
-    console.log('updatedCard', updatedCard);
     // Return the updated card from the cache immediately
     return updatedCard;
   }

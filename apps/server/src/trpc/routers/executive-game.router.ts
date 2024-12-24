@@ -133,10 +133,10 @@ export default (trpc: TrpcService, ctx: Context) =>
             message: 'Game is locked',
           });
         }
-        let currentTurn;
+        let currentTurnId;
         try {
-          currentTurn =
-            await ctx.executiveGameTurnService.getLatestTurn(gameId);
+          currentTurnId =
+            await ctx.executiveGameTurnService.getLatestTurnId(gameId);
         } catch (error) {
           ctx.executiveGameService.unlockInput(gameId);
           throw new TRPCError({
@@ -144,7 +144,7 @@ export default (trpc: TrpcService, ctx: Context) =>
             message: error instanceof Error ? error.message : 'An unexpected error occurred',
           });
         }
-        if (!currentTurn) {
+        if (!currentTurnId) {
           ctx.executiveGameService.unlockInput(gameId);
 
           throw new TRPCError({
@@ -156,8 +156,8 @@ export default (trpc: TrpcService, ctx: Context) =>
           await ctx.executiveGameManagementService.playCardIntoTrick(
             cardId,
             playerId,
-            currentTurn.gameId,
-            currentTurn.id,
+            gameId,
+            currentTurnId,
           );
         } catch (error) {
           ctx.executiveGameService.unlockInput(gameId);

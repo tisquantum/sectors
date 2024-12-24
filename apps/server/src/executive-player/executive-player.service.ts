@@ -37,6 +37,14 @@ export class ExecutivePlayerService {
     });
   }
 
+  async getExecutivePlayerNoRelations(
+    executivePlayerWhereUniqueInput: Prisma.ExecutivePlayerWhereUniqueInput,
+  ): Promise<ExecutivePlayer | null> {
+    return this.prisma.executivePlayer.findUnique({
+      where: executivePlayerWhereUniqueInput,
+    });
+  }
+
   async getExecutivePlayerAndAgendas(
     executivePlayerWhereUniqueInput: Prisma.ExecutivePlayerWhereUniqueInput,
   ): Promise<ExecutivePlayerWithAgendas | null> {
@@ -54,15 +62,12 @@ export class ExecutivePlayerService {
   async getExecutivePlayerWithCards(
     executivePlayerWhereUniqueInput: Prisma.ExecutivePlayerWhereUniqueInput,
   ): Promise<ExecutivePlayerWithCards | null> {
-    const player = await this.getExecutivePlayer(
-      executivePlayerWhereUniqueInput,
-    );
-    if (!player) return null;
-
-    return {
-      ...player,
-      cards: player.cards,
-    };
+    return this.prisma.executivePlayer.findUnique({
+      where: executivePlayerWhereUniqueInput,
+      include: {
+        cards: true,
+      },
+    });
   }
 
   async getExecutivePlayerByUserIdAndGameId(
@@ -106,7 +111,7 @@ export class ExecutivePlayerService {
   }): Promise<ExecutivePlayerWithRelations[]> {
     const { skip, take, cursor, where, orderBy } = params;
 
-    const players = await this.prisma.executivePlayer.findMany({
+    return this.prisma.executivePlayer.findMany({
       skip,
       take,
       cursor,
@@ -124,8 +129,6 @@ export class ExecutivePlayerService {
         voteMarkerOwner: true,
       },
     });
-
-    return players;
   }
 
   async listExecutivePlayersNoRelations(params: {

@@ -52,22 +52,13 @@ export class ExecutiveInfluenceService {
   }): Promise<Influence[]> {
     const { skip, take, cursor, where, orderBy } = params;
 
-    const influences = await this.prisma.influence.findMany({
+    return this.prisma.influence.findMany({
       skip,
       take,
       cursor,
       where,
       orderBy,
     });
-
-    // Cache the results
-    influences.forEach((influence) => {
-      if (influence.id) {
-        this.influenceCache.set(influence.id, influence);
-      }
-    });
-
-    return influences;
   }
 
   // Create a new Influence
