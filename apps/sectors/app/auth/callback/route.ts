@@ -14,7 +14,6 @@ export async function GET(request: Request) {
     const { data: authSession, error } =
       await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      console.log("authSession", authSession);
       // create user if appropriate
 
       // Fetch the authenticated user
@@ -24,7 +23,6 @@ export async function GET(request: Request) {
       if (sessionError) {
         throw new Error(sessionError.message);
       }
-      console.log("sessionData", sessionData);
       const authUserId = sessionData.user?.id;
       const email = sessionData.user?.email;
 

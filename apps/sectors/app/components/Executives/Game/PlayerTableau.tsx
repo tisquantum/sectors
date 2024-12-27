@@ -24,7 +24,7 @@ import {
 } from "@nextui-org/react";
 import { RELATIONSHIP_TRACK_LENGTH } from "@server/data/executive_constants";
 import { ActionWrapper } from "./ActionWrapper";
-import { InfluenceInput } from "../Player/InfluenceInput";
+import { InfluenceMultiInput } from "../Player/InfluenceMultiInput";
 import { useEffect, useState } from "react";
 import { CardList } from "./CardList";
 import { InfluenceBidWithInfluence } from "@server/prisma/prisma.types";
@@ -35,6 +35,7 @@ import { RiLock2Fill, RiLockUnlockFill } from "@remixicon/react";
 import { TakeNoBid } from "../Player/TakeNoBid";
 import { Votes } from "../Player/Votes";
 import { Agendas } from "../Player/Agenda";
+import { InfluenceInput } from "../Player/InfluenceInput";
 
 //TODO: Add green border to active area on tableau
 const InfluenceBids = ({
@@ -47,9 +48,10 @@ const InfluenceBids = ({
   isInteractive?: boolean;
 }) => {
   const { pingCounter, currentPhase, gameId } = useExecutiveGame();
-  const [influenceDestination, setInfluenceDestination] =
-    useState<InfluenceLocation>(InfluenceLocation.OWNED_BY_PLAYER);
-  const [isBidLocked, setIsBidLocked] = useState(false);
+  const [influenceDestinations, setInfluenceDestinations] = useState<
+    Record<string, InfluenceLocation>
+  >({});
+
   const {
     data: executiveInfluenceBids,
     isLoading,
@@ -81,27 +83,28 @@ const InfluenceBids = ({
   if (executiveInfluenceBids.length === 0) {
     return <div>No bids</div>;
   }
+  console.log("executiveInfluenceBids", executiveInfluenceBids);
   //group influenceBids by playerIds
-  const flattenedInfluenceBids = executiveInfluenceBids.flatMap(
-    (bid) => bid.influenceBids
-  );
-  const influenceBidsGrouped = flattenedInfluenceBids.reduce(
-    (acc: Record<string, InfluenceBidWithInfluence[]>, influenceBid) => {
-      const selfPlayerId = influenceBid.Influence.selfPlayerId;
+  // const flattenedInfluenceBids = executiveInfluenceBids.flatMap(
+  //   (bid) => bid.influenceBids
+  // );
+  // const influenceBidsGrouped = executiveInfluenceBids.reduce(
+  //   (acc: Record<string, InfluenceBidWithInfluence[]>, influenceBid) => {
+  //     const fromPlayerId = influenceBid.fromPlayerId;
 
-      if (selfPlayerId === null) {
-        return acc;
-      }
+  //     if (fromPlayerId === null) {
+  //       return acc;
+  //     }
 
-      if (!acc[selfPlayerId]) {
-        acc[selfPlayerId] = [];
-      }
+  //     if (!acc[fromPlayerId]) {
+  //       acc[fromPlayerId] = [];
+  //     }
 
-      acc[selfPlayerId].push(influenceBid);
-      return acc;
-    },
-    {}
-  );
+  //     acc[fromPlayerId].push(influenceBid);
+  //     return acc;
+  //   },
+  //   {}
+  // );
 
   const hasBidBeenSelected = executiveInfluenceBids.some(
     (bid) => bid.isSelected
@@ -109,80 +112,124 @@ const InfluenceBids = ({
   return (
     <div className="relative">
       <div className={`flex flex-row gap-2`}>
-        {Object.keys(influenceBidsGrouped).map((bid) => (
-          <>
-            {isInteractive ? (
-              <ActionWrapper
-                acceptCallback={() => {
-                  return new Promise<void>((resolve) => {
-                    moveInfluenceBidToPlayer.mutate(
-                      {
-                        executiveInfluenceBidId:
-                          influenceBidsGrouped[bid][0]
-                            .executiveInfluenceBidId || "",
-                        targetLocation: influenceDestination,
-                        isBidLocked,
-                        gameId,
-                      },
-                      {
-                        onSettled: () => {
-                          resolve(); // Resolve the promise here
+        {executiveInfluenceBids.map((bid) => {
+          const groupedInfluenceBids = bid.influenceBids.reduce(
+            (acc, influenceBid) => {
+              const selfPlayerId = influenceBid.Influence.selfPlayerId;
+              if (!selfPlayerId) {
+                return acc;
+              }
+              if (!acc[selfPlayerId]) {
+                acc[selfPlayerId] = [];
+              }
+              acc[selfPlayerId].push(influenceBid);
+              return acc;
+            },
+            {} as Record<string, InfluenceBidWithInfluence[]>
+          );
+
+          return (
+            <>
+              {isInteractive ? (
+                <ActionWrapper
+                  acceptCallback={() => {
+                    return new Promise<void>((resolve) => {
+                      const influenceMoves = Object.keys(
+                        groupedInfluenceBids
+                      ).map((key) => ({
+                        influenceIds: groupedInfluenceBids[key]?.map(
+                          (influenceBid) => influenceBid.influenceId
+                        ),
+                        targetLocation:
+                          influenceDestinations[
+                            groupedInfluenceBids[key][0].Influence
+                              .selfPlayerId || ""
+                          ], // Assume influenceDestinations is a state mapping playerId to location
+                      }));
+
+                      moveInfluenceBidToPlayer.mutate(
+                        {
+                          executiveInfluenceBidId: bid.id || "",
+                          influenceMoves,
+                          gameId,
                         },
-                      }
-                    );
-                  });
-                }}
-                optionsNode={
-                  <div className="flex flex-col gap-2 justify-center items-center">
-                    <div className="flex flex-row gap-1">
-                      <Switch
-                        isSelected={isBidLocked}
-                        onChange={() => setIsBidLocked(!isBidLocked)}
-                        size="lg"
-                        color="warning"
-                        startContent={<RiLock2Fill />}
-                        endContent={<RiLockUnlockFill />}
-                      />
-                      <Influence
-                        playerId={bid}
-                        influenceCount={
-                          isBidLocked
-                            ? Math.floor(influenceBidsGrouped[bid].length / 2)
-                            : influenceBidsGrouped[bid].length
+                        {
+                          onSettled: () => {
+                            resolve(); // Resolve the promise here
+                          },
                         }
+                      );
+                    });
+                  }}
+                  optionsNode={
+                    <div className="flex flex-wrap gap-2 justify-center items-center">
+                      {Object.keys(groupedInfluenceBids).map((key) => (
+                        <div key={key} className="flex flex-col gap-2">
+                          <div className="flex flex-row gap-1">
+                            <Influence
+                              playerId={key}
+                              influenceCount={groupedInfluenceBids[key].length}
+                            />
+                          </div>
+                          <RadioGroup
+                            label={`Move Influence`}
+                            color="warning"
+                            value={
+                              influenceDestinations[
+                                groupedInfluenceBids[key][0].Influence
+                                  .selfPlayerId || ""
+                              ]
+                            } // Assume influenceDestinations is a state
+                            onValueChange={(value) =>
+                              setInfluenceDestinations((prev) => ({
+                                ...prev,
+                                [groupedInfluenceBids[key][0].Influence
+                                  .selfPlayerId || ""]:
+                                  value as InfluenceLocation,
+                              }))
+                            }
+                          >
+                            <Radio value={InfluenceLocation.OWNED_BY_PLAYER}>
+                              Influence
+                            </Radio>
+                            <Radio value={InfluenceLocation.RELATIONSHIP}>
+                              Relationship
+                            </Radio>
+                          </RadioGroup>
+                        </div>
+                      ))}
+                    </div>
+                  }
+                >
+                  <div className="flex flex-row gap-1">
+                    <PlayerAvatar
+                      player={bid.fromPlayer}
+                      badgeContent={bid.influenceBids.length.toString()}
+                    />
+                    {Object.keys(groupedInfluenceBids).map((key) => (
+                      <Influence
+                        playerId={key || ""}
+                        influenceCount={groupedInfluenceBids[key].length}
+                      />
+                    ))}
+                  </div>
+                </ActionWrapper>
+              ) : (
+                <div className="flex flex-row gap-1">
+                  <PlayerAvatar player={bid.fromPlayer} />
+                  {Object.keys(groupedInfluenceBids).map((key) => (
+                    <div className="flex relative">
+                      <Influence
+                        playerId={key || ""}
+                        influenceCount={groupedInfluenceBids[key].length}
                       />
                     </div>
-                    <RadioGroup
-                      label="Select Where To Move Influence"
-                      color="warning"
-                      value={influenceDestination}
-                      onValueChange={(value) =>
-                        setInfluenceDestination(value as InfluenceLocation)
-                      }
-                    >
-                      <Radio value={InfluenceLocation.OWNED_BY_PLAYER}>
-                        Influence
-                      </Radio>
-                      <Radio value={InfluenceLocation.RELATIONSHIP}>
-                        Relationship
-                      </Radio>
-                    </RadioGroup>
-                  </div>
-                }
-              >
-                <Influence
-                  playerId={bid}
-                  influenceCount={influenceBidsGrouped[bid].length}
-                />
-              </ActionWrapper>
-            ) : (
-              <Influence
-                playerId={bid}
-                influenceCount={influenceBidsGrouped[bid].length}
-              />
-            )}
-          </>
-        ))}
+                  ))}
+                </div>
+              )}
+            </>
+          );
+        })}
       </div>
       {hasBidBeenSelected && (
         <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-lg">
@@ -228,7 +275,6 @@ const Relationships = ({ playerId }: { playerId: string }) => {
     }
     return acc;
   }, {} as Record<string, (typeof relationships)[0][]>);
-  console.log("groupedRelationships", groupedRelationships);
   return (
     <div className="flex flex-col gap-2">
       {Array.from({ length: RELATIONSHIP_TRACK_LENGTH }).map((_, index) => {
@@ -377,8 +423,6 @@ const PlayerInfluence = ({
     }
     return acc;
   }, {} as Record<string, (typeof playerInfluence)[0][]>);
-  console.log("groupedPlayerInfluence", groupedPlayerInfluence);
-  console.log("playerInfluence", playerInfluence);
   //filter all influence of type ceo
   const ceoInfluence = playerInfluence.filter(
     (influence) => influence.influenceType === InfluenceType.CEO
@@ -402,7 +446,6 @@ const PlayerInfluence = ({
                       },
                       {
                         onSettled: () => {
-                          console.log("Influence selected", influences);
                           resolve(); // Resolve the promise here
                         },
                         onError: (error) => {
@@ -551,7 +594,9 @@ const Bribe = ({
   isInteractive?: boolean;
 }) => {
   const { authPlayer, pingCounter, currentPhase, gameId } = useExecutiveGame();
-  const [influenceValue, setInfluenceValue] = useState(1);
+  const [influenceValues, setInfluenceValues] = useState<
+    Record<string, number>
+  >({}); //selfPlayerId, number of influence
   const createInfluenceBidMutation =
     trpc.executiveGame.createInfluenceBid.useMutation();
   const {
@@ -580,10 +625,60 @@ const Bribe = ({
   if (!selfInfluenceAuthPlayerOwns) {
     selfInfluenceAuthPlayerOwns = [];
   }
-  console.log("selfInfluenceAuthPlayerOwns", selfInfluenceAuthPlayerOwns);
   const maxInfluence = selfInfluenceAuthPlayerOwns.length;
   const minInfluence = 1;
+  const playerInfluences = authPlayer?.ownedByInfluence.reduce(
+    (acc, influence) => {
+      const playerId = influence.ownedByPlayerId;
+      const selfPlayerId = influence.selfPlayerId;
 
+      if (!selfPlayerId) {
+        // Skip influences without a valid ownedByPlayerId
+        return acc;
+      }
+
+      if (!playerId) {
+        return acc;
+      }
+
+      // Initialize the array for this playerId if not already present
+      if (!acc[selfPlayerId]) {
+        acc[selfPlayerId] = {
+          id: influence.id,
+          selfPlayerId: influence.selfPlayerId,
+          playerId,
+          count: 0,
+        };
+      }
+
+      // Check if an entry for this influence already exists
+      const existingInfluence = acc[selfPlayerId];
+
+      if (existingInfluence.count > 0) {
+        // Increment the count if the influence already exists
+        existingInfluence.count += 1;
+      } else {
+        // Add a new influence entry with count initialized to 1
+        acc[selfPlayerId] = {
+          id: influence.id,
+          selfPlayerId: influence.selfPlayerId,
+          playerId,
+          count: 1, // Start the count at 1
+        };
+      }
+
+      return acc;
+    },
+    {} as Record<
+      string,
+      {
+        id: string;
+        selfPlayerId: string | null;
+        playerId: string;
+        count: number;
+      }
+    >
+  );
   if (isLoading) {
     return <div>Loading...</div>;
   }
@@ -605,12 +700,12 @@ const Bribe = ({
                     {
                       fromPlayerId: authPlayer.id,
                       toPlayerId: playerId,
-                      influenceAmount: influenceValue,
+                      influenceValues,
                       gameId,
                     },
                     {
                       onSettled: () => {
-                        setInfluenceValue(1);
+                        setInfluenceValues({});
                         resolve(); // Resolve the promise here
                       },
                       onError: (error) => {
@@ -623,11 +718,10 @@ const Bribe = ({
                 });
               }}
               optionsNode={
-                <InfluenceInput
-                  setInfluenceValue={setInfluenceValue}
-                  influenceValue={influenceValue.toString()}
-                  influenceMin={minInfluence}
-                  influenceMax={maxInfluence}
+                <InfluenceMultiInput
+                  setInfluenceValues={setInfluenceValues}
+                  influenceValues={influenceValues}
+                  influences={playerInfluences} // Assume this is provided as a prop or fetched dynamically
                 />
               }
             >
@@ -708,7 +802,7 @@ export const PlayerTableau = ({ playerId }: { playerId: string }) => {
                   <div className="absolute -top-3 left-3 bg-white px-2 font-bold text-gray-800 rounded-md">
                     BIDS
                   </div>
-                  <div className="pt-2">
+                  <div className="pt-2 flex flex-col gap-2">
                     <InfluenceBids
                       toPlayerId={player.id}
                       currentTurnId={currentPhase.gameTurnId}

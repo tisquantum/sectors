@@ -89,7 +89,6 @@ import CompanyPriorityList from "./CompanyPriorityOperatingRound";
 import InsolvencyContributionComponent from "./InsolvencyContribution";
 import { friendlyResearchName } from "@sectors/app/helpers";
 import CompanyAwardTrack from "./CompanyAwardTrack";
-import TabView from "../Game/TabView";
 
 const renderSymbolDisplay = (operatingRoundAction: OperatingRoundAction) => {
   const IconWithText = ({
@@ -902,7 +901,6 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
   const currentCompanyActions = companyActions?.filter(
     (companyAction) => companyAction.companyId === currentCompany
   );
-  console.log("collectedCompanies", collectedCompanies);
   return (
     <div className="flex flex-col gap-4">
       <Tabs>

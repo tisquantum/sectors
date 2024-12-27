@@ -158,7 +158,6 @@ const RoomComponent = ({ room }: { room: RoomWithUsersAndGames }) => {
   };
 
   const handleGameStart = () => {
-    console.log("isSectorsGame", isSectorsGame);
     if (isSectorsGame) {
       router.push(`/games/${gameId}`);
     } else {

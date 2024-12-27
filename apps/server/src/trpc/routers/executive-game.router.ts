@@ -61,11 +61,11 @@ export default (trpc: TrpcService, ctx: Context) =>
           gameId: z.string(),
           fromPlayerId: z.string(),
           toPlayerId: z.string(),
-          influenceAmount: z.number(),
+          influenceValues: z.record(z.string(), z.number()), 
         }),
       )
       .mutation(async ({ input }) => {
-        const { gameId, fromPlayerId, toPlayerId, influenceAmount } = input;
+        const { gameId, fromPlayerId, toPlayerId, influenceValues } = input;
         const isLocked = ctx.executiveGameService.checkLockAndLock(gameId);
         if (isLocked) {
           throw new TRPCError({
@@ -78,12 +78,16 @@ export default (trpc: TrpcService, ctx: Context) =>
             {
               fromPlayerId,
               toPlayerId,
-              influenceAmount,
+              influenceValues,
             },
           );
         } catch (error) {
           console.error('createInfluenceBid error', error);
           ctx.executiveGameService.unlockInput(gameId);
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: error instanceof Error ? error.message : 'An unexpected error occurred',
+          });
         }
         ctx.executiveGameService.unlockInput(gameId);
         return { success: true };
@@ -104,6 +108,10 @@ export default (trpc: TrpcService, ctx: Context) =>
           await ctx.executiveGameManagementService.playerPass(gameId, playerId);
         } catch (error) {
           ctx.executiveGameService.unlockInput(gameId);
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: error instanceof Error ? error.message : 'An unexpected error occurred',
+          });
         }
         ctx.executiveGameService.unlockInput(gameId);
         return { success: true };
@@ -125,15 +133,18 @@ export default (trpc: TrpcService, ctx: Context) =>
             message: 'Game is locked',
           });
         }
-        let currentTurn;
+        let currentTurnId;
         try {
-          currentTurn =
-            await ctx.executiveGameTurnService.getLatestTurn(gameId);
+          currentTurnId =
+            await ctx.executiveGameTurnService.getLatestTurnId(gameId);
         } catch (error) {
-          console.error('createInfluenceBid error', error);
           ctx.executiveGameService.unlockInput(gameId);
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: error instanceof Error ? error.message : 'An unexpected error occurred',
+          });
         }
-        if (!currentTurn) {
+        if (!currentTurnId) {
           ctx.executiveGameService.unlockInput(gameId);
 
           throw new TRPCError({
@@ -145,11 +156,15 @@ export default (trpc: TrpcService, ctx: Context) =>
           await ctx.executiveGameManagementService.playCardIntoTrick(
             cardId,
             playerId,
-            currentTurn.gameId,
-            currentTurn.id,
+            gameId,
+            currentTurnId,
           );
         } catch (error) {
           ctx.executiveGameService.unlockInput(gameId);
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: error instanceof Error ? error.message : 'An unexpected error occurred',
+          });
         }
         ctx.executiveGameService.unlockInput(gameId);
         return { success: true };

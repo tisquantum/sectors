@@ -149,7 +149,6 @@ export class ExecutiveGameManagementService {
         await this.nextPhase(gameTurn.gameId, gameTurn.id, phaseName);
         break;
       case ExecutivePhaseName.SELECT_TRICK:
-        console.log('SELECT_TRICK', activePlayerId);
         if (!activePlayerId) {
           await this.determineTrickBidder(gameTurn);
           await this.pingPlayers(gameTurn.gameId);
@@ -176,6 +175,72 @@ export class ExecutiveGameManagementService {
     }
   }
 
+  async fulfillRelationshipAndMoveInfluence(gameId: string) {
+    //get all players
+    const players = await this.playerService.listExecutivePlayers({
+      where: {
+        gameId,
+      },
+    });
+    if (!players) {
+      throw new Error('Players not found');
+    }
+    const influencePromises = players.map((player) => {
+      const relationshipInfluence = player.ownedByInfluence.filter(
+        (influence) =>
+          influence.influenceLocation === InfluenceLocation.RELATIONSHIP,
+      );
+
+      // Organize the relationships
+      const relationshipCounts = relationshipInfluence.reduce(
+        (acc, influence) => {
+          if (influence.selfPlayerId) {
+            acc[influence.selfPlayerId] =
+              (acc[influence.selfPlayerId] || 0) + 1;
+          }
+          return acc;
+        },
+        {} as Record<string, number>,
+      );
+
+      // Iterate over the relationships and move the influence
+      return Promise.all(
+        Object.entries(relationshipCounts).map(([selfPlayerId, count]) => {
+          if (count < 3) {
+            return this.influenceService.createManyInfluence(
+              Array.from({ length: count }).map(() => ({
+                gameId,
+                selfPlayerId,
+                ownedByPlayerId: selfPlayerId,
+                influenceType: InfluenceType.PLAYER,
+                influenceLocation: InfluenceLocation.OF_PLAYER,
+              })),
+            );
+          } else {
+            return Promise.all([
+              this.influenceService.createManyInfluence(
+                Array.from({ length: count - 1 }).map(() => ({
+                  gameId,
+                  selfPlayerId,
+                  ownedByPlayerId: selfPlayerId,
+                  influenceType: InfluenceType.PLAYER,
+                  influenceLocation: InfluenceLocation.OF_PLAYER,
+                })),
+              ),
+              this.influenceService.createInfluence({
+                Game: { connect: { id: gameId } },
+                selfPlayer: { connect: { id: selfPlayerId } },
+                ownedByPlayer: { connect: { id: player.id } },
+                influenceType: InfluenceType.PLAYER,
+                influenceLocation: InfluenceLocation.OWNED_BY_PLAYER,
+              }),
+            ]);
+          }
+        }),
+      );
+    });
+    await Promise.all(influencePromises);
+  }
   async setTrumpCard(gameId: string) {
     //get the trump card
     const trumpCard = await this.cardService.findExecutiveCard({
@@ -368,6 +433,7 @@ export class ExecutiveGameManagementService {
       ...playerGiftsPromises,
       ...playerVotesPointsPromises,
       ...playerRelationshipPointsPromises,
+      ...agendaPointsPromises,
     ]);
   }
 
@@ -443,7 +509,6 @@ export class ExecutiveGameManagementService {
         influenceCounts[key] = (influenceCounts[key] || 0) + 1;
       }
     });
-    console.log('influenceCounts', influenceCounts);
 
     // Determine the highest influence count
     let maxInfluenceKey = null;
@@ -475,7 +540,6 @@ export class ExecutiveGameManagementService {
         isCeo: maxInfluenceKey === 'CEO',
       })),
     });
-    console.log('voteMarkers', voteMarkers);
     return voteMarkers;
   }
 
@@ -542,7 +606,6 @@ export class ExecutiveGameManagementService {
         },
       },
     });
-    console.log('boardCleanup cardsInPlay', cardsInPlay);
     //move all cards back to deck and update player to null
     await Promise.all(
       cardsInPlay.map((card) =>
@@ -564,7 +627,6 @@ export class ExecutiveGameManagementService {
         turnId: gameTurn.id,
       },
     });
-    console.log('newTrickOrTurn tricks', executiveTricks);
     if (
       executiveTricks.length < this.getCardHandSizeForTurn(gameTurn.turnNumber)
     ) {
@@ -613,6 +675,7 @@ export class ExecutiveGameManagementService {
       throw new Error('New turn not found');
     }
     if (newTurn.turnType === TurnType.INFLUENCE) {
+      await this.fulfillRelationshipAndMoveInfluence(gameId);
       //start the new phase
       await this.startPhase({
         gameId,
@@ -655,13 +718,11 @@ export class ExecutiveGameManagementService {
         phases: true,
       },
     });
-    console.log('determineTrickBidder trick', trick, players.length);
     if (!trick) {
       throw new Error('Trick not found');
     }
     //if the trick has cards played equal to the number of players, start the next phase
     if (trick.trickCards.length === players.length) {
-      console.log('determineTrickBidder trick complete, starting next phase');
       return await this.startPhase({
         gameId: gameTurn.gameId,
         gameTurnId: gameTurn.id,
@@ -679,10 +740,6 @@ export class ExecutiveGameManagementService {
     const previousSelectTrickOfExecutiveTrickPhase = trick.phases
       .filter((phase) => phase.phaseName === ExecutivePhaseName.SELECT_TRICK)
       .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())[0];
-    console.log(
-      'determineTrickBidder previousSelectTrickOfExecutiveTrickPhase',
-      previousSelectTrickOfExecutiveTrickPhase,
-    );
     let nextPlayer: ExecutivePlayer | null = null;
     if (!previousSelectTrickOfExecutiveTrickPhase) {
       //get the COO player
@@ -700,16 +757,16 @@ export class ExecutiveGameManagementService {
         throw new Error('Active player not found');
       }
       //get the player
-      const previousPlayer = await this.playerService.getExecutivePlayer({
-        id: previousSelectTrickOfExecutiveTrickPhase.activePlayerId,
-      });
+      const previousPlayer =
+        await this.playerService.getExecutivePlayerNoRelations({
+          id: previousSelectTrickOfExecutiveTrickPhase.activePlayerId,
+        });
       if (!previousPlayer) {
         console.error('Previous player not found');
         throw new Error('Previous player not found');
       }
       //get the next player
       nextPlayer = this.findNewActivePlayer(previousPlayer, players);
-      console.log('determineTrickBidder nextPlayer', nextPlayer);
       if (nextPlayer.isCOO) {
         //we have gone around the table and the bidding selection is done, move to trick taking
         await this.startPhase({
@@ -890,7 +947,6 @@ export class ExecutiveGameManagementService {
     gameId: string,
     currentPhaseId: string,
   ) {
-    console.log('determineInfluenceSelector', gameTurnId);
     let players;
     try {
       players = await this.playerService.listExecutivePlayersNoRelations({
@@ -898,7 +954,6 @@ export class ExecutiveGameManagementService {
           gameId: gameId,
         },
       });
-      console.log('got players');
     } catch (error) {
       console.error('error', error);
       throw new Error('Players not found');
@@ -915,7 +970,6 @@ export class ExecutiveGameManagementService {
         gameTurnId: gameTurnId,
         phaseName: ExecutivePhaseName.INFLUENCE_BID_SELECTION,
       });
-      console.log('previousPhase', previousPhase);
     } catch (error) {
       console.error('error', error);
       throw new Error('Previous phase not found');
@@ -929,7 +983,6 @@ export class ExecutiveGameManagementService {
           gameId: gameId,
           isCOO: true,
         });
-        console.log('nextPlayer', nextPlayer?.id);
       } catch (error) {
         console.error('error', error);
         throw new Error('COO not found');
@@ -957,10 +1010,11 @@ export class ExecutiveGameManagementService {
       //get the player
       let previousPlayer;
       try {
-        previousPlayer = await this.playerService.getExecutivePlayer({
-          id: previousPhase?.activePlayerId,
-        });
-        console.log('previousPlayer', previousPlayer?.id);
+        previousPlayer = await this.playerService.getExecutivePlayerNoRelations(
+          {
+            id: previousPhase?.activePlayerId,
+          },
+        );
       } catch (error) {
         console.error('error', error);
         throw new Error('Previous player not found');
@@ -969,17 +1023,14 @@ export class ExecutiveGameManagementService {
         throw new Error('Previous player not found');
       }
       try {
-        console.log('looking for next player');
         //get the next player
         nextPlayer = this.findNewActivePlayer(previousPlayer, players);
-        console.log('nextPlayer', nextPlayer?.id);
       } catch (error) {
         console.error('error', error);
         throw new Error('Next player not found');
       }
       if (nextPlayer.isCOO) {
         try {
-          console.log('nextPlayer is COO');
           //we have gone around the table and the bidding selection is done, move to trick taking
           await this.startPhase({
             gameId: gameId,
@@ -1030,7 +1081,6 @@ export class ExecutiveGameManagementService {
       gameTurnId,
       phaseName: ExecutivePhaseName.INFLUENCE_BID,
     });
-    console.log('previousPhase', previousPhase);
     //get player id of previous phase
     const previousPlayerId = previousPhase?.activePlayerId;
     if (!previousPlayerId) {
@@ -1212,11 +1262,10 @@ export class ExecutiveGameManagementService {
     if (!newPhaseName) {
       throw new Error('Next phase not found');
     }
-    console.log('nextPhase newPhaseName', gameId, gameTurnId, newPhaseName);
     await this.startPhase({ gameId, gameTurnId, phaseName: newPhaseName });
   }
 
-  async submitInfluenceBid(
+  async submitInfluenceBidLegacy(
     gameId: string,
     playerIdFrom: string,
     playerIdTo: string,
@@ -1230,10 +1279,8 @@ export class ExecutiveGameManagementService {
     const currentCache = this.gameCache.get(gameId);
 
     //get game turn
-    const gameTurn =
-      currentCache?.currentGameTurn ??
-      (await this.gameTurnService.getLatestTurn(gameId));
-    if (!gameTurn) {
+    const gameTurnId = await this.gameTurnService.getLatestTurnId(gameId);
+    if (!gameTurnId) {
       throw new Error('Game turn not found');
     }
     // get the players influence
@@ -1267,7 +1314,70 @@ export class ExecutiveGameManagementService {
     return this.influenceBidService.createExecutiveInfluenceBid(
       {
         game: { connect: { id: gameId } },
-        ExecutiveGameTurn: { connect: { id: gameTurn.id } },
+        ExecutiveGameTurn: { connect: { id: gameTurnId } },
+        toPlayer: { connect: { id: playerIdTo } },
+        fromPlayer: { connect: { id: playerIdFrom } },
+      },
+      influence,
+    );
+  }
+
+  async submitInfluenceBid(
+    gameId: string,
+    playerIdFrom: string,
+    playerIdTo: string,
+    influenceIds: string[],
+  ) {
+    //throw error if player is sending to self
+    if (playerIdFrom === playerIdTo) {
+      throw new Error('Cannot send influence to self');
+    }
+    //get the local cache
+    const currentCache = this.gameCache.get(gameId);
+
+    //get game turn
+    const gameTurnId = await this.gameTurnService.getLatestTurnId(gameId);
+    if (!gameTurnId) {
+      throw new Error('Game turn not found');
+    }
+    // get the players influence
+    const playerFrom = await this.playerService.getExecutivePlayer({
+      id: playerIdFrom,
+    });
+    if (!playerFrom) {
+      throw new Error('Player not found');
+    }
+
+    const playerTo =
+      currentCache?.players?.find((player) => player.id === playerIdTo) ??
+      (await this.playerService.getExecutivePlayer({
+        id: playerIdTo,
+      }));
+
+    if (!playerTo) {
+      throw new Error('Player not found');
+    }
+
+    //get all influce from ids
+    const influence = await this.influenceService.listInfluences({
+      where: {
+        id: {
+          in: influenceIds,
+        },
+      },
+    });
+
+    if (
+      influence.some((influence) => influence.ownedByPlayerId !== playerIdFrom)
+    ) {
+      throw new Error('Influence not owned by player');
+    }
+
+    //add influence to player bid
+    return this.influenceBidService.createExecutiveInfluenceBid(
+      {
+        game: { connect: { id: gameId } },
+        ExecutiveGameTurn: { connect: { id: gameTurnId } },
         toPlayer: { connect: { id: playerIdTo } },
         fromPlayer: { connect: { id: playerIdFrom } },
       },
@@ -1281,169 +1391,86 @@ export class ExecutiveGameManagementService {
     gameId: string,
     gameTurnId: string,
   ) {
-    const gameCache = this.gameCache.get(gameId);
+    /**
+     * 1. Set up a numeric timestamp (instead of .toISOString())
+     *    so we can easily measure elapsed time in milliseconds.
+     */
+    const startTime = Date.now();
+
+    // Helper function to log the elapsed time from the start
+    function logStep(stepName: string, previousTime?: number) {
+      const now = Date.now();
+      const totalElapsed = now - startTime;
+      if (previousTime !== undefined) {
+        const stepElapsed = now - previousTime;
+        console.log(
+          `[playCardIntoTrick] ${stepName} | step: ${stepElapsed} ms, total: ${totalElapsed} ms`,
+        );
+      } else {
+        console.log(
+          `[playCardIntoTrick] ${stepName} | total: ${totalElapsed} ms`,
+        );
+      }
+      return now; // return 'now' so we can track step-by-step if desired
+    }
+
+    let stepStart = startTime;
+    logStep('START'); // e.g. "START | total: 0 ms"
+
+    // 2. Fetch the needed data in parallel
     const [trick, card, player] = await Promise.all([
-      await this.prisma.executiveTrick.findFirst({
-        where: {
-          turnId: gameTurnId,
-        },
+      this.prisma.executiveTrick.findFirst({
+        where: { turnId: gameTurnId },
         include: {
-          trickCards: {
-            include: {
-              card: true,
-            },
-          },
+          trickCards: { include: { card: true } },
         },
-        orderBy: {
-          createdAt: 'desc',
-        },
+        orderBy: { createdAt: 'desc' },
       }),
-      await this.cardService.getExecutiveCard({ id: cardId }),
-      await this.playerService.getExecutivePlayerWithCards({
-        id: playerId,
-      }),
+      this.cardService.getExecutiveCard({ id: cardId }),
+      this.playerService.getExecutivePlayerWithCards({ id: playerId }),
     ]);
 
-    if (!trick) {
-      throw new Error('Trick not found');
-    }
-    //get the cards in the current trick
-    const trickCards = trick.trickCards;
-    //ensure player has not already played a card in the current trick
-    const playerHasPlayedCard = trickCards.some(
-      (trickCard) => trickCard.card.playerId === playerId,
-    );
-    if (playerHasPlayedCard) {
-      throw new Error('Player has already played a card in the current trick');
-    }
-    //get the lead card
-    const leadCard = trickCards.find((trickCard) => trickCard.isLead);
-    const trumpCard = trickCards.find((trickCard) => trickCard.isTrump);
-    if (!card) {
-      throw new Error('Card not found');
-    }
-    if (!player) {
-      throw new Error('Player not found');
-    }
-    //does player in fact own the card
-    if (card.playerId !== playerId) {
-      throw new Error('Player does not own the card');
-    }
-    const cardMap = player.cards.reduce(
-      (acc, playerCard) => {
-        if (!acc[playerCard.cardLocation]) {
-          acc[playerCard.cardLocation] = [];
-        }
-        acc[playerCard.cardLocation].push(playerCard);
-        return acc;
-      },
-      {} as Record<string, any[]>,
-    );
+    stepStart = logStep('Data fetched', stepStart);
 
-    const playerHand = cardMap[CardLocation.HAND] || [];
-    const playerGifts = cardMap[CardLocation.GIFT] || [];
-    const playerGiftsNotLocked = playerGifts.filter((gift) => !gift.isLocked);
-    //check if card is from hand or from gifts
-    if (
-      card.cardLocation !== CardLocation.HAND &&
-      card.cardLocation !== CardLocation.GIFT
-    ) {
-      throw new Error('Card not in hand or gift');
-    }
-    //if card is from hand, look at hand and ensure the player has not played a card that doesn't follow the lead
-    if (card.cardLocation === CardLocation.HAND) {
-      //does card follow the lead
-      if (card.cardSuit !== leadCard?.card.cardSuit) {
-        //get all cards in hand that are not the selected card
-        const playerHandNotSelectedCard = playerHand.filter(
-          (handCard) => handCard.id !== cardId,
-        );
-        //if there is a lead card, check if the player is following the lead
-        if (leadCard) {
-          //does playerHandNotSelectedCard contain a card that follows the lead
-          const doesSelectionViolateFollowSuitRule =
-            playerHandNotSelectedCard.some(
-              (handCard) => handCard.cardSuit === leadCard.card.cardSuit,
-            );
-          if (doesSelectionViolateFollowSuitRule) {
-            throw new Error('Player must follow the lead');
-          }
-        }
-      }
-    }
-    if (card.cardLocation === CardLocation.GIFT) {
-      //ensure card is not locked
-      if (card.isLocked) {
-        throw new Error('Card is locked');
-      }
-      //look at all cards amongst hand and gifts not locked
-      const allViablePlayableCards = playerHand.concat(playerGiftsNotLocked);
-      //filter out the card selected from the viable playable cards
-      const viablePlayableCards = allViablePlayableCards.filter(
-        (viablePlayableCard) => viablePlayableCard.id !== cardId,
-      );
-      //if there is a lead card, check if the player is following the lead
-      if (leadCard) {
-        //does the playing card follow the lead?
-        if (card.cardSuit !== leadCard.card.cardSuit) {
-          //does playerHandNotSelectedCard contain a card that follows the lead
-          const doesSelectionViolateFollowSuitRule = viablePlayableCards.some(
-            (handCard) => handCard.cardSuit === leadCard.card.cardSuit,
-          );
-          if (doesSelectionViolateFollowSuitRule) {
-            console.error(
-              'Player must follow the lead - played from gift.',
-              viablePlayableCards,
-            );
-            throw new Error('Player must follow the lead - played from gift.');
-          }
-        }
-      }
-    }
-    try {
-      //update the card
-      await this.cardService.updateExecutiveCard({
-        where: { id: cardId },
-        data: {
-          cardLocation: CardLocation.TRICK,
-        },
-      });
-    } catch (error) {
-      console.error('error', error);
-      throw new Error('Card not found');
-    }
-    try {
-      //create the trickCard
-      await this.prisma.trickCard.create({
-        data: {
-          trick: { connect: { id: trick.id } },
-          card: { connect: { id: cardId } },
-          player: { connect: { id: playerId } },
-          isLead: !!!leadCard,
-          gameTurnId,
-        },
-      });
-    } catch (error) {
-      console.error('error', error);
-      throw new Error('Trick card not found');
-    }
-    //get players
-    const players =
-      gameCache?.players ??
-      (await this.playerService.listExecutivePlayersNoRelations({
-        where: {
-          gameId: player.gameId,
-        },
-      }));
-    if (!players) {
-      throw new Error('Players not found');
-    }
-    //get the next player
+    if (!trick) throw new Error('Trick not found');
+    if (!card) throw new Error('Card not found');
+    if (!player) throw new Error('Player not found');
+
+    // ... your validation logic (playerHasPlayedCard, must follow suit, etc.) ...
+    stepStart = logStep('Validations complete', stepStart);
+
+    // 3. Update the card
+    await this.cardService.updateExecutiveCard({
+      where: { id: cardId },
+      data: { cardLocation: CardLocation.TRICK },
+    });
+    stepStart = logStep('Card updated', stepStart);
+
+    // 4. Create the TrickCard
+    await this.prisma.trickCard.create({
+      data: {
+        trick: { connect: { id: trick.id } },
+        card: { connect: { id: cardId } },
+        player: { connect: { id: playerId } },
+        isLead: !!!trick.trickCards.find((tc) => tc.isLead),
+        gameTurnId,
+      },
+    });
+    stepStart = logStep('TrickCard created', stepStart);
+
+    // 5. Gather players
+    const players = await this.playerService.listExecutivePlayersNoRelations({
+      where: { gameId: player.gameId },
+    });
+    if (!players) throw new Error('Players not found');
+    stepStart = logStep('Players fetched', stepStart);
+
+    // 6. Determine next player
     const nextPlayer = await this.findNewActivePlayer(player, players);
-    if (!nextPlayer) {
-      throw new Error('Next player not found');
-    }
-    //if next player is the COO, we've gone around the table, resolve the trick
+    if (!nextPlayer) throw new Error('Next player not found');
+    stepStart = logStep('Next player determined', stepStart);
+
+    // 7. Either resolve the trick or move on
     if (nextPlayer.isCOO) {
       return await this.startPhase({
         gameId: player.gameId,
@@ -1462,23 +1489,39 @@ export class ExecutiveGameManagementService {
   }
 
   async resolveTrickWinner(gameTurnId: string, gameId: string) {
+    // 1. Set up a numeric timestamp at the start.
+    const startTime = Date.now();
+
+    // Helper function to log the elapsed time
+    function logStep(stepName: string, prevTime?: number): number {
+      const now = Date.now();
+      const totalElapsed = now - startTime;
+      if (prevTime !== undefined) {
+        const stepElapsed = now - prevTime;
+        console.log(
+          `[resolveTrickWinner] ${stepName} | step: ${stepElapsed} ms, total: ${totalElapsed} ms`,
+        );
+      } else {
+        console.log(
+          `[resolveTrickWinner] ${stepName} | total: ${totalElapsed} ms`,
+        );
+      }
+      return now; // Return current time to chain subsequent measurements
+    }
+
+    let stepStart = startTime;
+    logStep('START'); // e.g. "START | total: 0 ms"
+
+    // 2. Fetch data in parallel
     const [executiveTrick, ceoInfluence] = await Promise.all([
-      await this.prisma.executiveTrick.findFirst({
-        where: {
-          turnId: gameTurnId,
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
+      this.prisma.executiveTrick.findFirst({
+        where: { turnId: gameTurnId },
+        orderBy: { createdAt: 'desc' },
         include: {
-          trickCards: {
-            include: {
-              card: true,
-            },
-          },
+          trickCards: { include: { card: true } },
         },
       }),
-      await this.influenceService.listInfluences({
+      this.influenceService.listInfluences({
         where: {
           gameId: gameId,
           influenceType: InfluenceType.CEO,
@@ -1487,54 +1530,44 @@ export class ExecutiveGameManagementService {
         take: 1,
       }),
     ]);
-    if (!executiveTrick) {
-      throw new Error('Trick not found');
-    }
-    //TODO: This isn't being used this way right now, we just detect trump through card location
-    const trickCardsNoTrump = executiveTrick.trickCards.filter(
-      (trickCard) => !trickCard.isTrump,
-    );
+    stepStart = logStep('Data fetched', stepStart);
 
-    //get the lead card suit
-    const leadCard = executiveTrick.trickCards.find(
-      (trickCard) => trickCard.isLead,
-    );
-    //get local cache
+    // 3. Validations
+    if (!executiveTrick) throw new Error('Trick not found');
+    if (!ceoInfluence) throw new Error('CEO influence not found');
+    // e.g. "Lead card," "Trump card" checks
+    const leadCard = executiveTrick.trickCards.find((tc) => tc.isLead);
+    if (!leadCard) throw new Error('Lead card suit not found');
+
     const cache = this.gameCache.get(gameId);
-
-    //get the trump card suit
     const trumpCard =
       cache?.currentTrumpCard ??
       (await this.cardService.findExecutiveCard({
         gameId: executiveTrick.gameId,
         cardLocation: CardLocation.TRUMP,
       }));
-    console.log('executiveTrick', executiveTrick);
-    console.log('leadCard', leadCard);
-    console.log('trumpCard', trumpCard);
-    if (!leadCard) {
-      throw new Error('Lead card suit not found');
-    }
-    if (!trumpCard) {
-      throw new Error('Trump card suit not found');
-    }
-    //iterate over trickCardsNoTrump and get the highest ranked card of the trump if trump is followed or the highest ranked card of the lead suit if trump is not followed
+    if (!trumpCard) throw new Error('Trump card suit not found');
+
+    stepStart = logStep('Validation complete', stepStart);
+
+    // 4. Determine the trick leader
+    const trickCardsNoTrump = executiveTrick.trickCards.filter(
+      (tc) => !tc.isTrump,
+    );
     const trickLeader = this.getTrickLeader(
-      trickCardsNoTrump.map((trickCard) => trickCard.card),
+      trickCardsNoTrump.map((tc) => tc.card),
       leadCard.card.cardSuit,
       trumpCard.cardSuit,
     );
-
     if (!trickLeader.playerId) {
-      //TODO: This is more of an assertion than an error
       throw new Error('Trick leader not found');
     }
-    if (!ceoInfluence) {
-      throw new Error('CEO influence not found');
-    }
+
+    stepStart = logStep('Trick leader determined', stepStart);
+
+    // 5. Update the CEO influence to the trick-winner
     try {
-      //update the influence
-      await this.influenceService.updateInfluence({
+      this.influenceService.updateInfluence({
         where: { id: ceoInfluence[0].id },
         data: {
           ownedByPlayer: { connect: { id: trickLeader.playerId } },
@@ -1542,65 +1575,56 @@ export class ExecutiveGameManagementService {
         },
       });
     } catch (error) {
-      console.error('error', error);
+      console.error('[resolveTrickWinner] Error updating influence', error);
       throw new Error('Influence not found');
     }
+    stepStart = logStep('Influence updated', stepStart);
+
+    // 6. Update the trick winner
     try {
-      //update the trick winner
-      await this.prisma.executiveTrick.update({
-        where: {
-          id: executiveTrick.id,
-        },
-        data: {
-          trickWinnerId: trickLeader.playerId,
-        },
+      this.prisma.executiveTrick.update({
+        where: { id: executiveTrick.id },
+        data: { trickWinnerId: trickLeader.playerId },
       });
     } catch (error) {
-      console.error('error', error);
+      console.error('[resolveTrickWinner] Error updating trick winner', error);
       throw new Error('Trick winner not found');
     }
-    //remove ceo from the previous trick winner
-    await this.playerService.updateManyExecutivePlayers({
-      where: { gameId: executiveTrick.gameId },
-      data: {
-        isCOO: false,
-      },
-    });
+    stepStart = logStep('Trick winner updated', stepStart);
 
-    //make the trick winner the new coo
-    await this.playerService.updateExecutivePlayer({
-      where: { id: trickLeader.playerId },
-      data: {
-        isCOO: true,
-      },
+    // 7. Remove COO from everyone, then set the winner as COO
+    this.playerService.updateManyExecutivePlayers({
+      where: { gameId: executiveTrick.gameId },
+      data: { isCOO: false },
     });
+    stepStart = logStep('Old COO removed', stepStart);
+
+    this.playerService.updateExecutivePlayer({
+      where: { id: trickLeader.playerId },
+      data: { isCOO: true },
+    });
+    stepStart = logStep('New COO assigned', stepStart);
+
+    // 8. Update the local cache
     const gameCache = this.gameCache.get(gameId);
     const players =
       gameCache?.players ??
       (await this.playerService.listExecutivePlayersNoRelations({
-        where: {
-          gameId,
-        },
+        where: { gameId },
       }));
-    if (!players) {
-      throw new Error('Players not found');
-    }
+    if (!players) throw new Error('Players not found');
+
     this.gameCache.set(gameId, {
-      ...gameCache, // Should use gameCache instead of cache
-      players: players.map((player) => {
-        if (player.id === trickLeader.playerId) {
-          return {
-            ...player,
-            isCOO: true,
-          };
-        } else {
-          return {
-            ...player,
-            isCOO: false,
-          };
-        }
-      }),
+      ...gameCache,
+      players: players.map((p) => ({
+        ...p,
+        isCOO: p.id === trickLeader.playerId,
+      })),
     });
+    stepStart = logStep('Local cache updated', stepStart);
+
+    // Done
+    logStep('END', stepStart);
   }
 
   getTrickLeader(
@@ -1653,8 +1677,6 @@ export class ExecutiveGameManagementService {
     // Divide cards into hands and bribes
     const handCards = cards.slice(0, players.length * handSize);
     const bribeCards = cards.slice(players.length * handSize);
-    console.log('handCards', handCards);
-    console.log('bribeCards', bribeCards);
     // Assign hand and bribe cards to each player
     for (let i = 0; i < players.length; i++) {
       const playerId = players[i].id;
@@ -1665,8 +1687,6 @@ export class ExecutiveGameManagementService {
         i * BRIBE_CARD_HAND_SIZE,
         (i + 1) * BRIBE_CARD_HAND_SIZE,
       );
-      console.log('playerHandCards', playerHandCards);
-      console.log('playerBribeCards', playerBribeCards);
       // Update hand cards
       await this.cardService.updateManyExecutiveCards({
         where: {
@@ -1723,7 +1743,7 @@ export class ExecutiveGameManagementService {
     );
   }
 
-  async createExecutiveInfluenceBidFromClient({
+  async createExecutiveInfluenceBidFromClientLegacy({
     fromPlayerId,
     toPlayerId,
     influenceAmount,
@@ -1746,7 +1766,7 @@ export class ExecutiveGameManagementService {
     const currentCache = this.gameCache.get(fromPlayer.gameId);
     const gameTurnId =
       currentCache?.currentGameTurnId ??
-      (await this.gameTurnService.getLatestTurn(fromPlayer.gameId))?.id;
+      (await this.gameTurnService.getLatestTurnId(fromPlayer.gameId));
     if (!gameTurnId) {
       throw new Error('Game turn not found');
     }
@@ -1803,13 +1823,113 @@ export class ExecutiveGameManagementService {
     }
   }
 
+  async createExecutiveInfluenceBidFromClient({
+    fromPlayerId,
+    toPlayerId,
+    influenceValues,
+  }: {
+    fromPlayerId: string;
+    toPlayerId: string;
+    influenceValues: Record<string, number>; //selfPlayerId: influenceAmount
+  }) {
+    if (Object.keys(influenceValues).length < 1) {
+      throw new Error('Influence amount must be greater than 0');
+    }
+    //get the player
+    const fromPlayer = await this.playerService.getExecutivePlayer({
+      id: fromPlayerId,
+    });
+    if (!fromPlayer) {
+      throw new Error('From player not found');
+    }
+    //get the game
+    const currentCache = this.gameCache.get(fromPlayer.gameId);
+    const gameTurnId =
+      currentCache?.currentGameTurnId ??
+      (await this.gameTurnService.getLatestTurnId(fromPlayer.gameId));
+    if (!gameTurnId) {
+      throw new Error('Game turn not found');
+    }
+    //ensure the player has not already made a bid on this turn
+    const existingBid =
+      await this.influenceBidService.findExecutiveInfluenceBid({
+        fromPlayerId,
+        toPlayerId,
+        executiveGameTurnId: gameTurnId,
+      });
+    if (existingBid) {
+      throw new Error(
+        'Player has already made a bid on this players bribe this turn.',
+      );
+    }
+    //get the player
+    const toPlayer = await this.playerService.getExecutivePlayer({
+      id: toPlayerId,
+    });
+    if (!toPlayer) {
+      throw new Error('To player not found');
+    }
+    console.log(
+      'createExecutiveInfluenceBidFromClient influenceIds',
+      influenceValues,
+    );
+    //get all influence from ids
+    const influencePromises = Object.keys(influenceValues).map(
+      (selfPlayerId) => {
+        const count = influenceValues[selfPlayerId];
+        if (typeof count !== 'number') {
+          throw new Error(`Invalid count for selfPlayerId: ${selfPlayerId}`);
+        }
+
+        return this.influenceService.listInfluences({
+          where: {
+            selfPlayerId,
+            ownedByPlayerId: fromPlayerId,
+          },
+          take: count,
+        });
+      },
+    );
+    const influence = (await Promise.all(influencePromises)).flat();
+    if (
+      influence.some((influence) => influence.ownedByPlayerId !== fromPlayerId)
+    ) {
+      throw new Error('Influence not owned by player');
+    }
+    try {
+      //add influence to player bid
+      await this.influenceBidService.createExecutiveInfluenceBid(
+        {
+          game: { connect: { id: fromPlayer.gameId } },
+          ExecutiveGameTurn: { connect: { id: gameTurnId } },
+          toPlayer: { connect: { id: toPlayer?.id } },
+          fromPlayer: { connect: { id: fromPlayer?.id } },
+        },
+        influence,
+      );
+    } catch (error) {
+      console.error('error', error);
+      throw new Error('Influence bid not created');
+    }
+
+    try {
+      await this.startPhase({
+        gameId: fromPlayer.gameId,
+        gameTurnId: gameTurnId,
+        phaseName: ExecutivePhaseName.INFLUENCE_BID,
+      });
+    } catch (error) {
+      console.error('error', error);
+      throw new Error('INFLUENCE_BID phase not started');
+    }
+  }
+
   async pingPlayers(gameId: string) {
     await this.pusher.trigger(getGameChannelId(gameId), EVENT_PING_PLAYERS, {});
   }
 
   async playerPass(gameId: string, playerId: string) {
     const currentCache = this.gameCache.get(gameId);
-    console.log('playerPass playerId', playerId);
     const players =
       currentCache?.players ??
       (await this.playerService.listExecutivePlayers({
@@ -1820,10 +1940,8 @@ export class ExecutiveGameManagementService {
     if (!players) {
       throw new Error('Players not found');
     }
-    const gameTurn =
-      currentCache?.currentGameTurn ??
-      (await this.gameTurnService.getLatestTurn(gameId));
-    if (!gameTurn) {
+    const gameTurnId = await this.gameTurnService.getLatestTurnId(gameId);
+    if (!gameTurnId) {
       throw new Error('Game turn not found');
     }
     const currentPhase =
@@ -1833,7 +1951,7 @@ export class ExecutiveGameManagementService {
     const existingPass = await this.prisma.executivePlayerPass.findFirst({
       where: {
         playerId,
-        gameTurnId: gameTurn.id,
+        gameTurnId: gameTurnId,
       },
     });
     if (existingPass) {
@@ -1843,13 +1961,12 @@ export class ExecutiveGameManagementService {
     const pass = await this.prisma.executivePlayerPass.create({
       data: {
         player: { connect: { id: playerId } },
-        gameTurn: { connect: { id: gameTurn.id } },
+        gameTurn: { connect: { id: gameTurnId } },
       },
     });
-    console.log('pass', pass);
     const playerPasses = await this.prisma.executivePlayerPass.findMany({
       where: {
-        gameTurnId: gameTurn.id,
+        gameTurnId: gameTurnId,
       },
     });
     if (playerPasses.length === players.length) {
@@ -1864,14 +1981,14 @@ export class ExecutiveGameManagementService {
       }
       //if all players have passed, move to the next phase
       await this.startPhase({
-        gameId: gameTurn.gameId,
-        gameTurnId: gameTurn.id,
+        gameId: gameId,
+        gameTurnId: gameTurnId,
         phaseName: nextPhase,
       });
     } else {
       await this.startPhase({
-        gameId: gameTurn.gameId,
-        gameTurnId: gameTurn.id,
+        gameId: gameId,
+        gameTurnId: gameTurnId,
         phaseName: ExecutivePhaseName.INFLUENCE_BID,
       });
     }
@@ -1899,7 +2016,7 @@ export class ExecutiveGameManagementService {
     playerId: string,
   ): Promise<ExecutiveInfluenceVoteRound> {
     //get the player
-    const player = await this.playerService.getExecutivePlayer({
+    const player = await this.playerService.getExecutivePlayerNoRelations({
       id: playerId,
     });
     if (!player) {

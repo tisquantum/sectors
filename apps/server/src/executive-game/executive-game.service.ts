@@ -5,37 +5,49 @@ import { ExecutiveGameWithRelations } from '@server/prisma/prisma.types';
 
 @Injectable()
 export class ExecutiveGameService {
-  //lock input for gameId
   private inputLockCache = new Map<string, boolean>();
+  private gameCache = new Map<string, ExecutiveGameWithRelations>();
+  private updateQueue: {
+    gameId: string;
+    data: Prisma.ExecutiveGameUpdateInput;
+  }[] = [];
+  private batchTimer: NodeJS.Timeout | null = null;
+
   constructor(private prisma: PrismaService) {}
 
-  // Retrieve a specific ExecutiveGame by unique input
-  async getExecutiveGame(
-    executiveGameWhereUniqueInput: Prisma.ExecutiveGameWhereUniqueInput,
-  ): Promise<ExecutiveGameWithRelations | null> {
-    return this.prisma.executiveGame.findUnique({
-      where: executiveGameWhereUniqueInput,
+  async createExecutiveGame(
+    data: Prisma.ExecutiveGameCreateInput,
+  ): Promise<ExecutiveGameWithRelations> {
+    // Create a new game in the database
+    const game = await this.prisma.executiveGame.create({
+      data,
       include: {
         players: true,
         influence: true,
         ExecutiveVictoryPoint: true,
         ExecutiveAgenda: true,
         phases: true,
-        gameTurn: true
+        gameTurn: true,
       },
     });
+
+    // Cache the newly created game
+    this.gameCache.set(game.id, game);
+
+    return game;
   }
 
-  // List all ExecutiveGames with optional filtering, pagination, and sorting
   async listExecutiveGames(params: {
     skip?: number;
     take?: number;
     cursor?: Prisma.ExecutiveGameWhereUniqueInput;
     where?: Prisma.ExecutiveGameWhereInput;
     orderBy?: Prisma.ExecutiveGameOrderByWithRelationInput;
-  }): Promise<ExecutiveGame[]> {
+  }): Promise<ExecutiveGameWithRelations[]> {
     const { skip, take, cursor, where, orderBy } = params;
-    return this.prisma.executiveGame.findMany({
+
+    // Fetch games from the database with all required relations
+    const games = await this.prisma.executiveGame.findMany({
       skip,
       take,
       cursor,
@@ -47,47 +59,135 @@ export class ExecutiveGameService {
         influence: true,
         ExecutiveVictoryPoint: true,
         ExecutiveAgenda: true,
+        phases: true, // Include phases
+        gameTurn: true, // Include gameTurn
       },
     });
+
+    // Update cache with the fetched games
+    games.forEach((game) => {
+      this.gameCache.set(game.id, game);
+    });
+
+    return games;
   }
 
-  // Create a new ExecutiveGame
-  async createExecutiveGame(data: Prisma.ExecutiveGameCreateInput): Promise<ExecutiveGame> {
-    return this.prisma.executiveGame.create({
-      data,
-    });
-  }
+  // Retrieve a specific ExecutiveGame
+  async getExecutiveGame(
+    executiveGameWhereUniqueInput: Prisma.ExecutiveGameWhereUniqueInput,
+  ): Promise<ExecutiveGameWithRelations | null> {
+    const gameId = executiveGameWhereUniqueInput.id;
 
-  // Create multiple ExecutiveGames
-  async createManyExecutiveGames(
-    data: Prisma.ExecutiveGameCreateManyInput[],
-  ): Promise<Prisma.BatchPayload> {
-    return this.prisma.executiveGame.createMany({
-      data,
-      skipDuplicates: true,
+    if (!gameId) {
+      return null;
+    }
+    // Check in-memory cache
+    if (this.gameCache.has(gameId)) {
+      //if gameCache has no players, fetch from database
+      if (
+        !this.gameCache.get(gameId)?.players ||
+        this.gameCache.get(gameId)?.players.length === 0
+      ) {
+        console.log('fetching game from database, no players');
+        const game = await this.prisma.executiveGame.findUnique({
+          where: executiveGameWhereUniqueInput,
+          include: {
+            players: true,
+            influence: true,
+            ExecutiveVictoryPoint: true,
+            ExecutiveAgenda: true,
+            phases: true,
+            gameTurn: true,
+          },
+        });
+        if (game) {
+          this.gameCache.set(gameId, game);
+          return game;
+        }
+      }
+      return this.gameCache.get(gameId) || null;
+    }
+
+    // Fetch from database if not cached
+    const game = await this.prisma.executiveGame.findUnique({
+      where: executiveGameWhereUniqueInput,
+      include: {
+        players: true,
+        influence: true,
+        ExecutiveVictoryPoint: true,
+        ExecutiveAgenda: true,
+        phases: true,
+        gameTurn: true,
+      },
     });
+
+    if (game) {
+      this.gameCache.set(gameId, game);
+    }
+
+    return game;
   }
 
   // Update an existing ExecutiveGame
   async updateExecutiveGame(params: {
     where: Prisma.ExecutiveGameWhereUniqueInput;
     data: Prisma.ExecutiveGameUpdateInput;
-  }): Promise<ExecutiveGame> {
+  }): Promise<void> {
     const { where, data } = params;
-    return this.prisma.executiveGame.update({
-      data,
-      where,
-    });
+    const gameId = where.id;
+    if (!gameId) {
+      return;
+    }
+    // Update in-memory cache
+    if (this.gameCache.has(gameId)) {
+      const currentGame = this.gameCache.get(gameId);
+      this.gameCache.set(gameId, {
+        ...currentGame,
+        ...data,
+      } as ExecutiveGameWithRelations);
+    }
+
+    // Enqueue update for background persistence
+    this.enqueueUpdate(gameId, data);
   }
 
-  // Delete an ExecutiveGame
-  async deleteExecutiveGame(
-    where: Prisma.ExecutiveGameWhereUniqueInput,
-  ): Promise<ExecutiveGame> {
-    return this.prisma.executiveGame.delete({
-      where,
-    });
+  // Enqueue updates for batch persistence
+  private enqueueUpdate(gameId: string, data: Prisma.ExecutiveGameUpdateInput) {
+    this.updateQueue.push({ gameId, data });
+
+    if (!this.batchTimer) {
+      this.batchTimer = setTimeout(() => this.persistUpdates(), 1000); // Batch every second
+    }
   }
+
+  // Persist updates to the database
+  private async persistUpdates() {
+    const updates = [...this.updateQueue];
+    this.updateQueue = [];
+
+    const updatePromises = updates.map(({ gameId, data }) =>
+      this.prisma.executiveGame.update({
+        where: { id: gameId },
+        data,
+      }),
+    );
+
+    try {
+      await Promise.all(updatePromises);
+    } catch (error) {
+      console.error('Failed to persist updates:', error);
+    }
+
+    // Clear the timer
+    this.batchTimer = null;
+  }
+
+  // Clear cache for a specific game (e.g., after deletion)
+  clearCache(gameId: string): void {
+    this.gameCache.delete(gameId);
+  }
+
+  // Other CRUD methods remain unchanged...
 
   checkLock(gameId: string): boolean {
     return this.inputLockCache.get(gameId) || false;

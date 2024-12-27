@@ -161,7 +161,6 @@ const CompanyIpoVote = ({
             onClick={() => {
               if (selectedPrice) {
                 setIsLoadingIpoVoteSubmission(true);
-                console.log(`Selected IPO Price: $${selectedPrice}`);
                 useIpoVoteSubmitMutation.mutate({
                   companyId: company.id,
                   playerId: authPlayer.id,

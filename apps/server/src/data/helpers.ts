@@ -309,10 +309,6 @@ export const getPseudoSpend = (orders: PlayerOrderWithCompany[]) => {
       acc + (order.quantity ?? 0) * (order.Company.currentStockPrice ?? 0),
     0,
   );
-  console.log('totalBuyIpo', totalBuyIpo);
-  console.log('totalSellIpo', totalSellIpo);
-  console.log('totalBuyOpenMarket', totalBuyOpenMarket);
-  console.log('totalSellOpenMarket', totalSellOpenMarket);
   return totalBuyIpo - totalSellIpo + totalBuyOpenMarket - totalSellOpenMarket;
 };
 
@@ -693,7 +689,6 @@ export function createSeededResearchCards(seed: string): Card[] {
   ) {
     const effectIndex = Math.abs(Math.floor(rng() * (effects.length - 1)));
     const effect = effects[effectIndex];
-    console.log('effect', effect, effectIndex);
     cards.push({
       id: i + 1,
       name: effect,
@@ -717,7 +712,6 @@ export function createSeededResearchCards(seed: string): Card[] {
   }
   //remove any cards that are undefined
   cards = cards.filter((card) => card !== undefined);
-  console.log('cards', cards);
   return cards;
 }
 

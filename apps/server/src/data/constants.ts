@@ -373,22 +373,11 @@ export const getNextCompanyOperatingRoundTurn = (
   companyActionOrder: CompanyActionOrder[],
   currentCompanyId?: string,
 ): Company => {
-  console.log(
-    'getNextCompanyOperatingRoundTurn',
-    companies,
-    companyActionOrder,
-    currentCompanyId,
-  );
   const sortedCompanies = getCompanyActionOperatingRoundTurnOrder(
     companies,
     companyActionOrder,
   );
-  console.log('getNextCompanyOperatingRoundTurn', sortedCompanies);
   if (!currentCompanyId) {
-    console.log(
-      'getNextCompanyOperatingRoundTurn returning the first company',
-      sortedCompanies[0],
-    );
     return sortedCompanies[0];
   }
 

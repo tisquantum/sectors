@@ -80,14 +80,17 @@ export default (trpc: TrpcService, ctx: Context) =>
       .input(
         z.object({
           executiveInfluenceBidId: z.string(),
-          targetLocation: z.nativeEnum(InfluenceLocation),
-          isBidLocked: z.boolean(),
+          influenceMoves: z.array(
+            z.object({
+              influenceIds: z.array(z.string()),
+              targetLocation: z.nativeEnum(InfluenceLocation),
+            }),
+          ),
           gameId: z.string(),
         }),
       )
       .mutation(async ({ input }) => {
-        const { executiveInfluenceBidId, targetLocation, isBidLocked, gameId } =
-          input;
+        const { executiveInfluenceBidId, influenceMoves, gameId } = input;
         const isLocked = ctx.executiveGameService.checkLockAndLock(gameId);
         if (isLocked) {
           throw new TRPCError({
@@ -104,15 +107,13 @@ export default (trpc: TrpcService, ctx: Context) =>
         } catch (error) {
           ctx.executiveGameService.unlockInput(gameId);
         }
-        console.log('executiveInfluenceBid', executiveInfluenceBid);
         if (!executiveInfluenceBid) {
           throw new Error('Executive Influence Bid not found');
         }
         try {
           await ctx.executiveInfluenceService.moveInfluenceBidToPlayer(
             executiveInfluenceBid,
-            targetLocation,
-            isBidLocked,
+            influenceMoves,
           );
         } catch (error) {
           ctx.executiveGameService.unlockInput(gameId);
@@ -122,13 +123,11 @@ export default (trpc: TrpcService, ctx: Context) =>
             message: 'Move Influence Bid to Player error',
           });
         }
-        console.log('executiveInfluenceBid', executiveInfluenceBid);
         //exchange the bribe card and move gifts for player
         try {
           await ctx.executiveCardService.exchangeBribe(
             executiveInfluenceBid.toPlayerId,
             executiveInfluenceBid.fromPlayerId,
-            isBidLocked,
           );
         } catch (error) {
           ctx.executiveGameService.unlockInput(gameId);

@@ -79,7 +79,6 @@ export class CompanyActionService {
       console.error('error', error);
       throw new Error('Error getting marketing orders');
     }
-    console.log('marketingOrders', marketingOrders);
     if (!marketingOrders.length) {
       return [];
     }
@@ -94,10 +93,6 @@ export class CompanyActionService {
       acc[sectorId] += 1;
       return acc;
     }, {});
-    console.log(
-      'marketingOrdersGroupedBySectorId',
-      marketingOrdersGroupedBySectorId,
-    );
     //convert to array
     return Object.entries(marketingOrdersGroupedBySectorId).map(
       ([sectorId, count]) => ({
