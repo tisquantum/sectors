@@ -208,6 +208,7 @@ const InfluenceBids = ({
                     />
                     {Object.keys(groupedInfluenceBids).map((key) => (
                       <Influence
+                        key={key}
                         playerId={key || ""}
                         influenceCount={groupedInfluenceBids[key].length}
                       />
@@ -218,7 +219,7 @@ const InfluenceBids = ({
                 <div className="flex flex-row gap-1">
                   <PlayerAvatar player={bid.fromPlayer} />
                   {Object.keys(groupedInfluenceBids).map((key) => (
-                    <div className="flex relative">
+                    <div className="flex relative" key={key}>
                       <Influence
                         playerId={key || ""}
                         influenceCount={groupedInfluenceBids[key].length}
