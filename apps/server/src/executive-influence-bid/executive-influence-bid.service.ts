@@ -118,6 +118,7 @@ export class ExecutiveInfluenceBidService {
     data: Prisma.ExecutiveInfluenceBidCreateInput,
     influence: Influence[],
   ): Promise<ExecutiveInfluenceBidWithRelations> {
+    console.log('create executive influence bid', influence.map((inf) => inf.id)); 
     // Create the executive influence bid
     const executiveInfluenceBid =
       await this.prisma.executiveInfluenceBid.create({
@@ -151,7 +152,6 @@ export class ExecutiveInfluenceBidService {
         },
       },
       data: {
-        ownedByPlayerId: null,
         influenceLocation: InfluenceLocation.BRIBE,
       },
     });

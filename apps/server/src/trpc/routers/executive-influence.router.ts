@@ -80,14 +80,17 @@ export default (trpc: TrpcService, ctx: Context) =>
       .input(
         z.object({
           executiveInfluenceBidId: z.string(),
-          targetLocation: z.nativeEnum(InfluenceLocation),
-          isBidLocked: z.boolean(),
+          influenceMoves: z.array(
+            z.object({
+              influenceIds: z.array(z.string()),
+              targetLocation: z.nativeEnum(InfluenceLocation),
+            }),
+          ),
           gameId: z.string(),
         }),
       )
       .mutation(async ({ input }) => {
-        const { executiveInfluenceBidId, targetLocation, isBidLocked, gameId } =
-          input;
+        const { executiveInfluenceBidId, influenceMoves, gameId } = input;
         const isLocked = ctx.executiveGameService.checkLockAndLock(gameId);
         if (isLocked) {
           throw new TRPCError({
@@ -110,8 +113,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         try {
           await ctx.executiveInfluenceService.moveInfluenceBidToPlayer(
             executiveInfluenceBid,
-            targetLocation,
-            isBidLocked,
+            influenceMoves,
           );
         } catch (error) {
           ctx.executiveGameService.unlockInput(gameId);
@@ -126,7 +128,6 @@ export default (trpc: TrpcService, ctx: Context) =>
           await ctx.executiveCardService.exchangeBribe(
             executiveInfluenceBid.toPlayerId,
             executiveInfluenceBid.fromPlayerId,
-            isBidLocked,
           );
         } catch (error) {
           ctx.executiveGameService.unlockInput(gameId);

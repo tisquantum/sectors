@@ -61,11 +61,11 @@ export default (trpc: TrpcService, ctx: Context) =>
           gameId: z.string(),
           fromPlayerId: z.string(),
           toPlayerId: z.string(),
-          influenceAmount: z.number(),
+          influenceValues: z.record(z.string(), z.number()), 
         }),
       )
       .mutation(async ({ input }) => {
-        const { gameId, fromPlayerId, toPlayerId, influenceAmount } = input;
+        const { gameId, fromPlayerId, toPlayerId, influenceValues } = input;
         const isLocked = ctx.executiveGameService.checkLockAndLock(gameId);
         if (isLocked) {
           throw new TRPCError({
@@ -78,7 +78,7 @@ export default (trpc: TrpcService, ctx: Context) =>
             {
               fromPlayerId,
               toPlayerId,
-              influenceAmount,
+              influenceValues,
             },
           );
         } catch (error) {

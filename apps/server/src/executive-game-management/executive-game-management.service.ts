@@ -1265,7 +1265,7 @@ export class ExecutiveGameManagementService {
     await this.startPhase({ gameId, gameTurnId, phaseName: newPhaseName });
   }
 
-  async submitInfluenceBid(
+  async submitInfluenceBidLegacy(
     gameId: string,
     playerIdFrom: string,
     playerIdTo: string,
@@ -1309,6 +1309,69 @@ export class ExecutiveGameManagementService {
     }
     //get influence from count
     const influence = selfInfluenceOwned.slice(0, influenceCount);
+
+    //add influence to player bid
+    return this.influenceBidService.createExecutiveInfluenceBid(
+      {
+        game: { connect: { id: gameId } },
+        ExecutiveGameTurn: { connect: { id: gameTurnId } },
+        toPlayer: { connect: { id: playerIdTo } },
+        fromPlayer: { connect: { id: playerIdFrom } },
+      },
+      influence,
+    );
+  }
+
+  async submitInfluenceBid(
+    gameId: string,
+    playerIdFrom: string,
+    playerIdTo: string,
+    influenceIds: string[],
+  ) {
+    //throw error if player is sending to self
+    if (playerIdFrom === playerIdTo) {
+      throw new Error('Cannot send influence to self');
+    }
+    //get the local cache
+    const currentCache = this.gameCache.get(gameId);
+
+    //get game turn
+    const gameTurnId = await this.gameTurnService.getLatestTurnId(gameId);
+    if (!gameTurnId) {
+      throw new Error('Game turn not found');
+    }
+    // get the players influence
+    const playerFrom = await this.playerService.getExecutivePlayer({
+      id: playerIdFrom,
+    });
+    if (!playerFrom) {
+      throw new Error('Player not found');
+    }
+
+    const playerTo =
+      currentCache?.players?.find((player) => player.id === playerIdTo) ??
+      (await this.playerService.getExecutivePlayer({
+        id: playerIdTo,
+      }));
+
+    if (!playerTo) {
+      throw new Error('Player not found');
+    }
+
+    //get all influce from ids
+    const influence = await this.influenceService.listInfluences({
+      where: {
+        id: {
+          in: influenceIds,
+        },
+      },
+    });
+
+    if (
+      influence.some((influence) => influence.ownedByPlayerId !== playerIdFrom)
+    ) {
+      throw new Error('Influence not owned by player');
+    }
 
     //add influence to player bid
     return this.influenceBidService.createExecutiveInfluenceBid(
@@ -1680,7 +1743,7 @@ export class ExecutiveGameManagementService {
     );
   }
 
-  async createExecutiveInfluenceBidFromClient({
+  async createExecutiveInfluenceBidFromClientLegacy({
     fromPlayerId,
     toPlayerId,
     influenceAmount,
@@ -1748,6 +1811,107 @@ export class ExecutiveGameManagementService {
       console.error('error', error);
       throw new Error('Influence bid not found');
     }
+    try {
+      await this.startPhase({
+        gameId: fromPlayer.gameId,
+        gameTurnId: gameTurnId,
+        phaseName: ExecutivePhaseName.INFLUENCE_BID,
+      });
+    } catch (error) {
+      console.error('error', error);
+      throw new Error('INFLUENCE_BID phase not started');
+    }
+  }
+
+  async createExecutiveInfluenceBidFromClient({
+    fromPlayerId,
+    toPlayerId,
+    influenceValues,
+  }: {
+    fromPlayerId: string;
+    toPlayerId: string;
+    influenceValues: Record<string, number>; //selfPlayerId: influenceAmount
+  }) {
+    if (Object.keys(influenceValues).length < 1) {
+      throw new Error('Influence amount must be greater than 0');
+    }
+    //get the player
+    const fromPlayer = await this.playerService.getExecutivePlayer({
+      id: fromPlayerId,
+    });
+    if (!fromPlayer) {
+      throw new Error('From player not found');
+    }
+    //get the game
+    const currentCache = this.gameCache.get(fromPlayer.gameId);
+    const gameTurnId =
+      currentCache?.currentGameTurnId ??
+      (await this.gameTurnService.getLatestTurnId(fromPlayer.gameId));
+    if (!gameTurnId) {
+      throw new Error('Game turn not found');
+    }
+    //ensure the player has not already made a bid on this turn
+    const existingBid =
+      await this.influenceBidService.findExecutiveInfluenceBid({
+        fromPlayerId,
+        toPlayerId,
+        executiveGameTurnId: gameTurnId,
+      });
+    if (existingBid) {
+      throw new Error(
+        'Player has already made a bid on this players bribe this turn.',
+      );
+    }
+    //get the player
+    const toPlayer = await this.playerService.getExecutivePlayer({
+      id: toPlayerId,
+    });
+    if (!toPlayer) {
+      throw new Error('To player not found');
+    }
+    console.log(
+      'createExecutiveInfluenceBidFromClient influenceIds',
+      influenceValues,
+    );
+    //get all influence from ids
+    const influencePromises = Object.keys(influenceValues).map(
+      (selfPlayerId) => {
+        const count = influenceValues[selfPlayerId];
+        if (typeof count !== 'number') {
+          throw new Error(`Invalid count for selfPlayerId: ${selfPlayerId}`);
+        }
+
+        return this.influenceService.listInfluences({
+          where: {
+            selfPlayerId,
+            ownedByPlayerId: fromPlayerId,
+          },
+          take: count,
+        });
+      },
+    );
+    const influence = (await Promise.all(influencePromises)).flat();
+    if (
+      influence.some((influence) => influence.ownedByPlayerId !== fromPlayerId)
+    ) {
+      throw new Error('Influence not owned by player');
+    }
+    try {
+      //add influence to player bid
+      await this.influenceBidService.createExecutiveInfluenceBid(
+        {
+          game: { connect: { id: fromPlayer.gameId } },
+          ExecutiveGameTurn: { connect: { id: gameTurnId } },
+          toPlayer: { connect: { id: toPlayer?.id } },
+          fromPlayer: { connect: { id: fromPlayer?.id } },
+        },
+        influence,
+      );
+    } catch (error) {
+      console.error('error', error);
+      throw new Error('Influence bid not created');
+    }
+
     try {
       await this.startPhase({
         gameId: fromPlayer.gameId,

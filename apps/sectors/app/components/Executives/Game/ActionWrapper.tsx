@@ -50,7 +50,7 @@ export const ActionWrapper = ({
             <Spinner />
           ) : (
             <>
-              <div className="flex flex-row items-center justify-center gap-2">
+              <div className="flex flex-row items-center justify-center gap-2 p-2">
                 <Button color="success" onPress={handleAccept} isIconOnly>
                   <RiCheckFill />
                 </Button>

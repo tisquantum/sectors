@@ -275,7 +275,7 @@ export class ExecutiveCardService {
   async exchangeBribe(
     bribePlayerId: string,
     giftPlayerId: string,
-    isLocked: boolean,
+    isLocked = false,
   ): Promise<ExecutiveCard> {
     // Retrieve the bribe card from the cache or database
     let bribeCard: ExecutiveCard | undefined = [...this.cardCache.values()]
