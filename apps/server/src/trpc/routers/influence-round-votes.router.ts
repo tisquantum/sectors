@@ -6,6 +6,7 @@ import { PhaseName } from '@prisma/client';
 import { checkIsPlayerAction, checkSubmissionTime } from '../trpc.middleware';
 import { PlayersService } from '@server/players/players.service';
 import { GamesService } from '@server/games/games.service';
+import { TRPCError } from '@trpc/server';
 
 type Context = {
   influenceRoundVotesService: InfluenceRoundVotesService;
@@ -90,7 +91,17 @@ export default (trpc: TrpcService, ctx: Context) =>
         // ensure current phase is influence voting round
         const currentPhase = await ctx.phaseService.currentPhase(gameId);
         if (currentPhase?.name == PhaseName.INFLUENCE_BID_ACTION) {
-          return ctx.influenceRoundVotesService.createInfluenceVote(data);
+          try {
+            return ctx.influenceRoundVotesService.createInfluenceVote(data);
+          } catch (error) {
+            throw new TRPCError({
+              code: 'INTERNAL_SERVER_ERROR',
+              message:
+                error instanceof Error
+                  ? error.message
+                  : 'An unexpected error occurred',
+            });
+          }
         } else {
           throw new Error(
             'Cannot create influence vote outside of influence voting round',
