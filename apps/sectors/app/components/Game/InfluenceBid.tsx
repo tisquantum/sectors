@@ -45,7 +45,9 @@ const InfluenceBidAction = () => {
                 let influenceNum = parseInt(influence);
                 if (influenceNum < 0 || influenceNum > DEFAULT_INFLUENCE) {
                   setIsLoadingInfluenceSubmission(false);
-                  toast.error(`Influence must be between 0 and ${DEFAULT_INFLUENCE}`);
+                  toast.error(
+                    `Influence must be between 0 and ${DEFAULT_INFLUENCE}`
+                  );
                   return;
                 }
                 createInfluenceVote({
