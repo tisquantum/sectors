@@ -195,14 +195,6 @@ const StartTurnUpdates = () => {
             A new company has opened in {companyWithSector?.Sector.name},
             welcome {companyWithSector?.name}!
           </motion.p>
-          <motion.p
-            className="text-md text-gray-400"
-            initial={{ x: 10 }}
-            animate={{ x: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            Investor Tranches will be distributed.
-          </motion.p>
           <motion.div
             className="mt-4 w-full h-1 bg-green-400 rounded"
             initial={{ scaleX: 0 }}
