@@ -49,7 +49,7 @@ const PlayerOverview = ({
                 className={tooltipStyle}
                 content={
                   <p>
-                    Networth: The total value of all shares owned plus cash on
+                    Net worth: The total value of all shares owned plus cash on
                     hand.
                   </p>
                 }
