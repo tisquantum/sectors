@@ -1,4 +1,5 @@
 import {
+  RiBankFill,
   RiBox2Fill,
   RiBuilding3Fill,
   RiExpandUpDownFill,
@@ -10,12 +11,14 @@ import {
   RiPercentFill,
   RiPriceTag3Fill,
   RiSailboatFill,
+  RiScalesFill,
   RiShapesFill,
   RiSparkling2Fill,
   RiStackFill,
   RiTeamFill,
   RiTextWrap,
   RiTicket2Fill,
+  RiUserFill,
   RiWallet3Fill,
 } from "@remixicon/react";
 
@@ -49,9 +52,12 @@ const SymbolLegend = () => (
     <LegendItem symbol={<RiTicket2Fill />} label="Share" />
     <LegendItem symbol={<RiSparkling2Fill />} label="Prestige" />
     <LegendItem symbol={<RiWallet3Fill />} label="Cash on Hand" />
+    <LegendItem symbol={<RiScalesFill />} label="Net Worth" />
     <LegendItem symbol={<RiFundsFill />} label="Stock Price" />
     <LegendItem symbol={<RiGameFill />} label="Passive Effect" />
     <LegendItem symbol={<RiTeamFill />} label="Consumer" />
+    <LegendItem symbol={<RiBankFill />} label="Bank" />
+    <LegendItem symbol={<RiUserFill />} label="Player" />
   </div>
 );
 
