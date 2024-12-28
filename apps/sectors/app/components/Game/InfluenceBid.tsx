@@ -5,6 +5,7 @@ import { DEFAULT_INFLUENCE } from "@server/data/constants";
 import { Input } from "@nextui-org/react";
 import DebounceButton from "../General/DebounceButton";
 import { use, useEffect, useState } from "react";
+import { toast } from "sonner";
 
 const InfluenceBidAction = () => {
   const { currentPhase, authPlayer } = useGame();
@@ -43,6 +44,8 @@ const InfluenceBidAction = () => {
                 setIsLoadingInfluenceSubmission(true);
                 let influenceNum = parseInt(influence);
                 if (influenceNum < 0 || influenceNum > DEFAULT_INFLUENCE) {
+                  setIsLoadingInfluenceSubmission(false);
+                  toast.error(`Influence must be between 0 and ${DEFAULT_INFLUENCE}`);
                   return;
                 }
                 createInfluenceVote({
