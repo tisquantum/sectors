@@ -4,6 +4,7 @@ import CompanyComponent from "./Company";
 import { useEffect } from "react";
 import { AvatarGroup } from "@nextui-org/react";
 import { RiGameFill, RiSparkling2Fill } from "@remixicon/react";
+import { AwardTrackType } from "@server/prisma/prisma.client";
 
 const CompanyAwardTrack = ({
   companyAwardTrackId,
@@ -31,6 +32,18 @@ const CompanyAwardTrack = ({
   useEffect(() => {
     refetchAwardTrackSpaces();
   }, [currentPhase?.id]);
+  const awardTrackDescription = (awardTrackType: AwardTrackType) => {
+    switch (awardTrackType) {
+      case AwardTrackType.RESEARCH:
+        return "Every time the company selects a research action during operations advance one space on this track.";
+      case AwardTrackType.MARKETING:
+        return "Every time a company selects a marketing campaign action during operations advance one space on this track.";
+      case AwardTrackType.CATALYST:
+        return "Every time a company issues shares or lobbies during operations advance one space on this track.";
+      default:
+        return "The company with the most prestige at the end of the game wins.";
+    }
+  };
   if (isLoadingAwardTrack || isLoadingAwardTrackSpaces)
     return <div> Loading... </div>;
   if (isErrorAwardTrack || isErrorAwardTrackSpaces) return <div> Error </div>;
@@ -40,6 +53,9 @@ const CompanyAwardTrack = ({
       <h2 className="text-lg lg:text-2xl font-bold mb-4">
         {awardTrack.awardTrackName} Award Track
       </h2>
+      <p className="text-sm lg:text-lg text-gray-400 mb-4">
+        {awardTrackDescription(awardTrack.awardTrackType)}
+      </p>
       <div className="flex flex-wrap gap-4 border-2 border-dashed border-gray-400 p-4 rounded-lg">
         {awardTrackSpaces.map((companyAwardTrackSpace) => {
           return (
@@ -63,8 +79,8 @@ const CompanyAwardTrack = ({
               {companyAwardTrackSpace.awardTrackSpaceNumber ==
                 awardTrackSpaces.length - 1 && (
                 <div className="flex gap-1 text-lg font-semibold">
-                    <RiSparkling2Fill />
-                    <RiGameFill />
+                  <RiSparkling2Fill />
+                  <RiGameFill />
                 </div>
               )}
             </div>

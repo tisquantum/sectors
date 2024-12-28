@@ -2831,6 +2831,11 @@ export class GameManagementService {
       switch (companyAction.action) {
         case OperatingRoundAction.SHARE_ISSUE:
           await this.resolveIssueShares(companyAction);
+          await this.moveCompanyForwardOnCompanyAwardTrack(
+            company.id,
+            phase.gameId,
+            AwardTrackType.CATALYST,
+          );
           break;
         case OperatingRoundAction.MARKETING:
           await this.resolveMarketingAction(companyAction);
@@ -2838,11 +2843,6 @@ export class GameManagementService {
             company.id,
             phase.gameId,
             AwardTrackType.MARKETING,
-          );
-          await this.moveCompanyForwardOnCompanyAwardTrack(
-            company.id,
-            phase.gameId,
-            AwardTrackType.CATALYST,
           );
           break;
         case OperatingRoundAction.MARKETING_SMALL_CAMPAIGN:
