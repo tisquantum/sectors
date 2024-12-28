@@ -56,37 +56,35 @@ const CompanyIpoVote = ({
   if (!authPlayer) return <div>Not logged in</div>;
   return (
     <div className="flex flex-col gap-4 p-4 rounded-lg shadow-md">
-      <h2 className="text-lg font-semibold">
+      <div className="flex items-center gap-2">
         {isInteractive ? (
-          <div className="flex items-center gap-2">
-            <span>Select IPO Price for</span>
-            <Popover>
-              <PopoverTrigger>
-                <div
-                  className={`flex flex-row items-center justify-center px-2 py-1 rounded-medium gap-2 cursor-pointer
+          <span>Select IPO Price for</span>
+        ) : (
+          <span>IPO Price for</span>
+        )}
+        <Popover>
+          <PopoverTrigger>
+            <div
+              className={`flex flex-row items-center justify-center px-2 py-1 rounded-medium gap-2 cursor-pointer
                     bg-[${
                       sector.name ? sectorColors[sector.name] : "primary"
                     }]`}
-                >
-                  <span>{company.name}</span>
-                  <span>|</span>
-                  <span>{sector?.name}</span>
-                  <span>|</span>
-                  <div className="flex gap-1 items-center">
-                    <RiPriceTag3Fill size={18} />
-                    <span>${company.unitPrice}</span>
-                  </div>
-                </div>
-              </PopoverTrigger>
-              <PopoverContent>
-                <CompanyInfo companyId={company.id} />
-              </PopoverContent>
-            </Popover>
-          </div>
-        ) : (
-          "IPO Price selections"
-        )}
-      </h2>
+            >
+              <span>{company.name}</span>
+              <span>|</span>
+              <span>{sector?.name}</span>
+              <span>|</span>
+              <div className="flex gap-1 items-center">
+                <RiPriceTag3Fill size={18} />
+                <span>${company.unitPrice}</span>
+              </div>
+            </div>
+          </PopoverTrigger>
+          <PopoverContent>
+            <CompanyInfo companyId={company.id} />
+          </PopoverContent>
+        </Popover>
+      </div>
 
       {/* Price Grid */}
       <div className="grid grid-cols-4 gap-2">
