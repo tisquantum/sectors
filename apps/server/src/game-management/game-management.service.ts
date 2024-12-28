@@ -1531,13 +1531,11 @@ export class GameManagementService {
     }
 
     const newCompanyInfo = getRandomCompany(sector.sectorName);
-    const ipoPrice = determineFloatPrice(sector);
-    const stockTier = determineStockTier(ipoPrice);
     const newCompany = await this.companyService.createCompany({
       Game: { connect: { id: phase.gameId } },
       Sector: { connect: { id: sectorId } },
       status: CompanyStatus.INACTIVE,
-      currentStockPrice: ipoPrice,
+      currentStockPrice: null,
       companyTier: startingCompanyTier,
       name: newCompanyInfo.name,
       stockSymbol: newCompanyInfo.symbol,
@@ -1546,9 +1544,9 @@ export class GameManagementService {
           sector.unitPriceMin,
       ),
       throughput: 0,
-      ipoAndFloatPrice: ipoPrice,
-      cashOnHand: ipoPrice * DEFAULT_SHARE_DISTRIBUTION,
-      stockTier,
+      ipoAndFloatPrice: null,
+      cashOnHand: 0,
+      stockTier: undefined,
       demandScore: 0,
       baseDemand: 0,
       supplyCurrent: 0,
@@ -1567,7 +1565,7 @@ export class GameManagementService {
     await this.shareService.createManyShares(shares);
     //create stock history
     await this.stockHistoryService.createStockHistory({
-      price: ipoPrice || 0,
+      price: 0,
       action: StockAction.INITIAL,
       stepsMoved: 0,
       Company: { connect: { id: newCompany.id } },
@@ -5466,11 +5464,9 @@ export class GameManagementService {
           if (!sector) {
             throw new Error('Sector not found');
           }
-          const ipoPrice = determineFloatPrice(sector);
-          const stockTier = determineStockTier(ipoPrice);
           return {
             ...company,
-            stockTier: stockTier,
+            stockTier: undefined,
             ipoAndFloatPrice: null,
             currentStockPrice: null,
             cashOnHand: 0,
@@ -7389,6 +7385,7 @@ export class GameManagementService {
         ipoAndFloatPrice: ipoPrice,
         currentStockPrice: ipoPrice,
         cashOnHand: ipoPrice * DEFAULT_SHARE_DISTRIBUTION,
+        stockTier: determineStockTier(ipoPrice),
       },
     });
     //create shares
