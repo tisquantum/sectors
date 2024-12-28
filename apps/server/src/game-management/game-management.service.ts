@@ -7385,7 +7385,7 @@ export class GameManagementService {
         ipoAndFloatPrice: ipoPrice,
         currentStockPrice: ipoPrice,
         cashOnHand: ipoPrice * DEFAULT_SHARE_DISTRIBUTION,
-        stockTier: getCurrentTierBySharePrice(ipoPrice),
+        stockTier: determineStockTier(ipoPrice),
       },
     });
     //create shares
