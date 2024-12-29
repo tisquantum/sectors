@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { login, googleSignIn, anonymousSignIn } from "./actions";
 import DebounceButton from "@sectors/app/components/General/DebounceButton";
+import { Turnstile } from "@marsidev/react-turnstile";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -9,6 +10,7 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [emailError, setEmailError] = useState("");
+  const [captchaToken, setCaptchaToken] = useState("");
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -33,7 +35,7 @@ export default function LoginPage() {
     const formData = new FormData();
     formData.append("email", email);
     formData.append("password", password);
-
+    formData.append("captchaToken", captchaToken);
     await login(formData);
     setIsSubmitting(false);
     setIsLoading(false);
@@ -49,7 +51,7 @@ export default function LoginPage() {
 
   const handleAnonymousLogin = async () => {
     try {
-      await anonymousSignIn();
+      await anonymousSignIn(captchaToken);
     } catch (error) {
       console.error("Anonymous Sign-In Error:", error);
     }
@@ -157,6 +159,14 @@ export default function LoginPage() {
             guest account if you sign out or clear browsing data. This account
             is only accessible from this browser on this device.
           </p>
+        </div>
+        <div className="flex justify-center items-center text-center mt-3">
+          <Turnstile
+            siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || ""}
+            onSuccess={(token) => {
+              setCaptchaToken(token);
+            }}
+          />
         </div>
       </div>
     </div>
