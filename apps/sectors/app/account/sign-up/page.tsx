@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { signup } from "../login/actions";
 import DebounceButton from "@sectors/app/components/General/DebounceButton";
+import { Turnstile } from "@marsidev/react-turnstile";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
@@ -9,6 +10,7 @@ export default function SignupPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [emailError, setEmailError] = useState("");
+  const [captchaToken, setCaptchaToken] = useState("");
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -33,6 +35,7 @@ export default function SignupPage() {
     const formData = new FormData();
     formData.append("email", email);
     formData.append("password", password);
+    formData.append("captchaToken", captchaToken);
 
     await signup(formData);
     setIsSubmitting(false);
@@ -100,6 +103,12 @@ export default function SignupPage() {
             </a>
           </div>
         </form>
+        <Turnstile
+          siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || ""}
+          onSuccess={(token) => {
+            setCaptchaToken(token);
+          }}
+        />
       </div>
     </div>
   );

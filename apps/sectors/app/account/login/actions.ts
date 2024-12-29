@@ -13,6 +13,9 @@ export async function login(formData: FormData) {
   const data = {
     email: formData.get("email") as string,
     password: formData.get("password") as string,
+    options: {
+      captchaToken: formData.get("captchaToken") as string,
+    },
   };
 
   const { error } = await supabase.auth.signInWithPassword(data);
@@ -33,6 +36,9 @@ export async function signup(formData: FormData) {
   const data = {
     email: formData.get("email") as string,
     password: formData.get("password") as string,
+    options: {
+      captchaToken: formData.get("captchaToken") as string,
+    },
   };
 
   const { error } = await supabase.auth.signUp(data);
@@ -65,10 +71,14 @@ export async function googleSignIn() {
   }
 }
 
-export async function anonymousSignIn() {
+export async function anonymousSignIn(captchaToken: string) {
   const supabase = createClient();
 
-  const { error } = await supabase.auth.signInAnonymously();
+  const { error } = await supabase.auth.signInAnonymously({
+    options: {
+      captchaToken,
+    },
+  });
 
   if (error) {
     throw new Error(error.message);
