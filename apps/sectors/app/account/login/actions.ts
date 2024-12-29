@@ -64,3 +64,16 @@ export async function googleSignIn() {
     redirect(data.url); // Redirect to the URL provided by Supabase
   }
 }
+
+export async function anonymousSignIn() {
+  const supabase = createClient();
+
+  const { error } = await supabase.auth.signInAnonymously();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/authenticate", "layout");
+  redirect("/authenticate");
+}

@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { login, googleSignIn } from "./actions";
+import { login, googleSignIn, anonymousSignIn } from "./actions";
 import DebounceButton from "@sectors/app/components/General/DebounceButton";
 
 export default function LoginPage() {
@@ -44,6 +44,14 @@ export default function LoginPage() {
       await googleSignIn();
     } catch (error) {
       console.error("Google Sign-In Error:", error);
+    }
+  };
+
+  const handleAnonymousLogin = async () => {
+    try {
+      await anonymousSignIn();
+    } catch (error) {
+      console.error("Anonymous Sign-In Error:", error);
     }
   };
 
@@ -131,6 +139,24 @@ export default function LoginPage() {
           >
             Sign in with Google
           </button>
+          <p className="text-xs text-gray-500 mt-2">
+            Sign in using your Google account. If this is your first time using
+            this app, a sectors account will be created for you.
+          </p>
+        </div>
+
+        <div className="text-center mt-3">
+          <button
+            onClick={handleAnonymousLogin}
+            className="bg-gray-600 hover:bg-gray-800 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full"
+          >
+            Continue as Guest
+          </button>
+          <p className="text-xs text-gray-500 mt-2">
+            Continue as a guest to play sectors. You will lose access to this
+            guest account if you sign out or clear browsing data. This account
+            is only accessible from this browser on this device.
+          </p>
         </div>
       </div>
     </div>
