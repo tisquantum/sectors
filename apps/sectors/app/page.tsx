@@ -51,13 +51,17 @@ export default function Home() {
       </div>
       <div className="mb-16 flex items-center justify-center gap-2">
         {user ? (
-          <Button as={Link} href="/rooms">Join a Game</Button>
+          <Button as={Link} href="/rooms">
+            Join a Game
+          </Button>
         ) : (
           <div className="flex flex-col gap-2">
             <p className="text-lg text-default-900">
-              In order to play you must have an account.
+              To play, press this button.
             </p>
-            <Button as={Link} href="/account/login">Login / Sign Up</Button>
+            <Button as={Link} href="/account/login">
+              Login / Sign Up / Play As Guest
+            </Button>
           </div>
         )}
       </div>
