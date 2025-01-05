@@ -13,4 +13,5 @@ export interface StartGameInput {
   useShortOrders: boolean;
   useOptionOrders: boolean;
   isTimerless: boolean;
+  bots: number;
 }
