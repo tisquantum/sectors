@@ -93,15 +93,6 @@ const OperatingRoundProduction = () => {
         })}
       </div>
       <div className="flex flex-col gap-2">
-        <div className="bg-slate-800 p-4 rounded-lg shadow-md flex flex-col gap-4 overflow-auto scrollbar">
-          <div>
-            <h2 className="text-lg font-semibold mb-2">Operations Priority</h2>
-            <CompanyPriorityList companies={companiesWithSector} />
-          </div>
-          <div className="bg-slate-800">
-            <ThroughputLegend />
-          </div>
-        </div>
         <div className="flex flex-wrap gap-4">
           {operatingRound.productionResults.map((productionResult) => (
             <div
@@ -151,6 +142,15 @@ const OperatingRoundProduction = () => {
               </div>
             </div>
           ))}
+        </div>
+        <div className="bg-slate-800 p-4 rounded-lg shadow-md flex flex-col gap-4 overflow-auto scrollbar">
+          <div>
+            <h2 className="text-lg font-semibold mb-2">Operations Priority</h2>
+            <CompanyPriorityList companies={companiesWithSector} />
+          </div>
+          <div className="bg-slate-800">
+            <ThroughputLegend />
+          </div>
         </div>
       </div>
     </div>
