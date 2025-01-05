@@ -925,10 +925,9 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
                 {showLock && <RiLockFill />}
                 <div className="flex gap-2">
                   {collectedCompanies.map((company, index) => (
-                    <Popover>
+                    <Popover key={company.id}>
                       <PopoverTrigger>
                         <div
-                          key={company.id}
                           className={`flex items-center justify-center p-2 w-14 h-14 rounded-full text-white text-xs lg:text-sm font-bold cursor-pointer ${
                             currentCompany === company.id
                               ? `${
