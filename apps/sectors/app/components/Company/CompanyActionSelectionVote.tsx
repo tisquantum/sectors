@@ -294,7 +294,7 @@ const renderSymbolDisplay = (operatingRoundAction: OperatingRoundAction) => {
           </Row>
           <Row variant="flat" color="warning">
             <div className="flex items-center gap-1">
-              <span>-1</span> <RiHandCoinFill size={18} />
+              <span>-1</span>  <RiBuilding3Fill size={18} /> <RiBox2Fill size={18} />
               <span>/</span>
               <RiListOrdered2 size={18} />
             </div>
