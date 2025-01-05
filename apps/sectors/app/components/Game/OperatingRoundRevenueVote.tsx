@@ -8,7 +8,7 @@ import {
   Sector,
   SectorName,
 } from "@server/prisma/prisma.client";
-import { Radio, RadioGroup } from "@nextui-org/react";
+import { Radio, RadioGroup, Tooltip } from "@nextui-org/react";
 import { useState } from "react";
 import { CompanyTierData } from "@server/data/constants";
 import CompanyInfo from "../Company/CompanyInfo";
@@ -17,6 +17,12 @@ import Button from "@sectors/app/components/General/DebounceButton";
 import DebounceButton from "@sectors/app/components/General/DebounceButton";
 import { CompanyWithSector } from "@server/prisma/prisma.types";
 import SectorConsumerDistributionAnimation from "./SectorConsumerDistributionAnimation";
+import {
+  baseToolTipStyle,
+  tooltipStyle,
+} from "@sectors/app/helpers/tailwind.helpers";
+import CompanyPriorityList from "../Company/CompanyPriorityOperatingRound";
+import { Info } from "lucide-react";
 
 const DistributeSelection = ({
   company,
@@ -42,7 +48,7 @@ const DistributeSelection = ({
       },
     });
   const handleSubmit = async () => {
-    if(!authPlayer) {
+    if (!authPlayer) {
       return;
     }
     setIsLoading(true);
@@ -125,9 +131,20 @@ const OperatingRoundRevenueVote = () => {
 
   return (
     <div className="p-6 rounded-lg shadow-md">
-      <h1 className="text-2xl font-bold mb-4">
-        Operating Round Production Vote
-      </h1>
+      <div className="flex flex-col gap-2">
+        <h1 className="text-2xl font-bold mb-4">
+          Operating Round Production Vote
+        </h1>
+        <Tooltip
+          classNames={{ base: baseToolTipStyle }}
+          className={tooltipStyle}
+          content={<CompanyPriorityList companies={companiesWithSector} />}
+        >
+          <span className="flex flex-row gap-2">
+            <Info /> Company Priority List
+          </span>
+        </Tooltip>
+      </div>
       <div className="flex flex-col gap-1">
         {sectorNames.map((sectorName: SectorName) => (
           <SectorConsumerDistributionAnimation
