@@ -89,6 +89,7 @@ import CompanyPriorityList from "./CompanyPriorityOperatingRound";
 import InsolvencyContributionComponent from "./InsolvencyContribution";
 import { friendlyResearchName } from "@sectors/app/helpers";
 import CompanyAwardTrack from "./CompanyAwardTrack";
+import { Info } from "lucide-react";
 
 const renderSymbolDisplay = (operatingRoundAction: OperatingRoundAction) => {
   const IconWithText = ({
@@ -294,7 +295,8 @@ const renderSymbolDisplay = (operatingRoundAction: OperatingRoundAction) => {
           </Row>
           <Row variant="flat" color="warning">
             <div className="flex items-center gap-1">
-              <span>-1</span>  <RiBuilding3Fill size={18} /> <RiBox2Fill size={18} />
+              <span>-1</span> <RiBuilding3Fill size={18} />{" "}
+              <RiBox2Fill size={18} />
               <span>/</span>
               <RiListOrdered2 size={18} />
             </div>
@@ -907,33 +909,45 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
         <Tab key="company-selection" title="Company Vote">
           <div className="flex flex-col gap-1 flex-grow relative">
             <div className="flex flex-col gap-2 justify-center items-center">
-              <Tooltip
-                classNames={{ base: baseToolTipStyle }}
-                className={tooltipStyle}
-                content={<CompanyPriorityList companies={companies} />}
-              >
+              <div className="flex flex-col gap-2 items-center justify-center">
                 <h2>Turn Order</h2>
-              </Tooltip>
+                <Tooltip
+                  classNames={{ base: baseToolTipStyle }}
+                  className={tooltipStyle}
+                  content={<CompanyPriorityList companies={companies} />}
+                >
+                  <span className="flex flex-row gap-2">
+                    <Info /> Company Priority List
+                  </span>
+                </Tooltip>
+              </div>
               <div className="flex flex-col gap-2 justify-center items-center">
                 {showLock && <RiLockFill />}
                 <div className="flex gap-2">
                   {collectedCompanies.map((company, index) => (
-                    <div
-                      key={company.id}
-                      className={`flex items-center justify-center p-2 w-14 h-14 rounded-full text-white text-xs lg:text-sm font-bold ${
-                        currentCompany === company.id
-                          ? `${
-                              company.status === CompanyStatus.INSOLVENT
-                                ? "bg-rose-500"
-                                : "bg-blue-500"
-                            }`
-                          : company.status === CompanyStatus.INSOLVENT
-                          ? "bg-rose-500"
-                          : "bg-gray-500"
-                      }`}
-                    >
-                      {company.stockSymbol}
-                    </div>
+                    <Popover>
+                      <PopoverTrigger>
+                        <div
+                          key={company.id}
+                          className={`flex items-center justify-center p-2 w-14 h-14 rounded-full text-white text-xs lg:text-sm font-bold cursor-pointer ${
+                            currentCompany === company.id
+                              ? `${
+                                  company.status === CompanyStatus.INSOLVENT
+                                    ? "bg-rose-500"
+                                    : "bg-blue-500"
+                                }`
+                              : company.status === CompanyStatus.INSOLVENT
+                              ? "bg-rose-500"
+                              : "bg-gray-500"
+                          }`}
+                        >
+                          {company.stockSymbol}
+                        </div>
+                      </PopoverTrigger>
+                      <PopoverContent>
+                        <CompanyInfo companyId={company.id} />
+                      </PopoverContent>
+                    </Popover>
                   ))}
                 </div>
                 <div className="flex gap-2">
