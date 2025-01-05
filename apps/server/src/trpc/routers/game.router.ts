@@ -102,6 +102,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           useShortOrders: z.boolean(),
           useLimitOrders: z.boolean(),
           isTimerless: z.boolean().optional(),
+          bots: z.number(),
           players: z.any().optional(),
           companies: z.any().optional(),
           Player: z.any().optional(),
@@ -128,6 +129,7 @@ export default (trpc: TrpcService, ctx: Context) =>
             useShortOrders: input.useShortOrders,
             useLimitOrders: input.useLimitOrders,
             isTimerless: input.isTimerless || false,
+            bots: input.bots,
           });
         } catch (error) {
           return {

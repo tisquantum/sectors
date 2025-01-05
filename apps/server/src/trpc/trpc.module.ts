@@ -55,6 +55,7 @@ import { ExecutiveGameManagementService } from '@server/executive-game-managemen
 import { ExecutivePhaseService } from '@server/executive-phase/executive-phase.service';
 import { ExecutiveGameTurnService } from '@server/executive-game-turn/executive-game-turn.service';
 import { ExecutiveInfluenceVoteRoundService } from '@server/executive-influence-vote-round/executive-influence-vote-round.service';
+import { AiBotService } from '@server/ai-bot/ai-bot.service';
 
 @Module({
   imports: [PrismaModule],
@@ -117,6 +118,7 @@ import { ExecutiveInfluenceVoteRoundService } from '@server/executive-influence-
     ExecutivePhaseService,
     ExecutiveInfluenceService,
     ExecutiveInfluenceVoteRoundService,
+    AiBotService,
   ],
 })
 export class TrpcModule {}

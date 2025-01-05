@@ -52,6 +52,7 @@ interface GameOptionsState {
   useShortOrders: boolean;
   useLimitOrders: boolean;
   isTimerless: boolean;
+  bots: number;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -76,6 +77,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     useShortOrders: false,
     useLimitOrders: false,
     isTimerless: GAME_SETUP_DEFAULT_TIMERLESS,
+    bots: 0,
   });
   const joinRoomMutation = trpc.roomUser.joinRoom.useMutation();
   const leaveRoomMutation = trpc.roomUser.leaveRoom.useMutation();
@@ -130,7 +132,8 @@ const Sidebar: React.FC<SidebarProps> = ({
     useOptionOrders: boolean,
     useShortOrders: boolean,
     useLimitOrders: boolean,
-    isTimerless: boolean
+    isTimerless: boolean,
+    bots: number
   ) => {
     //response happens through pusher to all clients.
     startGameMutation.mutate({
@@ -146,6 +149,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       useShortOrders,
       useLimitOrders,
       isTimerless,
+      bots,
     });
   };
 
@@ -232,7 +236,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                           gameOptions.useOptionOrders,
                           gameOptions.useShortOrders,
                           gameOptions.useLimitOrders,
-                          gameOptions.isTimerless
+                          gameOptions.isTimerless,
+                          gameOptions.bots
                         )
                       : handleExecutiveStartGame(room.id, room.name);
                   }}

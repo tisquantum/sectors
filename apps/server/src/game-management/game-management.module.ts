@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { PrismaModule } from '@server/prisma/prisma.module';
 import { PlayersModule } from '@server/players/players.module';
 import { GameManagementService } from './game-management.service';
@@ -40,6 +40,9 @@ import { HeadlineModule } from '@server/headline/headline.module';
 import { StockSubRoundModule } from '@server/stock-sub-round/stock-sub-round.module';
 import { CompanyAwardTrackModule } from '@server/company-award-track/company-award-track.module';
 import { CompanyAwardTrackSpaceModule } from '@server/company-award-track-space/company-award-track-space.module';
+import { AiBotModule } from '@server/ai-bot/ai-bot.module';
+import { RevenueDistributionVoteModule } from '@server/revenue-distribution-vote/revenue-distribution-vote.module';
+import { OperatingRoundVoteModule } from '@server/operating-round-vote/operating-round-vote.module';
 
 @Module({
   imports: [
@@ -83,6 +86,9 @@ import { CompanyAwardTrackSpaceModule } from '@server/company-award-track-space/
     StockSubRoundModule,
     CompanyAwardTrackModule,
     CompanyAwardTrackSpaceModule,
+    AiBotModule,
+    RevenueDistributionVoteModule,
+    OperatingRoundVoteModule
   ],
   providers: [GameManagementService],
   exports: [GameManagementService],

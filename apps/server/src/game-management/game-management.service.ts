@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
 import { PlayersService } from '@server/players/players.service';
 import {
@@ -220,6 +220,16 @@ import { generateHeadlines } from '@server/headline/headline.helpers';
 import { StockSubRoundService } from '@server/stock-sub-round/stock-sub-round.service';
 import { CompanyAwardTrackService } from '@server/company-award-track/company-award-track.service';
 import { CompanyAwardTrackSpaceService } from '@server/company-award-track-space/company-award-track-space.service';
+import {
+  adjectives,
+  animals,
+  colors,
+  uniqueNamesGenerator,
+} from 'unique-names-generator';
+import { randomUUID } from 'crypto';
+import { AiBotService } from '@server/ai-bot/ai-bot.service';
+import { RevenueDistributionVoteService } from '@server/revenue-distribution-vote/revenue-distribution-vote.service';
+import { OperatingRoundVoteService } from '@server/operating-round-vote/operating-round-vote.service';
 
 type GroupedByPhase = {
   [key: string]: {
@@ -286,6 +296,9 @@ export class GameManagementService {
     private stockSubRoundService: StockSubRoundService,
     private companyAwardTrackService: CompanyAwardTrackService,
     private companyAwardTrackSpaceService: CompanyAwardTrackSpaceService,
+    private aiBotService: AiBotService,
+    private revenueDistributionVoteService: RevenueDistributionVoteService,
+    private operatingRoundVoteService: OperatingRoundVoteService,
   ) {}
 
   /**
@@ -316,8 +329,14 @@ export class GameManagementService {
       case PhaseName.HEADLINE_RESOLVE:
         await this.resolveHeadlines(phase, game.id);
         break;
+      case PhaseName.SET_COMPANY_IPO_PRICES:
+        await this.botHandleSetCompanyIpoPrices(game.id);
+        break;
       case PhaseName.RESOLVE_SET_COMPANY_IPO_PRICES:
         await this.resolveSetCompanyAndIpoPrices(phase, game.id);
+        break;
+      case PhaseName.INFLUENCE_BID_ACTION:
+        await this.botHandleInfluenceBidAction(game.id);
         break;
       case PhaseName.INFLUENCE_BID_RESOLVE:
         await this.resolveInfluenceBid(phase, game.id);
@@ -336,6 +355,7 @@ export class GameManagementService {
         break;
       case PhaseName.STOCK_ACTION_ORDER:
         await this.handleNewSubStockActionRound(phase);
+        await this.botHandleStockActionOrder(game.id);
         break;
       case PhaseName.STOCK_ACTION_RESULT:
         if (game.isTimerless) {
@@ -377,6 +397,9 @@ export class GameManagementService {
       case PhaseName.OPERATING_PRODUCTION:
         await this.resolveOperatingProduction(phase);
         break;
+      case PhaseName.OPERATING_PRODUCTION_VOTE:
+        await this.botHandleOperatingProductionVote(game.id);
+        break;
       case PhaseName.OPERATING_PRODUCTION_VOTE_RESOLVE:
         await this.resolveOperatingProductionVotes(phase);
         break;
@@ -393,6 +416,9 @@ export class GameManagementService {
             gameId: phase.gameId,
           });
         }
+        break;
+      case PhaseName.OPERATING_ACTION_COMPANY_VOTE:
+        await this.botHandleOperatingActionCompanyVote(game.id);
         break;
       case PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT:
         await this.resolveCompanyVotes(phase);
@@ -1374,13 +1400,15 @@ export class GameManagementService {
       };
     });
 
+    //filter our all bots from players
+    const humanPlayers = players.filter((player) => player.userId);
     // Create player results
-    const playerResults = players.map((player, index) => {
+    const playerResults = humanPlayers.map((player, index) => {
       const placementData = placements.find((p) => p.index === index)!;
       return {
         gameRecordId: gameRecord.id,
         playerId: player.id,
-        userId: player.userId,
+        userId: player.userId as string, //casting here as we ensure every player has a userId
         netWorth: netWorths[index],
         placement: placementData.placement, // Ensure correct placement for each player
         rankingPoints: rankingPoints.find((p) => p.playerId === index)!
@@ -5249,28 +5277,54 @@ export class GameManagementService {
     gameId: string,
     roomId: number,
     startingCashOnHand: number,
+    bots: number,
   ): Promise<Player[]> {
+    // 1) Get real users from the room
     const users = await this.prisma.roomUser.findMany({
-      where: {
-        roomId,
-      },
+      where: { roomId },
       include: {
         user: true,
       },
     });
 
-    return await this.playersService.createManyPlayers(
-      users.map((user) => ({
-        nickname: user.user.name,
+    // 2) Build the array of player data for humans
+    const playersToCreate: Prisma.PlayerCreateManyInput[] = users.map(
+      (roomUser) => ({
+        nickname: roomUser.user.name,
         cashOnHand: startingCashOnHand,
         gameId,
-        userId: user.userId,
+        userId: roomUser.userId,
         marketOrderActions: MAX_MARKET_ORDER_ACTIONS,
         limitOrderActions: MAX_LIMIT_ORDER_ACTIONS,
         shortOrderActions: MAX_SHORT_ORDER_ACTIONS,
         marginAccount: 0,
-      })),
+        isBot: false, // real humans
+      }),
     );
+
+    // 3) Add the requested number of bots
+    //    Each bot uses userId = 'BOT' (or you can do 'BOT-<unique>')
+    //    and sets isBot = true.
+    for (let i = 0; i < bots; i++) {
+      const shortName = uniqueNamesGenerator({
+        dictionaries: [adjectives, animals, colors], // colors can be omitted here as not used
+        length: 2,
+      });
+      playersToCreate.push({
+        nickname: shortName,
+        cashOnHand: startingCashOnHand,
+        gameId,
+        marketOrderActions: MAX_MARKET_ORDER_ACTIONS,
+        limitOrderActions: MAX_LIMIT_ORDER_ACTIONS,
+        shortOrderActions: MAX_SHORT_ORDER_ACTIONS,
+        marginAccount: 0,
+        userId: null,
+        isBot: true,
+      });
+    }
+
+    // 4) Create players in bulk
+    return this.playersService.createManyPlayers(playersToCreate);
   }
 
   async startGame(input: StartGameInput): Promise<Game> {
@@ -5287,6 +5341,7 @@ export class GameManagementService {
       useLimitOrders,
       useShortOrders,
       isTimerless,
+      bots,
     } = input;
 
     const gameData: Prisma.GameCreateInput = {
@@ -5338,15 +5393,17 @@ export class GameManagementService {
         game.id,
         roomId,
         startingCashOnHand,
+        bots,
       );
-
+      //filter out all bot players
+      const humanPlayers = players.filter((player) => !player.isBot);
       //add player ids to roomuser
       await Promise.all(
-        players.map((player) =>
+        humanPlayers.map((player) =>
           this.roomUserService.updateRoomUser({
             where: {
               userId_roomId: {
-                userId: player.userId,
+                userId: player.userId as string,
                 roomId: roomId,
               },
             },
@@ -9390,6 +9447,11 @@ export class GameManagementService {
     return prizes;
   }
 
+  /**
+   * Set player readiness for the given game and player.
+   * If all human (non-bot) players are ready, automatically
+   * set bot players to ready as well.
+   */
   async setPlayerReadiness(
     gameId: string,
     playerId: string,
@@ -9399,57 +9461,72 @@ export class GameManagementService {
       this.readinessStore[gameId] = [];
     }
 
-    const player = this.readinessStore[gameId].find(
-      (p) => p.playerId === playerId,
-    );
+    // 1) Update or create readiness for this player
+    const readinessList = this.readinessStore[gameId];
+    const existing = readinessList.find((p) => p.playerId === playerId);
 
-    if (player) {
-      player.isReady = isReady;
+    if (existing) {
+      existing.isReady = isReady;
     } else {
-      this.readinessStore[gameId].push({ playerId, isReady });
+      readinessList.push({ playerId, isReady });
     }
-    //check if all players are ready
-    //get total player length for game
-    this.playersService
-      .players({
-        where: { gameId },
-      })
-      .then(async (players) => {
-        //if all players are ready, start the next phase
-        if (
-          this.readinessStore[gameId].length === players.length &&
-          this.readinessStore[gameId].every((p) => p.isReady)
-        ) {
-          //get game
-          const game = await this.gamesService.game({ id: gameId });
 
-          if (!game) {
-            throw new Error('Game not found');
-          }
-          if (!game.currentPhaseId) {
-            throw new Error('Current phase not found');
-          }
+    // 2) Load all players (including bots)
+    const allPlayers = await this.playersService.players({
+      where: { gameId },
+    });
 
-          if (!game.isTimerless) {
-            //end current phase timer
-            this.endPhaseTimer(gameId);
-          }
+    // 3) Check how many human players there are and if they’re all ready
+    //    “Human players” = isBot == false OR isBot is null in DB.
+    const humanPlayers = allPlayers.filter((p) => !p.isBot);
 
-          //get the phase
-          const phase = await this.phaseService.phase({
-            id: game.currentPhaseId,
-          });
-          if (!phase) {
-            throw new Error('Phase not found');
-          }
-          //do the thing to start the next phase immediately
-          // Start the next phase immediately
-          this.handlePhaseTransition({
-            phase,
-            gameId,
-          });
+    // 4) Are all human players ready?
+    const allHumansReady = humanPlayers.every((humanPlayer) => {
+      const found = readinessList.find(
+        (item) => item.playerId === humanPlayer.id,
+      );
+      return found?.isReady === true;
+    });
+
+    // 5) If all humans are ready, automatically set all bots as ready
+    if (allHumansReady) {
+      const botPlayers = allPlayers.filter((p) => p.isBot);
+      for (const bot of botPlayers) {
+        const found = readinessList.find((item) => item.playerId === bot.id);
+        if (!found) {
+          readinessList.push({ playerId: bot.id, isReady: true });
+        } else {
+          found.isReady = true;
         }
+      }
+    }
+
+    // 6) If everyone (human + bot) is ready, handle transition
+    const totalPlayers = allPlayers.length;
+    if (
+      this.readinessStore[gameId].length === totalPlayers &&
+      this.readinessStore[gameId].every((p) => p.isReady)
+    ) {
+      // End timer if not timerless
+      const game = await this.gamesService.game({ id: gameId });
+      if (!game) throw new Error('Game not found');
+      if (!game.isTimerless) {
+        this.endPhaseTimer(gameId);
+      }
+
+      // Start next phase
+      if (!game.currentPhaseId) throw new Error('No current phase');
+      const currentPhase = await this.phaseService.phase({
+        id: game.currentPhaseId,
       });
+      if (!currentPhase) throw new Error('Phase not found');
+
+      // Proceed
+      this.handlePhaseTransition({
+        phase: currentPhase,
+        gameId,
+      });
+    }
   }
 
   //set all player readiness to false for gameId helper
@@ -9534,5 +9611,372 @@ export class GameManagementService {
         Player: true,
       },
     });
+  }
+
+  /**
+   * 1) INFLUENCE_BID_ACTION
+   *    Example: Each bot decides how much influence to bid.
+   */
+  private async botHandleInfluenceBidAction(gameId: string): Promise<void> {
+    // 1) Get BOT players for this game
+    const botPlayers = await this.aiBotService.getBotPlayers(gameId);
+    if (!botPlayers.length) return;
+
+    // 2) Retrieve the current InfluenceRound (assuming you have a method to do so)
+    //    If your logic requires a different approach (e.g. looking up by gameTurn),
+    //    adjust accordingly.
+    const influenceRound = await this.prisma.influenceRound.findFirst({
+      where: { gameId /* possibly: roundStep: 0, or gameTurnId: ??? */ },
+      orderBy: { id: 'desc' }, // or however you pick the "current" round
+    });
+    if (!influenceRound) {
+      console.log(`No active influence round found for game ${gameId}.`);
+      return;
+    }
+
+    // 3) For each BOT, place some influence bid
+    for (const bot of botPlayers) {
+      // Suppose each bot randomly bids between 0 and DEFAULT INFLUNCE
+      const influenceMax = DEFAULT_INFLUENCE;
+      const randomBid = this.aiBotService.randomInRange(0, influenceMax);
+
+      // 4) Insert the vote just like a human would do via your service
+      //    (mirroring the data shape: { influence, InfluenceRound, Player, submissionStamp })
+      try {
+        await this.prisma.influenceVote.create({
+          data: {
+            influence: randomBid,
+            // Link the correct round
+            InfluenceRound: { connect: { id: influenceRound.id } },
+            // Link the bot
+            Player: { connect: { id: bot.id } },
+            submissionStamp: new Date(), // or however you set submissionStamp
+          },
+        });
+
+        console.log(
+          `Bot [${bot.nickname}] bids ${randomBid} influence in InfluenceRound ${influenceRound.id}.`,
+        );
+      } catch (error) {
+        console.error(
+          `Failed creating influence vote for bot [${bot.nickname}]:`,
+          error,
+        );
+      }
+    }
+  }
+
+  /**
+   * 2) SET_COMPANY_IPO_PRICES
+   *    Example: Each bot picks an IPO price for newly formed companies.
+   */
+  /**
+   * 2) SET_COMPANY_IPO_PRICES
+   *    Each bot picks an IPO price for newly formed companies the same way a human would.
+   */
+  private async botHandleSetCompanyIpoPrices(gameId: string): Promise<void> {
+    // 1) Get BOT players
+    const botPlayers = await this.aiBotService.getBotPlayers(gameId);
+    if (!botPlayers.length) return;
+
+    // 2) Possibly find the companies that need IPO prices
+    const unpricedCompanies = await this.prisma.company.findMany({
+      where: { gameId, ipoAndFloatPrice: null, status: CompanyStatus.INACTIVE },
+    });
+    if (!unpricedCompanies.length) return;
+
+    // 3) For each bot, for each unpriced company, pick a random IPO price
+    //    and call `createIpoVote(...)` exactly like a human does
+    for (const bot of botPlayers) {
+      for (const company of unpricedCompanies) {
+        // (A) Find the sector
+        const sector = await this.prisma.sector.findUnique({
+          where: { id: company.sectorId },
+        });
+        if (!sector) continue;
+
+        
+        const companyIpoPrices = stockGridPrices.filter(
+          (price) => price >= sector.ipoMin && price <= sector.ipoMax
+        );
+        //get random companyIpoPrice
+        const randomIndex = this.aiBotService.randomInRange(
+          0,
+          companyIpoPrices.length - 1,
+        );
+        // (C) Use the same "createIpoVote" method humans use
+        //     This ensures identical validation, DB writes, etc.
+        await this.createIpoVote({
+          playerId: bot.id,
+          companyId: company.id,
+          ipoPrice: companyIpoPrices[randomIndex],
+        });
+
+        console.log(
+          `Bot [${bot.nickname}] sets IPO price = ${companyIpoPrices[randomIndex]} for ${company.name}.`,
+        );
+      }
+    }
+  }
+
+  /**
+   * 4) STOCK_ACTION_ORDER
+   *    Example: Each bot decides to place buy/sell orders during the stock round.
+   */
+  /**
+   * STOCK_ACTION_ORDER
+   *
+   * The bot will only create "Market Buy" orders—no limit, no short, no option.
+   */
+  private async botHandleStockActionOrder(gameId: string): Promise<void> {
+    const botPlayers = await this.aiBotService.getBotPlayers(gameId);
+    if (!botPlayers.length) return;
+
+    // Find companies in ACTIVE or INACTIVE status
+    const companies = await this.prisma.company.findMany({
+      where: {
+        gameId,
+        status: { in: [CompanyStatus.ACTIVE, CompanyStatus.INACTIVE] },
+      },
+    });
+    if (!companies.length) return;
+
+    for (const bot of botPlayers) {
+      // Skip if no cash
+      if (bot.cashOnHand <= 0) {
+        console.log(`Bot [${bot.nickname}] has no cash; skipping buy.`);
+        continue;
+      }
+
+      // Pick a random company
+      const randomIndex = this.aiBotService.randomInRange(
+        0,
+        companies.length - 1,
+      );
+      const randomCompany = companies[randomIndex];
+
+      try {
+        // Use your existing method that humans call for consistency
+        const playerOrder = await this.createPlayerOrder({
+          // The player & company
+          playerId: bot.id,
+          companyId: randomCompany.id,
+
+          // Only a MARKET order
+          orderType: OrderType.MARKET,
+          location: ShareLocation.IPO,
+
+          // Single share buy
+          quantity: 1,
+          value: 0, // '0' for a market buy in many setups
+          isSell: false,
+
+          // Standard defaults
+          orderStatus: OrderStatus.PENDING,
+          gameId,
+          submissionStamp: new Date(),
+        });
+
+        // Decrement the bot's stock action counter
+        await this.playersService.subtractActionCounter(
+          playerOrder.playerId,
+          playerOrder.orderType,
+        );
+
+        console.log(
+          `Bot [${bot.nickname}] placed a MARKET BUY (1 share) on ${randomCompany.name}.`,
+        );
+      } catch (error) {
+        console.error(
+          `Bot [${bot.nickname}] failed to create Market Buy order:`,
+          error,
+        );
+      }
+    }
+  }
+
+  /**
+   * 7) OPERATING_PRODUCTION_VOTE
+   *    Each bot decides how to vote for distribution of revenue:
+   *    e.g. FULL DIVIDEND, FIFTY-FIFTY, or RETAINED, etc.
+   */
+  /**
+   * OPERATING_PRODUCTION_VOTE
+   *
+   * Each bot will fetch the same OperatingRound + ProductionResults
+   * that humans see, then cast a RevenueDistribution vote.
+   */
+  private async botHandleOperatingProductionVote(
+    gameId: string,
+  ): Promise<void> {
+    // 1) Get bot players
+    const botPlayers = await this.aiBotService.getBotPlayers(gameId);
+    if (!botPlayers.length) return;
+
+    // 2) Find the current phase to see if it has an operatingRoundId
+    const currentPhase = await this.phaseService.currentPhase(gameId);
+    if (!currentPhase?.operatingRoundId) {
+      console.log(`No operatingRoundId found for phase in gameId=${gameId}.`);
+      return;
+    }
+
+    // 3) Fetch the operating round + production results
+    //    (mirroring the same query your frontend uses)
+    const operatingRound =
+      await this.operatingRoundService.operatingRoundWithProductionResults({
+        id: currentPhase.operatingRoundId,
+      });
+    if (!operatingRound) {
+      console.log(
+        `No operating round found for id=${currentPhase.operatingRoundId}.`,
+      );
+      return;
+    }
+    if (!operatingRound.productionResults?.length) {
+      console.log(
+        `No production results found in operating round=${operatingRound.id}.`,
+      );
+      return;
+    }
+
+    // 4) For each active company, the production result is up for vote.
+    //    The human UI is grouping them by sector, but for bots,
+    //    we just need to see each ProductionResult and place a vote.
+    //    We'll pick a random distribution as an example.
+    const distributionChoices = [
+      RevenueDistribution.DIVIDEND_FULL,
+      RevenueDistribution.DIVIDEND_FIFTY_FIFTY,
+      RevenueDistribution.RETAINED,
+    ];
+
+    // 5) For each BOT, for each ProductionResult, cast a vote
+    for (const bot of botPlayers) {
+      for (const result of operatingRound.productionResults) {
+        // e.g. skip if the company status is not active:
+        if (result.Company?.status !== CompanyStatus.ACTIVE) continue;
+
+        // pick a random distribution
+        const randomIndex = Math.floor(
+          Math.random() * distributionChoices.length,
+        );
+        const chosenDistribution = distributionChoices[randomIndex];
+
+        // 6) Reuse the same data structure that humans do
+        //    Typically: { operatingRoundId, productionResultId, playerId, companyId,
+        //                revenueDistribution, gameId }
+
+        // If you have a top-level method, e.g.:
+        //   gameManagementService.createRevenueDistributionVote({ ... })
+        // call that. Otherwise, if your final code calls
+        //   revenueDistributionVoteService.createRevenueDistributionVote({ ... })
+        // you can do so directly here.
+
+        try {
+          await this.revenueDistributionVoteService.createRevenueDistributionVote(
+            {
+              OperatingRound: { connect: { id: operatingRound.id } },
+              ProductionResult: { connect: { id: result.id } },
+              Player: { connect: { id: bot.id } },
+              Company: { connect: { id: result.companyId } },
+              revenueDistribution: chosenDistribution,
+            },
+          );
+
+          console.log(
+            `Bot [${bot.nickname}] voted ${chosenDistribution} for Company ${result.Company?.name}.`,
+          );
+        } catch (error) {
+          console.error(
+            `Bot [${bot.nickname}] failed to cast vote for ProductionResult=${result.id}:`,
+            error,
+          );
+        }
+      }
+    }
+  }
+
+  /**
+   * 8) OPERATING_ACTION_COMPANY_VOTE
+   *    Each bot decides which action (OperatingRoundAction)
+   *    the company should take.
+   */
+  private async botHandleOperatingActionCompanyVote(
+    gameId: string,
+  ): Promise<void> {
+    // 1) Get the current phase to see if there is a companyId/operatingRoundId
+    const currentPhase = await this.phaseService.currentPhase(gameId);
+    if (
+      !currentPhase ||
+      currentPhase.name !== PhaseName.OPERATING_ACTION_COMPANY_VOTE
+    ) {
+      console.log(
+        `No valid operating-action-company-vote phase found for gameId=${gameId}.`,
+      );
+      return;
+    }
+    if (!currentPhase.companyId || !currentPhase.operatingRoundId) {
+      console.log(
+        `Phase is missing companyId or operatingRoundId, cannot place votes.`,
+      );
+      return;
+    }
+
+    const botPlayers = await this.aiBotService.getBotPlayers(gameId);
+    if (!botPlayers.length) return;
+
+    const possibleActions = [
+      OperatingRoundAction.VETO,
+      OperatingRoundAction.EXPANSION,
+      OperatingRoundAction.MARKETING_SMALL_CAMPAIGN,
+      OperatingRoundAction.MARKETING,
+      OperatingRoundAction.OUTSOURCE,
+      OperatingRoundAction.LOAN,
+      OperatingRoundAction.DOWNSIZE,
+      OperatingRoundAction.SPEND_PRESTIGE,
+      OperatingRoundAction.INCREASE_PRICE,
+      OperatingRoundAction.DECREASE_PRICE,
+      OperatingRoundAction.MERGE,
+      OperatingRoundAction.RESEARCH,
+      OperatingRoundAction.SHARE_BUYBACK,
+      OperatingRoundAction.SHARE_ISSUE,
+      OperatingRoundAction.PRODUCTION,
+      OperatingRoundAction.LOBBY,
+      OperatingRoundAction.LICENSING_AGREEMENT,
+    ];
+
+    // 4) Each bot picks a random action and submits a vote
+    for (const bot of botPlayers) {
+      // Decide how many actions to vote for:
+      // For a simple example, we vote for exactly ONE action.
+      // If your game allows multiple actions, you could loop or pick multiple.
+      const choice =
+        possibleActions[
+          this.aiBotService.randomInRange(0, possibleActions.length - 1)
+        ];
+
+      try {
+        // 5) Call the same method your humans do:
+        //    e.g. `operatingRoundVoteService.createOperatingRoundVote({ ... })`
+        //    or if your code calls `gameManagementService.createOperatingRoundVote(...)`,
+        //    do that instead. The important part is to pass the same shape:
+        await this.operatingRoundVoteService.createOperatingRoundVote({
+          OperatingRound: { connect: { id: currentPhase.operatingRoundId } },
+          Player: { connect: { id: bot.id } },
+          Company: { connect: { id: currentPhase.companyId } },
+          actionVoted: choice,
+          // submissionStamp if needed:
+          submissionStamp: new Date(),
+        });
+
+        console.log(
+          `Bot [${bot.nickname}] votes for "${choice}" on companyId=${currentPhase.companyId}.`,
+        );
+      } catch (error) {
+        console.error(
+          `Bot [${bot.nickname}] failed to cast operating action vote for "${choice}":`,
+          error,
+        );
+      }
+    }
   }
 }

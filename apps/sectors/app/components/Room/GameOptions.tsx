@@ -28,6 +28,7 @@ type ValueMap = {
   useShortOrders: { [key: number]: boolean };
   useLimitOrders: { [key: number]: boolean };
   isTimerless: { [key: number]: boolean };
+  bots: { [key: number]: number };
 };
 
 type GameOptionsKeys = keyof ValueMap;
@@ -47,6 +48,7 @@ interface GameOptionsState {
   useShortOrders: boolean;
   useLimitOrders: boolean;
   isTimerless: boolean;
+  bots: number;
 }
 
 export const GameOptionDescription: React.FC<{
@@ -79,6 +81,7 @@ const GameOptions: React.FC<GameOptionsProps> = ({ onOptionsChange }) => {
     useShortOrders: false,
     useLimitOrders: false,
     isTimerless: GAME_SETUP_DEFAULT_TIMERLESS,
+    bots: 0,
   });
 
   useEffect(() => {
@@ -134,6 +137,18 @@ const GameOptions: React.FC<GameOptionsProps> = ({ onOptionsChange }) => {
     isTimerless: {
       1: true,
       2: false,
+    },
+    bots: {
+      1: 0,
+      2: 1,
+      3: 2,
+      4: 3,
+      5: 4,
+      6: 5,
+      7: 6,
+      8: 7,
+      9: 8,
+      10: 9,
     },
   };
 
@@ -442,6 +457,58 @@ const GameOptions: React.FC<GameOptionsProps> = ({ onOptionsChange }) => {
           </SelectItem>
           <SelectItem key={2} value={2}>
             No
+          </SelectItem>
+        </Select>
+      </div>
+      <div className="mb-4 flex flex-col">
+        <GameOptionDescription
+          name="Bots"
+          description={
+            <p className={tooltipParagraphStyle}>
+              The amount of bots to be added to the game.
+            </p>
+          }
+        />
+        <Select
+          size="lg"
+          className="max-w-xs"
+          onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+            handleSelectChange("bots", Number(e.target.value))
+          }
+          defaultSelectedKeys={["1"]}
+          popoverProps={{
+            color: "primary",
+          }}
+        >
+          <SelectItem key={1} value={1}>
+            0
+          </SelectItem>
+          <SelectItem key={2} value={2}>
+            1
+          </SelectItem>
+          <SelectItem key={3} value={3}>
+            2
+          </SelectItem>
+          <SelectItem key={4} value={4}>
+            3
+          </SelectItem>
+          <SelectItem key={5} value={5}>
+            4
+          </SelectItem>
+          <SelectItem key={6} value={6}>
+            5
+          </SelectItem>
+          <SelectItem key={7} value={7}>
+            6
+          </SelectItem>
+          <SelectItem key={8} value={8}>
+            7
+          </SelectItem>
+          <SelectItem key={9} value={9}>
+            8
+          </SelectItem>
+          <SelectItem key={10} value={10}>
+            9
           </SelectItem>
         </Select>
       </div>

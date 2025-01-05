@@ -5,7 +5,7 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
   previewFeatures = ["relationJoins"]
 }
 
@@ -73,12 +73,12 @@ model Player {
   nickname                 String
   cashOnHand               Int
   gameId                   String
-  userId                   String                    @db.Uuid
+  userId                   String?                   @db.Uuid
   accountStatus            AccountStatus             @default(ACTIVE)
   marginAccount            Int                       @default(0)
   overdraftTier            OverdraftTier?
   Game                     Game                      @relation(fields: [gameId], references: [id])
-  User                     User                      @relation(fields: [userId], references: [id])
+  User                     User?                     @relation(fields: [userId], references: [id])
   Share                    Share[]
   MeetingMessage           MeetingMessage[]
   CaptialGains             CapitalGains[]
@@ -103,6 +103,7 @@ model Player {
   RoomUser                 RoomUser?
   PlayerHeadline           PlayerHeadline[]
   CompanyIpoPriceVote      CompanyIpoPriceVote[]
+  isBot                    Boolean                   @default(false)
 }
 
 enum AccountStatus {
@@ -1513,7 +1514,6 @@ enum ExecutiveGameStatus {
   PAUSED
   FINISHED
 }
-
 
 enum ExecutivePhaseName {
   START_GAME
