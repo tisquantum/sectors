@@ -10,7 +10,8 @@
     "lint": "next lint",
     "e-dev": "concurrently \"pnpm run dev\" \"pnpm run electron-dev\"",
     "electron-dev": "wait-on http://localhost:3000 && electron .",
-    "electron-pack": "electron-packager . MyElectronApp --platform=win32 --arch=x64 --out=dist --overwrite --ignore='^/(node_modules|\\.git|\\.vscode|dist|out)'"
+    "electron-pack": "electron-packager . MyElectronApp --platform=win32 --arch=x64 --out=dist --overwrite",
+    "electron-build": "electron-builder --win --x64"
   },
   "main": "main/main.js",
   "dependencies": {
