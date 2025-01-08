@@ -1,8 +1,9 @@
-// main/main.js (now ESM)
+// main/main.js
 
 import { app, BrowserWindow } from 'electron';
 import path from 'path';
-import isDev from 'electron-is-dev';
+// Remove import of 'electron-is-dev'
+// import isDev from 'electron-is-dev';
 import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
@@ -14,6 +15,8 @@ let mainWindow;
 let nextProcess;
 
 function createWindow() {
+  const isDev = !app.isPackaged; // Use app.isPackaged
+
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -27,7 +30,7 @@ function createWindow() {
   const port = process.env.PORT || 3000;
   const startURL = isDev
     ? `http://localhost:${port}`
-    : `http://localhost:${port}`;
+    : `http://localhost:${port}`; // Adjust this in the next step
 
   mainWindow.loadURL(startURL);
 
@@ -37,7 +40,10 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  const isDev = !app.isPackaged; // Use app.isPackaged
+
   if (!isDev) {
+    // Start Next.js in production mode
     nextProcess = spawn('npm', ['start'], {
       shell: true,
       env: { ...process.env, PORT: 3000 },

@@ -10,7 +10,7 @@
     "lint": "next lint",
     "e-dev": "concurrently \"pnpm run dev\" \"pnpm run electron-dev\"",
     "electron-dev": "wait-on http://localhost:3000 && electron .",
-    "electron-pack": "electron-packager . MyElectronApp --platform=win32 --arch=x64 --out=dist"
+    "electron-pack": "electron-packager . MyElectronApp --platform=win32 --arch=x64 --out=dist --overwrite --ignore='^/(node_modules|\\.git|\\.vscode|dist|out)'"
   },
   "main": "main/main.js",
   "dependencies": {
@@ -37,8 +37,6 @@
     "@uidotdev/usehooks": "^2.4.1",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
-    "electron-is-dev": "^3.0.1",
-    "electron-serve": "^2.1.1",
     "framer-motion": "^11.2.10",
     "lodash": "^4.17.21",
     "lucide-react": "^0.439.0",
@@ -56,12 +54,15 @@
     "wait-on": "^8.0.1"
   },
   "devDependencies": {
+    "@electron/packager": "^18.3.6",
     "@tailwindcss/forms": "^0.5.7",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "concurrently": "^9.1.2",
     "electron": "^33.3.1",
+    "electron-is-dev": "^3.0.1",
+    "electron-serve": "^2.1.1",
     "electron-builder": "^25.1.8",
     "eslint": "^8",
     "eslint-config-next": "14.2.3",
