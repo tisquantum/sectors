@@ -214,7 +214,6 @@ const GameOptions: React.FC<GameOptionsProps> = ({ onOptionsChange }) => {
           size="lg"
           className="max-w-xs"
           onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
-            console.log("select change", e.target.value);
             handleSelectChange("startingCashOnHand", Number(e.target.value));
           }}
           defaultSelectedKeys={["2"]}
