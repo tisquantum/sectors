@@ -181,6 +181,7 @@ const GameOptions: React.FC<GameOptionsProps> = ({ onOptionsChange }) => {
           defaultSelectedKeys={["1"]}
           popoverProps={{
             color: "primary",
+            className: "pointer-events-auto",
           }}
         >
           <SelectItem key={1} value={1}>
@@ -212,13 +213,16 @@ const GameOptions: React.FC<GameOptionsProps> = ({ onOptionsChange }) => {
         <Select
           size="lg"
           className="max-w-xs"
-          onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-            handleSelectChange("startingCashOnHand", Number(e.target.value))
-          }
+          onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+            console.log("select change", e.target.value);
+            handleSelectChange("startingCashOnHand", Number(e.target.value));
+          }}
           defaultSelectedKeys={["2"]}
           popoverProps={{
             color: "primary",
+            className: "pointer-events-auto",
           }}
+          aria-label="Starting Cash on Hand"
         >
           <SelectItem key={1} value={1}>
             200 (Business Elite)
@@ -249,6 +253,7 @@ const GameOptions: React.FC<GameOptionsProps> = ({ onOptionsChange }) => {
           defaultSelectedKeys={["2"]}
           popoverProps={{
             color: "primary",
+            className: "pointer-events-auto",
           }}
         >
           <SelectItem key={1} value={1}>
@@ -307,6 +312,7 @@ const GameOptions: React.FC<GameOptionsProps> = ({ onOptionsChange }) => {
           defaultSelectedKeys={["3"]}
           popoverProps={{
             color: "primary",
+            className: "pointer-events-auto",
           }}
         >
           {/* <SelectItem key={1} value={1}>
@@ -338,6 +344,7 @@ const GameOptions: React.FC<GameOptionsProps> = ({ onOptionsChange }) => {
           defaultSelectedKeys={["1"]}
           popoverProps={{
             color: "primary",
+            className: "pointer-events-auto",
           }}
         >
           <SelectItem key={1} value={1}>
@@ -376,6 +383,7 @@ const GameOptions: React.FC<GameOptionsProps> = ({ onOptionsChange }) => {
           defaultSelectedKeys={["2"]}
           popoverProps={{
             color: "primary",
+            className: "pointer-events-auto",
           }}
         >
           <SelectItem key={1} value={1}>
@@ -450,6 +458,7 @@ const GameOptions: React.FC<GameOptionsProps> = ({ onOptionsChange }) => {
           defaultSelectedKeys={["1"]}
           popoverProps={{
             color: "primary",
+            className: "pointer-events-auto",
           }}
         >
           <SelectItem key={1} value={1}>
@@ -478,6 +487,7 @@ const GameOptions: React.FC<GameOptionsProps> = ({ onOptionsChange }) => {
           defaultSelectedKeys={["1"]}
           popoverProps={{
             color: "primary",
+            className: "pointer-events-auto",
           }}
         >
           <SelectItem key={1} value={1}>
