@@ -39,6 +39,9 @@ const PlayerSelect = ({
         base: "max-w-xs",
         trigger: "min-h-12 py-2",
       }}
+      popoverProps={{
+        className: "pointer-events-auto",
+      }}
       renderValue={(items) => {
         return (
           <div className="flex flex-wrap gap-2">
