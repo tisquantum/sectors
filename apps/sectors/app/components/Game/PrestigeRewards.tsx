@@ -55,7 +55,7 @@ const PrestigeRewards: React.FC<PrestigeRewardsProps> = ({
         }
 
         return (
-          <Popover>
+          <Popover key={index}>
             <PopoverTrigger>
               <motion.div
                 className={`${
