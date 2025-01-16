@@ -127,24 +127,7 @@ const FinancialQuote = () => {
 };
 
 const StartTurnUpdates = () => {
-  const { currentTurn, gameId } = useGame();
-  const {
-    data: companyWithSector,
-    isLoading,
-    isError,
-  } = trpc.company.companyWithSectorFindFirst.useQuery(
-    {
-      where: {
-        gameId,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    },
-    {
-      enabled: currentTurn.turn % 3 === 0,
-    }
-  );
+  const { currentTurn } = useGame();
 
   return (
     <motion.div
@@ -179,30 +162,6 @@ const StartTurnUpdates = () => {
           <FinancialQuote />
         )}
       </motion.div>
-      {currentTurn.turn % 3 === 0 && (
-        <motion.div
-          className="flex flex-col justify-center items-center bg-black p-6 rounded-md mt-4 shadow-2xl border border-green-600"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5, duration: 0.7 }}
-        >
-          <motion.p
-            className="text-2xl font-semibold text-green-400 mb-2"
-            initial={{ x: -10 }}
-            animate={{ x: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            A new company has opened in {companyWithSector?.Sector.name},
-            welcome {companyWithSector?.name}!
-          </motion.p>
-          <motion.div
-            className="mt-4 w-full h-1 bg-green-400 rounded"
-            initial={{ scaleX: 0 }}
-            animate={{ scaleX: 1 }}
-            transition={{ duration: 2 }}
-          />
-        </motion.div>
-      )}
     </motion.div>
   );
 };

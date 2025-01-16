@@ -911,15 +911,16 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
             <div className="flex flex-col gap-2 justify-center items-center">
               <div className="flex flex-col gap-2 items-center justify-center">
                 <h2>Turn Order</h2>
-                <Tooltip
-                  classNames={{ base: baseToolTipStyle }}
-                  className={tooltipStyle}
-                  content={<CompanyPriorityList companies={companies} />}
-                >
-                  <span className="flex flex-row gap-2">
-                    <Info /> Company Priority List
-                  </span>
-                </Tooltip>
+                <Popover>
+                  <PopoverTrigger>
+                    <span className="flex flex-row gap-2">
+                      <Info /> Company Priority List
+                    </span>
+                  </PopoverTrigger>
+                  <PopoverContent>
+                    <CompanyPriorityList companies={companies} />
+                  </PopoverContent>
+                </Popover>
               </div>
               <div className="flex flex-col gap-2 justify-center items-center">
                 {showLock && <RiLockFill />}
