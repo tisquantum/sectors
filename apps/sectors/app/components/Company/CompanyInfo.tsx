@@ -491,6 +491,22 @@ const CompanyInfo = ({
                   <RiWallet3Fill size={20} /> <span>${company.cashOnHand}</span>
                 </div>
               </Tooltip>
+              {company.ipoAndFloatPrice && (
+                <Tooltip
+                  classNames={{ base: baseToolTipStyle }}
+                  className={tooltipStyle}
+                  content={
+                    <p className={tooltipParagraphStyle}>
+                      The initial public offering price.
+                    </p>
+                  }
+                >
+                  <div className={`flex items-center gap-1`}>
+                    <span className="text-lg">IPO</span>
+                    <span>${company.ipoAndFloatPrice}</span>
+                  </div>
+                </Tooltip>
+              )}
               <Tooltip
                 classNames={{ base: baseToolTipStyle }}
                 className={tooltipStyle}
