@@ -150,14 +150,16 @@ const InfluenceBid = ({ isRevealRound }: { isRevealRound?: boolean }) => {
         <h1 className="text-2xl">Influence Bid</h1>
         {isRevealRound ? (
           <div>
-            <div className="flex gap-4">
+            <div className="flex flex-wrap gap-4">
               {influenceRoundVotesRevealExtended?.map((vote) => (
                 <div key={vote.id} className="flex flex-col gap-2">
                   <div className="flex flex-col gap-2 bg-slate-800 p-2 rounded-md items-center max-w-64">
                     <PlayerAvatar player={vote.Player} showNameLabel />
-                    <div className="text-center">
-                      uses {vote.influence} influence of {maxInfluence}, earning
-                      a bonus ${maxInfluence - vote.influence}.
+                    <div className="flex flex-col gap-2 justify-center items-center">
+                      <span>
+                        {vote.influence} of {maxInfluence}
+                      </span>
+                      <span>+ ${maxInfluence - vote.influence}</span>
                     </div>
                   </div>
                 </div>
