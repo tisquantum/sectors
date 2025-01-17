@@ -935,7 +935,7 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
                 <h2>Turn Order</h2>
                 <Popover>
                   <PopoverTrigger>
-                    <span className="flex flex-row gap-2">
+                    <span className="flex flex-row gap-2 cursor-pointer">
                       <Info /> Company Priority List
                     </span>
                   </PopoverTrigger>
