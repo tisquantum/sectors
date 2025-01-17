@@ -134,6 +134,7 @@ const StockChart = () => {
       const stockHistory = selectedCompany.StockHistory;
       const data = stockHistory
         .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+        .filter((stockHistory) => stockHistory.price !== 0)
         .map((stockHistory, index) => ({
           phaseId: `${index + 1} ${stockHistory.Phase.name}`,
           stockPrice: stockHistory.price,
@@ -176,6 +177,7 @@ const StockChart = () => {
         return company.StockHistory.sort(
           (a, b) => a.createdAt.getTime() - b.createdAt.getTime()
         ) // Sort by createdAt
+          .filter((stockHistory) => stockHistory.price !== 0)
           .map((stockHistory, index) => ({
             indexer: `${index + 1} ${stockHistory.Phase.name}`,
             phaseId: stockHistory.phaseId, // Generate consistent phaseId

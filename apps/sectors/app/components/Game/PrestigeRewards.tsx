@@ -1,4 +1,10 @@
-import { Badge, Tooltip } from "@nextui-org/react";
+import {
+  Badge,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  Tooltip,
+} from "@nextui-org/react";
 import { PrestigeTrack, PrestigeTrackItem } from "@server/data/constants";
 import { createPrestigeTrackBasedOnSeed } from "@server/data/helpers";
 import { PrestigeReward } from "@server/prisma/prisma.client";
@@ -49,49 +55,47 @@ const PrestigeRewards: React.FC<PrestigeRewardsProps> = ({
         }
 
         return (
-          <Tooltip
-            key={index}
-            content={
+          <Popover key={index}>
+            <PopoverTrigger>
+              <motion.div
+                className={`${
+                  layout === "grid"
+                    ? "flex flex-col items-center p-1 bg-gray-700 rounded-lg text-white hover:bg-gray-600"
+                    : "flex flex-col items-center p-1 text-white"
+                } ${
+                  (gameState.nextPrestigeReward || 0) === index &&
+                  "ring-2 ring-blue-500"
+                }`}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <div className="flex gap-1 items-center">
+                  <div className="w-5 h-5">
+                    <PrestigeIcon prestigeType={reward.type} />
+                  </div>
+                  <div className="flex flex-col items-center justify-center">
+                    <div className="flex items-center gap-1 text-sm lg:text-base">
+                      <RiSparkling2Fill className="ml-2 size-4 text-yellow-500" />{" "}
+                      {reward.cost}
+                    </div>
+                    {reward.type == PrestigeReward.CAPITAL_INJECTION &&
+                      renderCapitalInjection(index, reward)}
+                  </div>
+                </div>
+                {layout === "grid" && (
+                  <div className="mt-2 text-center text-sm lg:text-base">
+                    {reward.name}
+                  </div>
+                )}
+              </motion.div>
+            </PopoverTrigger>
+            <PopoverContent>
               <div className="flex flex-col">
                 <span>{reward.name}</span>
                 <p>{reward.description}</p>
               </div>
-            }
-            classNames={{ base: baseToolTipStyle }}
-            className={tooltipStyle}
-          >
-            <motion.div
-              className={`${
-                layout === "grid"
-                  ? "flex flex-col items-center p-1 bg-gray-700 rounded-lg text-white hover:bg-gray-600"
-                  : "flex flex-col items-center p-1 text-white"
-              } ${
-                (gameState.nextPrestigeReward || 0) === index &&
-                "ring-2 ring-blue-500"
-              }`}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <div className="flex gap-1 items-center">
-                <div className="w-5 h-5">
-                  <PrestigeIcon prestigeType={reward.type} />
-                </div>
-                <div className="flex flex-col items-center justify-center">
-                  <div className="flex items-center gap-1 text-sm lg:text-base">
-                    <RiSparkling2Fill className="ml-2 size-4 text-yellow-500" />{" "}
-                    {reward.cost}
-                  </div>
-                  {reward.type == PrestigeReward.CAPITAL_INJECTION &&
-                    renderCapitalInjection(index, reward)}
-                </div>
-              </div>
-              {layout === "grid" && (
-                <div className="mt-2 text-center text-sm lg:text-base">
-                  {reward.name}
-                </div>
-              )}
-            </motion.div>
-          </Tooltip>
+            </PopoverContent>
+          </Popover>
         );
       })}
     </div>

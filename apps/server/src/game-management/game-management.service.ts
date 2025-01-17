@@ -9801,11 +9801,17 @@ export class GameManagementService {
       //we return as no bot will act
       return;
     }
+    const botOddsToAct =
+      stockSubRound.roundNumber === 1
+        ? 0.9
+        : stockSubRound.roundNumber === 2
+          ? 0.7
+          : 0.5;
     // 2) For each bot, decide how many actions (0..3)
     for (const bot of botPlayers) {
       const companiesSoldThisTurn = new Set<string>();
 
-      const botWillPlaceOrder = Math.random() < 0.6;
+      const botWillPlaceOrder = Math.random() < botOddsToAct;
 
       if (!botWillPlaceOrder) {
         console.log(`Bot [${bot.nickname}] decides to skip stock action.`);
