@@ -333,14 +333,14 @@ const StockRoundOrderGrid = ({
                     <div className="h-96 w-80">
                       <LineChart
                         className="w-full"
-                        data={selectedCompanyOrder.company.StockHistory.map(
-                          (stockHistory, index) => ({
-                            phaseId: `${index + 1} ${stockHistory.Phase.name}`,
-                            stockPrice: stockHistory.price,
-                            stockAction: stockHistory.action,
-                            steps: stockHistory.stepsMoved,
-                          })
-                        )}
+                        data={selectedCompanyOrder.company.StockHistory.filter(
+                          (stockHistory) => stockHistory.price !== 0
+                        ).map((stockHistory, index) => ({
+                          phaseId: `${index + 1} ${stockHistory.Phase.name}`,
+                          stockPrice: stockHistory.price,
+                          stockAction: stockHistory.action,
+                          steps: stockHistory.stepsMoved,
+                        }))}
                         index="phaseId"
                         categories={["stockPrice"]}
                         yAxisLabel="Stock Price"
