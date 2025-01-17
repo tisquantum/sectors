@@ -76,6 +76,7 @@ import {
   RiTicket2Fill,
   RiWalletFill,
   RiBuilding2Fill,
+  RiGovernmentFill,
 } from "@remixicon/react";
 import {
   companyPriorityOrderOperations,
@@ -533,20 +534,41 @@ const CompanyActionSelectionVote = ({
               </p>
             </div>
             <div className="flex justify-center">
-              {submitComplete ? (
-                <div>
-                  <span>Vote(s) Submitted</span>
-                </div>
-              ) : currentPhase?.name ===
-                  PhaseName.OPERATING_ACTION_COMPANY_VOTE &&
-                currentPhase?.companyId === company.id ? (
-                <DebounceButton
-                  onClick={handleSubmit}
-                  disabled={submitComplete}
-                  isLoading={isLoadingSelectionVote}
-                >
-                  Submit All Votes
-                </DebounceButton>
+              {authPlayer ? (
+                submitComplete ? (
+                  <div>
+                    <span>Vote(s) Submitted</span>
+                  </div>
+                ) : currentPhase?.name ===
+                    PhaseName.OPERATING_ACTION_COMPANY_VOTE &&
+                  currentPhase?.companyId === company.id ? (
+                  <div className="flex flex-col items-center gap-4 p-4 shadow-sm">
+                    <div className="flex items-center gap-2 text-lg font-semibold text-gray-300">
+                      <RiGovernmentFill size={22} className="text-blue-500" />
+                      <span
+                        className={`${
+                          companyAllowedActions == selectedActions.length
+                            ? "text-blue-400"
+                            : "text-blue-600"
+                        }`}
+                      >
+                        {` ${selectedActions.length}`}
+                      </span>
+                      <span>of</span>
+                      <span className="text-blue-400">
+                        {` ${companyAllowedActions}`}
+                      </span>
+                    </div>
+                    <DebounceButton
+                      onClick={handleSubmit}
+                      disabled={submitComplete}
+                      isLoading={isLoadingSelectionVote}
+                      className="mt-2 px-4 py-2 text-white bg-blue-600 rounded hover:bg-blue-700 disabled:bg-gray-400"
+                    >
+                      Submit All Votes
+                    </DebounceButton>
+                  </div>
+                ) : null
               ) : null}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">

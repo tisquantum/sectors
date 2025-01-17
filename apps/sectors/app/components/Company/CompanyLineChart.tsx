@@ -21,12 +21,14 @@ export const CompanyLineChart = ({ companyId }: { companyId: string }) => {
   if (!company) return <div>Company not found</div>;
   const chartData = company.StockHistory.sort(
     (a, b) => a.createdAt.getTime() - b.createdAt.getTime()
-  ).map((stockHistory, index) => ({
-    phaseId: `${index + 1} ${stockHistory.Phase.name}`,
-    stockPrice: stockHistory.price,
-    stockAction: stockHistory.action,
-    steps: stockHistory.stepsMoved,
-  }));
+  )
+    .filter((stockHistory) => stockHistory.price !== 0)
+    .map((stockHistory, index) => ({
+      phaseId: `${index + 1} ${stockHistory.Phase.name}`,
+      stockPrice: stockHistory.price,
+      stockAction: stockHistory.action,
+      steps: stockHistory.stepsMoved,
+    }));
   return (
     <div className="flex flex-col justify-center items-center h-[400px] w-[330px] lg:w-[500px]">
       {company.name}
