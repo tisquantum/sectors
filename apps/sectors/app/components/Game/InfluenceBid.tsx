@@ -159,7 +159,7 @@ const InfluenceBid = ({ isRevealRound }: { isRevealRound?: boolean }) => {
                       <span>
                         {vote.influence} of {maxInfluence}
                       </span>
-                      <span>${maxInfluence - vote.influence}</span>
+                      <span>+ ${maxInfluence - vote.influence}</span>
                     </div>
                   </div>
                 </div>
