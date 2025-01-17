@@ -475,21 +475,28 @@ export class GameManagementService {
       },
       {} as Record<string, CompanyIpoPriceVote[]>,
     );
-    //determine the average ipo price for each company
-    const averageIpoPrices = Object.entries(groupedVotes).map(
-      ([companyId, votes]) => {
+
+    // Determine IPO prices for each company
+    const companyIpoPrices = companies.map((company) => {
+      const votes = groupedVotes[company.id] || [];
+      let averagePrice: number;
+
+      if (votes.length > 0) {
         const total = votes.reduce((acc, vote) => acc + vote.ipoPrice, 0);
-        return { companyId, average: total / votes.length };
-      },
-    );
-    //find the closest price on stockGridPrices
-    const companyIpoPrices = averageIpoPrices.map(({ companyId, average }) => {
+        averagePrice = total / votes.length;
+      } else {
+        // Calculate the middle value between ipoMin and ipoMax
+        averagePrice = (company.Sector.ipoMin + company.Sector.ipoMax) / 2;
+      }
+
+      // Find the closest price on stockGridPrices
       const closestPrice = stockGridPrices.reduce((acc, price) => {
-        return Math.abs(price - average) < Math.abs(acc - average)
+        return Math.abs(price - averagePrice) < Math.abs(acc - averagePrice)
           ? price
           : acc;
       });
-      return { companyId, price: closestPrice };
+
+      return { companyId: company.id, price: closestPrice };
     });
     for (const { companyId, price } of companyIpoPrices) {
       const company = companies.find((company) => company.id === companyId);
