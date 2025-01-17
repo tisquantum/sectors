@@ -102,6 +102,20 @@ const OperatingRoundRevenueVoteResolve = () => {
       ? Math.floor((productionResult.revenue / totalShares) * shareCount)
       : 0;
   };
+
+  const friendlyDistributionName = (distribution: RevenueDistribution) => {
+    switch (distribution) {
+      case RevenueDistribution.DIVIDEND_FULL:
+        return "Full";
+      case RevenueDistribution.DIVIDEND_FIFTY_FIFTY:
+        return "Fifty Fifty";
+      case RevenueDistribution.RETAINED:
+        return "Retained";
+      default:
+        return "Unknown";
+    }
+  };
+
   return (
     <div>
       <h1 className="text-2xl">Operating Round Revenue Vote Resolution</h1>
@@ -231,8 +245,8 @@ const OperatingRoundRevenueVoteResolve = () => {
                   </div>
                 </div>
                 <div className="flex flex-col">
-                  <span className="mb-1">Vote Results</span>
-                  <div className="flex flex-col my-2 gap-3">
+                  <span className="mb-1">Dividend Vote Results</span>
+                  <div className="flex flex-wrap my-2 gap-3">
                     {revenueDistributionVote
                       .filter(
                         (vote: RevenueDistributionVoteWithRelations) =>
@@ -249,7 +263,9 @@ const OperatingRoundRevenueVoteResolve = () => {
                             />
                           }
                         >
-                          <span>{vote.revenueDistribution}</span>
+                          <span>
+                            {friendlyDistributionName(vote.revenueDistribution)}
+                          </span>
                         </Chip>
                       ))}
                   </div>
