@@ -155,18 +155,38 @@ enum StockTier {
   TIER_5
 }
 
+enum FactoryTier {
+  TIER_1
+  TIER_2
+  TIER_3
+  TIER_4
+  TIER_5
+}
+
+model Factory {
+  id     String   @id @default(uuid())
+  tier   FactoryTier
+  companyId String
+  gameId String
+  resources Resource[]
+  workers   Int
+  Company   Company @relation(fields: [companyId], references: [id])
+  Game      Game    @relation(fields: [gameId], references: [id])
+}
+
 model Company {
   id                       String                    @id @default(uuid())
   name                     String
   stockSymbol              String
-  unitPrice                Int
+  unitPrice                Int  //this is the markup price of the company
   throughput               Int //TODO: Deprecated
-  supplyMax                Int                       @default(0)
-  supplyBase               Int                       @default(0)
-  supplyCurrent            Int                       @default(0)
-  demandScore              Int                       @default(0)
-  baseDemand               Int                       @default(0)
-  prestigeTokens           Int                       @default(0)
+  brandScore               Int                       @default(0) //Driven by marketing and other factors??
+  supplyMax                Int                       @default(0) //TODO: Deprecated
+  supplyBase               Int                       @default(0) //TODO: Deprecated
+  supplyCurrent            Int                       @default(0) //TODO: Deprecated
+  demandScore              Int                       @default(0) //TODO: deprecated
+  baseDemand               Int                       @default(0) //TODO: deprecated
+  prestigeTokens           Int                       @default(0) //TODO: deprecated
   sectorId                 String
   gameId                   String
   isFloated                Boolean                   @default(false)
@@ -179,7 +199,9 @@ model Company {
   mergedWithParent         String?
   mergedWithChildren       String?
   ipoAndFloatPrice         Int?
-  companyTier              CompanyTier               @default(INCUBATOR)
+  factoryTier               FactoryTier               @default(TIER_1)
+  factories                Factory[]
+  companyTier              CompanyTier               @default(INCUBATOR) //TODO: Deprecated
   status                   CompanyStatus             @default(INACTIVE)
   Sector                   Sector                    @relation(fields: [sectorId], references: [id])
   Share                    Share[]
@@ -649,6 +671,24 @@ enum ResearchCardEffect {
   NO_DISCERNIBLE_FINDINGS
 }
 
+enum MarketingCampaignTier {
+  TIER_1
+  TIER_2
+  TIER_3
+}
+
+model SectorMarketing {
+  id        String   @id @default(uuid())
+  gameId    String
+  sectorId  String
+  companyId String
+  campaignTier MarketingCampaignTier
+  workers   Int  //count of workers used for the campaign, equivalant to the tier
+  Game      Game     @relation(fields: [gameId], references: [id])
+  Sector    Sector   @relation(fields: [sectorId], references: [id])
+  Company   Company  @relation(fields: [companyId], references: [id])
+}
+
 model Sector {
   id                     String           @id @default(uuid())
   name                   String
@@ -713,6 +753,7 @@ model Game {
   useShortOrders          Boolean                  @default(true)
   useOptionOrders         Boolean                  @default(true)
   certificateLimit        Int                      @default(12)
+  laborWorkers            Int                      @default(30)   //Economy Track/Workers
   economyScore            Int                      @default(10)
   isTimerless             Boolean                  @default(false)
   nextPrestigeReward      Int?
@@ -856,6 +897,32 @@ model GameTurn {
   PlayerHeadline         PlayerHeadline[]
   StockSubRound          StockSubRound[]
   CompanyIpoPriceVote    CompanyIpoPriceVote[]
+}
+
+enum ResourceType {
+  TRIANGLE
+  SQUARE
+  CIRCLE
+  MATERIALS
+  INDUSTRIALS
+  CONSUMER_DISCRETIONARY
+  CONSUMER_STAPLES
+  CONSUMER_CYCLICAL
+  CONSUMER_DEFENSIVE
+  ENERGY
+  HEALTHCARE
+  TECHNOLOGY
+  GENERAL
+}
+
+model Resource {
+  id        String   @id @default(uuid())
+  gameId    String
+  resource  ResourceType
+  prices    Int[]
+  currentPrice Int
+  gameTurnId String
+  Game      Game     @relation(fields: [gameId], references: [id])
 }
 
 model CompanyActionOrder {
