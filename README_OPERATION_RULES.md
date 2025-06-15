@@ -1,5 +1,8 @@
 New Operation Mechanics
 
+- New Shareholder Meeting
+-- Shareholders will now vote, by influence which is shares, for 1 action.  Lobby (+1 to Sector Score), Outsource (Reduce Worker Salary by 10% this turn), Licensing Agreement (+1 bonus to unit price, note this does not impact the actual score used for attraction, just profits), Increase Unit Price (+2 Unit Price), Decrease Unit Price (-3 Unit Price), Share Issue (+2 shares into market), Share Buyback (buy back 1 share)
+
 - Global Resource Pool & Resource Economy Tracks
 -- Each resource exists on a track, as resources are taken, this commodity becomes cheaper and the price decreases, the more availability of said resource, the more expensive the resource is, this reflects economies of scale
 -- There are 3 Global Resources each sector can use for their factories, while each sector has a unique resource track that only it's factories can use
@@ -38,7 +41,7 @@ Factories
 -- By default, each sector starts with five permanent sector specific resources to draw from
 -- When a factory is built, a permanent resource marker of the companies choice from goods it produces is put into the consumption bag
 -- Marketing resources in the consumption bag are temporary, when they are drawn, they are discarded
--- During each consumption round, goods are drawn equivalent to the customers in each sector. For every customer the sector **cannot service**, the sector score reduces by 1.
+-- During each consumption round, goods are drawn equivalent to the customers in each sector. For every customer the sector **cannot service**, the companies respective sector score reduces by 1.  1 Good is Drawn for each consumer, one by one.  The consumer will go to the factory that can supply that good from the company that has the highest **attraction rating** (that is the lowest number on the price tracker, modified by brand score).
 -- Each factory can only service the maximum allotment of it's factory size
 --- Factory I: 3 customers
 --- Factory II: 4 customers
@@ -46,6 +49,7 @@ Factories
 --- Factory IV: 6 customers
 -- As each good goes to a company, the customer marker is moved to that factory to demonstrate product sold, once it fills, the factory no longer can offer anymore product
 -- A customer will always buy the most complex product available first.  This reflects the refinement of better factories.
+-- If all customers are serviced in a sector, the sectors score goes up by 1
 
 
 Units sold
@@ -81,4 +85,5 @@ I I II III IV.  These slots are limited by phase just as factories are.
 -- Research always costs a flat fee per phase of $100 (I). $200 (II). $300 (III). $400 (IV).  Research also takes the respective amount of workers out of the pool until the next turn.
 
 Marketing Campaigns and Research are conducted simultanesously.
+
 

@@ -163,71 +163,90 @@ enum FactoryTier {
   TIER_5
 }
 
+enum FactorySize {
+  I
+  II
+  III
+  IV
+}
+
 model Factory {
-  id     String   @id @default(uuid())
-  tier   FactoryTier
-  companyId String
-  gameId String
-  resources Resource[]
-  workers   Int
-  Company   Company @relation(fields: [companyId], references: [id])
-  Game      Game    @relation(fields: [gameId], references: [id])
+  id              String           @id @default(uuid())
+  companyId       String
+  gameId          String
+  blueprintId     String
+  size            FactorySize      // Changed from tier to size
+  workers         Int              @default(0)
+  customers       Int              @default(0)
+  isOperational   Boolean          @default(false)
+  Company         Company          @relation(fields: [companyId], references: [id])
+  Game            Game             @relation(fields: [gameId], references: [id])
+  Blueprint       FactoryBlueprint @relation(fields: [blueprintId], references: [id])
+  resources       Resource[]
+  marketingCampaigns MarketingCampaign[]
 }
 
 model Company {
-  id                       String                    @id @default(uuid())
-  name                     String
-  stockSymbol              String
-  unitPrice                Int  //this is the markup price of the company
-  throughput               Int //TODO: Deprecated
-  brandScore               Int                       @default(0) //Driven by marketing and other factors??
-  supplyMax                Int                       @default(0) //TODO: Deprecated
-  supplyBase               Int                       @default(0) //TODO: Deprecated
-  supplyCurrent            Int                       @default(0) //TODO: Deprecated
-  demandScore              Int                       @default(0) //TODO: deprecated
-  baseDemand               Int                       @default(0) //TODO: deprecated
-  prestigeTokens           Int                       @default(0) //TODO: deprecated
-  sectorId                 String
-  gameId                   String
-  isFloated                Boolean                   @default(false)
-  hasLoan                  Boolean                   @default(false)
-  hasEconomiesOfScale      Boolean                   @default(false)
-  stockTier                StockTier                 @default(TIER_1)
-  tierSharesFulfilled      Int                       @default(0)
-  currentStockPrice        Int?                      @default(0)
-  cashOnHand               Int                       @default(0)
-  mergedWithParent         String?
-  mergedWithChildren       String?
-  ipoAndFloatPrice         Int?
+  id                        String                    @id @default(uuid())
+  name                      String
+  stockSymbol               String
+  unitPrice                 Int                       @default(0)
+  throughput                Int //TODO: Deprecated
+  brandScore                Int                       @default(0)
+  supplyMax                 Int                       @default(0)
+  supplyBase                Int                       @default(0)
+  supplyCurrent             Int                       @default(0)
+  demandScore               Int                       @default(0)
+  baseDemand                Int                       @default(0)
+  prestigeTokens            Int                       @default(0)
+  sectorId                  String
+  gameId                    String
+  isFloated                 Boolean                   @default(false)
+  hasLoan                   Boolean                   @default(false)
+  hasEconomiesOfScale       Boolean                   @default(false)
+  stockTier                 StockTier                 @default(TIER_1)
+  tierSharesFulfilled       Int                       @default(0)
+  currentStockPrice         Int?                      @default(0)
+  cashOnHand                Int                       @default(0)
+  mergedWithParent          String?
+  mergedWithChildren        String?
+  ipoAndFloatPrice          Int?
   factoryTier               FactoryTier               @default(TIER_1)
-  factories                Factory[]
-  companyTier              CompanyTier               @default(INCUBATOR) //TODO: Deprecated
-  status                   CompanyStatus             @default(INACTIVE)
-  Sector                   Sector                    @relation(fields: [sectorId], references: [id])
-  Share                    Share[]
-  StockHistory             StockHistory[]
-  Game                     Game                      @relation(fields: [gameId], references: [id])
-  createdAt                DateTime                  @default(now())
-  updatedAt                DateTime                  @updatedAt
-  PlayerOrder              PlayerOrder[]
-  CompanyOperationPhases   Phase[]
-  CompanyVotes             OperatingRoundVote[]
-  CompanyActions           CompanyAction[]
-  ProductionResults        ProductionResult[]
-  RevenueDistributionVotes RevenueDistributionVote[]
-  PrestigeRewards          PrestigeRewards[]
-  Cards                    Card[]
-  OptionContracts          OptionContract[]
-  ShortOrders              ShortOrder[]
-  TransactionsPerformedOn  Transaction[]
-  InsolvencyContributions  InsolvencyContribution[]
-  PrizeDistributions       PrizeDistribution[]
-  CompanyActionOrders      CompanyActionOrder[]
-  Entity                   Entity?                   @relation(fields: [entityId], references: [id])
-  entityId                 String?                   @unique
-  Headline                 Headline[]
-  companySpaces            CompanySpace[]
-  CompanyIpoPriceVote      CompanyIpoPriceVote[]
+  factories                 Factory[]
+  companyTier               CompanyTier               @default(INCUBATOR)
+  status                    CompanyStatus             @default(INACTIVE)
+  Sector                    Sector                    @relation(fields: [sectorId], references: [id])
+  Share                     Share[]
+  StockHistory              StockHistory[]
+  Game                      Game                      @relation(fields: [gameId], references: [id])
+  createdAt                 DateTime                  @default(now())
+  updatedAt                 DateTime                  @updatedAt
+  PlayerOrder               PlayerOrder[]
+  CompanyOperationPhases    Phase[]
+  CompanyVotes              OperatingRoundVote[]
+  CompanyActions            CompanyAction[]
+  ProductionResults         ProductionResult[]
+  RevenueDistributionVotes  RevenueDistributionVote[]
+  PrestigeRewards           PrestigeRewards[]
+  Cards                     Card[]
+  OptionContracts           OptionContract[]
+  ShortOrders               ShortOrder[]
+  TransactionsPerformedOn   Transaction[]
+  InsolvencyContributions   InsolvencyContribution[]
+  PrizeDistributions        PrizeDistribution[]
+  CompanyActionOrders       CompanyActionOrder[]
+  Entity                    Entity?                   @relation(fields: [entityId], references: [id])
+  entityId                  String?                   @unique
+  Headline                  Headline[]
+  companySpaces             CompanySpace[]
+  CompanyIpoPriceVote       CompanyIpoPriceVote[]
+  operationMechanicsVersion OperationMechanicsVersion @default(LEGACY)
+  marketingCampaigns        MarketingCampaign[]
+  researchProgress          Int                       @default(0)
+  researchGrants            Int                       @default(0)
+  marketFavors              Int                       @default(0)
+  factoryBlueprints         FactoryBlueprint[]
+  sectorMarketing           SectorMarketing[]
 }
 
 enum CompanyTier {
@@ -432,18 +451,22 @@ enum OrderType {
 }
 
 model OperatingRound {
-  id                       String                    @id @default(uuid())
-  phase                    Phase[]
-  operatingRoundVote       OperatingRoundVote[]
-  companyActions           CompanyAction[]
-  productionResults        ProductionResult[]
-  revenueDistributionVotes RevenueDistributionVote[]
-  gameId                   String
-  gameTurnId               String
-  GameTurn                 GameTurn                  @relation(fields: [gameTurnId], references: [id])
-  Game                     Game                      @relation(fields: [gameId], references: [id])
-  createdAt                DateTime                  @default(now())
-  updatedAt                DateTime                  @updatedAt
+  id                        String                    @id @default(uuid())
+  phase                     Phase[]
+  operatingRoundVote        OperatingRoundVote[]
+  companyActions            CompanyAction[]
+  productionResults         ProductionResult[]
+  revenueDistributionVotes  RevenueDistributionVote[]
+  gameId                    String
+  gameTurnId                String
+  GameTurn                  GameTurn                  @relation(fields: [gameTurnId], references: [id])
+  Game                      Game                      @relation(fields: [gameId], references: [id])
+  createdAt                 DateTime                  @default(now())
+  updatedAt                 DateTime                  @updatedAt
+  operationMechanicsVersion OperationMechanicsVersion @default(LEGACY)
+  workforceAllocation       Int                       @default(0)
+  researchAllocation        Int                       @default(0)
+  marketingAllocation       Int                       @default(0)
 }
 
 model CapitalGains {
@@ -678,46 +701,48 @@ enum MarketingCampaignTier {
 }
 
 model SectorMarketing {
-  id        String   @id @default(uuid())
-  gameId    String
-  sectorId  String
-  companyId String
+  id           String                @id @default(uuid())
+  gameId       String
+  sectorId     String
+  companyId    String
   campaignTier MarketingCampaignTier
-  workers   Int  //count of workers used for the campaign, equivalant to the tier
-  Game      Game     @relation(fields: [gameId], references: [id])
-  Sector    Sector   @relation(fields: [sectorId], references: [id])
-  Company   Company  @relation(fields: [companyId], references: [id])
+  workers      Int //count of workers used for the campaign, equivalant to the tier
+  Game         Game                  @relation(fields: [gameId], references: [id])
+  Sector       Sector                @relation(fields: [sectorId], references: [id])
+  Company      Company               @relation(fields: [companyId], references: [id])
 }
 
 model Sector {
-  id                     String           @id @default(uuid())
+  id                     String            @id @default(uuid())
   name                   String
-  sectorName             SectorName       @default(GENERAL)
-  consumers              Int              @default(0)
+  sectorName             SectorName        @default(GENERAL)
+  consumers              Int               @default(0)
   supply                 Int
   demand                 Int
-  demandBonus            Int?             @default(0)
+  demandBonus            Int?              @default(0)
   marketingPrice         Float
   basePrice              Float
-  ipoMin                 Int              @default(10)
-  ipoMax                 Int              @default(20)
-  sharePercentageToFloat Int              @default(50)
-  unitPriceMin           Int              @default(0)
-  unitPriceMax           Int              @default(0)
-  supplyDefault          Int              @default(0)
-  demandMin              Int              @default(0)
-  demandMax              Int              @default(1)
-  supplyMin              Int              @default(0)
-  supplyMax              Int              @default(1)
+  ipoMin                 Int               @default(10)
+  ipoMax                 Int               @default(20)
+  sharePercentageToFloat Int               @default(50)
+  unitPriceMin           Int               @default(0)
+  unitPriceMax           Int               @default(0)
+  supplyDefault          Int               @default(0)
+  demandMin              Int               @default(0)
+  demandMax              Int               @default(1)
+  supplyMin              Int               @default(0)
+  supplyMax              Int               @default(1)
+  researchMarker         Int               @default(0)
   Company                Company[]
   PlayerOrder            PlayerOrder[]
-  Game                   Game?            @relation(fields: [gameId], references: [id])
+  Game                   Game?             @relation(fields: [gameId], references: [id])
   gameId                 String?
-  createdAt              DateTime         @default(now())
-  updatedAt              DateTime         @updatedAt
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
   SectorPrize            SectorPrize[]
   SectorPriority         SectorPriority[]
   Headline               Headline[]
+  sectorMarketing        SectorMarketing[]
 }
 
 enum SectorName {
@@ -734,66 +759,73 @@ enum SectorName {
 }
 
 model Game {
-  id                      String                   @id @default(uuid())
-  name                    String
-  currentTurn             String
-  currentOrSubRound       Int
-  currentRound            RoundType
-  currentActivePlayer     String?
-  sectorPriority          SectorPriority[]
-  bankPoolNumber          Int
-  consumerPoolNumber      Int
-  gameStatus              GameStatus               @default(PENDING)
-  gameStep                Int
-  roomId                  Int
-  overdraft               Boolean                  @default(true) //facilitates overdrafts for player accounts during stock purchase
-  isPaused                Boolean                  @default(false)
-  playerOrdersConcealed   Boolean                  @default(true) //Conceals player orders until the stock round reveal phase
-  useLimitOrders          Boolean                  @default(true)
-  useShortOrders          Boolean                  @default(true)
-  useOptionOrders         Boolean                  @default(true)
-  certificateLimit        Int                      @default(12)
-  laborWorkers            Int                      @default(30)   //Economy Track/Workers
-  economyScore            Int                      @default(10)
-  isTimerless             Boolean                  @default(false)
-  nextPrestigeReward      Int?
-  gameMaxTurns            Int?
-  capitalInjectionRewards Int[] //track Capital Injection rewards, should we instate prestige rewards on game creation instead and put this there?
-  distributionStrategy    DistributionStrategy     @default(FAIR_SPLIT)
-  gameLogs                GameLog[]
-  sectors                 Sector[]
-  InfluenceRound          InfluenceRound[]
-  GameTurn                GameTurn[]
-  Player                  Player[]
-  Company                 Company[]
-  Phase                   Phase[]
-  StockRound              StockRound[]
-  StockSubRound           StockSubRound[]
-  OperatingRound          OperatingRound[]
-  ResearchDeck            ResearchDeck[]
-  MeetingMessage          MeetingMessage[]
-  PlayerOrder             PlayerOrder[]
-  Headlines               Headline[]
-  Share                   Share[]
-  OptionContracts         OptionContract[]
-  CapitalGains            CapitalGains[]
-  PrestigeRewards         PrestigeRewards[]
-  Cards                   Card[]
-  Room                    Room                     @relation(fields: [roomId], references: [id])
-  currentPhaseId          String?
-  currentStockRoundId     String?
-  currentOperatingRoundId String?
-  createdAt               DateTime                 @default(now())
-  updatedAt               DateTime                 @updatedAt
-  GameRecord              GameRecord?
-  Transactions            Transaction[]
-  Entities                Entity[]
-  InsolvencyContribution  InsolvencyContribution[]
-  StockHistory            StockHistory[]
-  Prizes                  Prize[]
-  PlayerHeadline          PlayerHeadline[]
-  CompanyAwardTrack       CompanyAwardTrack[]
-  CompanyIpoPriceVote     CompanyIpoPriceVote[]
+  id                        String                    @id @default(uuid())
+  name                      String
+  currentTurn               String
+  currentOrSubRound         Int
+  currentRound              RoundType
+  currentActivePlayer       String?
+  sectorPriority            SectorPriority[]
+  bankPoolNumber            Int
+  consumerPoolNumber        Int
+  gameStatus                GameStatus                @default(PENDING)
+  gameStep                  Int
+  roomId                    Int
+  overdraft                 Boolean                   @default(true)
+  isPaused                  Boolean                   @default(false)
+  playerOrdersConcealed     Boolean                   @default(true)
+  useLimitOrders            Boolean                   @default(true)
+  useShortOrders            Boolean                   @default(true)
+  useOptionOrders           Boolean                   @default(true)
+  certificateLimit          Int                       @default(12)
+  laborWorkers              Int                       @default(30)
+  isTimerless               Boolean                   @default(false)
+  nextPrestigeReward        Int?
+  gameMaxTurns              Int?
+  capitalInjectionRewards   Int[]
+  distributionStrategy      DistributionStrategy      @default(FAIR_SPLIT)
+  economyScore              Int                       @default(0)
+  gameLogs                  GameLog[]
+  sectors                   Sector[]
+  InfluenceRound            InfluenceRound[]
+  GameTurn                  GameTurn[]
+  Player                    Player[]
+  Company                   Company[]
+  Phase                     Phase[]
+  StockRound                StockRound[]
+  StockSubRound             StockSubRound[]
+  OperatingRound            OperatingRound[]
+  ResearchDeck              ResearchDeck[]
+  MeetingMessage            MeetingMessage[]
+  PlayerOrder               PlayerOrder[]
+  Headlines                 Headline[]
+  Share                     Share[]
+  OptionContracts           OptionContract[]
+  CapitalGains              CapitalGains[]
+  PrestigeRewards           PrestigeRewards[]
+  Cards                     Card[]
+  Room                      Room                      @relation(fields: [roomId], references: [id])
+  currentPhaseId            String?
+  currentStockRoundId       String?
+  currentOperatingRoundId   String?
+  createdAt                 DateTime                  @default(now())
+  updatedAt                 DateTime                  @updatedAt
+  GameRecord                GameRecord?
+  Transactions              Transaction[]
+  Entities                  Entity[]
+  InsolvencyContribution    InsolvencyContribution[]
+  StockHistory              StockHistory[]
+  Prizes                    Prize[]
+  PlayerHeadline            PlayerHeadline[]
+  CompanyAwardTrack         CompanyAwardTrack[]
+  CompanyIpoPriceVote       CompanyIpoPriceVote[]
+  operationMechanicsVersion OperationMechanicsVersion @default(LEGACY)
+  workforcePool             Int                       @default(0)
+  factories                 Factory[]
+  marketingCampaigns        MarketingCampaign[]
+  resources                 Resource[]
+  factoryBlueprints         FactoryBlueprint[]
+  sectorMarketing           SectorMarketing[]
 }
 
 model SectorPriority {
@@ -916,13 +948,14 @@ enum ResourceType {
 }
 
 model Resource {
-  id        String   @id @default(uuid())
-  gameId    String
-  resource  ResourceType
-  prices    Int[]
+  id           String            @id @default(uuid())
+  gameId       String
+  type         ResourceType
+  trackType    ResourceTrackType
   currentPrice Int
-  gameTurnId String
-  Game      Game     @relation(fields: [gameId], references: [id])
+  gameTurnId   String
+  Game         Game              @relation(fields: [gameId], references: [id])
+  factories    Factory[]
 }
 
 model CompanyActionOrder {
@@ -1654,4 +1687,58 @@ enum CardSuit {
   HEART
   CLUB
   SPADE
+}
+
+// New enums for operation mechanics
+enum OperationMechanicsVersion {
+  LEGACY
+  MODERN
+}
+
+enum ResourceTrackType {
+  GLOBAL
+  SECTOR
+}
+
+enum FactoryBlueprintType {
+  CIRCLE
+  SQUARE
+  TRIANGLE
+  SECTOR
+}
+
+enum MarketingCampaignStatus {
+  ACTIVE
+  DECAYING
+  EXPIRED
+}
+
+// New model for Factory Blueprints
+model FactoryBlueprint {
+  id             String                 @id @default(uuid())
+  companyId      String
+  gameId         String
+  size           FactorySize           // Changed from tier to size
+  resourceTypes  FactoryBlueprintType[]
+  resourceCounts Int[]
+  Company        Company                @relation(fields: [companyId], references: [id])
+  Game           Game                   @relation(fields: [gameId], references: [id])
+  factories      Factory[]
+  slot           Int                   // Which slot in the company tableau (1-5)
+  phase          Int                   // Which phase this slot becomes available (1-4)
+}
+
+// New model for Marketing Campaigns
+model MarketingCampaign {
+  id            String                  @id @default(uuid())
+  companyId     String
+  gameId        String
+  tier          MarketingCampaignTier
+  workers       Int
+  status        MarketingCampaignStatus @default(ACTIVE)
+  brandBonus    Int                     @default(0)
+  factoryId     String?
+  Factory       Factory?                @relation(fields: [factoryId], references: [id])
+  Company       Company                 @relation(fields: [companyId], references: [id])
+  Game          Game                    @relation(fields: [gameId], references: [id])
 }

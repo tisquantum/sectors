@@ -9,6 +9,7 @@ import {
   RoundType,
   GameStatus,
   OperatingRoundAction,
+  OperationMechanicsVersion,
 } from '@prisma/client';
 import { GameManagementService } from '@server/game-management/game-management.service';
 import {
@@ -103,6 +104,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           useLimitOrders: z.boolean(),
           isTimerless: z.boolean().optional(),
           bots: z.number(),
+          operationMechanicsVersion: z.nativeEnum(OperationMechanicsVersion).optional(),
           players: z.any().optional(),
           companies: z.any().optional(),
           Player: z.any().optional(),
@@ -130,6 +132,7 @@ export default (trpc: TrpcService, ctx: Context) =>
             useLimitOrders: input.useLimitOrders,
             isTimerless: input.isTimerless || false,
             bots: input.bots,
+            operationMechanicsVersion: input.operationMechanicsVersion,
           });
         } catch (error) {
           return {

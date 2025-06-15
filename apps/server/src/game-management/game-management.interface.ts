@@ -14,4 +14,5 @@ export interface StartGameInput {
   useOptionOrders: boolean;
   isTimerless: boolean;
   bots: number;
+  operationMechanicsVersion?: 'LEGACY' | 'MODERN';
 }

@@ -51,6 +51,7 @@ import { sectorColors } from "@server/data/gameData";
 import { calculateCompanySupply, calculateDemand } from "@server/data/helpers";
 import {
   CompanyStatus,
+  OperationMechanicsVersion,
   Player,
   Share,
   ShareLocation,
@@ -72,6 +73,7 @@ import { renderLocationShortHand } from "@sectors/app/helpers";
 import PlayerAvatar from "../Player/PlayerAvatar";
 import { CompanyLineChart } from "./CompanyLineChart";
 import CompanyResearchCards from "./CompanyResearchCards";
+import { ModernCompany } from "./ModernCompany";
 
 const buildBarChart = (shares: ShareWithPlayer[]) => {
   //group shares by location and sum the quantity
@@ -380,7 +382,7 @@ const CompanyInfo = ({
   showingProductionResults?: boolean;
   isMinimal?: boolean;
 }) => {
-  const { currentPhase } = useGame();
+  const { currentPhase, gameState } = useGame();
   const {
     data: company,
     isLoading: isLoadingCompany,
@@ -402,6 +404,18 @@ const CompanyInfo = ({
   }
   if (!company) {
     return <div>No company found</div>;
+  }
+  // Conditionally render ModernCompany for MODERN operation mechanics
+  if (gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN) {
+    return (
+      <ModernCompany
+        companyId={company.id}
+        gameId={company.gameId}
+        currentPhase={currentPhase?.id || 0}
+        unitPrice={company.unitPrice}
+        brandScore={company.brandScore}
+      />
+    );
   }
   return (
     <>

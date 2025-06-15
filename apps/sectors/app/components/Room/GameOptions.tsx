@@ -1,6 +1,9 @@
 import React, { useState, useEffect, ReactNode } from "react";
 import { Checkbox, Select, SelectItem, Tooltip } from "@nextui-org/react";
-import { DistributionStrategy } from "@server/prisma/prisma.client";
+import {
+  DistributionStrategy,
+  OperationMechanicsVersion,
+} from "@server/prisma/prisma.client";
 import {
   GAME_SETUP_DEFAULT_BANK_POOL_NUMBER,
   GAME_SETUP_DEFAULT_CONSUMER_POOL_NUMBER,
@@ -29,6 +32,7 @@ type ValueMap = {
   useLimitOrders: { [key: number]: boolean };
   isTimerless: { [key: number]: boolean };
   bots: { [key: number]: number };
+  operationMechanicsVersion: { [key: number]: OperationMechanicsVersion };
 };
 
 type GameOptionsKeys = keyof ValueMap;
@@ -49,6 +53,7 @@ interface GameOptionsState {
   useLimitOrders: boolean;
   isTimerless: boolean;
   bots: number;
+  operationmMechanicsVersion: OperationMechanicsVersion;
 }
 
 export const GameOptionDescription: React.FC<{
@@ -82,6 +87,7 @@ const GameOptions: React.FC<GameOptionsProps> = ({ onOptionsChange }) => {
     useLimitOrders: false,
     isTimerless: GAME_SETUP_DEFAULT_TIMERLESS,
     bots: 0,
+    operationmMechanicsVersion: OperationMechanicsVersion.MODERN,
   });
 
   useEffect(() => {
@@ -149,6 +155,10 @@ const GameOptions: React.FC<GameOptionsProps> = ({ onOptionsChange }) => {
       8: 7,
       9: 8,
       10: 9,
+    },
+    operationMechanicsVersion: {
+      1: OperationMechanicsVersion.MODERN,
+      2: OperationMechanicsVersion.LEGACY,
     },
   };
 
@@ -518,6 +528,38 @@ const GameOptions: React.FC<GameOptionsProps> = ({ onOptionsChange }) => {
           </SelectItem>
           <SelectItem key={10} value={10}>
             9
+          </SelectItem>
+        </Select>
+      </div>
+      <div className="mb-4 flex flex-col">
+        <GameOptionDescription
+          name="Operation Mechanics Version"
+          description={
+            <p className={tooltipParagraphStyle}>
+              Operation Round game mechanics to use.
+            </p>
+          }
+        />
+        <Select
+          size="lg"
+          className="max-w-xs"
+          onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+            handleSelectChange(
+              "operationMechanicsVersion",
+              Number(e.target.value)
+            )
+          }
+          defaultSelectedKeys={["1"]}
+          popoverProps={{
+            color: "primary",
+            className: "pointer-events-auto",
+          }}
+        >
+          <SelectItem key={1} value={OperationMechanicsVersion.MODERN}>
+            Modern
+          </SelectItem>
+          <SelectItem key={2} value={OperationMechanicsVersion.LEGACY}>
+            Legacy
           </SelectItem>
         </Select>
       </div>

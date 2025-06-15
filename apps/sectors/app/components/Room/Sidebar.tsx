@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { DistributionStrategy } from "@server/prisma/prisma.client";
+import { DistributionStrategy, OperationMechanicsVersion } from "@server/prisma/prisma.client";
 import { Avatar, Tab, Tabs, Tooltip } from "@nextui-org/react";
 import { trpc } from "@sectors/app/trpc";
 import { useAuthUser } from "@sectors/app/components/AuthUser.context";
@@ -53,6 +53,7 @@ interface GameOptionsState {
   useLimitOrders: boolean;
   isTimerless: boolean;
   bots: number;
+  operationMechanicsVersion?: OperationMechanicsVersion;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -78,6 +79,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     useLimitOrders: false,
     isTimerless: GAME_SETUP_DEFAULT_TIMERLESS,
     bots: 0,
+    operationMechanicsVersion: OperationMechanicsVersion.MODERN,
   });
   const joinRoomMutation = trpc.roomUser.joinRoom.useMutation();
   const leaveRoomMutation = trpc.roomUser.leaveRoom.useMutation();
@@ -133,9 +135,9 @@ const Sidebar: React.FC<SidebarProps> = ({
     useShortOrders: boolean,
     useLimitOrders: boolean,
     isTimerless: boolean,
-    bots: number
+    bots: number,
+    operationMechanicsVersion?: OperationMechanicsVersion
   ) => {
-    //response happens through pusher to all clients.
     startGameMutation.mutate({
       roomId,
       roomName: room.name,
@@ -150,6 +152,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       useLimitOrders,
       isTimerless,
       bots,
+      operationMechanicsVersion,
     });
   };
 

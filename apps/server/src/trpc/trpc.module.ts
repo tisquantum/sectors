@@ -56,6 +56,8 @@ import { ExecutivePhaseService } from '@server/executive-phase/executive-phase.s
 import { ExecutiveGameTurnService } from '@server/executive-game-turn/executive-game-turn.service';
 import { ExecutiveInfluenceVoteRoundService } from '@server/executive-influence-vote-round/executive-influence-vote-round.service';
 import { AiBotService } from '@server/ai-bot/ai-bot.service';
+import { MarketingService } from '@server/marketing/marketing.service';
+import { FactoryService } from '@server/factory/factory.service';
 
 @Module({
   imports: [PrismaModule],
@@ -118,6 +120,8 @@ import { AiBotService } from '@server/ai-bot/ai-bot.service';
     ExecutivePhaseService,
     ExecutiveInfluenceService,
     ExecutiveInfluenceVoteRoundService,
+    MarketingService,
+    FactoryService,
     AiBotService,
   ],
 })
