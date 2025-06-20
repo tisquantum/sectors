@@ -1,96 +1,68 @@
+import { createClient, User } from '@supabase/supabase-js';
+import type * as express from 'express';
+import type { CreateNextContextOptions } from '@trpc/server/adapters/next';
 import { TRPCError } from '@trpc/server';
 import { NodeHTTPCreateContextFnOptions } from '@trpc/server/dist/adapters/node-http';
-import { inferAsyncReturnType } from '@trpc/server';
-import { PrismaService } from '../prisma/prisma.service';
-import { FactoryService } from '../factory/factory.service';
-import { MarketingService } from '../marketing/marketing.service';
-import { createClient } from '@supabase/supabase-js';
-import type { IncomingMessage, ServerResponse } from 'http';
 
 // Ensure Supabase client is created once
-const supabase = createClient(
-  process.env.SUPABASE_URL || '',
-  process.env.SUPABASE_ANON_KEY || '',
-);
+const supabaseUrl = process.env.SUPABASE_URL!;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY!;
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+export type CreateExpressContextOptions = NodeHTTPCreateContextFnOptions<
+  express.Request,
+  express.Response
+>;
 
 export interface Context {
-  req: IncomingMessage;
-  res: ServerResponse;
-  user?: {
-    id: string;
-    email?: string;
-    name?: string;
-  };
+  req: express.Request;
+  res: express.Response;
+  user: User | null; // Use the User type from Supabase
+  submissionStamp?: Date;
   gameId?: string;
   submittingPlayerId?: string;
-  prisma: PrismaService;
-  factoryService: FactoryService;
-  marketingService: MarketingService;
-  submissionStamp?: Date;
 }
 
-export async function createContext({
-  req,
-  res,
-}: NodeHTTPCreateContextFnOptions<IncomingMessage, ServerResponse>): Promise<Context> {
-  try {
-    // Get session from cookie
-    const cookie = req.headers.cookie;
-    if (!cookie) {
-      throw new TRPCError({
-        code: 'UNAUTHORIZED',
-        message: 'No session cookie found',
-      });
-    }
-
-    // Extract session from cookie
-    const sessionCookie = cookie
-      .split(';')
-      .find((c: string) => c.trim().startsWith('sb-'));
-    if (!sessionCookie) {
-      throw new TRPCError({
-        code: 'UNAUTHORIZED',
-        message: 'No session cookie found',
-      });
-    }
-
-    const session = sessionCookie.split('=')[1];
-    const { data, error } = await supabase.auth.getUser(session);
-
-    if (error || !data.user) {
-      throw new TRPCError({
-        code: 'UNAUTHORIZED',
-        message: 'Invalid session',
-      });
-    }
-
-    const user = data.user;
-    const prisma = new PrismaService();
-    const factoryService = new FactoryService(prisma);
-    const marketingService = new MarketingService(prisma);
-
-    return {
-      req,
-      res,
-      user,
-      prisma,
-      factoryService,
-      marketingService,
-    };
-  } catch (error) {
-    // If there's an error, return context without user
-    const prisma = new PrismaService();
-    const factoryService = new FactoryService(prisma);
-    const marketingService = new MarketingService(prisma);
-
-    return {
-      req,
-      res,
-      prisma,
-      factoryService,
-      marketingService,
-    };
+export const createContext = async (
+  opts: CreateExpressContextOptions,
+): Promise<Context> => {
+  const { req, res } = opts;
+  if (!req) {
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Request object not found',
+    });
   }
-}
+  if (!res) {
+    throw new TRPCError({
+      code: 'INTERNAL_SERVER_ERROR',
+      message: 'Response object not found',
+    });
+  }
+  // Extract the user's token from the request headers
+  const token = req.headers.authorization?.split(' ')[1];
 
-export type TrpcContext = inferAsyncReturnType<typeof createContext>;
+  if (!token) {
+    throw new TRPCError({
+      code: 'UNAUTHORIZED',
+      message: 'No authorization token provided',
+    });
+  }
+
+  // Retrieve user session from Supabase
+  const { data, error } = await supabase.auth.getUser(token);
+
+  if (error) {
+    throw new TRPCError({
+      code: 'UNAUTHORIZED',
+      message: 'Failed to authenticate user',
+    });
+  }
+
+  const user = data.user;
+  return {
+    req,
+    res,
+    user,
+  };
+};

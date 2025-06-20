@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { FactorySize, Company, FactoryConstructionOrder, FactoryBlueprint, ResourceType, FactoryBlueprintType } from '@prisma/client';
+import { FactorySize, Company, FactoryConstructionOrder, ResourceType } from '@prisma/client';
 import { ModernOperationMechanicsService } from '../game-management/modern-operation-mechanics.service';
 import { PhaseService } from '@server/phase/phase.service';
 

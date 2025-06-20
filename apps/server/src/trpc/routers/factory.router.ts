@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { FactoryService, CreateFactoryBlueprintSchema, CreateFactorySchema } from '../../factory/factory.service';
+import { FactoryService, CreateFactorySchema } from '../../factory/factory.service';
 import { TrpcService } from '../trpc.service';
 
 type Context = {
@@ -9,9 +9,9 @@ type Context = {
 export default (trpc: TrpcService, ctx: Context) =>
   trpc.router({
     createBlueprint: trpc.procedure
-      .input(CreateFactoryBlueprintSchema)
+      .input(CreateFactorySchema)
       .mutation(async ({ input }) => {
-        return ctx.factoryService.createFactoryBlueprint(input);
+        return ctx.factoryService.createFactory(input);
       }),
 
     buildFactory: trpc.procedure

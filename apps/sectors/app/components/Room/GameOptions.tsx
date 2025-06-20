@@ -53,7 +53,7 @@ interface GameOptionsState {
   useLimitOrders: boolean;
   isTimerless: boolean;
   bots: number;
-  operationmMechanicsVersion: OperationMechanicsVersion;
+  operationMechanicsVersion: OperationMechanicsVersion;
 }
 
 export const GameOptionDescription: React.FC<{
@@ -87,7 +87,7 @@ const GameOptions: React.FC<GameOptionsProps> = ({ onOptionsChange }) => {
     useLimitOrders: false,
     isTimerless: GAME_SETUP_DEFAULT_TIMERLESS,
     bots: 0,
-    operationmMechanicsVersion: OperationMechanicsVersion.MODERN,
+    operationMechanicsVersion: OperationMechanicsVersion.MODERN,
   });
 
   useEffect(() => {
@@ -555,10 +555,10 @@ const GameOptions: React.FC<GameOptionsProps> = ({ onOptionsChange }) => {
             className: "pointer-events-auto",
           }}
         >
-          <SelectItem key={1} value={OperationMechanicsVersion.MODERN}>
+          <SelectItem key={1} value={1}>
             Modern
           </SelectItem>
-          <SelectItem key={2} value={OperationMechanicsVersion.LEGACY}>
+          <SelectItem key={2} value={2}>
             Legacy
           </SelectItem>
         </Select>

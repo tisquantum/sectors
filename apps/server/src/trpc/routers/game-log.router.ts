@@ -10,7 +10,7 @@ type Context = {
 export default (trpc: TrpcService, ctx: Context) =>
   trpc.router({
     getGameLog: trpc.procedure
-      .input(z.object({ id: z.string() }))
+      .input(z.object({ id: z.number() }))
       .query(async ({ input }) => {
         const { id } = input;
         const gameLog = await ctx.gameLogService.gameLog({ id });
@@ -25,7 +25,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         z.object({
           skip: z.number().optional(),
           take: z.number().optional(),
-          cursor: z.string().optional(),
+          cursor: z.number().optional(),
           where: z.any().optional(),
           orderBy: z.any().optional(),
         }),
@@ -68,7 +68,7 @@ export default (trpc: TrpcService, ctx: Context) =>
     updateGameLog: trpc.procedure
       .input(
         z.object({
-          id: z.string(),
+          id: z.number(),
           data: z.object({
             gameId: z.string().optional(),
             content: z.string().optional(),
@@ -81,7 +81,7 @@ export default (trpc: TrpcService, ctx: Context) =>
       }),
 
     deleteGameLog: trpc.procedure
-      .input(z.object({ id: z.string() }))
+      .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
         const { id } = input;
         return ctx.gameLogService.deleteGameLog({ id });

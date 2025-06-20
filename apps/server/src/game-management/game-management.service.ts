@@ -5363,7 +5363,10 @@ export class GameManagementService {
       useShortOrders,
       isTimerless,
       bots,
+      operationMechanicsVersion,
     } = input;
+
+    console.log('operationMechanicsVersion', operationMechanicsVersion);
 
     const gameData: Prisma.GameCreateInput = {
       name: roomName,
@@ -5384,6 +5387,7 @@ export class GameManagementService {
       useLimitOrders,
       useShortOrders,
       isTimerless,
+      operationMechanicsVersion,
     };
 
     const jsonData = gameDataJson;

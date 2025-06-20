@@ -240,7 +240,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                           gameOptions.useShortOrders,
                           gameOptions.useLimitOrders,
                           gameOptions.isTimerless,
-                          gameOptions.bots
+                          gameOptions.bots,
+                          gameOptions.operationMechanicsVersion
                         )
                       : handleExecutiveStartGame(room.id, room.name);
                   }}

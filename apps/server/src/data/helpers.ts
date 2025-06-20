@@ -96,7 +96,7 @@ export function determineNextGamePhase(
   switch (phaseName) {
     case PhaseName.START_TURN:
       return {
-        phaseName: PhaseName.HEADLINE_RESOLVE,
+        phaseName: PhaseName.SET_COMPANY_IPO_PRICES,
         roundType: RoundType.INFLUENCE,
       };
     case PhaseName.HEADLINE_RESOLVE:

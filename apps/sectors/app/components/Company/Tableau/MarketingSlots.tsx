@@ -1,12 +1,9 @@
 'use client';
 
-import { Card } from '@/components/shadcn/card';
 import { cn } from '@/lib/utils';
-import { MarketingCampaignTier } from '@prisma/client';
 
 interface MarketingSlot {
   id: string;
-  tier: MarketingCampaignTier;
   phase: number;
   isAvailable: boolean;
   isOccupied: boolean;
@@ -20,40 +17,33 @@ interface MarketingSlotsProps {
 }
 
 const SLOT_CONFIG: MarketingSlot[] = [
-  { id: 'slot-1', tier: 'TIER_1', phase: 1, isAvailable: true, isOccupied: false },
-  { id: 'slot-2', tier: 'TIER_1', phase: 1, isAvailable: true, isOccupied: false },
-  { id: 'slot-3', tier: 'TIER_2', phase: 2, isAvailable: false, isOccupied: false },
-  { id: 'slot-4', tier: 'TIER_3', phase: 3, isAvailable: false, isOccupied: false },
-  { id: 'slot-5', tier: 'TIER_3', phase: 4, isAvailable: false, isOccupied: false },
+  { id: 'slot-2', phase: 2, isAvailable: true, isOccupied: false },
+  { id: 'slot-4', phase: 3, isAvailable: false, isOccupied: false },
+  { id: 'slot-5', phase: 4, isAvailable: false, isOccupied: false },
 ];
 
 export function MarketingSlots({ companyId, gameId, currentPhase }: MarketingSlotsProps) {
   return (
-    <div className="grid grid-cols-5 gap-2 p-2">
+    <div className="grid grid-cols-5 gap-1">
       {SLOT_CONFIG.map((slot) => (
-        <Card
+        <div
           key={slot.id}
           className={cn(
-            'relative h-16 w-full p-2 transition-all',
-            !slot.isAvailable && 'opacity-50',
-            slot.isOccupied && 'border-2 border-primary',
-            slot.phase <= currentPhase && 'cursor-pointer hover:border-primary'
+            'relative h-8 w-full rounded border transition-all flex items-center justify-center',
+            slot.isAvailable 
+              ? 'border-purple-400/60 bg-purple-400/10 text-purple-300' 
+              : 'border-gray-600/40 bg-gray-700/30 text-gray-500',
+            slot.isOccupied && 'border-purple-400 bg-purple-400/20 text-purple-200',
+            slot.isAvailable && !slot.isOccupied && 'hover:bg-purple-400/20 cursor-pointer'
           )}
         >
-          <div className="flex h-full flex-col items-center justify-center">
-            <div className="text-lg font-bold">
-              {slot.tier.replace('TIER_', '')}
-            </div>
-            <div className="text-sm text-muted-foreground">
-              {slot.phase}
-            </div>
-            {slot.isOccupied && (
-              <div className="absolute bottom-2 text-xs text-primary">
-                Active Campaign
-              </div>
-            )}
-          </div>
-        </Card>
+          <span className="text-xs font-medium">
+            {slot.phase}
+          </span>
+          {slot.isOccupied && (
+            <div className="absolute -top-1 -right-1 w-2 h-2 bg-purple-400 rounded-full"></div>
+          )}
+        </div>
       ))}
     </div>
   );

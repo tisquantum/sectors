@@ -167,18 +167,19 @@ enum FactorySize {
 model Factory {
   id                 String              @id @default(uuid())
   companyId          String
+  sectorId           String
   gameId             String
   size               FactorySize
   workers            Int
+  slot               Int
   isOperational      Boolean             @default(false)
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
   company            Company             @relation(fields: [companyId], references: [id])
   game               Game                @relation(fields: [gameId], references: [id])
-  blueprint          FactoryBlueprint?   @relation(fields: [blueprintId], references: [id])
-  blueprintId        String?
+  Sector             Sector              @relation(fields: [sectorId], references: [id])
   resources          Resource[]          @relation("FactoryResources")
-  marketingCampaigns MarketingCampaign[]
+  resourceTypes      ResourceType[]
 }
 
 model Company {
@@ -239,7 +240,6 @@ model Company {
   researchProgress          Int                        @default(0)
   researchGrants            Int                        @default(0)
   marketFavors              Int                        @default(0)
-  factoryBlueprints         FactoryBlueprint[]
   sectorMarketing           SectorMarketing[]
   factoryConstructionOrders FactoryConstructionOrder[]
   ceo                       Player?                    @relation("CompanyCEO", fields: [ceoId], references: [id])
@@ -348,7 +348,6 @@ model PlayerOrder {
   companyId          String
   sectorId           String
   orderType          OrderType
-  factoryBlueprintId String?
   stockRoundId       String
   stockSubRoundId    String
   orderStatus        OrderStatus
@@ -742,6 +741,7 @@ model Sector {
   SectorPriority         SectorPriority[]
   Headline               Headline[]
   sectorMarketing        SectorMarketing[]
+  factories              Factory[]
   technologyLevel        Int               @default(0)
 }
 
@@ -824,7 +824,6 @@ model Game {
   factories                 Factory[]
   marketingCampaigns        MarketingCampaign[]
   resources                 Resource[]
-  factoryBlueprints         FactoryBlueprint[]
   sectorMarketing           SectorMarketing[]
   workers                   Int                        @default(0)
   factoryConstructionOrders FactoryConstructionOrder[]
@@ -959,7 +958,6 @@ model Resource {
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   game              Game               @relation(fields: [gameId], references: [id])
-  factoryBlueprints FactoryBlueprint[] @relation("FactoryBlueprintResources")
   factories         Factory[]          @relation("FactoryResources")
 }
 
@@ -1099,7 +1097,7 @@ model InfluenceVote {
 }
 
 model GameLog {
-  id        String   @id @default(uuid())
+  id        Int   @id @default(autoincrement())
   gameId    String?
   phaseId   String?
   content   String
@@ -1727,7 +1725,7 @@ enum ResourceTrackType {
   SECTOR
 }
 
-enum FactoryBlueprintType {
+enum FactoryType {
   CIRCLE
   SQUARE
   TRIANGLE
@@ -1738,26 +1736,6 @@ enum MarketingCampaignStatus {
   ACTIVE
   DECAYING
   EXPIRED
-}
-
-// New model for Factory Blueprints
-model FactoryBlueprint {
-  id                String                 @id @default(uuid())
-  gameId            String
-  companyId         String
-  phase             Int // Phase when this blueprint becomes available
-  size              FactorySize
-  resourceTypes     FactoryBlueprintType[]
-  resourceCounts    Int[] // Number of each resource type required
-  slot              Int // Slot number in company's factory section
-  consumers         Int // Number of consumers currently using this factory
-  isAvailable       Boolean                @default(true)
-  createdAt         DateTime               @default(now())
-  updatedAt         DateTime               @updatedAt
-  game              Game                   @relation(fields: [gameId], references: [id])
-  company           Company                @relation(fields: [companyId], references: [id])
-  requiredResources Resource[]             @relation("FactoryBlueprintResources")
-  factories         Factory[]
 }
 
 model FactoryConstructionOrder {
@@ -1785,8 +1763,7 @@ model MarketingCampaign {
   workers    Int
   status     MarketingCampaignStatus @default(ACTIVE)
   brandBonus Int                     @default(0)
-  factoryId  String?
-  Factory    Factory?                @relation(fields: [factoryId], references: [id])
+  slot       Int                     @default(0)
   Company    Company                 @relation(fields: [companyId], references: [id])
   Game       Game                    @relation(fields: [gameId], references: [id])
 }

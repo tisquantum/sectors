@@ -9,7 +9,7 @@ import {
 } from '@server/pusher/pusher.types';
 import { RoomMessageWithRoomUser } from '@server/prisma/prisma.types';
 import { checkIsUserAction } from '../trpc.middleware';
-import { ROOM_MESSAGE_MAX_LENGTH } from '@server/data/constants';
+import { companyActionsDescription, ROOM_MESSAGE_MAX_LENGTH } from '@server/data/constants';
 import { TRPCError } from '@trpc/server';
 
 type Context = {
@@ -91,7 +91,6 @@ export default (trpc: TrpcService, ctx: Context) =>
               },
             },
           });
-
           //pusher logic
           ctx.pusherService
             .trigger(getRoomChannelId(roomId), EVENT_ROOM_MESSAGE, roomMessage)

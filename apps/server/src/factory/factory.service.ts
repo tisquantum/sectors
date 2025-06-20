@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Res } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { FactoryBlueprintType, OperationMechanicsVersion, Company, Game, FactorySize, Phase } from '@prisma/client';
+import { OperationMechanicsVersion, Company, Game, FactorySize, Phase, Resource, ResourceType } from '@prisma/client';
 import { z } from 'zod';
 
 // Export schemas for use in routers
@@ -8,7 +8,7 @@ export const CreateFactoryBlueprintSchema = z.object({
   companyId: z.string(),
   gameId: z.string(),
   size: z.nativeEnum(FactorySize),
-  resourceTypes: z.array(z.nativeEnum(FactoryBlueprintType)),
+  resourceTypes: z.array(z.nativeEnum(ResourceType)),
   resourceCounts: z.array(z.number().int().positive()),
   slot: z.number().int().min(1).max(5),
   phase: z.number().int().min(1).max(4),
@@ -17,7 +17,6 @@ export const CreateFactoryBlueprintSchema = z.object({
 export const CreateFactorySchema = z.object({
   companyId: z.string(),
   gameId: z.string(),
-  blueprintId: z.string(),
 });
 
 type CreateFactoryBlueprintInput = z.infer<typeof CreateFactoryBlueprintSchema>;
@@ -49,200 +48,21 @@ export class FactoryService {
 
   private validateResourceRequirements(
     size: FactorySize,
-    resourceTypes: FactoryBlueprintType[],
+    resourceTypes: ResourceType[],
     resourceCounts: number[]
   ): boolean {
-    // Must have exactly one sector resource
-    const sectorResourceIndex = resourceTypes.findIndex(type => type === FactoryBlueprintType.SECTOR);
-    if (sectorResourceIndex === -1 || resourceCounts[sectorResourceIndex] !== 1) {
-      return false;
-    }
-
-    // Total non-sector resources must match size requirements
-    const totalNonSectorResources = resourceCounts.reduce((sum, count, index) => 
-      resourceTypes[index] !== FactoryBlueprintType.SECTOR ? sum + count : sum, 0);
-    
-    switch (size) {
-      case FactorySize.FACTORY_I: return totalNonSectorResources === 1;
-      case FactorySize.FACTORY_II: return totalNonSectorResources === 2;
-      case FactorySize.FACTORY_III: return totalNonSectorResources === 3;
-      case FactorySize.FACTORY_IV: return totalNonSectorResources === 4;
-      default: return false;
-    }
-  }
-
-  async createFactoryBlueprint(data: CreateFactoryBlueprintInput) {
-    const validated = CreateFactoryBlueprintSchema.parse(data);
-
-    // Validate resource requirements
-    if (!this.validateResourceRequirements(
-      validated.size,
-      validated.resourceTypes,
-      validated.resourceCounts
-    )) {
-      throw new Error('Invalid resource requirements for factory size');
-    }
-
-    // Validate slot and phase
-    const company = await this.prisma.company.findUnique({
-      where: { id: validated.companyId },
-      include: { 
-        Game: {
-          include: {
-            Phase: {
-              where: {
-                id: {
-                  equals: undefined // This will be set by the game service
-                }
-              }
-            }
-          }
-        }
-      },
-    });
-
-    // Check if slot is already occupied
-    const existingBlueprint = await this.prisma.factoryBlueprint.findFirst({
-      where: {
-        companyId: validated.companyId,
-        slot: validated.slot,
-      },
-    });
-
-    if (existingBlueprint) {
-      throw new Error('Factory slot already occupied');
-    }
-
-    //get total resource cost
-    const resources = await this.prisma.resource.findMany({
-      where: {
-        gameId: validated.gameId,
-      },
-    });
-
-    // Calculate total cost by matching resource types with their counts
-    let totalCost = 0;
-    for (let i = 0; i < validated.resourceTypes.length; i++) {
-      const resourceType = validated.resourceTypes[i];
-      const resourceCount = validated.resourceCounts[i];
-      const resource = resources.find(r => r.type === resourceType);
-      if (resource) {
-        totalCost += resource.price * resourceCount;
-      }
-    }
-
-    return this.prisma.factoryBlueprint.create({
-      data: {
-        ...validated,
-        consumers: 0, // Add the missing consumers field
-      },
-    });
+    return true;
   }
 
   async createFactory(data: CreateFactoryInput) {
-    const validated = CreateFactorySchema.parse(data);
-
-    const blueprint = await this.prisma.factoryBlueprint.findUnique({
-      where: { id: validated.blueprintId },
-      include: {
-        company: true
-      }
-    });
-
-    if (!blueprint) {
-      throw new Error('Factory blueprint not found');
-    }
-
-    // Calculate total cost
-    const totalCost = await this.calculateFactoryBuildCost(validated.gameId, blueprint);
-    if (blueprint.company.cashOnHand < totalCost) {
-      throw new Error('Insufficient company cash');
-    }
-
-    // Create factory and update company cash in a transaction
-    return this.prisma.$transaction(async (tx) => {
-      const factory = await tx.factory.create({
-        data: {
-          blueprintId: validated.blueprintId,
-          companyId: validated.companyId,
-          gameId: validated.gameId,
-          size: blueprint.size,
-          workers: 0,
-          isOperational: false
-        },
-      });
-
-      await tx.company.update({
-        where: { id: validated.companyId },
-        data: { 
-          cashOnHand: { 
-            decrement: totalCost 
-          } 
-        },
-      });
-
-      return factory;
-    });
+    
   }
 
   async buildFactory(data: z.infer<typeof CreateFactorySchema>) {
-    const validated = CreateFactorySchema.parse(data);
-
-    // Get blueprint and verify resources
-    const blueprint = await this.prisma.factoryBlueprint.findUnique({
-      where: { id: validated.blueprintId },
-      include: { company: true },
-    });
-
-    if (!blueprint) {
-      throw new Error('Blueprint not found');
-    }
-
-    // Verify company has enough resources and cash
-    const totalCost = await this.calculateFactoryBuildCost(validated.gameId, blueprint);
-
-    if (blueprint.company.cashOnHand < totalCost) {
-      throw new Error('Insufficient funds to build factory');
-    }
-
-    // Create factory and deduct resources
-    return this.prisma.$transaction(async (tx) => {
-      // Create factory
-      const factory = await tx.factory.create({
-        data: {
-          companyId: validated.companyId,
-          gameId: validated.gameId,
-          blueprintId: validated.blueprintId,
-          size: blueprint.size,
-          workers: 0,
-          isOperational: false, // Factory becomes operational next turn
-        },
-      });
-
-      // Deduct resources and cash
-      await this.deductFactoryResources(tx, validated.gameId, blueprint);
-      await tx.company.update({
-        where: { id: validated.companyId },
-        data: { cashOnHand: { decrement: totalCost } },
-      });
-
-      return factory;
-    });
   }
 
-  private async calculateFactoryBuildCost(gameId: string, blueprint: any) {
-    // Get current resource prices
-    const resources = await this.prisma.resource.findMany({
-      where: { gameId },
-    });
-
+  private async calculateFactoryBuildCost(gameId: string, resources: Resource[]) {
     let totalCost = 0;
-    blueprint.resourceTypes.forEach((type: FactoryBlueprintType, index: number) => {
-      const resource = resources.find(r => r.type === type);
-      if (!resource) throw new Error(`Resource type ${type} not found`);
-      totalCost += resource.price * blueprint.resourceCounts[index];
-    });
-
     return totalCost;
   }
 
@@ -305,7 +125,6 @@ export class FactoryService {
     return this.prisma.factory.findUnique({
       where: { id: factoryId },
       include: {
-        blueprint: true,
         company: true,
         resources: true,
       },
@@ -320,7 +139,6 @@ export class FactoryService {
         gameId,
       },
       include: {
-        blueprint: true,
         resources: true,
       },
     });

@@ -224,6 +224,41 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure handle_new_user();
 
+-- Check if the user has a User record on updates and insert if missing
+create function public.create_user_if_missing()
+returns trigger
+language plpgsql
+security definer set search_path = ''
+as $$
+begin
+  -- Log the user ID being processed
+  RAISE NOTICE 'Processing user ID: %', new.id;
+
+  -- Check if the user record exists
+  if not exists (select 1 from public."User" where "authUserId" = new.id) then
+    -- Log if the user record is missing
+    RAISE NOTICE 'No User record found for authUserId: %. Creating new record.', new.id;
+
+    -- Insert the new user record
+    insert into public."User" (id, "authUserId", "createdAt", "updatedAt")
+    values (new.id, new.id, current_timestamp, current_timestamp);
+
+    -- Log successful insertion
+    RAISE NOTICE 'User record created for authUserId: %', new.id;
+  else
+    -- Log if the user record already exists
+    RAISE NOTICE 'User record already exists for authUserId: %', new.id;
+  end if;
+
+  return new;
+end;
+$$;
+
+-- Trigger the function when user record is updated
+create trigger check_user_record_on_update
+  after update on auth.users
+  for each row execute procedure create_user_if_missing();
+
 -- EXECUTIVES
 
 Should bribes be left on the table for that trick round if they are not taken?
@@ -233,3 +268,65 @@ I think so!  It's a powerful "sacrifice" for influence then.
 CEO or COO starts for accepting bids? Or just next player to left.
 
 Tricks and Trick history need to show the lead and trump data as well.
+
+-- BRAND VALUE
+Unit Price - Brand Bonus (from marketing), lower brand value wins
+
+Process for consumer, FILTERING OUT competing companies through pulls
+
+<Company A Factory A CIRCLE SQUARE>
+
+<Company A Factory B CIRCLE SQUARE SQUARE>
+
+<Company B Factory A CIRCLE CIRCLE CIRCLE>
+
+Consumer Bag -> Pulls Circle
+
+<Company A Factory A CIRCLE SQUARE>
+
+<Company A Factory B CIRCLE SQUARE SQUARE>
+
+<Company B Factory A CIRCLE CIRCLE CIRCLE>
+
+Consumer Bag -> Pulls Square
+
+<Company A Factory A CIRCLE SQUARE>
+
+<Company A Factory B CIRCLE SQUARE SQUARE>
+
+Result: Automatically fills highest factory within company
+
+**Bag resets (???)**
+
+Consumer Profile Idea
+
+A Consumer for the **next turn** is looking for X, Y and Z (???)
+
+What if the Sector Token was like a **wild card** and other tokens were specifity.
+
+Sector product recipes **can** include wild cards.
+
+If you elect to only make a recipe with wild cards, yes, you will be chosen everytime, but you also then risk the reward of being picked over another company.
+
+Also, sector specific resources typically have lower values.
+
+In phase I, a consumer will only look for a 2 pull, etc. etc.
+
+The company MUST match exactly the pull to sell to that consumer from that factory.  The specific resource is preferred over wildcards.
+
+As phases progress, a company profile for each available phase is drawn each round.
+
+On each new phase, an additional wildcard **sector resource influence** is put into the influence bag. (???)
+
+Consumers will always service **all possible factory industries from highest to lowest**.
+
+Phase I Sector: 2 Pull
+Phase II Sector: 3 Pull
+Phase III Sector: 4 Pull **rusts phase I factories** (???)
+Phase IV Sector: 5 Pull  **rusts phase II factories** (???)
+
+Rusting factories return their resource cubes back to the resource track.
+
+In the case of contested purchase decision, the consumer goes to the lowest brand score
+
+**How do players combat the only one resource strategy and flooding the market with that?**

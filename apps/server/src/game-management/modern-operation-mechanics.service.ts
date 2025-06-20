@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Phase, PhaseName, Game, Company, Resource, MarketingCampaign, FactoryBlueprint, FactorySize, ResourceType, ResourceTrackType, FactoryBlueprintType, OrderType, TransactionType, EntityType, SectorName } from '@prisma/client';
+import { Phase, PhaseName, Game, Company, Resource, MarketingCampaign, FactorySize, ResourceType, ResourceTrackType, OrderType, TransactionType, EntityType, SectorName } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { GameLogService } from '../game-log/game-log.service';
 import { CompanyService } from '../company/company.service';
