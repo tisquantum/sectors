@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
-import { Game, Prisma } from '@prisma/client';
+import { Game, Prisma, Resource } from '@prisma/client';
 import {
   GameState,
   GameWithGameTurns,
@@ -131,5 +131,13 @@ export class GamesService {
       },
     });
     return game?.isTimerless || false;
+  }
+
+  async getResources(gameId: string): Promise<Resource[]> {
+    return this.prisma.resource.findMany({
+      where: {
+        gameId,
+      },
+    });
   }
 }

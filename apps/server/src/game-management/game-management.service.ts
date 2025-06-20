@@ -230,6 +230,7 @@ import { randomUUID } from 'crypto';
 import { AiBotService } from '@server/ai-bot/ai-bot.service';
 import { RevenueDistributionVoteService } from '@server/revenue-distribution-vote/revenue-distribution-vote.service';
 import { OperatingRoundVoteService } from '@server/operating-round-vote/operating-round-vote.service';
+import { ModernOperationMechanicsService } from './modern-operation-mechanics.service';
 
 type GroupedByPhase = {
   [key: string]: {
@@ -299,6 +300,7 @@ export class GameManagementService {
     private aiBotService: AiBotService,
     private revenueDistributionVoteService: RevenueDistributionVoteService,
     private operatingRoundVoteService: OperatingRoundVoteService,
+    private modernOperationMechanicsService: ModernOperationMechanicsService,
   ) {}
 
   /**
@@ -313,6 +315,17 @@ export class GameManagementService {
    * @returns
    */
   async handlePhase(phase: Phase, game: Game) {
+    // If game is using modern operation mechanics, try to handle it with the modern service
+    if (game.operationMechanicsVersion === 'MODERN') {
+      const handled = await this.modernOperationMechanicsService.handlePhase(phase, game);
+      // If the modern service handled the phase, we're done
+      if (handled) {
+        return;
+      }
+      // Otherwise, fall through to legacy handling
+    }
+
+    // Legacy phase handling
     switch (phase.name) {
       case PhaseName.START_TURN:
         const gameCache = this.gameCache.get(game.id);
@@ -9484,8 +9497,8 @@ export class GameManagementService {
       where: { gameId },
     });
 
-    // 3) Check how many human players there are and if they’re all ready
-    //    “Human players” = isBot == false OR isBot is null in DB.
+    // 3) Check how many human players there are and if they're all ready
+    //    "Human players" = isBot == false OR isBot is null in DB.
     const humanPlayers = allPlayers.filter((p) => !p.isBot);
 
     // 4) Are all human players ready?
@@ -9718,7 +9731,7 @@ export class GameManagementService {
         const sector = sectorMap.get(company.sectorId);
         if (!sector) continue;
 
-        // Filter stockGridPrices by the sector’s ipoMin/ipoMax
+        // Filter stockGridPrices by the sector's ipoMin/ipoMax
         const companyIpoPrices = stockGridPrices.filter(
           (price) => price >= sector.ipoMin && price <= sector.ipoMax,
         );

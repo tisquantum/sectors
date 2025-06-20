@@ -29,20 +29,20 @@ export class FactoryService {
 
   private getRequiredWorkersForSize(size: FactorySize): number {
     switch (size) {
-      case FactorySize.I: return 1;
-      case FactorySize.II: return 2;
-      case FactorySize.III: return 3;
-      case FactorySize.IV: return 4;
+      case FactorySize.FACTORY_I: return 1;
+      case FactorySize.FACTORY_II: return 2;
+      case FactorySize.FACTORY_III: return 3;
+      case FactorySize.FACTORY_IV: return 4;
       default: throw new Error(`Unknown factory size: ${size}`);
     }
   }
 
   private getMaxCustomersForSize(size: FactorySize): number {
     switch (size) {
-      case FactorySize.I: return 3;
-      case FactorySize.II: return 4;
-      case FactorySize.III: return 5;
-      case FactorySize.IV: return 6;
+      case FactorySize.FACTORY_I: return 3;
+      case FactorySize.FACTORY_II: return 4;
+      case FactorySize.FACTORY_III: return 5;
+      case FactorySize.FACTORY_IV: return 6;
       default: throw new Error(`Unknown factory size: ${size}`);
     }
   }
@@ -63,10 +63,10 @@ export class FactoryService {
       resourceTypes[index] !== FactoryBlueprintType.SECTOR ? sum + count : sum, 0);
     
     switch (size) {
-      case FactorySize.I: return totalNonSectorResources === 1;
-      case FactorySize.II: return totalNonSectorResources === 2;
-      case FactorySize.III: return totalNonSectorResources === 3;
-      case FactorySize.IV: return totalNonSectorResources === 4;
+      case FactorySize.FACTORY_I: return totalNonSectorResources === 1;
+      case FactorySize.FACTORY_II: return totalNonSectorResources === 2;
+      case FactorySize.FACTORY_III: return totalNonSectorResources === 3;
+      case FactorySize.FACTORY_IV: return totalNonSectorResources === 4;
       default: return false;
     }
   }
@@ -101,15 +101,6 @@ export class FactoryService {
       },
     });
 
-    if (!company?.Game?.Phase?.[0]) {
-      throw new Error('Company or game phase not found');
-    }
-
-    const currentPhaseNumber = parseInt(company.Game.Phase[0].name.replace('PHASE_', ''));
-    if (currentPhaseNumber < validated.phase) {
-      throw new Error('Current game phase is too low for this factory slot');
-    }
-
     // Check if slot is already occupied
     const existingBlueprint = await this.prisma.factoryBlueprint.findFirst({
       where: {
@@ -122,8 +113,29 @@ export class FactoryService {
       throw new Error('Factory slot already occupied');
     }
 
+    //get total resource cost
+    const resources = await this.prisma.resource.findMany({
+      where: {
+        gameId: validated.gameId,
+      },
+    });
+
+    // Calculate total cost by matching resource types with their counts
+    let totalCost = 0;
+    for (let i = 0; i < validated.resourceTypes.length; i++) {
+      const resourceType = validated.resourceTypes[i];
+      const resourceCount = validated.resourceCounts[i];
+      const resource = resources.find(r => r.type === resourceType);
+      if (resource) {
+        totalCost += resource.price * resourceCount;
+      }
+    }
+
     return this.prisma.factoryBlueprint.create({
-      data: validated,
+      data: {
+        ...validated,
+        consumers: 0, // Add the missing consumers field
+      },
     });
   }
 
@@ -133,7 +145,7 @@ export class FactoryService {
     const blueprint = await this.prisma.factoryBlueprint.findUnique({
       where: { id: validated.blueprintId },
       include: {
-        Company: true
+        company: true
       }
     });
 
@@ -143,7 +155,7 @@ export class FactoryService {
 
     // Calculate total cost
     const totalCost = await this.calculateFactoryBuildCost(validated.gameId, blueprint);
-    if (blueprint.Company.cashOnHand < totalCost) {
+    if (blueprint.company.cashOnHand < totalCost) {
       throw new Error('Insufficient company cash');
     }
 
@@ -156,9 +168,8 @@ export class FactoryService {
           gameId: validated.gameId,
           size: blueprint.size,
           workers: 0,
-          customers: 0,
           isOperational: false
-        } as any, // TODO: Fix type issue with Prisma create input
+        },
       });
 
       await tx.company.update({
@@ -180,7 +191,7 @@ export class FactoryService {
     // Get blueprint and verify resources
     const blueprint = await this.prisma.factoryBlueprint.findUnique({
       where: { id: validated.blueprintId },
-      include: { Company: true },
+      include: { company: true },
     });
 
     if (!blueprint) {
@@ -190,7 +201,7 @@ export class FactoryService {
     // Verify company has enough resources and cash
     const totalCost = await this.calculateFactoryBuildCost(validated.gameId, blueprint);
 
-    if (blueprint.Company.cashOnHand < totalCost) {
+    if (blueprint.company.cashOnHand < totalCost) {
       throw new Error('Insufficient funds to build factory');
     }
 
@@ -204,7 +215,6 @@ export class FactoryService {
           blueprintId: validated.blueprintId,
           size: blueprint.size,
           workers: 0,
-          customers: 0,
           isOperational: false, // Factory becomes operational next turn
         },
       });
@@ -230,7 +240,7 @@ export class FactoryService {
     blueprint.resourceTypes.forEach((type: FactoryBlueprintType, index: number) => {
       const resource = resources.find(r => r.type === type);
       if (!resource) throw new Error(`Resource type ${type} not found`);
-      totalCost += resource.currentPrice * blueprint.resourceCounts[index];
+      totalCost += resource.price * blueprint.resourceCounts[index];
     });
 
     return totalCost;
@@ -248,7 +258,7 @@ export class FactoryService {
           type,
         },
         data: {
-          currentPrice: { increment: count }, // Price increases as resources are used
+          price: { increment: count }, // Price increases as resources are used
         },
       });
     }
@@ -257,7 +267,7 @@ export class FactoryService {
   async assignWorkers(factoryId: string, workerCount: number) {
     const factory = await this.prisma.factory.findUnique({
       where: { id: factoryId },
-      include: { Game: true },
+      include: { game: true },
     });
 
     if (!factory) {
@@ -269,7 +279,7 @@ export class FactoryService {
     }
 
     // Check if enough workers in pool
-    if (factory.Game.workforcePool < workerCount) {
+    if (factory.game.workforcePool < workerCount) {
       throw new Error('Not enough workers in pool');
     }
 
@@ -295,8 +305,8 @@ export class FactoryService {
     return this.prisma.factory.findUnique({
       where: { id: factoryId },
       include: {
-        Blueprint: true,
-        Company: true,
+        blueprint: true,
+        company: true,
         resources: true,
       },
     });
@@ -310,7 +320,7 @@ export class FactoryService {
         gameId,
       },
       include: {
-        Blueprint: true,
+        blueprint: true,
         resources: true,
       },
     });

@@ -138,7 +138,17 @@ export const phaseTimes = {
   [PhaseName.PRIZE_DISTRIBUTE_ACTION]: 50 * 1000,
   [PhaseName.PRIZE_DISTRIBUTE_RESOLVE]: 12 * 1000,
   [PhaseName.HEADLINE_RESOLVE]: 12 * 1000,
-};
+  [PhaseName.FACTORY_CONSTRUCTION]: 12 * 1000,
+  [PhaseName.FACTORY_CONSTRUCTION_RESOLVE]: 12 * 1000,
+  [PhaseName.MARKETING_CAMPAIGN]: 50 * 1000,
+  [PhaseName.MARKETING_CAMPAIGN_RESOLVE]: 12 * 1000,
+  [PhaseName.RESEARCH_ACTION]: 50 * 1000,
+  [PhaseName.RESEARCH_ACTION_RESOLVE]: 12 * 1000,
+  SHAREHOLDER_MEETING: 60,
+  MARKETING_CAMPAIGNS: 60,
+  RESEARCH_ACTIONS: 60,
+  CONSUMPTION_PHASE: 60,
+} as const;
 
 //Stock Grid Prices
 export const stockGridPrices = [
@@ -148,6 +158,32 @@ export const stockGridPrices = [
   291, 302, 313, 324, 335, 346, 358, 370, 382, 394, 406, 418, 431, 444, 457,
   470, 484, 498, 512, 526, 540, 555, 570, 585, 600,
 ];
+
+export const RESOURCE_PRICES_CIRCLE = [12, 15, 17, 14, 18, 16, 20, 19, 22, 24, 26, 23, 28, 25, 30, 27, 32, 29, 35, 31, 33, 36, 34, 38, 40]
+
+export const RESOURCE_PRICES_SQUARE = [5, 6, 7, 8, 10, 11, 12, 14, 15, 17, 18, 20, 21, 23, 24, 26, 27, 29, 30, 32]
+
+export const RESOURCE_PRICES_TRIANGLE = [8, 11, 14, 7, 16, 20, 6, 18, 25, 5, 22, 27, 9, 24, 30, 10, 35, 12, 40, 15, 38, 19, 43, 17, 46, 21, 50, 26, 55, 60]
+
+export const RESOURCE_PRICES_GEAR = [20, 22, 24, 27, 30, 34, 38, 42, 47, 53, 58, 65, 72, 80, 90]
+
+export const RESOURCE_PRICES_TECHNOLOGY = [15, 18, 22, 28, 20, 35, 25, 40, 30, 50]
+
+export const RESOURCE_PRICES_INDUSTRIAL = [10, 12, 14, 13, 16, 17, 18, 20, 21, 23]
+
+export const RESOURCE_PRICES_ENERGY = [8, 20, 5, 25, 10, 30, 7, 35, 6, 40]
+
+export const RESOURCE_PRICES_HEALTHCARE = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+export const RESOURCE_PRICES_CONSUMER_DEFENSIVE = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+export const RESOURCE_PRICES_CONSUMER_CYCLICAL = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+export const RESOURCE_PRICES_CONSUMER_DISCRETIONARY = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+export const RESOURCE_PRICES_CONSUMER_STAPLES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+export const RESOURCE_PRICES_MATERIALS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 export const getStockPriceClosestEqualOrLess = (price: number): number => {
   const index = stockGridPrices.findIndex((value) => value >= price);

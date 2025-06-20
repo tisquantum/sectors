@@ -39,6 +39,15 @@ import {
   PRESTIGE_TRACK_LENGTH,
   PrestigeTrack,
   PrestigeTrackItem,
+  RESOURCE_PRICES_CONSUMER_CYCLICAL,
+  RESOURCE_PRICES_CONSUMER_DEFENSIVE,
+  RESOURCE_PRICES_CONSUMER_DISCRETIONARY,
+  RESOURCE_PRICES_CONSUMER_STAPLES,
+  RESOURCE_PRICES_ENERGY,
+  RESOURCE_PRICES_HEALTHCARE,
+  RESOURCE_PRICES_INDUSTRIAL,
+  RESOURCE_PRICES_MATERIALS,
+  RESOURCE_PRICES_TECHNOLOGY,
   StockTierChartRange,
   companyActionsDescription,
   getStockPriceClosestEqualOrMore,
@@ -996,5 +1005,30 @@ export function getPassiveEffectForSector(sector: SectorName) {
       return OperatingRoundAction.EXTRACT;
     default:
       return OperatingRoundAction.VETO;
+  }
+}
+
+export function getResourcePricesForSector(sector: SectorName) {
+  switch (sector) {
+    case SectorName.HEALTHCARE:
+      return RESOURCE_PRICES_HEALTHCARE;
+    case SectorName.TECHNOLOGY:
+      return RESOURCE_PRICES_TECHNOLOGY;
+    case SectorName.ENERGY:
+      return RESOURCE_PRICES_ENERGY;
+    case SectorName.CONSUMER_DEFENSIVE:
+      return RESOURCE_PRICES_CONSUMER_DEFENSIVE;
+    case SectorName.CONSUMER_CYCLICAL:
+      return RESOURCE_PRICES_CONSUMER_CYCLICAL;
+    case SectorName.INDUSTRIALS:
+      return RESOURCE_PRICES_INDUSTRIAL;
+    case SectorName.MATERIALS:
+      return RESOURCE_PRICES_MATERIALS;
+    case SectorName.CONSUMER_DISCRETIONARY:
+      return RESOURCE_PRICES_CONSUMER_DISCRETIONARY;
+    case SectorName.CONSUMER_STAPLES:
+      return RESOURCE_PRICES_CONSUMER_STAPLES;
+    default:
+      return [1];
   }
 }

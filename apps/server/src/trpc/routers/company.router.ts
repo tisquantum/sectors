@@ -4,10 +4,14 @@ import { TrpcService } from '../trpc.service';
 import { Prisma, RoundType } from '@prisma/client';
 import { SectorService } from '@server/sector/sector.service';
 import { determineFloatPrice } from '@server/data/helpers';
+import { GamesService } from '@server/games/games.service';
+import { PhaseService } from '@server/phase/phase.service';
 
 type Context = {
   companyService: CompanyService;
   sectorService: SectorService;
+  phaseService: PhaseService;
+  gamesService: GamesService;
 };
 
 export default (trpc: TrpcService, ctx: Context) =>

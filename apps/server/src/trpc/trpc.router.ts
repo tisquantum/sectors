@@ -102,6 +102,8 @@ import factoryRouter from './routers/factory.router';
 import marketingRouter from './routers/marketing.router';
 import { FactoryService } from '@server/factory/factory.service';
 import { MarketingService } from '@server/marketing/marketing.service';
+import { factoryConstructionRouter } from './routers/factory-construction.router';
+import { FactoryConstructionService } from '@server/factory-construction/factory-construction.service';
 
 @Injectable()
 export class TrpcRouter {
@@ -158,6 +160,7 @@ export class TrpcRouter {
     private readonly executiveInfluenceVoteRoundService: ExecutiveInfluenceVoteRoundService,
     private readonly marketingService: MarketingService,
     private readonly factoryService: FactoryService,
+    private readonly factoryConstructionService: FactoryConstructionService,
     private readonly prismaService: PrismaService,
   ) {}
 
@@ -200,6 +203,8 @@ export class TrpcRouter {
     company: companyRouter(this.trpc, {
       companyService: this.companyService,
       sectorService: this.sectorService,
+      phaseService: this.phaseService,
+      gamesService: this.gamesService
     }),
     sector: sectorRouter(this.trpc, {
       sectorService: this.sectorService,
@@ -361,6 +366,12 @@ export class TrpcRouter {
     }),
     marketing: marketingRouter(this.trpc, {
       marketingService: this.marketingService,
+    }),
+    factoryConstruction: factoryConstructionRouter(this.trpc, {
+      factoryConstructionService: this.factoryConstructionService,
+      playerService: this.playersService,
+      phaseService: this.phaseService,
+      gamesService: this.gamesService,
     }),
   });
 

@@ -271,6 +271,7 @@ export default (trpc: TrpcService, ctx: Context) =>
             createdAt: z.date(),
             updatedAt: z.date(),
             phaseStartTime: z.date().nullable(),
+            sectorId: z.string().nullable(),
           }),
         }),
       )

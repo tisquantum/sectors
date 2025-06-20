@@ -1,12 +1,25 @@
-'use client';
+"use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from '@sectors/app/components/shadcn/card';
-import { FactorySlots } from './Tableau/FactorySlots';
-import { MarketingSlots } from './Tableau/MarketingSlots';
-import { trpc } from '@sectors/app/trpc';
-import { RiPriceTag3Fill, RiSparkling2Fill, RiWallet3Fill } from '@remixicon/react';
-import { Tooltip } from '@nextui-org/react';
-import { baseToolTipStyle, tooltipParagraphStyle, tooltipStyle } from '@sectors/app/helpers/tailwind.helpers';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@sectors/app/components/shadcn/card";
+import { FactorySlots } from "./Tableau/FactorySlots";
+import { MarketingSlots } from "./Tableau/MarketingSlots";
+import { trpc } from "@sectors/app/trpc";
+import {
+  RiPriceTag3Fill,
+  RiSparkling2Fill,
+  RiWallet3Fill,
+} from "@remixicon/react";
+import { Tooltip } from "@nextui-org/react";
+import {
+  baseToolTipStyle,
+  tooltipParagraphStyle,
+  tooltipStyle,
+} from "@sectors/app/helpers/tailwind.helpers";
 
 interface ModernCompanyProps {
   companyId: string;
@@ -23,7 +36,9 @@ export function ModernCompany({
   unitPrice,
   brandScore,
 }: ModernCompanyProps) {
-  const { data: company } = trpc.company.getCompanyWithSector.useQuery({ id: companyId });
+  const { data: company } = trpc.company.getCompanyWithSector.useQuery({
+    id: companyId,
+  });
 
   return (
     <div className="space-y-4">
@@ -38,7 +53,8 @@ export function ModernCompany({
               className={tooltipStyle}
               content={
                 <p className={tooltipParagraphStyle}>
-                  Unit Price of goods. Each consumer consumes one good per operating round given the company meets supply and demand.
+                  Unit Price of goods. Each consumer consumes one good per
+                  operating round given the company meets supply and demand.
                 </p>
               }
             >
@@ -53,7 +69,8 @@ export function ModernCompany({
               className={tooltipStyle}
               content={
                 <p className={tooltipParagraphStyle}>
-                  Brand Score affects customer attraction and can be increased through marketing campaigns.
+                  Brand Score affects customer attraction and can be increased
+                  through marketing campaigns.
                 </p>
               }
             >
@@ -88,11 +105,11 @@ export function ModernCompany({
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
-                <FactorySlots
-                  companyId={companyId}
-                  gameId={gameId}
-                  currentPhase={currentPhase}
-                />
+              <FactorySlots
+                companyId={companyId}
+                gameId={gameId}
+                currentPhase={currentPhase}
+              />
             </div>
           </CardContent>
         </Card>
@@ -103,15 +120,15 @@ export function ModernCompany({
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
-                <MarketingSlots
-                  companyId={companyId}
-                  gameId={gameId}
-                  currentPhase={currentPhase}
-                />
+              <MarketingSlots
+                companyId={companyId}
+                gameId={gameId}
+                currentPhase={currentPhase}
+              />
             </div>
           </CardContent>
         </Card>
       </div>
     </div>
   );
-} 
+}

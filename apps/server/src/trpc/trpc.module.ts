@@ -58,6 +58,10 @@ import { ExecutiveInfluenceVoteRoundService } from '@server/executive-influence-
 import { AiBotService } from '@server/ai-bot/ai-bot.service';
 import { MarketingService } from '@server/marketing/marketing.service';
 import { FactoryService } from '@server/factory/factory.service';
+import { FactoryConstructionModule } from '../factory-construction/factory-construction.module';
+import { factoryConstructionRouter } from './routers/factory-construction.router';
+import { FactoryConstructionService } from '@server/factory-construction/factory-construction.service';
+import { ModernOperationMechanicsService } from '@server/game-management/modern-operation-mechanics.service';
 
 @Module({
   imports: [PrismaModule],
@@ -123,6 +127,8 @@ import { FactoryService } from '@server/factory/factory.service';
     MarketingService,
     FactoryService,
     AiBotService,
+    FactoryConstructionService,
+    ModernOperationMechanicsService,
   ],
 })
 export class TrpcModule {}
