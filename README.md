@@ -302,7 +302,12 @@ Consumer Profile Idea
 
 A Consumer for the **next turn** is looking for X, Y and Z (???)
 
-What if the Sector Token was like a **wild card** and other tokens were specifity.
+~~What if the Sector Token was like a **wild card** and other tokens were specifity.~~
+
+Scratch that the bag for every sector will have 5 **Wild Card** Influence tokens.
+
+On each new phase, an additional wildcard **resource influence** is put into the influence bag. (???)
+
 
 Sector product recipes **can** include wild cards.
 
@@ -316,8 +321,6 @@ The company MUST match exactly the pull to sell to that consumer from that facto
 
 As phases progress, a company profile for each available phase is drawn each round.
 
-On each new phase, an additional wildcard **sector resource influence** is put into the influence bag. (???)
-
 Consumers will always service **all possible factory industries from highest to lowest**.
 
 Phase I Sector: 2 Pull
@@ -330,3 +333,10 @@ Rusting factories return their resource cubes back to the resource track.
 In the case of contested purchase decision, the consumer goes to the lowest brand score
 
 **How do players combat the only one resource strategy and flooding the market with that?**
+
+
+Marketing campaigns are active until their temporary token is pulled from the bag.  
+
+When a temporary token is pulled, it is subsequently removed after that turn.
+
+When the temporary token is removed, the marketing campaign ends.

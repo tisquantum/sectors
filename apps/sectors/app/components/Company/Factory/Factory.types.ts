@@ -1,0 +1,15 @@
+export type ResourceType = 
+  | 'TRIANGLE'
+  | 'SQUARE'
+  | 'CIRCLE'
+  | 'STAR'
+  | 'MATERIALS'
+  | 'INDUSTRIALS'
+  | 'CONSUMER_DISCRETIONARY'
+  | 'CONSUMER_STAPLES'
+  | 'CONSUMER_CYCLICAL'
+  | 'CONSUMER_DEFENSIVE'
+  | 'ENERGY'
+  | 'HEALTHCARE'
+  | 'TECHNOLOGY'
+  | 'GENERAL'; 
