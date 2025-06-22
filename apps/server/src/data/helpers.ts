@@ -259,6 +259,37 @@ export function determineNextGamePhase(
         phaseName: PhaseName.START_TURN,
         roundType: RoundType.GAME_UPKEEP,
       };
+    // MODERN OPERATING MECHANICS PHASE FLOW
+    case PhaseName.CONSUMPTION_PHASE:
+      return {
+        phaseName: PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT:
+      return {
+        phaseName: PhaseName.FACTORY_CONSTRUCTION,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.FACTORY_CONSTRUCTION:
+      return {
+        phaseName: PhaseName.FACTORY_CONSTRUCTION_RESOLVE,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.FACTORY_CONSTRUCTION_RESOLVE:
+      return {
+        phaseName: PhaseName.MARKETING_AND_RESEARCH_ACTION,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.MARKETING_AND_RESEARCH_ACTION:
+      return {
+        phaseName: PhaseName.MARKETING_AND_RESEARCH_ACTION_RESOLVE,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.MARKETING_AND_RESEARCH_ACTION_RESOLVE:
+      return {
+        phaseName: PhaseName.CAPITAL_GAINS,
+        roundType: RoundType.GAME_UPKEEP,
+      };
     default:
       return {
         phaseName: PhaseName.START_TURN,

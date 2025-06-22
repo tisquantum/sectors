@@ -61,6 +61,8 @@ import { ExecutivePhaseModule } from './executive-phase/executive-phase.module';
 import { ExecutiveGameTurnModule } from './executive-game-turn/executive-game-turn.module';
 import { ExecutiveInfluenceVoteRoundModule } from './executive-influence-vote-round/executive-influence-vote-round.module';
 import { AiBotModule } from './ai-bot/ai-bot.module';
+import { FactoryConstructionModule } from './factory-construction/factory-construction.module';
+import { ResourceModule } from './resource/resource.module';
 
 const yourPusherOptions = {
   cluster: process.env.PUSHER_CLUSTER ?? 'CLUSTER',
@@ -138,6 +140,8 @@ const chunkingOptions = {
     ExecutiveGameTurnModule,
     ExecutiveInfluenceVoteRoundModule,
     AiBotModule,
+    FactoryConstructionModule,
+    ResourceModule,
   ],
   controllers: [AppController],
   providers: [AppService],

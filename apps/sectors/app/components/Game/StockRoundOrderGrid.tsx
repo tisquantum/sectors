@@ -40,6 +40,7 @@ import OrderResults from "./OrderResults";
 import { useDrawer } from "../Drawer.context";
 import CompanyAwardTrack from "../Company/CompanyAwardTrack";
 import { ResearchTrack } from "../Company/Research/ResearchTrack";
+import { ResourceTracksContainer } from "./ResourceTracksContainer";
 
 function isOrderInputOpenPlayerOrderCounter(
   playerOrdersConcealed: PlayerOrderConcealed[],
@@ -69,7 +70,7 @@ function WorkforceTrack({ gameId }: WorkforceTrackProps) {
 
   const spaces = Array.from({ length: 40 }, (_, i) => i + 1);
   const economyScore = game.economyScore;
-  const availableWorkers = 9 ?? game.workforcePool;
+  const availableWorkers = game.workforcePool;
 
   return (
     <div className="mt-4 p-4 bg-gray-500 rounded-lg">
@@ -193,7 +194,7 @@ export function SectorResearchTracks({ gameId }: SectorResearchTracksProps) {
                       className="w-3 h-3 rounded-full mr-2"
                       style={{
                         backgroundColor:
-                          sectorColors[company.Sector?.name || "GENERAL"],
+                          sectorColors[sector.name || "GENERAL"],
                         position: "absolute",
                         left: `${(company.researchProgress / 20) * 100}%`,
                         transform: "translateX(-50%)",
@@ -401,6 +402,9 @@ const StockRoundOrderGrid = ({
             <Derivatives isInteractive={isInteractive} />
           </Tab>
         )}
+        <Tab key="resource-market" title="Resource Market">
+          <ResourceTracksContainer />
+        </Tab>
         <Tab key="table-view" title="Table View">
           <div className="p-4 max-w-full scrollbar">
             <h2 className="text-xl font-bold mb-4">Spot Market</h2>
