@@ -44,6 +44,9 @@ import { AiBotModule } from '@server/ai-bot/ai-bot.module';
 import { RevenueDistributionVoteModule } from '@server/revenue-distribution-vote/revenue-distribution-vote.module';
 import { OperatingRoundVoteModule } from '@server/operating-round-vote/operating-round-vote.module';
 import { ModernOperationMechanicsService } from './modern-operation-mechanics.service';
+import { FactoryConstructionModule } from '@server/factory-construction/factory-construction.module';
+import { ResourceModule } from '@server/resource/resource.module';
+import { FactoryModule } from '@server/factory/factory.module';
 
 @Module({
   imports: [
@@ -89,7 +92,10 @@ import { ModernOperationMechanicsService } from './modern-operation-mechanics.se
     CompanyAwardTrackSpaceModule,
     AiBotModule,
     RevenueDistributionVoteModule,
-    OperatingRoundVoteModule
+    OperatingRoundVoteModule,
+    FactoryConstructionModule,
+    FactoryModule,
+    ResourceModule
   ],
   providers: [
     GameManagementService,

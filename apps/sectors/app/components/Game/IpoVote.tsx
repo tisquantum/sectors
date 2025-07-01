@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import { stockGridPrices } from "@server/data/constants";
-import { Company, PhaseName, Sector } from "@server/prisma/prisma.client";
+import {
+  Company,
+  OperationMechanicsVersion,
+  PhaseName,
+  Sector,
+} from "@server/prisma/prisma.client";
 import DebounceButton from "../General/DebounceButton";
 import { trpc } from "@sectors/app/trpc";
 import { useGame } from "./GameContext";
@@ -15,6 +20,7 @@ import {
 import CompanyInfo from "../Company/CompanyInfo";
 import { RiPriceTag3Fill } from "@remixicon/react";
 import { sectorColors } from "@server/data/gameData";
+import CompanyInfoV2 from "../Company/CompanyV2/CompanyInfoV2";
 
 const CompanyIpoVote = ({
   company,
@@ -81,7 +87,12 @@ const CompanyIpoVote = ({
             </div>
           </PopoverTrigger>
           <PopoverContent>
-            <CompanyInfo companyId={company.id} />
+            {gameState.operationMechanicsVersion ===
+            OperationMechanicsVersion.MODERN ? (
+              <CompanyInfoV2 companyId={company.id} />
+            ) : (
+              <CompanyInfo companyId={company.id} />
+            )}
           </PopoverContent>
         </Popover>
       </div>

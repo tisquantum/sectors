@@ -17,6 +17,7 @@ import {
   PhaseName,
   RoundType,
   StockRound,
+  OperationMechanicsVersion,
 } from "@server/prisma/prisma.client";
 import Meeting from "../Meeting/Meeting";
 import {
@@ -57,6 +58,9 @@ import StartTurnUpdates from "./StartTurnUpdates";
 import GamePlayersRecap from "./GamePlayerRecap";
 import Headlines from "./Headlines";
 import IpoVotes from "./IpoVote";
+import { ConsumptionPhase } from "./ConsumptionPhase";
+import { OperatingRoundRevenueVoteV2, OperatingRoundRevenueVoteResolveV2 } from "./OperatingRoundRevenueV2";
+import FactoryConstructionPhase from "./FactoryConstructionPhase";
 
 const determineGameRound = (
   game: GameState
@@ -225,13 +229,21 @@ const Game = ({ gameId }: { gameId: string }) => {
     ) : currentRoundData?.phase.name === PhaseName.OPERATING_PRODUCTION ? (
       <OperatingRoundProduction />
     ) : currentRoundData?.phase.name === PhaseName.OPERATING_PRODUCTION_VOTE ? (
-      <OperatingRoundRevenueVote />
+      gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN ? (
+        <OperatingRoundRevenueVoteV2 />
+      ) : (
+        <OperatingRoundRevenueVote />
+      )
     ) : currentRoundData?.phase.name ===
       PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT ? (
       <OperatingRoundStockPriceAdjustment />
     ) : currentRoundData?.phase.name ===
       PhaseName.OPERATING_PRODUCTION_VOTE_RESOLVE ? (
-      <OperatingRoundRevenueVoteResolve />
+      gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN ? (
+        <OperatingRoundRevenueVoteResolveV2 />
+      ) : (
+        <OperatingRoundRevenueVoteResolve />
+      )
     ) : currentRoundData?.phase.name ===
       PhaseName.OPERATING_ACTION_COMPANY_VOTE ? (
       <CompanyActionSlider />
@@ -256,7 +268,17 @@ const Game = ({ gameId }: { gameId: string }) => {
       <InfluenceBid isRevealRound />
     ) : currentRoundData?.phase.name === PhaseName.STOCK_ACTION_SHORT_ORDER ? (
       <CoverShortOrders />
-    ) : null;
+    ) : currentRoundData?.phase.name === PhaseName.CONSUMPTION_PHASE ? (
+      <ConsumptionPhase />
+    ) : currentRoundData?.phase.name === PhaseName.FACTORY_CONSTRUCTION ? (
+      <FactoryConstructionPhase />
+    ) : currentRoundData?.phase.name === PhaseName.FACTORY_CONSTRUCTION_RESOLVE ? (
+      <></>//<FactoryConstructionResolve />
+    ) : currentRoundData?.phase.name === PhaseName.MARKETING_AND_RESEARCH_ACTION ? (
+      <></>// <MarketingAndResearchAction />
+    ) : currentRoundData?.phase.name === PhaseName.MARKETING_AND_RESEARCH_ACTION_RESOLVE ?
+    <></>// <MarketingAndResearchActionResolve /> 
+    : null;
 
   return (
     <>

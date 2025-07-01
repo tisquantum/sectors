@@ -98,6 +98,16 @@ export function friendlyPhaseName(name: PhaseName | undefined): string {
       return "Company Vote Result";
     case PhaseName.OPERATING_COMPANY_VOTE_RESOLVE:
       return "Resolve Company Action";
+    case PhaseName.CONSUMPTION_PHASE:
+      return "Consumption Phase";
+    case PhaseName.FACTORY_CONSTRUCTION:
+      return "Factory Construction";
+    case PhaseName.FACTORY_CONSTRUCTION_RESOLVE:
+      return "Resolve Factory Construction";
+    case PhaseName.MARKETING_AND_RESEARCH_ACTION:
+      return "Marketing and Research";
+    case PhaseName.MARKETING_AND_RESEARCH_ACTION_RESOLVE:
+      return "Resolve Marketing and Research";
     case PhaseName.CAPITAL_GAINS:
       return "Capital Gains";
     case PhaseName.DIVESTMENT:

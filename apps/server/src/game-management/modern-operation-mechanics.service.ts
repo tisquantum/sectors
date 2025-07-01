@@ -41,11 +41,9 @@ export class ModernOperationMechanicsService {
         break;
 
       case PhaseName.FACTORY_CONSTRUCTION:
-        await this.handleFactoryConstruction(game.id, phase.id);
         break;
 
       case PhaseName.FACTORY_CONSTRUCTION_RESOLVE:
-        await this.resolveFactoryConstruction(phase);
         break;
 
       case PhaseName.MARKETING_AND_RESEARCH_ACTION:

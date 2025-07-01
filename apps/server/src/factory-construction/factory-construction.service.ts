@@ -14,7 +14,6 @@ export class FactoryConstructionService {
   constructor(
     private prisma: PrismaService,
     private phaseService: PhaseService,
-    private modernOperationMechanicsService: ModernOperationMechanicsService,
   ) {}
 
   async validateCompanyOwnership(companyId: string, playerId: string): Promise<boolean | null> {

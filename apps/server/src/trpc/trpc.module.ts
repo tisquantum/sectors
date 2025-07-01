@@ -62,6 +62,8 @@ import { FactoryConstructionModule } from '../factory-construction/factory-const
 import { factoryConstructionRouter } from './routers/factory-construction.router';
 import { FactoryConstructionService } from '@server/factory-construction/factory-construction.service';
 import { ModernOperationMechanicsService } from '@server/game-management/modern-operation-mechanics.service';
+import { FactoryConstructionOrderService } from '@server/factory-construction/factory-construction-order.service';
+import { ResourceService } from '@server/resource/resource.service';
 
 @Module({
   imports: [PrismaModule],
@@ -129,6 +131,8 @@ import { ModernOperationMechanicsService } from '@server/game-management/modern-
     AiBotService,
     FactoryConstructionService,
     ModernOperationMechanicsService,
+    FactoryConstructionOrderService,
+    ResourceService
   ],
 })
 export class TrpcModule {}

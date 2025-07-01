@@ -51,6 +51,7 @@ import {
   AwardTrackType,
   GameTurn,
   CompanyIpoPriceVote,
+  OperationMechanicsVersion,
 } from '@prisma/client';
 import { GamesService } from '@server/games/games.service';
 import { CompanyService } from '@server/company/company.service';
@@ -316,8 +317,11 @@ export class GameManagementService {
    */
   async handlePhase(phase: Phase, game: Game) {
     // If game is using modern operation mechanics, try to handle it with the modern service
-    if (game.operationMechanicsVersion === 'MODERN') {
-      const handled = await this.modernOperationMechanicsService.handlePhase(phase, game);
+    if (game.operationMechanicsVersion === OperationMechanicsVersion.MODERN) {
+      const handled = await this.modernOperationMechanicsService.handlePhase(
+        phase,
+        game,
+      );
       // If the modern service handled the phase, we're done
       if (handled) {
         return;
@@ -6149,9 +6153,13 @@ export class GameManagementService {
       );
     }
 
-    const determinedNextPhase = determineNextGamePhase(phase.name, {
-      stockActionSubRoundIsOver: !!!hasOrdersInStockSubRound,
-    });
+    const determinedNextPhase = determineNextGamePhase(
+      phase.name,
+      {
+        stockActionSubRoundIsOver: !!!hasOrdersInStockSubRound,
+      },
+      gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN,
+    );
 
     let adjustedPhase = await this.findNextPhaseThatShouldBePlayed(
       determinedNextPhase,
@@ -6237,9 +6245,13 @@ export class GameManagementService {
     roundType: RoundType;
     companyId?: string;
   }> {
-    const determinedNextPhase = determineNextGamePhase(phase.name, {
-      stockActionSubRoundIsOver,
-    });
+    const determinedNextPhase = determineNextGamePhase(
+      phase.name,
+      {
+        stockActionSubRoundIsOver,
+      },
+      gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN,
+    );
 
     let nextPhaseTimer = Date.now();
     let nextPhase = await this.findNextPhaseThatShouldBePlayed(
@@ -6296,9 +6308,14 @@ export class GameManagementService {
     );
 
     while (!doesNextPhaseNeedToBePlayed) {
-      nextPhase = determineNextGamePhase(nextPhase.phaseName, {
-        stockActionSubRoundIsOver,
-      });
+      nextPhase = determineNextGamePhase(
+        nextPhase.phaseName,
+        {
+          stockActionSubRoundIsOver,
+        },
+        gameState.operationMechanicsVersion ===
+          OperationMechanicsVersion.MODERN,
+      );
       doesNextPhaseNeedToBePlayed = await this.doesNextPhaseNeedToBePlayed(
         nextPhase.phaseName,
         currentPhase,

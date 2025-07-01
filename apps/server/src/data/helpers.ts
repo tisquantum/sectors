@@ -76,6 +76,7 @@ interface NextPhaseOptions {
 export function determineNextGamePhase(
   phaseName: PhaseName,
   options?: NextPhaseOptions,
+  modernOperations: boolean = false,
 ): {
   phaseName: PhaseName;
   roundType: RoundType;
@@ -202,11 +203,19 @@ export function determineNextGamePhase(
         phaseName: PhaseName.STOCK_RESULTS_OVERVIEW,
         roundType: RoundType.STOCK,
       };
-    case PhaseName.STOCK_RESULTS_OVERVIEW:
+    case PhaseName.STOCK_RESULTS_OVERVIEW: {
+      //if modern operations, move to operations production
+      if (modernOperations) {
+        return {
+          phaseName: PhaseName.CONSUMPTION_PHASE,
+          roundType: RoundType.OPERATING,
+        };
+      }
       return {
         phaseName: PhaseName.OPERATING_ACTION_COMPANY_VOTE,
         roundType: RoundType.OPERATING,
       };
+    }
     case PhaseName.OPERATING_ACTION_COMPANY_VOTE:
       return {
         phaseName: PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT,
@@ -237,11 +246,19 @@ export function determineNextGamePhase(
         phaseName: PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT,
         roundType: RoundType.OPERATING,
       };
-    case PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT:
+    case PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT: {
+      //if modern operations, move to factory construction
+      if (modernOperations) {
+        return {
+          phaseName: PhaseName.FACTORY_CONSTRUCTION,
+          roundType: RoundType.OPERATING,
+        };
+      }
       return {
         phaseName: PhaseName.CAPITAL_GAINS,
         roundType: RoundType.OPERATING,
       };
+    }
     //if you are over some threshold on stocks, you must pay a tax.
     case PhaseName.CAPITAL_GAINS:
       return {
@@ -262,12 +279,7 @@ export function determineNextGamePhase(
     // MODERN OPERATING MECHANICS PHASE FLOW
     case PhaseName.CONSUMPTION_PHASE:
       return {
-        phaseName: PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT,
-        roundType: RoundType.OPERATING,
-      };
-    case PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT:
-      return {
-        phaseName: PhaseName.FACTORY_CONSTRUCTION,
+        phaseName: PhaseName.OPERATING_PRODUCTION_VOTE,
         roundType: RoundType.OPERATING,
       };
     case PhaseName.FACTORY_CONSTRUCTION:
