@@ -62,6 +62,8 @@ import { ConsumptionPhase } from "./ConsumptionPhase";
 import { OperatingRoundRevenueVoteV2, OperatingRoundRevenueVoteResolveV2 } from "./OperatingRoundRevenueV2";
 import FactoryConstructionPhase from "./FactoryConstructionPhase";
 import { ResolveFactoryConstructionPhase } from "../Factory/ResolveFactoryConstruction";
+import MarketingAndResearchAction from "./MarketingAndResearchAction";
+import MarketingAndResearchActionResolve from "./MarketingAndResearchActionResolve";
 
 const determineGameRound = (
   game: GameState
@@ -276,9 +278,10 @@ const Game = ({ gameId }: { gameId: string }) => {
     ) : currentRoundData?.phase.name === PhaseName.FACTORY_CONSTRUCTION_RESOLVE ? (
       <ResolveFactoryConstructionPhase />
     ) : currentRoundData?.phase.name === PhaseName.MARKETING_AND_RESEARCH_ACTION ? (
-      <></>// <MarketingAndResearchAction />
-    ) : currentRoundData?.phase.name === PhaseName.MARKETING_AND_RESEARCH_ACTION_RESOLVE ?
-    <></>// <MarketingAndResearchActionResolve /> 
+      <MarketingAndResearchAction />
+    ) : currentRoundData?.phase.name === PhaseName.MARKETING_AND_RESEARCH_ACTION_RESOLVE ? (
+      <MarketingAndResearchActionResolve />
+    )
     : null;
 
   return (
