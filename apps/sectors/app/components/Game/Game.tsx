@@ -61,6 +61,7 @@ import IpoVotes from "./IpoVote";
 import { ConsumptionPhase } from "./ConsumptionPhase";
 import { OperatingRoundRevenueVoteV2, OperatingRoundRevenueVoteResolveV2 } from "./OperatingRoundRevenueV2";
 import FactoryConstructionPhase from "./FactoryConstructionPhase";
+import { ResolveFactoryConstructionPhase } from "../Factory/ResolveFactoryConstruction";
 
 const determineGameRound = (
   game: GameState
@@ -273,7 +274,7 @@ const Game = ({ gameId }: { gameId: string }) => {
     ) : currentRoundData?.phase.name === PhaseName.FACTORY_CONSTRUCTION ? (
       <FactoryConstructionPhase />
     ) : currentRoundData?.phase.name === PhaseName.FACTORY_CONSTRUCTION_RESOLVE ? (
-      <></>//<FactoryConstructionResolve />
+      <ResolveFactoryConstructionPhase />
     ) : currentRoundData?.phase.name === PhaseName.MARKETING_AND_RESEARCH_ACTION ? (
       <></>// <MarketingAndResearchAction />
     ) : currentRoundData?.phase.name === PhaseName.MARKETING_AND_RESEARCH_ACTION_RESOLVE ?

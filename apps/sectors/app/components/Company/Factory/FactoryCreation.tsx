@@ -3,23 +3,9 @@
 import { useState } from 'react';
 import { trpc } from '@sectors/app/trpc';
 import { cn } from '@/lib/utils';
+import { ResourceType } from './Factory.types';
 
 type FactorySize = 'FACTORY_I' | 'FACTORY_II' | 'FACTORY_III' | 'FACTORY_IV';
-
-type ResourceType = 
-  | 'TRIANGLE'
-  | 'SQUARE'
-  | 'CIRCLE'
-  | 'MATERIALS'
-  | 'INDUSTRIALS'
-  | 'CONSUMER_DISCRETIONARY'
-  | 'CONSUMER_STAPLES'
-  | 'CONSUMER_CYCLICAL'
-  | 'CONSUMER_DEFENSIVE'
-  | 'ENERGY'
-  | 'HEALTHCARE'
-  | 'TECHNOLOGY'
-  | 'GENERAL';
 
 interface FactoryCreationProps {
   companyId: string;
@@ -34,21 +20,37 @@ interface ResourceSchematic {
   price: number;
 }
 
+// Helper function to get sector resource type
+const getSectorResourceType = (sectorName: string): ResourceType => {
+  switch (sectorName) {
+    case 'MATERIALS':
+      return 'MATERIALS';
+    case 'INDUSTRIALS':
+      return 'INDUSTRIALS';
+    case 'CONSUMER_DISCRETIONARY':
+      return 'CONSUMER_DISCRETIONARY';
+    case 'CONSUMER_STAPLES':
+      return 'CONSUMER_STAPLES';
+    case 'CONSUMER_CYCLICAL':
+      return 'CONSUMER_CYCLICAL';
+    case 'CONSUMER_DEFENSIVE':
+      return 'CONSUMER_DEFENSIVE';
+    case 'ENERGY':
+      return 'ENERGY';
+    case 'HEALTHCARE':
+      return 'HEALTHCARE';
+    case 'TECHNOLOGY':
+      return 'TECHNOLOGY';
+    default:
+      return 'GENERAL';
+  }
+};
+
 // Mock resource data - replace with actual tRPC call when resource router is available
 const MOCK_RESOURCES = [
-  { type: 'TRIANGLE' as ResourceType, price: 10 },
   { type: 'SQUARE' as ResourceType, price: 15 },
   { type: 'CIRCLE' as ResourceType, price: 20 },
-  { type: 'MATERIALS' as ResourceType, price: 25 },
-  { type: 'INDUSTRIALS' as ResourceType, price: 30 },
-  { type: 'CONSUMER_DISCRETIONARY' as ResourceType, price: 35 },
-  { type: 'CONSUMER_STAPLES' as ResourceType, price: 40 },
-  { type: 'CONSUMER_CYCLICAL' as ResourceType, price: 45 },
-  { type: 'CONSUMER_DEFENSIVE' as ResourceType, price: 50 },
-  { type: 'ENERGY' as ResourceType, price: 55 },
-  { type: 'HEALTHCARE' as ResourceType, price: 60 },
-  { type: 'TECHNOLOGY' as ResourceType, price: 65 },
-  { type: 'GENERAL' as ResourceType, price: 70 },
+  { type: 'TRIANGLE' as ResourceType, price: 10 },
 ];
 
 const RESOURCE_LIMITS: Record<FactorySize, number> = {
@@ -59,9 +61,9 @@ const RESOURCE_LIMITS: Record<FactorySize, number> = {
 };
 
 const RESOURCE_COLORS: Record<ResourceType, string> = {
-  TRIANGLE: 'bg-yellow-500',
   SQUARE: 'bg-blue-500',
   CIRCLE: 'bg-green-500',
+  TRIANGLE: 'bg-yellow-500',
   MATERIALS: 'bg-gray-500',
   INDUSTRIALS: 'bg-orange-500',
   CONSUMER_DISCRETIONARY: 'bg-purple-500',
@@ -80,7 +82,20 @@ export function FactoryCreation({
   factorySize, 
   onClose 
 }: FactoryCreationProps) {
-  const [schematic, setSchematic] = useState<ResourceSchematic[]>([]);
+  // Get company data to determine sector
+  const company = trpc.company.getCompanyWithSector.useQuery({ id: companyId });
+  
+  // Get sector resource type
+  const sectorResourceType = company.data?.Sector?.name 
+    ? getSectorResourceType(company.data.Sector.name)
+    : 'GENERAL';
+  
+  // Initialize with sector resource by default
+  const [schematic, setSchematic] = useState<ResourceSchematic[]>([{
+    type: sectorResourceType,
+    quantity: 1,
+    price: 25 // Default price, should be fetched from actual resource data
+  }]);
   
   // TODO: Replace with actual tRPC call when resource router is available
   const resources = MOCK_RESOURCES;
@@ -91,10 +106,10 @@ export function FactoryCreation({
 
   const addResource = (resourceType: ResourceType) => {
     if (!canAddResource || !resources) return;
-    
+    // Prevent duplicates
+    if (schematic.some((item) => item.type === resourceType)) return;
     const resource = resources.find((r: { type: ResourceType; price: number }) => r.type === resourceType);
     if (!resource) return;
-
     setSchematic(prev => [...prev, {
       type: resourceType,
       quantity: 1,
@@ -103,11 +118,18 @@ export function FactoryCreation({
   };
 
   const removeResource = (index: number) => {
+    // Don't allow removing the sector resource (index 0)
+    if (index === 0) return;
     setSchematic(prev => prev.filter((_, i) => i !== index));
   };
 
   const resetSchematic = () => {
-    setSchematic([]);
+    // Reset to just the sector resource
+    setSchematic([{
+      type: sectorResourceType,
+      quantity: 1,
+      price: 25
+    }]);
   };
 
   const updateQuantity = (index: number, quantity: number) => {
@@ -204,38 +226,22 @@ export function FactoryCreation({
               >
                 <div className="flex items-center gap-2">
                   <div className={cn('w-4 h-4 rounded', RESOURCE_COLORS[item.type])} />
-                  <span className="text-sm text-gray-200">{item.type}</span>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => updateQuantity(index, item.quantity - 1)}
-                      className="w-6 h-6 rounded bg-gray-600 hover:bg-gray-500 text-gray-200 text-xs"
-                    >
-                      -
-                    </button>
-                    <span className="text-sm text-gray-200 w-8 text-center">
-                      {item.quantity}
-                    </span>
-                    <button
-                      onClick={() => updateQuantity(index, item.quantity + 1)}
-                      className="w-6 h-6 rounded bg-gray-600 hover:bg-gray-500 text-gray-200 text-xs"
-                    >
-                      +
-                    </button>
-                  </div>
-                  
-                  <span className="text-sm text-gray-400 w-16 text-right">
-                    ${item.price * item.quantity}
+                  <span className="text-sm text-gray-200">
+                    {index === 0 ? 'STAR' : item.type}
                   </span>
-                  
-                  <button
-                    onClick={() => removeResource(index)}
-                    className="w-6 h-6 rounded bg-red-600/20 hover:bg-red-600/40 text-red-400 text-xs transition-colors"
-                  >
-                    ✕
-                  </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-400 w-16 text-right">
+                    ${item.price}
+                  </span>
+                  {index !== 0 && (
+                    <button
+                      onClick={() => removeResource(index)}
+                      className="w-6 h-6 rounded bg-red-600/20 hover:bg-red-600/40 text-red-400 text-xs transition-colors"
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

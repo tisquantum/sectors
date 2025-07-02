@@ -2,7 +2,6 @@ export type ResourceType =
   | 'TRIANGLE'
   | 'SQUARE'
   | 'CIRCLE'
-  | 'STAR'
   | 'MATERIALS'
   | 'INDUSTRIALS'
   | 'CONSUMER_DISCRETIONARY'
