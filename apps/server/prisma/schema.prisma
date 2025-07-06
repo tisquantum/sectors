@@ -1069,6 +1069,7 @@ enum PhaseName {
   MARKETING_AND_RESEARCH_ACTION
   MARKETING_AND_RESEARCH_ACTION_RESOLVE
   CONSUMPTION_PHASE
+  EARNINGS_CALL //profit and stock adjustment
 }
 
 model InfluenceRound {

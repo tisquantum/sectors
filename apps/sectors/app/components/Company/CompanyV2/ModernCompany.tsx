@@ -7,7 +7,7 @@ import { MarketingSlots } from "../Tableau/MarketingSlots";
 interface ModernCompanyProps {
   companyId: string;
   gameId: string;
-  currentPhase: number;
+  currentPhase?: string;
 }
 
 export function ModernCompany({
@@ -18,6 +18,10 @@ export function ModernCompany({
   const { data: company } = trpc.company.getCompanyWithSector.useQuery({
     id: companyId,
   });
+
+  if (!currentPhase) {
+    return null;
+  }
 
   return (
     <div className="bg-gray-800/95 backdrop-blur-sm rounded-lg border border-gray-600 shadow-lg p-3 space-y-3 min-w-[280px]">
@@ -31,7 +35,6 @@ export function ModernCompany({
           <FactorySlots
             companyId={companyId}
             gameId={gameId}
-            currentPhase={currentPhase}
           />
         </div>
       </div>
@@ -46,7 +49,6 @@ export function ModernCompany({
           <MarketingSlots
             companyId={companyId}
             gameId={gameId}
-            currentPhase={currentPhase}
           />
         </div>
       </div>

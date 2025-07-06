@@ -23,7 +23,6 @@ interface MarketingSlot {
 interface MarketingSlotsProps {
   companyId: string;
   gameId: string;
-  currentPhase: number;
 }
 
 const MOCK_CAMPAIGNS = [
@@ -49,7 +48,7 @@ const SLOT_CONFIG: MarketingSlot[] = [
   { id: 'slot-5', phase: 4, isAvailable: true, isOccupied: false },
 ];
 
-export function MarketingSlots({ companyId, gameId, currentPhase }: MarketingSlotsProps) {
+export function MarketingSlots({ companyId, gameId }: MarketingSlotsProps) {
   const [showMarketingCreation, setShowMarketingCreation] = useState(false);
 
   const handleSlotClick = (slot: MarketingSlot) => {

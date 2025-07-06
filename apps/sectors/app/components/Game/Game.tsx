@@ -64,6 +64,7 @@ import FactoryConstructionPhase from "./FactoryConstructionPhase";
 import { ResolveFactoryConstructionPhase } from "../Factory/ResolveFactoryConstruction";
 import MarketingAndResearchAction from "./MarketingAndResearchAction";
 import MarketingAndResearchActionResolve from "./MarketingAndResearchActionResolve";
+import { EarningsCall } from "./EarningsCall";
 
 const determineGameRound = (
   game: GameState
@@ -273,6 +274,8 @@ const Game = ({ gameId }: { gameId: string }) => {
       <CoverShortOrders />
     ) : currentRoundData?.phase.name === PhaseName.CONSUMPTION_PHASE ? (
       <ConsumptionPhase />
+    ) : currentRoundData?.phase.name === PhaseName.EARNINGS_CALL ? (
+      <EarningsCall />
     ) : currentRoundData?.phase.name === PhaseName.FACTORY_CONSTRUCTION ? (
       <FactoryConstructionPhase />
     ) : currentRoundData?.phase.name === PhaseName.FACTORY_CONSTRUCTION_RESOLVE ? (

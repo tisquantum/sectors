@@ -108,6 +108,8 @@ export function friendlyPhaseName(name: PhaseName | undefined): string {
       return "Marketing and Research";
     case PhaseName.MARKETING_AND_RESEARCH_ACTION_RESOLVE:
       return "Resolve Marketing and Research";
+    case PhaseName.EARNINGS_CALL:
+      return "Earnings Call";
     case PhaseName.CAPITAL_GAINS:
       return "Capital Gains";
     case PhaseName.DIVESTMENT:

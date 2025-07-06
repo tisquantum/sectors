@@ -26,7 +26,6 @@ interface FactorySlot {
 interface FactorySlotsProps {
   companyId: string;
   gameId: string;
-  currentPhase: number;
 }
 
 // Mock factory data
@@ -78,7 +77,7 @@ const SLOT_CONFIG: FactorySlot[] = [
   { id: 'slot-5', phase: 'IV', isAvailable: false, isOccupied: false },
 ];
 
-export function FactorySlots({ companyId, gameId, currentPhase }: FactorySlotsProps) {
+export function FactorySlots({ companyId, gameId }: FactorySlotsProps) {
   const [showFactoryCreation, setShowFactoryCreation] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<FactorySlot | null>(null);
 

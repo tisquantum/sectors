@@ -37,11 +37,11 @@ export function ResourceTrack({ resourceType, title, track, currentPrice }: Reso
         <h3 className="text-lg font-semibold text-white">{title || resourceType}</h3>
         <span className="text-lg font-bold text-green-400">${currentPrice}</span>
       </div>
-      <div className="flex gap-1">
+      <div className="flex flex-wrap gap-1 min-h-12">
         {track.map((price, index) => {
           const hasCube = index <= currentIndex;
           return (
-            <div key={index} className="relative flex-1 h-12 bg-gray-700 rounded flex items-center justify-center">
+            <div key={index} className="relative flex-1 basis-12 max-w-[48px] h-12 bg-gray-700 rounded flex items-center justify-center min-w-[40px]">
               <span className="relative z-10 text-white font-medium">${price}</span>
               {hasCube && (
                 <div className={cn('absolute inset-0 m-1 rounded-sm', resourceColor)} />

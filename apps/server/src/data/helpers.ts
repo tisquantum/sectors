@@ -207,7 +207,7 @@ export function determineNextGamePhase(
       //if modern operations, move to operations production
       if (modernOperations) {
         return {
-          phaseName: PhaseName.CONSUMPTION_PHASE,
+          phaseName: PhaseName.FACTORY_CONSTRUCTION,
           roundType: RoundType.OPERATING,
         };
       }
@@ -242,6 +242,12 @@ export function determineNextGamePhase(
         roundType: RoundType.OPERATING,
       };
     case PhaseName.OPERATING_PRODUCTION_VOTE_RESOLVE:
+      if (modernOperations) {
+        return {
+          phaseName: PhaseName.CAPITAL_GAINS,
+          roundType: RoundType.OPERATING,
+        };
+      }
       return {
         phaseName: PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT,
         roundType: RoundType.OPERATING,
@@ -249,10 +255,7 @@ export function determineNextGamePhase(
     case PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT: {
       //if modern operations, move to factory construction
       if (modernOperations) {
-        return {
-          phaseName: PhaseName.FACTORY_CONSTRUCTION,
-          roundType: RoundType.OPERATING,
-        };
+        throw new Error('Modern operations not implemented');
       }
       return {
         phaseName: PhaseName.CAPITAL_GAINS,
@@ -279,6 +282,11 @@ export function determineNextGamePhase(
     // MODERN OPERATING MECHANICS PHASE FLOW
     case PhaseName.CONSUMPTION_PHASE:
       return {
+        phaseName: PhaseName.EARNINGS_CALL,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.EARNINGS_CALL:
+      return {
         phaseName: PhaseName.OPERATING_PRODUCTION_VOTE,
         roundType: RoundType.OPERATING,
       };
@@ -299,7 +307,7 @@ export function determineNextGamePhase(
       };
     case PhaseName.MARKETING_AND_RESEARCH_ACTION_RESOLVE:
       return {
-        phaseName: PhaseName.CAPITAL_GAINS,
+        phaseName: PhaseName.CONSUMPTION_PHASE,
         roundType: RoundType.GAME_UPKEEP,
       };
     default:

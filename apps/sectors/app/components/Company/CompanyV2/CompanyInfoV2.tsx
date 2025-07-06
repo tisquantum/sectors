@@ -229,6 +229,67 @@ const CompanyInfoV2 = ({
     return <div>No company found</div>;
   }
 
+  if (isMinimal) {
+    return (
+      <div className="flex flex-col gap-2 p-2">
+        <div className="flex items-center gap-2 text-lg font-bold">
+          <span>{company.name}</span>
+          <div className="flex gap-1">
+            <span>{company.stockSymbol}</span>
+            <Tooltip
+              classNames={{ base: baseToolTipStyle }}
+              className={tooltipStyle}
+              content={
+                <p className={tooltipParagraphStyle}>The current stock price</p>
+              }
+            >
+              <Popover>
+                <PopoverTrigger>
+                  <div className="flex items-center gap-1 cursor-pointer">
+                    <RiFundsFill size={20} />
+                    <span>${company.currentStockPrice}</span>
+                  </div>
+                </PopoverTrigger>
+                <PopoverContent>
+                  <CompanyLineChart companyId={company.id} />
+                </PopoverContent>
+              </Popover>
+            </Tooltip>
+          </div>
+        </div>
+
+        <div className="flex gap-1">
+          <Tooltip
+            classNames={{ base: baseToolTipStyle }}
+            className={tooltipStyle}
+            content={
+              <p className={tooltipParagraphStyle}>
+                The company status. INACTIVE companies have not yet floated.
+              </p>
+            }
+          >
+            <span className={
+              company.status == CompanyStatus.ACTIVE ? "text-green-500" : company.status == CompanyStatus.INACTIVE ? "text-yellow-500" : "text-red-500"
+            }>{company.status}</span>
+          </Tooltip>
+          <Tooltip
+            classNames={{ base: baseToolTipStyle }}
+            className={tooltipStyle}
+            content={
+              <p className={tooltipParagraphStyle}>
+                Corporate treasury or cash on hand.
+              </p>
+            }
+          >
+            <div className="flex items-center gap-1" onClick={onOpen}>
+              <RiWallet3Fill size={20} /> <span>${company.cashOnHand}</span>
+            </div>
+          </Tooltip>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="flex flex-row gap-1 items-center h-full w-full">
@@ -339,20 +400,7 @@ const CompanyInfoV2 = ({
                 </Tooltip>
               </div>
               <div>
-                {isMinimal ? (
-                  <Accordion>
-                    <AccordionItem
-                      key="more-info"
-                      aria-label="More Information"
-                      title="More Information"
-                    >
-                      <CompanyMoreInfo
-                        company={company}
-                        showingProductionResults={showingProductionResults}
-                      />
-                    </AccordionItem>
-                  </Accordion>
-                ) : (
+                {isMinimal ? null : (
                   <CompanyMoreInfo
                     company={company}
                     showingProductionResults={showingProductionResults}
