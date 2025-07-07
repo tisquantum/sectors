@@ -7,6 +7,7 @@ import {
   OperatingRoundAction,
   PhaseName,
   PrestigeReward,
+  ResourceType,
   Sector,
   SectorName,
   StockTier,
@@ -160,6 +161,47 @@ export const stockGridPrices = [
   470, 484, 498, 512, 526, 540, 555, 570, 585, 600,
 ];
 
+// Worker track values account for the economy score + the worker salaries.
+// As workers are added to factories, the economy score increases because the global workforce is increasing strengthing the economy.
+// As workers are added to factories, the worker salaries increase because the global workforce is increasing strengthing the economy.
+export const workerTrackValues = [
+  10, 10, 10, 10, 11, 11, 11, 11, 12, 12,
+  13, 13, 13, 13, 14, 14, 14, 14, 15, 15,
+  15, 15, 16, 16, 16, 16, 17, 17, 17, 17,
+  18, 18, 18, 18, 19, 19, 19, 19, 20, 20,
+  20, 20, 21, 21, 21, 21, 22, 22, 22, 22,
+  23, 23, 23, 23, 24, 24, 24, 24, 25, 25,
+  25, 25, 26, 26, 26, 26, 27, 27, 27, 27,
+  28, 28, 28, 28, 29, 29, 29, 29, 30, 30
+]
+
+export const DEFAULT_WORKERS = 60;
+
+export function getSectorResourceForSectorName(sectorName: SectorName) {
+  switch(sectorName) {
+    case SectorName.CONSUMER_DEFENSIVE:
+      return ResourceType.CONSUMER_DEFENSIVE;
+    case SectorName.CONSUMER_CYCLICAL:
+      return ResourceType.CONSUMER_CYCLICAL;
+    case SectorName.CONSUMER_DISCRETIONARY:
+      return ResourceType.CONSUMER_DISCRETIONARY;
+    case SectorName.CONSUMER_STAPLES:
+      return ResourceType.CONSUMER_STAPLES;
+    case SectorName.ENERGY:
+      return ResourceType.ENERGY;
+    case SectorName.HEALTHCARE:
+      return ResourceType.HEALTHCARE;
+    case SectorName.INDUSTRIALS:
+      return ResourceType.INDUSTRIALS;
+    case SectorName.MATERIALS:
+      return ResourceType.MATERIALS;
+    case SectorName.TECHNOLOGY:
+      return ResourceType.TECHNOLOGY;
+    default:
+      return ResourceType.GENERAL;
+  }
+}
+
 export const RESOURCE_PRICES_CIRCLE = [12, 15, 17, 14, 18, 16, 20, 19, 22, 24, 26, 23, 28, 25, 30, 27, 32, 29, 35, 31, 33, 36, 34, 38, 40]
 
 export const RESOURCE_PRICES_SQUARE = [5, 6, 7, 8, 10, 11, 12, 14, 15, 17, 18, 20, 21, 23, 24, 26, 27, 29, 30, 32]
@@ -185,6 +227,37 @@ export const RESOURCE_PRICES_CONSUMER_DISCRETIONARY = [1, 2, 3, 4, 5, 6, 7, 8, 9
 export const RESOURCE_PRICES_CONSUMER_STAPLES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 export const RESOURCE_PRICES_MATERIALS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+export function getResourcePriceForResourceType(resourceType: ResourceType) {
+  switch(resourceType) {
+    case ResourceType.CIRCLE:
+      return RESOURCE_PRICES_CIRCLE
+    case ResourceType.SQUARE:
+      return RESOURCE_PRICES_SQUARE;
+    case ResourceType.TRIANGLE:
+      return RESOURCE_PRICES_TRIANGLE;
+    case ResourceType.CONSUMER_DEFENSIVE:
+      return RESOURCE_PRICES_CONSUMER_DEFENSIVE;
+    case ResourceType.CONSUMER_CYCLICAL:
+      return RESOURCE_PRICES_CONSUMER_CYCLICAL;
+    case ResourceType.CONSUMER_DISCRETIONARY:
+      return RESOURCE_PRICES_CONSUMER_DISCRETIONARY;
+    case ResourceType.CONSUMER_STAPLES:
+      return RESOURCE_PRICES_CONSUMER_STAPLES;
+    case ResourceType.ENERGY:
+      return RESOURCE_PRICES_ENERGY;
+    case ResourceType.HEALTHCARE:
+      return RESOURCE_PRICES_HEALTHCARE;
+    case ResourceType.INDUSTRIALS:
+      return RESOURCE_PRICES_INDUSTRIAL;
+    case ResourceType.MATERIALS:
+      return RESOURCE_PRICES_MATERIALS;
+    case ResourceType.TECHNOLOGY:
+      return RESOURCE_PRICES_TECHNOLOGY;
+    default:
+      return [];
+  }
+}
 
 export const getStockPriceClosestEqualOrLess = (price: number): number => {
   const index = stockGridPrices.findIndex((value) => value >= price);

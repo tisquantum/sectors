@@ -7,12 +7,15 @@ import { TrpcService } from '../trpc.service';
 import { PlayersService } from '@server/players/players.service';
 import { PhaseService } from '@server/phase/phase.service';
 import { GamesService } from '@server/games/games.service';
+import { getNumberForFactorySize, validFactorySizeForSectorTechnologyLevel } from '@server/data/helpers';
+import { SectorService } from '@server/sector/sector.service';
 
 type Context = {
   factoryConstructionService: FactoryConstructionService;
   playerService: PlayersService;
   phaseService: PhaseService;
   gamesService: GamesService;
+  sectorService: SectorService;
 };
 
 export const factoryConstructionRouter = (trpc: TrpcService, ctx: Context) => router({
@@ -36,7 +39,6 @@ export const factoryConstructionRouter = (trpc: TrpcService, ctx: Context) => ro
       if (!ctxMiddleware.submittingPlayerId) {
         throw new Error('Player ID is required');
       }
-
       // Validate that the company belongs to the submitting player
       const company = await ctx.factoryConstructionService.validateCompanyOwnership(
         input.companyId,
@@ -45,6 +47,23 @@ export const factoryConstructionRouter = (trpc: TrpcService, ctx: Context) => ro
 
       if (!company) {
         throw new Error('Company not found or not owned by player');
+      }
+      
+      //ensure factory size is valid for the sector technologyLevel
+      const sector = await ctx.sectorService.sector({ id: company.sectorId ?? '' });
+      if(!sector) {
+        throw new Error('Sector not found');
+      }
+      if(validFactorySizeForSectorTechnologyLevel(input.size, sector.technologyLevel)) {
+        throw new Error('Factory size is not valid for the sector technology level');
+      }
+
+      //ensure resource types don't exceed the factory size
+      const resourceTypes = input.resourceTypes;
+      const factorySize = input.size;
+      const resourceTypeCounts = resourceTypes.length;
+      if(resourceTypeCounts > getNumberForFactorySize(factorySize) + 1) {
+        throw new Error('Resource types exceed the factory size');
       }
 
       // Create the factory construction order

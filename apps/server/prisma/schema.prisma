@@ -953,8 +953,8 @@ model Resource {
   gameId            String
   type              ResourceType
   trackType         ResourceTrackType
-  quantity          Int
   price             Float
+  trackPosition     Int
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   game              Game               @relation(fields: [gameId], references: [id])

@@ -3,6 +3,7 @@ import {
   Card,
   Company,
   CompanyStatus,
+  FactorySize,
   OperatingRoundAction,
   OrderType,
   Phase,
@@ -1081,5 +1082,35 @@ export function getResourcePricesForSector(sector: SectorName) {
       return RESOURCE_PRICES_CONSUMER_STAPLES;
     default:
       return [1];
+  }
+}
+
+export function getNumberForFactorySize(factorySize: FactorySize) {
+  switch (factorySize) {
+    case FactorySize.FACTORY_I:
+      return 1;
+    case FactorySize.FACTORY_II:
+      return 2;
+    case FactorySize.FACTORY_III:
+      return 3;
+    case FactorySize.FACTORY_IV:
+      return 4;
+    default:
+      return 0;
+  }
+}
+
+export function validFactorySizeForSectorTechnologyLevel(factorySize: FactorySize, sectorTechnologyLevel: number) {
+  switch (factorySize) {
+    case FactorySize.FACTORY_I:
+      return sectorTechnologyLevel >= 1 && sectorTechnologyLevel <= 3;
+    case FactorySize.FACTORY_II:
+      return sectorTechnologyLevel >= 2 && sectorTechnologyLevel <= 4;
+    case FactorySize.FACTORY_III:
+      return sectorTechnologyLevel >= 3;
+    case FactorySize.FACTORY_IV:
+      return sectorTechnologyLevel >= 4;
+    default:
+      return false;
   }
 }

@@ -52,6 +52,8 @@ import {
   GameTurn,
   CompanyIpoPriceVote,
   OperationMechanicsVersion,
+  ResourceType,
+  ResourceTrackType,
 } from '@prisma/client';
 import { GamesService } from '@server/games/games.service';
 import { CompanyService } from '@server/company/company.service';
@@ -149,6 +151,12 @@ import {
   OUTSOURCE_PRESTIGE_PENALTY,
   AWARD_PRESTIGE_BONUS,
   stockGridPrices,
+  RESOURCE_PRICES_CIRCLE,
+  RESOURCE_PRICES_SQUARE,
+  RESOURCE_PRICES_TRIANGLE,
+  getSectorResourceForSectorName,
+  getResourcePriceForResourceType,
+  DEFAULT_WORKERS,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -232,6 +240,7 @@ import { AiBotService } from '@server/ai-bot/ai-bot.service';
 import { RevenueDistributionVoteService } from '@server/revenue-distribution-vote/revenue-distribution-vote.service';
 import { OperatingRoundVoteService } from '@server/operating-round-vote/operating-round-vote.service';
 import { ModernOperationMechanicsService } from './modern-operation-mechanics.service';
+import { ResourceService } from '@server/resource/resource.service';
 
 type GroupedByPhase = {
   [key: string]: {
@@ -302,6 +311,7 @@ export class GameManagementService {
     private revenueDistributionVoteService: RevenueDistributionVoteService,
     private operatingRoundVoteService: OperatingRoundVoteService,
     private modernOperationMechanicsService: ModernOperationMechanicsService,
+    private resourceService: ResourceService,
   ) {}
 
   /**
@@ -388,6 +398,9 @@ export class GameManagementService {
       case PhaseName.STOCK_RESOLVE_MARKET_ORDER:
         //resolve stock round
         await this.resolveMarketOrdersSingleOrderResolve(phase, game);
+        if(game.operationMechanicsVersion === OperationMechanicsVersion.MODERN) {
+          await this.assignCeo(phase, game);
+        }
         break;
       case PhaseName.STOCK_RESOLVE_PENDING_OPTION_ORDER:
         await this.openOptionsOrders(phase);
@@ -470,6 +483,59 @@ export class GameManagementService {
       default:
         return;
     }
+  }
+
+  async assignCeo(phase: Phase, game: Game) {
+    //iterate over all companies and check the share ownership of each company, the player with the most shares is the ceo, 
+    // in the case of a tie, the player with priority is the ceo
+    const companies = await this.companyService.companiesWithRelations({
+      where: { gameId: phase.gameId },
+    });
+    // iterate over companies and get the player with the most shares
+    const ceoPromises = companies.map(async (company) => {
+      const shares = company.Share;
+      const playerShareCounts = shares.reduce((acc, share) => {
+        //need an accumulator tracking all player ids share counts
+        if(share?.Player?.id) {
+          if(acc[share?.Player?.id]) {
+            acc[share?.Player?.id] += 1;
+          } else {
+            acc[share?.Player?.id] = 1;
+          }
+        }
+        return acc;
+      }, {} as Record<string, number>);
+      //find the player with the most shares
+      const playerWithMostShares = Object.keys(playerShareCounts).reduce((acc, playerShareCountKey) => {
+        if(playerShareCounts[playerShareCountKey] > acc.shareCount) {
+          return { playerId: playerShareCountKey, shareCount: playerShareCounts[playerShareCountKey] };
+        }
+        return acc;
+      }, { playerId: '', shareCount: 0 });
+      //if there is a tie, check the player priority
+      if(playerWithMostShares.shareCount === playerShareCounts[playerWithMostShares.playerId]) {
+        //check the player priority
+        const playerPriorities = await this.playerPriorityService.listPlayerPriorities({
+          where: { gameTurnId: phase.gameTurnId },
+        }) 
+        //find the player with the highest priority
+        const playerWithHighestPriority = playerPriorities.reduce((acc, playerPriority) => {
+          if (!acc || playerPriority.priority > acc.priority) {
+            return playerPriority;
+          }
+          return acc;
+        }, null as PlayerPriority | null);
+        
+        //update the player with the highest priority
+        playerWithMostShares.playerId = playerWithHighestPriority?.playerId || '';
+      }
+      //update the company with the ceo
+      await this.companyService.updateCompany({
+        where: { id: company.id },
+        data: { ceo: { connect: { id: playerWithMostShares.playerId } } },
+      });
+    });
+    await Promise.all(ceoPromises);
   }
 
   async resolveSetCompanyAndIpoPrices(phase: Phase, gameId: string) {
@@ -5392,6 +5458,7 @@ export class GameManagementService {
       useShortOrders,
       isTimerless,
       operationMechanicsVersion,
+      workers: DEFAULT_WORKERS,
     };
 
     const jsonData = gameDataJson;
@@ -5595,6 +5662,11 @@ export class GameManagementService {
       if (!influenceRound) {
         throw new Error('Failed to create influence round');
       }
+
+      //if modern operation mechanics version, create the initial resource track values
+      if(operationMechanicsVersion === OperationMechanicsVersion.MODERN) {
+        await this.createInitialResourceTrackValues(game.id, selectedSectors);
+      }
       // Start the stock round phase
       const newPhase = await this.startPhase({
         gameId: game.id,
@@ -5656,6 +5728,45 @@ export class GameManagementService {
       console.error('Error starting game:', error);
       throw new Error('Failed to start the game');
     }
+  }
+
+  async createInitialResourceTrackValues(gameId: string, sectors: Sector[]) {
+    //create the three general resources, circle, square and triangle
+    let resources: any = [
+        {
+          gameId,
+          type: ResourceType.CIRCLE,
+          trackType: ResourceTrackType.GLOBAL,
+          price: RESOURCE_PRICES_CIRCLE[0],
+          trackPosition: 0,
+        },
+        {
+          gameId,
+          type: ResourceType.SQUARE,
+          trackType: ResourceTrackType.GLOBAL,
+          price: RESOURCE_PRICES_SQUARE[0],
+          trackPosition: 0,
+        },
+        {
+          gameId,
+          type: ResourceType.TRIANGLE,
+          trackType: ResourceTrackType.GLOBAL,
+          price: RESOURCE_PRICES_TRIANGLE[0],
+          trackPosition: 0,
+        },
+      ];
+      //iterate over sectors and add the resource track values to the resources array
+      sectors.forEach((sector) => {
+        resources.push({
+          gameId,
+          type: getSectorResourceForSectorName(sector.sectorName),
+          trackType: ResourceTrackType.SECTOR,
+          price: getResourcePriceForResourceType(getSectorResourceForSectorName(sector.sectorName))[0],
+          trackPosition: 0,
+        });
+      });
+      //create the resources
+      await this.resourceService.createManyResources(resources);
   }
 
   async createAwardsTracks(gameId: string) {
