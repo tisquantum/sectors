@@ -119,57 +119,57 @@ export class ResourceService {
   }
 
   // Initialize resources for a new game
+  // Note: Resources use trackPosition as index into price arrays from constants
   async initializeGameResources(gameId: string): Promise<Resource[]> {
     const initialResources: Prisma.ResourceCreateManyInput[] = [
-      // Base resources
-      { gameId, type: ResourceType.TRIANGLE, trackType: ResourceTrackType.GLOBAL, quantity: 20, price: 10.0 },
-      { gameId, type: ResourceType.SQUARE, trackType: ResourceTrackType.GLOBAL, quantity: 15, price: 15.0 },
-      { gameId, type: ResourceType.CIRCLE, trackType: ResourceTrackType.GLOBAL, quantity: 10, price: 20.0 },
+      // Base resources - start at position 0 (highest price, most available)
+      { gameId, type: ResourceType.TRIANGLE, trackType: ResourceTrackType.GLOBAL, trackPosition: 0, price: 0 },
+      { gameId, type: ResourceType.SQUARE, trackType: ResourceTrackType.GLOBAL, trackPosition: 0, price: 0 },
+      { gameId, type: ResourceType.CIRCLE, trackType: ResourceTrackType.GLOBAL, trackPosition: 0, price: 0 },
       
-      // Sector-specific resources
-      { gameId, type: ResourceType.MATERIALS, trackType: ResourceTrackType.SECTOR, quantity: 12, price: 12.0 },
-      { gameId, type: ResourceType.INDUSTRIALS, trackType: ResourceTrackType.SECTOR, quantity: 12, price: 12.0 },
-      { gameId, type: ResourceType.CONSUMER_DISCRETIONARY, trackType: ResourceTrackType.SECTOR, quantity: 12, price: 12.0 },
-      { gameId, type: ResourceType.CONSUMER_STAPLES, trackType: ResourceTrackType.SECTOR, quantity: 12, price: 12.0 },
-      { gameId, type: ResourceType.CONSUMER_CYCLICAL, trackType: ResourceTrackType.SECTOR, quantity: 12, price: 12.0 },
-      { gameId, type: ResourceType.CONSUMER_DEFENSIVE, trackType: ResourceTrackType.SECTOR, quantity: 12, price: 12.0 },
-      { gameId, type: ResourceType.ENERGY, trackType: ResourceTrackType.SECTOR, quantity: 12, price: 12.0 },
-      { gameId, type: ResourceType.HEALTHCARE, trackType: ResourceTrackType.SECTOR, quantity: 12, price: 12.0 },
-      { gameId, type: ResourceType.TECHNOLOGY, trackType: ResourceTrackType.SECTOR, quantity: 12, price: 12.0 },
-      { gameId, type: ResourceType.GENERAL, trackType: ResourceTrackType.SECTOR, quantity: 12, price: 12.0 },
+      // Sector-specific resources - start at position 0
+      { gameId, type: ResourceType.MATERIALS, trackType: ResourceTrackType.SECTOR, trackPosition: 0, price: 0 },
+      { gameId, type: ResourceType.INDUSTRIALS, trackType: ResourceTrackType.SECTOR, trackPosition: 0, price: 0 },
+      { gameId, type: ResourceType.CONSUMER_DISCRETIONARY, trackType: ResourceTrackType.SECTOR, trackPosition: 0, price: 0 },
+      { gameId, type: ResourceType.CONSUMER_STAPLES, trackType: ResourceTrackType.SECTOR, trackPosition: 0, price: 0 },
+      { gameId, type: ResourceType.CONSUMER_CYCLICAL, trackType: ResourceTrackType.SECTOR, trackPosition: 0, price: 0 },
+      { gameId, type: ResourceType.CONSUMER_DEFENSIVE, trackType: ResourceTrackType.SECTOR, trackPosition: 0, price: 0 },
+      { gameId, type: ResourceType.ENERGY, trackType: ResourceTrackType.SECTOR, trackPosition: 0, price: 0 },
+      { gameId, type: ResourceType.HEALTHCARE, trackType: ResourceTrackType.SECTOR, trackPosition: 0, price: 0 },
+      { gameId, type: ResourceType.TECHNOLOGY, trackType: ResourceTrackType.SECTOR, trackPosition: 0, price: 0 },
+      { gameId, type: ResourceType.GENERAL, trackType: ResourceTrackType.SECTOR, trackPosition: 0, price: 0 },
     ];
 
     return this.createManyResources(initialResources);
   }
 
-  // Consume resources and update prices
-  async consumeResources(gameId: string, resourceConsumptions: { type: ResourceType; quantity: number }[]): Promise<void> {
+  // Consume resources and update track position (moves down the track = cheaper prices)
+  async consumeResources(gameId: string, resourceConsumptions: { type: ResourceType; count: number }[]): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       for (const consumption of resourceConsumptions) {
         const resource = await tx.resource.findFirst({
           where: { gameId, type: consumption.type },
         });
 
-        if (resource && resource.quantity >= consumption.quantity) {
-          // Calculate price increase based on consumption
-          const priceIncrease = consumption.quantity * 0.5;
-          
-          await tx.resource.update({
-            where: { id: resource.id },
-            data: {
-              quantity: { decrement: consumption.quantity },
-              price: { increment: priceIncrease },
-            },
-          });
-        } else {
-          throw new Error(`Insufficient resources of type ${consumption.type}`);
+        if (!resource) {
+          throw new Error(`Resource ${consumption.type} not found`);
         }
+
+        // Move track position down (consumed resources make them cheaper)
+        const newTrackPosition = resource.trackPosition + consumption.count;
+        
+        await tx.resource.update({
+          where: { id: resource.id },
+          data: {
+            trackPosition: newTrackPosition,
+          },
+        });
       }
     });
   }
 
-  // Add resources to pool (e.g., from production or events)
-  async addResources(gameId: string, resourceAdditions: { type: ResourceType; quantity: number }[]): Promise<void> {
+  // Add resources back to pool (moves track position up = more expensive)
+  async addResources(gameId: string, resourceAdditions: { type: ResourceType; count: number }[]): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
       for (const addition of resourceAdditions) {
         const resource = await tx.resource.findFirst({
@@ -177,14 +177,14 @@ export class ResourceService {
         });
 
         if (resource) {
-          // Calculate price decrease based on increased supply
-          const priceDecrease = addition.quantity * 0.3;
+          // Move track position up (more resources = more expensive)
+          // Don't go below 0
+          const newTrackPosition = Math.max(0, resource.trackPosition - addition.count);
           
           await tx.resource.update({
             where: { id: resource.id },
             data: {
-              quantity: { increment: addition.quantity },
-              price: { decrement: Math.max(0, priceDecrease) }, // Don't go below 0
+              trackPosition: newTrackPosition,
             },
           });
         }
@@ -200,35 +200,29 @@ export class ResourceService {
     return resource?.price || 0;
   }
 
-  // Get total resource value in a game
-  async getTotalResourceValue(gameId: string): Promise<number> {
-    const resources = await this.resourcesByGame(gameId);
-    return resources.reduce((total, resource) => {
-      return total + (resource.quantity * resource.price);
-    }, 0);
-  }
-
-  // Update resource prices based on supply and demand
+  // Update resource prices based on trackPosition using price arrays from constants
   async updateResourcePrices(gameId: string): Promise<void> {
     const resources = await this.resourcesByGame(gameId);
+    const { getResourcePriceForResourceType } = await import('@server/data/constants');
     
     for (const resource of resources) {
-      let newPrice = resource.price;
+      const priceArray = getResourcePriceForResourceType(resource.type);
       
-      // Adjust price based on quantity (supply)
-      if (resource.quantity < 5) {
-        newPrice *= 1.2; // Price increases when supply is low
-      } else if (resource.quantity > 20) {
-        newPrice *= 0.9; // Price decreases when supply is high
-      }
-      
-      // Ensure price doesn't go below minimum
-      newPrice = Math.max(newPrice, 1.0);
+      // Get price from array based on trackPosition
+      // If position exceeds array length, use last price in array
+      const price = priceArray[Math.min(resource.trackPosition, priceArray.length - 1)];
       
       await this.prisma.resource.update({
         where: { id: resource.id },
-        data: { price: newPrice },
+        data: { price: price || 0 },
       });
     }
+  }
+
+  // Get current price for a resource based on its track position
+  async getCurrentResourcePrice(resource: Resource): Promise<number> {
+    const { getResourcePriceForResourceType } = await import('@server/data/constants');
+    const priceArray = getResourcePriceForResourceType(resource.type);
+    return priceArray[Math.min(resource.trackPosition, priceArray.length - 1)] || 0;
   }
 } 

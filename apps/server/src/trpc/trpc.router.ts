@@ -104,6 +104,13 @@ import { FactoryService } from '@server/factory/factory.service';
 import { MarketingService } from '@server/marketing/marketing.service';
 import { factoryConstructionRouter } from './routers/factory-construction.router';
 import { FactoryConstructionService } from '@server/factory-construction/factory-construction.service';
+import { ResourceService } from '@server/resource/resource.service';
+import { ConsumptionMarkerService } from '@server/consumption-marker/consumption-marker.service';
+import { FactoryProductionService } from '@server/factory-production/factory-production.service';
+import resourceRouter from './routers/resource.router';
+import consumptionMarkerRouter from './routers/consumption-marker.router';
+import factoryProductionRouter from './routers/factory-production.router';
+import modernOperationsRouter from './routers/modern-operations.router';
 
 @Injectable()
 export class TrpcRouter {
@@ -162,6 +169,9 @@ export class TrpcRouter {
     private readonly factoryService: FactoryService,
     private readonly factoryConstructionService: FactoryConstructionService,
     private readonly prismaService: PrismaService,
+    private readonly resourceService: ResourceService,
+    private readonly consumptionMarkerService: ConsumptionMarkerService,
+    private readonly factoryProductionService: FactoryProductionService,
   ) {}
 
   appRouter = this.trpc.router({
@@ -363,6 +373,7 @@ export class TrpcRouter {
     }),
     factory: factoryRouter(this.trpc, {
       factoryService: this.factoryService,
+      prismaService: this.prismaService,
     }),
     marketing: marketingRouter(this.trpc, {
       marketingService: this.marketingService,
@@ -372,6 +383,24 @@ export class TrpcRouter {
       playerService: this.playersService,
       phaseService: this.phaseService,
       gamesService: this.gamesService,
+      sectorService: this.sectorService,
+    }),
+    resource: resourceRouter(this.trpc, {
+      resourceService: this.resourceService,
+    }),
+    consumptionMarker: consumptionMarkerRouter(this.trpc, {
+      consumptionMarkerService: this.consumptionMarkerService,
+    }),
+    factoryProduction: factoryProductionRouter(this.trpc, {
+      factoryProductionService: this.factoryProductionService,
+    }),
+    modernOperations: modernOperationsRouter(this.trpc, {
+      marketingService: this.marketingService,
+      companyService: this.companyService,
+      playerService: this.playersService,
+      phaseService: this.phaseService,
+      gamesService: this.gamesService,
+      prismaService: this.prismaService,
       sectorService: this.sectorService,
     }),
   });

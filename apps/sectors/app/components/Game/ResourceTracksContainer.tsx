@@ -2,76 +2,72 @@
 
 import { ResourceTrack } from './ResourceTrack';
 import { ResourceType } from '@/components/Company/Factory/Factory.types';
+import { ResourceTrackType } from '@server/prisma/prisma.client';
+import { trpc } from '@sectors/app/trpc';
+import { getResourcePriceForResourceType } from '@server/data/constants';
 
-const generateTrack = (length: number, basePrice: number, increment: number): number[] => {
-  const track = [];
-  let currentPrice = basePrice;
-  for (let i = 0; i < length; i++) {
-    track.push(currentPrice);
-    if (i % 3 === 0 && i > 0) { // Make the increment a bit more variable
-        currentPrice += increment + 1;
-    } else {
-        currentPrice += increment;
-    }
+interface Props {
+  gameId: string;
+}
+
+export function ResourceTracksContainer({ gameId }: Props) {
+  const { data: resources, isLoading } = trpc.resource.getGameResources.useQuery({ gameId });
+
+  if (isLoading) {
+    return <div className="p-4 text-gray-400">Loading resource tracks...</div>;
   }
-  return track.reverse();
-};
 
-const circleTrack = generateTrack(15, 8, 2);
-const squareTrack = generateTrack(20, 5, 1);
-const triangleTrack = generateTrack(25, 4, 1);
-const starTrack = generateTrack(12, 10, 2);
+  if (!resources || resources.length === 0) {
+    return <div className="p-4 text-gray-400">No resource tracks available</div>;
+  }
 
-const MOCK_RESOURCE_TRACK_DATA: Record<string, { track: number[], currentPrice: number, resourceType: ResourceType }> = {
-  'CIRCLE': {
-    track: circleTrack,
-    currentPrice: circleTrack[5],
-    resourceType: 'CIRCLE',
-  },
-  'SQUARE': {
-    track: squareTrack,
-    currentPrice: squareTrack[10],
-    resourceType: 'SQUARE',
-  },
-  'TRIANGLE': {
-    track: triangleTrack,
-    currentPrice: triangleTrack[15],
-    resourceType: 'TRIANGLE',
-  },
-  'STAR <MATERIALS>': {
-    track: starTrack,
-    currentPrice: starTrack[6],
-    resourceType: 'STAR',
-  },
-  'STAR <INDUSTRIALS>': {
-    track: starTrack,
-    currentPrice: starTrack[4],
-    resourceType: 'STAR',
-  },
-  'STAR <TECHNOLOGY>': {
-    track: starTrack,
-    currentPrice: starTrack[8],
-    resourceType: 'STAR',
-  },
-};
+  // Separate resources into general and sector-specific
+  const generalResources = resources.filter((r: any) => r.trackType === ResourceTrackType.GLOBAL);
+  const sectorResources = resources.filter((r: any) => r.trackType === ResourceTrackType.SECTOR);
 
-export function ResourceTracksContainer() {
   return (
-    <div className="p-4 space-y-4">
-      {(Object.keys(MOCK_RESOURCE_TRACK_DATA)).map((trackTitle) => {
-        const data = MOCK_RESOURCE_TRACK_DATA[trackTitle as keyof typeof MOCK_RESOURCE_TRACK_DATA];
-        if (!data) return null;
-        const { track, currentPrice, resourceType } = data;
-        return (
-          <ResourceTrack
-            key={trackTitle}
-            title={trackTitle}
-            resourceType={resourceType}
-            track={track}
-            currentPrice={currentPrice}
-          />
-        )
-      })}
+    <div className="p-4 space-y-6">
+      {/* General Resources */}
+      {generalResources.length > 0 && (
+        <div>
+          <h3 className="text-lg font-semibold text-white mb-3">General Resources</h3>
+          <div className="space-y-4">
+            {generalResources.map((resource: any) => {
+              const priceTrack = getResourcePriceForResourceType(resource.type);
+              return (
+                <ResourceTrack
+                  key={resource.id}
+                  title={resource.type}
+                  resourceType={resource.type as ResourceType}
+                  track={priceTrack}
+                  currentPrice={resource.price}
+                />
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Sector Resources */}
+      {sectorResources.length > 0 && (
+        <div>
+          <h3 className="text-lg font-semibold text-white mb-3">Sector Resources</h3>
+          <div className="space-y-4">
+            {sectorResources.map((resource: any) => {
+              const priceTrack = getResourcePriceForResourceType(resource.type);
+              return (
+                <ResourceTrack
+                  key={resource.id}
+                  title={`${resource.type.replace('_', ' ')} (Sector)`}
+                  resourceType={resource.type as ResourceType}
+                  track={priceTrack}
+                  currentPrice={resource.price}
+                />
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

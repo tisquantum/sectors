@@ -47,6 +47,9 @@ import { ModernOperationMechanicsService } from './modern-operation-mechanics.se
 import { FactoryConstructionModule } from '@server/factory-construction/factory-construction.module';
 import { ResourceModule } from '@server/resource/resource.module';
 import { FactoryModule } from '@server/factory/factory.module';
+import { ConsumptionMarkerModule } from '@server/consumption-marker/consumption-marker.module';
+import { MarketingModule } from '@server/marketing/marketing.module';
+import { FactoryProductionModule } from '@server/factory-production/factory-production.module';
 
 @Module({
   imports: [
@@ -95,7 +98,10 @@ import { FactoryModule } from '@server/factory/factory.module';
     OperatingRoundVoteModule,
     FactoryConstructionModule,
     FactoryModule,
-    ResourceModule
+    ResourceModule,
+    ConsumptionMarkerModule,
+    MarketingModule,
+    FactoryProductionModule,
   ],
   providers: [
     GameManagementService,

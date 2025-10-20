@@ -468,6 +468,9 @@ export class GameManagementService {
       case PhaseName.DIVESTMENT:
         await this.resolveDivestment(phase);
         break;
+      case PhaseName.FACTORY_CONSTRUCTION:
+        await this.resolveFactoryConstruction(phase);
+        break;
       case PhaseName.END_TURN:
         await this.adjustEconomyScore(phase);
         await this.resolveCompanyLoans(phase);
@@ -485,6 +488,37 @@ export class GameManagementService {
     }
   }
 
+  // Iterate over all factory construction orders from the previous phase and construct factories
+  // Note: This is the LEGACY version, modern mechanics use ModernOperationMechanicsService
+  async resolveFactoryConstruction(phase: Phase) {
+    //get all factory construction orders from the previous phase
+    const factoryConstructionOrders = await this.prisma.factoryConstructionOrder.findMany({
+      where: { gameTurnId: phase.gameTurnId },
+    });
+    //iterate over factory construction orders and construct factories
+    const factoryConstructionPromises = factoryConstructionOrders.map(async (order) => {
+      // Get next slot for this company
+      const existingFactories = await this.prisma.factory.count({
+        where: { companyId: order.companyId, gameId: order.gameId },
+      });
+
+      //construct factory
+      await this.prisma.factory.create({
+        data: {
+          companyId: order.companyId,
+          sectorId: order.sectorId,
+          gameId: order.gameId,
+          size: order.size,
+          workers: 0, // Legacy: workers assigned separately
+          slot: existingFactories + 1,
+          isOperational: true, // Legacy: operational immediately
+          resourceTypes: order.resourceTypes,
+        },
+      });
+    });
+    await Promise.all(factoryConstructionPromises);
+  }
+  
   async assignCeo(phase: Phase, game: Game) {
     //iterate over all companies and check the share ownership of each company, the player with the most shares is the ceo, 
     // in the case of a tie, the player with priority is the ceo
@@ -5666,6 +5700,7 @@ export class GameManagementService {
       //if modern operation mechanics version, create the initial resource track values
       if(operationMechanicsVersion === OperationMechanicsVersion.MODERN) {
         await this.createInitialResourceTrackValues(game.id, selectedSectors);
+        await this.initializeConsumptionBags(game.id, selectedSectors);
       }
       // Start the stock round phase
       const newPhase = await this.startPhase({
@@ -5767,6 +5802,38 @@ export class GameManagementService {
       });
       //create the resources
       await this.resourceService.createManyResources(resources);
+  }
+
+  /**
+   * Initialize consumption bags for all sectors with 5 permanent sector-specific markers each
+   */
+  async initializeConsumptionBags(gameId: string, sectors: Sector[]) {
+    const markers: any[] = [];
+    
+    for (const sector of sectors) {
+      const sectorResourceType = getSectorResourceForSectorName(sector.sectorName);
+      
+      // Add 5 permanent sector-specific markers to each sector's consumption bag
+      for (let i = 0; i < 5; i++) {
+        markers.push({
+          gameId,
+          sectorId: sector.id,
+          resourceType: sectorResourceType,
+          isPermanent: true,
+          companyId: null,
+        });
+      }
+    }
+
+    // Create all consumption markers
+    await this.prisma.consumptionMarker.createMany({
+      data: markers,
+    });
+
+    await this.gameLogService.createGameLog({
+      game: { connect: { id: gameId } },
+      content: 'Consumption bags initialized for all sectors',
+    });
   }
 
   async createAwardsTracks(gameId: string) {

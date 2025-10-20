@@ -1209,3 +1209,21 @@ export function getSectorValidIpoPrices(sector: Sector) {
     (price) => price >= sectorMinIpoPrice && price <= sectorMaxIpoPrice,
   );
 }
+
+// Modern Operation Mechanics Constants
+export const MARKETING_SLOT_COSTS = [0, 100, 200, 300, 400]; // Cost for each concurrent marketing slot
+export const RESEARCH_COSTS_BY_PHASE = [100, 200, 300, 400]; // Research cost per phase level
+export const DEFAULT_CONSUMPTION_MARKERS_PER_SECTOR = 5;
+export const FACTORY_WORKER_REQUIREMENTS = {
+  FACTORY_I: 2,
+  FACTORY_II: 4,
+  FACTORY_III: 6,
+  FACTORY_IV: 8,
+};
+export const FACTORY_CUSTOMER_LIMITS = {
+  FACTORY_I: 3,
+  FACTORY_II: 4,
+  FACTORY_III: 5,
+  FACTORY_IV: 6,
+};
+export const BASE_WORKER_SALARY = 10;

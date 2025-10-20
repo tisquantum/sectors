@@ -3,6 +3,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { FactorySize, Company, FactoryConstructionOrder, ResourceType } from '@prisma/client';
 import { ModernOperationMechanicsService } from '../game-management/modern-operation-mechanics.service';
 import { PhaseService } from '@server/phase/phase.service';
+import { PlayersService } from '@server/players/players.service';
+import { CompanyService } from '@server/company/company.service';
 
 interface RequiredResource {
   type: ResourceType;
@@ -14,10 +16,16 @@ export class FactoryConstructionService {
   constructor(
     private prisma: PrismaService,
     private phaseService: PhaseService,
+    private companyService: CompanyService,
   ) {}
 
   async validateCompanyOwnership(companyId: string, playerId: string): Promise<boolean | null> {
-    return true;
+    //check if company owner player id is the same as the player id
+    const company = await this.companyService.company({ id: companyId });
+    if(!company) {
+      return null;
+    }
+    return company.ceoId === playerId;
   }
 
   async createOrder(input: {

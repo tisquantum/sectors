@@ -180,6 +180,26 @@ model Factory {
   Sector             Sector              @relation(fields: [sectorId], references: [id])
   resources          Resource[]          @relation("FactoryResources")
   resourceTypes      ResourceType[]
+  factoryProductions FactoryProduction[]
+}
+
+model FactoryProduction {
+  id              String   @id @default(uuid())
+  factoryId       String
+  gameId          String
+  gameTurnId      String
+  companyId       String
+  customersServed Int      @default(0)
+  revenue         Int      @default(0)
+  costs           Int      @default(0)
+  profit          Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  Factory  Factory  @relation(fields: [factoryId], references: [id])
+  Game     Game     @relation(fields: [gameId], references: [id])
+  GameTurn GameTurn @relation(fields: [gameTurnId], references: [id])
+  Company  Company  @relation(fields: [companyId], references: [id])
 }
 
 model Company {
@@ -242,6 +262,8 @@ model Company {
   marketFavors              Int                        @default(0)
   sectorMarketing           SectorMarketing[]
   factoryConstructionOrders FactoryConstructionOrder[]
+  consumptionMarkers        ConsumptionMarker[]
+  factoryProductions        FactoryProduction[]
   ceo                       Player?                    @relation("CompanyCEO", fields: [ceoId], references: [id])
   ceoId                     String?
 }
@@ -743,6 +765,7 @@ model Sector {
   sectorMarketing        SectorMarketing[]
   factories              Factory[]
   technologyLevel        Int               @default(0)
+  consumptionMarkers     ConsumptionMarker[]
 }
 
 enum SectorName {
@@ -827,6 +850,8 @@ model Game {
   sectorMarketing           SectorMarketing[]
   workers                   Int                        @default(0)
   factoryConstructionOrders FactoryConstructionOrder[]
+  consumptionMarkers        ConsumptionMarker[]
+  factoryProductions        FactoryProduction[]
 }
 
 model SectorPriority {
@@ -930,6 +955,8 @@ model GameTurn {
   PlayerHeadline         PlayerHeadline[]
   StockSubRound          StockSubRound[]
   CompanyIpoPriceVote    CompanyIpoPriceVote[]
+  factoryConstructionOrders FactoryConstructionOrder[]
+  factoryProductions     FactoryProduction[]
 }
 
 enum ResourceType {
@@ -959,6 +986,21 @@ model Resource {
   updatedAt         DateTime           @updatedAt
   game              Game               @relation(fields: [gameId], references: [id])
   factories         Factory[]          @relation("FactoryResources")
+}
+
+model ConsumptionMarker {
+  id          String       @id @default(uuid())
+  sectorId    String
+  gameId      String
+  resourceType ResourceType
+  isPermanent Boolean      @default(true)
+  companyId   String?
+  
+  Sector      Sector       @relation(fields: [sectorId], references: [id])
+  Game        Game         @relation(fields: [gameId], references: [id])
+  Company     Company?     @relation(fields: [companyId], references: [id])
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 }
 
 model CompanyActionOrder {
@@ -1745,8 +1787,10 @@ model FactoryConstructionOrder {
   id            String         @id @default(uuid())
   companyId     String
   gameId        String
+  gameTurnId    String
   phaseId       String
   playerId      String
+  sectorId      String
   size          FactorySize
   resourceTypes ResourceType[]
   createdAt     DateTime       @default(now())
@@ -1755,6 +1799,7 @@ model FactoryConstructionOrder {
   company       Company        @relation(fields: [companyId], references: [id])
   game          Game           @relation(fields: [gameId], references: [id])
   phase         Phase          @relation(fields: [phaseId], references: [id])
+  gameTurn      GameTurn       @relation(fields: [gameTurnId], references: [id])
 }
 
 // New model for Marketing Campaigns

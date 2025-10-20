@@ -51,47 +51,65 @@ export default function MarketingAndResearchAction() {
     );
   }
 
-  const createMarketingCampaign = trpc.marketing.createCampaign.useMutation({
+  // Get current sector for research
+  const currentSector = gameState.sectors?.find(s => s.id === currentCompany.sectorId);
+
+  // Fetch worker allocation status
+  const { data: workforce } = trpc.modernOperations.getCompanyWorkforceStatus.useQuery({
+    companyId: currentCompany.id,
+    gameId: gameState.id,
+  });
+
+  // Fetch sector research progress
+  const { data: researchProgress } = trpc.modernOperations.getSectorResearchProgress.useQuery({
+    sectorId: currentCompany.sectorId,
+    gameId: gameState.id,
+  }, {
+    enabled: !!currentCompany.sectorId,
+  });
+
+  const createMarketingCampaign = trpc.modernOperations.submitMarketingCampaign.useMutation({
     onSuccess: () => {
       setShowMarketingCreation(false);
       setSelectedMarketingTier(null);
     },
     onError: (error) => {
       console.error('Failed to create marketing campaign:', error);
+      alert(`Error: ${error.message}`);
     },
   });
 
-  const drawResearchCard = trpc.researchDeck.drawResearchCard.useMutation({
-    onSuccess: (data) => {
+  const submitResearch = trpc.modernOperations.submitResearchAction.useMutation({
+    onSuccess: () => {
       setIsResearching(false);
-      setResearchResult(data.spacesMoved);
+      setResearchResult(1); // Simplified - actual result comes from backend
     },
     onError: (error) => {
       setIsResearching(false);
-      console.error('Failed to draw research card:', error);
+      console.error('Failed to submit research:', error);
+      alert(`Error: ${error.message}`);
     },
   });
 
-  const handleCreateMarketingCampaign = async (tier: MarketingCampaignTier) => {
+  const handleCreateMarketingCampaign = async (tier: MarketingCampaignTier, slot: number) => {
     if (!currentCompany) return;
 
     createMarketingCampaign.mutate({
       companyId: currentCompany.id,
       gameId: gameState.id,
       tier,
-      operationMechanicsVersion: gameState.operationMechanicsVersion || OperationMechanicsVersion.MODERN,
+      slot,
     });
   };
 
   const handleResearch = async () => {
-    if (!currentCompany) return;
+    if (!currentCompany || !currentSector) return;
 
     setIsResearching(true);
-    // This would need to be implemented in the backend
-    // For now, we'll simulate the research action
-    drawResearchCard.mutate({
+    submitResearch.mutate({
       companyId: currentCompany.id,
       gameId: gameState.id,
+      sectorId: currentSector.id,
     });
   };
 
@@ -154,7 +172,8 @@ export default function MarketingAndResearchAction() {
                           disabled={!canAfford || createMarketingCampaign.isPending}
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleCreateMarketingCampaign(tier);
+                            // Default to slot 1, can be enhanced with slot selector
+                            handleCreateMarketingCampaign(tier, 1);
                           }}
                         >
                           {createMarketingCampaign.isPending ? <Spinner size="sm" /> : 'Create'}

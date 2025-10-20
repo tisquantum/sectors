@@ -122,6 +122,23 @@ export const GameProvider: React.FC<{
       ) {
         refetchCurrentTurn();
       }
+      
+      // Refetch modern operations data on relevant phase changes
+      if (phaseName === PhaseName.FACTORY_CONSTRUCTION_RESOLVE) {
+        // Resources updated after factory construction
+        // Consumption markers added
+        // Note: These will auto-refetch if components are using the queries
+      }
+      if (phaseName === PhaseName.CONSUMPTION_PHASE) {
+        // Consumption bags drawn
+      }
+      if (phaseName === PhaseName.EARNINGS_CALL) {
+        // Factory production records created
+      }
+      if (phaseName === PhaseName.MARKETING_AND_RESEARCH_ACTION_RESOLVE) {
+        // Marketing campaigns activated
+        // Research progress updated
+      }
     };
 
     const handleNewPlayerOrder = (

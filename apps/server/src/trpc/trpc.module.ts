@@ -64,6 +64,8 @@ import { FactoryConstructionService } from '@server/factory-construction/factory
 import { ModernOperationMechanicsService } from '@server/game-management/modern-operation-mechanics.service';
 import { FactoryConstructionOrderService } from '@server/factory-construction/factory-construction-order.service';
 import { ResourceService } from '@server/resource/resource.service';
+import { ConsumptionMarkerService } from '@server/consumption-marker/consumption-marker.service';
+import { FactoryProductionService } from '@server/factory-production/factory-production.service';
 
 @Module({
   imports: [PrismaModule],
@@ -132,7 +134,9 @@ import { ResourceService } from '@server/resource/resource.service';
     FactoryConstructionService,
     ModernOperationMechanicsService,
     FactoryConstructionOrderService,
-    ResourceService
+    ResourceService,
+    ConsumptionMarkerService,
+    FactoryProductionService,
   ],
 })
 export class TrpcModule {}
