@@ -3,6 +3,7 @@
 import { useGame } from './GameContext';
 import { Card, CardBody, CardHeader, Chip } from '@nextui-org/react';
 import { ResearchTrack } from '../Company/Research/ResearchTrack';
+import PlayerAvatar from '../Player/PlayerAvatar';
 
 export default function MarketingAndResearchActionResolve() {
   const { gameState, currentPhase } = useGame();
@@ -44,8 +45,9 @@ export default function MarketingAndResearchActionResolve() {
                       color="primary" 
                       variant="flat" 
                       size="sm"
+                      avatar={<PlayerAvatar player={gameState.Player.find(p => p.id === company.ceoId) as Player} />}
                     >
-                      CEO: {gameState.Player.find(p => p.id === company.ceoId)?.nickname || 'Unknown'}
+                      {gameState.Player.find(p => p.id === company.ceoId)?.nickname || 'Unknown'}
                     </Chip>
                   </div>
                   
@@ -97,8 +99,9 @@ export default function MarketingAndResearchActionResolve() {
                       color="secondary" 
                       variant="flat" 
                       size="sm"
+                      avatar={<PlayerAvatar player={gameState.Player.find(p => p.id === company.ceoId) as Player} />}
                     >
-                      CEO: {gameState.Player.find(p => p.id === company.ceoId)?.nickname || 'Unknown'}
+                      {gameState.Player.find(p => p.id === company.ceoId)?.nickname || 'Unknown'}
                     </Chip>
                   </div>
                   

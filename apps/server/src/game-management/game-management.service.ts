@@ -525,49 +525,100 @@ export class GameManagementService {
     const companies = await this.companyService.companiesWithRelations({
       where: { gameId: phase.gameId },
     });
+    
+    // Get player priorities once for all companies
+    const playerPriorities = await this.playerPriorityService.listPlayerPriorities({
+      where: { gameTurnId: phase.gameTurnId },
+    });
+    
+    // Create a map of player priorities for quick lookup
+    const priorityMap = new Map<string, number>();
+    playerPriorities.forEach(pp => {
+      priorityMap.set(pp.playerId, pp.priority);
+    });
+    
     // iterate over companies and get the player with the most shares
     const ceoPromises = companies.map(async (company) => {
       const shares = company.Share;
-      const playerShareCounts = shares.reduce((acc, share) => {
-        //need an accumulator tracking all player ids share counts
-        if(share?.Player?.id) {
-          if(acc[share?.Player?.id]) {
-            acc[share?.Player?.id] += 1;
+      // Only count shares owned by players (location === PLAYER), not IPO or OPEN_MARKET
+      const playerShareCounts = shares
+        .filter(share => share.location === ShareLocation.PLAYER && share.Player?.id)
+        .reduce((acc, share) => {
+          const playerId = share.Player!.id;
+          if (acc[playerId]) {
+            acc[playerId] += 1;
           } else {
-            acc[share?.Player?.id] = 1;
-          }
-        }
-        return acc;
-      }, {} as Record<string, number>);
-      //find the player with the most shares
-      const playerWithMostShares = Object.keys(playerShareCounts).reduce((acc, playerShareCountKey) => {
-        if(playerShareCounts[playerShareCountKey] > acc.shareCount) {
-          return { playerId: playerShareCountKey, shareCount: playerShareCounts[playerShareCountKey] };
-        }
-        return acc;
-      }, { playerId: '', shareCount: 0 });
-      //if there is a tie, check the player priority
-      if(playerWithMostShares.shareCount === playerShareCounts[playerWithMostShares.playerId]) {
-        //check the player priority
-        const playerPriorities = await this.playerPriorityService.listPlayerPriorities({
-          where: { gameTurnId: phase.gameTurnId },
-        }) 
-        //find the player with the highest priority
-        const playerWithHighestPriority = playerPriorities.reduce((acc, playerPriority) => {
-          if (!acc || playerPriority.priority > acc.priority) {
-            return playerPriority;
+            acc[playerId] = 1;
           }
           return acc;
-        }, null as PlayerPriority | null);
-        
-        //update the player with the highest priority
-        playerWithMostShares.playerId = playerWithHighestPriority?.playerId || '';
+        }, {} as Record<string, number>);
+      
+      // If no player-owned shares, disconnect CEO or skip
+      const playerIds = Object.keys(playerShareCounts);
+      if (playerIds.length === 0) {
+        // No player owns shares, disconnect CEO
+        await this.companyService.updateCompany({
+          where: { id: company.id },
+          data: { ceo: { disconnect: true } },
+        });
+        return;
       }
-      //update the company with the ceo
-      await this.companyService.updateCompany({
-        where: { id: company.id },
-        data: { ceo: { connect: { id: playerWithMostShares.playerId } } },
-      });
+      
+      // Find the maximum share count
+      const maxShareCount = Math.max(...Object.values(playerShareCounts));
+      
+      // Find all players with the maximum share count (potential ties)
+      const playersWithMaxShares = playerIds.filter(
+        playerId => playerShareCounts[playerId] === maxShareCount
+      );
+      
+      let ceoPlayerId: string | null = null;
+      
+      if (playersWithMaxShares.length === 1) {
+        // No tie, use the player with most shares
+        ceoPlayerId = playersWithMaxShares[0];
+      } else {
+        // Tie exists, use player priority to break it
+        let highestPriority = -1;
+        for (const playerId of playersWithMaxShares) {
+          const priority = priorityMap.get(playerId) || 0;
+          if (priority > highestPriority) {
+            highestPriority = priority;
+            ceoPlayerId = playerId;
+          }
+        }
+        
+        // If still no CEO found (all have same priority or no priority), use first player
+        if (!ceoPlayerId) {
+          ceoPlayerId = playersWithMaxShares[0];
+        }
+      }
+      
+      // Verify player exists before connecting
+      if (ceoPlayerId) {
+        const playerExists = await this.prisma.player.findUnique({
+          where: { id: ceoPlayerId },
+        });
+        
+        if (playerExists) {
+          await this.companyService.updateCompany({
+            where: { id: company.id },
+            data: { ceo: { connect: { id: ceoPlayerId } } },
+          });
+        } else {
+          // Player doesn't exist, disconnect CEO
+          await this.companyService.updateCompany({
+            where: { id: company.id },
+            data: { ceo: { disconnect: true } },
+          });
+        }
+      } else {
+        // No valid CEO found, disconnect
+        await this.companyService.updateCompany({
+          where: { id: company.id },
+          data: { ceo: { disconnect: true } },
+        });
+      }
     });
     await Promise.all(ceoPromises);
   }
@@ -5626,9 +5677,10 @@ export class GameManagementService {
         }));
       });
       let companies;
+      let sectors: Sector[] = [];
       try {
         // Create sectors and companies
-        const sectors = await this.sectorService.createManySectors(sectorData);
+        sectors = await this.sectorService.createManySectors(sectorData);
         // sort sectors by default priority
         const sectorPrioritySorted = sectors.sort(
           (a, b) =>
@@ -5699,8 +5751,14 @@ export class GameManagementService {
 
       //if modern operation mechanics version, create the initial resource track values
       if(operationMechanicsVersion === OperationMechanicsVersion.MODERN) {
-        await this.createInitialResourceTrackValues(game.id, selectedSectors);
-        await this.initializeConsumptionBags(game.id, selectedSectors);
+        if (sectors.length === 0) {
+          // Fetch sectors from database if they weren't created (shouldn't happen, but safety check)
+          sectors = await this.sectorService.sectors({
+            where: { gameId: game.id },
+          });
+        }
+        await this.createInitialResourceTrackValues(game.id, sectors);
+        await this.initializeConsumptionBags(game.id, sectors);
       }
       // Start the stock round phase
       const newPhase = await this.startPhase({
@@ -5792,11 +5850,15 @@ export class GameManagementService {
       ];
       //iterate over sectors and add the resource track values to the resources array
       sectors.forEach((sector) => {
+        const sectorResourceType = getSectorResourceForSectorName(sector.sectorName);
+        const priceArray = getResourcePriceForResourceType(sectorResourceType);
+        const initialPrice = priceArray.length > 0 ? priceArray[0] : 0;
+        
         resources.push({
           gameId,
-          type: getSectorResourceForSectorName(sector.sectorName),
+          type: sectorResourceType,
           trackType: ResourceTrackType.SECTOR,
-          price: getResourcePriceForResourceType(getSectorResourceForSectorName(sector.sectorName))[0],
+          price: initialPrice,
           trackPosition: 0,
         });
       });

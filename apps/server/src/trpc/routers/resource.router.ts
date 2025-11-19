@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { ResourceService } from '../../resource/resource.service';
 import { TrpcService } from '../trpc.service';
-import { ResourceType } from '@prisma/client';
+import { ResourceType, Resource } from '@prisma/client';
 
 type Context = {
   resourceService: ResourceService;
@@ -11,9 +11,16 @@ export default (trpc: TrpcService, ctx: Context) =>
   trpc.router({
     getGameResources: trpc.procedure
       .input(z.object({
-        gameId: z.string(),
+        gameId: z.string().min(1, { message: 'gameId is required and must be a non-empty string' }),
+      }).refine((data) => data.gameId && typeof data.gameId === 'string' && data.gameId.length > 0, {
+        message: 'gameId must be a valid non-empty string',
+        path: ['gameId'],
       }))
       .query(async ({ input }) => {
+        // Additional defensive check
+        if (!input.gameId || typeof input.gameId !== 'string' || input.gameId.trim().length === 0) {
+          throw new Error('Invalid gameId: must be a valid non-empty string');
+        }
         return ctx.resourceService.getGameResources(input.gameId);
       }),
 
@@ -49,7 +56,7 @@ export default (trpc: TrpcService, ctx: Context) =>
       .query(async ({ input }) => {
         const resources = await ctx.resourceService.getGameResources(input.gameId);
         return Promise.all(
-          resources.map(async (resource) => ({
+          resources.map(async (resource: Resource) => ({
             type: resource.type,
             trackPosition: resource.trackPosition,
             price: await ctx.resourceService.getCurrentResourcePrice(resource),

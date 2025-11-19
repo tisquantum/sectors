@@ -44,15 +44,28 @@ export class FactoryConstructionService {
       throw new Error('No phase found');
     }
 
+    // Get company to find sectorId
+    const company = await this.companyService.company({ id: companyId });
+    if (!company) {
+      throw new Error('Company not found');
+    }
+    if (!company.sectorId) {
+      throw new Error('Company has no sector');
+    }
+
     const order = await this.prisma.factoryConstructionOrder.create({
       data: {
         companyId,
         gameId,
+        gameTurnId: phase.gameTurnId,
         phaseId: phase.id,
+        sectorId: company.sectorId,
         size,
         resourceTypes,
         playerId: playerId,
       },
     });
+
+    return order;
   }
 } 

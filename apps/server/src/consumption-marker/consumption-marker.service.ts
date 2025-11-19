@@ -170,5 +170,21 @@ export class ConsumptionMarkerService {
   async removeTemporaryMarker(markerId: string): Promise<ConsumptionMarker> {
     return this.deleteConsumptionMarker({ id: markerId });
   }
+
+  /**
+   * Get all consumption markers for a sector (the consumption bag)
+   */
+  async getSectorConsumptionBag(sectorId: string, gameId: string): Promise<ConsumptionMarker[]> {
+    return this.consumptionMarkersBySector(sectorId, gameId);
+  }
+
+  /**
+   * Get all consumption bags for all sectors in a game
+   */
+  async getAllConsumptionBags(gameId: string): Promise<ConsumptionMarker[]> {
+    return this.consumptionMarkers({
+      where: { gameId },
+    });
+  }
 }
 

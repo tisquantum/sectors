@@ -7,7 +7,7 @@
  * to verify the implementation works correctly.
  */
 
-import { PrismaClient, OperationMechanicsVersion, FactorySize, ResourceType, PhaseName, CompanyStatus } from '@prisma/client';
+import { PrismaClient, OperationMechanicsVersion, FactorySize, ResourceType, PhaseName, CompanyStatus, RoundType, GameStatus } from '@prisma/client';
 import { getResourcePriceForResourceType, getSectorResourceForSectorName, DEFAULT_WORKERS } from './src/data/constants';
 
 const prisma = new PrismaClient();
@@ -16,11 +16,13 @@ async function main() {
   console.log('\n🧪 MODERN OPERATION MECHANICS - BACKEND TEST\n');
   console.log('=' .repeat(60));
 
-  let testGameId: string;
-  let testCompanyId: string;
-  let testSectorId: string;
-  let testPlayerId: string;
-  let testFactoryId: string;
+  let testGameId: string = '';
+  let testCompanyId: string = '';
+  let testSectorId: string = '';
+  let testPlayerId: string = '';
+  let testFactoryId: string = '';
+  let room: { id: number } | null = null;
+  let user: { id: string; authUserId: string } | null = null;
 
   try {
     // ============================================================
@@ -30,17 +32,21 @@ async function main() {
     console.log('-'.repeat(60));
 
     // Create test room and user
-    const room = await prisma.room.create({
+    room = await prisma.room.create({
       data: { name: 'Modern Ops Test Room' },
     });
 
-    const user = await prisma.user.create({
+    user = await prisma.user.create({
       data: {
         name: 'Test Player',
         authUserId: `test-${Date.now()}`,
       },
     });
 
+    if (!room || !user) {
+      throw new Error('Room or user not created');
+    }
+    
     await prisma.roomUser.create({
       data: {
         userId: user.id,
@@ -51,34 +57,39 @@ async function main() {
 
     console.log(`✓ Test room and user created`);
 
+    if (!room) {
+      throw new Error('Room not created');
+    }
+
     // Note: You'll need to call your actual startGame method
     // For now, we'll create the game manually to test the mechanics
-    const gameTurn = await prisma.gameTurn.create({
+    const game = await prisma.game.create({
       data: {
-        game: {
-          create: {
-            name: 'Modern Ops Test',
-            currentTurn: '',
-            currentOrSubRound: 0,
-            currentRound: RoundType.GAME_UPKEEP,
-            bankPoolNumber: 10000,
-            consumerPoolNumber: 100,
-            distributionStrategy: 'PRIORITY',
-            gameStatus: GameStatus.ACTIVE,
-            gameStep: 0,
-            currentPhaseId: 'test',
-            roomId: room.id,
-            operationMechanicsVersion: OperationMechanicsVersion.MODERN,
-            workers: DEFAULT_WORKERS,
-            economyScore: 10,
-          },
-        },
-        turn: 1,
+        name: 'Modern Ops Test',
+        currentTurn: '',
+        currentOrSubRound: 0,
+        currentRound: RoundType.GAME_UPKEEP,
+        bankPoolNumber: 10000,
+        consumerPoolNumber: 100,
+        distributionStrategy: 'PRIORITY',
+        gameStatus: GameStatus.ACTIVE,
+        gameStep: 0,
+        currentPhaseId: 'test',
+        roomId: room.id,
+        operationMechanicsVersion: OperationMechanicsVersion.MODERN,
+        workers: DEFAULT_WORKERS,
+        economyScore: 10,
       },
-      include: { game: true },
     });
 
-    testGameId = gameTurn.game.id;
+    const gameTurn = await prisma.gameTurn.create({
+      data: {
+        gameId: game.id,
+        turn: 1,
+      },
+    });
+
+    testGameId = game.id;
 
     // Update game with current turn
     await prisma.game.update({
@@ -350,6 +361,10 @@ async function main() {
     console.log('\n📝 TEST 7: Factory Becomes Operational (Next Turn START)');
     console.log('-'.repeat(60));
 
+    if (!testFactoryId) {
+      throw new Error('No factory ID available');
+    }
+
     await prisma.factory.update({
       where: { id: testFactoryId },
       data: { isOperational: true },
@@ -381,6 +396,10 @@ async function main() {
     const customersToServe = Math.min(sector.consumers, 4); // FACTORY_II capacity = 4
 
     console.log(`\nSimulating ${customersToServe} customers being served...`);
+
+    if (!testFactoryId) {
+      throw new Error('No factory ID available');
+    }
 
     // Create FactoryProduction record
     const production = await prisma.factoryProduction.create({
@@ -530,10 +549,14 @@ async function main() {
         await prisma.sector.deleteMany({ where: { gameId: testGameId } });
         await prisma.gameTurn.deleteMany({ where: { gameId: testGameId } });
         await prisma.player.deleteMany({ where: { gameId: testGameId } });
-        await prisma.roomUser.deleteMany({ where: { roomId: room.id } });
-        await prisma.user.deleteMany({ where: { authUserId: user.authUserId } });
+        if (room) {
+          await prisma.roomUser.deleteMany({ where: { roomId: room.id } });
+          await prisma.room.delete({ where: { id: room.id } });
+        }
+        if (user) {
+          await prisma.user.deleteMany({ where: { authUserId: user.authUserId } });
+        }
         await prisma.game.delete({ where: { id: testGameId } });
-        await prisma.room.delete({ where: { id: room.id } });
         console.log('✓ Cleanup complete\n');
       } catch (cleanupError) {
         console.error('Cleanup error:', cleanupError);

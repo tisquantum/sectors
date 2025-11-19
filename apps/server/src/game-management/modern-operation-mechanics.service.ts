@@ -89,6 +89,7 @@ export class ModernOperationMechanicsService {
    * Companies pay for blueprint costs and factories are created.
    */
   private async resolveFactoryConstruction(phase: Phase) {
+    console.log('resolveFactoryConstruction', phase);
     const factoryConstructionOrders = await this.prisma.factoryConstructionOrder.findMany({
       where: { gameTurnId: phase.gameTurnId },
     });
@@ -110,20 +111,41 @@ export class ModernOperationMechanicsService {
       resourcePriceMap.set(resource.type, price);
     }
 
+    // Get game for worker availability check
+    const game = await this.prisma.game.findUnique({
+      where: { id: phase.gameId },
+    });
+
+    if (!game) {
+      await this.gameLogService.createGameLog({
+        game: { connect: { id: phase.gameId } },
+        content: 'Game not found for factory construction resolution',
+      });
+      return;
+    }
+
+    // Track successful order IDs for resource consumption
+    const successfulOrderIds = new Set<string>();
+
     for (const order of factoryConstructionOrders) {
       // Fetch company with relations
       const company = await this.prisma.company.findUnique({
         where: { id: order.companyId },
-            include: { Sector: true },
-          });
+        include: { Sector: true },
+      });
 
-          if (!company) {
-            await this.gameLogService.createGameLog({
-              game: { connect: { id: phase.gameId } },
-          content: `Company ${order.companyId} not found for factory construction`,
-            });
-            continue;
-          }
+      if (!company) {
+        const failureReason = `Company ${order.companyId} not found`;
+        await this.prisma.factoryConstructionOrder.update({
+          where: { id: order.id },
+          data: { failureReason },
+        });
+        await this.gameLogService.createGameLog({
+          game: { connect: { id: phase.gameId } },
+          content: failureReason,
+        });
+        continue;
+      }
 
       // Calculate total blueprint cost
       let blueprintCost = 0;
@@ -137,12 +159,51 @@ export class ModernOperationMechanicsService {
 
       // Check if company can afford it
       if (company.cashOnHand < blueprintCost) {
-              await this.gameLogService.createGameLog({
-                game: { connect: { id: phase.gameId } },
-          content: `${company.name} cannot afford factory construction. Cost: $${blueprintCost}, Cash: $${company.cashOnHand}`,
-              });
-              continue;
-          }
+        const failureReason = `Insufficient cash. Required: $${blueprintCost}, Available: $${company.cashOnHand}`;
+        await this.prisma.factoryConstructionOrder.update({
+          where: { id: order.id },
+          data: { failureReason },
+        });
+        await this.gameLogService.createGameLog({
+          game: { connect: { id: phase.gameId } },
+          content: `${company.name} cannot afford factory construction. ${failureReason}`,
+        });
+        continue;
+      }
+
+      // Check factory limit based on sector technology level
+      const existingFactories = await this.prisma.factory.count({
+        where: { companyId: company.id, gameId: phase.gameId },
+      });
+      
+      const maxFactories = this.getMaxFactories(company.Sector.technologyLevel);
+      if (existingFactories >= maxFactories) {
+        const failureReason = `Factory limit reached. Maximum factories allowed: ${maxFactories} (based on sector technology level ${company.Sector.technologyLevel})`;
+        await this.prisma.factoryConstructionOrder.update({
+          where: { id: order.id },
+          data: { failureReason },
+        });
+        await this.gameLogService.createGameLog({
+          game: { connect: { id: phase.gameId } },
+          content: `${company.name} cannot build more factories. ${failureReason}`,
+        });
+        continue;
+      }
+
+      // Check worker availability
+      const requiredWorkers = this.getRequiredWorkers(order.size);
+      if (game.workers < requiredWorkers) {
+        const failureReason = `Insufficient workers in workforce pool. Required: ${requiredWorkers}, Available: ${game.workers}`;
+        await this.prisma.factoryConstructionOrder.update({
+          where: { id: order.id },
+          data: { failureReason },
+        });
+        await this.gameLogService.createGameLog({
+          game: { connect: { id: phase.gameId } },
+          content: `${company.name} cannot build factory. ${failureReason}`,
+        });
+        continue;
+      }
 
       try {
         await this.prisma.$transaction(async (tx) => {
@@ -152,26 +213,27 @@ export class ModernOperationMechanicsService {
             data: { cashOnHand: { decrement: blueprintCost } },
           });
 
-          // Get next available slot
-          const existingFactories = await tx.factory.count({
-            where: { companyId: company.id, gameId: phase.gameId },
-          });
-
           // Create factory (will be operational next turn)
           const factory = await tx.factory.create({
             data: {
               companyId: company.id,
               sectorId: company.sectorId,
-            gameId: phase.gameId,
+              gameId: phase.gameId,
               size: order.size,
-              workers: this.getRequiredWorkers(order.size),
+              workers: requiredWorkers,
               slot: existingFactories + 1,
               isOperational: false,
               resourceTypes: order.resourceTypes,
             },
           });
 
-          // Delete the construction order
+          // Deduct workers from workforce pool
+          await tx.game.update({
+            where: { id: phase.gameId },
+            data: { workers: { decrement: requiredWorkers } },
+          });
+
+          // Delete the construction order on success
           await tx.factoryConstructionOrder.delete({
             where: { id: order.id },
           });
@@ -181,6 +243,9 @@ export class ModernOperationMechanicsService {
             content: `${company.name} built ${order.size} factory for $${blueprintCost}`,
           });
         });
+
+        // Track successful order for resource consumption
+        successfulOrderIds.add(order.id);
 
         // Add permanent consumption marker to sector bag (after transaction)
         // Company chooses which resource type from factory output
@@ -192,21 +257,31 @@ export class ModernOperationMechanicsService {
           factoryOutputResource,
         );
       } catch (error) {
+        const failureReason = `Construction failed: ${error instanceof Error ? error.message : String(error)}`;
+        await this.prisma.factoryConstructionOrder.update({
+          where: { id: order.id },
+          data: { failureReason },
+        });
         await this.gameLogService.createGameLog({
           game: { connect: { id: phase.gameId } },
-          content: `Factory construction failed for ${company.name}: ${error.message}`,
+          content: `Factory construction failed for ${company.name}: ${failureReason}`,
         });
       }
     }
 
-    // Consume resources AFTER all orders processed (simultaneous pricing)
+    // Consume resources ONLY for successfully completed orders (simultaneous pricing)
+    // Resources are consumed at the same prices for all successful orders
     const totalResourceConsumptions = new Map<ResourceType, number>();
+    
+    // Only consume resources for orders that succeeded (tracked before deletion)
     for (const order of factoryConstructionOrders) {
-      for (const resourceType of order.resourceTypes) {
-        totalResourceConsumptions.set(
-          resourceType,
-          (totalResourceConsumptions.get(resourceType) || 0) + 1
-        );
+      if (successfulOrderIds.has(order.id)) {
+        for (const resourceType of order.resourceTypes) {
+          totalResourceConsumptions.set(
+            resourceType,
+            (totalResourceConsumptions.get(resourceType) || 0) + 1
+          );
+        }
       }
     }
 
@@ -216,7 +291,7 @@ export class ModernOperationMechanicsService {
     
     if (consumptions.length > 0) {
       await this.resourceService.consumeResources(phase.gameId, consumptions);
-    await this.resourceService.updateResourcePrices(phase.gameId);
+      await this.resourceService.updateResourcePrices(phase.gameId);
     }
     
     await this.updateWorkforceTrack(phase);

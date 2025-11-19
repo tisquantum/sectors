@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma, Resource, ResourceType, ResourceTrackType } from '@prisma/client';
+import { getResourcePriceForResourceType } from '@server/data/constants';
 
 @Injectable()
 export class ResourceService {
@@ -44,6 +45,21 @@ export class ResourceService {
     return this.prisma.resource.findMany({
       where: { gameId, type },
     });
+  }
+
+  /**
+   * Get all resources for a game (alias for resourcesByGame)
+   */
+  async getGameResources(gameId: string): Promise<Resource[]> {
+    return this.resourcesByGame(gameId);
+  }
+
+  /**
+   * Get a single resource by type (returns first match or null)
+   */
+  async getResourceByType(gameId: string, type: ResourceType): Promise<Resource | null> {
+    const resources = await this.resourcesByType(gameId, type);
+    return resources.length > 0 ? resources[0] : null;
   }
 
   async createResource(data: Prisma.ResourceCreateInput): Promise<Resource> {
@@ -152,7 +168,10 @@ export class ResourceService {
         });
 
         if (!resource) {
-          throw new Error(`Resource ${consumption.type} not found`);
+          // Log warning and skip - resource type might not be initialized for this game
+          // This can happen if a resource type like GENERAL is used but wasn't created during game initialization
+          console.warn(`Resource ${consumption.type} not found for game ${gameId}. Skipping consumption.`);
+          continue;
         }
 
         // Move track position down (consumed resources make them cheaper)
@@ -203,7 +222,6 @@ export class ResourceService {
   // Update resource prices based on trackPosition using price arrays from constants
   async updateResourcePrices(gameId: string): Promise<void> {
     const resources = await this.resourcesByGame(gameId);
-    const { getResourcePriceForResourceType } = await import('@server/data/constants');
     
     for (const resource of resources) {
       const priceArray = getResourcePriceForResourceType(resource.type);
@@ -221,7 +239,6 @@ export class ResourceService {
 
   // Get current price for a resource based on its track position
   async getCurrentResourcePrice(resource: Resource): Promise<number> {
-    const { getResourcePriceForResourceType } = await import('@server/data/constants');
     const priceArray = getResourcePriceForResourceType(resource.type);
     return priceArray[Math.min(resource.trackPosition, priceArray.length - 1)] || 0;
   }

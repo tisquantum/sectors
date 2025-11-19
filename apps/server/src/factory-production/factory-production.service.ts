@@ -39,7 +39,12 @@ export class FactoryProductionService {
     cursor?: Prisma.FactoryProductionWhereUniqueInput;
     where?: Prisma.FactoryProductionWhereInput;
     orderBy?: Prisma.FactoryProductionOrderByWithRelationInput;
-  }): Promise<FactoryProduction[]> {
+  }): Promise<(FactoryProduction & {
+    Factory: any;
+    Company: any;
+    Game: any;
+    GameTurn: any;
+  })[]> {
     const { skip, take, cursor, where, orderBy } = params;
     return this.prisma.factoryProduction.findMany({
       skip,
@@ -53,7 +58,12 @@ export class FactoryProductionService {
         Game: true,
         GameTurn: true,
       },
-    });
+    }) as Promise<(FactoryProduction & {
+      Factory: any;
+      Company: any;
+      Game: any;
+      GameTurn: any;
+    })[]>;
   }
 
   async factoryProductionsByGameTurn(gameTurnId: string): Promise<FactoryProduction[]> {
@@ -170,6 +180,55 @@ export class FactoryProductionService {
       orderBy: { createdAt: 'desc' },
       take: 10, // Last 10 turns
     });
+  }
+
+  /**
+   * Get factory production for a specific factory and turn
+   */
+  async getFactoryProductionForTurn(factoryId: string, gameTurnId: string): Promise<FactoryProduction | null> {
+    const productions = await this.factoryProductions({
+      where: {
+        factoryId,
+        gameTurnId,
+      },
+    });
+    return productions.length > 0 ? productions[0] : null;
+  }
+
+  /**
+   * Get all factory productions for a company in a specific turn
+   */
+  async getCompanyProductionForTurn(companyId: string, gameTurnId: string): Promise<FactoryProduction[]> {
+    return this.factoryProductions({
+      where: {
+        companyId,
+        gameTurnId,
+      },
+    });
+  }
+
+  /**
+   * Get all factory productions for a game turn
+   */
+  async getGameTurnProduction(gameId: string, gameTurnId: string): Promise<(FactoryProduction & {
+    Factory: any;
+    Company: any;
+    Game: any;
+    GameTurn: any;
+  })[]> {
+    return this.factoryProductionsWithRelations({
+      where: {
+        gameId,
+        gameTurnId,
+      },
+    });
+  }
+
+  /**
+   * Get production history for a company across all turns
+   */
+  async getCompanyProductionHistory(companyId: string, gameId: string): Promise<FactoryProduction[]> {
+    return this.factoryProductionsByCompany(companyId, gameId);
   }
 }
 

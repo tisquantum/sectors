@@ -5,13 +5,19 @@ import { ResourceType } from '@/components/Company/Factory/Factory.types';
 import { ResourceTrackType } from '@server/prisma/prisma.client';
 import { trpc } from '@sectors/app/trpc';
 import { getResourcePriceForResourceType } from '@server/data/constants';
+import { useGame } from './GameContext';
 
-interface Props {
-  gameId: string;
-}
-
-export function ResourceTracksContainer({ gameId }: Props) {
-  const { data: resources, isLoading } = trpc.resource.getGameResources.useQuery({ gameId });
+export function ResourceTracksContainer() {
+  const { gameId } = useGame();
+  // Only query if gameId is valid
+  console.log('gameId', gameId);
+  const isValidGameId = !!gameId && typeof gameId === 'string' && gameId.length > 0;
+  console.log('isValidGameId', isValidGameId);
+  const { data: resources, isLoading } = trpc.resource.getGameResources.useQuery(
+    { gameId: isValidGameId ? gameId : '' },
+    { enabled: isValidGameId }
+  );
+  console.log('resources', resources);
 
   if (isLoading) {
     return <div className="p-4 text-gray-400">Loading resource tracks...</div>;

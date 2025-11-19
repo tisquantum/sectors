@@ -34,6 +34,7 @@ import {
   RiTeamFill,
   RiUserFill,
   RiWallet3Fill,
+  RiVipCrown2Fill,
 } from "@remixicon/react";
 import {
   baseToolTipStyle,
@@ -215,6 +216,11 @@ const CompanyInfoV2 = ({
     trpc.companyAction.listCompanyActions.useQuery({
       where: { companyId },
     });
+  // Fetch CEO player info
+  const { data: ceoPlayer } = trpc.player.getPlayer.useQuery(
+    { where: { id: company?.ceoId || "" } },
+    { enabled: !!company?.ceoId }
+  );
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
   useEffect(() => {
     refetchCompany();
@@ -258,7 +264,7 @@ const CompanyInfoV2 = ({
           </div>
         </div>
 
-        <div className="flex gap-1">
+        <div className="flex gap-1 flex-wrap">
           <Tooltip
             classNames={{ base: baseToolTipStyle }}
             className={tooltipStyle}
@@ -268,9 +274,17 @@ const CompanyInfoV2 = ({
               </p>
             }
           >
-            <span className={
-              company.status == CompanyStatus.ACTIVE ? "text-green-500" : company.status == CompanyStatus.INACTIVE ? "text-yellow-500" : "text-red-500"
-            }>{company.status}</span>
+            <span
+              className={
+                company.status == CompanyStatus.ACTIVE
+                  ? "text-green-500"
+                  : company.status == CompanyStatus.INACTIVE
+                  ? "text-yellow-500"
+                  : "text-red-500"
+              }
+            >
+              {company.status}
+            </span>
           </Tooltip>
           <Tooltip
             classNames={{ base: baseToolTipStyle }}
@@ -285,6 +299,22 @@ const CompanyInfoV2 = ({
               <RiWallet3Fill size={20} /> <span>${company.cashOnHand}</span>
             </div>
           </Tooltip>
+          {ceoPlayer && (
+            <Tooltip
+              classNames={{ base: baseToolTipStyle }}
+              className={tooltipStyle}
+              content={
+                <p className={tooltipParagraphStyle}>
+                  The CEO (Chief Executive Officer) of this company.
+                </p>
+              }
+            >
+              <div className="flex items-center gap-1">
+                <RiVipCrown2Fill size={20} />
+                <PlayerAvatar player={ceoPlayer as Player} size="sm" showNameLabel />
+              </div>
+            </Tooltip>
+          )}
         </div>
       </div>
     );
@@ -325,7 +355,7 @@ const CompanyInfoV2 = ({
                 </Popover>
               </Tooltip>
             </div>
-            <div className="flex gap-1">
+            <div className="flex gap-1 flex-wrap">
               <Tooltip
                 classNames={{ base: baseToolTipStyle }}
                 className={tooltipStyle}
@@ -337,6 +367,22 @@ const CompanyInfoV2 = ({
               >
                 <span>{company.status}</span>
               </Tooltip>
+              {ceoPlayer && (
+                <Tooltip
+                  classNames={{ base: baseToolTipStyle }}
+                  className={tooltipStyle}
+                  content={
+                    <p className={tooltipParagraphStyle}>
+                      The CEO (Chief Executive Officer) of this company.
+                    </p>
+                  }
+                >
+                  <div className="flex items-center gap-1">
+                    <RiVipCrown2Fill size={20} />
+                    <PlayerAvatar player={ceoPlayer as Player} size="sm" showNameLabel />
+                  </div>
+                </Tooltip>
+              )}
             </div>
             <div className="flex gap-1 justify-between items-center">
               <div className="flex flex-col gap-1">

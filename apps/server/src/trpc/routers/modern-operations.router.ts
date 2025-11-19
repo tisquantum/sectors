@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { TrpcService } from '../trpc.service';
-import { MarketingCampaignTier, PhaseName, ResourceType } from '@prisma/client';
+import { MarketingCampaignTier, PhaseName, ResourceType, OperationMechanicsVersion } from '@prisma/client';
 import { checkIsPlayerAction, checkSubmissionTime } from '../trpc.middleware';
 import { PlayersService } from '@server/players/players.service';
 import { PhaseService } from '@server/phase/phase.service';
@@ -57,12 +57,18 @@ export default (trpc: TrpcService, ctx: Context) =>
           throw new Error('Only the CEO can submit marketing campaigns');
         }
 
+        // Get game to determine operation mechanics version
+        const game = await ctx.gamesService.game({ id: input.gameId });
+        if (!game) {
+          throw new Error('Game not found');
+        }
+
         // Create the marketing campaign
         return ctx.marketingService.createCampaign({
           companyId: input.companyId,
           gameId: input.gameId,
           tier: input.tier,
-          slot: input.slot,
+          operationMechanicsVersion: game.operationMechanicsVersion || OperationMechanicsVersion.MODERN,
         });
       }),
 
@@ -108,12 +114,15 @@ export default (trpc: TrpcService, ctx: Context) =>
 
         // Create research action record
         // We'll store this as a company action for now
+        if (!game.currentTurn) {
+          throw new Error('Game has no current turn');
+        }
         return ctx.prismaService.companyAction.create({
           data: {
             companyId: input.companyId,
             action: 'RESEARCH' as any,
             resolved: false,
-            GameTurn: { connect: { id: game.currentTurn } },
+            gameTurnId: game.currentTurn,
           },
         });
       }),

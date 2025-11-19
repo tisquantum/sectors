@@ -1,7 +1,7 @@
 import { useGame } from "./GameContext";
 import "./EndTurnEconomy.css";
 import { sectorColors } from "@server/data/gameData";
-import { CompanyStatus, PhaseName, Sector } from "@server/prisma/prisma.client";
+import { CompanyStatus, OperationMechanicsVersion, PhaseName, Sector } from "@server/prisma/prisma.client";
 import {
   RiGlasses2Fill,
   RiHandCoinFill,
@@ -22,6 +22,7 @@ import { sectorPriority } from "@server/data/constants";
 import EconomySector from "./EconomySector";
 import EndTurnSectorConsumerDistributionAnimation from "./EndTurnSectorConsumerDistributionAnimation";
 import { sortSectorIdsByPriority } from "@server/data/helpers";
+import { WorkforceTrack, SectorResearchTracks } from "./Tracks";
 
 const EndTurnEconomy = () => {
   const { currentPhase, gameState, gameId } = useGame();
@@ -153,6 +154,31 @@ const EndTurnEconomy = () => {
         <div>
           <CompanyPriorityList companies={companiesWithSector} />
         </div>
+        
+        {/* Modern Operations Tracks - Only show for MODERN operation mechanics */}
+        {gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN && (
+          <div className="mt-6 space-y-6 w-full">
+            <div className="border-t border-gray-700 pt-6">
+              <h3 className="text-xl font-semibold text-gray-200 mb-4">
+                Modern Operations
+              </h3>
+              <div className="space-y-6">
+                <WorkforceTrack />
+                <div className="mt-6">
+                  <div className="mb-4">
+                    <h4 className="text-lg font-semibold text-gray-300">
+                      Sector Research Tracks
+                    </h4>
+                    <p className="text-sm text-gray-400 mt-1">
+                      Track sector-wide research progress. Companies in each sector contribute to their sector&apos;s research track.
+                    </p>
+                  </div>
+                  <SectorResearchTracks />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

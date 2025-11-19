@@ -225,7 +225,7 @@ describe('Modern Operation Mechanics - Integration Test', () => {
       });
 
       // Resolve factory construction
-      await modernOperationMechanicsService['resolveFactoryConstruction'](phase, game!);
+      await modernOperationMechanicsService['resolveFactoryConstruction'](phase);
 
       // Verify factory was created
       const factories = await prisma.factory.findMany({

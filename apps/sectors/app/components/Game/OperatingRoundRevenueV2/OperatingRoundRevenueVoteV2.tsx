@@ -9,9 +9,9 @@ import {
   Sector,
   SectorName,
 } from "@server/prisma/prisma.client";
-import { Radio, RadioGroup, Tooltip } from "@nextui-org/react";
-import { useState } from "react";
-import { CompanyTierData } from "@server/data/constants";
+import { Radio, RadioGroup, Tooltip, Spinner } from "@nextui-org/react";
+import { useState, useMemo } from "react";
+import { CompanyTierData, FACTORY_CUSTOMER_LIMITS } from "@server/data/constants";
 import CompanyInfo from "../../Company/CompanyInfo";
 import ShareHolders from "../../Company/ShareHolders";
 import DebounceButton from "@sectors/app/components/General/DebounceButton";
@@ -24,7 +24,7 @@ import CompanyPriorityList from "../../Company/CompanyPriorityOperatingRound";
 import { Info } from "lucide-react";
 import { OperationMechanicsVersion } from "@server/prisma/prisma.client";
 
-// Mock data for consumption phase revenue - this would come from the backend
+// Consumption phase revenue data structure
 interface ConsumptionRevenue {
   companyId: string;
   revenue: number;
@@ -37,121 +37,6 @@ interface ConsumptionRevenue {
     maxConsumers: number;
   }[];
 }
-
-const mockConsumptionRevenue: ConsumptionRevenue[] = [
-  {
-    companyId: '1',
-    revenue: 850,
-    consumersReceived: 12,
-    factories: [
-      {
-        id: 'f1',
-        size: 'FACTORY_I',
-        profit: 250,
-        consumersReceived: 4,
-        maxConsumers: 5
-      },
-      {
-        id: 'f2',
-        size: 'FACTORY_II',
-        profit: 350,
-        consumersReceived: 3,
-        maxConsumers: 3
-      },
-      {
-        id: 'f3',
-        size: 'FACTORY_I',
-        profit: 250,
-        consumersReceived: 5,
-        maxConsumers: 5
-      }
-    ]
-  },
-  {
-    companyId: '2',
-    revenue: 720,
-    consumersReceived: 8,
-    factories: [
-      {
-        id: 'f4',
-        size: 'FACTORY_I',
-        profit: 320,
-        consumersReceived: 4,
-        maxConsumers: 4
-      },
-      {
-        id: 'f5',
-        size: 'FACTORY_II',
-        profit: 400,
-        consumersReceived: 4,
-        maxConsumers: 4
-      }
-    ]
-  },
-  {
-    companyId: '3',
-    revenue: 680,
-    consumersReceived: 6,
-    factories: [
-      {
-        id: 'f6',
-        size: 'FACTORY_I',
-        profit: 280,
-        consumersReceived: 3,
-        maxConsumers: 4
-      },
-      {
-        id: 'f7',
-        size: 'FACTORY_III',
-        profit: 400,
-        consumersReceived: 3,
-        maxConsumers: 3
-      }
-    ]
-  },
-  {
-    companyId: '4',
-    revenue: 920,
-    consumersReceived: 10,
-    factories: [
-      {
-        id: 'f8',
-        size: 'FACTORY_II',
-        profit: 420,
-        consumersReceived: 4,
-        maxConsumers: 4
-      },
-      {
-        id: 'f9',
-        size: 'FACTORY_II',
-        profit: 500,
-        consumersReceived: 6,
-        maxConsumers: 6
-      }
-    ]
-  },
-  {
-    companyId: '5',
-    revenue: 550,
-    consumersReceived: 7,
-    factories: [
-      {
-        id: 'f10',
-        size: 'FACTORY_I',
-        profit: 200,
-        consumersReceived: 3,
-        maxConsumers: 4
-      },
-      {
-        id: 'f11',
-        size: 'FACTORY_I',
-        profit: 350,
-        consumersReceived: 4,
-        maxConsumers: 4
-      }
-    ]
-  }
-];
 
 const DistributeSelectionV2 = ({
   company,
@@ -218,7 +103,107 @@ const DistributeSelectionV2 = ({
 };
 
 const OperatingRoundRevenueVoteV2 = () => {
-  // For testing: always show mock data, ignore backend
+  const { gameId, currentPhase, currentTurn, gameState } = useGame();
+
+  // Only render for modern operation mechanics
+  if (gameState.operationMechanicsVersion !== OperationMechanicsVersion.MODERN) {
+    return null;
+  }
+
+  // Get production data for current turn
+  const { data: productionWithRelations, isLoading: productionLoading } = 
+    trpc.factoryProduction.getGameTurnProduction.useQuery(
+      {
+        gameId: gameId || '',
+        gameTurnId: currentTurn?.id || '',
+      },
+      { enabled: !!gameId && !!currentTurn?.id }
+    );
+
+  // Get companies with sectors
+  const { data: companiesWithSector, isLoading: companiesLoading } =
+    trpc.company.listCompaniesWithSector.useQuery({
+      where: {
+        gameId: gameId || '',
+        status: CompanyStatus.ACTIVE,
+      },
+    },
+    { enabled: !!gameId }
+    );
+
+  // Transform production data into ConsumptionRevenue format
+  const consumptionRevenueData = useMemo(() => {
+    if (!productionWithRelations || !companiesWithSector) {
+      return [];
+    }
+
+    // Group production records by company
+    const companyRevenueMap = new Map<string, ConsumptionRevenue>();
+
+    productionWithRelations.forEach((production: any) => {
+      const factory = production.Factory;
+      const company = production.Company;
+
+      if (!factory || !company || production.customersServed === 0) {
+        return;
+      }
+
+      const companyId = company.id;
+      const maxCustomers = FACTORY_CUSTOMER_LIMITS[factory.size] || 0;
+
+      if (!companyRevenueMap.has(companyId)) {
+        companyRevenueMap.set(companyId, {
+          companyId,
+          revenue: 0,
+          consumersReceived: 0,
+          factories: [],
+        });
+      }
+
+      const companyData = companyRevenueMap.get(companyId)!;
+      companyData.revenue += production.profit || production.revenue || 0;
+      companyData.consumersReceived += production.customersServed || 0;
+      companyData.factories.push({
+        id: factory.id,
+        size: factory.size,
+        profit: production.profit || production.revenue || 0,
+        consumersReceived: production.customersServed || 0,
+        maxConsumers: maxCustomers,
+      });
+    });
+
+    return Array.from(companyRevenueMap.values());
+  }, [productionWithRelations, companiesWithSector]);
+
+  if (productionLoading || companiesLoading) {
+    return (
+      <div className="p-6 rounded-lg shadow-md">
+        <div className="flex items-center justify-center h-64">
+          <Spinner size="lg" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!consumptionRevenueData || consumptionRevenueData.length === 0) {
+    return (
+      <div className="p-6 rounded-lg shadow-md">
+        <h1 className="text-2xl font-bold mb-4">Consumption Phase Revenue Vote</h1>
+        <p className="text-gray-400 mb-4">
+          Vote on how to distribute revenue earned from consumer consumption
+        </p>
+        <div className="text-center py-12">
+          <p className="text-gray-400 text-lg">No production data available for this turn.</p>
+          <p className="text-gray-500 text-sm mt-2">
+            Revenue will appear here after the consumption phase is resolved.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const operatingRoundId = currentPhase?.operatingRoundId || '';
+
   return (
     <div className="p-6 rounded-lg shadow-md">
       <h1 className="text-2xl font-bold mb-4">Consumption Phase Revenue Vote</h1>
@@ -226,46 +211,53 @@ const OperatingRoundRevenueVoteV2 = () => {
         Vote on how to distribute revenue earned from consumer consumption
       </p>
       <div className="flex flex-col gap-4">
-        {mockConsumptionRevenue.map((company) => {
-          // Minimal mock company object for voting UI
-          const mockCompany = {
-            id: company.companyId,
-            name: `Company ${company.companyId}`,
-            companyTier: 'STARTUP',
-            Sector: { id: 'sector1', name: 'CONSUMER_DEFENSIVE' },
-            Share: [],
-          } as Company & { Sector: Sector };
-          const mockOperatingRoundId = 'mock-op-round-1';
+        {consumptionRevenueData.map((companyRevenue) => {
+          // Find the actual company object
+          const company = companiesWithSector?.find(c => c.id === companyRevenue.companyId);
+          
+          if (!company) {
+            return null;
+          }
+
           return (
-            <div key={company.companyId} className="flex flex-col bg-slate-800 p-4 rounded-lg shadow-md border border-gray-700">
+            <div key={companyRevenue.companyId} className="flex flex-col bg-slate-800 p-4 rounded-lg shadow-md border border-gray-700">
               <div className="flex flex-col gap-2">
-                <span className="text-lg font-semibold text-white">Company {company.companyId}</span>
-                <span className="text-green-400 font-bold">Revenue: ${company.revenue}</span>
+                <span className="text-lg font-semibold text-white">{company.name}</span>
+                <span className="text-green-400 font-bold">Revenue: ${companyRevenue.revenue}</span>
                 <span className="text-md my-2 text-gray-300">
-                  Consumers Received: {company.consumersReceived}
+                  Consumers Received: {companyRevenue.consumersReceived}
                 </span>
                 {/* Factory Breakdown */}
                 <div className="space-y-2 mt-2">
                   <span className="text-sm font-medium text-gray-300">Factory Performance:</span>
-                  {company.factories.map((factory) => (
-                    <div key={factory.id} className="flex justify-between items-center bg-gray-800 rounded p-2">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-xs text-gray-300">{factory.size.replace('_', ' ')}</span>
-                        <span className="text-xs text-blue-400">{factory.consumersReceived}/{factory.maxConsumers} consumers</span>
+                  {companyRevenue.factories.map((factory) => {
+                    const capacityPercent = factory.maxConsumers > 0 
+                      ? ((factory.consumersReceived / factory.maxConsumers) * 100).toFixed(0)
+                      : '0';
+                    const isFullCapacity = factory.consumersReceived === factory.maxConsumers;
+                    
+                    return (
+                      <div key={factory.id} className="flex justify-between items-center bg-gray-800 rounded p-2">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xs text-gray-300">{factory.size.replace('_', ' ')}</span>
+                          <span className="text-xs text-blue-400">{factory.consumersReceived}/{factory.maxConsumers} consumers</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xs text-green-400 font-bold">${factory.profit}</span>
+                          <span className={`text-xs ${isFullCapacity ? 'text-green-400' : 'text-gray-400'}`}>
+                            {capacityPercent}% capacity
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-xs text-green-400 font-bold">${factory.profit}</span>
-                        <span className="text-xs text-gray-400">{((factory.consumersReceived / factory.maxConsumers) * 100).toFixed(0)}% capacity</span>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
                 {/* Voting UI */}
                 <div className="mt-4">
                   <DistributeSelectionV2
-                    company={mockCompany}
-                    consumptionRevenue={company}
-                    operatingRoundId={mockOperatingRoundId}
+                    company={company as Company & { Sector: Sector }}
+                    consumptionRevenue={companyRevenue}
+                    operatingRoundId={operatingRoundId}
                   />
                 </div>
               </div>

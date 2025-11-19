@@ -3,6 +3,7 @@
 import { trpc } from "@sectors/app/trpc";
 import { FactorySlots } from "../Tableau/FactorySlots";
 import { MarketingSlots } from "../Tableau/MarketingSlots";
+import { ConstructionOrders } from "../Factory/ConstructionOrders";
 
 interface ModernCompanyProps {
   companyId: string;
@@ -19,9 +20,8 @@ export function ModernCompany({
     id: companyId,
   });
 
-  if (!currentPhase) {
-    return null;
-  }
+  // Allow component to render without currentPhase (for always-available views)
+  // currentPhase is only needed for phase-specific factory creation, not viewing
 
   return (
     <div className="bg-gray-800/95 backdrop-blur-sm rounded-lg border border-gray-600 shadow-lg p-3 space-y-3 min-w-[280px]">
@@ -51,6 +51,11 @@ export function ModernCompany({
             gameId={gameId}
           />
         </div>
+      </div>
+
+      {/* Construction Orders & History */}
+      <div className="space-y-2 pt-2 border-t border-gray-700">
+        <ConstructionOrders companyId={companyId} gameId={gameId} showHistory={false} />
       </div>
     </div>
   );

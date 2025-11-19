@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import GameSidebar from "./GameSidebar";
 import GameTopBar from "./GameTopBar";
-import StockRoundOrderGrid from "./StockRoundOrderGrid";
+import { MarketsView } from "./MarketsView";
 import TabView from "./TabView";
 import PendingOrders from "./PendingOrders";
 import StockChart from "./StockChart";
@@ -65,6 +65,14 @@ import { ResolveFactoryConstructionPhase } from "../Factory/ResolveFactoryConstr
 import MarketingAndResearchAction from "./MarketingAndResearchAction";
 import MarketingAndResearchActionResolve from "./MarketingAndResearchActionResolve";
 import { EarningsCall } from "./EarningsCall";
+import {
+  ConsumptionPhase as ModernConsumptionPhase,
+  FactoryConstructionPhase as ModernFactoryConstructionPhase,
+  FactoryConstructionResolvePhase as ModernFactoryConstructionResolvePhase,
+  EarningsCallPhase as ModernEarningsCallPhase,
+  MarketingAndResearchPhase as ModernMarketingAndResearchPhase,
+  MarketingAndResearchResolvePhase as ModernMarketingAndResearchResolvePhase,
+} from "./ModernOperations/phases";
 
 const determineGameRound = (
   game: GameState
@@ -273,17 +281,41 @@ const Game = ({ gameId }: { gameId: string }) => {
     ) : currentRoundData?.phase.name === PhaseName.STOCK_ACTION_SHORT_ORDER ? (
       <CoverShortOrders />
     ) : currentRoundData?.phase.name === PhaseName.CONSUMPTION_PHASE ? (
-      <ConsumptionPhase />
+      gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN ? (
+        <ModernConsumptionPhase />
+      ) : (
+        <ConsumptionPhase />
+      )
     ) : currentRoundData?.phase.name === PhaseName.EARNINGS_CALL ? (
-      <EarningsCall />
+      gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN ? (
+        <ModernEarningsCallPhase />
+      ) : (
+        <EarningsCall />
+      )
     ) : currentRoundData?.phase.name === PhaseName.FACTORY_CONSTRUCTION ? (
-      <FactoryConstructionPhase />
+      gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN ? (
+        <ModernFactoryConstructionPhase />
+      ) : (
+        <FactoryConstructionPhase />
+      )
     ) : currentRoundData?.phase.name === PhaseName.FACTORY_CONSTRUCTION_RESOLVE ? (
-      <ResolveFactoryConstructionPhase />
+      gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN ? (
+        <ModernFactoryConstructionResolvePhase />
+      ) : (
+        <ResolveFactoryConstructionPhase />
+      )
     ) : currentRoundData?.phase.name === PhaseName.MARKETING_AND_RESEARCH_ACTION ? (
-      <MarketingAndResearchAction />
+      gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN ? (
+        <ModernMarketingAndResearchPhase />
+      ) : (
+        <MarketingAndResearchAction />
+      )
     ) : currentRoundData?.phase.name === PhaseName.MARKETING_AND_RESEARCH_ACTION_RESOLVE ? (
-      <MarketingAndResearchActionResolve />
+      gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN ? (
+        <ModernMarketingAndResearchResolvePhase />
+      ) : (
+        <MarketingAndResearchActionResolve />
+      )
     )
     : null;
 
@@ -337,7 +369,7 @@ const Game = ({ gameId }: { gameId: string }) => {
                 {currentView === "chart" && <StockChart />}
                 {currentView === "pending" && <PendingOrders />}
                 {currentView == "economy" && <EndTurnEconomy />}
-                {currentView == "markets" && <StockRoundOrderGrid />}
+                {currentView == "markets" && <MarketsView />}
                 {currentView == "companies" && <CompanyActionSlider />}
                 {gameState.gameStatus == GameStatus.FINISHED && (
                   <GameResults

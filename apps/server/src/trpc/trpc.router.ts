@@ -104,6 +104,7 @@ import { FactoryService } from '@server/factory/factory.service';
 import { MarketingService } from '@server/marketing/marketing.service';
 import { factoryConstructionRouter } from './routers/factory-construction.router';
 import { FactoryConstructionService } from '@server/factory-construction/factory-construction.service';
+import { FactoryConstructionOrderService } from '@server/factory-construction/factory-construction-order.service';
 import { ResourceService } from '@server/resource/resource.service';
 import { ConsumptionMarkerService } from '@server/consumption-marker/consumption-marker.service';
 import { FactoryProductionService } from '@server/factory-production/factory-production.service';
@@ -168,6 +169,7 @@ export class TrpcRouter {
     private readonly marketingService: MarketingService,
     private readonly factoryService: FactoryService,
     private readonly factoryConstructionService: FactoryConstructionService,
+    private readonly factoryConstructionOrderService: FactoryConstructionOrderService,
     private readonly prismaService: PrismaService,
     private readonly resourceService: ResourceService,
     private readonly consumptionMarkerService: ConsumptionMarkerService,
@@ -380,10 +382,15 @@ export class TrpcRouter {
     }),
     factoryConstruction: factoryConstructionRouter(this.trpc, {
       factoryConstructionService: this.factoryConstructionService,
+      factoryConstructionOrderService: this.factoryConstructionOrderService,
+      factoryService: this.factoryService,
+      prismaService: this.prismaService,
       playerService: this.playersService,
       phaseService: this.phaseService,
       gamesService: this.gamesService,
+      gameTurnService: this.gameTurnService,
       sectorService: this.sectorService,
+      companyService: this.companyService,
     }),
     resource: resourceRouter(this.trpc, {
       resourceService: this.resourceService,

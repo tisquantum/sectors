@@ -9,13 +9,23 @@ import { PhaseService } from '@server/phase/phase.service';
 import { GamesService } from '@server/games/games.service';
 import { getNumberForFactorySize, validFactorySizeForSectorTechnologyLevel } from '@server/data/helpers';
 import { SectorService } from '@server/sector/sector.service';
+import { CompanyService } from '@server/company/company.service';
+import { FactoryConstructionOrderService } from '../../factory-construction/factory-construction-order.service';
+import { FactoryService } from '../../factory/factory.service';
+import { PrismaService } from '@server/prisma/prisma.service';
+import { GameTurnService } from '@server/game-turn/game-turn.service';
 
 type Context = {
   factoryConstructionService: FactoryConstructionService;
+  factoryConstructionOrderService: FactoryConstructionOrderService;
+  factoryService: FactoryService;
+  prismaService: PrismaService;
   playerService: PlayersService;
   phaseService: PhaseService;
   gamesService: GamesService;
+  gameTurnService: GameTurnService;
   sectorService: SectorService;
+  companyService: CompanyService;
 };
 
 export const factoryConstructionRouter = (trpc: TrpcService, ctx: Context) => router({
@@ -23,6 +33,7 @@ export const factoryConstructionRouter = (trpc: TrpcService, ctx: Context) => ro
     .input(z.object({
       companyId: z.string(),
       gameId: z.string(),
+      playerId: z.string(),
       size: z.nativeEnum(FactorySize),
       resourceTypes: z.array(z.nativeEnum(ResourceType)),
     }))
@@ -39,18 +50,26 @@ export const factoryConstructionRouter = (trpc: TrpcService, ctx: Context) => ro
       if (!ctxMiddleware.submittingPlayerId) {
         throw new Error('Player ID is required');
       }
-      // Validate that the company belongs to the submitting player
-      const company = await ctx.factoryConstructionService.validateCompanyOwnership(
-        input.companyId,
-        ctxMiddleware.submittingPlayerId,
-      ) as Company | null;
+      
+      // Validate company ownership (CEO)
+      const company = await ctx.companyService.company({
+        id: input.companyId,
+      });
 
       if (!company) {
-        throw new Error('Company not found or not owned by player');
+        throw new Error('Company not found');
+      }
+
+      if (company.ceoId !== ctxMiddleware.submittingPlayerId) {
+        throw new Error('Only the CEO can submit factory construction orders');
+      }
+      
+      if (!company.sectorId) {
+        throw new Error('Company has no sector assigned');
       }
       
       //ensure factory size is valid for the sector technologyLevel
-      const sector = await ctx.sectorService.sector({ id: company.sectorId ?? '' });
+      const sector = await ctx.sectorService.sector({ id: company.sectorId });
       if(!sector) {
         throw new Error('Sector not found');
       }
@@ -71,5 +90,62 @@ export const factoryConstructionRouter = (trpc: TrpcService, ctx: Context) => ro
         ...input,
         playerId: ctxMiddleware.submittingPlayerId,
       });
+    }),
+
+  // Get outstanding factory construction orders for a company
+  getOutstandingOrders: publicProcedure
+    .input(z.object({
+      companyId: z.string(),
+      gameId: z.string(),
+      gameTurnId: z.string().optional(),
+    }))
+    .query(async ({ input }) => {
+      // Get current turn if not provided
+      let gameTurnId = input.gameTurnId;
+      if (!gameTurnId) {
+        const currentTurn = await ctx.gameTurnService.getCurrentTurn(input.gameId);
+        if (!currentTurn) {
+          return [];
+        }
+        gameTurnId = currentTurn.id;
+      }
+
+      // Get all orders for this company in the current turn
+      const orders = await ctx.factoryConstructionOrderService.factoryConstructionOrdersWithRelations({
+        where: {
+          companyId: input.companyId,
+          gameId: input.gameId,
+          gameTurnId: gameTurnId,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      return orders;
+    }),
+
+  // Get construction history for a company (factories built)
+  getConstructionHistory: publicProcedure
+    .input(z.object({
+      companyId: z.string(),
+      gameId: z.string(),
+    }))
+    .query(async ({ input }) => {
+      // Get all factories for this company, ordered by creation date
+      const factories = await ctx.prismaService.factory.findMany({
+        where: {
+          companyId: input.companyId,
+          gameId: input.gameId,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        include: {
+          Sector: true,
+        },
+      });
+
+      return factories;
     }),
 }); 

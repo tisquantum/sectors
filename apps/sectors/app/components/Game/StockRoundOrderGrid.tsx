@@ -39,7 +39,6 @@ import DerivativesTable from "./DerivativesTable";
 import OrderResults from "./OrderResults";
 import { useDrawer } from "../Drawer.context";
 import CompanyAwardTrack from "../Company/CompanyAwardTrack";
-import { ResearchTrack } from "../Company/Research/ResearchTrack";
 import { ResourceTracksContainer } from "./ResourceTracksContainer";
 
 function isOrderInputOpenPlayerOrderCounter(
@@ -53,166 +52,6 @@ function isOrderInputOpenPlayerOrderCounter(
       order.playerId === authPlayer.id && order.phaseId == currentPhase.id
   ).length;
   setIsOrderInputOpen(orderCount == 0);
-}
-
-interface SectorResearchTracksProps {
-  gameId: string;
-}
-
-interface WorkforceTrackProps {
-  gameId: string;
-}
-
-function WorkforceTrack({ gameId }: WorkforceTrackProps) {
-  const { data: game } = trpc.game.getGame.useQuery({ id: gameId });
-
-  if (!game) return null;
-
-  const spaces = Array.from({ length: 40 }, (_, i) => i + 1);
-  const economyScore = game.economyScore;
-  const availableWorkers = game.workforcePool;
-
-  return (
-    <div className="mt-4 p-4 bg-gray-500 rounded-lg">
-      <h3 className="text-lg font-semibold mb-2">Workforce Track</h3>
-      <div className="flex flex-col">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium">
-            Available Workers: {availableWorkers}
-          </span>
-          <span className="text-sm font-medium">
-            Economy Score: {economyScore}
-          </span>
-        </div>
-        <div className="grid grid-cols-10 gap-1">
-          {spaces.map((space) => (
-            <div
-              key={space}
-              className={`
-              relative h-16 pt-4 border rounded flex items-center justify-center
-              ${space <= availableWorkers ? "bg-green-100" : "bg-gray-200"}
-              ${space === economyScore ? "ring-2 ring-blue-500" : ""}
-            `}
-            >
-              <div className="absolute top-1 text-xs text-gray-600">
-                {space}
-              </div>
-              {space <= availableWorkers && (
-                <div className="w-4 h-4 bg-green-500 shadow-md border border-green-700" />
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export function SectorResearchTracks({ gameId }: SectorResearchTracksProps) {
-  const { data: sectors } = trpc.sector.listSectors.useQuery({
-    where: { gameId },
-    orderBy: { name: "asc" },
-  });
-  const { data: companies } = trpc.company.listCompanies.useQuery({
-    where: { gameId },
-    orderBy: { name: "asc" },
-  });
-
-  if (!sectors || !companies) return null;
-
-  // Group companies by sector
-  const companiesBySector = companies.reduce(
-    (acc: Record<string, Company[]>, company: Company) => {
-      if (company.sectorId) {
-        if (!acc[company.sectorId]) {
-          acc[company.sectorId] = [];
-        }
-        acc[company.sectorId].push(company);
-      }
-      return acc;
-    },
-    {}
-  );
-
-  // Filter sectors to only show those with companies in the game
-  const activeSectors = sectors.filter(
-    (sector: Sector) => companiesBySector[sector.id]
-  );
-
-  // Create a 20-space track with rewards at specific milestones
-  const createResearchSpaces = (currentProgress: number) => {
-    return Array.from({ length: 20 }, (_, i) => ({
-      id: `space-${i + 1}`,
-      number: i + 1,
-      phase: Math.ceil((i + 1) / 5),
-      isUnlocked: i + 1 <= currentProgress * 5,
-      hasReward: [5, 10, 15, 20].includes(i + 1),
-      reward: [5, 10, 15, 20].includes(i + 1)
-        ? {
-            type: i + 1 === 20 ? ("MARKET_FAVOR" as const) : ("GRANT" as const),
-            amount: i + 1 === 20 ? 2 : 1,
-          }
-        : undefined,
-    }));
-  };
-
-  return (
-    <div className="space-y-4">
-      <WorkforceTrack gameId={gameId} />
-      {activeSectors.map((sector: Sector) => (
-        <div
-          key={sector.id}
-          className="p-4 rounded-lg shadow"
-          style={{
-            backgroundColor: sectorColors[sector.name] || "#ffffff",
-          }}
-        >
-          <h3 className="text-lg font-semibold mb-2">{sector.name}</h3>
-
-          {/* Single Research Track for the Sector */}
-          <div className="mb-4">
-            <div className="flex justify-between items-center mb-1">
-              <h4 className="text-sm font-medium">Sector Research Track</h4>
-              <span className="text-sm text-gray-600">
-                Sector Progress: {sector.researchMarker}
-              </span>
-            </div>
-
-            {/* Main Research Track */}
-            <div className="relative">
-              <ResearchTrack
-                spaces={createResearchSpaces(sector.researchMarker)}
-                currentProgress={sector.researchMarker}
-                currentPhase={Math.ceil(sector.researchMarker / 5)}
-              />
-
-              {/* Company Markers */}
-              <div className="mt-2 space-y-1">
-                {companiesBySector[sector.id]?.map((company: Company) => (
-                  <div key={company.id} className="flex items-center text-sm">
-                    <div
-                      className="w-3 h-3 rounded-full mr-2"
-                      style={{
-                        backgroundColor:
-                          sectorColors[sector.name || "GENERAL"],
-                        position: "absolute",
-                        left: `${(company.researchProgress / 20) * 100}%`,
-                        transform: "translateX(-50%)",
-                        marginTop: "-1.5rem",
-                      }}
-                    />
-                    <span className="text-gray-600">
-                      {company.name}: {company.researchProgress}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
 }
 
 const StockRoundOrderGrid = ({
@@ -394,7 +233,6 @@ const StockRoundOrderGrid = ({
                 )
               )
             )}
-            <SectorResearchTracks gameId={gameId} />
           </div>
         </Tab>
         {gameState.useOptionOrders && (

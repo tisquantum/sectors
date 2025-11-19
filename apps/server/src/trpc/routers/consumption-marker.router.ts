@@ -41,7 +41,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         );
         
         // Group by resource type and permanence
-        const summary = markers.reduce((acc, marker) => {
+        const summary = markers.reduce((acc: Record<string, { resourceType: ResourceType; isPermanent: boolean; count: number }>, marker) => {
           const key = `${marker.resourceType}_${marker.isPermanent ? 'permanent' : 'temporary'}`;
           if (!acc[key]) {
             acc[key] = {

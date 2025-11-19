@@ -1,10 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
 import { FactoryCreation } from '../Factory/FactoryCreation';
 import { Factory } from '../Factory/Factory';
+import { trpc } from '@sectors/app/trpc';
+import { useGame } from '../../Game/GameContext';
+import { FACTORY_CUSTOMER_LIMITS } from '@server/data/constants';
 
 interface FactorySlot {
   id: string;
@@ -26,60 +29,76 @@ interface FactorySlot {
 interface FactorySlotsProps {
   companyId: string;
   gameId: string;
+  currentPhase?: number;
 }
 
-// Mock factory data
-const MOCK_FACTORIES = [
-  {
-    id: 'factory-1',
-    size: 'FACTORY_I',
-    workers: 1,
-    consumers: 2,
-    resources: [
-      { type: 'TRIANGLE', price: 10 },
-      { type: 'SQUARE', price: 12 },
-    ],
-    isOperational: true,
-    totalValue: 22,
-  },
-  {
-    id: 'factory-2',
-    size: 'FACTORY_II',
-    workers: 2,
-    consumers: 3,
-    resources: [
-      { type: 'CIRCLE', price: 8 },
-      { type: 'SQUARE', price: 15 },
-      { type: 'STAR', price: 25 },
-    ],
-    isOperational: false,
-    totalValue: 48,
-  },
-];
-
-const SLOT_CONFIG: FactorySlot[] = [
-  { 
-    id: 'slot-1', 
-    phase: 'I', 
-    isAvailable: true, 
-    isOccupied: true,
-    factory: MOCK_FACTORIES[0]
-  },
-  { 
-    id: 'slot-2', 
-    phase: 'I', 
-    isAvailable: true, 
-    isOccupied: true,
-    factory: MOCK_FACTORIES[1]
-  },
-  { id: 'slot-3', phase: 'II', isAvailable: false, isOccupied: false },
-  { id: 'slot-4', phase: 'III', isAvailable: false, isOccupied: false },
-  { id: 'slot-5', phase: 'IV', isAvailable: false, isOccupied: false },
-];
-
-export function FactorySlots({ companyId, gameId }: FactorySlotsProps) {
+export function FactorySlots({ companyId, gameId, currentPhase }: FactorySlotsProps) {
+  const { currentPhase: gamePhase } = useGame();
   const [showFactoryCreation, setShowFactoryCreation] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<FactorySlot | null>(null);
+
+  // Fetch real factory data
+  const { data: factories, isLoading } = trpc.factory.getCompanyFactories.useQuery({
+    companyId,
+    gameId,
+  });
+
+  // Fetch production data for current turn if available
+  const { data: productionData } = trpc.factoryProduction.getCompanyProductionForTurn.useQuery(
+    {
+      companyId,
+      gameTurnId: gamePhase?.id || '',
+    },
+    { enabled: !!gamePhase?.id }
+  );
+
+  // Create production map for quick lookup
+  const productionMap = useMemo(() => {
+    if (!productionData) return new Map();
+    return new Map(productionData.map(p => [p.factoryId, p]));
+  }, [productionData]);
+
+  // Build slot configuration from real factory data
+  const SLOT_CONFIG: FactorySlot[] = useMemo(() => {
+    const slots: FactorySlot[] = [
+      { id: 'slot-1', phase: 'I', isAvailable: true, isOccupied: false },
+      { id: 'slot-2', phase: 'II', isAvailable: false, isOccupied: false },
+      { id: 'slot-3', phase: 'III', isAvailable: false, isOccupied: false },
+      { id: 'slot-4', phase: 'IV', isAvailable: false, isOccupied: false },
+      { id: 'slot-5', phase: 'IV', isAvailable: false, isOccupied: false },
+    ];
+
+    if (!factories) return slots;
+
+    // Map factories to slots by slot number
+    factories.forEach((factory) => {
+      const slotIndex = factory.slot - 1; // Slots are 1-indexed
+      if (slotIndex >= 0 && slotIndex < slots.length) {
+        const production = productionMap.get(factory.id);
+        const maxCustomers = FACTORY_CUSTOMER_LIMITS[factory.size] || 0;
+        
+        slots[slotIndex] = {
+          ...slots[slotIndex],
+          isOccupied: true,
+          isAvailable: true,
+          factory: {
+            id: factory.id,
+            size: factory.size,
+            workers: factory.workers,
+            consumers: production?.customersServed || maxCustomers,
+            resources: factory.resourceTypes.map((type, idx) => ({
+              type,
+              price: 0, // TODO: Get actual resource prices if needed
+            })),
+            isOperational: factory.isOperational,
+            totalValue: production?.profit || 0,
+          },
+        };
+      }
+    });
+
+    return slots;
+  }, [factories, productionMap]);
 
   const handleSlotClick = (slot: FactorySlot) => {
     if (slot.isAvailable && !slot.isOccupied) {
@@ -97,6 +116,19 @@ export function FactorySlots({ companyId, gameId }: FactorySlotsProps) {
       default: return 'FACTORY_I';
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-5 gap-1">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div
+            key={`loading-${i}`}
+            className="w-full h-8 rounded border border-gray-600/40 bg-gray-700/30 animate-pulse"
+          />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <>

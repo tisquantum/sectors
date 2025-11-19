@@ -91,14 +91,13 @@ export default function MarketingAndResearchAction() {
     },
   });
 
-  const handleCreateMarketingCampaign = async (tier: MarketingCampaignTier, slot: number) => {
+  const handleCreateMarketingCampaign = async (tier: MarketingCampaignTier) => {
     if (!currentCompany) return;
 
     createMarketingCampaign.mutate({
       companyId: currentCompany.id,
       gameId: gameState.id,
       tier,
-      slot,
     });
   };
 
@@ -172,8 +171,7 @@ export default function MarketingAndResearchAction() {
                           disabled={!canAfford || createMarketingCampaign.isPending}
                           onClick={(e) => {
                             e.stopPropagation();
-                            // Default to slot 1, can be enhanced with slot selector
-                            handleCreateMarketingCampaign(tier, 1);
+                            handleCreateMarketingCampaign(tier);
                           }}
                         >
                           {createMarketingCampaign.isPending ? <Spinner size="sm" /> : 'Create'}

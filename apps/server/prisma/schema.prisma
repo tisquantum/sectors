@@ -1793,6 +1793,7 @@ model FactoryConstructionOrder {
   sectorId      String
   size          FactorySize
   resourceTypes ResourceType[]
+  failureReason String?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   player        Player         @relation(fields: [playerId], references: [id])

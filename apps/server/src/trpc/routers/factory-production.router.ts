@@ -32,6 +32,18 @@ export default (trpc: TrpcService, ctx: Context) =>
         );
       }),
 
+    getCompanyProductionForTurn: trpc.procedure
+      .input(z.object({
+        companyId: z.string(),
+        gameTurnId: z.string(),
+      }))
+      .query(async ({ input }) => {
+        return ctx.factoryProductionService.getCompanyProductionForTurn(
+          input.companyId,
+          input.gameTurnId
+        );
+      }),
+
     getGameTurnProduction: trpc.procedure
       .input(z.object({
         gameId: z.string(),
@@ -67,7 +79,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           input.gameTurnId
         );
 
-        const summary = productions.reduce((acc, prod) => ({
+        const summary = productions.reduce((acc: { totalCustomers: number; totalRevenue: number; totalCosts: number; totalProfit: number; factoryCount: number }, prod) => ({
           totalCustomers: acc.totalCustomers + prod.customersServed,
           totalRevenue: acc.totalRevenue + prod.revenue,
           totalCosts: acc.totalCosts + prod.costs,
