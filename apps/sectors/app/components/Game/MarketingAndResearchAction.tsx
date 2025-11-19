@@ -92,22 +92,25 @@ export default function MarketingAndResearchAction() {
   });
 
   const handleCreateMarketingCampaign = async (tier: MarketingCampaignTier) => {
-    if (!currentCompany) return;
+    if (!currentCompany || !authPlayer) return;
 
     createMarketingCampaign.mutate({
       companyId: currentCompany.id,
       gameId: gameState.id,
+      playerId: authPlayer.id,
       tier,
+      slot: 1, // Default slot
     });
   };
 
   const handleResearch = async () => {
-    if (!currentCompany || !currentSector) return;
+    if (!currentCompany || !currentSector || !authPlayer) return;
 
     setIsResearching(true);
     submitResearch.mutate({
       companyId: currentCompany.id,
       gameId: gameState.id,
+      playerId: authPlayer.id,
       sectorId: currentSector.id,
     });
   };

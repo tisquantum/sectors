@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useGame } from '../../GameContext';
 import { trpc } from '@sectors/app/trpc';
 import { MarketingCampaignTier } from '@server/prisma/prisma.client';
-import { Button, Spinner, Select, SelectItem } from '@nextui-org/react';
+import { Button, Spinner, Select, SelectItem, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from '@nextui-org/react';
 import { ResearchTrack } from '../../../Company/Research/ResearchTrack';
 import { ModernOperationsLayout, ModernOperationsSection } from '../layouts';
 import CompanyInfoV2 from '../../../Company/CompanyV2/CompanyInfoV2';
@@ -42,6 +42,8 @@ export default function MarketingAndResearchPhase() {
   const [isResearching, setIsResearching] = useState(false);
   const [researchResult, setResearchResult] = useState<number | null>(null);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
+  const { isOpen: isErrorModalOpen, onOpen: onErrorModalOpen, onOpenChange: onErrorModalOpenChange } = useDisclosure();
+  const [errorMessage, setErrorMessage] = useState<string>('');
 
   // Get all companies where the player is CEO
   const { data: playerCompanies, isLoading: companiesLoading } = trpc.company.listCompanies.useQuery({
@@ -86,7 +88,8 @@ export default function MarketingAndResearchPhase() {
     },
     onError: (error) => {
       console.error('Failed to create marketing campaign:', error);
-      alert(`Error: ${error.message}`);
+      setErrorMessage(error.message || 'Failed to create marketing campaign');
+      onErrorModalOpen();
     },
   });
 
@@ -98,28 +101,31 @@ export default function MarketingAndResearchPhase() {
     onError: (error) => {
       setIsResearching(false);
       console.error('Failed to submit research:', error);
-      alert(`Error: ${error.message}`);
+      setErrorMessage(error.message || 'Failed to submit research');
+      onErrorModalOpen();
     },
   });
 
   const handleCreateMarketingCampaign = async (tier: MarketingCampaignTier, slot: number = 1) => {
-    if (!currentCompany) return;
+    if (!currentCompany || !authPlayer) return;
 
     createMarketingCampaign.mutate({
       companyId: currentCompany.id,
       gameId: gameState.id,
+      playerId: authPlayer.id,
       tier,
       slot,
     });
   };
 
   const handleResearch = async () => {
-    if (!currentCompany || !currentSector) return;
+    if (!currentCompany || !currentSector || !authPlayer) return;
 
     setIsResearching(true);
     submitResearch.mutate({
       companyId: currentCompany.id,
       gameId: gameState.id,
+      playerId: authPlayer.id,
       sectorId: currentSector.id,
     });
   };
@@ -128,29 +134,91 @@ export default function MarketingAndResearchPhase() {
   const researchCost = RESEARCH_COSTS[currentPhaseNumber as keyof typeof RESEARCH_COSTS] || 100;
   const canResearch = hasCompanySelected && currentCompany && currentCompany.cashOnHand >= researchCost;
 
+  // Fetch marketing campaigns for selected company
+  const { data: campaigns } = trpc.marketing.getCompanyCampaigns.useQuery(
+    {
+      companyId: currentCompany?.id || '',
+      gameId: gameState.id,
+    },
+    { enabled: hasCompanySelected && !!currentCompany?.id }
+  );
+
+  // Fetch brand bonus for selected company
+  const { data: totalBrandBonus } = trpc.marketing.getTotalBrandBonus.useQuery(
+    {
+      companyId: currentCompany?.id || '',
+      gameId: gameState.id,
+    },
+    { enabled: hasCompanySelected && !!currentCompany?.id }
+  );
+
   const sidebar = (
     <ModernOperationsSection title="Quick Info">
       <div className="space-y-4 text-sm text-gray-400">
-        <div>
-          <p className="font-medium text-gray-300 mb-2">Marketing Campaigns</p>
-          <ul className="space-y-1 text-xs">
-            <li>• Boost brand score</li>
-            <li>• Requires workers</li>
-            <li>• Costs cash</li>
-          </ul>
-        </div>
-        <div>
-          <p className="font-medium text-gray-300 mb-2">Research</p>
-          <ul className="space-y-1 text-xs">
-            <li>• Advance sector tech</li>
-            <li>• Cost varies by phase</li>
-            <li>• Random outcomes</li>
-          </ul>
-        </div>
         {hasCompanySelected && currentCompany && (
-          <div className="pt-4 border-t border-gray-700">
-            <CompanyInfoV2 companyId={currentCompany.id} isMinimal={true} />
-          </div>
+          <>
+            <div>
+              <p className="font-medium text-gray-300 mb-2">Marketing Campaigns</p>
+              <ul className="space-y-1 text-xs">
+                <li>• Boost brand score</li>
+                <li>• Requires workers</li>
+                <li>• Costs cash</li>
+                {campaigns && campaigns.length > 0 && (
+                  <>
+                    <li className="text-purple-300 mt-2">
+                      Active: {campaigns.length} campaign{campaigns.length !== 1 ? 's' : ''}
+                    </li>
+                    <li className="text-purple-300">
+                      Total Brand Bonus: +{totalBrandBonus || 0}
+                    </li>
+                  </>
+                )}
+              </ul>
+            </div>
+            <div>
+              <p className="font-medium text-gray-300 mb-2">Research</p>
+              <ul className="space-y-1 text-xs">
+                <li>• Advance sector tech</li>
+                <li>• Cost varies by phase</li>
+                <li>• Random outcomes</li>
+                {currentCompany && (
+                  <>
+                    <li className="text-blue-300 mt-2">
+                      Progress: {currentCompany.researchProgress || 0} spaces
+                    </li>
+                    {researchProgress && (
+                      <li className="text-blue-300">
+                        Sector Tech: Level {researchProgress.technologyLevel || 0}
+                      </li>
+                    )}
+                  </>
+                )}
+              </ul>
+            </div>
+            <div className="pt-4 border-t border-gray-700">
+              <CompanyInfoV2 companyId={currentCompany.id} isMinimal={true} />
+            </div>
+          </>
+        )}
+        {!hasCompanySelected && (
+          <>
+            <div>
+              <p className="font-medium text-gray-300 mb-2">Marketing Campaigns</p>
+              <ul className="space-y-1 text-xs">
+                <li>• Boost brand score</li>
+                <li>• Requires workers</li>
+                <li>• Costs cash</li>
+              </ul>
+            </div>
+            <div>
+              <p className="font-medium text-gray-300 mb-2">Research</p>
+              <ul className="space-y-1 text-xs">
+                <li>• Advance sector tech</li>
+                <li>• Cost varies by phase</li>
+                <li>• Random outcomes</li>
+              </ul>
+            </div>
+          </>
         )}
       </div>
     </ModernOperationsSection>
@@ -216,8 +284,11 @@ export default function MarketingAndResearchPhase() {
               }}
             >
               {playerCompanies.map((company) => (
-                <SelectItem key={company.id} value={company.id}>
-                  {company.name}
+                <SelectItem key={company.id} value={company.id} textValue={`${company.name} $${company.cashOnHand}`}>
+                  <div className="flex items-center justify-between w-full">
+                    <span>{company.name}</span>
+                    <span className="text-gray-400 ml-2">${company.cashOnHand}</span>
+                  </div>
                 </SelectItem>
               ))}
             </Select>
@@ -384,6 +455,25 @@ export default function MarketingAndResearchPhase() {
           </ModernOperationsSection>
         )}
       </div>
+
+      {/* Error Modal */}
+      <Modal isOpen={isErrorModalOpen} onOpenChange={onErrorModalOpenChange}>
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1">Error</ModalHeader>
+              <ModalBody>
+                <p className="text-red-400">{errorMessage}</p>
+              </ModalBody>
+              <ModalFooter>
+                <Button color="danger" variant="light" onPress={onClose}>
+                  Close
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
     </ModernOperationsLayout>
   );
 }

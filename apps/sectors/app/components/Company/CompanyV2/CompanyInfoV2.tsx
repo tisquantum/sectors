@@ -74,6 +74,7 @@ import { CompanyLineChart } from "../CompanyLineChart";
 import CompanyResearchCards from "../CompanyResearchCards";
 import { ModernCompany } from "./ModernCompany";
 import ShareComponent from "../Share";
+import { MarketingSlots } from "../Tableau/MarketingSlots";
 
 const buildBarChart = (shares: ShareWithPlayer[]) => {
   //group shares by location and sum the quantity
@@ -191,6 +192,84 @@ const CompanyMoreInfo = ({
           </Tooltip>
         </div>
       </div>
+    </div>
+  );
+};
+
+const MarketingCampaignInfo = ({ companyId, gameId }: { companyId: string; gameId: string }) => {
+  const { data: campaigns } = trpc.marketing.getCompanyCampaigns.useQuery({
+    companyId,
+    gameId,
+  });
+  const { data: totalBrandBonus } = trpc.marketing.getTotalBrandBonus.useQuery({
+    companyId,
+    gameId,
+  });
+
+  if (!campaigns || campaigns.length === 0) {
+    return (
+      <div className="text-sm text-gray-400 mt-2">
+        No active marketing campaigns
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-2 space-y-2">
+      <div className="text-sm text-gray-400">
+        <span className="text-purple-300 font-medium">{campaigns.length}</span> active campaign{campaigns.length !== 1 ? 's' : ''}
+        {' • '}
+        <span className="text-purple-300 font-medium">+{totalBrandBonus || 0}</span> total brand bonus
+      </div>
+      <div className="flex flex-wrap gap-2 text-xs">
+        {campaigns.map((campaign) => (
+          <div
+            key={campaign.id}
+            className="px-2 py-1 rounded bg-purple-400/20 border border-purple-400/40 text-gray-300"
+          >
+            Tier {campaign.tier.replace('TIER_', '')}: +{campaign.brandBonus} brand
+            {campaign.status === 'DECAYING' && (
+              <span className="text-yellow-400 ml-1">(Decaying)</span>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const ResearchInfo = ({ companyId, gameId }: { companyId: string; gameId: string }) => {
+  const { data: company } = trpc.company.getCompanyWithSector.useQuery({
+    id: companyId,
+  });
+
+  const { data: researchProgress } = trpc.modernOperations.getSectorResearchProgress.useQuery(
+    {
+      sectorId: company?.sectorId || '',
+      gameId,
+    },
+    { enabled: !!company?.sectorId }
+  );
+
+  const researchProgressValue = company?.researchProgress || 0;
+  const technologyLevel = (researchProgress as any)?.technologyLevel || company?.Sector?.technologyLevel || 0;
+
+  return (
+    <div className="mt-2 space-y-2">
+      <div className="text-sm text-gray-400">
+        Company Progress: <span className="text-blue-300 font-medium">{researchProgressValue}</span> spaces
+      </div>
+      {(researchProgress || company?.Sector?.technologyLevel) && (
+        <div className="text-sm text-gray-400">
+          Sector Technology: Level <span className="text-blue-300 font-medium">{technologyLevel}</span>
+        </div>
+      )}
+      {(researchProgressValue >= 5 || researchProgressValue >= 10) && (
+        <div className="text-xs text-green-400 mt-2">
+          {researchProgressValue >= 10 && '✓ Grant at 5 • '}
+          {researchProgressValue >= 10 && '✓ Market Favor at 10'}
+        </div>
+      )}
     </div>
   );
 };
@@ -468,8 +547,43 @@ const CompanyInfoV2 = ({
       <ModernCompany
         companyId={company.id}
         gameId={company.gameId}
-        currentPhase={Number(currentPhase?.id || 0)}
+        currentPhase={currentPhase?.id}
       />
+      {!isMinimal && (
+        <Accordion className="mt-2">
+          <AccordionItem
+            key="marketing-research"
+            aria-label="Marketing & Research"
+            title={
+              <div className="flex items-center gap-2">
+                <RiSparkling2Fill size={18} />
+                <span>Marketing & Research</span>
+              </div>
+            }
+          >
+            <div className="space-y-4 p-2">
+              {/* Marketing Section */}
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-2 h-2 bg-purple-400 rounded"></div>
+                  <span className="font-medium text-gray-300">Marketing Campaigns</span>
+                </div>
+                <MarketingSlots companyId={company.id} gameId={company.gameId} />
+                <MarketingCampaignInfo companyId={company.id} gameId={company.gameId} />
+              </div>
+
+              {/* Research Section */}
+              <div className="pt-2 border-t border-gray-700">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-2 h-2 bg-blue-400 rounded"></div>
+                  <span className="font-medium text-gray-300">Research Progress</span>
+                </div>
+                <ResearchInfo companyId={company.id} gameId={company.gameId} />
+              </div>
+            </div>
+          </AccordionItem>
+        </Accordion>
+      )}
       <Modal
         isOpen={isOpen}
         onOpenChange={onOpenChange}

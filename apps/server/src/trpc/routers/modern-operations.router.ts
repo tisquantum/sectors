@@ -27,6 +27,7 @@ export default (trpc: TrpcService, ctx: Context) =>
       .input(z.object({
         companyId: z.string(),
         gameId: z.string(),
+        playerId: z.string(),
         tier: z.nativeEnum(MarketingCampaignTier),
         slot: z.number().int().min(1).max(3),
       }))
@@ -77,6 +78,7 @@ export default (trpc: TrpcService, ctx: Context) =>
       .input(z.object({
         companyId: z.string(),
         gameId: z.string(),
+        playerId: z.string(),
         sectorId: z.string(),
       }))
       .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))

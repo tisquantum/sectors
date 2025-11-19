@@ -3,9 +3,12 @@
 import { cn } from '@/lib/utils';
 import { Marketing } from '../Marketing/Marketing';
 import { ResourceType } from '@/components/Company/Factory/Factory.types';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { MarketingCreation } from '../Marketing/MarketingCreation';
+import { trpc } from '@sectors/app/trpc';
+import { getSectorResourceForSectorName } from '@server/data/constants';
+import { SectorName } from '@server/prisma/prisma.client';
 
 interface MarketingSlot {
   id: string;
@@ -25,37 +28,109 @@ interface MarketingSlotsProps {
   gameId: string;
 }
 
-const MOCK_CAMPAIGNS = [
-  {
-    id: 'campaign-1',
-    brandModifier: 2,
-    workers: 1,
-    resources: [
-      { type: 'CONSUMER_DISCRETIONARY' as ResourceType, price: 15 },
-    ],
-  },
-];
-
-const SLOT_CONFIG: MarketingSlot[] = [
-  { 
-    id: 'slot-2', 
-    phase: 2, 
-    isAvailable: true, 
-    isOccupied: true,
-    campaign: MOCK_CAMPAIGNS[0]
-  },
-  { id: 'slot-4', phase: 3, isAvailable: true, isOccupied: false },
-  { id: 'slot-5', phase: 4, isAvailable: true, isOccupied: false },
-];
+// Helper to get max marketing slots based on technology level (same as factories)
+const getMaxMarketingSlots = (technologyLevel: number): number => {
+  switch (technologyLevel) {
+    case 1: return 2;
+    case 2: return 3;
+    case 3: return 4;
+    case 4: return 5;
+    default: return 2;
+  }
+};
 
 export function MarketingSlots({ companyId, gameId }: MarketingSlotsProps) {
   const [showMarketingCreation, setShowMarketingCreation] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState<MarketingSlot | null>(null);
+
+  // Fetch company to get sector info
+  const { data: company } = trpc.company.getCompanyWithSector.useQuery({
+    id: companyId,
+  });
+
+  // Fetch real marketing campaigns
+  const { data: campaigns, isLoading } = trpc.marketing.getCompanyCampaigns.useQuery({
+    companyId,
+    gameId,
+  });
+
+  // Get sector resource type for this company
+  const sectorResourceType = useMemo(() => {
+    if (!company?.Sector?.sectorName) return ResourceType.GENERAL;
+    return getSectorResourceForSectorName(company.Sector.sectorName as SectorName);
+  }, [company]);
+
+  // Get technology level to determine slot availability
+  const technologyLevel = company?.Sector?.technologyLevel || 0;
+  const maxSlots = getMaxMarketingSlots(technologyLevel);
+
+  // Build slot configuration from real campaign data
+  const SLOT_CONFIG: MarketingSlot[] = useMemo(() => {
+    const slots: MarketingSlot[] = [
+      { id: 'slot-1', phase: 1, isAvailable: true, isOccupied: false },
+      { id: 'slot-2', phase: 2, isAvailable: maxSlots >= 2, isOccupied: false },
+      { id: 'slot-3', phase: 3, isAvailable: maxSlots >= 3, isOccupied: false },
+      { id: 'slot-4', phase: 4, isAvailable: maxSlots >= 4, isOccupied: false },
+      { id: 'slot-5', phase: 5, isAvailable: maxSlots >= 5, isOccupied: false },
+    ];
+
+    if (!campaigns) return slots;
+
+    // Map campaigns to slots by slot number
+    // Handle slot: 0 (default/unset) as slot 1 (index 0)
+    // Also handle 1-indexed slots (1-5) by converting to 0-indexed array position
+    campaigns.forEach((campaign) => {
+      let slotIndex: number;
+      if (campaign.slot === 0) {
+        // Default/unset slot (0) should be treated as first slot (index 0)
+        slotIndex = 0;
+      } else {
+        // Slots are 1-indexed (1-5), convert to 0-indexed array position (0-4)
+        slotIndex = campaign.slot - 1;
+      }
+      
+      if (slotIndex >= 0 && slotIndex < slots.length) {
+        slots[slotIndex] = {
+          ...slots[slotIndex],
+          isOccupied: true,
+          isAvailable: true,
+          campaign: {
+            id: campaign.id,
+            brandModifier: campaign.brandBonus,
+            workers: campaign.workers,
+            resources: [
+              {
+                type: sectorResourceType,
+                price: 0, // Marketing campaigns don't have resource prices
+              },
+            ],
+          },
+        };
+      }
+    });
+
+    return slots;
+  }, [campaigns, maxSlots, sectorResourceType]);
 
   const handleSlotClick = (slot: MarketingSlot) => {
     if (slot.isAvailable && !slot.isOccupied) {
+      setSelectedSlot(slot);
       setShowMarketingCreation(true);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-5 gap-1">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div
+            key={`loading-${i}`}
+            className="w-full h-8 rounded border border-gray-600/40 bg-gray-700/30 animate-pulse"
+          />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <>
@@ -68,10 +143,9 @@ export function MarketingSlots({ companyId, gameId }: MarketingSlotsProps) {
               'relative w-full rounded border transition-all flex items-center justify-center',
               slot.isOccupied ? 'h-auto' : 'h-8',
               slot.isAvailable 
-                ? 'border-purple-400/60 bg-purple-400/10 text-purple-300' 
-                : 'border-gray-600/40 bg-gray-700/30 text-gray-500',
-              slot.isOccupied && 'border-purple-400 bg-purple-400/20 text-purple-200',
-              slot.isAvailable && !slot.isOccupied && 'hover:bg-purple-400/20 cursor-pointer'
+                ? 'border-purple-400/60 bg-purple-400/10 text-purple-300 cursor-pointer hover:bg-purple-400/20' 
+                : 'border-gray-600/40 bg-gray-700/30 text-gray-500 cursor-not-allowed',
+              slot.isOccupied && 'border-purple-400 bg-purple-400/20 text-purple-200 cursor-default'
             )}
           >
             {slot.isOccupied && slot.campaign ? (
@@ -99,6 +173,7 @@ export function MarketingSlots({ companyId, gameId }: MarketingSlotsProps) {
             gameId={gameId}
             onClose={() => {
               setShowMarketingCreation(false);
+              setSelectedSlot(null);
             }}
           />
         </div>,

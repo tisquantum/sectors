@@ -1,7 +1,7 @@
 'use client';
 
 import { useGame } from '../../GameContext';
-import { Card, Chip, Spinner } from '@nextui-org/react';
+import { Card, Chip, Spinner, Popover, PopoverContent, PopoverTrigger } from '@nextui-org/react';
 import { ResearchTrack } from '../../../Company/Research/ResearchTrack';
 import { ModernOperationsLayout, ModernOperationsSection } from '../layouts';
 import { useModernOperations } from '../hooks';
@@ -9,6 +9,7 @@ import { trpc } from '@sectors/app/trpc';
 import { useMemo } from 'react';
 import PlayerAvatar from '@sectors/app/components/Player/PlayerAvatar';
 import { Player } from '@server/prisma/prisma.client';
+import { RiInformationLine } from '@remixicon/react';
 
 export default function MarketingAndResearchResolvePhase() {
   const { gameState, currentPhase, gameId } = useGame();
@@ -92,7 +93,34 @@ export default function MarketingAndResearchResolvePhase() {
       <div className="space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Marketing Results */}
-          <ModernOperationsSection title="Marketing Campaigns">
+          <ModernOperationsSection 
+            title={
+              <div className="flex items-center gap-2">
+                <span>Marketing Campaigns</span>
+                <Popover placement="bottom">
+                  <PopoverTrigger>
+                    <div className="flex items-center cursor-pointer">
+                      <RiInformationLine size={16} className="text-gray-400" />
+                    </div>
+                  </PopoverTrigger>
+                  <PopoverContent className="p-4">
+                    <div>
+                      <p className="font-semibold mb-2">Marketing Campaign Rules:</p>
+                      <ul className="space-y-1 list-disc list-inside text-sm">
+                        <li><strong>Costs:</strong> Marketing I ($100), II ($200), III ($300), IV ($400) base cost</li>
+                        <li><strong>Slot Penalties:</strong> Additional $0, $100, $200, $300, $400 for concurrent campaigns</li>
+                        <li><strong>Brand Bonuses:</strong> +1 (I), +2 (II), +3 (III), +4 (IV) brand score per tier</li>
+                        <li><strong>Consumption Markers:</strong> +1, +2, +3, +4 temporary markers added to sector bag</li>
+                        <li><strong>Lifespan:</strong> ACTIVE (turn 1) → DECAYING (turn 2) → Expired (turn 3, deleted)</li>
+                        <li><strong>Effect:</strong> Brand bonus reduces perceived price (attraction rating = unitPrice - brandBonus)</li>
+                        <li><strong>Workers:</strong> Requires 1-4 workers depending on tier (returned when campaign expires)</li>
+                      </ul>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            }
+          >
             <div className="space-y-4">
               {companies.length === 0 ? (
                 <p className="text-gray-400 text-center py-4">No companies participated in marketing</p>
@@ -163,7 +191,35 @@ export default function MarketingAndResearchResolvePhase() {
           </ModernOperationsSection>
 
           {/* Research Results */}
-          <ModernOperationsSection title="Research Advances">
+          <ModernOperationsSection 
+            title={
+              <div className="flex items-center gap-2">
+                <span>Research Advances</span>
+                <Popover placement="bottom">
+                  <PopoverTrigger>
+                    <div className="flex items-center cursor-pointer">
+                      <RiInformationLine size={16} className="text-gray-400" />
+                    </div>
+                  </PopoverTrigger>
+                  <PopoverContent className="p-4">
+                    <div>
+                      <p className="font-semibold mb-2">Research Rules:</p>
+                      <ul className="space-y-1 list-disc list-inside text-sm">
+                        <li><strong>Costs:</strong> Phase I ($100), II ($200), III ($300), IV ($400) per action</li>
+                        <li><strong>Progress:</strong> Random result: +0, +1, or +2 spaces per research action</li>
+                        <li><strong>Company Milestones:</strong></li>
+                        <li className="ml-4">• Progress 5: +$200 grant (cash bonus)</li>
+                        <li className="ml-4">• Progress 10: +1 market favor (stock boost)</li>
+                        <li><strong>Sector Technology:</strong> Advances when total sector research hits milestones</li>
+                        <li><strong>Workers:</strong> Requires 1-4 workers depending on phase (returned next turn)</li>
+                        <li><strong>Effect:</strong> Individual company progress + shared sector progress</li>
+                      </ul>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            }
+          >
             <div className="space-y-4">
               {companies.length === 0 ? (
                 <p className="text-gray-400 text-center py-4">No companies participated in research</p>
@@ -206,7 +262,37 @@ export default function MarketingAndResearchResolvePhase() {
         </div>
 
         {/* Sector Research Tracks */}
-        <ModernOperationsSection title="Sector Research Tracks">
+        <ModernOperationsSection 
+          title={
+            <div className="flex items-center gap-2">
+              <span>Sector Research Tracks</span>
+              <Popover placement="bottom">
+                <PopoverTrigger>
+                  <div className="flex items-center cursor-pointer">
+                    <RiInformationLine size={16} className="text-gray-400" />
+                  </div>
+                </PopoverTrigger>
+                <PopoverContent className="p-4">
+                  <div>
+                    <p className="font-semibold mb-2">Research Track Rules:</p>
+                    <ul className="space-y-1 list-disc list-inside text-sm">
+                      <li><strong>Track Structure:</strong> 20 spaces per sector (4 phases of 5 spaces each)</li>
+                      <li><strong>Technology Levels:</strong> Unlock factory slots based on total sector research:</li>
+                      <li className="ml-4">• Level 1 (5+ research): 2 factory slots unlocked</li>
+                      <li className="ml-4">• Level 2 (15+ research): 3 factory slots unlocked</li>
+                      <li className="ml-4">• Level 3 (30+ research): 4 factory slots unlocked</li>
+                      <li className="ml-4">• Level 4 (50+ research): 5 factory slots unlocked</li>
+                      <li><strong>Shared Progress:</strong> All companies in a sector contribute to the same track</li>
+                      <li><strong>Markers:</strong> Research marker shows current sector-wide progress (0-20)</li>
+                      <li><strong>Rewards:</strong> Rewards at spaces 5, 10, 15, and 20 (grants and market favors)</li>
+                      <li><strong>Factory Slots:</strong> Technology level determines maximum factory slots per company</li>
+                    </ul>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+          }
+        >
           <div className="space-y-6">
             {gameState.sectors?.map((sector: any) => {
               const sectorProgress = researchProgress.find((rp: any) => rp.sectorId === sector.id);

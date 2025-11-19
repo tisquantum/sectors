@@ -11,6 +11,8 @@ import { ConsumptionMarkerService } from '../consumption-marker/consumption-mark
 import { MarketingService } from '../marketing/marketing.service';
 import { FactoryProductionService } from '../factory-production/factory-production.service';
 import { StockHistoryService } from '../stock-history/stock-history.service';
+import { GameTurnService } from '../game-turn/game-turn.service';
+import { GamesService } from '../games/games.service';
 import { getResourcePriceForResourceType, getSectorResourceForSectorName, BASE_WORKER_SALARY } from '@server/data/constants';
 
 interface RequiredResource {
@@ -32,6 +34,8 @@ export class ModernOperationMechanicsService {
     private marketingService: MarketingService,
     private factoryProductionService: FactoryProductionService,
     private stockHistoryService: StockHistoryService,
+    private gameTurnService: GameTurnService,
+    private gamesService: GamesService,
   ) {}
 
   async handlePhase(phase: Phase, game: Game) {
@@ -73,6 +77,7 @@ export class ModernOperationMechanicsService {
       case PhaseName.END_TURN:
         await this.degradeMarketingCampaigns(phase);
         await this.updateResearchProgress(phase);
+        await this.createNewTurn(phase);
         break;
 
       default:
@@ -1079,5 +1084,34 @@ export class ModernOperationMechanicsService {
         });
       }
     }
+  }
+
+  /**
+   * END_TURN
+   * Create a new turn after completing end-of-turn tasks
+   */
+  private async createNewTurn(phase: Phase) {
+    // Get current turn
+    const currentTurn = await this.gameTurnService.getCurrentTurn(phase.gameId);
+
+    if (!currentTurn) {
+      throw new Error('Current turn not found');
+    }
+
+    // Create a new game turn
+    const newTurn = await this.gameTurnService.createGameTurn({
+      game: { connect: { id: phase.gameId } },
+      turn: currentTurn.turn + 1,
+    });
+
+    // Update game state with new turn
+    await this.gamesService.updateGameState({
+      where: { id: phase.gameId },
+      data: {
+        currentTurn: newTurn.id,
+        currentOperatingRoundId: null,
+        currentStockRoundId: null,
+      },
+    });
   }
 } 

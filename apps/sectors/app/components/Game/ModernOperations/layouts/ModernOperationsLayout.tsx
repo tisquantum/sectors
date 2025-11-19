@@ -63,7 +63,7 @@ export function ModernOperationsSection({
   children,
   className = '',
 }: {
-  title?: string;
+  title?: string | React.ReactNode;
   children: React.ReactNode;
   className?: string;
 }) {
@@ -71,7 +71,11 @@ export function ModernOperationsSection({
     <Card className={`bg-gray-800/50 border border-gray-700 ${className}`}>
       {title && (
         <CardHeader className="pb-3">
-          <h2 className="text-xl font-semibold text-gray-200">{title}</h2>
+          {typeof title === 'string' ? (
+            <h2 className="text-xl font-semibold text-gray-200">{title}</h2>
+          ) : (
+            <div className="text-xl font-semibold text-gray-200">{title}</div>
+          )}
         </CardHeader>
       )}
       <CardBody>{children}</CardBody>

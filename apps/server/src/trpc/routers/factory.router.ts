@@ -113,4 +113,12 @@ export default (trpc: TrpcService, ctx: Context) =>
 
         return factories;
       }),
+
+    getGameFactories: trpc.procedure
+      .input(z.object({
+        gameId: z.string(),
+      }))
+      .query(async ({ input }) => {
+        return ctx.factoryService.getGameFactories(input.gameId);
+      }),
   }); 
