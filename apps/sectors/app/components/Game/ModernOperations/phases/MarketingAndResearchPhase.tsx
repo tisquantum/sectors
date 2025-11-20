@@ -1,14 +1,31 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useGame } from '../../GameContext';
-import { trpc } from '@sectors/app/trpc';
-import { MarketingCampaignTier } from '@server/prisma/prisma.client';
-import { Button, Spinner, Select, SelectItem, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from '@nextui-org/react';
-import { ResearchTrack } from '../../../Company/Research/ResearchTrack';
-import { ModernOperationsLayout, ModernOperationsSection } from '../layouts';
-import CompanyInfoV2 from '../../../Company/CompanyV2/CompanyInfoV2';
-import { RiBuilding3Fill } from '@remixicon/react';
+import { useState, useEffect } from "react";
+import { useGame } from "../../GameContext";
+import { trpc } from "@sectors/app/trpc";
+import {
+  MarketingCampaignTier,
+  ResourceType,
+  OperationMechanicsVersion,
+} from "@server/prisma/prisma.client";
+import {
+  Button,
+  Spinner,
+  Select,
+  SelectItem,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  useDisclosure,
+} from "@nextui-org/react";
+import { ResearchTrack } from "../../../Company/Research/ResearchTrack";
+import { ModernOperationsLayout, ModernOperationsSection } from "../layouts";
+import CompanyInfoV2 from "../../../Company/CompanyV2/CompanyInfoV2";
+import { ConsumptionBagViewer } from "../ConsumptionBagViewer";
+import { RiBuilding3Fill } from "@remixicon/react";
+import { cn } from "@/lib/utils";
 
 const RESEARCH_COSTS = {
   1: 100, // Phase I
@@ -38,18 +55,37 @@ const MARKETING_CONFIG = {
 export default function MarketingAndResearchPhase() {
   const { gameState, authPlayer, currentPhase, gameId } = useGame();
   const [showMarketingCreation, setShowMarketingCreation] = useState(false);
-  const [selectedMarketingTier, setSelectedMarketingTier] = useState<MarketingCampaignTier | null>(null);
+  const [selectedMarketingTier, setSelectedMarketingTier] =
+    useState<MarketingCampaignTier | null>(null);
+  const [selectedResources, setSelectedResources] = useState<ResourceType[]>(
+    []
+  );
   const [isResearching, setIsResearching] = useState(false);
   const [researchResult, setResearchResult] = useState<number | null>(null);
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
-  const { isOpen: isErrorModalOpen, onOpen: onErrorModalOpen, onOpenChange: onErrorModalOpenChange } = useDisclosure();
-  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(
+    null
+  );
+  const {
+    isOpen: isErrorModalOpen,
+    onOpen: onErrorModalOpen,
+    onOpenChange: onErrorModalOpenChange,
+  } = useDisclosure();
+  const {
+    isOpen: isResourceModalOpen,
+    onOpen: onResourceModalOpen,
+    onOpenChange: onResourceModalOpenChange,
+  } = useDisclosure();
+  const [errorMessage, setErrorMessage] = useState<string>("");
+
+  // Get tRPC utils for invalidating queries
+  const trpcUtils = trpc.useUtils();
 
   // Get all companies where the player is CEO
-  const { data: playerCompanies, isLoading: companiesLoading } = trpc.company.listCompanies.useQuery({
-    where: { gameId, ceoId: authPlayer?.id },
-    orderBy: { name: 'asc' },
-  });
+  const { data: playerCompanies, isLoading: companiesLoading } =
+    trpc.company.listCompanies.useQuery({
+      where: { gameId, ceoId: authPlayer?.id },
+      orderBy: { name: "asc" },
+    });
 
   // Auto-select first company when companies are loaded and none is selected
   useEffect(() => {
@@ -59,55 +95,101 @@ export default function MarketingAndResearchPhase() {
   }, [playerCompanies, selectedCompanyId]);
 
   // Get currently selected company
-  const currentCompany = playerCompanies?.find(c => c.id === selectedCompanyId);
+  const currentCompany = playerCompanies?.find(
+    (c) => c.id === selectedCompanyId
+  );
   const hasCompanySelected = !!currentCompany;
 
-  // Get current sector for research
-  const currentSector = currentCompany ? gameState.sectors?.find(s => s.id === currentCompany.sectorId) : null;
+  // Get current sector for research and resource filtering
+  const currentSector = currentCompany
+    ? gameState.sectors?.find((s) => s.id === currentCompany.sectorId)
+    : null;
 
   // Fetch worker allocation status (only if company selected)
-  const { data: workforce } = trpc.modernOperations.getCompanyWorkforceStatus.useQuery({
-    companyId: currentCompany?.id || '',
-    gameId: gameState.id,
-  }, {
-    enabled: hasCompanySelected && !!currentCompany?.id,
-  });
+  const { data: workforce } =
+    trpc.modernOperations.getCompanyWorkforceStatus.useQuery(
+      {
+        companyId: currentCompany?.id || "",
+        gameId: gameState.id,
+      },
+      {
+        enabled: hasCompanySelected && !!currentCompany?.id,
+      }
+    );
 
   // Fetch sector research progress (only if company selected)
-  const { data: researchProgress } = trpc.modernOperations.getSectorResearchProgress.useQuery({
-    sectorId: currentCompany?.sectorId || '',
-    gameId: gameState.id,
-  }, {
-    enabled: hasCompanySelected && !!currentCompany?.sectorId,
-  });
+  const { data: researchProgress } =
+    trpc.modernOperations.getSectorResearchProgress.useQuery(
+      {
+        sectorId: currentCompany?.sectorId || "",
+        gameId: gameState.id,
+      },
+      {
+        enabled: hasCompanySelected && !!currentCompany?.sectorId,
+      }
+    );
 
-  const createMarketingCampaign = trpc.modernOperations.submitMarketingCampaign.useMutation({
-    onSuccess: () => {
-      setShowMarketingCreation(false);
-      setSelectedMarketingTier(null);
-    },
-    onError: (error) => {
-      console.error('Failed to create marketing campaign:', error);
-      setErrorMessage(error.message || 'Failed to create marketing campaign');
-      onErrorModalOpen();
-    },
-  });
+  const createMarketingCampaign =
+    trpc.modernOperations.submitMarketingCampaign.useMutation({
+      onSuccess: async () => {
+        setShowMarketingCreation(false);
+        setSelectedMarketingTier(null);
+        setSelectedResources([]);
+        onResourceModalOpenChange();
+        
+        // Invalidate queries to refresh the UI
+        if (currentCompany) {
+          await Promise.all([
+            trpcUtils.marketing.getCompanyCampaigns.invalidate({
+              companyId: currentCompany.id,
+              gameId: gameState.id,
+            }),
+            trpcUtils.marketing.getTotalBrandBonus.invalidate({
+              companyId: currentCompany.id,
+              gameId: gameState.id,
+            }),
+            trpcUtils.company.listCompanies.invalidate({
+              where: { gameId, ceoId: authPlayer?.id },
+            }),
+          ]);
+        }
+      },
+      onError: (error) => {
+        console.error("Failed to create marketing campaign:", error);
+        setErrorMessage(error.message || "Failed to create marketing campaign");
+        onErrorModalOpen();
+      },
+    });
 
-  const submitResearch = trpc.modernOperations.submitResearchAction.useMutation({
-    onSuccess: () => {
-      setIsResearching(false);
-      setResearchResult(1); // Simplified - actual result comes from backend
-    },
-    onError: (error) => {
-      setIsResearching(false);
-      console.error('Failed to submit research:', error);
-      setErrorMessage(error.message || 'Failed to submit research');
-      onErrorModalOpen();
-    },
-  });
+  const submitResearch = trpc.modernOperations.submitResearchAction.useMutation(
+    {
+      onSuccess: () => {
+        setIsResearching(false);
+        setResearchResult(1); // Simplified - actual result comes from backend
+      },
+      onError: (error) => {
+        setIsResearching(false);
+        console.error("Failed to submit research:", error);
+        setErrorMessage(error.message || "Failed to submit research");
+        onErrorModalOpen();
+      },
+    }
+  );
 
-  const handleCreateMarketingCampaign = async (tier: MarketingCampaignTier, slot: number = 1) => {
+  const handleCreateMarketingCampaign = async (
+    tier: MarketingCampaignTier,
+    slot: number = 1
+  ) => {
     if (!currentCompany || !authPlayer) return;
+
+    const requiredCount = getRequiredResourceCount(tier);
+    if (selectedResources.length !== requiredCount) {
+      setErrorMessage(
+        `Please select exactly ${requiredCount} resource(s) for ${tier}`
+      );
+      onErrorModalOpen();
+      return;
+    }
 
     createMarketingCampaign.mutate({
       companyId: currentCompany.id,
@@ -115,6 +197,7 @@ export default function MarketingAndResearchPhase() {
       playerId: authPlayer.id,
       tier,
       slot,
+      resourceTypes: selectedResources,
     });
   };
 
@@ -130,14 +213,20 @@ export default function MarketingAndResearchPhase() {
     });
   };
 
-  const currentPhaseNumber = Math.ceil(Number(currentPhase?.name?.match(/\d+/)?.[0] || '1'));
-  const researchCost = RESEARCH_COSTS[currentPhaseNumber as keyof typeof RESEARCH_COSTS] || 100;
-  const canResearch = hasCompanySelected && currentCompany && currentCompany.cashOnHand >= researchCost;
+  const currentPhaseNumber = Math.ceil(
+    Number(currentPhase?.name?.match(/\d+/)?.[0] || "1")
+  );
+  const researchCost =
+    RESEARCH_COSTS[currentPhaseNumber as keyof typeof RESEARCH_COSTS] || 100;
+  const canResearch =
+    hasCompanySelected &&
+    currentCompany &&
+    currentCompany.cashOnHand >= researchCost;
 
   // Fetch marketing campaigns for selected company
   const { data: campaigns } = trpc.marketing.getCompanyCampaigns.useQuery(
     {
-      companyId: currentCompany?.id || '',
+      companyId: currentCompany?.id || "",
       gameId: gameState.id,
     },
     { enabled: hasCompanySelected && !!currentCompany?.id }
@@ -146,11 +235,96 @@ export default function MarketingAndResearchPhase() {
   // Fetch brand bonus for selected company
   const { data: totalBrandBonus } = trpc.marketing.getTotalBrandBonus.useQuery(
     {
-      companyId: currentCompany?.id || '',
+      companyId: currentCompany?.id || "",
       gameId: gameState.id,
     },
     { enabled: hasCompanySelected && !!currentCompany?.id }
   );
+
+  // Fetch resources for selection
+  const isValidGameId =
+    !!gameId && typeof gameId === "string" && gameId.length > 0;
+  const { data: resourcesData } = trpc.resource.getGameResources.useQuery(
+    { gameId: isValidGameId ? gameId : "" },
+    { enabled: isValidGameId }
+  );
+
+  // Helper function to get sector resource type
+  const getSectorResourceType = (sectorName: string): ResourceType | null => {
+    switch (sectorName) {
+      case "MATERIALS":
+        return ResourceType.MATERIALS;
+      case "INDUSTRIALS":
+        return ResourceType.INDUSTRIALS;
+      case "CONSUMER_DISCRETIONARY":
+        return ResourceType.CONSUMER_DISCRETIONARY;
+      case "CONSUMER_STAPLES":
+        return ResourceType.CONSUMER_STAPLES;
+      case "CONSUMER_CYCLICAL":
+        return ResourceType.CONSUMER_CYCLICAL;
+      case "CONSUMER_DEFENSIVE":
+        return ResourceType.CONSUMER_DEFENSIVE;
+      case "ENERGY":
+        return ResourceType.ENERGY;
+      case "HEALTHCARE":
+        return ResourceType.HEALTHCARE;
+      case "TECHNOLOGY":
+        return ResourceType.TECHNOLOGY;
+      default:
+        return null;
+    }
+  };
+
+  // Filter available resources: only TRIANGLE, SQUARE, CIRCLE, and the company's sector resource
+  const baseResources: ResourceType[] = [
+    ResourceType.TRIANGLE,
+    ResourceType.SQUARE,
+    ResourceType.CIRCLE,
+  ];
+  const sectorResource = currentSector
+    ? getSectorResourceType(currentSector.sectorName)
+    : null;
+  const allowedResources = sectorResource
+    ? [...baseResources, sectorResource]
+    : baseResources;
+
+  // Filter the fetched resources to only show allowed ones
+  const availableResources =
+    resourcesData
+      ?.filter((r) => allowedResources.includes(r.type as ResourceType))
+      ?.map((r) => r.type as ResourceType) || [];
+
+  const getRequiredResourceCount = (tier: MarketingCampaignTier): number => {
+    switch (tier) {
+      case MarketingCampaignTier.TIER_1:
+        return 1;
+      case MarketingCampaignTier.TIER_2:
+        return 2;
+      case MarketingCampaignTier.TIER_3:
+        return 3;
+      default:
+        return 0;
+    }
+  };
+
+  const handleResourceToggle = (resourceType: ResourceType) => {
+    if (!selectedMarketingTier) return;
+
+    const requiredCount = getRequiredResourceCount(selectedMarketingTier);
+    const isSelected = selectedResources.includes(resourceType);
+
+    if (isSelected) {
+      setSelectedResources((prev) => prev.filter((r) => r !== resourceType));
+    } else if (selectedResources.length < requiredCount) {
+      setSelectedResources((prev) => [...prev, resourceType]);
+    }
+  };
+
+  const handleOpenResourceSelection = (tier: MarketingCampaignTier) => {
+    setSelectedMarketingTier(tier);
+    setSelectedResources([]);
+    onResourceModalOpen();
+  };
 
   const sidebar = (
     <ModernOperationsSection title="Quick Info">
@@ -158,7 +332,9 @@ export default function MarketingAndResearchPhase() {
         {hasCompanySelected && currentCompany && (
           <>
             <div>
-              <p className="font-medium text-gray-300 mb-2">Marketing Campaigns</p>
+              <p className="font-medium text-gray-300 mb-2">
+                Marketing Campaigns
+              </p>
               <ul className="space-y-1 text-xs">
                 <li>• Boost brand score</li>
                 <li>• Requires workers</li>
@@ -166,7 +342,8 @@ export default function MarketingAndResearchPhase() {
                 {campaigns && campaigns.length > 0 && (
                   <>
                     <li className="text-purple-300 mt-2">
-                      Active: {campaigns.length} campaign{campaigns.length !== 1 ? 's' : ''}
+                      Active: {campaigns.length} campaign
+                      {campaigns.length !== 1 ? "s" : ""}
                     </li>
                     <li className="text-purple-300">
                       Total Brand Bonus: +{totalBrandBonus || 0}
@@ -188,7 +365,8 @@ export default function MarketingAndResearchPhase() {
                     </li>
                     {researchProgress && (
                       <li className="text-blue-300">
-                        Sector Tech: Level {researchProgress.technologyLevel || 0}
+                        Sector Tech: Level{" "}
+                        {researchProgress.technologyLevel || 0}
                       </li>
                     )}
                   </>
@@ -203,7 +381,9 @@ export default function MarketingAndResearchPhase() {
         {!hasCompanySelected && (
           <>
             <div>
-              <p className="font-medium text-gray-300 mb-2">Marketing Campaigns</p>
+              <p className="font-medium text-gray-300 mb-2">
+                Marketing Campaigns
+              </p>
               <ul className="space-y-1 text-xs">
                 <li>• Boost brand score</li>
                 <li>• Requires workers</li>
@@ -246,9 +426,12 @@ export default function MarketingAndResearchPhase() {
         <ModernOperationsSection>
           <div className="flex flex-col items-center justify-center h-64 space-y-4">
             <div className="text-center">
-              <p className="text-gray-400 text-lg mb-2">No Companies Available</p>
+              <p className="text-gray-400 text-lg mb-2">
+                No Companies Available
+              </p>
               <p className="text-gray-500 text-sm">
-                You must be the CEO of a company to perform marketing and research actions.
+                You must be the CEO of a company to perform marketing and
+                research actions.
               </p>
             </div>
           </div>
@@ -268,7 +451,8 @@ export default function MarketingAndResearchPhase() {
         <ModernOperationsSection title="Select Company">
           <div className="space-y-4">
             <p className="text-gray-400 text-sm">
-              Select a company you are the CEO of to conduct marketing and research actions.
+              Select a company you are the CEO of to conduct marketing and
+              research actions.
             </p>
             <Select
               label="Company"
@@ -280,14 +464,20 @@ export default function MarketingAndResearchPhase() {
               }}
               startContent={<RiBuilding3Fill size={18} />}
               classNames={{
-                trigger: 'bg-gray-700/50 border-gray-600',
+                trigger: "bg-gray-700/50 border-gray-600",
               }}
             >
               {playerCompanies.map((company) => (
-                <SelectItem key={company.id} value={company.id} textValue={`${company.name} $${company.cashOnHand}`}>
+                <SelectItem
+                  key={company.id}
+                  value={company.id}
+                  textValue={`${company.name} $${company.cashOnHand}`}
+                >
                   <div className="flex items-center justify-between w-full">
                     <span>{company.name}</span>
-                    <span className="text-gray-400 ml-2">${company.cashOnHand}</span>
+                    <span className="text-gray-400 ml-2">
+                      ${company.cashOnHand}
+                    </span>
                   </div>
                 </SelectItem>
               ))}
@@ -300,62 +490,81 @@ export default function MarketingAndResearchPhase() {
           <ModernOperationsSection title="Marketing Campaigns">
             <div className="space-y-4">
               <p className="text-gray-400 text-sm">
-                Create marketing campaigns to boost your brand and influence consumer behavior.
+                Create marketing campaigns to boost your brand and influence
+                consumer behavior.
               </p>
-              
+
               <div className="grid grid-cols-1 gap-3">
-                {Object.values(MarketingCampaignTier).map((tier: MarketingCampaignTier) => {
-                  const config = MARKETING_CONFIG[tier];
-                  const canAfford = hasCompanySelected && currentCompany && currentCompany.cashOnHand >= config.cost;
-                  const isDisabled = !hasCompanySelected || !canAfford || createMarketingCampaign.isPending;
-                  
-                  return (
-                    <div
-                      key={tier}
-                      className={`p-4 rounded-lg border transition-colors ${
-                        !hasCompanySelected
-                          ? 'border-gray-700 opacity-50 bg-gray-700/20 cursor-not-allowed'
-                          : selectedMarketingTier === tier
-                          ? 'border-purple-500 bg-purple-500/20 cursor-pointer'
-                          : canAfford
-                          ? 'border-gray-600 hover:border-purple-400 bg-gray-700/30 cursor-pointer'
-                          : 'border-gray-700 opacity-50 bg-gray-700/20 cursor-not-allowed'
-                      }`}
-                      onClick={() => !isDisabled && canAfford && setSelectedMarketingTier(tier)}
-                    >
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <h3 className="font-semibold text-gray-200">
-                            Campaign {tier.split('_')[1]}
-                          </h3>
-                          <div className="text-sm text-gray-400 space-y-1 mt-1">
-                            <div>Workers: {config.workers}</div>
-                            <div>Brand Bonus: +{config.brandBonus}</div>
-                            <div>Cost: ${config.cost}</div>
-                            {currentCompany && (
-                              <div className={`mt-1 ${currentCompany.cashOnHand >= config.cost ? 'text-gray-400' : 'text-red-400'}`}>
-                                Company Cash: ${currentCompany.cashOnHand}
-                              </div>
-                            )}
+                 {Object.values(MarketingCampaignTier).map(
+                   (tier: MarketingCampaignTier) => {
+                     const config = MARKETING_CONFIG[tier];
+                     const canAfford =
+                       hasCompanySelected &&
+                       currentCompany &&
+                       currentCompany.cashOnHand >= config.cost;
+                     const isDisabled =
+                       !hasCompanySelected ||
+                       !canAfford ||
+                       createMarketingCampaign.isPending;
+
+                    return (
+                      <div
+                        key={tier}
+                        className={`p-4 rounded-lg border transition-colors ${
+                          !hasCompanySelected
+                            ? "border-gray-700 opacity-50 bg-gray-700/20 cursor-not-allowed"
+                            : selectedMarketingTier === tier
+                            ? "border-purple-500 bg-purple-500/20 cursor-pointer"
+                            : canAfford
+                            ? "border-gray-600 hover:border-purple-400 bg-gray-700/30 cursor-pointer"
+                            : "border-gray-700 opacity-50 bg-gray-700/20 cursor-not-allowed"
+                        }`}
+                        onClick={() =>
+                          !isDisabled &&
+                          canAfford &&
+                          setSelectedMarketingTier(tier)
+                        }
+                      >
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <h3 className="font-semibold text-gray-200">
+                              Campaign {tier.split("_")[1]}
+                            </h3>
+                             <div className="text-sm text-gray-400 space-y-1 mt-1">
+                               <div>Workers: {config.workers}</div>
+                               <div>Brand Bonus: +{config.brandBonus}</div>
+                               <div>Cost: ${config.cost}</div>
+                               {currentCompany && (
+                                 <div
+                                   className={`mt-1 ${
+                                     currentCompany.cashOnHand >= config.cost
+                                       ? "text-gray-400"
+                                       : "text-red-400"
+                                   }`}
+                                 >
+                                   Company Cash: ${currentCompany.cashOnHand}
+                                 </div>
+                               )}
+                             </div>
                           </div>
+                          <Button
+                            size="sm"
+                            color="primary"
+                            disabled={isDisabled}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (!isDisabled) {
+                                handleOpenResourceSelection(tier);
+                              }
+                            }}
+                          >
+                            Create
+                          </Button>
                         </div>
-                        <Button
-                          size="sm"
-                          color="primary"
-                          disabled={isDisabled}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (!isDisabled) {
-                              handleCreateMarketingCampaign(tier, 1); // Default to slot 1
-                            }
-                          }}
-                        >
-                          {createMarketingCampaign.isPending ? <Spinner size="sm" /> : 'Create'}
-                        </Button>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  }
+                )}
               </div>
             </div>
           </ModernOperationsSection>
@@ -364,21 +573,38 @@ export default function MarketingAndResearchPhase() {
           <ModernOperationsSection title="Research & Development">
             <div className="space-y-4">
               <p className="text-gray-400 text-sm">
-                Invest in research to advance your sector's technology track and gain advantages.
+                Invest in research to advance your sector's technology track and
+                gain advantages.
               </p>
-              
+
               <div className="space-y-3">
-                <div className={`flex justify-between items-center p-3 rounded-lg ${
-                  hasCompanySelected ? 'bg-gray-700/30' : 'bg-gray-700/20 opacity-50'
-                }`}>
+                <div
+                  className={`flex justify-between items-center p-3 rounded-lg ${
+                    hasCompanySelected
+                      ? "bg-gray-700/30"
+                      : "bg-gray-700/20 opacity-50"
+                  }`}
+                >
                   <div>
-                    <div className="font-medium text-gray-200">Research Cost</div>
-                    <div className="text-sm text-gray-400">Phase {currentPhaseNumber}</div>
+                    <div className="font-medium text-gray-200">
+                      Research Cost
+                    </div>
+                    <div className="text-sm text-gray-400">
+                      Phase {currentPhaseNumber}
+                    </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-bold text-gray-200">${researchCost}</div>
+                    <div className="font-bold text-gray-200">
+                      ${researchCost}
+                    </div>
                     {currentCompany ? (
-                      <div className={`text-sm ${currentCompany.cashOnHand >= researchCost ? 'text-gray-400' : 'text-red-400'}`}>
+                      <div
+                        className={`text-sm ${
+                          currentCompany.cashOnHand >= researchCost
+                            ? "text-gray-400"
+                            : "text-red-400"
+                        }`}
+                      >
                         Company Cash: ${currentCompany.cashOnHand}
                       </div>
                     ) : (
@@ -390,7 +616,9 @@ export default function MarketingAndResearchPhase() {
                 </div>
 
                 <div className="p-3 bg-gray-700/30 rounded-lg">
-                  <h4 className="font-medium text-gray-200 mb-2">Research Outcomes</h4>
+                  <h4 className="font-medium text-gray-200 mb-2">
+                    Research Outcomes
+                  </h4>
                   <div className="text-sm text-gray-400 space-y-1">
                     <div>• Major Discovery: +2 spaces</div>
                     <div>• Minor Discovery: +1 space</div>
@@ -415,7 +643,9 @@ export default function MarketingAndResearchPhase() {
                   color="primary"
                   size="lg"
                   className="w-full"
-                  disabled={!canResearch || isResearching || !hasCompanySelected}
+                  disabled={
+                    !canResearch || isResearching || !hasCompanySelected
+                  }
                   onClick={handleResearch}
                 >
                   {isResearching ? (
@@ -424,9 +654,9 @@ export default function MarketingAndResearchPhase() {
                       Researching...
                     </div>
                   ) : !hasCompanySelected ? (
-                    'Select a Company First'
+                    "Select a Company First"
                   ) : (
-                    'Conduct Research'
+                    "Conduct Research"
                   )}
                 </Button>
               </div>
@@ -446,10 +676,13 @@ export default function MarketingAndResearchPhase() {
                 phase: Math.ceil((i + 1) / 5),
                 isUnlocked: i < 20,
                 hasReward: (i + 1) % 5 === 0,
-                reward: (i + 1) % 5 === 0 ? {
-                  type: 'GRANT' as const,
-                  amount: Math.ceil((i + 1) / 5) * 100,
-                } : undefined,
+                reward:
+                  (i + 1) % 5 === 0
+                    ? {
+                        type: "GRANT" as const,
+                        amount: Math.ceil((i + 1) / 5) * 100,
+                      }
+                    : undefined,
               }))}
             />
           </ModernOperationsSection>
@@ -474,7 +707,118 @@ export default function MarketingAndResearchPhase() {
           )}
         </ModalContent>
       </Modal>
+
+      {/* Resource Selection Modal */}
+      <Modal
+        isOpen={isResourceModalOpen}
+        onOpenChange={onResourceModalOpenChange}
+        size="2xl"
+      >
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1">
+                Select Resources for Campaign{" "}
+                {selectedMarketingTier?.split("_")[1]}
+              </ModalHeader>
+              <ModalBody>
+                {selectedMarketingTier && currentCompany && currentSector && (
+                  <>
+                    <div className="flex flex-row gap-4">
+                      {/* Company Info */}
+                      <div className="mb-4 pb-4 border-b border-gray-700 flex flex-col">
+                        <CompanyInfoV2 companyId={currentCompany.id} />
+                      </div>
+
+                      {/* Consumption Bag Viewer */}
+                      <div className="mb-4 pb-4 border-b border-gray-700">
+                        <ConsumptionBagViewer
+                          sectorId={currentSector.id}
+                          sectorName={currentSector.name}
+                          gameId={gameState.id}
+                        />
+                      </div>
+                    </div>
+
+                    <p className="text-gray-400 text-sm mb-4">
+                      Select {getRequiredResourceCount(selectedMarketingTier)}{" "}
+                      resource(s) to add to the consumption bag.
+                    </p>
+                    <div className="grid grid-cols-4 gap-2">
+                      {availableResources.map((resourceType) => {
+                        const isSelected =
+                          selectedResources.includes(resourceType);
+                        const canSelect =
+                          selectedResources.length <
+                          getRequiredResourceCount(selectedMarketingTier);
+                        return (
+                          <button
+                            key={resourceType}
+                            onClick={() => handleResourceToggle(resourceType)}
+                            disabled={!canSelect && !isSelected}
+                            className={cn(
+                              "p-3 rounded-lg border text-sm transition-colors",
+                              isSelected
+                                ? "bg-purple-600/20 border-purple-500 text-purple-300"
+                                : canSelect
+                                ? "border-gray-600 hover:border-purple-400 hover:bg-gray-700/50 text-gray-200"
+                                : "border-gray-700 text-gray-500 cursor-not-allowed opacity-50"
+                            )}
+                          >
+                            {resourceType}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {selectedResources.length > 0 && (
+                      <div className="mt-4 p-3 bg-gray-700/30 rounded-lg">
+                        <p className="text-sm text-gray-300 mb-2">
+                          Selected Resources:
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedResources.map((resourceType) => (
+                            <span
+                              key={resourceType}
+                              className="px-3 py-1 bg-purple-600/30 text-purple-300 rounded text-sm"
+                            >
+                              {resourceType}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </ModalBody>
+              <ModalFooter>
+                <Button color="danger" variant="light" onPress={onClose}>
+                  Cancel
+                </Button>
+                <Button
+                  color="primary"
+                  onPress={() => {
+                    if (selectedMarketingTier) {
+                      handleCreateMarketingCampaign(selectedMarketingTier, 1);
+                    }
+                  }}
+                  disabled={
+                    !selectedMarketingTier ||
+                    selectedResources.length !==
+                      getRequiredResourceCount(selectedMarketingTier) ||
+                    createMarketingCampaign.isPending
+                  }
+                >
+                  {createMarketingCampaign.isPending ? (
+                    <Spinner size="sm" />
+                  ) : (
+                    "Create Campaign"
+                  )}
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
     </ModernOperationsLayout>
   );
 }
-

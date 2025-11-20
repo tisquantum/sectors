@@ -30,6 +30,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         playerId: z.string(),
         tier: z.nativeEnum(MarketingCampaignTier),
         slot: z.number().int().min(1).max(3),
+        resourceTypes: z.array(z.nativeEnum(ResourceType)), // Resources selected by player
       }))
       .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
       .use(async (opts) =>
@@ -70,6 +71,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           gameId: input.gameId,
           tier: input.tier,
           operationMechanicsVersion: game.operationMechanicsVersion || OperationMechanicsVersion.MODERN,
+          resourceTypes: input.resourceTypes,
         });
       }),
 

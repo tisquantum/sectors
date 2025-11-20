@@ -223,18 +223,24 @@ export class ResourceService {
   async updateResourcePrices(gameId: string): Promise<void> {
     const resources = await this.resourcesByGame(gameId);
     
-    for (const resource of resources) {
-      const priceArray = getResourcePriceForResourceType(resource.type);
-      
-      // Get price from array based on trackPosition
-      // If position exceeds array length, use last price in array
-      const price = priceArray[Math.min(resource.trackPosition, priceArray.length - 1)];
-      
-      await this.prisma.resource.update({
-        where: { id: resource.id },
-        data: { price: price || 0 },
-      });
+    // OPTIMIZATION: Batch update all resources in a single transaction
+    if (resources.length === 0) {
+      return;
     }
+
+    await this.prisma.$transaction(
+      resources.map(resource => {
+        const priceArray = getResourcePriceForResourceType(resource.type);
+        // Get price from array based on trackPosition
+        // If position exceeds array length, use last price in array
+        const price = priceArray[Math.min(resource.trackPosition, priceArray.length - 1)] || 0;
+        
+        return this.prisma.resource.update({
+          where: { id: resource.id },
+          data: { price },
+        });
+      })
+    );
   }
 
   // Get current price for a resource based on its track position

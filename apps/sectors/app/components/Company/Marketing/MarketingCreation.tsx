@@ -3,6 +3,10 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { ResourceType } from '@/components/Company/Factory/Factory.types';
+import { trpc } from '@sectors/app/trpc';
+import { MarketingCampaignTier } from '@server/prisma/prisma.client';
+import { useGame } from '../../Game/GameContext';
+import { Spinner } from '@nextui-org/react';
 
 type CampaignSize = 'CAMPAIGN_I' | 'CAMPAIGN_II' | 'CAMPAIGN_III';
 
@@ -34,10 +38,10 @@ const MOCK_RESOURCES = [
     { type: 'GENERAL' as ResourceType, price: 70 },
 ];
 
-const CAMPAIGN_CONFIG: Record<CampaignSize, { workers: number; brandBonus: number; resources: number; cost: number }> = {
-  CAMPAIGN_I: { workers: 1, brandBonus: 1, resources: 1, cost: 10 },
-  CAMPAIGN_II: { workers: 2, brandBonus: 2, resources: 2, cost: 20 },
-  CAMPAIGN_III: { workers: 3, brandBonus: 3, resources: 3, cost: 30 },
+const CAMPAIGN_CONFIG: Record<CampaignSize, { workers: number; brandBonus: number; resources: number; cost: number; tier: MarketingCampaignTier }> = {
+  CAMPAIGN_I: { workers: 1, brandBonus: 1, resources: 1, cost: 100, tier: MarketingCampaignTier.TIER_1 },
+  CAMPAIGN_II: { workers: 2, brandBonus: 2, resources: 2, cost: 200, tier: MarketingCampaignTier.TIER_2 },
+  CAMPAIGN_III: { workers: 3, brandBonus: 3, resources: 3, cost: 300, tier: MarketingCampaignTier.TIER_3 },
 };
 
 const RESOURCE_COLORS: Record<ResourceType, string> = {
@@ -62,10 +66,61 @@ export function MarketingCreation({
   gameId,
   onClose,
 }: MarketingCreationProps) {
+  const { authPlayer, gameState } = useGame();
   const [selectedSize, setSelectedSize] = useState<CampaignSize>('CAMPAIGN_I');
   const [schematic, setSchematic] = useState<ResourceSchematic[]>([]);
   
-  const resources = MOCK_RESOURCES;
+  // Get company to find its sector
+  const company = gameState?.Company?.find(c => c.id === companyId);
+  const companySector = company?.sectorId ? gameState?.sectors?.find(s => s.id === company.sectorId) : null;
+  
+  // Helper function to get sector resource type
+  const getSectorResourceType = (sectorName: string): ResourceType | null => {
+    switch (sectorName) {
+      case 'MATERIALS': return ResourceType.MATERIALS;
+      case 'INDUSTRIALS': return ResourceType.INDUSTRIALS;
+      case 'CONSUMER_DISCRETIONARY': return ResourceType.CONSUMER_DISCRETIONARY;
+      case 'CONSUMER_STAPLES': return ResourceType.CONSUMER_STAPLES;
+      case 'CONSUMER_CYCLICAL': return ResourceType.CONSUMER_CYCLICAL;
+      case 'CONSUMER_DEFENSIVE': return ResourceType.CONSUMER_DEFENSIVE;
+      case 'ENERGY': return ResourceType.ENERGY;
+      case 'HEALTHCARE': return ResourceType.HEALTHCARE;
+      case 'TECHNOLOGY': return ResourceType.TECHNOLOGY;
+      default: return null;
+    }
+  };
+  
+  // Fetch real resources from backend
+  const isValidGameId = !!gameId && typeof gameId === 'string' && gameId.length > 0;
+  const { data: resourcesData, isLoading: resourcesLoading } = trpc.resource.getGameResources.useQuery(
+    { gameId: isValidGameId ? gameId : '' },
+    { enabled: isValidGameId }
+  );
+  
+  // Filter available resources: only TRIANGLE, SQUARE, CIRCLE, and the company's sector resource
+  const baseResources: ResourceType[] = [ResourceType.TRIANGLE, ResourceType.SQUARE, ResourceType.CIRCLE];
+  const sectorResource = companySector ? getSectorResourceType(companySector.sectorName) : null;
+  const allowedResources = sectorResource 
+    ? [...baseResources, sectorResource]
+    : baseResources;
+  
+  // Filter and transform resources data to match expected format
+  const resources = resourcesData
+    ?.filter(r => allowedResources.includes(r.type as ResourceType))
+    ?.map(r => ({
+      type: r.type as ResourceType,
+      price: r.price,
+    })) || MOCK_RESOURCES.filter(r => allowedResources.includes(r.type));
+  
+  const submitCampaign = trpc.modernOperations.submitMarketingCampaign.useMutation({
+    onSuccess: () => {
+      onClose();
+    },
+    onError: (error) => {
+      console.error('Failed to create marketing campaign:', error);
+      alert(`Failed to create campaign: ${error.message}`);
+    },
+  });
 
   const campaignConfig = CAMPAIGN_CONFIG[selectedSize];
   const maxResources = campaignConfig.resources;
@@ -85,10 +140,19 @@ export function MarketingCreation({
   };
 
   const handleSubmit = async () => {
-    if (schematic.length === 0) return;
-    // ... mutation call here
-    console.log('Creating campaign with:', { companyId, gameId, campaignSize: selectedSize, resources: schematic });
-    onClose();
+    if (schematic.length === 0 || !authPlayer) return;
+    
+    const campaignConfig = CAMPAIGN_CONFIG[selectedSize];
+    const resourceTypes = schematic.map(s => s.type);
+    
+    await submitCampaign.mutateAsync({
+      companyId,
+      gameId,
+      playerId: authPlayer.id,
+      tier: campaignConfig.tier,
+      slot: 1, // TODO: Get actual slot number
+      resourceTypes,
+    });
   };
 
   const totalCost = campaignConfig.cost;
@@ -136,23 +200,29 @@ export function MarketingCreation({
       </div>
 
       <div className="space-y-3">
-        <h4 className="text-sm font-medium text-gray-300">Available Resources for Influence Bag</h4>
-        <div className="grid grid-cols-3 gap-2">
-          {resources?.map((resource) => (
-            <button
-              key={resource.type}
-              onClick={() => addResource(resource.type)}
-              disabled={!canAddResource}
-              className={cn(
-                'p-2 rounded border transition-all text-xs font-medium flex items-center gap-2 justify-center',
-                canAddResource ? 'border-gray-500 hover:border-gray-400 text-gray-200 hover:bg-gray-700/50' : 'border-gray-700 text-gray-500 cursor-not-allowed'
-              )}
-            >
-              <div className={cn('w-3 h-3 rounded', RESOURCE_COLORS[resource.type])} />
-              <span>{resource.type}</span>
-            </button>
-          ))}
-        </div>
+        <h4 className="text-sm font-medium text-gray-300">Available Resources for Consumption Bag</h4>
+        {resourcesLoading ? (
+          <div className="flex items-center justify-center py-4">
+            <Spinner size="sm" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-2">
+            {resources?.map((resource) => (
+              <button
+                key={resource.type}
+                onClick={() => addResource(resource.type)}
+                disabled={!canAddResource}
+                className={cn(
+                  'p-2 rounded border transition-all text-xs font-medium flex items-center gap-2 justify-center',
+                  canAddResource ? 'border-gray-500 hover:border-gray-400 text-gray-200 hover:bg-gray-700/50' : 'border-gray-700 text-gray-500 cursor-not-allowed'
+                )}
+              >
+                <div className={cn('w-3 h-3 rounded', RESOURCE_COLORS[resource.type] || 'bg-gray-500')} />
+                <span>{resource.type}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="space-y-3">
@@ -182,13 +252,13 @@ export function MarketingCreation({
         <button onClick={onClose} className="flex-1 px-4 py-2 rounded border border-gray-600 text-gray-300 hover:bg-gray-700/50 transition-colors">Cancel</button>
         <button
           onClick={handleSubmit}
-          disabled={schematic.length === 0}
+          disabled={schematic.length === 0 || submitCampaign.isPending}
           className={cn(
             'flex-1 px-4 py-2 rounded font-medium transition-colors',
-            schematic.length > 0 ? 'bg-purple-600 hover:bg-purple-700 text-white' : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+            schematic.length > 0 && !submitCampaign.isPending ? 'bg-purple-600 hover:bg-purple-700 text-white' : 'bg-gray-700 text-gray-500 cursor-not-allowed'
           )}
         >
-          Create Campaign
+          {submitCampaign.isPending ? <Spinner size="sm" /> : 'Create Campaign'}
         </button>
       </div>
     </div>

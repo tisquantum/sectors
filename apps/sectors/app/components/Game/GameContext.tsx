@@ -63,6 +63,7 @@ export const GameProvider: React.FC<{
 }> = ({ gameId, children }) => {
   const { user } = useAuthUser();
   const channel = usePusherSubscription(gameId);
+  const trpcUtils = trpc.useUtils();
   const {
     data: gameState,
     isLoading: gameStateIsLoading,
@@ -133,7 +134,9 @@ export const GameProvider: React.FC<{
         // Consumption bags drawn
       }
       if (phaseName === PhaseName.EARNINGS_CALL) {
-        // Factory production records created
+        // Factory production records created during CONSUMPTION_PHASE resolution
+        // Invalidate production queries so consumption phase can show results
+        trpcUtils.factoryProduction.getGameTurnProduction.invalidate();
       }
       if (phaseName === PhaseName.MARKETING_AND_RESEARCH_ACTION_RESOLVE) {
         // Marketing campaigns activated

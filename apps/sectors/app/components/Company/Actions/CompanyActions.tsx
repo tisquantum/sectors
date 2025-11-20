@@ -81,6 +81,7 @@ export function CompanyActions({
             phase={phase}
             availableWorkers={availableWorkers}
             availableCash={availableCash}
+            operationMechanicsVersion={operationMechanicsVersion}
             onActionComplete={onActionComplete}
           />
         </TabsContent>

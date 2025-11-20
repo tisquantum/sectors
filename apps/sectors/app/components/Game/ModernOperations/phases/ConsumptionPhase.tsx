@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
 import { useModernOperations } from '../hooks';
 import { ModernOperationsLayout, ModernOperationsSection } from '../layouts';
@@ -24,14 +24,35 @@ export function ConsumptionPhase() {
   const { gameId, currentTurn, gameState } = useGame();
   const { productionData, sectors, consumptionBags, isLoading } = useModernOperations();
 
+  // Get tRPC utils for invalidating queries
+  const trpcUtils = trpc.useUtils();
+
+  // Get current phase to detect transitions
+  const { currentPhase } = useGame();
+
   // Get production data with relations for current turn
-  const { data: productionWithRelations, isLoading: productionLoading } = trpc.factoryProduction.getGameTurnProduction.useQuery(
+  // Refetch when phase changes to ensure we get fresh data after resolution
+  const { data: productionWithRelations, isLoading: productionLoading, refetch: refetchProduction } = trpc.factoryProduction.getGameTurnProduction.useQuery(
     {
       gameId,
       gameTurnId: currentTurn?.id || '',
     },
-    { enabled: !!gameId && !!currentTurn?.id }
+    { 
+      enabled: !!gameId && !!currentTurn?.id,
+      // Refetch when phase changes to catch resolution
+      refetchOnMount: true,
+      refetchOnWindowFocus: false,
+    }
   );
+
+  // Refetch production data when phase transitions to EARNINGS_CALL
+  // (This is when production records are created from consumption phase resolution)
+  useEffect(() => {
+    if (currentPhase?.name === 'EARNINGS_CALL' && currentTurn?.id) {
+      // Production records should now exist, refetch to show results
+      refetchProduction();
+    }
+  }, [currentPhase?.name, currentTurn?.id, refetchProduction]);
 
   // Get operational factories for preview (when phase hasn't resolved yet)
   // MUST be called before any conditional returns to follow React hooks rules

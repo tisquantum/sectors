@@ -432,6 +432,11 @@ export class GameManagementService {
         break;
       case PhaseName.OPERATING_PRODUCTION_VOTE_RESOLVE:
         await this.resolveOperatingProductionVotes(phase);
+        // AUTO-FORWARD: Execute Capital Gains and Divestment automatically before END_TURN
+        // These phases are processed but don't require player ready-up
+        // This handles the modern operations flow: OPERATING_PRODUCTION_VOTE_RESOLVE -> OPERATING_STOCK_PRICE_ADJUSTMENT -> (auto) CAPITAL_GAINS -> (auto) DIVESTMENT -> END_TURN
+        await this.resolveCapitalGainsViaTurnIncome(phase);
+        await this.resolveDivestment(phase);
         break;
       case PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT:
         await this.adjustStockPrices(phase);
@@ -440,6 +445,12 @@ export class GameManagementService {
         await this.decrementSectorDemandBonus(phase);
         await this.decrementCompanyTemporarySupplyBonus(phase);
         await this.decrementActiveCompanyDemand(phase);
+        
+        // AUTO-FORWARD: Execute Capital Gains and Divestment automatically before END_TURN
+        // These phases are processed but don't require player ready-up
+        await this.resolveCapitalGainsViaTurnIncome(phase);
+        await this.resolveDivestment(phase);
+        
         if (game.isTimerless) {
           await this.handlePhaseTransition({
             phase,
@@ -8988,9 +8999,38 @@ export class GameManagementService {
         return;
       case PhaseName.STOCK_ACTION_OPTION_ORDER:
         return this.anyOptionOrdersToBeExercised(currentPhase?.gameId || '');
+      // AUTO-FORWARD: Skip if no factory construction orders were submitted
+      case PhaseName.FACTORY_CONSTRUCTION_RESOLVE:
+        return this.hasFactoryConstructionOrders(currentPhase);
+      // AUTO-FORWARD: Capital Gains and Divestment are always auto-processed before END_TURN
+      // They don't require player ready-up and are handled automatically
+      case PhaseName.CAPITAL_GAINS:
+      case PhaseName.DIVESTMENT:
+        return false;
       default:
         return true;
     }
+  }
+
+  /**
+   * Check if there are any factory construction orders for the current turn
+   * @param currentPhase - The current phase object
+   * @returns true if there are orders to resolve, false otherwise
+   */
+  async hasFactoryConstructionOrders(currentPhase: Phase): Promise<boolean> {
+    if (!currentPhase?.gameTurnId) {
+      return false;
+    }
+    
+    // Check if there are any factory construction orders for this turn
+    // Orders are created during FACTORY_CONSTRUCTION phase and resolved in FACTORY_CONSTRUCTION_RESOLVE
+    const orderCount = await this.prisma.factoryConstructionOrder.count({
+      where: { 
+        gameTurnId: currentPhase.gameTurnId,
+      },
+    });
+    
+    return orderCount > 0;
   }
 
   async isThereAnyCompanyIPOPriceToSet(gameId: string): Promise<boolean> {

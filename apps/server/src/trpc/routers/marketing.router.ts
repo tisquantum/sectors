@@ -1,13 +1,14 @@
 import { z } from 'zod';
 import { MarketingService } from '../../marketing/marketing.service';
 import { TrpcService } from '../trpc.service';
-import { MarketingCampaignTier, OperationMechanicsVersion } from '@prisma/client';
+import { MarketingCampaignTier, OperationMechanicsVersion, ResourceType } from '@prisma/client';
 
 const CreateMarketingCampaignSchema = z.object({
   companyId: z.string(),
   gameId: z.string(),
   tier: z.nativeEnum(MarketingCampaignTier),
   operationMechanicsVersion: z.nativeEnum(OperationMechanicsVersion),
+  resourceTypes: z.array(z.nativeEnum(ResourceType)), // Resources selected by player
 });
 
 type Context = {

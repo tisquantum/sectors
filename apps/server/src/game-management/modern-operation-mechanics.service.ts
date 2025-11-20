@@ -13,6 +13,7 @@ import { FactoryProductionService } from '../factory-production/factory-producti
 import { StockHistoryService } from '../stock-history/stock-history.service';
 import { GameTurnService } from '../game-turn/game-turn.service';
 import { GamesService } from '../games/games.service';
+import { TransactionService } from '../transaction/transaction.service';
 import { getResourcePriceForResourceType, getSectorResourceForSectorName, BASE_WORKER_SALARY } from '@server/data/constants';
 
 interface RequiredResource {
@@ -36,6 +37,7 @@ export class ModernOperationMechanicsService {
     private stockHistoryService: StockHistoryService,
     private gameTurnService: GameTurnService,
     private gamesService: GamesService,
+    private transactionService: TransactionService,
   ) {}
 
   async handlePhase(phase: Phase, game: Game) {
@@ -77,6 +79,7 @@ export class ModernOperationMechanicsService {
       case PhaseName.END_TURN:
         await this.degradeMarketingCampaigns(phase);
         await this.updateResearchProgress(phase);
+        await this.distributeConsumersToSectors(phase);
         await this.createNewTurn(phase);
         break;
 
@@ -111,6 +114,7 @@ export class ModernOperationMechanicsService {
     const resources = await this.resourceService.resourcesByGame(phase.gameId);
     const resourcePriceMap = new Map<ResourceType, number>();
     
+    // Calculate prices in parallel (no DB queries needed, uses constants)
     for (const resource of resources) {
       const price = await this.resourceService.getCurrentResourcePrice(resource);
       resourcePriceMap.set(resource.type, price);
@@ -129,26 +133,48 @@ export class ModernOperationMechanicsService {
       return;
     }
 
+    // OPTIMIZATION: Batch fetch all companies at once
+    const companyIds = [...new Set(factoryConstructionOrders.map(o => o.companyId))];
+    const companies = await this.prisma.company.findMany({
+      where: { id: { in: companyIds } },
+      include: { Sector: true, Entity: true },
+    });
+    const companyMap = new Map(companies.map(c => [c.id, c]));
+
+    // OPTIMIZATION: Batch count all factories at once
+    const factoryCounts = await this.prisma.factory.groupBy({
+      by: ['companyId'],
+      where: { gameId: phase.gameId },
+      _count: { id: true },
+    });
+    const factoryCountMap = new Map(
+      factoryCounts.map(f => [f.companyId, f._count.id])
+    );
+
     // Track successful order IDs for resource consumption
     const successfulOrderIds = new Set<string>();
+    // Collect game log entries for batch creation
+    const gameLogEntries: Array<{ gameId: string; content: string; phaseId?: string }> = [];
+    // Collect order updates for batch processing
+    const orderUpdates: Array<{ id: string; failureReason: string }> = [];
+    // Collect successful operations for batch processing
+    const successfulOperations: Array<{
+      order: FactoryConstructionOrder;
+      company: Company;
+      blueprintCost: number;
+      requiredWorkers: number;
+      existingFactories: number;
+      factoryOutputResource: ResourceType;
+    }> = [];
 
     for (const order of factoryConstructionOrders) {
-      // Fetch company with relations
-      const company = await this.prisma.company.findUnique({
-        where: { id: order.companyId },
-        include: { Sector: true },
-      });
+      // Get company from map (already fetched)
+      const company = companyMap.get(order.companyId);
 
       if (!company) {
         const failureReason = `Company ${order.companyId} not found`;
-        await this.prisma.factoryConstructionOrder.update({
-          where: { id: order.id },
-          data: { failureReason },
-        });
-        await this.gameLogService.createGameLog({
-          game: { connect: { id: phase.gameId } },
-          content: failureReason,
-        });
+        orderUpdates.push({ id: order.id, failureReason });
+        gameLogEntries.push({ gameId: phase.gameId, content: failureReason });
         continue;
       }
 
@@ -165,31 +191,23 @@ export class ModernOperationMechanicsService {
       // Check if company can afford it
       if (company.cashOnHand < blueprintCost) {
         const failureReason = `Insufficient cash. Required: $${blueprintCost}, Available: $${company.cashOnHand}`;
-        await this.prisma.factoryConstructionOrder.update({
-          where: { id: order.id },
-          data: { failureReason },
-        });
-        await this.gameLogService.createGameLog({
-          game: { connect: { id: phase.gameId } },
+        orderUpdates.push({ id: order.id, failureReason });
+        gameLogEntries.push({
+          gameId: phase.gameId,
           content: `${company.name} cannot afford factory construction. ${failureReason}`,
         });
         continue;
       }
 
       // Check factory limit based on sector technology level
-      const existingFactories = await this.prisma.factory.count({
-        where: { companyId: company.id, gameId: phase.gameId },
-      });
+      const existingFactories = factoryCountMap.get(company.id) || 0;
       
       const maxFactories = this.getMaxFactories(company.Sector.technologyLevel);
       if (existingFactories >= maxFactories) {
         const failureReason = `Factory limit reached. Maximum factories allowed: ${maxFactories} (based on sector technology level ${company.Sector.technologyLevel})`;
-        await this.prisma.factoryConstructionOrder.update({
-          where: { id: order.id },
-          data: { failureReason },
-        });
-        await this.gameLogService.createGameLog({
-          game: { connect: { id: phase.gameId } },
+        orderUpdates.push({ id: order.id, failureReason });
+        gameLogEntries.push({
+          gameId: phase.gameId,
           content: `${company.name} cannot build more factories. ${failureReason}`,
         });
         continue;
@@ -199,77 +217,121 @@ export class ModernOperationMechanicsService {
       const requiredWorkers = this.getRequiredWorkers(order.size);
       if (game.workers < requiredWorkers) {
         const failureReason = `Insufficient workers in workforce pool. Required: ${requiredWorkers}, Available: ${game.workers}`;
-        await this.prisma.factoryConstructionOrder.update({
-          where: { id: order.id },
-          data: { failureReason },
-        });
-        await this.gameLogService.createGameLog({
-          game: { connect: { id: phase.gameId } },
+        orderUpdates.push({ id: order.id, failureReason });
+        gameLogEntries.push({
+          gameId: phase.gameId,
           content: `${company.name} cannot build factory. ${failureReason}`,
         });
         continue;
       }
 
+      // Store successful operation for batch processing
+      successfulOperations.push({
+        order,
+        company,
+        blueprintCost,
+        requiredWorkers,
+        existingFactories,
+        factoryOutputResource: order.resourceTypes[0], // First resource in blueprint
+      });
+    }
+
+    // OPTIMIZATION: Batch update failed orders
+    if (orderUpdates.length > 0) {
+      await this.prisma.$transaction(
+        orderUpdates.map(update =>
+          this.prisma.factoryConstructionOrder.update({
+            where: { id: update.id },
+            data: { failureReason: update.failureReason },
+          })
+        )
+      );
+    }
+
+    // Process successful operations in batches
+    for (const op of successfulOperations) {
       try {
+        let createdFactoryId: string | null = null;
+        
         await this.prisma.$transaction(async (tx) => {
           // Deduct cash from company
           await tx.company.update({
-            where: { id: company.id },
-            data: { cashOnHand: { decrement: blueprintCost } },
+            where: { id: op.company.id },
+            data: { cashOnHand: { decrement: op.blueprintCost } },
           });
 
           // Create factory (will be operational next turn)
           const factory = await tx.factory.create({
             data: {
-              companyId: company.id,
-              sectorId: company.sectorId,
+              companyId: op.company.id,
+              sectorId: op.company.sectorId,
               gameId: phase.gameId,
-              size: order.size,
-              workers: requiredWorkers,
-              slot: existingFactories + 1,
+              size: op.order.size,
+              workers: op.requiredWorkers,
+              slot: op.existingFactories + 1,
               isOperational: false,
-              resourceTypes: order.resourceTypes,
+              resourceTypes: op.order.resourceTypes,
             },
           });
+          
+          createdFactoryId = factory.id;
 
           // Deduct workers from workforce pool
           await tx.game.update({
             where: { id: phase.gameId },
-            data: { workers: { decrement: requiredWorkers } },
+            data: { workers: { decrement: op.requiredWorkers } },
           });
 
           // Delete the construction order on success
           await tx.factoryConstructionOrder.delete({
-            where: { id: order.id },
-          });
-
-          await this.gameLogService.createGameLog({
-            game: { connect: { id: phase.gameId } },
-            content: `${company.name} built ${order.size} factory for $${blueprintCost}`,
+            where: { id: op.order.id },
           });
         });
 
+        // Create transaction record for factory construction
+        if (createdFactoryId) {
+          try {
+            await this.transactionService.createTransactionEntityToEntity({
+              gameId: phase.gameId,
+              gameTurnId: phase.gameTurnId,
+              phaseId: phase.id,
+              fromEntityType: EntityType.COMPANY,
+              toEntityType: EntityType.BANK,
+              fromEntityId: op.company.entityId || undefined,
+              amount: op.blueprintCost,
+              transactionType: TransactionType.FACTORY_CONSTRUCTION,
+              fromCompanyId: op.company.id,
+              companyInvolvedId: op.company.id,
+              description: `Factory construction: ${op.order.size} factory built for $${op.blueprintCost}`,
+            });
+          } catch (error) {
+            // Log error but don't fail the factory construction
+            console.error('Failed to create factory construction transaction:', error);
+          }
+        }
+
         // Track successful order for resource consumption
-        successfulOrderIds.add(order.id);
+        successfulOrderIds.add(op.order.id);
+
+        // Collect game log entry
+        gameLogEntries.push({
+          gameId: phase.gameId,
+          content: `${op.company.name} built ${op.order.size} factory for $${op.blueprintCost}`,
+        });
 
         // Add permanent consumption marker to sector bag (after transaction)
-        // Company chooses which resource type from factory output
-        const factoryOutputResource = order.resourceTypes[0]; // First resource in blueprint
         await this.consumptionMarkerService.addFactoryMarkerToBag(
           phase.gameId,
-          company.sectorId,
-          company.id,
-          factoryOutputResource,
+          op.company.sectorId,
+          op.company.id,
+          op.factoryOutputResource,
         );
       } catch (error) {
         const failureReason = `Construction failed: ${error instanceof Error ? error.message : String(error)}`;
-        await this.prisma.factoryConstructionOrder.update({
-          where: { id: order.id },
-          data: { failureReason },
-        });
-        await this.gameLogService.createGameLog({
-          game: { connect: { id: phase.gameId } },
-          content: `Factory construction failed for ${company.name}: ${failureReason}`,
+        orderUpdates.push({ id: op.order.id, failureReason });
+        gameLogEntries.push({
+          gameId: phase.gameId,
+          content: `Factory construction failed for ${op.company.name}: ${failureReason}`,
         });
       }
     }
@@ -297,6 +359,17 @@ export class ModernOperationMechanicsService {
     if (consumptions.length > 0) {
       await this.resourceService.consumeResources(phase.gameId, consumptions);
       await this.resourceService.updateResourcePrices(phase.gameId);
+    }
+    
+    // OPTIMIZATION: Batch create all game logs at once
+    if (gameLogEntries.length > 0) {
+      await this.gameLogService.createManyGameLogs(
+        gameLogEntries.map(entry => ({
+          gameId: entry.gameId,
+          phaseId: entry.phaseId || phase.id,
+          content: entry.content,
+        }))
+      );
     }
     
     await this.updateWorkforceTrack(phase);
@@ -394,11 +467,14 @@ export class ModernOperationMechanicsService {
       },
     });
 
-    for (const factory of inoperativeFactories) {
-      await this.gameLogService.createGameLog({
-        game: { connect: { id: phase.gameId } },
-        content: `${factory.company.name}'s ${factory.size} factory is now operational`,
-      });
+    // OPTIMIZATION: Batch create game logs
+    if (inoperativeFactories.length > 0) {
+      await this.gameLogService.createManyGameLogs(
+        inoperativeFactories.map(factory => ({
+          gameId: phase.gameId,
+          content: `${factory.company.name}'s ${factory.size} factory is now operational`,
+        }))
+      );
     }
   }
 
@@ -618,6 +694,8 @@ export class ModernOperationMechanicsService {
 
       let customersServed = 0;
       const markersDrawn: string[] = [];
+      // OPTIMIZATION: Collect markers to delete for batch deletion
+      const markersToDelete: string[] = [];
 
       // Draw from consumption bag for each customer
       for (let i = 0; i < customerCount; i++) {
@@ -663,12 +741,17 @@ export class ModernOperationMechanicsService {
           customersServed++;
         }
 
-        // Remove temporary markers after drawing
+        // Collect temporary markers for batch deletion
         if (!drawnMarker.isPermanent) {
-          await this.consumptionMarkerService.deleteConsumptionMarker({
-            id: drawnMarker.id,
-          });
+          markersToDelete.push(drawnMarker.id);
         }
+      }
+
+      // OPTIMIZATION: Batch delete temporary markers
+      if (markersToDelete.length > 0) {
+        await this.prisma.consumptionMarker.deleteMany({
+          where: { id: { in: markersToDelete } },
+        });
       }
 
       // Update sector score based on service quality
@@ -680,35 +763,51 @@ export class ModernOperationMechanicsService {
           where: { id: sector.id },
           data: { demand: Math.max(0, sector.demand - unservedCustomers) },
         });
-
-        await this.gameLogService.createGameLog({
-          game: { connect: { id: phase.gameId } },
-          content: `${sector.sectorName} failed to service ${unservedCustomers} customers. Sector score reduced.`,
-        });
       } else {
         // All customers serviced - increase sector score
         await this.sectorService.updateSector({
           where: { id: sector.id },
           data: { demand: sector.demand + 1 },
         });
-
-        await this.gameLogService.createGameLog({
-          game: { connect: { id: phase.gameId } },
-          content: `${sector.sectorName} serviced all customers! Sector score increased.`,
-        });
       }
+
+      // OPTIMIZATION: Collect game log entries for batch creation
+      const sectorGameLogEntries: Array<{ gameId: string; content: string }> = [];
 
       // Log factory performance
       for (const [factoryId, customers] of factoryCustomerCounts.entries()) {
         if (customers > 0) {
           const factory = factories.find(f => f.id === factoryId);
           if (factory) {
-            await this.gameLogService.createGameLog({
-              game: { connect: { id: phase.gameId } },
+            sectorGameLogEntries.push({
+              gameId: phase.gameId,
               content: `${factory.company.name}'s factory served ${customers} customers`,
             });
           }
         }
+      }
+
+      // Add sector-level log entries
+      if (unservedCustomers > 0) {
+        sectorGameLogEntries.push({
+          gameId: phase.gameId,
+          content: `${sector.sectorName} failed to service ${unservedCustomers} customers. Sector score reduced.`,
+        });
+      } else {
+        sectorGameLogEntries.push({
+          gameId: phase.gameId,
+          content: `${sector.sectorName} serviced all customers! Sector score increased.`,
+        });
+      }
+
+      // Batch create all game logs for this sector
+      if (sectorGameLogEntries.length > 0) {
+        await this.gameLogService.createManyGameLogs(
+          sectorGameLogEntries.map(entry => ({
+            gameId: entry.gameId,
+            content: entry.content,
+          }))
+        );
       }
 
       // Create FactoryProduction records for each factory that served customers
@@ -778,32 +877,68 @@ export class ModernOperationMechanicsService {
       },
     });
 
-    // Add marketing markers to consumption bags
+    // OPTIMIZATION: Collect company updates and game logs for batch processing
+    const companyBrandUpdates: Array<{ id: string; brandScore: number }> = [];
+    const marketingGameLogEntries: Array<{ gameId: string; content: string }> = [];
+
+    // Add marketing markers to consumption bags using selected resources
     for (const campaign of newMarketingCampaigns) {
       const company = campaign.Company;
-      const sectorResourceType = getSectorResourceForSectorName(company.Sector.sectorName);
-      const markerCount = this.getMarketingResourceBonus(campaign.tier);
+      
+      // Use the resources selected by the player when creating the campaign
+      // Campaign 1: 1 resource, Campaign 2: 2 resources, Campaign 3: 3 resources
+      // Type assertion needed until Prisma types are regenerated after schema change
+      const selectedResources = (campaign as any).resourceTypes || [];
+      
+      if (selectedResources.length === 0) {
+        // Fallback: if no resources were selected (legacy campaigns), use sector resource
+        const sectorResourceType = getSectorResourceForSectorName(company.Sector.sectorName);
+        const markerCount = this.getMarketingResourceBonus(campaign.tier);
+        
+        await this.consumptionMarkerService.addMarketingMarkersToBag(
+          phase.gameId,
+          company.sectorId,
+          company.id,
+          sectorResourceType,
+          markerCount,
+        );
+      } else {
+        // Add one marker for each selected resource (temporary markers)
+        for (const resourceType of selectedResources) {
+          await this.consumptionMarkerService.addMarketingMarkersToBag(
+            phase.gameId,
+            company.sectorId,
+            company.id,
+            resourceType,
+            1, // One marker per selected resource
+          );
+        }
+      }
 
-      await this.consumptionMarkerService.addMarketingMarkersToBag(
-        phase.gameId,
-        company.sectorId,
-        company.id,
-        sectorResourceType,
-        markerCount,
+      // Collect company brand score update
+      companyBrandUpdates.push({
+        id: company.id,
+        brandScore: company.brandScore + campaign.brandBonus,
+      });
+
+      // Collect game log entry
+      const resourceCount = selectedResources.length || this.getMarketingResourceBonus(campaign.tier);
+      marketingGameLogEntries.push({
+        gameId: phase.gameId,
+        content: `${company.name} launched ${campaign.tier} marketing campaign (+${campaign.brandBonus} brand, +${resourceCount} consumption markers)`,
+      });
+    }
+
+    // OPTIMIZATION: Batch update company brand scores
+    if (companyBrandUpdates.length > 0) {
+      await this.prisma.$transaction(
+        companyBrandUpdates.map(update =>
+          this.prisma.company.update({
+            where: { id: update.id },
+            data: { brandScore: update.brandScore },
+          })
+        )
       );
-
-      // Update company brand score
-      await this.companyService.updateCompany({
-        where: { id: company.id },
-        data: {
-          brandScore: company.brandScore + campaign.brandBonus,
-        },
-      });
-
-      await this.gameLogService.createGameLog({
-        game: { connect: { id: phase.gameId } },
-        content: `${company.name} launched ${campaign.tier} marketing campaign (+${campaign.brandBonus} brand, +${markerCount} consumption markers)`,
-      });
     }
 
     // Handle research actions
@@ -815,34 +950,67 @@ export class ModernOperationMechanicsService {
       },
     });
 
+    // OPTIMIZATION: Collect research updates and game logs
+    const researchCompanyUpdates: Array<{
+      id: string;
+      researchGrants?: number;
+      cashOnHand?: number;
+      marketFavors?: number;
+    }> = [];
+    const researchGameLogEntries: Array<{ gameId: string; content: string }> = [];
+
     for (const company of companies) {
       // Research grants at milestones
       if (company.researchProgress === 5) {
-        await this.companyService.updateCompany({
-          where: { id: company.id },
-          data: {
-            researchGrants: company.researchGrants + 1,
-            cashOnHand: company.cashOnHand + 200, // Grant money
-          },
+        researchCompanyUpdates.push({
+          id: company.id,
+          researchGrants: company.researchGrants + 1,
+          cashOnHand: company.cashOnHand + 200, // Grant money
         });
 
-        await this.gameLogService.createGameLog({
-          game: { connect: { id: phase.gameId } },
+        researchGameLogEntries.push({
+          gameId: phase.gameId,
           content: `${company.name} reached research milestone! Received $200 grant.`,
         });
       } else if (company.researchProgress === 10) {
-        await this.companyService.updateCompany({
-          where: { id: company.id },
-          data: {
-            marketFavors: company.marketFavors + 1,
-          },
+        researchCompanyUpdates.push({
+          id: company.id,
+          marketFavors: company.marketFavors + 1,
         });
 
-        await this.gameLogService.createGameLog({
-          game: { connect: { id: phase.gameId } },
+        researchGameLogEntries.push({
+          gameId: phase.gameId,
           content: `${company.name} reached research milestone! Received market favor (stock boost).`,
         });
       }
+    }
+
+    // OPTIMIZATION: Batch update research companies
+    if (researchCompanyUpdates.length > 0) {
+      await this.prisma.$transaction(
+        researchCompanyUpdates.map(update => {
+          const data: any = {};
+          if (update.researchGrants !== undefined) data.researchGrants = update.researchGrants;
+          if (update.cashOnHand !== undefined) data.cashOnHand = update.cashOnHand;
+          if (update.marketFavors !== undefined) data.marketFavors = update.marketFavors;
+          
+          return this.prisma.company.update({
+            where: { id: update.id },
+            data,
+          });
+        })
+      );
+    }
+
+    // OPTIMIZATION: Batch create all game logs
+    const allGameLogEntries = [...marketingGameLogEntries, ...researchGameLogEntries];
+    if (allGameLogEntries.length > 0) {
+      await this.gameLogService.createManyGameLogs(
+        allGameLogEntries.map(entry => ({
+          gameId: entry.gameId,
+          content: entry.content,
+        }))
+      );
     }
   }
 
@@ -878,26 +1046,37 @@ export class ModernOperationMechanicsService {
       return;
     }
 
+    // OPTIMIZATION: Fetch all resources once and build price map
+    const allResources = await this.resourceService.resourcesByGame(phase.gameId);
+    const resourcePriceMap = new Map<ResourceType, number>();
+    
+    // Calculate all resource prices in parallel
+    await Promise.all(
+      allResources.map(async (resource) => {
+        const price = await this.resourceService.getCurrentResourcePrice(resource);
+        resourcePriceMap.set(resource.type, price);
+      })
+    );
+
     // Group by company for consolidated reporting
     const companySummaries = new Map<string, { revenue: number; costs: number; profit: number; company: Company }>();
+    // OPTIMIZATION: Collect production updates for batch processing
+    const productionUpdates: Array<{
+      id: string;
+      revenue: number;
+      costs: number;
+      profit: number;
+    }> = [];
 
     for (const production of factoryProductions) {
       const factory = production.Factory;
       const company = production.Company;
 
-      // Get resources used in factory blueprint
-      const resources = await this.resourceService.resources({
-        where: {
-          gameId: phase.gameId,
-          type: { in: factory.resourceTypes },
-        },
-      });
-
       // Calculate revenue per unit sold (sum of all resource prices + unit price)
+      // OPTIMIZATION: Use pre-calculated price map instead of querying
       let revenuePerUnit = company.unitPrice;
-      for (const resource of resources) {
-        const price = await this.resourceService.getCurrentResourcePrice(resource);
-        revenuePerUnit += price;
+      for (const resourceType of factory.resourceTypes) {
+        revenuePerUnit += resourcePriceMap.get(resourceType) || 0;
       }
 
       // Calculate actual revenue based on customers served (EXACT count from consumption phase)
@@ -909,14 +1088,12 @@ export class ModernOperationMechanicsService {
       // Calculate profit
       const factoryProfit = factoryRevenue - factoryCosts;
 
-      // Update the production record with calculated values
-      await this.factoryProductionService.updateFactoryProduction({
-        where: { id: production.id },
-        data: {
-          revenue: factoryRevenue,
-          costs: factoryCosts,
-          profit: factoryProfit,
-        },
+      // Collect update for batch processing
+      productionUpdates.push({
+        id: production.id,
+        revenue: factoryRevenue,
+        costs: factoryCosts,
+        profit: factoryProfit,
       });
 
       // Aggregate company totals
@@ -934,16 +1111,39 @@ export class ModernOperationMechanicsService {
       summary.profit += factoryProfit;
     }
 
+    // OPTIMIZATION: Batch update all production records
+    if (productionUpdates.length > 0) {
+      await this.prisma.$transaction(
+        productionUpdates.map(update =>
+          this.prisma.factoryProduction.update({
+            where: { id: update.id },
+            data: {
+              revenue: update.revenue,
+              costs: update.costs,
+              profit: update.profit,
+            },
+          })
+        )
+      );
+    }
+
+    // OPTIMIZATION: Collect company updates and game logs for batch processing
+    const companyUpdates: Array<{ id: string; cashOnHand: number }> = [];
+    const stockPriceOperations: Array<{
+      companyId: string;
+      steps: number;
+      currentPrice: number;
+    }> = [];
+    const earningsGameLogEntries: Array<{ gameId: string; content: string }> = [];
+
     // Process each company's total earnings
     for (const [companyId, summary] of companySummaries.entries()) {
       const { revenue, costs, profit, company } = summary;
 
-      // Update company cash
-      await this.companyService.updateCompany({
-        where: { id: companyId },
-        data: {
-          cashOnHand: company.cashOnHand + profit,
-        },
+      // Collect company cash update
+      companyUpdates.push({
+        id: companyId,
+        cashOnHand: company.cashOnHand + profit,
       });
 
       // Stock price adjustment based on profitability
@@ -960,31 +1160,65 @@ export class ModernOperationMechanicsService {
         stockPriceSteps = -1;
       }
 
-      // Apply stock price adjustment
-      if (stockPriceSteps > 0) {
+      // Collect stock price operation
+      if (stockPriceSteps !== 0) {
+        stockPriceOperations.push({
+          companyId,
+          steps: stockPriceSteps,
+          currentPrice: company.currentStockPrice || 0,
+        });
+      }
+
+      // Collect game log entry
+      earningsGameLogEntries.push({
+        gameId: phase.gameId,
+        content: `${company.name} earnings: Revenue $${revenue}, Costs $${costs}, Profit $${profit}. Stock ${stockPriceSteps > 0 ? '+' : ''}${stockPriceSteps} steps.`,
+      });
+    }
+
+    // OPTIMIZATION: Batch update company cash
+    if (companyUpdates.length > 0) {
+      await this.prisma.$transaction(
+        companyUpdates.map(update =>
+          this.prisma.company.update({
+            where: { id: update.id },
+            data: { cashOnHand: update.cashOnHand },
+          })
+        )
+      );
+    }
+
+    // Apply stock price adjustments (these may need to be sequential due to dependencies)
+    for (const op of stockPriceOperations) {
+      if (op.steps > 0) {
         await this.stockHistoryService.moveStockPriceUp(
           phase.gameId,
-          companyId,
+          op.companyId,
           phase.id,
-          company.currentStockPrice || 0,
-          stockPriceSteps,
+          op.currentPrice,
+          op.steps,
           StockAction.PRODUCTION,
         );
-      } else if (stockPriceSteps < 0) {
+      } else {
         await this.stockHistoryService.moveStockPriceDown(
           phase.gameId,
-          companyId,
+          op.companyId,
           phase.id,
-          company.currentStockPrice || 0,
-          Math.abs(stockPriceSteps),
+          op.currentPrice,
+          Math.abs(op.steps),
           StockAction.PRODUCTION,
         );
       }
+    }
 
-      await this.gameLogService.createGameLog({
-        game: { connect: { id: phase.gameId } },
-        content: `${company.name} earnings: Revenue $${revenue}, Costs $${costs}, Profit $${profit}. Stock ${stockPriceSteps > 0 ? '+' : ''}${stockPriceSteps} steps.`,
-      });
+    // OPTIMIZATION: Batch create game logs
+    if (earningsGameLogEntries.length > 0) {
+      await this.gameLogService.createManyGameLogs(
+        earningsGameLogEntries.map(entry => ({
+          gameId: entry.gameId,
+          content: entry.content,
+        }))
+      );
     }
   }
 
@@ -1011,32 +1245,68 @@ export class ModernOperationMechanicsService {
       },
     });
 
+    if (expiredCampaigns.length === 0) {
+      return;
+    }
+
+    // OPTIMIZATION: Collect updates for batch processing
+    const companyBrandUpdates: Array<{ id: string; brandScore: number }> = [];
+    const workerIncrement = expiredCampaigns.reduce((sum, c) => sum + c.workers, 0);
+    const campaignIds: string[] = [];
+    const campaignGameLogEntries: Array<{ gameId: string; content: string }> = [];
+
     for (const campaign of expiredCampaigns) {
-      // Reduce brand score
-      await this.companyService.updateCompany({
-        where: { id: campaign.companyId },
-        data: {
-          brandScore: Math.max(0, campaign.Company.brandScore - campaign.brandBonus),
-        },
+      // Collect brand score update
+      companyBrandUpdates.push({
+        id: campaign.companyId,
+        brandScore: Math.max(0, campaign.Company.brandScore - campaign.brandBonus),
       });
 
-      // Return workers to pool
+      campaignIds.push(campaign.id);
+
+      campaignGameLogEntries.push({
+        gameId: phase.gameId,
+        content: `${campaign.Company.name}'s marketing campaign expired`,
+      });
+    }
+
+    // OPTIMIZATION: Batch update company brand scores
+    if (companyBrandUpdates.length > 0) {
+      await this.prisma.$transaction(
+        companyBrandUpdates.map(update =>
+          this.prisma.company.update({
+            where: { id: update.id },
+            data: { brandScore: update.brandScore },
+          })
+        )
+      );
+    }
+
+    // Return all workers to pool in one update
+    if (workerIncrement > 0) {
       await this.prisma.game.update({
         where: { id: phase.gameId },
         data: {
-          workers: { increment: campaign.workers },
+          workers: { increment: workerIncrement },
         },
       });
+    }
 
-      // Delete campaign
-      await this.prisma.marketingCampaign.delete({
-        where: { id: campaign.id },
+    // OPTIMIZATION: Batch delete campaigns
+    if (campaignIds.length > 0) {
+      await this.prisma.marketingCampaign.deleteMany({
+        where: { id: { in: campaignIds } },
       });
+    }
 
-      await this.gameLogService.createGameLog({
-        game: { connect: { id: phase.gameId } },
-        content: `${campaign.Company.name}'s marketing campaign expired`,
-      });
+    // OPTIMIZATION: Batch create game logs
+    if (campaignGameLogEntries.length > 0) {
+      await this.gameLogService.createManyGameLogs(
+        campaignGameLogEntries.map(entry => ({
+          gameId: entry.gameId,
+          content: entry.content,
+        }))
+      );
     }
   }
 
@@ -1083,6 +1353,93 @@ export class ModernOperationMechanicsService {
           content: `${sector.sectorName} technology advanced to level ${newTechLevel}! New factory phases unlocked.`,
         });
       }
+    }
+  }
+
+  /**
+   * Distribute consumers from global pool to sectors based on economy score
+   * This ensures sectors have consumers for the consumption phase
+   */
+  private async distributeConsumersToSectors(phase: Phase) {
+    const [sectors, game] = await Promise.all([
+      this.sectorService.sectors({
+        where: { gameId: phase.gameId },
+      }),
+      this.prisma.game.findUnique({
+        where: { id: phase.gameId },
+        select: { economyScore: true, consumerPoolNumber: true },
+      }),
+    ]);
+
+    if (!game) {
+      throw new Error('Game not found');
+    }
+
+    // Sort sectors by priority (simple round-robin for now)
+    const sectorsSorted = sectors.sort((a, b) => {
+      const priority = ['MATERIALS', 'INDUSTRIALS', 'CONSUMER_DISCRETIONARY', 'CONSUMER_STAPLES', 
+                       'CONSUMER_CYCLICAL', 'CONSUMER_DEFENSIVE', 'ENERGY', 'HEALTHCARE', 'TECHNOLOGY'];
+      return priority.indexOf(a.sectorName) - priority.indexOf(b.sectorName);
+    });
+
+    const sectorUpdates: Array<{ id: string; consumers: number }> = [];
+    let remainingEconomyScore = game.economyScore;
+    let sectorIndex = 0;
+    let updatedConsumerPool = game.consumerPoolNumber;
+
+    // Distribute economy score to sectors
+    while (remainingEconomyScore > 0 && updatedConsumerPool > 0) {
+      const sector = sectorsSorted[sectorIndex % sectorsSorted.length];
+      let update = sectorUpdates.find(u => u.id === sector.id);
+      
+      if (!update) {
+        update = { id: sector.id, consumers: sector.consumers };
+        sectorUpdates.push(update);
+      }
+
+      const allocation = Math.min(
+        sector.demand + (sector.demandBonus || 0),
+        remainingEconomyScore,
+      );
+      const consumersToAdd = Math.min(updatedConsumerPool, allocation);
+      
+      if (consumersToAdd > 0) {
+        update.consumers += consumersToAdd;
+        updatedConsumerPool -= consumersToAdd;
+        remainingEconomyScore -= consumersToAdd;
+        
+        await this.gameLogService.createGameLog({
+          game: { connect: { id: phase.gameId } },
+          content: `${sector.sectorName} received ${consumersToAdd} consumers from global pool.`,
+        });
+      }
+
+      sectorIndex++;
+      
+      // Prevent infinite loop
+      if (sectorIndex > sectorsSorted.length * 10) {
+        break;
+      }
+    }
+
+    // Batch update sectors
+    if (sectorUpdates.length > 0) {
+      await this.prisma.$transaction(
+        sectorUpdates.map(update =>
+          this.prisma.sector.update({
+            where: { id: update.id },
+            data: { consumers: update.consumers },
+          })
+        )
+      );
+    }
+
+    // Update game consumer pool
+    if (updatedConsumerPool !== game.consumerPoolNumber) {
+      await this.prisma.game.update({
+        where: { id: phase.gameId },
+        data: { consumerPoolNumber: updatedConsumerPool },
+      });
     }
   }
 

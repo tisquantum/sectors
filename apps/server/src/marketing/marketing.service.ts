@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma, MarketingCampaignTier, OperationMechanicsVersion, MarketingCampaignStatus } from '@prisma/client';
+import { Prisma, MarketingCampaignTier, OperationMechanicsVersion, MarketingCampaignStatus, ResourceType } from '@prisma/client';
 import { z } from 'zod';
 
 const CreateMarketingCampaignSchema = z.object({
@@ -8,6 +8,7 @@ const CreateMarketingCampaignSchema = z.object({
   gameId: z.string(),
   tier: z.nativeEnum(MarketingCampaignTier),
   operationMechanicsVersion: z.nativeEnum(OperationMechanicsVersion),
+  resourceTypes: z.array(z.nativeEnum(ResourceType)), // Resources selected by player
 });
 
 type CreateMarketingCampaignInput = z.infer<typeof CreateMarketingCampaignSchema>;
@@ -17,7 +18,13 @@ export class MarketingService {
   constructor(private readonly prisma: PrismaService) {}
 
   async createCampaign(input: CreateMarketingCampaignInput) {
-    const { companyId, gameId, tier, operationMechanicsVersion } = input;
+    const { companyId, gameId, tier, operationMechanicsVersion, resourceTypes } = input;
+
+    // Validate resource count matches tier
+    const expectedResourceCount = this.getResourceCountForTier(tier);
+    if (resourceTypes.length !== expectedResourceCount) {
+      throw new Error(`Campaign ${tier} requires exactly ${expectedResourceCount} resource(s), but ${resourceTypes.length} were provided`);
+    }
 
     // Get company to check funds
     const company = await this.prisma.company.findUnique({
@@ -44,6 +51,7 @@ export class MarketingService {
           workers: this.getWorkersForTier(tier),
           brandBonus: this.getBrandBonusForTier(tier),
           status: MarketingCampaignStatus.ACTIVE,
+          resourceTypes, // Store selected resources
         },
       });
 
@@ -56,14 +64,18 @@ export class MarketingService {
     });
   }
 
+  private getResourceCountForTier(tier: MarketingCampaignTier): number {
+    switch (tier) {
+      case MarketingCampaignTier.TIER_1: return 1;
+      case MarketingCampaignTier.TIER_2: return 2;
+      case MarketingCampaignTier.TIER_3: return 3;
+      default: throw new Error(`Unknown marketing tier: ${tier}`);
+    }
+  }
+
   private calculateCampaignCost(tier: MarketingCampaignTier, operationMechanicsVersion: OperationMechanicsVersion): number {
-    // Base cost for tier
-    const baseCost = this.getBaseCostForTier(tier);
-
-    // Additional cost for operation mechanics version
-    const versionCost = operationMechanicsVersion === OperationMechanicsVersion.MODERN ? 100 : 0; // $100 for modern mechanics
-
-    return baseCost + versionCost;
+    // Base cost for tier (same for legacy and modern)
+    return this.getBaseCostForTier(tier);
   }
 
   private getBaseCostForTier(tier: MarketingCampaignTier): number {

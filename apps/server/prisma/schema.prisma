@@ -1805,14 +1805,15 @@ model FactoryConstructionOrder {
 
 // New model for Marketing Campaigns
 model MarketingCampaign {
-  id         String                  @id @default(uuid())
-  companyId  String
-  gameId     String
-  tier       MarketingCampaignTier
-  workers    Int
-  status     MarketingCampaignStatus @default(ACTIVE)
-  brandBonus Int                     @default(0)
-  slot       Int                     @default(0)
-  Company    Company                 @relation(fields: [companyId], references: [id])
-  Game       Game                    @relation(fields: [gameId], references: [id])
+  id           String                  @id @default(uuid())
+  companyId    String
+  gameId       String
+  tier         MarketingCampaignTier
+  workers      Int
+  status       MarketingCampaignStatus @default(ACTIVE)
+  brandBonus   Int                     @default(0)
+  slot         Int                     @default(0)
+  resourceTypes ResourceType[]         // Resources selected by player to add to consumption bag
+  Company      Company                 @relation(fields: [companyId], references: [id])
+  Game         Game                    @relation(fields: [gameId], references: [id])
 }
