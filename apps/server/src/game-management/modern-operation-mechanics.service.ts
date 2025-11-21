@@ -1686,19 +1686,17 @@ export class ModernOperationMechanicsService {
   /**
    * RESOLVE_INSOLVENCY
    * Resolve insolvency contributions for companies that went negative after earnings call.
-   * This phase allows shareholders to contribute cash or shares to help companies avoid bankruptcy.
+   * This phase checks all insolvent companies and updates their status based on current cash.
+   * Simple logic: if cash >= 0, set to ACTIVE; if cash < 0, set to BANKRUPT.
    */
   private async handleResolveInsolvency(phase: Phase) {
-    // Get the company from the phase (if companyId is set, resolve that specific company)
-    // Otherwise, get all insolvent companies for this game
-    const companies = phase.companyId
-      ? [await this.companyService.company({ id: phase.companyId })]
-      : await this.companyService.companies({
-          where: {
-            gameId: phase.gameId,
-            status: CompanyStatus.INSOLVENT,
-          },
-        });
+    // Get all insolvent companies for this game
+    const companies = await this.companyService.companies({
+      where: {
+        gameId: phase.gameId,
+        status: CompanyStatus.INSOLVENT,
+      },
+    });
 
     if (!companies || companies.length === 0) {
       await this.gameLogService.createGameLog({
@@ -1708,34 +1706,42 @@ export class ModernOperationMechanicsService {
       return;
     }
 
-    // For now, we'll handle the first insolvent company
-    // In a full implementation, we'd iterate through all or create separate phases
-    const company = companies[0];
-    if (!company) {
-      return;
+    // Process each insolvent company
+    for (const company of companies) {
+      // Check current cash (which should already include contributions from resolveInsolvencyContribution)
+      const currentCompany = await this.companyService.company({ id: company.id });
+      if (!currentCompany) {
+        continue;
+      }
+
+      // Simple logic: if cash is positive or zero, company is ACTIVE; if negative, company is BANKRUPT
+      if (currentCompany.cashOnHand >= 0) {
+        // Company has recovered - set to ACTIVE
+        await this.companyService.updateCompany({
+          where: { id: company.id },
+          data: { status: CompanyStatus.ACTIVE },
+        });
+        await this.gameLogService.createGameLog({
+          game: { connect: { id: phase.gameId } },
+          content: `${company.name} has recovered from insolvency with cash of $${currentCompany.cashOnHand}.`,
+        });
+      } else {
+        // Company is still insolvent - set to BANKRUPT
+        await this.companyService.updateCompany({
+          where: { id: company.id },
+          data: { status: CompanyStatus.BANKRUPT },
+        });
+        await this.gameLogService.createGameLog({
+          game: { connect: { id: phase.gameId } },
+          content: `${company.name} has not recovered from insolvency (cash: $${currentCompany.cashOnHand}) and is now bankrupt.`,
+        });
+        // TODO: Handle share liquidation for bankrupt companies
+        // This would involve:
+        // 1. Getting all shares for the company
+        // 2. Calculating liquidation value (BANKRUPTCY_SHARE_PERCENTAGE_RETAINED * stock price)
+        // 3. Returning partial value to shareholders
+        // 4. Deleting shares
+      }
     }
-
-    // Note: Full implementation would require:
-    // 1. InsolvencyContributionService to get contributions
-    // 2. ShareService to handle share liquidation
-    // 3. PlayersService to handle player transactions
-    // 4. TransactionService for recording transactions
-    
-    // For now, log that the phase was reached
-    // The actual resolution logic should be handled by the existing
-    // game-management.service.resolveCompanyVotes method or similar
-    await this.gameLogService.createGameLog({
-      game: { connect: { id: phase.gameId } },
-      content: `Resolving insolvency for ${company.name}. Shareholders can contribute cash or shares.`,
-    });
-
-    // TODO: Implement full resolution logic similar to game-management.service.resolveCompanyVotes
-    // This would involve:
-    // 1. Getting all insolvency contributions for this company and turn
-    // 2. Calculating total cash and share value contributed
-    // 3. Checking if shortfall is met (company.cashOnHand + contributions >= CompanyTierData[company.companyTier].insolvencyShortFall)
-    // 4. If met: Update company status to ACTIVE, update cash
-    // 5. If not met: Update company status to BANKRUPT, liquidate shares, return partial value to shareholders
-    // 6. Adjust stock price based on shares contributed
   }
 } 

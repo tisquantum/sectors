@@ -58,6 +58,7 @@ import {
 import { GamesService } from '@server/games/games.service';
 import { CompanyService } from '@server/company/company.service';
 import { SectorService } from '@server/sector/sector.service';
+import { FactoryProductionService } from '@server/factory-production/factory-production.service';
 import { gameDataJson } from '@server/data/gameData';
 import { StartGameInput } from './game-management.interface';
 import {
@@ -312,6 +313,7 @@ export class GameManagementService {
     private operatingRoundVoteService: OperatingRoundVoteService,
     private modernOperationMechanicsService: ModernOperationMechanicsService,
     private resourceService: ResourceService,
+    private factoryProductionService: FactoryProductionService,
   ) {}
 
   /**
@@ -2532,6 +2534,14 @@ export class GameManagementService {
     }
     const playerIds = players.map((player) => player.id);
     const playersIncome = await this.getTurnIncome(playerIds, game.currentTurn);
+    
+    // If no income transactions found, skip capital gains calculation
+    // This can happen in modern operations if all revenue was retained or no dividends were paid
+    if (playersIncome.length === 0) {
+      console.log(`[resolveCapitalGainsViaTurnIncome] No income transactions found for turn ${game.currentTurn}, skipping capital gains`);
+      return;
+    }
+    
     //charge capital gains
     const capitalGainsUpdates = [];
     const playerUpdatePromises = [];
@@ -2634,8 +2644,10 @@ export class GameManagementService {
       },
     });
 
+    // If no transactions found, return empty array (no income to tax)
+    // This can happen in modern operations if all revenue was retained or no dividends were paid
     if (!transactions || transactions.length === 0) {
-      throw new Error('No relevant transactions found for the turn.');
+      return [];
     }
 
     // Group transactions by player entityId
@@ -2873,6 +2885,258 @@ export class GameManagementService {
         continue;
       }
 
+      await this.gamesService.updateGameState({
+        where: { id: phase.gameId },
+        data: { bankPoolNumber: game.bankPoolNumber - moneyFromBank },
+      });
+    }
+  }
+
+  /**
+   * Calculate and distribute dividends for modern operations (using FactoryProduction records)
+   * This method is similar to calculateAndDistributeDividends but works with FactoryProduction
+   * instead of ProductionResult records.
+   */
+  async calculateAndDistributeDividendsModern(phase: Phase) {
+    console.log('calculateAndDistributeDividendsModern', phase);
+    if (!phase.operatingRoundId) {
+      throw new Error('Operating round not found');
+    }
+    if (!phase.gameTurnId) {
+      throw new Error('Game turn not found');
+    }
+
+    const operatingRound =
+      await this.operatingRoundService.operatingRoundWithRevenueDistributionVotes(
+        {
+          id: phase.operatingRoundId,
+        },
+      );
+    console.log('operatingRound', operatingRound);
+
+    if (!operatingRound) {
+      console.error('Operating round not found');
+      return;
+    }
+
+    // Group votes by company
+    type GroupedByCompany = {
+      [key: string]: RevenueDistributionVote[];
+    };
+
+    const groupedVotes =
+      operatingRound?.revenueDistributionVotes.reduce<GroupedByCompany>(
+        (acc, vote) => {
+          if (!acc[vote.companyId]) {
+            acc[vote.companyId] = [vote];
+          } else {
+            acc[vote.companyId].push(vote);
+          }
+          return acc;
+        },
+        {},
+      );
+    console.log('groupedVotes', groupedVotes);
+    if (!groupedVotes) {
+      console.error('No grouped votes found');
+      return;
+    }
+
+    const game = await this.gamesService.game({ id: phase.gameId });
+    if (!game) {
+      console.error('Game not found');
+      return;
+    }
+
+    // Get player priorities for tie-breaking
+    const playerPriorities =
+      await this.playerPriorityService.listPlayerPriorities({
+        where: { gameTurnId: phase.gameTurnId },
+      });
+    playerPriorities.sort((a, b) => a.priority - b.priority);
+    console.log('playerPriorities', playerPriorities);
+    // Process each company
+    for (const [companyId, votes] of Object.entries(groupedVotes)) {
+      // Filter out votes with weight 0
+      const validVotes = votes.filter((vote) => vote.weight > 0);
+      if (validVotes.length === 0) {
+        continue;
+      }
+
+      // Calculate vote counts
+      const voteCount: { [key: string]: number } = {};
+      validVotes.forEach((vote) => {
+        if (!voteCount[vote.revenueDistribution]) {
+          voteCount[vote.revenueDistribution] = 0;
+        }
+        voteCount[vote.revenueDistribution] += vote.weight;
+      });
+
+      // Get the option with the most votes
+      const maxVotes = Math.max(...Object.values(voteCount));
+      const maxVoteOptions = Object.keys(voteCount).filter(
+        (key) => voteCount[key] === maxVotes,
+      );
+      console.log('maxVoteOptions', maxVoteOptions);
+
+      // Resolve tie using player priority
+      let revenueDistribution: RevenueDistribution | null = null;
+      for (const player of playerPriorities) {
+        const playerVote = validVotes.find(
+          (vote) =>
+            vote.playerId === player.playerId &&
+            maxVoteOptions.includes(vote.revenueDistribution),
+        );
+        if (playerVote) {
+          revenueDistribution = playerVote.revenueDistribution;
+          break;
+        }
+      }
+      console.log('revenueDistribution', revenueDistribution);
+
+      // Default to RETAINED if no vote found
+      if (!revenueDistribution) {
+        revenueDistribution = RevenueDistribution.RETAINED;
+      }
+
+      // Get company with shares
+      const company = await this.companyService.companyWithRelations({
+        id: companyId,
+      });
+      if (!company) {
+        console.error(`Company ${companyId} not found`);
+        continue;
+      }
+
+      // Get total revenue from FactoryProduction records for this company and turn
+      const totalRevenue = await this.factoryProductionService.getCompanyTurnRevenue(
+        companyId,
+        phase.gameTurnId,
+      );
+      console.log('totalRevenue', totalRevenue);
+      if (totalRevenue === 0) {
+        console.log(`No revenue to distribute for company ${company.name}`);
+        continue;
+      }
+
+      // Handle negative revenue (must be retained)
+      if (totalRevenue < 0) {
+        revenueDistribution = RevenueDistribution.RETAINED;
+      }
+
+      // Filter to only player-held shares for dividend calculation
+      const playerShares = company.Share.filter(
+        (share) => share.location === ShareLocation.PLAYER && share.playerId,
+      );
+
+      // Calculate dividend and company retention
+      let dividend = 0;
+      let moneyToCompany = 0;
+      const moneyFromBank = totalRevenue;
+
+      // Only calculate dividends if there are player-held shares
+      if (playerShares.length === 0) {
+        console.log(`No player-held shares found for company ${company.name}, retaining all revenue`);
+        moneyToCompany = totalRevenue;
+      } else {
+        console.log('revenueDistribution', revenueDistribution);
+        console.log('playerShares', playerShares);
+        switch (revenueDistribution) {
+          case RevenueDistribution.DIVIDEND_FULL:
+            dividend = totalRevenue / playerShares.length;
+            break;
+          case RevenueDistribution.DIVIDEND_FIFTY_FIFTY:
+            dividend = Math.floor(totalRevenue / 2) / playerShares.length;
+            moneyToCompany = Math.floor(totalRevenue / 2);
+            break;
+          case RevenueDistribution.RETAINED:
+            moneyToCompany = totalRevenue;
+            break;
+          default:
+            moneyToCompany = totalRevenue;
+            break;
+        }
+      }
+      console.log('dividend', dividend);
+      console.log('moneyToCompany', moneyToCompany);
+      // Distribute dividends to players
+      if (dividend > 0 && playerShares.length > 0) {
+        const groupedSharesByPlayerId = playerShares.reduce<{
+          [key: string]: Share[];
+        }>((acc, share) => {
+          if (!share.playerId) {
+            console.warn(`Share ${share.id} has no playerId, skipping`);
+            return acc;
+          }
+          if (!acc[share.playerId]) {
+            acc[share.playerId] = [];
+          }
+          acc[share.playerId].push(share);
+          return acc;
+        }, {});
+
+        console.log(`[calculateAndDistributeDividendsModern] Company ${company.name}: totalRevenue=${totalRevenue}, dividend per share=${dividend}, playerShares=${playerShares.length}, players with shares=${Object.keys(groupedSharesByPlayerId).length}`);
+
+        // Update player cash on hand
+        const sharePromises = Object.entries(groupedSharesByPlayerId).map(
+          async ([playerId, shares]) => {
+            const player = await this.playersService.player({
+              id: playerId,
+            });
+            if (!player) {
+              console.error(`[calculateAndDistributeDividendsModern] Player ${playerId} not found`);
+              return;
+            }
+            const dividendTotal = Math.floor(dividend * shares.length);
+            console.log(`[calculateAndDistributeDividendsModern] Distributing $${dividendTotal} to player ${player.nickname} (${shares.length} shares)`);
+            await this.playerAddMoney({
+              gameId: phase.gameId,
+              gameTurnId: phase.gameTurnId,
+              phaseId: phase.id,
+              playerId: player.id,
+              amount: dividendTotal,
+              fromEntity: EntityType.BANK,
+              description: 'Dividends.',
+              transactionSubType: TransactionSubType.DIVIDEND,
+            });
+            await this.gameLogService.createGameLog({
+              game: { connect: { id: phase.gameId } },
+              content: `Player ${player.nickname} has received dividends of $${dividendTotal} from ${company.name}.`,
+            });
+          },
+        );
+        await Promise.all(sharePromises);
+      } else if (dividend > 0 && playerShares.length === 0) {
+        console.warn(`[calculateAndDistributeDividendsModern] Dividend calculated (${dividend}) but no player shares found for company ${company.name}`);
+      }
+
+      // Update company cash on hand
+      if (moneyToCompany !== 0) {
+        const companyUpdated = await this.companyService.updateCompany({
+          where: { id: company.id },
+          data: { cashOnHand: company.cashOnHand + moneyToCompany },
+        });
+        // If company has positive cash on hand, make sure it's active
+        if (companyUpdated.cashOnHand > 0) {
+          await this.companyService.updateCompany({
+            where: { id: company.id },
+            data: { status: CompanyStatus.ACTIVE },
+          });
+        }
+        if (moneyToCompany > 0) {
+          this.gameLogService.createGameLog({
+            game: { connect: { id: phase.gameId } },
+            content: `Company ${company.name} has retained $${moneyToCompany}.`,
+          });
+        } else {
+          this.gameLogService.createGameLog({
+            game: { connect: { id: phase.gameId } },
+            content: `Company ${company.name} has lost $${Math.abs(moneyToCompany)} from cash on hand.`,
+          });
+        }
+      }
+      console.log('moneyFromBank', moneyFromBank);
+      // Update bank pool
       await this.gamesService.updateGameState({
         where: { id: phase.gameId },
         data: { bankPoolNumber: game.bankPoolNumber - moneyFromBank },
@@ -4504,15 +4768,22 @@ export class GameManagementService {
       }
 
       if (maxVote) {
-        productionResultsUpdates.push({
-          where: {
-            id: validVotes[0].productionResultId,
-            operatingRoundId: phase.operatingRoundId,
-          },
-          data: {
-            revenueDistribution: maxVote as RevenueDistribution,
-          },
-        });
+        // Only update ProductionResult if productionResultId exists (legacy operations)
+        // Modern operations use FactoryProduction, so productionResultId will be null
+        const productionResultId = validVotes[0].productionResultId;
+        if (productionResultId !== null && productionResultId !== undefined) {
+          productionResultsUpdates.push({
+            where: {
+              id: productionResultId,
+              operatingRoundId: phase.operatingRoundId,
+            },
+            data: {
+              revenueDistribution: maxVote as RevenueDistribution,
+            },
+          });
+        }
+        // For modern operations (productionResultId is null), the revenue distribution
+        // is handled directly in the dividend calculation, not via ProductionResult
       }
     }
 
@@ -4523,7 +4794,13 @@ export class GameManagementService {
       ),
     );
     try {
-      await this.calculateAndDistributeDividends(phase);
+      // Check if this is modern operations
+      const game = await this.gamesService.game({ id: phase.gameId });
+      if (game?.operationMechanicsVersion === OperationMechanicsVersion.MODERN) {
+        await this.calculateAndDistributeDividendsModern(phase);
+      } else {
+        await this.calculateAndDistributeDividends(phase);
+      }
     } catch (error) {
       console.error('Error calculating and distributing dividends', error);
     }
@@ -5051,6 +5328,30 @@ export class GameManagementService {
         fromEntityType: EntityType.PLAYER,
         fromEntityId: player.entityId || undefined,
         toEntityType: EntityType.BANK,
+      });
+    }
+
+    // Calculate total contribution value
+    const totalContributionValue = contribution.cashContribution + 
+      (contribution.shareContribution * (company.currentStockPrice || 0));
+
+    // Update company cash with the contribution
+    const updatedCompany = await this.companyService.updateCompany({
+      where: { id: company.id },
+      data: {
+        cashOnHand: company.cashOnHand + totalContributionValue,
+      },
+    });
+
+    // If company cash is now positive, set status to ACTIVE immediately
+    if (updatedCompany.cashOnHand >= 0 && company.status === CompanyStatus.INSOLVENT) {
+      await this.companyService.updateCompany({
+        where: { id: company.id },
+        data: { status: CompanyStatus.ACTIVE },
+      });
+      await this.gameLogService.createGameLog({
+        game: { connect: { id: game.id } },
+        content: `${company.name} has recovered from insolvency with cash of $${updatedCompany.cashOnHand}.`,
       });
     }
   }
@@ -9003,6 +9304,9 @@ export class GameManagementService {
       // AUTO-FORWARD: Skip if no factory construction orders were submitted
       case PhaseName.FACTORY_CONSTRUCTION_RESOLVE:
         return this.hasFactoryConstructionOrders(currentPhase);
+      // AUTO-FORWARD: Skip if no insolvent companies exist
+      case PhaseName.RESOLVE_INSOLVENCY:
+        return this.hasInsolventCompanies(currentPhase);
       // AUTO-FORWARD: Capital Gains and Divestment are always auto-processed before END_TURN
       // They don't require player ready-up and are handled automatically
       case PhaseName.CAPITAL_GAINS:
@@ -9011,6 +9315,27 @@ export class GameManagementService {
       default:
         return true;
     }
+  }
+
+  /**
+   * Check if there are any insolvent companies in the game
+   * @param currentPhase - The current phase object
+   * @returns true if there are insolvent companies, false otherwise
+   */
+  async hasInsolventCompanies(currentPhase: Phase): Promise<boolean> {
+    if (!currentPhase?.gameId) {
+      return false;
+    }
+
+    // Check if there are any insolvent companies in the game
+    const insolventCompanies = await this.companyService.companies({
+      where: {
+        gameId: currentPhase.gameId,
+        status: CompanyStatus.INSOLVENT,
+      },
+    });
+
+    return insolventCompanies && insolventCompanies.length > 0;
   }
 
   /**
