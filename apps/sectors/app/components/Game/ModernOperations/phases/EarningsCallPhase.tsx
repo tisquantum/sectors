@@ -3,9 +3,11 @@
 import { useGame } from '../../GameContext';
 import { trpc } from '@sectors/app/trpc';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
-import { FACTORY_CUSTOMER_LIMITS } from '@server/data/constants';
+import { FACTORY_CUSTOMER_LIMITS, BASE_WORKER_SALARY } from '@server/data/constants';
 import { ModernOperationsLayout, ModernOperationsSection } from '../layouts';
 import { Spinner } from '@nextui-org/react';
+import { ResourceIcon } from '../../ConsumptionPhase/ResourceIcon';
+import { useMemo } from 'react';
 
 export function EarningsCallPhase() {
   const { gameState, gameId, currentTurn } = useGame();
@@ -15,6 +17,18 @@ export function EarningsCallPhase() {
     gameId,
     gameTurnId: currentTurn?.id || '',
   }, { enabled: !!gameId && !!currentTurn?.id });
+
+  // Fetch resource prices for detailed breakdown
+  const { data: resourcePrices } = trpc.resource.getAllResourcePrices.useQuery(
+    { gameId: gameId || '' },
+    { enabled: !!gameId }
+  );
+
+  // Create a map of resource type to price for quick lookup
+  const resourcePriceMap = useMemo(() => {
+    if (!resourcePrices) return new Map<string, number>();
+    return new Map(resourcePrices.map(r => [r.type, r.price]));
+  }, [resourcePrices]);
 
   if (isLoading) {
     return (
@@ -221,19 +235,75 @@ export function EarningsCallPhase() {
                           </div>
                         </div>
 
-                        {/* Resource Types */}
-                        {factory.resourceTypes && factory.resourceTypes.length > 0 && (
-                          <div className="mt-3 pt-3 border-t border-gray-600">
-                            <div className="text-xs text-gray-400 mb-1">Resources:</div>
-                            <div className="flex gap-2">
-                              {factory.resourceTypes.map((type, idx) => (
-                                <span key={idx} className="px-2 py-1 bg-gray-800 text-gray-300 rounded text-xs">
-                                  {type.replace('_', ' ')}
-                                </span>
-                              ))}
+                        {/* Detailed Math Breakdown */}
+                        <div className="mt-4 pt-4 border-t border-gray-600 bg-gray-800/50 rounded-lg p-3">
+                          <div className="text-xs font-semibold text-gray-300 mb-3">Calculation Breakdown:</div>
+                          
+                          {/* Revenue Calculation */}
+                          <div className="space-y-2 text-xs">
+                            <div className="text-gray-400 font-medium">Revenue Calculation:</div>
+                            <div className="pl-2 space-y-1">
+                              <div className="text-gray-500">Revenue per unit = Sum of resource prices:</div>
+                              <div className="pl-2 flex flex-wrap items-center gap-1.5">
+                                {factory.resourceTypes && factory.resourceTypes.length > 0 ? (
+                                  factory.resourceTypes.map((resourceType, idx) => {
+                                    const price = resourcePriceMap.get(resourceType) || 0;
+                                    return (
+                                      <span key={idx} className="flex items-center gap-1 px-1.5 py-0.5 bg-gray-700 rounded">
+                                        <ResourceIcon resourceType={resourceType} size="w-3 h-3" />
+                                        <span className="text-gray-300">${price}</span>
+                                        {idx < factory.resourceTypes.length - 1 && (
+                                          <span className="text-gray-500 ml-1">+</span>
+                                        )}
+                                      </span>
+                                    );
+                                  })
+                                ) : (
+                                  <span className="text-gray-500">No resources</span>
+                                )}
+                                {factory.resourceTypes && factory.resourceTypes.length > 0 && (
+                                  <span className="text-gray-400">
+                                    = ${factory.resourceTypes.reduce((sum, rt) => sum + (resourcePriceMap.get(rt) || 0), 0)}/unit
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-gray-400 pt-1">
+                                Total Revenue = {production.customersServed} customers × ${factory.resourceTypes?.reduce((sum, rt) => sum + (resourcePriceMap.get(rt) || 0), 0) || 0}/unit = <span className="text-blue-400 font-semibold">${production.revenue}</span>
+                              </div>
+                            </div>
+
+                            {/* Costs Calculation */}
+                            <div className="pt-2 border-t border-gray-700">
+                              <div className="text-gray-400 font-medium">Costs Calculation:</div>
+                              <div className="pl-2 text-gray-400 pt-1">
+                                {(() => {
+                                  const actualSalaryPerWorker = factory.workers > 0 ? (production.costs / factory.workers) : 0;
+                                  return (
+                                    <>
+                                      Worker Costs = {factory.workers} workers × ${actualSalaryPerWorker.toFixed(0)}/worker = <span className="text-red-400 font-semibold">${production.costs}</span>
+                                    </>
+                                  );
+                                })()}
+                              </div>
+                            </div>
+
+                            {/* Profit Calculation */}
+                            <div className="pt-2 border-t border-gray-700">
+                              <div className="text-gray-400 font-medium">Profit Calculation:</div>
+                              <div className="pl-2 text-gray-300 pt-1">
+                                Profit = Revenue - Costs
+                              </div>
+                              <div className="pl-2 text-gray-300 pt-1">
+                                Profit = <span className="text-blue-400">${production.revenue}</span> - <span className="text-red-400">${production.costs}</span> = <span className={`font-bold ${production.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>${production.profit}</span>
+                              </div>
+                              {production.profit < 0 && (
+                                <div className="pl-2 text-yellow-400 italic mt-1 text-xs">
+                                  ⚠️ Negative profit: Costs exceed revenue. Consider increasing customers served or reducing workers.
+                                </div>
+                              )}
                             </div>
                           </div>
-                        )}
+                        </div>
                       </div>
                     );
                   })}

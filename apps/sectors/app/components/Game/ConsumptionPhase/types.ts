@@ -11,6 +11,8 @@ export interface Factory {
   consumersReceived: number;
   maxConsumers: number;
   profit: number;
+  revenue?: number;
+  costs?: number;
 }
 
 export interface Company {
@@ -42,6 +44,7 @@ export interface ConsumerFlowPerSectorProps {
 
 export interface CompanyPerformanceProps {
   companies: Company[];
+  gameId?: string;
 }
 
 export interface ConsumerFlowLogProps {

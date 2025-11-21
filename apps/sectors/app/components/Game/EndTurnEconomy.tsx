@@ -2,6 +2,7 @@ import { useGame } from "./GameContext";
 import "./EndTurnEconomy.css";
 import { sectorColors } from "@server/data/gameData";
 import { CompanyStatus, OperationMechanicsVersion, PhaseName, Sector } from "@server/prisma/prisma.client";
+import { useRef, useEffect } from "react";
 import {
   RiGlasses2Fill,
   RiHandCoinFill,
@@ -28,13 +29,46 @@ import Divestment from "./Divestment";
 
 const EndTurnEconomy = () => {
   const { currentPhase, gameState, gameId } = useGame();
+  
+  // Track query calls to detect infinite loops
+  const queryCallCountRef = useRef(0);
   const { data: companiesWithSector, isLoading: isLoadingCompanies } =
-    trpc.company.listCompaniesWithSector.useQuery({
-      where: {
-        gameId: gameId,
-        status: CompanyStatus.ACTIVE,
+    trpc.company.listCompaniesWithSector.useQuery(
+      {
+        where: {
+          gameId: gameId,
+          status: CompanyStatus.ACTIVE,
+        },
       },
-    });
+      {
+        // Prevent excessive refetching
+        refetchOnMount: false,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
+        staleTime: 30000, // 30 seconds
+      }
+    );
+  
+  // Track query success to detect loops
+  useEffect(() => {
+    if (companiesWithSector) {
+      queryCallCountRef.current += 1;
+      const count = queryCallCountRef.current;
+      if (count % 5 === 0) {
+        console.warn(`[EndTurnEconomy] listCompaniesWithSector query succeeded ${count} times`);
+      }
+      if (count > 20) {
+        console.error(`[EndTurnEconomy] POTENTIAL INFINITE LOOP: listCompaniesWithSector query succeeded ${count} times!`);
+      }
+    }
+  }, [companiesWithSector]);
+  
+  // Log component renders
+  const renderCountRef = useRef(0);
+  renderCountRef.current += 1;
+  if (renderCountRef.current % 10 === 0) {
+    console.log(`[EndTurnEconomy] Render count: ${renderCountRef.current}`);
+  }
   //get sectors
   const sectorPriorityStored = gameState?.sectorPriority;
   let sectors: Sector[] = [];

@@ -78,26 +78,60 @@ const calculatePreviousSectorConsumers = (
   sectors: Sector[],
   economyScore: number
 ) => {
-  const sectorConsumers = sectors.map((sector) => sector.consumers);
-  let remainingEconomyScore = economyScore;
+  // Safety check: return empty array if no sectors
+  if (!sectors || sectors.length === 0) {
+    console.warn(`[calculatePreviousSectorConsumers] No sectors provided`);
+    return [];
+  }
+
+  const sectorConsumers = sectors.map((sector) => sector.consumers || 0);
+  let remainingEconomyScore = Math.max(0, economyScore);
   let sectorIndex = 0;
+  let iterations = 0;
+  const MAX_ITERATIONS = sectors.length * 100; // Safety limit: prevent infinite loops
 
   // Loop until the remaining economy score is depleted
-  while (remainingEconomyScore > 0) {
+  while (remainingEconomyScore > 0 && iterations < MAX_ITERATIONS) {
+    iterations++;
+    
+    // Safety check: ensure sector exists
+    if (sectorIndex >= sectors.length || sectorIndex < 0) {
+      console.error(`[calculatePreviousSectorConsumers] Invalid sectorIndex: ${sectorIndex}, sectors.length: ${sectors.length}`);
+      break;
+    }
+
     const sector = sectors[sectorIndex];
-    const sectorDemand = sector.demand + (sector.demandBonus || 0);
+    
+    // Safety check: ensure sector is defined
+    if (!sector) {
+      console.error(`[calculatePreviousSectorConsumers] Sector at index ${sectorIndex} is undefined`);
+      break;
+    }
+
+    const sectorDemand = (sector.demand || 0) + (sector.demandBonus || 0);
+
+    // Safety check: if demand is 0, we can't process this sector
+    if (sectorDemand <= 0) {
+      // Move to next sector if this one has no demand
+      sectorIndex = (sectorIndex + 1) % sectors.length;
+      continue;
+    }
 
     // Determine how many consumers can be subtracted from the current sector
     const consumersToMove = Math.min(sectorDemand, remainingEconomyScore);
 
     // Add the consumers to the result array
-    sectorConsumers[sectorIndex] -= consumersToMove;
+    sectorConsumers[sectorIndex] = Math.max(0, sectorConsumers[sectorIndex] - consumersToMove);
 
     // Subtract from the remaining economy score
     remainingEconomyScore -= consumersToMove;
 
     // Move to the next sector (loop back to the beginning if needed)
     sectorIndex = (sectorIndex + 1) % sectors.length;
+  }
+
+  if (iterations >= MAX_ITERATIONS) {
+    console.error(`[calculatePreviousSectorConsumers] MAX_ITERATIONS reached! remainingEconomyScore: ${remainingEconomyScore}`);
   }
 
   return sectorConsumers.map((consumers) => Math.max(consumers, 0));
@@ -109,17 +143,34 @@ const EndTurnSectorConsumerDistributionAnimation = ({
   sectors: Sector[];
 }) => {
   const { gameState } = useGame();
+  
+  // Safety check: ensure sectors array is valid
+  if (!sectors || sectors.length === 0) {
+    console.warn(`[EndTurnSectorConsumerDistributionAnimation] No sectors provided`);
+    return <div>No sectors available</div>;
+  }
+
   const [currentConsumerPool, setCurrentConsumerPool] = useState(
-    gameState.consumerPoolNumber
+    gameState?.consumerPoolNumber || 0
   );
-  const [economyScore, setEconomyScore] = useState(gameState.economyScore);
+  const [economyScore, setEconomyScore] = useState(gameState?.economyScore || 0);
   const [currentSectorIndex, setCurrentSectorIndex] = useState(0);
   const [consumersMoving, setConsumersMoving] = useState(0);
   const [cumulativeConsumers, setCumulativeConsumers] = useState(
-    calculatePreviousSectorConsumers(sectors, gameState.economyScore)
+    calculatePreviousSectorConsumers(sectors, gameState?.economyScore || 0)
   );
-  const currentSector = sectors[currentSectorIndex];
-  const sectorDemand = currentSector.demand + (currentSector.demandBonus || 0);
+  
+  // Safety check: ensure currentSectorIndex is valid
+  const safeSectorIndex = Math.max(0, Math.min(currentSectorIndex, sectors.length - 1));
+  const currentSector = sectors[safeSectorIndex];
+  
+  // Safety check: ensure sector exists and has demand
+  if (!currentSector) {
+    console.error(`[EndTurnSectorConsumerDistributionAnimation] Invalid sector at index ${safeSectorIndex}`);
+    return <div>Error: Invalid sector data</div>;
+  }
+  
+  const sectorDemand = (currentSector.demand || 0) + (currentSector.demandBonus || 0);
 
   return (
     <div className="flex flex-col gap-2 text-xl">
@@ -170,25 +221,29 @@ const EndTurnSectorConsumerDistributionAnimation = ({
               className="relative"
               style={{ width: 30, height: 30 }}
               onAnimationComplete={() => {
-                if (currentConsumerPool > 0 && economyScore > 0) {
+                // Safety checks: ensure we have valid data and sectorDemand > 0
+                if (currentConsumerPool > 0 && economyScore > 0 && sectorDemand > 0) {
                   if (consumersMoving < sectorDemand) {
                     setConsumersMoving((prev) => prev + 1);
-                    setCurrentConsumerPool((prev) => prev - 1);
-                    setEconomyScore((prev) => prev - 1);
+                    setCurrentConsumerPool((prev) => Math.max(0, prev - 1));
+                    setEconomyScore((prev) => Math.max(0, prev - 1));
                   } else {
                     setCumulativeConsumers((prev) => {
                       const newCumulative = [...prev];
-                      newCumulative[currentSectorIndex] += consumersMoving;
+                      // Use safe index to prevent out-of-bounds access
+                      const safeIndex = Math.max(0, Math.min(currentSectorIndex, sectors.length - 1));
+                      newCumulative[safeIndex] = (newCumulative[safeIndex] || 0) + consumersMoving;
                       return newCumulative;
                     });
                     setConsumersMoving(0); // Reset consumers for the next sector
-                    // Move to the next sector
-                    setCurrentSectorIndex((prev) =>
-                      prev + 1 < sectors.length ? prev + 1 : 0
-                    );
+                    // Move to the next sector with bounds checking
+                    setCurrentSectorIndex((prev) => {
+                      const nextIndex = prev + 1;
+                      return nextIndex < sectors.length ? nextIndex : 0;
+                    });
                     setConsumersMoving((prev) => prev + 1);
-                    setCurrentConsumerPool((prev) => prev - 1);
-                    setEconomyScore((prev) => prev - 1);
+                    setCurrentConsumerPool((prev) => Math.max(0, prev - 1));
+                    setEconomyScore((prev) => Math.max(0, prev - 1));
                   }
                 }
               }}
@@ -207,8 +262,8 @@ const EndTurnSectorConsumerDistributionAnimation = ({
             sector={sector}
             sectorColor={sectorColors[sector.name]}
             sectorIndex={index}
-            consumersMoving={index === currentSectorIndex ? consumersMoving : 0}
-            cumulativeConsumers={cumulativeConsumers[index]}
+            consumersMoving={index === safeSectorIndex ? consumersMoving : 0}
+            cumulativeConsumers={cumulativeConsumers[index] || 0}
           />
         ))}
       </div>

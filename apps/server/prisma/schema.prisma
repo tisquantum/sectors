@@ -544,12 +544,12 @@ model ProductionResult {
 model RevenueDistributionVote {
   id                  Int                 @id @default(autoincrement())
   operatingRoundId    String
-  productionResultId  Int
+  productionResultId  Int?                // Optional for modern operations (uses FactoryProduction instead)
   playerId            String
   companyId           String
   weight              Int                 @default(1)
   revenueDistribution RevenueDistribution
-  ProductionResult    ProductionResult    @relation(fields: [productionResultId], references: [id])
+  ProductionResult    ProductionResult?   @relation(fields: [productionResultId], references: [id])
   Player              Player              @relation(fields: [playerId], references: [id])
   Company             Company             @relation(fields: [companyId], references: [id])
   OperatingRound      OperatingRound      @relation(fields: [operatingRoundId], references: [id])
@@ -738,6 +738,7 @@ model Sector {
   consumers              Int               @default(0)
   supply                 Int
   demand                 Int
+  baseDemand             Int?              @default(0) // Base demand from initialization (preserved)
   demandBonus            Int?              @default(0)
   marketingPrice         Float
   basePrice              Float
@@ -1112,6 +1113,7 @@ enum PhaseName {
   MARKETING_AND_RESEARCH_ACTION_RESOLVE
   CONSUMPTION_PHASE
   EARNINGS_CALL //profit and stock adjustment
+  RESOLVE_INSOLVENCY //resolve insolvent companies after earnings call
 }
 
 model InfluenceRound {

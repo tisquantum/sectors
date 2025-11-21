@@ -284,8 +284,9 @@ const InsolvencyContributionComponent = ({
                 value={shareContribution.toString()}
                 min={0}
                 max={
-                  company.Share.filter((s) => s.playerId === authPlayer.id)
-                    .length
+                  playerWithShares.Share.filter(
+                    (share) => share.companyId === company.id
+                  ).length
                 }
               />
             </div>

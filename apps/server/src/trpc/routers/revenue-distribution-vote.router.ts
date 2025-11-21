@@ -90,7 +90,7 @@ export default (trpc: TrpcService, ctx: Context) =>
       .input(
         z.object({
           operatingRoundId: z.string(),
-          productionResultId: z.number(),
+          productionResultId: z.number().optional(), // Optional for modern operations
           playerId: z.string(),
           companyId: z.string(),
           revenueDistribution: z.nativeEnum(RevenueDistribution),
@@ -120,7 +120,10 @@ export default (trpc: TrpcService, ctx: Context) =>
           OperatingRound: { connect: { id: operatingRoundId } },
           Player: { connect: { id: playerId } },
           Company: { connect: { id: companyId } },
-          ProductionResult: { connect: { id: productionResultId } },
+          // Only connect ProductionResult if productionResultId is provided (legacy operations)
+          ...(productionResultId !== undefined && productionResultId !== null && productionResultId !== 0
+            ? { ProductionResult: { connect: { id: productionResultId } } }
+            : {}),
           submissionStamp: ctxMiddleware.submissionStamp,
         };
         return ctx.revenueDistributionVoteService.createRevenueDistributionVote(

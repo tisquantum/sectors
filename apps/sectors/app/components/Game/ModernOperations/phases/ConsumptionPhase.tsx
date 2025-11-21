@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
 import { useModernOperations } from '../hooks';
 import { ModernOperationsLayout, ModernOperationsSection } from '../layouts';
@@ -47,8 +47,22 @@ export function ConsumptionPhase() {
 
   // Refetch production data when phase transitions to EARNINGS_CALL
   // (This is when production records are created from consumption phase resolution)
+  const productionRefetchCountRef = useRef(0);
   useEffect(() => {
     if (currentPhase?.name === 'EARNINGS_CALL' && currentTurn?.id) {
+      productionRefetchCountRef.current += 1;
+      const count = productionRefetchCountRef.current;
+      
+      if (count > 5) {
+        console.warn(`[ConsumptionPhase] refetchProduction called ${count} times`);
+      }
+      
+      if (count > 20) {
+        console.error(`[ConsumptionPhase] POTENTIAL INFINITE LOOP: refetchProduction called ${count} times!`);
+        return;
+      }
+
+      console.log(`[ConsumptionPhase] Refetching production data (call #${count})`);
       // Production records should now exist, refetch to show results
       refetchProduction();
     }
@@ -140,6 +154,8 @@ export function ConsumptionPhase() {
         // Update existing factory data (could happen if multiple production records exist)
         existingFactory.consumersReceived += production.customersServed;
         existingFactory.profit += (production.profit || 0);
+        existingFactory.revenue = (existingFactory.revenue || 0) + (production.revenue || 0);
+        existingFactory.costs = (existingFactory.costs || 0) + (production.costs || 0);
       } else {
         // Add factory to company
         companyData.factories.push({
@@ -149,6 +165,8 @@ export function ConsumptionPhase() {
           consumersReceived: production.customersServed,
           maxConsumers: maxCustomers,
           profit: production.profit || 0,
+          revenue: production.revenue || 0,
+          costs: production.costs || 0,
         });
       }
     });
@@ -479,7 +497,7 @@ export function ConsumptionPhase() {
 
         <TabsContent value="performance" className="mt-4">
           {companiesData.length > 0 ? (
-            <CompanyPerformance companies={companiesData} />
+            <CompanyPerformance companies={companiesData} gameId={gameId} />
           ) : (
             <div className="text-center py-12 text-gray-400">
               No company performance data available

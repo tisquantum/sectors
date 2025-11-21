@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import GameSidebar from "./GameSidebar";
 import GameTopBar from "./GameTopBar";
 import { MarketsView } from "./MarketsView";
+import { OperationsView } from "./OperationsView";
 import TabView from "./TabView";
 import PendingOrders from "./PendingOrders";
 import StockChart from "./StockChart";
@@ -73,6 +74,8 @@ import {
   MarketingAndResearchPhase as ModernMarketingAndResearchPhase,
   MarketingAndResearchResolvePhase as ModernMarketingAndResearchResolvePhase,
 } from "./ModernOperations/phases";
+import InsolvencyContributionComponent from "../Company/InsolvencyContribution";
+import { CompanyStatus } from "@server/prisma/prisma.client";
 
 const determineGameRound = (
   game: GameState
@@ -155,6 +158,20 @@ const Game = ({ gameId }: { gameId: string }) => {
   const [showPhaseList, setShowPhaseList] = useState<boolean>(true);
   const constraintsRef = useRef(null);
   const [isTimerAtZero, setIsTimerAtZero] = useState(false);
+  
+  // Track renders and view changes
+  const renderCountRef = useRef(0);
+  renderCountRef.current += 1;
+  if (renderCountRef.current % 10 === 0) {
+    console.log(`[Game] Render count: ${renderCountRef.current}, currentView: ${currentView}`);
+  }
+  
+  // Track view changes
+  const viewChangeCountRef = useRef(0);
+  useEffect(() => {
+    viewChangeCountRef.current += 1;
+    console.log(`[Game] View changed to: ${currentView} (change #${viewChangeCountRef.current})`);
+  }, [currentView]);
   const { isOpen, onOpen, onClose, onOpenChange } = useDisclosure();
   const {
     isOpen: isSidebarModalOpen,
@@ -179,6 +196,7 @@ const Game = ({ gameId }: { gameId: string }) => {
     return () => clearInterval(timer);
   }, [currentPhase?.name]);
   const handleCurrentView = (view: string) => {
+    console.log(`[Game] handleCurrentView called with: ${view}`);
     setCurrentView(view);
   };
   const currentRoundData = determineGameRound(gameState);
@@ -316,6 +334,21 @@ const Game = ({ gameId }: { gameId: string }) => {
       ) : (
         <MarketingAndResearchActionResolve />
       )
+    ) : currentRoundData?.phase.name === PhaseName.RESOLVE_INSOLVENCY ? (
+      <div className="flex flex-col gap-4 p-4 w-full">
+        <h2 className="text-2xl font-bold">Resolve Insolvency</h2>
+        {gameState.Company.filter(c => c.status === CompanyStatus.INSOLVENT).length === 0 ? (
+          <div className="text-center p-4">
+            <p>No insolvent companies found. All companies are solvent.</p>
+          </div>
+        ) : (
+          gameState.Company.filter(c => c.status === CompanyStatus.INSOLVENT).map((company) => (
+            <div key={company.id} className="border rounded-lg p-4">
+              <InsolvencyContributionComponent company={company as any} />
+            </div>
+          ))
+        )}
+      </div>
     )
     : null;
 
@@ -370,7 +403,7 @@ const Game = ({ gameId }: { gameId: string }) => {
                 {currentView === "pending" && <PendingOrders />}
                 {currentView == "economy" && <EndTurnEconomy />}
                 {currentView == "markets" && <MarketsView />}
-                {currentView == "companies" && <CompanyActionSlider />}
+                {currentView == "companies" && <OperationsView />}
                 {gameState.gameStatus == GameStatus.FINISHED && (
                   <GameResults
                     isOpen={isOpen}

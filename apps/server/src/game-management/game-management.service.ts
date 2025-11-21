@@ -5629,6 +5629,7 @@ export class GameManagementService {
         sectorName: sector.sectorName,
         supply: sector.supply,
         demand: sector.demand,
+        baseDemand: sector.demand, // Store initial demand as base demand
         consumers: 0,
         demandMin: 0,
         demandMax: 0,

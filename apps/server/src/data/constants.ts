@@ -147,6 +147,7 @@ export const phaseTimes: Record<PhaseName, number> = {
   [PhaseName.RESEARCH_ACTION_RESOLVE]: 12 * 1000,
   [PhaseName.CONSUMPTION_PHASE]: 60 * 1000,
   [PhaseName.EARNINGS_CALL]: 12 * 1000,
+  [PhaseName.RESOLVE_INSOLVENCY]: 60 * 1000,
   [PhaseName.SHAREHOLDER_MEETING]: 60 * 1000, 
   [PhaseName.MARKETING_AND_RESEARCH_ACTION]: 60 * 1000, 
   [PhaseName.MARKETING_AND_RESEARCH_ACTION_RESOLVE]: 12 * 1000,

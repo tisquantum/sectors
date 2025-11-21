@@ -76,12 +76,17 @@ export function AnimatedConsumptionFlow({
     });
 
     sortedLog.forEach((entry, index) => {
-      // Extract factory info from destination string (format: "CompanyName Factory Size (Slot X)")
-      const match = entry.destination.match(/(.+?)\s+(FACTORY_[IVX]+)\s+\(Slot\s+\d+\)/);
-      if (!match) return;
+      // Extract factory info from destination string (format: "CompanyName FACTORY I (Slot X)")
+      // Note: The destination uses "FACTORY I" (with space), not "FACTORY_I" (with underscore)
+      const match = entry.destination.match(/(.+?)\s+(FACTORY\s+[IVX]+)\s+\(Slot\s+\d+\)/);
+      if (!match) {
+        console.warn('Failed to parse destination:', entry.destination);
+        return;
+      }
 
       const companyName = match[1].trim();
-      const factorySize = match[2];
+      // Convert "FACTORY I" back to "FACTORY_I" for matching
+      const factorySize = match[2].replace(/\s+/g, '_');
       
       // Find factory and company
       const company = companies.find(c => c.name === companyName);
@@ -147,6 +152,22 @@ export function AnimatedConsumptionFlow({
   const totalSteps = animationSteps.length;
   const currentStepData = animationSteps[currentStep];
 
+  // If no animation steps, show message
+  if (totalSteps === 0) {
+    return (
+      <div className="text-center py-12">
+        <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
+          <p className="text-gray-400 text-lg mb-2">No animation data available</p>
+          <p className="text-gray-500 text-sm">
+            {flowLog.length === 0 
+              ? "The consumption phase hasn't resolved yet, or no customers were served this turn."
+              : "Unable to generate animation steps from flow log data."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   // Auto-play animation
   useEffect(() => {
     if (!isPlaying || currentStep >= totalSteps - 1) {
@@ -189,16 +210,39 @@ export function AnimatedConsumptionFlow({
     return currentStepData.factoryStates.get(factoryId) || { current: 0, max: 0 };
   };
 
-  // Get remaining markers in bag
+  // Get remaining markers in bag (returns actual marker objects, not just count)
   const getRemainingMarkers = (sectorId: string) => {
-    if (!currentStepData) return consumptionBags.filter(m => m.sectorId === sectorId).length;
+    const sectorMarkers = consumptionBags.filter(m => m.sectorId === sectorId);
     
-    const markersDrawnSoFar = animationSteps
+    if (!currentStepData) return sectorMarkers;
+    
+    // Track which markers have been drawn so far
+    const drawnMarkers = animationSteps
       .slice(0, currentStep + 1)
       .filter(s => s.sectorId === sectorId && s.markerDrawn)
-      .length;
+      .map(s => s.markerDrawn!);
     
-    return Math.max(0, consumptionBags.filter(m => m.sectorId === sectorId).length - markersDrawnSoFar);
+    // Return markers that haven't been drawn yet
+    // We match by resource type and permanence status
+    const remaining = sectorMarkers.filter(marker => {
+      const wasDrawn = drawnMarkers.some(drawn => 
+        drawn.resourceType === marker.resourceType && 
+        drawn.isPermanent === marker.isPermanent
+      );
+      return !wasDrawn;
+    });
+    
+    return remaining;
+  };
+
+  // Get drawn markers for a sector (what's been drawn so far in the animation)
+  const getDrawnMarkers = (sectorId: string) => {
+    if (!currentStepData) return [];
+    
+    return animationSteps
+      .slice(0, currentStep + 1)
+      .filter(s => s.sectorId === sectorId && s.markerDrawn)
+      .map(s => s.markerDrawn!);
   };
 
   return (
@@ -256,12 +300,11 @@ export function AnimatedConsumptionFlow({
             <div className="space-y-3">
               {sectors.map(sector => {
                 const remainingMarkers = getRemainingMarkers(sector.id);
+                const drawnMarkers = getDrawnMarkers(sector.id);
                 const sectorMarkers = consumptionBags.filter(m => m.sectorId === sector.id);
-                const permanent = sectorMarkers.filter(m => m.isPermanent).length;
-                const temporary = sectorMarkers.filter(m => !m.isPermanent).length;
                 
                 const isActive = currentStepData.sectorId === sector.id;
-                const drawnMarker = currentStepData.markerDrawn;
+                const currentDrawnMarker = currentStepData.markerDrawn;
 
                 return (
                   <motion.div
@@ -272,42 +315,81 @@ export function AnimatedConsumptionFlow({
                     animate={isActive ? { scale: 1.02 } : { scale: 1 }}
                     transition={{ duration: 0.2 }}
                   >
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center justify-between mb-3">
                       <span className="font-medium text-gray-200">{sector.name}</span>
                       <span className="text-sm text-gray-400">
-                        {remainingMarkers} remaining
+                        {remainingMarkers.length} in bag, {drawnMarkers.length} drawn
                       </span>
                     </div>
                     
-                    {/* Markers in bag */}
-                    <div className="flex flex-wrap gap-2 mb-2">
-                      {Array.from({ length: Math.min(remainingMarkers, 20) }).map((_, i) => (
-                        <motion.div
-                          key={i}
-                          className="w-4 h-4 rounded bg-gray-600"
-                          animate={i === 0 && isActive && drawnMarker ? {
-                            opacity: [1, 0, 0],
-                            scale: [1, 1.5, 0],
-                            y: [-10, -30, -50],
-                          } : {}}
-                          transition={{ duration: 0.5 }}
-                        />
-                      ))}
+                    {/* What's in the bag */}
+                    <div className="mb-3">
+                      <div className="text-xs text-gray-400 mb-1.5 font-medium">In Bag:</div>
+                      <div className="flex flex-wrap gap-2">
+                        {remainingMarkers.length > 0 ? (
+                          remainingMarkers.slice(0, 20).map((marker, i) => (
+                            <motion.div
+                              key={marker.id || `remaining-${i}`}
+                              animate={i === 0 && isActive && currentDrawnMarker && currentDrawnMarker.resourceType === marker.resourceType ? {
+                                opacity: [1, 0, 0],
+                                scale: [1, 1.5, 0],
+                                y: [-10, -30, -50],
+                              } : {}}
+                              transition={{ duration: 0.5 }}
+                            >
+                              <ResourceIcon 
+                                resourceType={marker.resourceType} 
+                                size="w-5 h-5"
+                                title={marker.isPermanent ? `${marker.resourceType} (Permanent)` : `${marker.resourceType} (Temporary)`}
+                              />
+                            </motion.div>
+                          ))
+                        ) : (
+                          <span className="text-xs text-gray-500 italic">Empty</span>
+                        )}
+                        {remainingMarkers.length > 20 && (
+                          <div className="text-xs text-gray-500 flex items-center">
+                            +{remainingMarkers.length - 20} more
+                          </div>
+                        )}
+                      </div>
                     </div>
 
-                    {/* Drawn marker animation */}
+                    {/* What's been drawn */}
+                    {drawnMarkers.length > 0 && (
+                      <div className="pt-2 border-t border-gray-600">
+                        <div className="text-xs text-gray-400 mb-1.5 font-medium">Drawn:</div>
+                        <div className="flex flex-wrap gap-2">
+                          {drawnMarkers.map((drawn, i) => (
+                            <motion.div
+                              key={`drawn-${i}`}
+                              initial={i === drawnMarkers.length - 1 && isActive ? { opacity: 0, scale: 0 } : { opacity: 1, scale: 1 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              className="flex items-center gap-1 px-2 py-1 bg-blue-500/20 rounded border border-blue-500/50"
+                            >
+                              <ResourceIcon resourceType={drawn.resourceType} size="w-4 h-4" />
+                              <span className="text-xs text-blue-300">
+                                {drawn.isPermanent ? 'P' : 'T'}
+                              </span>
+                            </motion.div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Current draw animation (if active) */}
                     <AnimatePresence>
-                      {isActive && drawnMarker && (
+                      {isActive && currentDrawnMarker && (
                         <motion.div
                           initial={{ opacity: 0, y: -20, scale: 0 }}
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           exit={{ opacity: 0, scale: 0 }}
-                          className="flex items-center gap-2 mt-2 p-2 bg-blue-500/20 rounded border border-blue-500"
+                          className="flex items-center gap-2 mt-2 p-2 bg-blue-500/30 rounded border-2 border-blue-500"
                         >
-                          <ResourceIcon resourceType={drawnMarker.resourceType} size="w-5 h-5" />
-                          <span className="text-sm text-blue-300">
-                            Drawn: {drawnMarker.resourceType}
-                            {drawnMarker.isPermanent ? ' (Permanent)' : ' (Temporary)'}
+                          <ResourceIcon resourceType={currentDrawnMarker.resourceType} size="w-5 h-5" />
+                          <span className="text-sm text-blue-200 font-medium">
+                            Drawing: {currentDrawnMarker.resourceType}
+                            {currentDrawnMarker.isPermanent ? ' (Permanent)' : ' (Temporary)'}
                           </span>
                         </motion.div>
                       )}
@@ -322,42 +404,60 @@ export function AnimatedConsumptionFlow({
           <div className="bg-gray-800 rounded-lg border border-gray-700 p-4">
             <h3 className="text-lg font-semibold text-white mb-4">Factory Assignments</h3>
             <div className="space-y-4">
-              {currentStepData.customerAssigned && (
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="bg-blue-500/20 rounded-lg p-3 border border-blue-500"
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <RiTeamFill className="text-blue-400" size={20} />
-                    <span className="font-medium text-blue-300">Customer Assigned</span>
-                  </div>
-                  <div className="text-sm space-y-1">
-                    <div>
-                      <span className="text-gray-400">To: </span>
-                      <span className="text-white font-semibold">
-                        {currentStepData.customerAssigned.companyName}
-                      </span>
-                      <span className="text-gray-400"> - </span>
-                      <span className="text-gray-300">
-                        {currentStepData.customerAssigned.factorySize.replace('_', ' ')}
-                      </span>
+              {currentStepData.customerAssigned && (() => {
+                const assignedCompany = companies.find(c => 
+                  c.name === currentStepData.customerAssigned.companyName
+                );
+                return (
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="bg-blue-500/20 rounded-lg p-3 border border-blue-500"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <RiTeamFill className="text-blue-400" size={20} />
+                      <span className="font-medium text-blue-300">Customer Assigned</span>
                     </div>
-                    <div>
-                      <span className="text-gray-400">Reason: </span>
-                      <span className="text-yellow-300">
-                        {currentStepData.customerAssigned.reason}
-                      </span>
+                    <div className="text-sm space-y-1">
+                      <div>
+                        <span className="text-gray-400">To: </span>
+                        <span className="text-white font-semibold">
+                          {currentStepData.customerAssigned.companyName}
+                        </span>
+                        {assignedCompany && (
+                          <>
+                            <span className="text-gray-500 mx-1">•</span>
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-gray-600/50 text-gray-300 border border-gray-500/50">
+                              {assignedCompany.sector}
+                            </span>
+                          </>
+                        )}
+                        <span className="text-gray-400"> - </span>
+                        <span className="text-gray-300">
+                          {currentStepData.customerAssigned.factorySize.replace('_', ' ')}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-gray-400">Reason: </span>
+                        <span className="text-yellow-300">
+                          {currentStepData.customerAssigned.reason}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                </motion.div>
-              )}
+                  </motion.div>
+                );
+              })()}
 
               {/* Company Factories */}
               {companies.map(company => (
                 <div key={company.id} className="bg-gray-700 rounded-lg p-3 border border-gray-600">
                   <div className="mb-3">
-                    <h4 className="font-semibold text-white">{company.name}</h4>
+                    <div className="flex items-center justify-between mb-1">
+                      <h4 className="font-semibold text-white">{company.name}</h4>
+                      <span className="text-xs px-2 py-0.5 rounded bg-gray-600 text-gray-300 border border-gray-500">
+                        {company.sector}
+                      </span>
+                    </div>
                     <p className="text-xs text-gray-400">Brand Score: {company.brandScore}</p>
                   </div>
                   

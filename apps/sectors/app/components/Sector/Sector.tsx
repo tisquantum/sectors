@@ -37,9 +37,18 @@ import { calculateAverageStockPrice } from "@server/data/helpers";
 const SectorComponent = () => {
   const { gameId, gameState } = useGame();
   const { data: sectorsWithCompanies, isLoading } =
-    trpc.sector.listSectorsWithCompanies.useQuery({
-      where: { gameId },
-    });
+    trpc.sector.listSectorsWithCompanies.useQuery(
+      {
+        where: { gameId },
+      },
+      {
+        // Prevent excessive refetching
+        refetchOnMount: false,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
+        staleTime: 30000, // 30 seconds
+      }
+    );
   if (isLoading) return <div>Loading...</div>;
   if (sectorsWithCompanies == undefined) return null;
   const getSectorColor = (sectorName: string) => {

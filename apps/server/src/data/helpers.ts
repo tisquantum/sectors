@@ -288,6 +288,11 @@ export function determineNextGamePhase(
       };
     case PhaseName.EARNINGS_CALL:
       return {
+        phaseName: PhaseName.RESOLVE_INSOLVENCY,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.RESOLVE_INSOLVENCY:
+      return {
         phaseName: PhaseName.OPERATING_PRODUCTION_VOTE,
         roundType: RoundType.OPERATING,
       };

@@ -48,7 +48,7 @@ const OperatingRoundRevenueVoteResolveV2 = () => {
     trpc.company.listCompaniesWithSector.useQuery({
       where: {
         gameId: gameId || '',
-        status: CompanyStatus.ACTIVE,
+        status: { in: [CompanyStatus.ACTIVE, CompanyStatus.INSOLVENT] },
       },
     },
     { enabled: !!gameId }

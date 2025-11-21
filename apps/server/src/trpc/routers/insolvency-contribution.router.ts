@@ -75,7 +75,7 @@ export default (trpc: TrpcService, ctx: Context) =>
       .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
       .use(async (opts) =>
         checkSubmissionTime(
-          PhaseName.OPERATING_ACTION_COMPANY_VOTE,
+          PhaseName.RESOLVE_INSOLVENCY,
           opts,
           ctx.phaseService,
           ctx.gamesService,

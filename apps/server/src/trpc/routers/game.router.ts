@@ -204,7 +204,18 @@ export default (trpc: TrpcService, ctx: Context) =>
       .input(z.object({ gameId: z.string() }))
       .query(async ({ input }) => {
         const { gameId } = input;
-        return ctx.gamesService.getGameState(gameId);
+        const startTime = Date.now();
+        console.log(`[tRPC] getGameState called for gameId: ${gameId} at ${new Date().toISOString()}`);
+        try {
+          const result = await ctx.gamesService.getGameState(gameId);
+          const duration = Date.now() - startTime;
+          console.log(`[tRPC] getGameState completed for gameId: ${gameId} in ${duration}ms`);
+          return result;
+        } catch (error) {
+          const duration = Date.now() - startTime;
+          console.error(`[tRPC] getGameState ERROR for gameId: ${gameId} after ${duration}ms:`, error);
+          throw error;
+        }
       }),
 
     // forceNextPhase: trpc.procedure

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Phase, PhaseName, Game, Company, Resource, MarketingCampaign, FactorySize, ResourceType, ResourceTrackType, OrderType, TransactionType, EntityType, SectorName, FactoryConstructionOrder, MarketingCampaignTier, MarketingCampaignStatus, StockAction } from '@prisma/client';
+import { Phase, PhaseName, Game, Company, Resource, MarketingCampaign, FactorySize, ResourceType, ResourceTrackType, OrderType, TransactionType, EntityType, SectorName, FactoryConstructionOrder, MarketingCampaignTier, MarketingCampaignStatus, StockAction, CompanyStatus, ShareLocation, TransactionSubType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { GameLogService } from '../game-log/game-log.service';
 import { CompanyService } from '../company/company.service';
@@ -14,7 +14,7 @@ import { StockHistoryService } from '../stock-history/stock-history.service';
 import { GameTurnService } from '../game-turn/game-turn.service';
 import { GamesService } from '../games/games.service';
 import { TransactionService } from '../transaction/transaction.service';
-import { getResourcePriceForResourceType, getSectorResourceForSectorName, BASE_WORKER_SALARY } from '@server/data/constants';
+import { getResourcePriceForResourceType, getSectorResourceForSectorName, BASE_WORKER_SALARY, CompanyTierData, BANKRUPTCY_SHARE_PERCENTAGE_RETAINED } from '@server/data/constants';
 
 interface RequiredResource {
   type: ResourceType;
@@ -46,6 +46,7 @@ export class ModernOperationMechanicsService {
         await this.updateResourcePrices(phase);
         await this.updateWorkforceTrack(phase);
         await this.makeFactoriesOperational(phase);
+        await this.updateSectorDemand(phase);
         break;
 
       case PhaseName.SHAREHOLDER_MEETING:
@@ -74,6 +75,10 @@ export class ModernOperationMechanicsService {
 
       case PhaseName.EARNINGS_CALL:
         await this.handleEarningsCall(phase);
+        break;
+
+      case PhaseName.RESOLVE_INSOLVENCY:
+        await this.handleResolveInsolvency(phase);
         break;
 
       case PhaseName.END_TURN:
@@ -423,13 +428,8 @@ export class ModernOperationMechanicsService {
       data: { workers: availableWorkers },
     });
 
-    // Update economy score based on worker allocation
-    const economyScore = Math.floor((totalFactoryWorkers / Math.max(1, totalAllocatedWorkers)) * 100);
-    
-    await this.prisma.game.update({
-      where: { id: phase.gameId },
-      data: { economyScore },
-    });
+    // Note: Economy score is NOT updated here - it's controlled by adjustEconomyScore()
+    // which adjusts based on dividends vs retained earnings, not worker allocation
 
     await this.gameLogService.createGameLog({
       game: { connect: { id: phase.gameId } },
@@ -700,7 +700,16 @@ export class ModernOperationMechanicsService {
       // Draw from consumption bag for each customer
       for (let i = 0; i < customerCount; i++) {
         // Draw a random marker
-        const availableMarkers = markers.filter(m => !markersDrawn.includes(m.id));
+        // Only filter out temporary markers that have been drawn
+        // Permanent markers can be reused multiple times
+        const availableMarkers = markers.filter(m => {
+          // If it's a permanent marker, it's always available (can be reused)
+          if (m.isPermanent) {
+            return true;
+          }
+          // If it's a temporary marker, check if it's already been drawn
+          return !markersDrawn.includes(m.id);
+        });
         
         if (availableMarkers.length === 0) {
           break; // No more markers to draw
@@ -708,7 +717,11 @@ export class ModernOperationMechanicsService {
 
         const randomIndex = Math.floor(Math.random() * availableMarkers.length);
         const drawnMarker = availableMarkers[randomIndex];
-        markersDrawn.push(drawnMarker.id);
+        
+        // Only track temporary markers in markersDrawn (permanent markers can be reused)
+        if (!drawnMarker.isPermanent) {
+          markersDrawn.push(drawnMarker.id);
+        }
 
         // Find factories that can produce this resource, sorted by attraction rating
         const eligibleFactories = factories
@@ -754,22 +767,9 @@ export class ModernOperationMechanicsService {
         });
       }
 
-      // Update sector score based on service quality
+      // Note: Sector demand is now calculated based on base sector demand + brand scores
+      // No longer updated based on service quality
       const unservedCustomers = customerCount - customersServed;
-      
-      if (unservedCustomers > 0) {
-        // Reduce sector score for each unserved customer
-        await this.sectorService.updateSector({
-          where: { id: sector.id },
-          data: { demand: Math.max(0, sector.demand - unservedCustomers) },
-        });
-      } else {
-        // All customers serviced - increase sector score
-        await this.sectorService.updateSector({
-          where: { id: sector.id },
-          data: { demand: sector.demand + 1 },
-        });
-      }
 
       // OPTIMIZATION: Collect game log entries for batch creation
       const sectorGameLogEntries: Array<{ gameId: string; content: string }> = [];
@@ -791,12 +791,12 @@ export class ModernOperationMechanicsService {
       if (unservedCustomers > 0) {
         sectorGameLogEntries.push({
           gameId: phase.gameId,
-          content: `${sector.sectorName} failed to service ${unservedCustomers} customers. Sector score reduced.`,
+          content: `${sector.sectorName} failed to service ${unservedCustomers} customers.`,
         });
       } else {
         sectorGameLogEntries.push({
           gameId: phase.gameId,
-          content: `${sector.sectorName} serviced all customers! Sector score increased.`,
+          content: `${sector.sectorName} serviced all customers!`,
         });
       }
 
@@ -1058,6 +1058,52 @@ export class ModernOperationMechanicsService {
       })
     );
 
+    // Calculate worker salaries based on sector demand ranking
+    // 1st highest demand = $10, 2nd = $8, 3rd+ = $6
+    const sectors = await this.sectorService.sectors({
+      where: { gameId: phase.gameId },
+    });
+    
+    // Sort sectors by demand (descending) - using effective demand (demand + demandBonus)
+    const sortedSectors = [...sectors].sort((a, b) => {
+      const aDemand = a.demand + (a.demandBonus || 0);
+      const bDemand = b.demand + (b.demandBonus || 0);
+      return bDemand - aDemand; // Descending order
+    });
+
+    // Create map: sectorId -> worker salary
+    const sectorWorkerSalaryMap = new Map<string, number>();
+    sortedSectors.forEach((sector, index) => {
+      let salary: number;
+      if (index === 0) {
+        salary = 8; // Highest demand: $8
+      } else if (index === 1) {
+        salary = 4; // Second highest: $4
+      } else {
+        salary = 2; // Third and below: $2
+      }
+      sectorWorkerSalaryMap.set(sector.id, salary);
+    });
+
+    // Log worker salary assignments for debugging
+    const salaryLogEntries: Array<{ gameId: string; content: string }> = [];
+    sortedSectors.forEach((sector, index) => {
+      const salary = sectorWorkerSalaryMap.get(sector.id) || 6;
+      const effectiveDemand = sector.demand + (sector.demandBonus || 0);
+      salaryLogEntries.push({
+        gameId: phase.gameId,
+        content: `${sector.sectorName} ranked #${index + 1} (demand: ${effectiveDemand}) → Worker salary: $${salary}/worker`,
+      });
+    });
+    if (salaryLogEntries.length > 0) {
+      await this.gameLogService.createManyGameLogs(
+        salaryLogEntries.map(entry => ({
+          gameId: entry.gameId,
+          content: entry.content,
+        }))
+      );
+    }
+
     // Group by company for consolidated reporting
     const companySummaries = new Map<string, { revenue: number; costs: number; profit: number; company: Company }>();
     // OPTIMIZATION: Collect production updates for batch processing
@@ -1072,18 +1118,22 @@ export class ModernOperationMechanicsService {
       const factory = production.Factory;
       const company = production.Company;
 
-      // Calculate revenue per unit sold (sum of all resource prices + unit price)
+      // Calculate revenue per unit sold (sum of all resource prices from resource market)
+      // Revenue = sum of current resource prices (NOT including unit price)
+      // Each customer buys 1:1 units, so total revenue = customersServed × revenuePerUnit
       // OPTIMIZATION: Use pre-calculated price map instead of querying
-      let revenuePerUnit = company.unitPrice;
+      let revenuePerUnit = 0;
       for (const resourceType of factory.resourceTypes) {
-        revenuePerUnit += resourcePriceMap.get(resourceType) || 0;
+        const resourcePrice = resourcePriceMap.get(resourceType) || 0;
+        revenuePerUnit += resourcePrice;
       }
 
       // Calculate actual revenue based on customers served (EXACT count from consumption phase)
       const factoryRevenue = production.customersServed * revenuePerUnit;
 
-      // Calculate worker costs
-      const factoryCosts = factory.workers * BASE_WORKER_SALARY;
+      // Calculate worker costs based on sector demand ranking
+      const workerSalary = sectorWorkerSalaryMap.get(factory.sectorId) || 6; // Default to $6 if sector not found
+      const factoryCosts = factory.workers * workerSalary;
 
       // Calculate profit
       const factoryProfit = factoryRevenue - factoryCosts;
@@ -1219,6 +1269,45 @@ export class ModernOperationMechanicsService {
           content: entry.content,
         }))
       );
+    }
+
+    // Check for companies with negative cash and mark them as INSOLVENT
+    const insolventCompanyUpdates: Array<{ id: string }> = [];
+    const insolvencyLogEntries: Array<{ gameId: string; content: string }> = [];
+
+    for (const update of companyUpdates) {
+      if (update.cashOnHand < 0) {
+        insolventCompanyUpdates.push({ id: update.id });
+        const company = companySummaries.get(update.id)?.company;
+        if (company) {
+          insolvencyLogEntries.push({
+            gameId: phase.gameId,
+            content: `${company.name} has gone insolvent with cash of $${update.cashOnHand}.`,
+          });
+        }
+      }
+    }
+
+    // Mark companies as INSOLVENT
+    if (insolventCompanyUpdates.length > 0) {
+      await this.prisma.$transaction(
+        insolventCompanyUpdates.map(update =>
+          this.prisma.company.update({
+            where: { id: update.id },
+            data: { status: CompanyStatus.INSOLVENT },
+          })
+        )
+      );
+
+      // Log insolvency events
+      if (insolvencyLogEntries.length > 0) {
+        await this.gameLogService.createManyGameLogs(
+          insolvencyLogEntries.map(entry => ({
+            gameId: entry.gameId,
+            content: entry.content,
+          }))
+        );
+      }
     }
   }
 
@@ -1357,8 +1446,80 @@ export class ModernOperationMechanicsService {
   }
 
   /**
+   * Calculate and update sector demand based on base sector demand + brand scores
+   * Effective Demand = base sector demand (from initialization) + sum of brand scores for all companies in sector
+   * 
+   * The sector's `baseDemand` field stores the initial demand from gameData (preserved).
+   * The `demand` field is updated each turn to reflect effective demand (base + brand scores).
+   */
+  private async updateSectorDemand(phase: Phase) {
+    // Query sectors with companies directly using Prisma to include Company relation
+    const sectors = await this.prisma.sector.findMany({
+      where: { gameId: phase.gameId },
+      include: {
+        Company: {
+          select: { id: true, brandScore: true },
+        },
+      },
+    });
+
+    const sectorUpdates: Array<{ id: string; demand: number }> = [];
+    const gameLogEntries: Array<{ gameId: string; content: string }> = [];
+
+    for (const sector of sectors) {
+      // Sum of brand scores for all companies in this sector
+      const totalBrandScore = sector.Company.reduce(
+        (sum: number, company: { id: string; brandScore: number | null }) => sum + (company.brandScore || 0),
+        0
+      );
+
+      // Base demand is stored in baseDemand field (initialized from gameData)
+      // If baseDemand is null/0 (for existing games), use current demand as fallback
+      const baseDemand = sector.baseDemand ?? sector.demand;
+
+      // Effective demand = base demand + brand scores
+      const effectiveDemand = baseDemand + totalBrandScore;
+
+      // Update the sector's demand field to show effective demand
+      if (effectiveDemand !== sector.demand) {
+        sectorUpdates.push({
+          id: sector.id,
+          demand: effectiveDemand,
+        });
+
+        gameLogEntries.push({
+          gameId: phase.gameId,
+          content: `${sector.sectorName} effective demand: ${effectiveDemand} (base: ${baseDemand} + brand: ${totalBrandScore})`,
+        });
+      }
+    }
+
+    // Batch update sectors
+    if (sectorUpdates.length > 0) {
+      await this.prisma.$transaction(
+        sectorUpdates.map(update =>
+          this.prisma.sector.update({
+            where: { id: update.id },
+            data: { demand: update.demand },
+          })
+        )
+      );
+
+      // Batch create game logs
+      if (gameLogEntries.length > 0) {
+        await this.gameLogService.createManyGameLogs(
+          gameLogEntries.map(entry => ({
+            gameId: entry.gameId,
+            content: entry.content,
+          }))
+        );
+      }
+    }
+  }
+
+  /**
    * Distribute consumers from global pool to sectors based on economy score
-   * This ensures sectors have consumers for the consumption phase
+   * Uses proportional distribution based on sector demand values
    */
   private async distributeConsumersToSectors(phase: Phase) {
     const [sectors, game] = await Promise.all([
@@ -1375,50 +1536,80 @@ export class ModernOperationMechanicsService {
       throw new Error('Game not found');
     }
 
-    // Sort sectors by priority (simple round-robin for now)
-    const sectorsSorted = sectors.sort((a, b) => {
-      const priority = ['MATERIALS', 'INDUSTRIALS', 'CONSUMER_DISCRETIONARY', 'CONSUMER_STAPLES', 
-                       'CONSUMER_CYCLICAL', 'CONSUMER_DEFENSIVE', 'ENERGY', 'HEALTHCARE', 'TECHNOLOGY'];
-      return priority.indexOf(a.sectorName) - priority.indexOf(b.sectorName);
-    });
+    // Calculate total demand across all sectors
+    const totalDemand = sectors.reduce(
+      (sum, sector) => sum + (sector.demand + (sector.demandBonus || 0)),
+      0
+    );
 
-    const sectorUpdates: Array<{ id: string; consumers: number }> = [];
-    let remainingEconomyScore = game.economyScore;
-    let sectorIndex = 0;
-    let updatedConsumerPool = game.consumerPoolNumber;
+    if (totalDemand === 0) {
+      // No demand in any sector, skip distribution
+      await this.gameLogService.createGameLog({
+        game: { connect: { id: phase.gameId } },
+        content: 'No sector demand found. Skipping consumer distribution.',
+      });
+      return;
+    }
 
-    // Distribute economy score to sectors
-    while (remainingEconomyScore > 0 && updatedConsumerPool > 0) {
-      const sector = sectorsSorted[sectorIndex % sectorsSorted.length];
-      let update = sectorUpdates.find(u => u.id === sector.id);
+    const maxConsumersToDistribute = Math.min(game.economyScore, game.consumerPoolNumber);
+    const sectorUpdates: Array<{ id: string; consumers: number; proportionalShare: number }> = [];
+    const gameLogEntries: Array<{ gameId: string; content: string }> = [];
+
+    // Calculate proportional distribution for each sector
+    for (const sector of sectors) {
+      const sectorDemand = sector.demand + (sector.demandBonus || 0);
+      if (sectorDemand === 0) continue;
+
+      // Calculate proportional share: (sector demand / total demand) * economy score
+      const proportionalShare = (sectorDemand / totalDemand) * game.economyScore;
       
-      if (!update) {
-        update = { id: sector.id, consumers: sector.consumers };
-        sectorUpdates.push(update);
+      sectorUpdates.push({
+        id: sector.id,
+        consumers: sector.consumers,
+        proportionalShare,
+      });
+    }
+
+    // Sort by proportional share (descending) to handle rounding
+    sectorUpdates.sort((a, b) => b.proportionalShare - a.proportionalShare);
+
+    // Distribute consumers using largest remainder method to handle rounding
+    let remainingConsumers = maxConsumersToDistribute;
+    const roundedShares: Array<{ id: string; floor: number; remainder: number }> = [];
+
+    // First pass: assign floor values
+    for (const update of sectorUpdates) {
+      const floor = Math.floor(update.proportionalShare);
+      const remainder = update.proportionalShare - floor;
+      roundedShares.push({ id: update.id, floor, remainder });
+      update.consumers += floor;
+      remainingConsumers -= floor;
+    }
+
+    // Second pass: distribute remaining consumers to sectors with largest remainders
+    roundedShares.sort((a, b) => b.remainder - a.remainder);
+    for (let i = 0; i < remainingConsumers && i < roundedShares.length; i++) {
+      const share = roundedShares[i];
+      const update = sectorUpdates.find(u => u.id === share.id);
+      if (update) {
+        update.consumers += 1;
+        remainingConsumers -= 1;
       }
+    }
 
-      const allocation = Math.min(
-        sector.demand + (sector.demandBonus || 0),
-        remainingEconomyScore,
-      );
-      const consumersToAdd = Math.min(updatedConsumerPool, allocation);
+    // Create game log entries
+    for (const update of sectorUpdates) {
+      const sector = sectors.find(s => s.id === update.id);
+      if (!sector) continue;
       
-      if (consumersToAdd > 0) {
-        update.consumers += consumersToAdd;
-        updatedConsumerPool -= consumersToAdd;
-        remainingEconomyScore -= consumersToAdd;
-        
-        await this.gameLogService.createGameLog({
-          game: { connect: { id: phase.gameId } },
-          content: `${sector.sectorName} received ${consumersToAdd} consumers from global pool.`,
+      const sectorDemand = sector.demand + (sector.demandBonus || 0);
+      const consumersAdded = update.consumers - sector.consumers;
+      
+      if (consumersAdded > 0) {
+        gameLogEntries.push({
+          gameId: phase.gameId,
+          content: `${sector.sectorName} received ${consumersAdded} consumers (${((sectorDemand / totalDemand) * 100).toFixed(1)}% of economy score ${game.economyScore})`,
         });
-      }
-
-      sectorIndex++;
-      
-      // Prevent infinite loop
-      if (sectorIndex > sectorsSorted.length * 10) {
-        break;
       }
     }
 
@@ -1435,11 +1626,31 @@ export class ModernOperationMechanicsService {
     }
 
     // Update game consumer pool
-    if (updatedConsumerPool !== game.consumerPoolNumber) {
+    const totalConsumersDistributed = sectorUpdates.reduce(
+      (sum, update) => {
+        const sector = sectors.find(s => s.id === update.id);
+        return sum + (update.consumers - (sector?.consumers || 0));
+      },
+      0
+    );
+    
+    if (totalConsumersDistributed > 0) {
       await this.prisma.game.update({
         where: { id: phase.gameId },
-        data: { consumerPoolNumber: updatedConsumerPool },
+        data: { 
+          consumerPoolNumber: Math.max(0, game.consumerPoolNumber - totalConsumersDistributed)
+        },
       });
+    }
+
+    // Batch create game logs
+    if (gameLogEntries.length > 0) {
+      await this.gameLogService.createManyGameLogs(
+        gameLogEntries.map(entry => ({
+          gameId: entry.gameId,
+          content: entry.content,
+        }))
+      );
     }
   }
 
@@ -1470,5 +1681,61 @@ export class ModernOperationMechanicsService {
         currentStockRoundId: null,
       },
     });
+  }
+
+  /**
+   * RESOLVE_INSOLVENCY
+   * Resolve insolvency contributions for companies that went negative after earnings call.
+   * This phase allows shareholders to contribute cash or shares to help companies avoid bankruptcy.
+   */
+  private async handleResolveInsolvency(phase: Phase) {
+    // Get the company from the phase (if companyId is set, resolve that specific company)
+    // Otherwise, get all insolvent companies for this game
+    const companies = phase.companyId
+      ? [await this.companyService.company({ id: phase.companyId })]
+      : await this.companyService.companies({
+          where: {
+            gameId: phase.gameId,
+            status: CompanyStatus.INSOLVENT,
+          },
+        });
+
+    if (!companies || companies.length === 0) {
+      await this.gameLogService.createGameLog({
+        game: { connect: { id: phase.gameId } },
+        content: 'No insolvent companies found for resolution.',
+      });
+      return;
+    }
+
+    // For now, we'll handle the first insolvent company
+    // In a full implementation, we'd iterate through all or create separate phases
+    const company = companies[0];
+    if (!company) {
+      return;
+    }
+
+    // Note: Full implementation would require:
+    // 1. InsolvencyContributionService to get contributions
+    // 2. ShareService to handle share liquidation
+    // 3. PlayersService to handle player transactions
+    // 4. TransactionService for recording transactions
+    
+    // For now, log that the phase was reached
+    // The actual resolution logic should be handled by the existing
+    // game-management.service.resolveCompanyVotes method or similar
+    await this.gameLogService.createGameLog({
+      game: { connect: { id: phase.gameId } },
+      content: `Resolving insolvency for ${company.name}. Shareholders can contribute cash or shares.`,
+    });
+
+    // TODO: Implement full resolution logic similar to game-management.service.resolveCompanyVotes
+    // This would involve:
+    // 1. Getting all insolvency contributions for this company and turn
+    // 2. Calculating total cash and share value contributed
+    // 3. Checking if shortfall is met (company.cashOnHand + contributions >= CompanyTierData[company.companyTier].insolvencyShortFall)
+    // 4. If met: Update company status to ACTIVE, update cash
+    // 5. If not met: Update company status to BANKRUPT, liquidate shares, return partial value to shareholders
+    // 6. Adjust stock price based on shares contributed
   }
 } 
