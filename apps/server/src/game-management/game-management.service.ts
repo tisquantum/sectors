@@ -2949,6 +2949,7 @@ export class GameManagementService {
     }
 
     // Get player priorities for tie-breaking
+    // TODO: This is not working as expected.  We need to get the player priorities for the current turn.  It appears our assumption that the player priorities are the same for all turns is incorrect.
     const playerPriorities =
       await this.playerPriorityService.listPlayerPriorities({
         where: { gameTurnId: phase.gameTurnId },
@@ -3043,10 +3044,10 @@ export class GameManagementService {
         console.log('playerShares', playerShares);
         switch (revenueDistribution) {
           case RevenueDistribution.DIVIDEND_FULL:
-            dividend = totalRevenue / playerShares.length;
+            dividend = totalRevenue / company.Share.length;
             break;
           case RevenueDistribution.DIVIDEND_FIFTY_FIFTY:
-            dividend = Math.floor(totalRevenue / 2) / playerShares.length;
+            dividend = Math.floor(totalRevenue / 2) / company.Share.length;
             moneyToCompany = Math.floor(totalRevenue / 2);
             break;
           case RevenueDistribution.RETAINED:
@@ -3089,6 +3090,31 @@ export class GameManagementService {
             }
             const dividendTotal = Math.floor(dividend * shares.length);
             console.log(`[calculateAndDistributeDividendsModern] Distributing $${dividendTotal} to player ${player.nickname} (${shares.length} shares)`);
+            
+            // Create transaction for dividend payment (company to player via bank)
+            if (company.entityId) {
+              try {
+                await this.transactionService.createTransactionEntityToEntity({
+                  gameId: phase.gameId,
+                  gameTurnId: phase.gameTurnId,
+                  phaseId: phase.id,
+                  fromEntityType: EntityType.COMPANY,
+                  toEntityType: EntityType.PLAYER,
+                  fromEntityId: company.entityId,
+                  toEntityId: player.entityId || undefined,
+                  amount: dividendTotal,
+                  transactionType: TransactionType.CASH,
+                  transactionSubType: TransactionSubType.DIVIDEND,
+                  fromCompanyId: companyId,
+                  toPlayerId: playerId,
+                  companyInvolvedId: companyId,
+                  description: `Dividend payment: $${dividendTotal} to ${player.nickname} (${shares.length} shares)`,
+                });
+              } catch (error) {
+                console.error('Failed to create dividend transaction:', error);
+              }
+            }
+            
             await this.playerAddMoney({
               gameId: phase.gameId,
               gameTurnId: phase.gameTurnId,
@@ -3123,6 +3149,29 @@ export class GameManagementService {
             data: { status: CompanyStatus.ACTIVE },
           });
         }
+        
+        // Create transaction for revenue retention
+        if (moneyToCompany > 0 && company.entityId) {
+          try {
+            await this.transactionService.createTransactionEntityToEntity({
+              gameId: phase.gameId,
+              gameTurnId: phase.gameTurnId,
+              phaseId: phase.id,
+              fromEntityType: EntityType.BANK,
+              toEntityType: EntityType.COMPANY,
+              toEntityId: company.entityId,
+              amount: moneyToCompany,
+              transactionType: TransactionType.CASH,
+              transactionSubType: TransactionSubType.OPERATING_COST,
+              toCompanyId: companyId,
+              companyInvolvedId: companyId,
+              description: `Revenue retention: $${moneyToCompany} retained by ${company.name}`,
+            });
+          } catch (error) {
+            console.error('Failed to create revenue retention transaction:', error);
+          }
+        }
+        
         if (moneyToCompany > 0) {
           this.gameLogService.createGameLog({
             game: { connect: { id: phase.gameId } },
@@ -4457,6 +4506,12 @@ export class GameManagementService {
       data: { cost },
     });
 
+    // Determine transaction type based on action
+    let transactionType: TransactionType = TransactionType.CASH;
+    if (companyAction.action === OperatingRoundAction.RESEARCH) {
+      transactionType = TransactionType.RESEARCH;
+    }
+
     //create entity transaction
     this.transactionService
       .createTransactionEntityToEntity({
@@ -4465,7 +4520,7 @@ export class GameManagementService {
         fromEntityType: EntityType.COMPANY,
         toEntityType: EntityType.BANK,
         amount: cost,
-        transactionType: TransactionType.CASH,
+        transactionType: transactionType,
         gameId: game.id,
         gameTurnId: game.currentTurn,
         phaseId: game.currentPhaseId || '',

@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma, MarketingCampaignTier, OperationMechanicsVersion, MarketingCampaignStatus, ResourceType } from '@prisma/client';
+import { Prisma, MarketingCampaignTier, OperationMechanicsVersion, MarketingCampaignStatus, ResourceType, EntityType, TransactionType } from '@prisma/client';
 import { z } from 'zod';
+import { TransactionService } from '../transaction/transaction.service';
 
 const CreateMarketingCampaignSchema = z.object({
   companyId: z.string(),
@@ -15,7 +16,10 @@ type CreateMarketingCampaignInput = z.infer<typeof CreateMarketingCampaignSchema
 
 @Injectable()
 export class MarketingService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly transactionService: TransactionService,
+  ) {}
 
   async createCampaign(input: CreateMarketingCampaignInput) {
     const { companyId, gameId, tier, operationMechanicsVersion, resourceTypes } = input;
@@ -41,8 +45,24 @@ export class MarketingService {
       throw new Error('Insufficient funds');
     }
 
+    // Get company with entity and game/phase info for transaction
+    const companyWithEntity = await this.prisma.company.findUnique({
+      where: { id: companyId },
+      include: { Entity: true },
+    });
+
+    if (!companyWithEntity) {
+      throw new Error('Company not found');
+    }
+
+    // Get current game and phase for transaction
+    const game = await this.prisma.game.findUnique({
+      where: { id: gameId },
+      select: { currentTurn: true, currentPhaseId: true },
+    });
+
     // Create campaign and update company cash in a transaction
-    return this.prisma.$transaction(async (tx) => {
+    const campaign = await this.prisma.$transaction(async (tx) => {
       const campaign = await tx.marketingCampaign.create({
         data: {
           companyId,
@@ -62,6 +82,30 @@ export class MarketingService {
 
       return campaign;
     });
+
+    // Create transaction record for marketing campaign payment
+    if (game?.currentTurn && game?.currentPhaseId) {
+      try {
+        await this.transactionService.createTransactionEntityToEntity({
+          gameId,
+          gameTurnId: game.currentTurn,
+          phaseId: game.currentPhaseId,
+          fromEntityType: EntityType.COMPANY,
+          toEntityType: EntityType.BANK,
+          fromEntityId: companyWithEntity.entityId || undefined,
+          amount: cost,
+          transactionType: TransactionType.MARKETING_CAMPAIGN,
+          fromCompanyId: companyId,
+          companyInvolvedId: companyId,
+          description: `Marketing campaign ${tier}: $${cost}`,
+        });
+      } catch (error) {
+        // Log error but don't fail the campaign creation
+        console.error('Failed to create marketing campaign transaction:', error);
+      }
+    }
+
+    return campaign;
   }
 
   private getResourceCountForTier(tier: MarketingCampaignTier): number {

@@ -15,6 +15,9 @@ import { GameTurnService } from '../game-turn/game-turn.service';
 import { GamesService } from '../games/games.service';
 import { TransactionService } from '../transaction/transaction.service';
 import { getResourcePriceForResourceType, getSectorResourceForSectorName, BASE_WORKER_SALARY, CompanyTierData, BANKRUPTCY_SHARE_PERCENTAGE_RETAINED } from '@server/data/constants';
+import { PlayerPriorityService } from '@server/player-priority/player-priority.service';
+import { PlayersService } from '@server/players/players.service';
+import { calculateNetWorth } from '@server/data/helpers';
 
 interface RequiredResource {
   type: ResourceType;
@@ -38,6 +41,8 @@ export class ModernOperationMechanicsService {
     private gameTurnService: GameTurnService,
     private gamesService: GamesService,
     private transactionService: TransactionService,
+    private playerPriorityService: PlayerPriorityService,
+    private playersService: PlayersService,
   ) {}
 
   async handlePhase(phase: Phase, game: Game) {
@@ -47,6 +52,7 @@ export class ModernOperationMechanicsService {
         await this.updateWorkforceTrack(phase);
         await this.makeFactoriesOperational(phase);
         await this.updateSectorDemand(phase);
+        await this.determinePriorityOrderBasedOnNetWorth(phase);
         break;
 
       case PhaseName.SHAREHOLDER_MEETING:
@@ -94,6 +100,56 @@ export class ModernOperationMechanicsService {
         return false;
     }
     return true;
+  }
+
+  async determinePriorityOrderBasedOnNetWorth(phase: Phase) {
+    const gameTurnPromise = this.gameTurnService.getCurrentTurn(phase.gameId);
+    const playersPromise = this.playersService.playersWithShares({
+      gameId: phase.gameId,
+    });
+    //get player priorities
+    const playerPrioritiesPromise =
+      this.playerPriorityService.listPlayerPriorities({
+        where: { gameTurnId: phase.gameTurnId },
+      });
+
+    const [gameTurn, players, playerPriorities] = await Promise.all([
+      gameTurnPromise,
+      playersPromise,
+      playerPrioritiesPromise,
+    ]);
+
+    if (!gameTurn) {
+      throw new Error('Game turn not found');
+    }
+
+    if (gameTurn.turn === 1) {
+      return;
+    }
+
+    //if player priorities already exist, do not recreate them
+    if (playerPriorities.length > 0) {
+      return;
+    }
+
+    const netWorths = players.map((player) => {
+      return {
+        playerId: player.id,
+        netWorth: calculateNetWorth(player.cashOnHand, player.Share),
+      };
+    });
+
+    const priorityPlayerOrder = netWorths.sort(
+      (a, b) => a.netWorth - b.netWorth,
+    );
+
+    const playerPriority = priorityPlayerOrder.map((playerPriority, index) => ({
+      playerId: playerPriority.playerId,
+      priority: index + 1,
+      gameTurnId: phase.gameTurnId,
+    }));
+
+    await this.playerPriorityService.createManyPlayerPriorities(playerPriority);
   }
 
   /**
@@ -645,7 +701,12 @@ export class ModernOperationMechanicsService {
       where: { gameId: phase.gameId },
     });
 
+    // Track sector updates and total consumers returned to pool
+    const sectorUpdates: Array<{ id: string; consumers: number }> = [];
+    let totalConsumersReturnedToPool = 0;
+
     for (const sector of sectors) {
+      console.log('sector', sector.sectorName, 'consumers', sector.consumers);
       const customerCount = sector.consumers;
       
       if (customerCount === 0) {
@@ -685,6 +746,8 @@ export class ModernOperationMechanicsService {
           },
         },
       });
+
+      console.log('factories', factories.length);
 
       // Track customers served per factory
       const factoryCustomerCounts = new Map<string, number>();
@@ -727,8 +790,28 @@ export class ModernOperationMechanicsService {
         const eligibleFactories = factories
           .filter(f => {
             const currentCustomers = factoryCustomerCounts.get(f.id) || 0;
+            console.log('factory', f.id, 'currentCustomers', currentCustomers);
             const maxCustomers = this.getFactoryConsumerLimit(f.size);
-            const canProduceResource = f.resourceTypes.includes(drawnMarker.resourceType);
+            console.log('factory', f.id, 'maxCustomers', maxCustomers);
+            
+            // Check if factory can produce the resource
+            // GENERAL is a wildcard that matches any factory with general resources (TRIANGLE, SQUARE, CIRCLE)
+            let canProduceResource: boolean;
+            if (drawnMarker.resourceType === ResourceType.GENERAL) {
+              // GENERAL matches any factory that has at least one general resource type
+              const generalResourceTypes: ResourceType[] = [ResourceType.TRIANGLE, ResourceType.SQUARE, ResourceType.CIRCLE];
+              canProduceResource = f.resourceTypes.some(rt => generalResourceTypes.includes(rt as ResourceType));
+            } else {
+              // For specific resource types, check if:
+              // 1. Factory has that exact type in resourceTypes, OR
+              // 2. The marker type matches the factory's sector resource type (factories can always produce their sector's resource)
+              const sectorResourceType = this.getSectorResourceType(sector.sectorName);
+              const hasExactType = f.resourceTypes.includes(drawnMarker.resourceType);
+              const matchesSectorResource = sectorResourceType !== null && drawnMarker.resourceType === sectorResourceType;
+              canProduceResource = hasExactType || matchesSectorResource;
+            }
+            
+            console.log('factory', f.id, 'canProduceResource', canProduceResource, 'markerType', drawnMarker.resourceType, 'factoryTypes', f.resourceTypes, 'sectorResourceType', this.getSectorResourceType(sector.sectorName));
             return canProduceResource && currentCustomers < maxCustomers;
           })
           .sort((a, b) => {
@@ -745,6 +828,8 @@ export class ModernOperationMechanicsService {
             return aAttractionRating - bAttractionRating;
           });
 
+        console.log('eligibleFactories', eligibleFactories.length);
+
         if (eligibleFactories.length > 0) {
           const selectedFactory = eligibleFactories[0];
           factoryCustomerCounts.set(
@@ -752,6 +837,7 @@ export class ModernOperationMechanicsService {
             (factoryCustomerCounts.get(selectedFactory.id) || 0) + 1
           );
           customersServed++;
+          console.log('selectedFactory', selectedFactory.id, 'customersServed', customersServed);
         }
 
         // Collect temporary markers for batch deletion
@@ -765,6 +851,15 @@ export class ModernOperationMechanicsService {
         await this.prisma.consumptionMarker.deleteMany({
           where: { id: { in: markersToDelete } },
         });
+      }
+
+      // Track sector update: remove serviced consumers from sector
+      if (customersServed > 0) {
+        sectorUpdates.push({
+          id: sector.id,
+          consumers: Math.max(0, sector.consumers - customersServed),
+        });
+        totalConsumersReturnedToPool += customersServed;
       }
 
       // Note: Sector demand is now calculated based on base sector demand + brand scores
@@ -830,6 +925,41 @@ export class ModernOperationMechanicsService {
 
       if (factoryProductionRecords.length > 0) {
         await this.factoryProductionService.createManyFactoryProductions(factoryProductionRecords);
+      }
+    }
+
+    // Batch update sectors: remove serviced consumers
+    if (sectorUpdates.length > 0) {
+      await this.prisma.$transaction(
+        sectorUpdates.map(update =>
+          this.prisma.sector.update({
+            where: { id: update.id },
+            data: { consumers: update.consumers },
+          })
+        )
+      );
+    }
+
+    // Update game: return all serviced consumers to global pool
+    if (totalConsumersReturnedToPool > 0) {
+      const game = await this.prisma.game.findUnique({
+        where: { id: phase.gameId },
+        select: { consumerPoolNumber: true },
+      });
+
+      if (game) {
+        await this.prisma.game.update({
+          where: { id: phase.gameId },
+          data: {
+            consumerPoolNumber: game.consumerPoolNumber + totalConsumersReturnedToPool,
+          },
+        });
+
+        // Log the return to pool
+        await this.gameLogService.createGameLog({
+          game: { connect: { id: phase.gameId } },
+          content: `${totalConsumersReturnedToPool} serviced consumers returned to global consumer pool.`,
+        });
       }
     }
   }
@@ -1195,6 +1325,28 @@ export class ModernOperationMechanicsService {
         id: companyId,
         cashOnHand: company.cashOnHand + profit,
       });
+
+      // Create transaction for revenue retention (profit added to company)
+      if (profit > 0 && company.entityId) {
+        try {
+          await this.transactionService.createTransactionEntityToEntity({
+            gameId: phase.gameId,
+            gameTurnId: phase.gameTurnId,
+            phaseId: phase.id,
+            fromEntityType: EntityType.BANK,
+            toEntityType: EntityType.COMPANY,
+            toEntityId: company.entityId,
+            amount: profit,
+            transactionType: TransactionType.CASH,
+            transactionSubType: TransactionSubType.OPERATING_COST,
+            toCompanyId: companyId,
+            companyInvolvedId: companyId,
+            description: `Revenue retention: Revenue $${revenue} - Costs $${costs} = Profit $${profit}`,
+          });
+        } catch (error) {
+          console.error('Failed to create revenue retention transaction:', error);
+        }
+      }
 
       // Stock price adjustment based on profitability
       let stockPriceSteps = 0;

@@ -52,11 +52,23 @@ export function FactorySlots({ companyId, gameId, currentPhase }: FactorySlotsPr
     { enabled: !!gamePhase?.id }
   );
 
+  // Fetch resource prices
+  const { data: resourcePrices } = trpc.resource.getAllResourcePrices.useQuery(
+    { gameId },
+    { enabled: !!gameId }
+  );
+
   // Create production map for quick lookup
   const productionMap = useMemo(() => {
     if (!productionData) return new Map();
     return new Map(productionData.map(p => [p.factoryId, p]));
   }, [productionData]);
+
+  // Create resource price map for quick lookup
+  const resourcePriceMap = useMemo(() => {
+    if (!resourcePrices) return new Map<string, number>();
+    return new Map(resourcePrices.map(r => [r.type, r.price]));
+  }, [resourcePrices]);
 
   // Build slot configuration from real factory data
   const SLOT_CONFIG: FactorySlot[] = useMemo(() => {
@@ -88,7 +100,7 @@ export function FactorySlots({ companyId, gameId, currentPhase }: FactorySlotsPr
             consumers: production?.customersServed || maxCustomers,
             resources: factory.resourceTypes.map((type, idx) => ({
               type,
-              price: 0, // TODO: Get actual resource prices if needed
+              price: resourcePriceMap.get(type) || 0,
             })),
             isOperational: factory.isOperational,
             totalValue: production?.profit || 0,
@@ -98,7 +110,7 @@ export function FactorySlots({ companyId, gameId, currentPhase }: FactorySlotsPr
     });
 
     return slots;
-  }, [factories, productionMap]);
+  }, [factories, productionMap, resourcePriceMap]);
 
   const handleSlotClick = (slot: FactorySlot) => {
     if (slot.isAvailable && !slot.isOccupied) {

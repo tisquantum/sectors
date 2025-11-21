@@ -8,6 +8,7 @@ import { ConsumptionPhase as ModernConsumptionPhase } from './ModernOperations/p
 import { EarningsCallPhase as ModernEarningsCallPhase } from './ModernOperations/phases';
 import { MarketingAndResearchPhase as ModernMarketingAndResearchPhase } from './ModernOperations/phases';
 import { MarketingAndResearchResolvePhase as ModernMarketingAndResearchResolvePhase } from './ModernOperations/phases';
+import { ResourceTracksContainer } from './ResourceTracksContainer';
 
 /**
  * Operations View - Modern Operations
@@ -46,6 +47,12 @@ export function OperationsView() {
         <Tab key="earnings" title="Earnings Call">
           <div className="w-full h-full p-4">
             <ModernEarningsCallPhase />
+          </div>
+        </Tab>
+
+        <Tab key="resource-tracks" title="Resource Tracks">
+          <div className="w-full h-full">
+            <ResourceTracksContainer />
           </div>
         </Tab>
 

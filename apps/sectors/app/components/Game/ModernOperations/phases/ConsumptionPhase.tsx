@@ -81,6 +81,9 @@ export function ConsumptionPhase() {
     return allFactoriesData.filter(f => f.isOperational);
   }, [allFactoriesData]);
 
+  console.log('operationalFactories', operationalFactories);
+  console.log('productionWithRelations', productionWithRelations);
+
   // Transform production data into the format expected by child components
   const transformedData = useMemo(() => {
     if (!productionWithRelations || !gameState?.sectors || !gameState?.Company) {
