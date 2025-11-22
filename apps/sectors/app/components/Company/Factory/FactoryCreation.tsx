@@ -76,9 +76,9 @@ export function FactoryCreation({
     { enabled: isValidGameId }
   );
   
-  // Get sector resource type
-  const sectorResourceType = company.data?.Sector?.name 
-    ? getSectorResourceType(company.data.Sector.name)
+  // Get sector resource type - use sectorName (enum) not name (display name)
+  const sectorResourceType = company.data?.Sector?.sectorName 
+    ? getSectorResourceType(company.data.Sector.sectorName)
     : 'GENERAL';
   
   // Get sector resource price
@@ -88,18 +88,42 @@ export function FactoryCreation({
   }, [allResources, sectorResourceType]);
   
   // Initialize with sector resource by default
-  const [schematic, setSchematic] = useState<ResourceSchematic[]>([{
-    type: sectorResourceType,
-    quantity: 1,
-    price: sectorResource?.price || 25
-  }]);
+  const [schematic, setSchematic] = useState<ResourceSchematic[]>(() => {
+    // Start with empty array, will be populated by useEffect when sector data loads
+    return [];
+  });
 
-  // Update sector resource price when available
+  // Update schematic when sector resource becomes available
   useEffect(() => {
-    if (sectorResource && schematic[0]?.type === sectorResourceType) {
-      setSchematic(prev => prev.map((item, i) => 
-        i === 0 ? { ...item, price: sectorResource.price } : item
-      ));
+    // Only proceed if we have a valid sector resource type (not GENERAL)
+    if (sectorResourceType && sectorResourceType !== 'GENERAL' && sectorResource) {
+      setSchematic(prev => {
+        // If schematic is empty or first item is GENERAL, replace with sector resource
+        if (prev.length === 0 || prev[0]?.type === 'GENERAL') {
+          // Keep other resources but ensure sector resource is first
+          const otherResources = prev.filter((item, i) => 
+            i !== 0 && item.type !== sectorResourceType
+          );
+          return [{
+            type: sectorResourceType,
+            quantity: 1,
+            price: sectorResource.price
+          }, ...otherResources];
+        }
+        // If first item already matches sector resource, just update the price
+        if (prev[0]?.type === sectorResourceType) {
+          return prev.map((item, i) => 
+            i === 0 ? { ...item, price: sectorResource.price } : item
+          );
+        }
+        // If sector resource exists elsewhere, move it to first position
+        const withoutSector = prev.filter(item => item.type !== sectorResourceType);
+        return [{
+          type: sectorResourceType,
+          quantity: 1,
+          price: sectorResource.price
+        }, ...withoutSector];
+      });
     }
   }, [sectorResource, sectorResourceType]);
 

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Phase, PhaseName, Game, Company, Resource, MarketingCampaign, FactorySize, ResourceType, ResourceTrackType, OrderType, TransactionType, EntityType, SectorName, FactoryConstructionOrder, MarketingCampaignTier, MarketingCampaignStatus, StockAction, CompanyStatus, ShareLocation, TransactionSubType } from '@prisma/client';
+import { Phase, PhaseName, Game, Company, Resource, MarketingCampaign, FactorySize, ResourceType, ResourceTrackType, OrderType, TransactionType, EntityType, SectorName, FactoryConstructionOrder, MarketingCampaignTier, MarketingCampaignStatus, StockAction, CompanyStatus, ShareLocation, TransactionSubType, Sector } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { GameLogService } from '../game-log/game-log.service';
 import { CompanyService } from '../company/company.service';
@@ -208,13 +208,16 @@ export class ModernOperationMechanicsService {
       return;
     }
 
+    // Type for company with Sector relation included
+    type CompanyWithSector = Company & { Sector: Sector };
+    
     // OPTIMIZATION: Batch fetch all companies at once
     const companyIds = [...new Set(factoryConstructionOrders.map(o => o.companyId))];
     const companies = await this.prisma.company.findMany({
       where: { id: { in: companyIds } },
       include: { Sector: true, Entity: true },
     });
-    const companyMap = new Map(companies.map(c => [c.id, c]));
+    const companyMap = new Map<string, CompanyWithSector>(companies.map(c => [c.id, c as CompanyWithSector]));
 
     // OPTIMIZATION: Batch count all factories at once
     const factoryCounts = await this.prisma.factory.groupBy({
@@ -235,7 +238,7 @@ export class ModernOperationMechanicsService {
     // Collect successful operations for batch processing
     const successfulOperations: Array<{
       order: FactoryConstructionOrder;
-      company: Company;
+      company: CompanyWithSector;
       blueprintCost: number;
       requiredWorkers: number;
       existingFactories: number;
@@ -570,8 +573,11 @@ export class ModernOperationMechanicsService {
     const DEFAULT_WORKERS = 40; // From constants
     const availableWorkers = Math.max(0, DEFAULT_WORKERS - totalAllocatedWorkers);
     
-    // Calculate economy score: starts at 10, +1 for every 2 allocated workers
-    const economyScore = 10 + Math.floor(totalAllocatedWorkers / 2);
+    // Calculate economy score: represents the rightmost filled allocated square
+    // Economy score = 10 + position of rightmost allocated worker
+    // If 0 workers allocated, economy score is 10 (starting position before track)
+    // If 5 workers allocated (positions 1-5), economy score is 10 + 5 = 15
+    const economyScore = 10 + totalAllocatedWorkers;
     
     // Get current game state to check if workforcePool needs initialization
     const currentGame = await this.prisma.game.findUnique({
@@ -1401,10 +1407,14 @@ export class ModernOperationMechanicsService {
    * Adjust stock prices based on profitability.
    */
   private async handleEarningsCall(phase: Phase) {
+    console.log(`[EARNINGS_CALL] Starting earnings call for game ${phase.gameId}, turn ${phase.gameTurnId}`);
+    
     // Get all factory production records for this turn
     const factoryProductions = await this.factoryProductionService.factoryProductionsWithRelations({
       where: { gameTurnId: phase.gameTurnId },
     });
+
+    console.log(`[EARNINGS_CALL] Found ${factoryProductions.length} factory production records`);
 
     if (factoryProductions.length === 0) {
       await this.gameLogService.createGameLog({
@@ -1416,6 +1426,8 @@ export class ModernOperationMechanicsService {
 
     // OPTIMIZATION: Fetch all resources once and build price map
     const allResources = await this.resourceService.resourcesByGame(phase.gameId);
+    console.log(`[EARNINGS_CALL] Found ${allResources.length} resources for game ${phase.gameId}`);
+    
     const resourcePriceMap = new Map<ResourceType, number>();
     
     // Calculate all resource prices in parallel
@@ -1423,8 +1435,11 @@ export class ModernOperationMechanicsService {
       allResources.map(async (resource) => {
         const price = await this.resourceService.getCurrentResourcePrice(resource);
         resourcePriceMap.set(resource.type, price);
+        console.log(`[EARNINGS_CALL] Resource ${resource.type}: price = $${price} (trackPosition: ${resource.trackPosition})`);
       })
     );
+    
+    console.log(`[EARNINGS_CALL] Resource price map:`, Array.from(resourcePriceMap.entries()));
 
     // Calculate worker salaries based on sector demand ranking
     // 1st highest demand = $10, 2nd = $8, 3rd+ = $6
@@ -1494,10 +1509,16 @@ export class ModernOperationMechanicsService {
       for (const resourceType of factory.resourceTypes) {
         const resourcePrice = resourcePriceMap.get(resourceType) || 0;
         revenuePerUnit += resourcePrice;
+        // Debug logging for revenue calculation
+        console.log(`[EARNINGS_CALL] Factory ${factory.id} resource ${resourceType}: price = $${resourcePrice}`);
       }
+      
+      console.log(`[EARNINGS_CALL] Factory ${factory.id} (${factory.resourceTypes.join(', ')}): revenuePerUnit = $${revenuePerUnit}, customersServed = ${production.customersServed}`);
 
       // Calculate actual revenue based on customers served (EXACT count from consumption phase)
       const factoryRevenue = production.customersServed * revenuePerUnit;
+      
+      console.log(`[EARNINGS_CALL] Factory ${factory.id} factoryRevenue = $${factoryRevenue}`);
 
       // Calculate worker costs based on sector demand ranking
       const workerSalary = sectorWorkerSalaryMap.get(factory.sectorId) || 6; // Default to $6 if sector not found
@@ -1702,16 +1723,86 @@ export class ModernOperationMechanicsService {
   }
 
   private async degradeMarketingCampaigns(phase: Phase) {
-    // Move ACTIVE campaigns to DECAYING
-    await this.prisma.marketingCampaign.updateMany({
+    // Get current turn to determine which campaigns were created in previous turns
+    const currentTurn = await this.gameTurnService.getCurrentTurn(phase.gameId);
+    if (!currentTurn) {
+      throw new Error('Current turn not found');
+    }
+
+    // Only degrade campaigns that were created in a turn BEFORE the current turn
+    // This ensures campaigns created in the current turn remain ACTIVE for the full turn
+    // Campaigns lifecycle:
+    // - Created in turn N: ACTIVE for turn N and turn N+1
+    // - End of turn N+1: ACTIVE → DECAYING (if gameTurnId < currentTurn.turn)
+    // - End of turn N+2: DECAYING → Expired (deleted)
+    // 
+    // We compare turn numbers: campaigns created in turn N should degrade at end of turn N+1
+    // So we degrade campaigns where (currentTurn.turn - campaign.gameTurn.turn) >= 2
+    // Get all active campaigns with their turn information
+    // Note: gameTurnId field will be available after Prisma migration
+    const campaignsToDegrade = await this.prisma.marketingCampaign.findMany({
       where: {
         gameId: phase.gameId,
         status: MarketingCampaignStatus.ACTIVE,
       },
-      data: {
-        status: MarketingCampaignStatus.DECAYING,
-      },
-    });
+    }) as any[];
+
+    if (campaignsToDegrade.length === 0) {
+      // No campaigns to degrade, skip to expiring DECAYING campaigns
+    } else {
+      // Get turn numbers for all campaigns' gameTurnIds
+      const campaignTurnIds = [...new Set(campaignsToDegrade.map(c => (c as any).gameTurnId).filter(Boolean))];
+      
+      if (campaignTurnIds.length === 0) {
+        // No gameTurnId set yet (old campaigns before migration), skip
+      } else {
+        const campaignTurns = await this.prisma.gameTurn.findMany({
+          where: {
+            id: { in: campaignTurnIds },
+          },
+          select: {
+            id: true,
+            turn: true,
+          },
+        });
+
+        // Create a map of gameTurnId -> turn number
+        const turnNumberMap = new Map(campaignTurns.map(t => [t.id, t.turn]));
+
+        // Filter campaigns that are at least 2 turns old (created in turn N, current turn is N+2 or later)
+        // Campaign lifecycle: Created in turn N, active for turns N and N+1, degrade at end of turn N+1
+        // So if current turn is N+2, campaigns from turn N should degrade
+        const oldCampaigns = campaignsToDegrade.filter(campaign => {
+          const campaignGameTurnId = (campaign as any).gameTurnId;
+          if (!campaignGameTurnId) {
+            // Old campaign without gameTurnId, skip (will be handled after migration)
+            return false;
+          }
+          const campaignTurnNumber = turnNumberMap.get(campaignGameTurnId);
+          if (campaignTurnNumber === undefined) {
+            // If no turn info, skip (shouldn't happen, but safety check)
+            return false;
+          }
+          const currentTurnNumber = currentTurn.turn;
+          // Degrade if current turn is at least 2 turns after campaign was created
+          // (turn N created, turn N+2 current means campaign had turns N and N+1 active)
+          return (currentTurnNumber - campaignTurnNumber) >= 2;
+        });
+
+        if (oldCampaigns.length > 0) {
+          // Move ACTIVE campaigns (from previous turns) to DECAYING
+          await this.prisma.marketingCampaign.updateMany({
+            where: {
+              id: { in: oldCampaigns.map(c => c.id) },
+            },
+            data: {
+              status: MarketingCampaignStatus.DECAYING,
+            },
+          });
+        }
+      }
+    }
+
 
     // Remove DECAYING campaigns (they expire after 1 turn)
     const expiredCampaigns = await this.prisma.marketingCampaign.findMany({

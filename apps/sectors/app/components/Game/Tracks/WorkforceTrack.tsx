@@ -65,8 +65,13 @@ export function WorkforceTrack() {
       ? Math.max(0, totalWorkers - totalAllocatedFromData)
       : totalWorkers; // Default to all available if we don't have data yet
   
-  const economyScore = gameState?.economyScore ?? game?.economyScore ?? 0;
   const allocatedWorkers = totalWorkers - availableWorkers;
+  
+  // Economy score should represent the rightmost filled allocated square
+  // If no workers allocated, economy score is 10 (starting position before track)
+  // If 5 workers allocated (positions 1-5), economy score should be 10 + 5 = 15
+  // Use calculated value from allocated workers to ensure it matches the rightmost allocated position
+  const economyScore = allocatedWorkers > 0 ? 10 + allocatedWorkers : 10;
 
   // Create a mapping of space number to sector color
   // Workers are allocated left to right (starting from space 1), so we need to map which spaces belong to which sectors
@@ -146,10 +151,15 @@ export function WorkforceTrack() {
             // Workers are allocated from left to right, starting at space 1
             // So spaces 1 to allocatedWorkers are allocated, and spaces allocatedWorkers+1 to 40 are available
             const isAvailable = space > allocatedWorkers;
-            // Economy score starts at 10, so economy score 10 = position 0 (before track starts)
-            // Economy score 11+ maps to spaces: space = economyScore - 10
+            // Economy score represents the rightmost filled allocated square
+            // Economy score = 10 + allocatedWorkers (where allocatedWorkers is the position of the rightmost allocated worker)
+            // So economy score 15 = position 5 (15 - 10 = 5), economy score 12 = position 2 (12 - 10 = 2)
+            // If no workers allocated, economy score is 10 (before track starts, position 0)
             const economyScorePosition = economyScore > 10 ? economyScore - 10 : 0;
-            const isEconomyScore = economyScore > 10 && space === economyScorePosition;
+            // The economy score indicator should be at the rightmost allocated worker's position
+            const rightmostAllocatedPosition = allocatedWorkers > 0 ? allocatedWorkers : 0;
+            // Show economy score indicator at the rightmost allocated position
+            const isEconomyScore = allocatedWorkers > 0 && space === rightmostAllocatedPosition;
             const sectorInfo = spaceToSectorMap.get(space);
 
             return (

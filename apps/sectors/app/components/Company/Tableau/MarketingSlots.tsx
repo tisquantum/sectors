@@ -81,22 +81,20 @@ export function MarketingSlots({ companyId, gameId }: MarketingSlotsProps) {
 
     if (!campaigns) return slots;
 
-    // Map campaigns to slots by slot number
-    // Handle slot: 0 (default/unset) as slot 1 (index 0)
-    // Also handle 1-indexed slots (1-5) by converting to 0-indexed array position
+    // Assign campaigns to slots sequentially, filling from left to right
+    // This ensures that if you have 2 campaigns, they appear in slots 1 and 2
+    let nextAvailableSlotIndex = 0;
+    
     campaigns.forEach((campaign) => {
-      let slotIndex: number;
-      if (campaign.slot === 0) {
-        // Default/unset slot (0) should be treated as first slot (index 0)
-        slotIndex = 0;
-      } else {
-        // Slots are 1-indexed (1-5), convert to 0-indexed array position (0-4)
-        slotIndex = campaign.slot - 1;
+      // Find the next available slot that's not yet occupied
+      while (nextAvailableSlotIndex < slots.length && slots[nextAvailableSlotIndex].isOccupied) {
+        nextAvailableSlotIndex++;
       }
       
-      if (slotIndex >= 0 && slotIndex < slots.length) {
-        slots[slotIndex] = {
-          ...slots[slotIndex],
+      // If we've found an available slot, assign the campaign to it
+      if (nextAvailableSlotIndex < slots.length && slots[nextAvailableSlotIndex].isAvailable) {
+        slots[nextAvailableSlotIndex] = {
+          ...slots[nextAvailableSlotIndex],
           isOccupied: true,
           isAvailable: true,
           campaign: {
@@ -111,6 +109,7 @@ export function MarketingSlots({ companyId, gameId }: MarketingSlotsProps) {
             ],
           },
         };
+        nextAvailableSlotIndex++;
       }
     });
 

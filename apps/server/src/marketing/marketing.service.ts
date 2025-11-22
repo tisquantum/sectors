@@ -61,12 +61,17 @@ export class MarketingService {
       select: { currentTurn: true, currentPhaseId: true },
     });
 
+    if (!game?.currentTurn) {
+      throw new Error('Current turn not found');
+    }
+
     // Create campaign and update company cash in a transaction
     const campaign = await this.prisma.$transaction(async (tx) => {
       const campaign = await tx.marketingCampaign.create({
         data: {
           companyId,
           gameId,
+          gameTurnId: game.currentTurn, // Track which turn the campaign was created in
           tier,
           workers: this.getWorkersForTier(tier),
           brandBonus: this.getBrandBonusForTier(tier),

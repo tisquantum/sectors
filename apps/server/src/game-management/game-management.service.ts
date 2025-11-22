@@ -9436,11 +9436,14 @@ export class GameManagementService {
       return false;
     }
 
-    // Check if there are any FactoryProduction records with profit > 0 for this turn
+    // Check if there are any FactoryProduction records with customersServed > 0 for this turn
+    // Note: We check customersServed (not profit) because profit is calculated DURING the earnings call phase
+    // If we checked profit > 0, the phase would always be skipped since profit starts at 0 until earnings call runs
+    // After earnings call runs, profit might be > 0, so we check if any records exist that need processing
     const productionCount = await this.prisma.factoryProduction.count({
       where: {
         gameTurnId: currentPhase.gameTurnId,
-        profit: { gt: 0 },
+        customersServed: { gt: 0 },
       },
     });
 
