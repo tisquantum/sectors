@@ -3,7 +3,10 @@
 import { trpc } from "@sectors/app/trpc";
 import { FactorySlots } from "../Tableau/FactorySlots";
 import { MarketingSlots } from "../Tableau/MarketingSlots";
+import { ResearchSlot } from "../Tableau/ResearchSlot";
 import { ConstructionOrders } from "../Factory/ConstructionOrders";
+import { PendingCampaigns } from "../Marketing/PendingCampaigns";
+import { PendingResearchOrders } from "../Research/PendingResearchOrders";
 
 interface ModernCompanyProps {
   companyId: string;
@@ -53,9 +56,33 @@ export function ModernCompany({
         </div>
       </div>
 
+      {/* Compact Research Section */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-1 text-xs font-medium text-gray-200">
+          <div className="w-2 h-2 bg-blue-400 rounded"></div>
+          Research
+        </div>
+        <div className="pl-3">
+          <ResearchSlot
+            companyId={companyId}
+            gameId={gameId}
+          />
+        </div>
+      </div>
+
       {/* Construction Orders & History */}
       <div className="space-y-2 pt-2 border-t border-gray-700">
         <ConstructionOrders companyId={companyId} gameId={gameId} showHistory={false} />
+      </div>
+
+      {/* Pending Marketing Campaigns */}
+      <div className="space-y-2 pt-2 border-t border-gray-700">
+        <PendingCampaigns companyId={companyId} gameId={gameId} />
+      </div>
+
+      {/* Pending Research Orders */}
+      <div className="space-y-2 pt-2 border-t border-gray-700">
+        <PendingResearchOrders companyId={companyId} gameId={gameId} />
       </div>
     </div>
   );

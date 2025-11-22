@@ -8,6 +8,7 @@ import { Factory } from '../Factory/Factory';
 import { trpc } from '@sectors/app/trpc';
 import { useGame } from '../../Game/GameContext';
 import { FACTORY_CUSTOMER_LIMITS } from '@server/data/constants';
+import { PhaseName } from '@server/prisma/prisma.client';
 
 interface FactorySlot {
   id: string;
@@ -36,6 +37,9 @@ export function FactorySlots({ companyId, gameId, currentPhase }: FactorySlotsPr
   const { currentPhase: gamePhase } = useGame();
   const [showFactoryCreation, setShowFactoryCreation] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<FactorySlot | null>(null);
+
+  // Check if we're in the MODERN_OPERATIONS phase
+  const isModernOperationsPhase = gamePhase?.name === PhaseName.MODERN_OPERATIONS;
 
   // Fetch real factory data
   const { data: factories, isLoading } = trpc.factory.getCompanyFactories.useQuery({
@@ -113,6 +117,8 @@ export function FactorySlots({ companyId, gameId, currentPhase }: FactorySlotsPr
   }, [factories, productionMap, resourcePriceMap]);
 
   const handleSlotClick = (slot: FactorySlot) => {
+    // Only allow clicks during MODERN_OPERATIONS phase
+    if (!isModernOperationsPhase) return;
     if (slot.isAvailable && !slot.isOccupied) {
       setSelectedSlot(slot);
       setShowFactoryCreation(true);
@@ -150,13 +156,15 @@ export function FactorySlots({ companyId, gameId, currentPhase }: FactorySlotsPr
             key={slot.id}
             onClick={() => handleSlotClick(slot)}
             className={cn(
-              'relative w-full rounded border transition-all flex items-center justify-center cursor-pointer',
+              'relative w-full rounded border transition-all flex items-center justify-center',
               slot.isOccupied ? 'h-auto' : 'h-8',
-              slot.isAvailable 
-                ? 'border-orange-400/60 bg-orange-400/10 text-orange-300 hover:bg-orange-400/20' 
-                : 'border-gray-600/40 bg-gray-700/30 text-gray-500 cursor-not-allowed',
               slot.isOccupied && 'border-orange-400 bg-orange-400/20 text-orange-200 cursor-default',
-              slot.isAvailable && !slot.isOccupied && 'hover:border-orange-400'
+              // Only allow interaction during MODERN_OPERATIONS phase
+              isModernOperationsPhase && slot.isAvailable && !slot.isOccupied
+                ? 'border-orange-400/60 bg-orange-400/10 text-orange-300 hover:bg-orange-400/20 cursor-pointer hover:border-orange-400'
+                : 'border-gray-600/40 bg-gray-700/30 text-gray-500 cursor-not-allowed',
+              // Dim available slots if not in correct phase
+              !isModernOperationsPhase && slot.isAvailable && !slot.isOccupied && 'opacity-50'
             )}
           >
             {slot.isOccupied && slot.factory ? (

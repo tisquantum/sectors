@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useGame } from "../../GameContext";
 import { trpc } from "@sectors/app/trpc";
 import {
@@ -24,8 +24,9 @@ import { ResearchTrack } from "../../../Company/Research/ResearchTrack";
 import { ModernOperationsLayout, ModernOperationsSection } from "../layouts";
 import CompanyInfoV2 from "../../../Company/CompanyV2/CompanyInfoV2";
 import { ConsumptionBagViewer } from "../ConsumptionBagViewer";
-import { RiBuilding3Fill } from "@remixicon/react";
+import { RiBuilding3Fill, RiVipCrown2Fill } from "@remixicon/react";
 import { cn } from "@/lib/utils";
+import PlayerAvatar from "../../../Player/PlayerAvatar";
 
 const RESEARCH_COSTS = {
   1: 100, // Phase I
@@ -80,12 +81,44 @@ export default function MarketingAndResearchPhase() {
   // Get tRPC utils for invalidating queries
   const trpcUtils = trpc.useUtils();
 
-  // Get all companies where the player is CEO
-  const { data: playerCompanies, isLoading: companiesLoading } =
+  // Get all companies where the player has shares (owns)
+  const { data: playersWithShares } = trpc.player.playersWithShares.useQuery({
+    where: { gameId },
+  });
+
+  // Get all companies in the game
+  const { data: allCompanies, isLoading: companiesLoading } =
     trpc.company.listCompanies.useQuery({
-      where: { gameId, ceoId: authPlayer?.id },
+      where: { gameId },
       orderBy: { name: "asc" },
     });
+
+  // Find companies the player owns shares in
+  const playerCompanies = useMemo(() => {
+    if (!playersWithShares || !allCompanies || !authPlayer) return [];
+    const authPlayerWithShares = playersWithShares.find(p => p.id === authPlayer.id);
+    if (!authPlayerWithShares) return [];
+    
+    // Get company IDs where player has shares
+    const companyIdsWithShares = new Set(
+      authPlayerWithShares.Share
+        .filter(share => share.location === 'PLAYER' && !share.shortOrderId)
+        .map(share => share.companyId)
+    );
+    
+    // Return companies with their CEO info
+    return allCompanies
+      .filter(company => companyIdsWithShares.has(company.id))
+      .map(company => {
+        const isCEO = company.ceoId === authPlayer.id;
+        const ceoPlayer = playersWithShares.find(p => p.id === company.ceoId);
+        return {
+          ...company,
+          isCEO,
+          ceoPlayer: ceoPlayer || null,
+        };
+      });
+  }, [playersWithShares, allCompanies, authPlayer]);
 
   // Auto-select first company when companies are loaded and none is selected
   useEffect(() => {
@@ -99,6 +132,7 @@ export default function MarketingAndResearchPhase() {
     (c) => c.id === selectedCompanyId
   );
   const hasCompanySelected = !!currentCompany;
+  const canOperateCompany = currentCompany?.isCEO === true;
 
   // Get current sector for research and resource filtering
   const currentSector = currentCompany
@@ -407,8 +441,8 @@ export default function MarketingAndResearchPhase() {
   if (companiesLoading) {
     return (
       <ModernOperationsLayout
-        title="Marketing & Research Phase"
-        description="Create marketing campaigns and advance your research track"
+        title="Modern Operations"
+        description="Build factories, create marketing campaigns, and advance your research track"
       >
         <div className="flex items-center justify-center h-64">
           <Spinner size="lg" />
@@ -417,77 +451,94 @@ export default function MarketingAndResearchPhase() {
     );
   }
 
-  if (!playerCompanies || playerCompanies.length === 0) {
-    return (
-      <ModernOperationsLayout
-        title="Marketing & Research Phase"
-        description="Create marketing campaigns and advance your research track"
-      >
-        <ModernOperationsSection>
-          <div className="flex flex-col items-center justify-center h-64 space-y-4">
-            <div className="text-center">
-              <p className="text-gray-400 text-lg mb-2">
-                No Companies Available
-              </p>
-              <p className="text-gray-500 text-sm">
-                You must be the CEO of a company to perform marketing and
-                research actions.
-              </p>
-            </div>
-          </div>
-        </ModernOperationsSection>
-      </ModernOperationsLayout>
-    );
-  }
+  // Still show the layout even if no companies - user can see the phase
 
   return (
     <ModernOperationsLayout
-      title="Marketing & Research Phase"
-      description="Create marketing campaigns and advance your research track"
+      title="Modern Operations"
+      description="Build factories, create marketing campaigns, and advance your research track"
       sidebar={sidebar}
     >
       <div className="space-y-6">
-        {/* Company Selector */}
-        <ModernOperationsSection title="Select Company">
+        {/* Company Selector - Show all companies you own */}
+        <ModernOperationsSection title="Your Companies">
           <div className="space-y-4">
             <p className="text-gray-400 text-sm">
-              Select a company you are the CEO of to conduct marketing and
-              research actions.
+              Select a company you own to view or operate. You can only operate companies where you are the CEO.
             </p>
-            <Select
-              label="Company"
-              placeholder="Select a company"
-              selectedKeys={currentCompany ? [currentCompany.id] : []}
-              onSelectionChange={(keys) => {
-                const selectedId = Array.from(keys)[0] as string;
-                setSelectedCompanyId(selectedId || null);
-              }}
-              startContent={<RiBuilding3Fill size={18} />}
-              classNames={{
-                trigger: "bg-gray-700/50 border-gray-600",
-              }}
-            >
-              {playerCompanies.map((company) => (
-                <SelectItem
-                  key={company.id}
-                  value={company.id}
-                  textValue={`${company.name} $${company.cashOnHand}`}
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <span>{company.name}</span>
-                    <span className="text-gray-400 ml-2">
-                      ${company.cashOnHand}
-                    </span>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {playerCompanies.map((company) => {
+                const isSelected = selectedCompanyId === company.id;
+                const isCEO = company.isCEO;
+                
+                return (
+                  <div
+                    key={company.id}
+                    onClick={() => setSelectedCompanyId(company.id)}
+                    className={cn(
+                      "relative rounded-lg border transition-all cursor-pointer",
+                      isSelected
+                        ? "border-blue-500 bg-blue-500/10 ring-2 ring-blue-500"
+                        : "border-gray-600 hover:border-gray-500 bg-gray-700/30"
+                    )}
+                  >
+                    <div className="p-4">
+                      <CompanyInfoV2 companyId={company.id} isMinimal={true} />
+                      
+                      {/* CEO Indicator */}
+                      {isCEO ? (
+                        <div className="mt-2 flex items-center gap-2 text-green-400 text-sm">
+                          <RiVipCrown2Fill size={16} />
+                          <span>You are CEO</span>
+                        </div>
+                      ) : company.ceoPlayer ? (
+                        <div className="mt-2 flex items-center gap-2 text-gray-400 text-sm">
+                          <span>CEO:</span>
+                          <PlayerAvatar player={company.ceoPlayer} size="sm" />
+                          <span className="text-gray-300">
+                            {company.ceoPlayer.nickname}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="mt-2 text-gray-500 text-sm">
+                          CEO: Unknown
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </SelectItem>
-              ))}
-            </Select>
+                );
+              })}
+            </div>
+            
+            {playerCompanies.length === 0 && (
+              <div className="text-center py-8 text-gray-400">
+                You don't own any companies yet.
+              </div>
+            )}
           </div>
         </ModernOperationsSection>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Marketing Section */}
-          <ModernOperationsSection title="Marketing Campaigns">
+        {/* Show operating controls only if CEO */}
+        {hasCompanySelected && !canOperateCompany && (
+          <ModernOperationsSection title="Cannot Operate">
+            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+              <p className="text-yellow-400">
+                You are not the CEO of this company. Only the CEO can perform marketing and research actions.
+                {currentCompany?.ceoPlayer && (
+                  <span className="block mt-2 text-sm text-gray-300">
+                    CEO: <strong>{currentCompany.ceoPlayer.nickname}</strong>
+                  </span>
+                )}
+              </p>
+            </div>
+          </ModernOperationsSection>
+        )}
+
+        {/* Operating controls - only shown if CEO */}
+        {hasCompanySelected && canOperateCompany && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Marketing Section */}
+            <ModernOperationsSection title="Marketing Campaigns">
             <div className="space-y-4">
               <p className="text-gray-400 text-sm">
                 Create marketing campaigns to boost your brand and influence
@@ -662,9 +713,10 @@ export default function MarketingAndResearchPhase() {
               </div>
             </div>
           </ModernOperationsSection>
-        </div>
+          </div>
+        )}
 
-        {/* Research Track Display */}
+        {/* Research Track Display - Show for all selected companies */}
         {hasCompanySelected && currentCompany && (
           <ModernOperationsSection title="Research Track">
             <ResearchTrack

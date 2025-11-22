@@ -126,6 +126,10 @@ export function friendlyPhaseName(name: PhaseName | undefined): string {
       return "Distribute Tranches";
     case PhaseName.PRIZE_DISTRIBUTE_RESOLVE:
       return "Resolve Tranches Distribution";
+    case PhaseName.MODERN_OPERATIONS:
+      return "Modern Operations";
+    case PhaseName.RESOLVE_MODERN_OPERATIONS:
+      return "Resolve Modern Operations";
     default:
       return "Unknown Phase";
   }

@@ -379,6 +379,9 @@ export class TrpcRouter {
     }),
     marketing: marketingRouter(this.trpc, {
       marketingService: this.marketingService,
+      gamesService: this.gamesService,
+      gameTurnService: this.gameTurnService,
+      prismaService: this.prismaService,
     }),
     factoryConstruction: factoryConstructionRouter(this.trpc, {
       factoryConstructionService: this.factoryConstructionService,
@@ -409,6 +412,7 @@ export class TrpcRouter {
       gamesService: this.gamesService,
       prismaService: this.prismaService,
       sectorService: this.sectorService,
+      gameTurnService: this.gameTurnService,
     }),
   });
 

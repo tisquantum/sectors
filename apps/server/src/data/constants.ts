@@ -139,8 +139,10 @@ export const phaseTimes: Record<PhaseName, number> = {
   [PhaseName.PRIZE_DISTRIBUTE_ACTION]: 50 * 1000,
   [PhaseName.PRIZE_DISTRIBUTE_RESOLVE]: 12 * 1000,
   [PhaseName.HEADLINE_RESOLVE]: 12 * 1000,
-  [PhaseName.FACTORY_CONSTRUCTION]: 12 * 1000,
-  [PhaseName.FACTORY_CONSTRUCTION_RESOLVE]: 12 * 1000,
+  [PhaseName.FACTORY_CONSTRUCTION]: 12 * 1000, // Legacy - kept for backward compatibility
+  [PhaseName.FACTORY_CONSTRUCTION_RESOLVE]: 12 * 1000, // Legacy - kept for backward compatibility
+  [PhaseName.MODERN_OPERATIONS]: 60 * 1000, // Combined: Factory Construction + Marketing + Research
+  [PhaseName.RESOLVE_MODERN_OPERATIONS]: 12 * 1000, // Combined resolve for all operations
   [PhaseName.MARKETING_CAMPAIGN]: 50 * 1000,
   [PhaseName.MARKETING_CAMPAIGN_RESOLVE]: 12 * 1000,
   [PhaseName.RESEARCH_ACTION]: 50 * 1000,
@@ -176,7 +178,7 @@ export const workerTrackValues = [
   28, 28, 28, 28, 29, 29, 29, 29, 30, 30
 ]
 
-export const DEFAULT_WORKERS = 60;
+export const DEFAULT_WORKERS = 40;
 
 export function getSectorResourceForSectorName(sectorName: SectorName) {
   switch(sectorName) {
@@ -1189,10 +1191,12 @@ export const phasesInOrder = [
   // PhaseName.OPERATING_COMPANY_VOTE_RESOLVE,
   // PhaseName.OPERATING_PRODUCTION,
   //OPERATIONS V2 PHASES
-  PhaseName.FACTORY_CONSTRUCTION,
-  PhaseName.FACTORY_CONSTRUCTION_RESOLVE,
-  PhaseName.MARKETING_AND_RESEARCH_ACTION,
-  PhaseName.MARKETING_AND_RESEARCH_ACTION_RESOLVE,
+  // PhaseName.FACTORY_CONSTRUCTION,
+  // PhaseName.FACTORY_CONSTRUCTION_RESOLVE,
+  // PhaseName.MARKETING_AND_RESEARCH_ACTION,
+  // PhaseName.MARKETING_AND_RESEARCH_ACTION_RESOLVE,
+  PhaseName.MODERN_OPERATIONS,
+  PhaseName.RESOLVE_MODERN_OPERATIONS,
   PhaseName.CONSUMPTION_PHASE,
   PhaseName.EARNINGS_CALL,
   PhaseName.OPERATING_PRODUCTION_VOTE,

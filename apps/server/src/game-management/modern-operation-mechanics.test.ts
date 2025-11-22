@@ -101,7 +101,7 @@ describe('Modern Operation Mechanics - Integration Test', () => {
       // Verify game created
       expect(game).toBeDefined();
       expect(game.operationMechanicsVersion).toBe(OperationMechanicsVersion.MODERN);
-      expect(game.workers).toBe(60); // DEFAULT_WORKERS
+      expect(game.workers).toBe(40); // DEFAULT_WORKERS
 
       // Verify resources created (3 global + 3 sectors × 1 sector-specific = 6 resources for 3 sectors)
       const resources = await prisma.resource.findMany({

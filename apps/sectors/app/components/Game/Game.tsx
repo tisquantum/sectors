@@ -73,6 +73,8 @@ import {
   EarningsCallPhase as ModernEarningsCallPhase,
   MarketingAndResearchPhase as ModernMarketingAndResearchPhase,
   MarketingAndResearchResolvePhase as ModernMarketingAndResearchResolvePhase,
+  ModernOperations as ModernOperationsPhase,
+  ModernOperationsResolve as ModernOperationsResolvePhase,
 } from "./ModernOperations/phases";
 import InsolvencyContributionComponent from "../Company/InsolvencyContribution";
 import { CompanyStatus } from "@server/prisma/prisma.client";
@@ -312,28 +314,34 @@ const Game = ({ gameId }: { gameId: string }) => {
       )
     ) : currentRoundData?.phase.name === PhaseName.FACTORY_CONSTRUCTION ? (
       gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN ? (
-        <ModernFactoryConstructionPhase />
+        <ModernMarketingAndResearchPhase /> // Use combined phase for modern operations
       ) : (
         <FactoryConstructionPhase />
       )
     ) : currentRoundData?.phase.name === PhaseName.FACTORY_CONSTRUCTION_RESOLVE ? (
       gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN ? (
-        <ModernFactoryConstructionResolvePhase />
+        <ModernMarketingAndResearchResolvePhase /> // Use combined resolve for modern operations
       ) : (
         <ResolveFactoryConstructionPhase />
       )
     ) : currentRoundData?.phase.name === PhaseName.MARKETING_AND_RESEARCH_ACTION ? (
       gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN ? (
-        <ModernMarketingAndResearchPhase />
+        <ModernMarketingAndResearchPhase /> // Combined: Factory + Marketing + Research
       ) : (
         <MarketingAndResearchAction />
       )
     ) : currentRoundData?.phase.name === PhaseName.MARKETING_AND_RESEARCH_ACTION_RESOLVE ? (
       gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN ? (
-        <ModernMarketingAndResearchResolvePhase />
+        <ModernMarketingAndResearchResolvePhase /> // Combined resolve
       ) : (
         <MarketingAndResearchActionResolve />
       )
+    ) : currentRoundData?.phase.name === PhaseName.MODERN_OPERATIONS ? (
+      // New combined phase: Factory Construction + Marketing + Research
+      <ModernOperationsPhase />
+    ) : currentRoundData?.phase.name === PhaseName.RESOLVE_MODERN_OPERATIONS ? (
+      // New combined resolve phase
+      <ModernOperationsResolvePhase />
     ) : currentRoundData?.phase.name === PhaseName.RESOLVE_INSOLVENCY ? (
       <div className="flex flex-col gap-4 p-4 w-full">
         <h2 className="text-2xl font-bold">Resolve Insolvency</h2>

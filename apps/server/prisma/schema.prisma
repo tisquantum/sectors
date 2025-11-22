@@ -103,7 +103,8 @@ model Player {
   RoomUser                 RoomUser?
   PlayerHeadline           PlayerHeadline[]
   CompanyIpoPriceVote      CompanyIpoPriceVote[]
-  FactoryConstructionOrder FactoryConstructionOrder[]
+  factoryConstructionOrders FactoryConstructionOrder[]
+  researchOrders           ResearchOrder[]
   isBot                    Boolean                    @default(false)
   companiesAsCEO           Company[]                  @relation("CompanyCEO")
 }
@@ -262,6 +263,7 @@ model Company {
   marketFavors              Int                        @default(0)
   sectorMarketing           SectorMarketing[]
   factoryConstructionOrders FactoryConstructionOrder[]
+  researchOrders            ResearchOrder[]
   consumptionMarkers        ConsumptionMarker[]
   factoryProductions        FactoryProduction[]
   ceo                       Player?                    @relation("CompanyCEO", fields: [ceoId], references: [id])
@@ -851,6 +853,7 @@ model Game {
   sectorMarketing           SectorMarketing[]
   workers                   Int                        @default(0)
   factoryConstructionOrders FactoryConstructionOrder[]
+  researchOrders            ResearchOrder[]
   consumptionMarkers        ConsumptionMarker[]
   factoryProductions        FactoryProduction[]
 }
@@ -957,6 +960,7 @@ model GameTurn {
   StockSubRound          StockSubRound[]
   CompanyIpoPriceVote    CompanyIpoPriceVote[]
   factoryConstructionOrders FactoryConstructionOrder[]
+  researchOrders         ResearchOrder[]
   factoryProductions     FactoryProduction[]
 }
 
@@ -1057,7 +1061,8 @@ model Phase {
   StockHistory             StockHistory[]
   Transactions             Transaction[]
   GameLogs                 GameLog[]
-  FactoryConstructionOrder FactoryConstructionOrder[]
+  factoryConstructionOrders FactoryConstructionOrder[]
+  researchOrders           ResearchOrder[]
   phaseStartTime           DateTime?
   createdAt                DateTime                   @default(now())
   updatedAt                DateTime                   @updatedAt
@@ -1111,6 +1116,8 @@ enum PhaseName {
   RESEARCH_ACTION_RESOLVE
   MARKETING_AND_RESEARCH_ACTION
   MARKETING_AND_RESEARCH_ACTION_RESOLVE
+  MODERN_OPERATIONS // Combined: Factory Construction + Marketing + Research
+  RESOLVE_MODERN_OPERATIONS // Combined: Factory Construction Resolve + Marketing/Research Resolve
   CONSUMPTION_PHASE
   EARNINGS_CALL //profit and stock adjustment
   RESOLVE_INSOLVENCY //resolve insolvent companies after earnings call
@@ -1818,4 +1825,25 @@ model MarketingCampaign {
   resourceTypes ResourceType[]         // Resources selected by player to add to consumption bag
   Company      Company                 @relation(fields: [companyId], references: [id])
   Game         Game                    @relation(fields: [gameId], references: [id])
+}
+
+// Research Orders - submitted during MODERN_OPERATIONS, resolved during RESOLVE_MODERN_OPERATIONS
+model ResearchOrder {
+  id                String   @id @default(uuid())
+  companyId         String
+  gameId            String
+  gameTurnId        String
+  phaseId           String
+  playerId          String
+  sectorId          String
+  cost              Int      // Research cost (varies by phase/turn)
+  researchProgressGain Int?  // Random result: 0, 1, or 2 (set during resolve)
+  failureReason     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  player            Player   @relation(fields: [playerId], references: [id])
+  company           Company  @relation(fields: [companyId], references: [id])
+  game              Game     @relation(fields: [gameId], references: [id])
+  phase             Phase    @relation(fields: [phaseId], references: [id])
+  gameTurn          GameTurn @relation(fields: [gameTurnId], references: [id])
 }

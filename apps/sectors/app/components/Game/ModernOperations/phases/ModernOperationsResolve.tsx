@@ -4,22 +4,21 @@ import { useState, useMemo, useEffect } from "react";
 import { useGame } from "../../GameContext";
 import { trpc } from "@sectors/app/trpc";
 import { Spinner, Chip, Popover, PopoverContent, PopoverTrigger } from "@nextui-org/react";
-import { RiVipCrown2Fill, RiInformationLine } from "@remixicon/react";
+import { RiVipCrown2Fill, RiInformationLine, RiMegaphoneFill, RiTestTubeFill } from "@remixicon/react";
 import { cn } from "@/lib/utils";
 import PlayerAvatar from "../../../Player/PlayerAvatar";
 import CompanyInfoV2 from "../../../Company/CompanyV2/CompanyInfoV2";
 import { ModernOperationsLayout, ModernOperationsSection } from "../layouts";
 import { SectorResearchTracks } from "../../Tracks";
-import { RiMegaphoneFill, RiTestTubeFill } from "@remixicon/react";
 
 /**
- * MarketingAndResearchResolvePhase Component
+ * ModernOperationsResolve Phase Component
  *
  * Shows all companies the player owns with CompanyInfoV2 components.
  * Displays resolved marketing campaigns and research advances for the selected company.
  * Similar structure to ModernOperations but shows resolved results instead of operations.
  */
-export default function MarketingAndResearchResolvePhase() {
+export default function ModernOperationsResolve() {
   const { gameId, authPlayer, currentPhase, currentTurn } = useGame();
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
 
@@ -179,53 +178,61 @@ export default function MarketingAndResearchResolvePhase() {
       description={`Phase ${currentPhaseNumber} - View resolved marketing campaigns and research advances`}
     >
       <div className="space-y-6">
-        {/* Company Selector Grid */}
+        {/* Company Selection Grid */}
         <ModernOperationsSection title="Your Companies">
-          <p className="text-gray-400 text-sm mb-4">
-            Select a company to view its resolved marketing campaigns and research
-            advances.
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {playerCompanies.map((company) => {
-              const isSelected = selectedCompanyId === company.id;
+          <div className="space-y-4">
+            <p className="text-gray-400 text-sm">
+              Select a company to view its resolved marketing campaigns and research advances.
+            </p>
 
-              return (
-                <div
-                  key={company.id}
-                  onClick={() => setSelectedCompanyId(company.id)}
-                  className={cn(
-                    "relative rounded-lg border transition-all cursor-pointer overflow-hidden",
-                    isSelected
-                      ? "border-blue-500 bg-blue-500/10 ring-2 ring-blue-500"
-                      : "border-gray-600 hover:border-gray-500 bg-gray-700/30"
-                  )}
-                >
-                  <div className="p-4">
-                    <CompanyInfoV2 companyId={company.id} />
-                  </div>
+            {playerCompanies.length === 0 ? (
+              <div className="text-center py-8 text-gray-400">
+                You don't own any companies yet.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {playerCompanies.map((company) => {
+                  const isSelected = selectedCompanyId === company.id;
 
-                  {/* CEO Indicator */}
-                  {company.isCEO ? (
-                    <div className="absolute top-2 right-2 flex items-center gap-1 text-green-400 text-xs font-semibold">
-                      <RiVipCrown2Fill size={14} />
-                      <span>You are CEO</span>
+                  return (
+                    <div
+                      key={company.id}
+                      onClick={() => setSelectedCompanyId(company.id)}
+                      className={cn(
+                        "relative rounded-lg border transition-all cursor-pointer overflow-hidden",
+                        isSelected
+                          ? "border-blue-500 bg-blue-500/10 ring-2 ring-blue-500"
+                          : "border-gray-600 hover:border-gray-500 bg-gray-700/30"
+                      )}
+                    >
+                      <div className="p-4">
+                        <CompanyInfoV2 companyId={company.id} />
+                      </div>
+
+                      {/* CEO Indicator */}
+                      {company.isCEO ? (
+                        <div className="absolute top-2 right-2 flex items-center gap-1 text-green-400 text-xs font-semibold">
+                          <RiVipCrown2Fill size={14} />
+                          <span>You are CEO</span>
+                        </div>
+                      ) : company.ceoPlayer ? (
+                        <div className="absolute top-2 right-2 flex items-center gap-1 text-gray-400 text-xs">
+                          <span>CEO:</span>
+                          <PlayerAvatar player={company.ceoPlayer} size="xs" />
+                          <span className="text-gray-300">
+                            {company.ceoPlayer.nickname}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="absolute top-2 right-2 text-gray-500 text-xs">
+                          CEO: Unknown
+                        </div>
+                      )}
                     </div>
-                  ) : company.ceoPlayer ? (
-                    <div className="absolute top-2 right-2 flex items-center gap-1 text-gray-400 text-xs">
-                      <span>CEO:</span>
-                      <PlayerAvatar player={company.ceoPlayer} size="xs" />
-                      <span className="text-gray-300">
-                        {company.ceoPlayer.nickname}
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="absolute top-2 right-2 text-gray-500 text-xs">
-                      CEO: Unknown
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                  );
+                })}
+              </div>
+            )}
           </div>
         </ModernOperationsSection>
 
@@ -368,7 +375,7 @@ export default function MarketingAndResearchResolvePhase() {
                         {selectedCompany.researchProgress || 0} spaces
                       </span>
                     </div>
-                    {resolvedOrders.length > 0 && (
+                    {resolvedOrders && resolvedOrders.length > 0 && (
                       <div className="mt-3 pt-3 border-t border-gray-600">
                         <div className="text-xs text-gray-400 mb-2">
                           Research Orders Resolved:

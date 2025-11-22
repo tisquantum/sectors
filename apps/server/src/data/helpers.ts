@@ -205,10 +205,10 @@ export function determineNextGamePhase(
         roundType: RoundType.STOCK,
       };
     case PhaseName.STOCK_RESULTS_OVERVIEW: {
-      //if modern operations, move to operations production
+      //if modern operations, move to modern operations phase
       if (modernOperations) {
         return {
-          phaseName: PhaseName.FACTORY_CONSTRUCTION,
+          phaseName: PhaseName.MODERN_OPERATIONS,
           roundType: RoundType.OPERATING,
         };
       }
@@ -297,21 +297,34 @@ export function determineNextGamePhase(
         roundType: RoundType.OPERATING,
       };
     case PhaseName.FACTORY_CONSTRUCTION:
+      // Legacy support - route to new combined phase
       return {
-        phaseName: PhaseName.FACTORY_CONSTRUCTION_RESOLVE,
+        phaseName: PhaseName.RESOLVE_MODERN_OPERATIONS,
         roundType: RoundType.OPERATING,
       };
     case PhaseName.FACTORY_CONSTRUCTION_RESOLVE:
+      // Legacy support - route to marketing/research or new combined phase
       return {
-        phaseName: PhaseName.MARKETING_AND_RESEARCH_ACTION,
+        phaseName: modernOperations ? PhaseName.RESOLVE_MODERN_OPERATIONS : PhaseName.MARKETING_AND_RESEARCH_ACTION,
         roundType: RoundType.OPERATING,
       };
     case PhaseName.MARKETING_AND_RESEARCH_ACTION:
+      // Legacy support
       return {
         phaseName: PhaseName.MARKETING_AND_RESEARCH_ACTION_RESOLVE,
         roundType: RoundType.OPERATING,
       };
     case PhaseName.MARKETING_AND_RESEARCH_ACTION_RESOLVE:
+      return {
+        phaseName: PhaseName.CONSUMPTION_PHASE,
+        roundType: RoundType.GAME_UPKEEP,
+      };
+    case PhaseName.MODERN_OPERATIONS:
+      return {
+        phaseName: PhaseName.RESOLVE_MODERN_OPERATIONS,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.RESOLVE_MODERN_OPERATIONS:
       return {
         phaseName: PhaseName.CONSUMPTION_PHASE,
         roundType: RoundType.GAME_UPKEEP,

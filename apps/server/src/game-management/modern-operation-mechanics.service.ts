@@ -65,18 +65,32 @@ export class ModernOperationMechanicsService {
 
       case PhaseName.FACTORY_CONSTRUCTION:
         // Players submit factory construction orders (handled by client)
+        // Legacy support - kept for backward compatibility
         break;
 
       case PhaseName.FACTORY_CONSTRUCTION_RESOLVE:
         await this.resolveFactoryConstruction(phase);
+        // Legacy support - kept for backward compatibility
         break;
 
       case PhaseName.MARKETING_AND_RESEARCH_ACTION:
         // Players submit marketing and research actions (handled by client)
+        // Legacy support - kept for backward compatibility
         break;
 
       case PhaseName.MARKETING_AND_RESEARCH_ACTION_RESOLVE:
         await this.resolveMarketingAndResearchActions(phase);
+        // Legacy support - kept for backward compatibility
+        break;
+
+      case PhaseName.MODERN_OPERATIONS:
+        // Combined phase: Factory Construction + Marketing + Research
+        // Players submit all operation orders (handled by client)
+        break;
+
+      case PhaseName.RESOLVE_MODERN_OPERATIONS:
+        // Combined phase: Resolve Factory Construction + Marketing + Research
+        await this.resolveModernOperations(phase);
         break;
 
       case PhaseName.EARNINGS_CALL:
@@ -286,6 +300,12 @@ export class ModernOperationMechanicsService {
         continue;
       }
 
+      // Get sector resource type to ensure correct factory output resource
+      const sectorResourceType = this.getSectorResourceType(company.Sector.sectorName);
+      
+      // Determine factory output resource: use sector resource type if available, otherwise first resource
+      const factoryOutputResource = sectorResourceType || order.resourceTypes[0];
+      
       // Store successful operation for batch processing
       successfulOperations.push({
         order,
@@ -293,7 +313,7 @@ export class ModernOperationMechanicsService {
         blueprintCost,
         requiredWorkers,
         existingFactories,
-        factoryOutputResource: order.resourceTypes[0], // First resource in blueprint
+        factoryOutputResource, // Sector resource type or first resource in blueprint
       });
     }
 
@@ -314,6 +334,25 @@ export class ModernOperationMechanicsService {
       try {
         let createdFactoryId: string | null = null;
         
+        // Get the sector's unique resource type
+        const sectorResourceType = this.getSectorResourceType(op.company.Sector.sectorName);
+        
+        // Ensure sector resource type is always included and replace GENERAL with sector resource
+        let factoryResourceTypes = [...op.order.resourceTypes];
+        
+        if (sectorResourceType) {
+          // Remove GENERAL and any existing sector resource type (to avoid duplicates)
+          factoryResourceTypes = factoryResourceTypes.filter(rt => 
+            rt !== ResourceType.GENERAL && rt !== sectorResourceType
+          );
+          
+          // Always put sector resource type first, followed by other resources
+          factoryResourceTypes = [sectorResourceType, ...factoryResourceTypes];
+        } else {
+          // If no sector resource type, just remove GENERAL
+          factoryResourceTypes = factoryResourceTypes.filter(rt => rt !== ResourceType.GENERAL);
+        }
+        
         await this.prisma.$transaction(async (tx) => {
           // Deduct cash from company
           await tx.company.update({
@@ -322,6 +361,7 @@ export class ModernOperationMechanicsService {
           });
 
           // Create factory (will be operational next turn)
+          // Always ensure sector resource type is first, and replace GENERAL with sector resource
           const factory = await tx.factory.create({
             data: {
               companyId: op.company.id,
@@ -331,7 +371,7 @@ export class ModernOperationMechanicsService {
               workers: op.requiredWorkers,
               slot: op.existingFactories + 1,
               isOperational: false,
-              resourceTypes: op.order.resourceTypes,
+              resourceTypes: factoryResourceTypes,
             },
           });
           
@@ -436,6 +476,25 @@ export class ModernOperationMechanicsService {
     await this.updateWorkforceTrack(phase);
   }
 
+  /**
+   * RESOLVE_MODERN_OPERATIONS
+   * Combined resolver for Factory Construction, Marketing, and Research actions
+   * Processes all three action types in one phase
+   */
+  private async resolveModernOperations(phase: Phase) {
+    // Resolve factory construction first
+    await this.resolveFactoryConstruction(phase);
+    
+    // Then resolve marketing and research actions
+    await this.resolveMarketingAndResearchActions(phase);
+    
+    // Update workforce track after all operations
+    await this.updateWorkforceTrack(phase);
+    
+    // Update sector demand after workers are allocated
+    await this.updateSectorDemand(phase);
+  }
+
   private async updateResourcePrices(phase: Phase) {
     // Update global and sector-specific resource prices based on availability
     await this.resourceService.updateResourcePrices(phase.gameId);
@@ -448,14 +507,19 @@ export class ModernOperationMechanicsService {
   }
 
   private async updateWorkforceTrack(phase: Phase) {
-    // Get current game state
+    // Get current game state with all necessary relations
     const game = await this.prisma.game.findUnique({
       where: { id: phase.gameId },
       include: {
-        factories: true,
+        factories: {
+          include: {
+            Sector: true,
+          },
+        },
         Company: {
           include: {
             marketingCampaigns: true,
+            Sector: true,
           },
         },
       },
@@ -465,33 +529,107 @@ export class ModernOperationMechanicsService {
       return;
     }
 
-    // Calculate total workers in factories
-    const totalFactoryWorkers = game.factories.reduce((sum: number, factory: any) => sum + factory.workers, 0);
+    // Calculate total workers in factories by sector
+    const factoryWorkersBySector = new Map<string, number>();
+    const totalFactoryWorkers = game.factories.reduce((sum: number, factory: any) => {
+      const sectorId = factory.sectorId;
+      const current = factoryWorkersBySector.get(sectorId) || 0;
+      factoryWorkersBySector.set(sectorId, current + factory.workers);
+      return sum + factory.workers;
+    }, 0);
     
-    // Calculate total workers in marketing campaigns
+    // Calculate total workers in marketing campaigns by sector
+    const marketingWorkersBySector = new Map<string, number>();
     const totalMarketingWorkers = game.Company.reduce((sum: number, company: any) => {
-      return sum + company.marketingCampaigns.reduce((campaignSum: number, campaign: any) => campaignSum + campaign.workers, 0);
+      const sectorId = company.sectorId;
+      const marketingWorkers = company.marketingCampaigns.reduce((campaignSum: number, campaign: any) => campaignSum + campaign.workers, 0);
+      if (marketingWorkers > 0) {
+        const current = marketingWorkersBySector.get(sectorId) || 0;
+        marketingWorkersBySector.set(sectorId, current + marketingWorkers);
+      }
+      return sum + marketingWorkers;
+    }, 0);
+
+    // Calculate research workers by sector (researchProgress represents allocated workers)
+    // Note: researchProgress accumulates, so we use the current value as allocated workers
+    const researchWorkersBySector = new Map<string, number>();
+    const totalResearchWorkers = game.Company.reduce((sum: number, company: any) => {
+      const sectorId = company.sectorId;
+      const researchWorkers = company.researchProgress || 0;
+      if (researchWorkers > 0) {
+        const current = researchWorkersBySector.get(sectorId) || 0;
+        researchWorkersBySector.set(sectorId, current + researchWorkers);
+      }
+      return sum + researchWorkers;
     }, 0);
 
     // Calculate total allocated workers
-    const totalAllocatedWorkers = totalFactoryWorkers + totalMarketingWorkers;
+    const totalAllocatedWorkers = totalFactoryWorkers + totalMarketingWorkers + totalResearchWorkers;
     
-    // Update available workers in game
-    const availableWorkers = Math.max(0, game.workers - totalAllocatedWorkers);
+    // Update available workers in game (workforcePool tracks available workers)
+    const DEFAULT_WORKERS = 40; // From constants
+    const availableWorkers = Math.max(0, DEFAULT_WORKERS - totalAllocatedWorkers);
+    
+    // Calculate economy score: starts at 10, +1 for every 2 allocated workers
+    const economyScore = 10 + Math.floor(totalAllocatedWorkers / 2);
+    
+    // Get current game state to check if workforcePool needs initialization
+    const currentGame = await this.prisma.game.findUnique({
+      where: { id: phase.gameId },
+      select: { workforcePool: true },
+    });
+    
+    // If workforcePool is 0 and we have no allocations, initialize it to DEFAULT_WORKERS
+    // This handles existing games that were created before workforcePool was initialized
+    const workforcePoolToSet = (currentGame?.workforcePool === 0 && totalAllocatedWorkers === 0)
+      ? DEFAULT_WORKERS
+      : availableWorkers;
     
     await this.prisma.game.update({
       where: { id: phase.gameId },
-      data: { workers: availableWorkers },
+      data: { 
+        workforcePool: workforcePoolToSet,
+        workers: workforcePoolToSet, // Keep both fields in sync for backward compatibility
+        economyScore: economyScore,
+      },
     });
 
-    // Note: Economy score is NOT updated here - it's controlled by adjustEconomyScore()
-    // which adjusts based on dividends vs retained earnings, not worker allocation
+    // Store worker allocation by sector for demand calculation
+    // Combine all worker allocations by sector
+    const allSectorIds = new Set([
+      ...Array.from(factoryWorkersBySector.keys()),
+      ...Array.from(marketingWorkersBySector.keys()),
+      ...Array.from(researchWorkersBySector.keys()),
+    ]);
+
+    const workerAllocationLogs: Array<{ gameId: string; content: string }> = [];
+    
+    for (const sectorId of allSectorIds) {
+      const factoryWorkers = factoryWorkersBySector.get(sectorId) || 0;
+      const marketingWorkers = marketingWorkersBySector.get(sectorId) || 0;
+      const researchWorkers = researchWorkersBySector.get(sectorId) || 0;
+      const totalSectorWorkers = factoryWorkers + marketingWorkers + researchWorkers;
+      
+      if (totalSectorWorkers > 0) {
+        const sector = await this.prisma.sector.findUnique({ where: { id: sectorId } });
+        if (sector) {
+          workerAllocationLogs.push({
+            gameId: phase.gameId,
+            content: `${sector.sectorName}: ${factoryWorkers} factory + ${marketingWorkers} marketing + ${researchWorkers} research = ${totalSectorWorkers} total workers`,
+          });
+        }
+      }
+    }
 
     await this.gameLogService.createGameLog({
       game: { connect: { id: phase.gameId } },
       phase: { connect: { id: phase.id } },
-      content: `Workforce track updated: ${totalFactoryWorkers} factory workers, ${totalMarketingWorkers} marketing workers, ${availableWorkers} available`,
+      content: `Workforce track updated: ${totalFactoryWorkers} factory workers, ${totalMarketingWorkers} marketing workers, ${totalResearchWorkers} research workers, ${availableWorkers} available. Economy score: ${economyScore} (${totalAllocatedWorkers} allocated workers)`,
     });
+
+    if (workerAllocationLogs.length > 0) {
+      await this.gameLogService.createManyGameLogs(workerAllocationLogs);
+    }
   }
 
   /**
@@ -1071,41 +1209,141 @@ export class ModernOperationMechanicsService {
       );
     }
 
-    // Handle research actions
-    // Get companies that increased research progress this turn
-    const companies = await this.companyService.companies({
-      where: {
-        gameId: phase.gameId,
-        researchProgress: { gt: 0 },
+    // Handle research orders
+    // Get all research orders from this turn
+    const researchOrders = await this.prisma.researchOrder.findMany({
+      where: { gameTurnId: phase.gameTurnId },
+      include: {
+        company: {
+          include: { Sector: true },
+        },
       },
     });
 
-    // OPTIMIZATION: Collect research updates and game logs
+    // OPTIMIZATION: Collect research updates and game logs for batch processing
     const researchCompanyUpdates: Array<{
+      id: string;
+      researchProgress?: number;
+      cashOnHand?: number;
+      researchGrants?: number;
+      marketFavors?: number;
+    }> = [];
+    const researchGameLogEntries: Array<{ gameId: string; content: string }> = [];
+    const researchOrderUpdates: Array<{
+      id: string;
+      researchProgressGain: number;
+      failureReason?: string;
+    }> = [];
+
+    // Process each research order
+    for (const order of researchOrders) {
+      const company = order.company;
+      
+      // Check if company can still afford the research (cash may have changed)
+      if (company.cashOnHand < order.cost) {
+        // Mark order as failed
+        researchOrderUpdates.push({
+          id: order.id,
+          researchProgressGain: 0,
+          failureReason: `Insufficient funds. Required: $${order.cost}, Available: $${company.cashOnHand}`,
+        });
+        
+        researchGameLogEntries.push({
+          gameId: phase.gameId,
+          content: `${company.name} research order failed: insufficient funds.`,
+        });
+        continue;
+      }
+
+      // Generate random research progress gain (0, 1, or 2)
+      const researchProgressGain = Math.floor(Math.random() * 3); // 0, 1, or 2
+
+      // Collect company update
+      const currentProgress = company.researchProgress || 0;
+      const newProgress = currentProgress + researchProgressGain;
+
+      researchCompanyUpdates.push({
+        id: company.id,
+        researchProgress: newProgress,
+        cashOnHand: company.cashOnHand - order.cost,
+      });
+
+      // Mark order with result
+      researchOrderUpdates.push({
+        id: order.id,
+        researchProgressGain,
+      });
+
+      // Create game log entry
+      researchGameLogEntries.push({
+        gameId: phase.gameId,
+        content: `${company.name} invested $${order.cost} in research. Progress: +${researchProgressGain} (Total: ${newProgress}).`,
+      });
+    }
+
+    // OPTIMIZATION: Batch update research orders with results
+    if (researchOrderUpdates.length > 0) {
+      await this.prisma.$transaction(
+        researchOrderUpdates.map(update =>
+          this.prisma.researchOrder.update({
+            where: { id: update.id },
+            data: {
+              researchProgressGain: update.researchProgressGain,
+              failureReason: update.failureReason || null,
+            },
+          })
+        )
+      );
+    }
+
+    // OPTIMIZATION: Batch update companies with research results
+    if (researchCompanyUpdates.length > 0) {
+      await this.prisma.$transaction(
+        researchCompanyUpdates.map(update => {
+          const data: any = {};
+          if (update.researchProgress !== undefined) data.researchProgress = update.researchProgress;
+          if (update.cashOnHand !== undefined) data.cashOnHand = update.cashOnHand;
+          
+          return this.prisma.company.update({
+            where: { id: update.id },
+            data,
+          });
+        })
+      );
+    }
+
+    // Check for research milestones after processing all orders
+    const updatedCompanies = await this.companyService.companies({
+      where: {
+        gameId: phase.gameId,
+        id: { in: researchCompanyUpdates.map(u => u.id) },
+      },
+    });
+
+    const milestoneUpdates: Array<{
       id: string;
       researchGrants?: number;
       cashOnHand?: number;
       marketFavors?: number;
     }> = [];
-    const researchGameLogEntries: Array<{ gameId: string; content: string }> = [];
 
-    for (const company of companies) {
+    for (const company of updatedCompanies) {
       // Research grants at milestones
-      if (company.researchProgress === 5) {
-        researchCompanyUpdates.push({
+      if (company.researchProgress === 5 && (company.researchGrants || 0) === 0) {
+        milestoneUpdates.push({
           id: company.id,
-          researchGrants: company.researchGrants + 1,
-          cashOnHand: company.cashOnHand + 200, // Grant money
+          researchGrants: 1,
+          cashOnHand: (company.cashOnHand || 0) + 200, // Grant money
         });
 
         researchGameLogEntries.push({
           gameId: phase.gameId,
           content: `${company.name} reached research milestone! Received $200 grant.`,
         });
-      } else if (company.researchProgress === 10) {
-        researchCompanyUpdates.push({
+      } else if (company.researchProgress === 10 && (company.marketFavors || 0) === 0) {
+        milestoneUpdates.push({
           id: company.id,
-          marketFavors: company.marketFavors + 1,
+          marketFavors: 1,
         });
 
         researchGameLogEntries.push({
@@ -1115,10 +1353,10 @@ export class ModernOperationMechanicsService {
       }
     }
 
-    // OPTIMIZATION: Batch update research companies
-    if (researchCompanyUpdates.length > 0) {
+    // Batch update milestone rewards
+    if (milestoneUpdates.length > 0) {
       await this.prisma.$transaction(
-        researchCompanyUpdates.map(update => {
+        milestoneUpdates.map(update => {
           const data: any = {};
           if (update.researchGrants !== undefined) data.researchGrants = update.researchGrants;
           if (update.cashOnHand !== undefined) data.cashOnHand = update.cashOnHand;
@@ -1598,11 +1836,12 @@ export class ModernOperationMechanicsService {
   }
 
   /**
-   * Calculate and update sector demand based on base sector demand + brand scores
-   * Effective Demand = base sector demand (from initialization) + sum of brand scores for all companies in sector
+   * Calculate and update sector demand based on base sector demand + brand scores + worker allocation
+   * Effective Demand = base sector demand (from initialization) + sum of brand scores + worker allocation by sector
    * 
+   * Worker allocation = total workers in factories + marketing campaigns + research for that sector
    * The sector's `baseDemand` field stores the initial demand from gameData (preserved).
-   * The `demand` field is updated each turn to reflect effective demand (base + brand scores).
+   * The `demand` field is updated each turn to reflect effective demand (base + brand + workers).
    */
   private async updateSectorDemand(phase: Phase) {
     // Query sectors with companies directly using Prisma to include Company relation
@@ -1610,10 +1849,66 @@ export class ModernOperationMechanicsService {
       where: { gameId: phase.gameId },
       include: {
         Company: {
-          select: { id: true, brandScore: true },
+          select: { id: true, brandScore: true, researchProgress: true },
         },
       },
     });
+
+    // Get all factories and marketing campaigns grouped by sector
+    const factories = await this.prisma.factory.findMany({
+      where: { gameId: phase.gameId },
+      select: { sectorId: true, workers: true },
+    });
+
+    const marketingCampaigns = await this.prisma.marketingCampaign.findMany({
+      where: { 
+        gameId: phase.gameId,
+        status: MarketingCampaignStatus.ACTIVE,
+      },
+      include: {
+        Company: {
+          select: { sectorId: true },
+        },
+      },
+    });
+
+    // Calculate worker allocation by sector
+    const workerAllocationBySector = new Map<string, number>();
+    
+    // Add factory workers
+    for (const factory of factories) {
+      const current = workerAllocationBySector.get(factory.sectorId) || 0;
+      workerAllocationBySector.set(factory.sectorId, current + factory.workers);
+    }
+    
+    // Add marketing campaign workers
+    for (const campaign of marketingCampaigns) {
+      const sectorId = campaign.Company.sectorId;
+      const current = workerAllocationBySector.get(sectorId) || 0;
+      workerAllocationBySector.set(sectorId, current + campaign.workers);
+    }
+    
+    // Add research workers from ResearchOrder records
+    // Each research order requires workers - count ALL research orders in the game
+    // Research orders allocate workers when created and remain allocated (they don't get deleted after resolution)
+    const researchOrders = await this.prisma.researchOrder.findMany({
+      where: {
+        gameId: phase.gameId,
+        // Count all research orders - workers remain allocated throughout the game
+      },
+      include: {
+        company: {
+          select: { sectorId: true },
+        },
+      },
+    });
+
+    // Count research workers by sector (each research order = 1 worker)
+    for (const order of researchOrders) {
+      const sectorId = order.company.sectorId;
+      const current = workerAllocationBySector.get(sectorId) || 0;
+      workerAllocationBySector.set(sectorId, current + 1); // Each research order = 1 worker
+    }
 
     const sectorUpdates: Array<{ id: string; demand: number }> = [];
     const gameLogEntries: Array<{ gameId: string; content: string }> = [];
@@ -1625,12 +1920,15 @@ export class ModernOperationMechanicsService {
         0
       );
 
-      // Base demand is stored in baseDemand field (initialized from gameData)
-      // If baseDemand is null/0 (for existing games), use current demand as fallback
-      const baseDemand = sector.baseDemand ?? sector.demand;
+      // Worker allocation for this sector
+      const workerAllocation = workerAllocationBySector.get(sector.id) || 0;
 
-      // Effective demand = base demand + brand scores
-      const effectiveDemand = baseDemand + totalBrandScore;
+      // Base demand should be 0 for modern operations - demand comes from workers + brand bonus only
+      // If baseDemand exists but is > 0, it's from old gameData and should be ignored
+      const baseDemand = 0; // No base demand - all demand comes from worker allocation + brand bonus
+
+      // Effective demand = base demand + brand scores + worker allocation
+      const effectiveDemand = baseDemand + totalBrandScore + workerAllocation;
 
       // Update the sector's demand field to show effective demand
       if (effectiveDemand !== sector.demand) {
@@ -1641,7 +1939,7 @@ export class ModernOperationMechanicsService {
 
         gameLogEntries.push({
           gameId: phase.gameId,
-          content: `${sector.sectorName} effective demand: ${effectiveDemand} (base: ${baseDemand} + brand: ${totalBrandScore})`,
+          content: `${sector.sectorName} effective demand: ${effectiveDemand} (base: ${baseDemand} + brand: ${totalBrandScore} + workers: ${workerAllocation})`,
         });
       }
     }

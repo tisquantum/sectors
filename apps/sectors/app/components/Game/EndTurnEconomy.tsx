@@ -156,11 +156,10 @@ const EndTurnEconomy = () => {
                     className={tooltipStyle}
                     content={
                       <p className={tooltipParagraphStyle}>
-                        Once each sector has floated a company, the economy is
-                        eligible to begin moving. If at least one company in each
-                        sector pay dividends, the economy will move up by 1. If at
-                        least one company retains, the economy will move down by 1.
-                        If both of these are true, the economy will remain the same.
+                        The economy score is determined by worker allocation. It starts at 10
+                        and increases by 1 for every 2 workers allocated to factories, marketing
+                        campaigns, or research. As more workers are employed across the economy,
+                        the economy score increases, reflecting a stronger economy.
                       </p>
                     }
                   >
@@ -182,7 +181,7 @@ const EndTurnEconomy = () => {
                 </div>
               </div>
             )}
-            <div className="flex flex-col justify-center items-center gap-1 text-base lg:text-xl">
+            {/* <div className="flex flex-col justify-center items-center gap-1 text-base lg:text-xl">
               <h3 className="flex items-center gap-1">
                 <RiSparkling2Fill /> <span>Prestige Track</span>
               </h3>
@@ -195,7 +194,7 @@ const EndTurnEconomy = () => {
               <div className="flex gap-2 text-xl">
                 <ResearchDeck />
               </div>
-            </div>
+            </div> */}
             <div>
               <CompanyPriorityList companies={companiesWithSector} />
             </div>

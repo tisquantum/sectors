@@ -8,7 +8,8 @@ import { createPortal } from 'react-dom';
 import { MarketingCreation } from '../Marketing/MarketingCreation';
 import { trpc } from '@sectors/app/trpc';
 import { getSectorResourceForSectorName } from '@server/data/constants';
-import { SectorName } from '@server/prisma/prisma.client';
+import { SectorName, PhaseName } from '@server/prisma/prisma.client';
+import { useGame } from '../../Game/GameContext';
 
 interface MarketingSlot {
   id: string;
@@ -40,8 +41,12 @@ const getMaxMarketingSlots = (technologyLevel: number): number => {
 };
 
 export function MarketingSlots({ companyId, gameId }: MarketingSlotsProps) {
+  const { currentPhase } = useGame();
   const [showMarketingCreation, setShowMarketingCreation] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<MarketingSlot | null>(null);
+
+  // Check if we're in the MODERN_OPERATIONS phase
+  const isModernOperationsPhase = currentPhase?.name === PhaseName.MODERN_OPERATIONS;
 
   // Fetch company to get sector info
   const { data: company } = trpc.company.getCompanyWithSector.useQuery({
@@ -113,6 +118,8 @@ export function MarketingSlots({ companyId, gameId }: MarketingSlotsProps) {
   }, [campaigns, maxSlots, sectorResourceType]);
 
   const handleSlotClick = (slot: MarketingSlot) => {
+    // Only allow clicks during MODERN_OPERATIONS phase
+    if (!isModernOperationsPhase) return;
     if (slot.isAvailable && !slot.isOccupied) {
       setSelectedSlot(slot);
       setShowMarketingCreation(true);
@@ -142,10 +149,13 @@ export function MarketingSlots({ companyId, gameId }: MarketingSlotsProps) {
             className={cn(
               'relative w-full rounded border transition-all flex items-center justify-center',
               slot.isOccupied ? 'h-auto' : 'h-8',
-              slot.isAvailable 
-                ? 'border-purple-400/60 bg-purple-400/10 text-purple-300 cursor-pointer hover:bg-purple-400/20' 
+              slot.isOccupied && 'border-purple-400 bg-purple-400/20 text-purple-200 cursor-default',
+              // Only allow interaction during MODERN_OPERATIONS phase
+              isModernOperationsPhase && slot.isAvailable && !slot.isOccupied
+                ? 'border-purple-400/60 bg-purple-400/10 text-purple-300 cursor-pointer hover:bg-purple-400/20'
                 : 'border-gray-600/40 bg-gray-700/30 text-gray-500 cursor-not-allowed',
-              slot.isOccupied && 'border-purple-400 bg-purple-400/20 text-purple-200 cursor-default'
+              // Dim available slots if not in correct phase
+              !isModernOperationsPhase && slot.isAvailable && !slot.isOccupied && 'opacity-50'
             )}
           >
             {slot.isOccupied && slot.campaign ? (

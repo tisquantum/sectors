@@ -485,7 +485,11 @@ export class GameManagementService {
         await this.resolveFactoryConstruction(phase);
         break;
       case PhaseName.END_TURN:
-        await this.adjustEconomyScore(phase);
+        // Only adjust economy score for legacy mechanics
+        // Modern mechanics calculate economy score in updateWorkforceTrack (START_TURN phase)
+        if (game.operationMechanicsVersion !== OperationMechanicsVersion.MODERN) {
+          await this.adjustEconomyScore(phase);
+        }
         await this.resolveCompanyLoans(phase);
         await this.resolveCompanyAwards(phase);
         if (game.useOptionOrders) {
@@ -5911,6 +5915,7 @@ export class GameManagementService {
       isTimerless,
       operationMechanicsVersion,
       workers: DEFAULT_WORKERS,
+      workforcePool: DEFAULT_WORKERS, // Initialize available workers to default (40)
     };
 
     const jsonData = gameDataJson;
@@ -5984,8 +5989,8 @@ export class GameManagementService {
         name: sector.name,
         sectorName: sector.sectorName,
         supply: sector.supply,
-        demand: sector.demand,
-        baseDemand: sector.demand, // Store initial demand as base demand
+        demand: 0, // Start with 0 demand - will be calculated from workers + brand bonus
+        baseDemand: 0, // No base demand - demand comes from workers + brand bonus only
         consumers: 0,
         demandMin: 0,
         demandMax: 0,
@@ -9362,6 +9367,13 @@ export class GameManagementService {
       // AUTO-FORWARD: Skip if no insolvent companies exist
       case PhaseName.RESOLVE_INSOLVENCY:
         return this.hasInsolventCompanies(currentPhase);
+      // AUTO-FORWARD: Skip if there are no earnings (profit > 0)
+      case PhaseName.EARNINGS_CALL:
+        return this.hasEarnings(currentPhase);
+      // AUTO-FORWARD: Skip if there are no consumers served this turn
+      case PhaseName.OPERATING_PRODUCTION_VOTE:
+      case PhaseName.OPERATING_PRODUCTION_VOTE_RESOLVE:
+        return this.hasConsumersServed(currentPhase);
       // AUTO-FORWARD: Capital Gains and Divestment are always auto-processed before END_TURN
       // They don't require player ready-up and are handled automatically
       case PhaseName.CAPITAL_GAINS:
@@ -9412,6 +9424,48 @@ export class GameManagementService {
     });
     
     return orderCount > 0;
+  }
+
+  /**
+   * Check if there are any earnings (profit > 0) for the current turn
+   * @param currentPhase - The current phase object
+   * @returns true if there are earnings, false otherwise
+   */
+  async hasEarnings(currentPhase: Phase): Promise<boolean> {
+    if (!currentPhase?.gameTurnId) {
+      return false;
+    }
+
+    // Check if there are any FactoryProduction records with profit > 0 for this turn
+    const productionCount = await this.prisma.factoryProduction.count({
+      where: {
+        gameTurnId: currentPhase.gameTurnId,
+        profit: { gt: 0 },
+      },
+    });
+
+    return productionCount > 0;
+  }
+
+  /**
+   * Check if there are any consumers served for the current turn
+   * @param currentPhase - The current phase object
+   * @returns true if there are consumers served, false otherwise
+   */
+  async hasConsumersServed(currentPhase: Phase): Promise<boolean> {
+    if (!currentPhase?.gameTurnId) {
+      return false;
+    }
+
+    // Check if there are any FactoryProduction records with customersServed > 0 for this turn
+    const productionCount = await this.prisma.factoryProduction.count({
+      where: {
+        gameTurnId: currentPhase.gameTurnId,
+        customersServed: { gt: 0 },
+      },
+    });
+
+    return productionCount > 0;
   }
 
   async isThereAnyCompanyIPOPriceToSet(gameId: string): Promise<boolean> {

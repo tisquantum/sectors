@@ -40,7 +40,7 @@ export const factoryConstructionRouter = (trpc: TrpcService, ctx: Context) => ro
     .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
     .use(async (opts) =>
       checkSubmissionTime(
-        PhaseName.FACTORY_CONSTRUCTION, //TODO: don't assume this is the phase
+        [PhaseName.FACTORY_CONSTRUCTION, PhaseName.MODERN_OPERATIONS], // Allow both old and new phase names
         opts,
         ctx.phaseService,
         ctx.gamesService,
