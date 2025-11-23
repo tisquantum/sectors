@@ -117,8 +117,8 @@ const AuthMenu = memo(
               </Button>
             </DropdownTrigger>
             <DropdownMenu>
-              <DropdownItem href="/account/settings">Settings</DropdownItem>
-              <DropdownItem onClick={handleLogout}>Logout</DropdownItem>
+              <DropdownItem key="settings" href="/account/settings">Settings</DropdownItem>
+              <DropdownItem key="logout" onClick={handleLogout}>Logout</DropdownItem>
             </DropdownMenu>
           </Dropdown>
         ) : (

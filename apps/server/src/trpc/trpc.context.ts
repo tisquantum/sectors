@@ -1,8 +1,7 @@
 import { createClient, User } from '@supabase/supabase-js';
 import type * as express from 'express';
-import type { CreateNextContextOptions } from '@trpc/server/adapters/next';
 import { TRPCError } from '@trpc/server';
-import { NodeHTTPCreateContextFnOptions } from '@trpc/server/dist/adapters/node-http';
+import type { NodeHTTPCreateContextFnOptions } from '@trpc/server/adapters/node-http';
 
 // Ensure Supabase client is created once
 const supabaseUrl = process.env.SUPABASE_URL!;
