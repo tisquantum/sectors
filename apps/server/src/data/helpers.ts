@@ -326,8 +326,13 @@ export function determineNextGamePhase(
       };
     case PhaseName.RESOLVE_MODERN_OPERATIONS:
       return {
+        phaseName: PhaseName.RUSTED_FACTORY_UPGRADE,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.RUSTED_FACTORY_UPGRADE:
+      return {
         phaseName: PhaseName.CONSUMPTION_PHASE,
-        roundType: RoundType.GAME_UPKEEP,
+        roundType: RoundType.OPERATING,
       };
     default:
       return {

@@ -3055,11 +3055,11 @@ export class GameManagementService {
         console.log('playerShares', playerShares.length, 'openMarketShares', openMarketShares.length);
         switch (revenueDistribution) {
           case RevenueDistribution.DIVIDEND_FULL:
-            // Dividend per share = revenue / 10 (rounded down)
-            dividend = Math.floor(totalRevenue / TOTAL_SHARES_IN_ROTATION);
-            // Total dividends paid = per share * number of eligible shares
-            // Company retains the remainder
-            moneyToCompany = totalRevenue - (dividend * sharesEligibleForDividends);
+            // For full dividend, distribute ALL revenue to eligible shares
+            // Dividend per share = revenue / eligible shares (rounded down)
+            dividend = Math.floor(totalRevenue / sharesEligibleForDividends);
+            // Company retains 0 - any remainder from rounding will be distributed to shareholders
+            moneyToCompany = 0;
             break;
           case RevenueDistribution.DIVIDEND_FIFTY_FIFTY:
             // Half revenue per share = (revenue / 2) / 10 (rounded down)
@@ -3107,9 +3107,20 @@ export class GameManagementService {
           0
         );
 
+        // For full dividend, calculate remainder from rounding and distribute it
+        let remainderToDistribute = 0;
+        if (revenueDistribution === RevenueDistribution.DIVIDEND_FULL) {
+          const totalDistributedToPlayers = totalDividendsPaidToPlayers;
+          const totalDistributedToOpenMarket = openMarketShares.length > 0 
+            ? Math.floor(dividend * openMarketShares.length) 
+            : 0;
+          const totalDistributed = totalDistributedToPlayers + totalDistributedToOpenMarket;
+          remainderToDistribute = totalRevenue - totalDistributed;
+        }
+
         // Update player cash on hand
         const sharePromises = Object.entries(groupedSharesByPlayerId).map(
-          async ([playerId, shares]) => {
+          async ([playerId, shares], index) => {
             const player = await this.playersService.player({
               id: playerId,
             });
@@ -3117,7 +3128,11 @@ export class GameManagementService {
               console.error(`[calculateAndDistributeDividendsModern] Player ${playerId} not found`);
               return;
             }
-            const dividendTotal = Math.floor(dividend * shares.length);
+            let dividendTotal = Math.floor(dividend * shares.length);
+            // For full dividend, add remainder to first player to ensure company retains 0
+            if (revenueDistribution === RevenueDistribution.DIVIDEND_FULL && index === 0 && remainderToDistribute > 0) {
+              dividendTotal += remainderToDistribute;
+            }
             console.log(`[calculateAndDistributeDividendsModern] Distributing $${dividendTotal} to player ${player.nickname} (${shares.length} shares)`);
             
             // Update player cash and bank pool (playerAddMoney creates BANK → PLAYER transaction)
@@ -3138,6 +3153,11 @@ export class GameManagementService {
           },
         );
         await Promise.all(sharePromises);
+        
+        // Update totalDividendsPaidToPlayers to include remainder
+        if (revenueDistribution === RevenueDistribution.DIVIDEND_FULL && remainderToDistribute > 0) {
+          totalDividendsPaidToPlayers += remainderToDistribute;
+        }
       }
       
       // Distribute dividends to company for open market shares (BANK → COMPANY)
@@ -9426,6 +9446,9 @@ export class GameManagementService {
       case PhaseName.OPERATING_PRODUCTION_VOTE:
       case PhaseName.OPERATING_PRODUCTION_VOTE_RESOLVE:
         return this.hasConsumersServed(currentPhase);
+      // AUTO-FORWARD: Skip if no sector has advanced beyond research stage 1
+      case PhaseName.RUSTED_FACTORY_UPGRADE:
+        return this.hasAdvancedResearchStage(currentPhase);
       // AUTO-FORWARD: Capital Gains and Divestment are always auto-processed before END_TURN
       // They don't require player ready-up and are handled automatically
       case PhaseName.CAPITAL_GAINS:
@@ -9521,6 +9544,34 @@ export class GameManagementService {
     });
 
     return productionCount > 0;
+  }
+
+  /**
+   * Check if any sector has just transitioned to a new research stage
+   * The phase should only run when transitioning between stages:
+   * - Stage 1 → Stage 2: researchMarker = 6 (crossed from 0-5 to 6-10)
+   * - Stage 2 → Stage 3: researchMarker = 11 (crossed from 6-10 to 11-15)
+   * - Stage 3 → Stage 4: researchMarker = 16 (crossed from 11-15 to 16-20)
+   * @param currentPhase - The current phase object
+   * @returns true if any sector is at a stage boundary (6, 11, or 16), false otherwise
+   */
+  async hasAdvancedResearchStage(currentPhase: Phase): Promise<boolean> {
+    if (!currentPhase?.gameId) {
+      return false;
+    }
+
+    // Check if any sector is at a stage transition boundary
+    // Stage 1→2: researchMarker = 6
+    // Stage 2→3: researchMarker = 11
+    // Stage 3→4: researchMarker = 16
+    const sectorCount = await this.prisma.sector.count({
+      where: {
+        gameId: currentPhase.gameId,
+        researchMarker: { in: [6, 11, 16] },
+      },
+    });
+
+    return sectorCount > 0;
   }
 
   async isThereAnyCompanyIPOPriceToSet(gameId: string): Promise<boolean> {

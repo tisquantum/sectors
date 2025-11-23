@@ -143,6 +143,7 @@ export const phaseTimes: Record<PhaseName, number> = {
   [PhaseName.FACTORY_CONSTRUCTION_RESOLVE]: 12 * 1000, // Legacy - kept for backward compatibility
   [PhaseName.MODERN_OPERATIONS]: 60 * 1000, // Combined: Factory Construction + Marketing + Research
   [PhaseName.RESOLVE_MODERN_OPERATIONS]: 12 * 1000, // Combined resolve for all operations
+  [PhaseName.RUSTED_FACTORY_UPGRADE]: 12 * 1000, // Resolve rusted factory upgrades
   [PhaseName.MARKETING_CAMPAIGN]: 50 * 1000,
   [PhaseName.MARKETING_CAMPAIGN_RESOLVE]: 12 * 1000,
   [PhaseName.RESEARCH_ACTION]: 50 * 1000,
@@ -1197,6 +1198,7 @@ export const phasesInOrder = [
   // PhaseName.MARKETING_AND_RESEARCH_ACTION_RESOLVE,
   PhaseName.MODERN_OPERATIONS,
   PhaseName.RESOLVE_MODERN_OPERATIONS,
+  PhaseName.RUSTED_FACTORY_UPGRADE,
   PhaseName.CONSUMPTION_PHASE,
   PhaseName.EARNINGS_CALL,
   PhaseName.OPERATING_PRODUCTION_VOTE,

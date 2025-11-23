@@ -75,6 +75,7 @@ import {
   MarketingAndResearchResolvePhase as ModernMarketingAndResearchResolvePhase,
   ModernOperations as ModernOperationsPhase,
   ModernOperationsResolve as ModernOperationsResolvePhase,
+  RustedFactoryUpgradePhase,
 } from "./ModernOperations/phases";
 import InsolvencyContributionComponent from "../Company/InsolvencyContribution";
 import { CompanyStatus } from "@server/prisma/prisma.client";
@@ -342,6 +343,9 @@ const Game = ({ gameId }: { gameId: string }) => {
     ) : currentRoundData?.phase.name === PhaseName.RESOLVE_MODERN_OPERATIONS ? (
       // New combined resolve phase
       <ModernOperationsResolvePhase />
+    ) : currentRoundData?.phase.name === PhaseName.RUSTED_FACTORY_UPGRADE ? (
+      // Rusted factory upgrade phase
+      <RustedFactoryUpgradePhase />
     ) : currentRoundData?.phase.name === PhaseName.RESOLVE_INSOLVENCY ? (
       <div className="flex flex-col gap-4 p-4 w-full">
         <h2 className="text-2xl font-bold">Resolve Insolvency</h2>

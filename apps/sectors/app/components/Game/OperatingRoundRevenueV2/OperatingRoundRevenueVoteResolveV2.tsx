@@ -258,11 +258,13 @@ const OperatingRoundRevenueVoteResolveV2 = () => {
           let retained = 0;
           
           if (voteOutcome === RevenueDistribution.DIVIDEND_FULL) {
-            // Dividend per share = revenue / 10 (rounded down)
-            dividendPerShare = Math.floor(revenue / TOTAL_SHARES_IN_ROTATION);
-            // Total dividends paid = per share * number of eligible shares
-            dividendTotal = dividendPerShare * shareCount;
-            retained = revenue - dividendTotal;
+            // For full dividend, distribute ALL revenue to eligible shares
+            // Dividend per share = revenue / eligible shares (rounded down for display)
+            dividendPerShare = shareCount > 0 ? Math.floor(revenue / shareCount) : 0;
+            // Total dividends paid = ALL revenue (company retains 0)
+            // Note: Actual distribution may vary slightly due to rounding, but all revenue is distributed
+            dividendTotal = revenue;
+            retained = 0;
           } else if (voteOutcome === RevenueDistribution.DIVIDEND_FIFTY_FIFTY) {
             // Half revenue per share = (revenue / 2) / 10 (rounded down)
             dividendPerShare = Math.floor(Math.floor(revenue / 2) / TOTAL_SHARES_IN_ROTATION);

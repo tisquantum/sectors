@@ -55,6 +55,7 @@ export class ModernOperationMechanicsService {
         await this.updateWorkforceTrack(phase);
         await this.makeFactoriesOperational(phase);
         await this.updateSectorDemand(phase);
+        await this.updateSectorPriority(phase);
         await this.determinePriorityOrderBasedOnNetWorth(phase);
         await this.handleOpeningNewCompany(phase);
         break;
@@ -95,6 +96,11 @@ export class ModernOperationMechanicsService {
       case PhaseName.RESOLVE_MODERN_OPERATIONS:
         // Combined phase: Resolve Factory Construction + Marketing + Research
         await this.resolveModernOperations(phase);
+        break;
+
+      case PhaseName.RUSTED_FACTORY_UPGRADE:
+        // Resolve rusted factories that must be upgraded
+        await this.resolveRustedFactoryUpgrades(phase);
         break;
 
       case PhaseName.EARNINGS_CALL:
@@ -367,6 +373,15 @@ export class ModernOperationMechanicsService {
             data: { cashOnHand: { decrement: op.blueprintCost } },
           });
 
+          // Calculate full construction cost (base cost + resource costs)
+          const baseCost = {
+            [FactorySize.FACTORY_I]: 100,
+            [FactorySize.FACTORY_II]: 200,
+            [FactorySize.FACTORY_III]: 300,
+            [FactorySize.FACTORY_IV]: 400,
+          }[op.order.size];
+          const fullConstructionCost = baseCost + op.blueprintCost;
+
           // Create factory (will be operational next turn)
           // Always ensure sector resource type is first, and replace GENERAL with sector resource
           const factory = await tx.factory.create({
@@ -379,6 +394,7 @@ export class ModernOperationMechanicsService {
               slot: op.existingFactories + 1,
               isOperational: false,
               resourceTypes: factoryResourceTypes,
+              originalConstructionCost: fullConstructionCost, // Store for upgrade calculations
             },
           });
           
@@ -2289,6 +2305,474 @@ export class ModernOperationMechanicsService {
             content: entry.content,
           }))
         );
+      }
+    }
+  }
+
+  /**
+   * Calculate and update sector priority based on demand (inversed), with tie-breakers:
+   * 1. Lower demand = higher priority (inversed)
+   * 2. Tie-breaker 1: Lower average stock value = higher priority
+   * 3. Tie-breaker 2: Fewer companies = higher priority
+   * 4. Final tie-breaker: Random
+   */
+  private async updateSectorPriority(phase: Phase) {
+    // Get all sectors with their demand values
+    const sectors = await this.prisma.sector.findMany({
+      where: { gameId: phase.gameId },
+      select: {
+        id: true,
+        sectorName: true,
+        demand: true,
+      },
+    });
+
+    // Get all companies with their stock prices, grouped by sector
+    const companies = await this.prisma.company.findMany({
+      where: {
+        gameId: phase.gameId,
+        status: { in: [CompanyStatus.ACTIVE, CompanyStatus.INSOLVENT] },
+      },
+      select: {
+        id: true,
+        sectorId: true,
+        currentStockPrice: true,
+      },
+    });
+
+    // Calculate average stock price and company count per sector
+    const sectorData = new Map<string, {
+      sectorId: string;
+      sectorName: string;
+      demand: number;
+      averageStockPrice: number;
+      companyCount: number;
+    }>();
+
+    for (const sector of sectors) {
+      const sectorCompanies = companies.filter(c => c.sectorId === sector.id);
+      const companyCount = sectorCompanies.length;
+      const averageStockPrice = companyCount > 0
+        ? sectorCompanies.reduce((sum, c) => sum + (c.currentStockPrice || 0), 0) / companyCount
+        : 0;
+
+      sectorData.set(sector.id, {
+        sectorId: sector.id,
+        sectorName: sector.sectorName,
+        demand: sector.demand || 0,
+        averageStockPrice,
+        companyCount,
+      });
+    }
+
+    // Sort sectors by priority criteria
+    const sortedSectors = Array.from(sectorData.values()).sort((a, b) => {
+      // Primary: Lower demand = higher priority (inversed)
+      if (a.demand !== b.demand) {
+        return a.demand - b.demand;
+      }
+
+      // Tie-breaker 1: Lower average stock value = higher priority
+      if (a.averageStockPrice !== b.averageStockPrice) {
+        return a.averageStockPrice - b.averageStockPrice;
+      }
+
+      // Tie-breaker 2: Fewer companies = higher priority
+      if (a.companyCount !== b.companyCount) {
+        return a.companyCount - b.companyCount;
+      }
+
+      // Final tie-breaker: Random (use sector ID as seed for consistent randomness)
+      // This ensures the same sectors always get the same random order within a tie
+      return a.sectorId.localeCompare(b.sectorId);
+    });
+
+    // Get existing sector priorities
+    const existingPriorities = await this.prisma.sectorPriority.findMany({
+      where: { gameId: phase.gameId },
+    });
+
+    const existingPriorityMap = new Map(
+      existingPriorities.map(sp => [sp.sectorId, sp.id])
+    );
+
+    // Update or create sector priorities
+    await Promise.all(
+      sortedSectors.map(async (sector, index) => {
+        const priority = index + 1; // Lower number = higher priority
+        const existingId = existingPriorityMap.get(sector.sectorId);
+
+        if (existingId) {
+          // Update existing priority
+          await this.prisma.sectorPriority.update({
+            where: { id: existingId },
+            data: { priority },
+          });
+        } else {
+          // Create new priority
+          await this.prisma.sectorPriority.create({
+            data: {
+              gameId: phase.gameId,
+              sectorId: sector.sectorId,
+              priority,
+            },
+          });
+        }
+      })
+    );
+
+    // Log the priority order
+    await this.gameLogService.createGameLog({
+      game: { connect: { id: phase.gameId } },
+      content: `Sector priority updated: ${sortedSectors.map((s, i) => `${i + 1}. ${s.sectorName} (demand: ${s.demand}, avg stock: $${s.averageStockPrice.toFixed(0)}, companies: ${s.companyCount})`).join(', ')}`,
+    });
+  }
+
+  /**
+   * Calculate slot phases based on research stage
+   * Stage 1: I, I, I
+   * Stage 2: I/II, I/II, II
+   * Stage 3: II, II, II/III, III
+   * Stage 4: III, III/IV, IV
+   */
+  private getSlotPhasesForResearchStage(stage: number): Array<{ min: FactorySize; max: FactorySize }> {
+    switch (stage) {
+      case 1:
+        return [
+          { min: FactorySize.FACTORY_I, max: FactorySize.FACTORY_I },
+          { min: FactorySize.FACTORY_I, max: FactorySize.FACTORY_I },
+          { min: FactorySize.FACTORY_I, max: FactorySize.FACTORY_I },
+        ];
+      case 2:
+        return [
+          { min: FactorySize.FACTORY_I, max: FactorySize.FACTORY_II },
+          { min: FactorySize.FACTORY_I, max: FactorySize.FACTORY_II },
+          { min: FactorySize.FACTORY_II, max: FactorySize.FACTORY_II },
+        ];
+      case 3:
+        return [
+          { min: FactorySize.FACTORY_II, max: FactorySize.FACTORY_II },
+          { min: FactorySize.FACTORY_II, max: FactorySize.FACTORY_II },
+          { min: FactorySize.FACTORY_II, max: FactorySize.FACTORY_III },
+          { min: FactorySize.FACTORY_III, max: FactorySize.FACTORY_III },
+        ];
+      case 4:
+        return [
+          { min: FactorySize.FACTORY_III, max: FactorySize.FACTORY_III },
+          { min: FactorySize.FACTORY_III, max: FactorySize.FACTORY_IV },
+          { min: FactorySize.FACTORY_IV, max: FactorySize.FACTORY_IV },
+        ];
+      default:
+        // Default to stage 1
+        return [
+          { min: FactorySize.FACTORY_I, max: FactorySize.FACTORY_I },
+          { min: FactorySize.FACTORY_I, max: FactorySize.FACTORY_I },
+          { min: FactorySize.FACTORY_I, max: FactorySize.FACTORY_I },
+        ];
+    }
+  }
+
+  /**
+   * Get research stage from sector researchMarker
+   * Stage 1: 0-5, Stage 2: 6-10, Stage 3: 11-15, Stage 4: 16-20
+   */
+  private getResearchStage(researchMarker: number): number {
+    if (researchMarker >= 16) return 4;
+    if (researchMarker >= 11) return 3;
+    if (researchMarker >= 6) return 2;
+    return 1;
+  }
+
+  /**
+   * Check if a factory size is supported by a slot phase
+   */
+  private isFactorySizeSupported(factorySize: FactorySize, slotPhase: { min: FactorySize; max: FactorySize }): boolean {
+    const sizeOrder = {
+      [FactorySize.FACTORY_I]: 1,
+      [FactorySize.FACTORY_II]: 2,
+      [FactorySize.FACTORY_III]: 3,
+      [FactorySize.FACTORY_IV]: 4,
+    };
+    const factoryOrder = sizeOrder[factorySize];
+    const minOrder = sizeOrder[slotPhase.min];
+    const maxOrder = sizeOrder[slotPhase.max];
+    return factoryOrder >= minOrder && factoryOrder <= maxOrder;
+  }
+
+  /**
+   * Detect and mark rusted factories based on current research stage
+   */
+  private async detectRustedFactories(phase: Phase) {
+    // Get all sectors with their research markers
+    const sectors = await this.prisma.sector.findMany({
+      where: { gameId: phase.gameId },
+      select: {
+        id: true,
+        sectorName: true,
+        researchMarker: true,
+      },
+    });
+
+    // Get all factories
+    const factories = await this.prisma.factory.findMany({
+      where: {
+        gameId: phase.gameId,
+        isOperational: true, // Only check operational factories
+      },
+      include: {
+        company: {
+          select: {
+            id: true,
+            name: true,
+            status: true,
+          },
+        },
+      },
+    });
+
+    const rustedFactories: string[] = [];
+    const factoryUpdates: Array<{ id: string; isRusted: boolean }> = [];
+
+    for (const factory of factories) {
+      const sector = sectors.find(s => s.id === factory.sectorId);
+      if (!sector) continue;
+
+      const researchStage = this.getResearchStage(sector.researchMarker || 0);
+      const slotPhases = this.getSlotPhasesForResearchStage(researchStage);
+      
+      // Get the slot phase for this factory's slot (slots are 1-indexed)
+      const slotIndex = factory.slot - 1;
+      if (slotIndex < 0 || slotIndex >= slotPhases.length) {
+        // Slot doesn't exist for this stage, factory is rusted
+        rustedFactories.push(factory.id);
+        factoryUpdates.push({ id: factory.id, isRusted: true });
+        continue;
+      }
+
+      const slotPhase = slotPhases[slotIndex];
+      const isSupported = this.isFactorySizeSupported(factory.size, slotPhase);
+
+      if (!isSupported) {
+        rustedFactories.push(factory.id);
+        factoryUpdates.push({ id: factory.id, isRusted: true });
+      } else if (factory.isRusted) {
+        // Factory is no longer rusted
+        factoryUpdates.push({ id: factory.id, isRusted: false });
+      }
+    }
+
+    // Update factory rusted status
+    if (factoryUpdates.length > 0) {
+      await Promise.all(
+        factoryUpdates.map(update =>
+          this.prisma.factory.update({
+            where: { id: update.id },
+            data: { isRusted: update.isRusted },
+          })
+        )
+      );
+    }
+
+    // Log rusted factories
+    if (rustedFactories.length > 0) {
+      const rustedFactoryDetails = factories
+        .filter(f => rustedFactories.includes(f.id))
+        .map(f => `${f.company.name} - ${f.size} (Slot ${f.slot})`);
+      
+      await this.gameLogService.createGameLog({
+        game: { connect: { id: phase.gameId } },
+        content: `Rusted factories detected: ${rustedFactoryDetails.join(', ')}. These must be upgraded.`,
+      });
+    }
+
+    return rustedFactories;
+  }
+
+  /**
+   * Resolve rusted factory upgrades
+   * Companies must upgrade rusted factories or go into insolvency
+   */
+  private async resolveRustedFactoryUpgrades(phase: Phase) {
+    // First, detect rusted factories
+    const rustedFactoryIds = await this.detectRustedFactories(phase);
+
+    if (rustedFactoryIds.length === 0) {
+      await this.gameLogService.createGameLog({
+        game: { connect: { id: phase.gameId } },
+        content: 'No rusted factories detected. All factories are up to date.',
+      });
+      return;
+    }
+
+    // Get rusted factories with their companies and sectors
+    const rustedFactories = await this.prisma.factory.findMany({
+      where: {
+        id: { in: rustedFactoryIds },
+      },
+      include: {
+        company: true,
+        Sector: {
+          select: {
+            id: true,
+            sectorName: true,
+            researchMarker: true,
+          },
+        },
+      },
+    });
+
+    // Group by company to handle all upgrades for a company together
+    const factoriesByCompany = new Map<string, typeof rustedFactories>();
+    for (const factory of rustedFactories) {
+      if (!factoriesByCompany.has(factory.companyId)) {
+        factoriesByCompany.set(factory.companyId, []);
+      }
+      factoriesByCompany.get(factory.companyId)!.push(factory);
+    }
+
+    // Process each company's rusted factories
+    for (const [companyId, companyFactories] of factoriesByCompany.entries()) {
+      const company = companyFactories[0].company;
+      const sector = companyFactories[0].Sector;
+      const researchStage = this.getResearchStage(sector.researchMarker || 0);
+      const slotPhases = this.getSlotPhasesForResearchStage(researchStage);
+
+      let totalUpgradeCost = 0;
+      const upgrades: Array<{
+        factory: typeof rustedFactories[0];
+        newSize: FactorySize;
+        upgradeCost: number;
+      }> = [];
+
+      // Calculate upgrade costs for each rusted factory
+      for (const factory of companyFactories) {
+        const slotIndex = factory.slot - 1;
+        if (slotIndex < 0 || slotIndex >= slotPhases.length) {
+          // Slot doesn't exist - factory must be removed or company goes insolvent
+          // For now, we'll require upgrading to the minimum size of the first available slot
+          continue;
+        }
+
+        const slotPhase = slotPhases[slotIndex];
+        const currentSizeOrder = {
+          [FactorySize.FACTORY_I]: 1,
+          [FactorySize.FACTORY_II]: 2,
+          [FactorySize.FACTORY_III]: 3,
+          [FactorySize.FACTORY_IV]: 4,
+        }[factory.size];
+
+        const minSizeOrder = {
+          [FactorySize.FACTORY_I]: 1,
+          [FactorySize.FACTORY_II]: 2,
+          [FactorySize.FACTORY_III]: 3,
+          [FactorySize.FACTORY_IV]: 4,
+        }[slotPhase.min];
+
+        // Determine new factory size (must be at least slotPhase.min)
+        // If factory is already at or above minimum and within max, it can stay
+        // Otherwise, upgrade to minimum required size
+        const maxSizeOrder = {
+          [FactorySize.FACTORY_I]: 1,
+          [FactorySize.FACTORY_II]: 2,
+          [FactorySize.FACTORY_III]: 3,
+          [FactorySize.FACTORY_IV]: 4,
+        }[slotPhase.max];
+
+        let newSize: FactorySize;
+        if (currentSizeOrder >= minSizeOrder && currentSizeOrder <= maxSizeOrder) {
+          // Factory size is already within supported range - shouldn't be rusted
+          // This shouldn't happen, but if it does, keep current size
+          newSize = factory.size;
+        } else {
+          // Factory must upgrade to at least the minimum size
+          newSize = slotPhase.min;
+        }
+
+        // Calculate upgrade cost
+        // Upgrade cost = Full blueprint fee - 50% of original construction cost
+        const originalCost = factory.originalConstructionCost || 0;
+        const refundAmount = Math.floor(originalCost * 0.5);
+
+        // Get required resources for new factory size
+        const requiredResources = await this.getRequiredResourcesForFactory(newSize, sector.sectorName);
+        const resourceTypes = requiredResources.map(r => r.type);
+        
+        const currentResourcePrices = await this.prisma.resource.findMany({
+          where: {
+            gameId: phase.gameId,
+            type: { in: resourceTypes },
+          },
+        });
+
+        // Calculate resource cost based on required quantities
+        const resourceCost = requiredResources.reduce((sum, req) => {
+          const resource = currentResourcePrices.find(r => r.type === req.type);
+          return sum + (resource?.price || 0) * req.quantity;
+        }, 0);
+
+        const baseCost = {
+          [FactorySize.FACTORY_I]: 100,
+          [FactorySize.FACTORY_II]: 200,
+          [FactorySize.FACTORY_III]: 300,
+          [FactorySize.FACTORY_IV]: 400,
+        }[newSize];
+
+        const fullBlueprintCost = baseCost + resourceCost;
+        const upgradeCost = fullBlueprintCost - refundAmount;
+
+        totalUpgradeCost += upgradeCost;
+        upgrades.push({
+          factory,
+          newSize,
+          upgradeCost,
+        });
+      }
+
+      // Check if company can afford upgrades
+      if (company.cashOnHand < totalUpgradeCost) {
+        // Company cannot afford upgrades - go into insolvency
+        await this.companyService.updateCompany({
+          where: { id: company.id },
+          data: { status: CompanyStatus.INSOLVENT },
+        });
+
+        await this.gameLogService.createGameLog({
+          game: { connect: { id: phase.gameId } },
+          content: `${company.name} cannot afford to upgrade ${companyFactories.length} rusted factory/factories (cost: $${totalUpgradeCost}, cash: $${company.cashOnHand}). Company is now INSOLVENT.`,
+        });
+
+        continue;
+      }
+
+      // Company can afford upgrades - perform them
+      for (const { factory, newSize, upgradeCost } of upgrades) {
+        // Deduct upgrade cost
+        await this.companyService.updateCompany({
+          where: { id: company.id },
+          data: { cashOnHand: { decrement: upgradeCost } },
+        });
+
+        // Update factory size and clear rusted status
+        await this.prisma.factory.update({
+          where: { id: factory.id },
+          data: {
+            size: newSize,
+            isRusted: false,
+            originalConstructionCost: upgradeCost + Math.floor((factory.originalConstructionCost || 0) * 0.5), // New construction cost
+            // Update workers based on new size
+            workers: {
+              [FactorySize.FACTORY_I]: 2,
+              [FactorySize.FACTORY_II]: 4,
+              [FactorySize.FACTORY_III]: 6,
+              [FactorySize.FACTORY_IV]: 8,
+            }[newSize],
+          },
+        });
+
+        await this.gameLogService.createGameLog({
+          game: { connect: { id: phase.gameId } },
+          content: `${company.name} upgraded factory in slot ${factory.slot} from ${factory.size} to ${newSize} for $${upgradeCost}.`,
+        });
       }
     }
   }

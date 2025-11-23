@@ -166,22 +166,24 @@ enum FactorySize {
 }
 
 model Factory {
-  id                 String              @id @default(uuid())
-  companyId          String
-  sectorId           String
-  gameId             String
-  size               FactorySize
-  workers            Int
-  slot               Int
-  isOperational      Boolean             @default(false)
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  company            Company             @relation(fields: [companyId], references: [id])
-  game               Game                @relation(fields: [gameId], references: [id])
-  Sector             Sector              @relation(fields: [sectorId], references: [id])
-  resources          Resource[]          @relation("FactoryResources")
-  resourceTypes      ResourceType[]
-  factoryProductions FactoryProduction[]
+  id                      String              @id @default(uuid())
+  companyId               String
+  sectorId                String
+  gameId                  String
+  size                    FactorySize
+  workers                 Int
+  slot                    Int
+  isOperational           Boolean             @default(false)
+  isRusted                Boolean             @default(false)
+  originalConstructionCost Int?                // Store original construction cost for upgrade calculations
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+  company                 Company             @relation(fields: [companyId], references: [id])
+  game                    Game                @relation(fields: [gameId], references: [id])
+  Sector                  Sector              @relation(fields: [sectorId], references: [id])
+  resources               Resource[]          @relation("FactoryResources")
+  resourceTypes           ResourceType[]
+  factoryProductions      FactoryProduction[]
 }
 
 model FactoryProduction {
@@ -1119,6 +1121,7 @@ enum PhaseName {
   MARKETING_AND_RESEARCH_ACTION_RESOLVE
   MODERN_OPERATIONS // Combined: Factory Construction + Marketing + Research
   RESOLVE_MODERN_OPERATIONS // Combined: Factory Construction Resolve + Marketing/Research Resolve
+  RUSTED_FACTORY_UPGRADE // Resolve rusted factories that must be upgraded
   CONSUMPTION_PHASE
   EARNINGS_CALL //profit and stock adjustment
   RESOLVE_INSOLVENCY //resolve insolvent companies after earnings call

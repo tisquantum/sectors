@@ -130,6 +130,8 @@ export function friendlyPhaseName(name: PhaseName | undefined): string {
       return "Modern Operations";
     case PhaseName.RESOLVE_MODERN_OPERATIONS:
       return "Resolve Modern Operations";
+    case PhaseName.RUSTED_FACTORY_UPGRADE:
+      return "Rusted Factory Upgrade";
     default:
       return "Unknown Phase";
   }

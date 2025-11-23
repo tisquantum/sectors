@@ -6,4 +6,5 @@ export { default as MarketingAndResearchPhase } from './MarketingAndResearchPhas
 export { default as MarketingAndResearchResolvePhase } from './MarketingAndResearchResolvePhase';
 export { default as ModernOperations } from './ModernOperations';
 export { default as ModernOperationsResolve } from './ModernOperationsResolve';
+export { RustedFactoryUpgradePhase } from './RustedFactoryUpgradePhase';
 
