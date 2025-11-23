@@ -9,6 +9,7 @@ import {
   RoundType,
   GameStatus,
   OperatingRoundAction,
+  OperationMechanicsVersion,
 } from '@prisma/client';
 import { GameManagementService } from '@server/game-management/game-management.service';
 import {
@@ -103,6 +104,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           useLimitOrders: z.boolean(),
           isTimerless: z.boolean().optional(),
           bots: z.number(),
+          operationMechanicsVersion: z.nativeEnum(OperationMechanicsVersion).optional(),
           players: z.any().optional(),
           companies: z.any().optional(),
           Player: z.any().optional(),
@@ -130,6 +132,7 @@ export default (trpc: TrpcService, ctx: Context) =>
             useLimitOrders: input.useLimitOrders,
             isTimerless: input.isTimerless || false,
             bots: input.bots,
+            operationMechanicsVersion: input.operationMechanicsVersion,
           });
         } catch (error) {
           return {
@@ -201,7 +204,18 @@ export default (trpc: TrpcService, ctx: Context) =>
       .input(z.object({ gameId: z.string() }))
       .query(async ({ input }) => {
         const { gameId } = input;
-        return ctx.gamesService.getGameState(gameId);
+        const startTime = Date.now();
+        console.log(`[tRPC] getGameState called for gameId: ${gameId} at ${new Date().toISOString()}`);
+        try {
+          const result = await ctx.gamesService.getGameState(gameId);
+          const duration = Date.now() - startTime;
+          console.log(`[tRPC] getGameState completed for gameId: ${gameId} in ${duration}ms`);
+          return result;
+        } catch (error) {
+          const duration = Date.now() - startTime;
+          console.error(`[tRPC] getGameState ERROR for gameId: ${gameId} after ${duration}ms:`, error);
+          throw error;
+        }
       }),
 
     // forceNextPhase: trpc.procedure
@@ -268,6 +282,7 @@ export default (trpc: TrpcService, ctx: Context) =>
             createdAt: z.date(),
             updatedAt: z.date(),
             phaseStartTime: z.date().nullable(),
+            sectorId: z.string().nullable(),
           }),
         }),
       )

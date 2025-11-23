@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '@server/prisma/prisma.service';
-import { Prisma, StockSubRound } from '@prisma/client';
+import { OrderStatus, Prisma, StockSubRound } from '@prisma/client';
 
 @Injectable()
 export class StockSubRoundService {
@@ -99,6 +99,7 @@ export class StockSubRoundService {
     const orders = await this.prisma.playerOrder.findMany({
       where: {
         stockSubRoundId: id,
+        orderStatus: OrderStatus.FILLED,
       },
     });
     return orders.length > 0;

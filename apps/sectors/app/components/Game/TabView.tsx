@@ -6,7 +6,7 @@ import SectorComponent from "../Sector/Sector";
 import GameLog from "./GameLog";
 import GameChat from "../GameChat/GameChat";
 import { useGame } from "./GameContext";
-import { Key, useState } from "react";
+import { Key, useState, useRef, useEffect } from "react";
 import { RiShapesFill, RiUserFill } from "@remixicon/react";
 
 const TabView = ({
@@ -18,12 +18,37 @@ const TabView = ({
 }) => {
   const { gameState, gameId } = useGame();
   const [selectedTab, setSelectedTab] = useState("chat");
-  if (!gameState.roomId || !gameState.name) return null;
-  const tabStyle = "flex flex-col overflow-hidden";
+  
+  // Track renders
+  const renderCountRef = useRef(0);
+  renderCountRef.current += 1;
+  if (renderCountRef.current % 10 === 0) {
+    console.log(`[TabView] Render count: ${renderCountRef.current}`);
+  }
+  
+  // Track tab changes
+  const tabChangeCountRef = useRef(0);
   const handleTabChange = (key: Key) => {
+    tabChangeCountRef.current += 1;
+    console.log(`[TabView] Tab changed to: ${key} (change #${tabChangeCountRef.current})`);
     setSelectedTab(key as string);
     setIsVertical(key === "close");
   };
+  
+  // Log when gameState changes
+  useEffect(() => {
+    console.log(`[TabView] gameState changed`, {
+      roomId: gameState?.roomId,
+      name: gameState?.name,
+      currentPhaseId: gameState?.currentPhaseId,
+    });
+  }, [gameState?.roomId, gameState?.name, gameState?.currentPhaseId]);
+  
+  if (!gameState.roomId || !gameState.name) {
+    console.log(`[TabView] Returning null - missing roomId or name`);
+    return null;
+  }
+  const tabStyle = "flex flex-col overflow-hidden";
   return (
     <Tabs
       aria-label="Options"

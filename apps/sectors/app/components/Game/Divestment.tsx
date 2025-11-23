@@ -14,15 +14,24 @@ const Divestment = () => {
     data: shareTransactionsDivestment,
     isLoading,
     isError,
-  } = trpc.transactions.listTransactions.useQuery({
-    where: {
-      transactionType: TransactionType.SHARE,
-      transactionSubType: TransactionSubType.DIVESTMENT,
-      GameTurn: {
-        id: gameState.currentTurn,
+  } = trpc.transactions.listTransactions.useQuery(
+    {
+      where: {
+        transactionType: TransactionType.SHARE,
+        transactionSubType: TransactionSubType.DIVESTMENT,
+        GameTurn: {
+          id: gameState.currentTurn,
+        },
       },
     },
-  });
+    {
+      staleTime: Infinity, // Data never goes stale - it's historical turn data
+      cacheTime: 1000 * 60 * 60, // Keep in cache for 1 hour
+      refetchOnMount: false, // Don't refetch when component mounts
+      refetchOnWindowFocus: false, // Don't refetch on window focus
+      refetchOnReconnect: false, // Don't refetch on reconnect
+    }
+  );
 
   if (isLoading) return <div>Loading...</div>;
   if (isError) return <div>Error...</div>;

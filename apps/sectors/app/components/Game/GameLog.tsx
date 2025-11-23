@@ -7,14 +7,23 @@ const GameLog = () => {
     data: gameLog,
     isLoading,
     error,
-  } = trpc.gameLog.listGameLogs.useQuery({
-    where: {
-      gameId,
+  } = trpc.gameLog.listGameLogs.useQuery(
+    {
+      where: {
+        gameId,
+      },
+      orderBy: {
+        id: "desc",
+      },
     },
-    orderBy: {
-      id: "desc",
-    },
-  });
+    {
+      // Prevent excessive refetching
+      refetchOnMount: false,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      staleTime: 30000, // 30 seconds
+    }
+  );
   if (isLoading) return <div>Loading...</div>;
   if (error) return <div>Error: {error.message}</div>;
   if (!gameLog) return <div>No game log found</div>;

@@ -7,6 +7,7 @@ import {
   OperatingRoundAction,
   PhaseName,
   PrestigeReward,
+  ResourceType,
   Sector,
   SectorName,
   StockTier,
@@ -100,7 +101,7 @@ export const OUTSOURCE_PRESTIGE_PENALTY = 1;
 /**
  * Phase times in milliseconds
  */
-export const phaseTimes = {
+export const phaseTimes: Record<PhaseName, number> = {
   [PhaseName.INFLUENCE_BID_ACTION]: 55 * 1000,
   [PhaseName.INFLUENCE_BID_REVEAL]: 10 * 1000,
   [PhaseName.INFLUENCE_BID_RESOLVE]: 15 * 1000,
@@ -138,6 +139,21 @@ export const phaseTimes = {
   [PhaseName.PRIZE_DISTRIBUTE_ACTION]: 50 * 1000,
   [PhaseName.PRIZE_DISTRIBUTE_RESOLVE]: 12 * 1000,
   [PhaseName.HEADLINE_RESOLVE]: 12 * 1000,
+  [PhaseName.FACTORY_CONSTRUCTION]: 12 * 1000, // Legacy - kept for backward compatibility
+  [PhaseName.FACTORY_CONSTRUCTION_RESOLVE]: 12 * 1000, // Legacy - kept for backward compatibility
+  [PhaseName.MODERN_OPERATIONS]: 60 * 1000, // Combined: Factory Construction + Marketing + Research
+  [PhaseName.RESOLVE_MODERN_OPERATIONS]: 12 * 1000, // Combined resolve for all operations
+  [PhaseName.RUSTED_FACTORY_UPGRADE]: 12 * 1000, // Resolve rusted factory upgrades
+  [PhaseName.MARKETING_CAMPAIGN]: 50 * 1000,
+  [PhaseName.MARKETING_CAMPAIGN_RESOLVE]: 12 * 1000,
+  [PhaseName.RESEARCH_ACTION]: 50 * 1000,
+  [PhaseName.RESEARCH_ACTION_RESOLVE]: 12 * 1000,
+  [PhaseName.CONSUMPTION_PHASE]: 60 * 1000,
+  [PhaseName.EARNINGS_CALL]: 12 * 1000,
+  [PhaseName.RESOLVE_INSOLVENCY]: 60 * 1000,
+  [PhaseName.SHAREHOLDER_MEETING]: 60 * 1000, 
+  [PhaseName.MARKETING_AND_RESEARCH_ACTION]: 60 * 1000, 
+  [PhaseName.MARKETING_AND_RESEARCH_ACTION_RESOLVE]: 12 * 1000,
 };
 
 //Stock Grid Prices
@@ -148,6 +164,104 @@ export const stockGridPrices = [
   291, 302, 313, 324, 335, 346, 358, 370, 382, 394, 406, 418, 431, 444, 457,
   470, 484, 498, 512, 526, 540, 555, 570, 585, 600,
 ];
+
+// Worker track values account for the economy score + the worker salaries.
+// As workers are added to factories, the economy score increases because the global workforce is increasing strengthing the economy.
+// As workers are added to factories, the worker salaries increase because the global workforce is increasing strengthing the economy.
+export const workerTrackValues = [
+  10, 10, 10, 10, 11, 11, 11, 11, 12, 12,
+  13, 13, 13, 13, 14, 14, 14, 14, 15, 15,
+  15, 15, 16, 16, 16, 16, 17, 17, 17, 17,
+  18, 18, 18, 18, 19, 19, 19, 19, 20, 20,
+  20, 20, 21, 21, 21, 21, 22, 22, 22, 22,
+  23, 23, 23, 23, 24, 24, 24, 24, 25, 25,
+  25, 25, 26, 26, 26, 26, 27, 27, 27, 27,
+  28, 28, 28, 28, 29, 29, 29, 29, 30, 30
+]
+
+export const DEFAULT_WORKERS = 40;
+
+export function getSectorResourceForSectorName(sectorName: SectorName) {
+  switch(sectorName) {
+    case SectorName.CONSUMER_DEFENSIVE:
+      return ResourceType.CONSUMER_DEFENSIVE;
+    case SectorName.CONSUMER_CYCLICAL:
+      return ResourceType.CONSUMER_CYCLICAL;
+    case SectorName.CONSUMER_DISCRETIONARY:
+      return ResourceType.CONSUMER_DISCRETIONARY;
+    case SectorName.CONSUMER_STAPLES:
+      return ResourceType.CONSUMER_STAPLES;
+    case SectorName.ENERGY:
+      return ResourceType.ENERGY;
+    case SectorName.HEALTHCARE:
+      return ResourceType.HEALTHCARE;
+    case SectorName.INDUSTRIALS:
+      return ResourceType.INDUSTRIALS;
+    case SectorName.MATERIALS:
+      return ResourceType.MATERIALS;
+    case SectorName.TECHNOLOGY:
+      return ResourceType.TECHNOLOGY;
+    default:
+      return ResourceType.GENERAL;
+  }
+}
+
+export const RESOURCE_PRICES_CIRCLE = [12, 15, 17, 14, 18, 16, 20, 19, 22, 24, 26, 23, 28, 25, 30, 27, 32, 29, 35, 31, 33, 36, 34, 38, 40]
+
+export const RESOURCE_PRICES_SQUARE = [5, 6, 7, 8, 10, 11, 12, 14, 15, 17, 18, 20, 21, 23, 24, 26, 27, 29, 30, 32]
+
+export const RESOURCE_PRICES_TRIANGLE = [8, 11, 14, 7, 16, 20, 6, 18, 25, 5, 22, 27, 9, 24, 30, 10, 35, 12, 40, 15, 38, 19, 43, 17, 46, 21, 50, 26, 55, 60]
+
+export const RESOURCE_PRICES_GEAR = [20, 22, 24, 27, 30, 34, 38, 42, 47, 53, 58, 65, 72, 80, 90]
+
+export const RESOURCE_PRICES_TECHNOLOGY = [15, 18, 22, 28, 20, 35, 25, 40, 30, 50]
+
+export const RESOURCE_PRICES_INDUSTRIAL = [10, 12, 14, 13, 16, 17, 18, 20, 21, 23]
+
+export const RESOURCE_PRICES_ENERGY = [8, 20, 5, 25, 10, 30, 7, 35, 6, 40]
+
+export const RESOURCE_PRICES_HEALTHCARE = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+export const RESOURCE_PRICES_CONSUMER_DEFENSIVE = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+export const RESOURCE_PRICES_CONSUMER_CYCLICAL = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+export const RESOURCE_PRICES_CONSUMER_DISCRETIONARY = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+export const RESOURCE_PRICES_CONSUMER_STAPLES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+export const RESOURCE_PRICES_MATERIALS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+export function getResourcePriceForResourceType(resourceType: ResourceType) {
+  switch(resourceType) {
+    case ResourceType.CIRCLE:
+      return RESOURCE_PRICES_CIRCLE
+    case ResourceType.SQUARE:
+      return RESOURCE_PRICES_SQUARE;
+    case ResourceType.TRIANGLE:
+      return RESOURCE_PRICES_TRIANGLE;
+    case ResourceType.CONSUMER_DEFENSIVE:
+      return RESOURCE_PRICES_CONSUMER_DEFENSIVE;
+    case ResourceType.CONSUMER_CYCLICAL:
+      return RESOURCE_PRICES_CONSUMER_CYCLICAL;
+    case ResourceType.CONSUMER_DISCRETIONARY:
+      return RESOURCE_PRICES_CONSUMER_DISCRETIONARY;
+    case ResourceType.CONSUMER_STAPLES:
+      return RESOURCE_PRICES_CONSUMER_STAPLES;
+    case ResourceType.ENERGY:
+      return RESOURCE_PRICES_ENERGY;
+    case ResourceType.HEALTHCARE:
+      return RESOURCE_PRICES_HEALTHCARE;
+    case ResourceType.INDUSTRIALS:
+      return RESOURCE_PRICES_INDUSTRIAL;
+    case ResourceType.MATERIALS:
+      return RESOURCE_PRICES_MATERIALS;
+    case ResourceType.TECHNOLOGY:
+      return RESOURCE_PRICES_TECHNOLOGY;
+    default:
+      return [];
+  }
+}
 
 export const getStockPriceClosestEqualOrLess = (price: number): number => {
   const index = stockGridPrices.findIndex((value) => value >= price);
@@ -1051,7 +1165,7 @@ export const phasesInOrder = [
   PhaseName.INFLUENCE_BID_ACTION,
   PhaseName.INFLUENCE_BID_RESOLVE,
   PhaseName.START_TURN,
-  PhaseName.HEADLINE_RESOLVE,
+  // PhaseName.HEADLINE_RESOLVE,
   PhaseName.SET_COMPANY_IPO_PRICES,
   PhaseName.RESOLVE_SET_COMPANY_IPO_PRICES,
   PhaseName.PRIZE_VOTE_ACTION,
@@ -1072,14 +1186,24 @@ export const phasesInOrder = [
   PhaseName.STOCK_ACTION_OPTION_ORDER, //exercise option orders, this can currently happen the turn they are opened
   PhaseName.STOCK_OPEN_LIMIT_ORDERS,
   PhaseName.STOCK_RESULTS_OVERVIEW,
-  //PhaseName.OPERATING_MEET,
-  PhaseName.OPERATING_ACTION_COMPANY_VOTE,
-  PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT,
-  PhaseName.OPERATING_COMPANY_VOTE_RESOLVE,
-  PhaseName.OPERATING_PRODUCTION,
+  // PhaseName.OPERATING_MEET,
+  // PhaseName.OPERATING_ACTION_COMPANY_VOTE,
+  // PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT,
+  // PhaseName.OPERATING_COMPANY_VOTE_RESOLVE,
+  // PhaseName.OPERATING_PRODUCTION,
+  //OPERATIONS V2 PHASES
+  // PhaseName.FACTORY_CONSTRUCTION,
+  // PhaseName.FACTORY_CONSTRUCTION_RESOLVE,
+  // PhaseName.MARKETING_AND_RESEARCH_ACTION,
+  // PhaseName.MARKETING_AND_RESEARCH_ACTION_RESOLVE,
+  PhaseName.MODERN_OPERATIONS,
+  PhaseName.RESOLVE_MODERN_OPERATIONS,
+  PhaseName.RUSTED_FACTORY_UPGRADE,
+  PhaseName.CONSUMPTION_PHASE,
+  PhaseName.EARNINGS_CALL,
   PhaseName.OPERATING_PRODUCTION_VOTE,
   PhaseName.OPERATING_PRODUCTION_VOTE_RESOLVE,
-  PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT,
+  // PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT,
   PhaseName.CAPITAL_GAINS,
   PhaseName.DIVESTMENT,
   PhaseName.END_TURN,
@@ -1092,3 +1216,21 @@ export function getSectorValidIpoPrices(sector: Sector) {
     (price) => price >= sectorMinIpoPrice && price <= sectorMaxIpoPrice,
   );
 }
+
+// Modern Operation Mechanics Constants
+export const MARKETING_SLOT_COSTS = [0, 100, 200, 300, 400]; // Cost for each concurrent marketing slot
+export const RESEARCH_COSTS_BY_PHASE = [100, 200, 300, 400]; // Research cost per research stage (based on sector researchMarker: Stage 1=0-5, Stage 2=6-10, Stage 3=11-15, Stage 4=16-20)
+export const DEFAULT_CONSUMPTION_MARKERS_PER_SECTOR = 5;
+export const FACTORY_WORKER_REQUIREMENTS = {
+  FACTORY_I: 2,
+  FACTORY_II: 4,
+  FACTORY_III: 6,
+  FACTORY_IV: 8,
+};
+export const FACTORY_CUSTOMER_LIMITS = {
+  FACTORY_I: 3,
+  FACTORY_II: 4,
+  FACTORY_III: 5,
+  FACTORY_IV: 6,
+};
+export const BASE_WORKER_SALARY = 10;

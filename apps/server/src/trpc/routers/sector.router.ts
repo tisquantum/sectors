@@ -70,4 +70,29 @@ export default (trpc: TrpcService, ctx: Context) =>
           orderBy,
         });
       }),
+
+    updateResearchMarker: trpc.procedure
+      .input(
+        z.object({
+          sectorId: z.string(),
+          gameId: z.string(),
+          amount: z.number(),
+        }),
+      )
+      .mutation(async ({ input }) => {
+        const { sectorId, gameId, amount } = input;
+        return ctx.sectorService.updateResearchMarker(sectorId, gameId, amount);
+      }),
+
+    getSectorResearchProgress: trpc.procedure
+      .input(
+        z.object({
+          sectorId: z.string(),
+          gameId: z.string(),
+        }),
+      )
+      .query(async ({ input }) => {
+        const { sectorId, gameId } = input;
+        return ctx.sectorService.getSectorResearchProgress(sectorId, gameId);
+      }),
   });

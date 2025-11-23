@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import { stockGridPrices } from "@server/data/constants";
-import { Company, PhaseName, Sector } from "@server/prisma/prisma.client";
+import {
+  Company,
+  OperationMechanicsVersion,
+  PhaseName,
+  Sector,
+} from "@server/prisma/prisma.client";
 import DebounceButton from "../General/DebounceButton";
 import { trpc } from "@sectors/app/trpc";
 import { useGame } from "./GameContext";
@@ -15,6 +20,7 @@ import {
 import CompanyInfo from "../Company/CompanyInfo";
 import { RiPriceTag3Fill } from "@remixicon/react";
 import { sectorColors } from "@server/data/gameData";
+import CompanyInfoV2 from "../Company/CompanyV2/CompanyInfoV2";
 
 const CompanyIpoVote = ({
   company,
@@ -81,7 +87,12 @@ const CompanyIpoVote = ({
             </div>
           </PopoverTrigger>
           <PopoverContent>
-            <CompanyInfo companyId={company.id} />
+            {gameState.operationMechanicsVersion ===
+            OperationMechanicsVersion.MODERN ? (
+              <CompanyInfoV2 companyId={company.id} />
+            ) : (
+              <CompanyInfo companyId={company.id} />
+            )}
           </PopoverContent>
         </Popover>
       </div>
@@ -176,12 +187,53 @@ const CompanyIpoVote = ({
 };
 
 const IpoVotes = ({ isInteractive }: { isInteractive?: boolean }) => {
-  const { gameState, authPlayer } = useGame();
+  const { gameState, authPlayer, currentTurn, currentPhase } = useGame();
   if (!gameState || !authPlayer) return null;
   const { Company, sectors } = gameState;
+  
+  // Get IPO votes for the current turn
+  const { data: ipoVotes } = trpc.game.getIpoVotesForGameTurn.useQuery(
+    {
+      gameTurnId: currentTurn.id,
+    },
+    { enabled: !!currentTurn?.id }
+  );
+  
+  // In voting phase: show companies without IPO prices
+  // In resolution phase: show companies that have votes (regardless of IPO price status)
+  const isResolutionPhase = currentPhase?.name === PhaseName.RESOLVE_SET_COMPANY_IPO_PRICES;
+  
+  let companiesToShow: Company[];
+  if (isResolutionPhase) {
+    // In resolution phase, show companies that have votes in this turn
+    const companyIdsWithVotes = new Set(
+      (ipoVotes || []).map((vote) => vote.companyId)
+    );
+    companiesToShow = Company.filter((company) =>
+      companyIdsWithVotes.has(company.id)
+    );
+  } else {
+    // In voting phase, show companies without IPO prices
+    companiesToShow = Company.filter(
+      (company) => company.ipoAndFloatPrice === null
+    );
+  }
+  
+  if (companiesToShow.length === 0) {
+    return (
+      <div className="flex flex-col gap-4 p-4">
+        <p className="text-gray-400">
+          {isResolutionPhase
+            ? "No companies with IPO votes to resolve."
+            : "All companies have IPO prices set."}
+        </p>
+      </div>
+    );
+  }
+  
   return (
     <div className="flex flex-col gap-4">
-      {Company.map((company) => {
+      {companiesToShow.map((company) => {
         const sector = sectors.find((sector) => sector.id === company.sectorId);
         if (!sector) return null;
         return (

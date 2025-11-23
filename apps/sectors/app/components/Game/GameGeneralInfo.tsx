@@ -2,6 +2,7 @@ import { friendlyDistributionStrategyName } from "@sectors/app/helpers";
 import { notFound } from "next/navigation";
 import React from "react";
 import { useGame } from "./GameContext";
+import { DEFAULT_WORKERS } from "@server/data/constants";
 import {
   RiFunctionAddFill,
   RiTeamFill,
@@ -13,6 +14,7 @@ import {
   RiListOrdered2,
   RiCurrencyFill,
   RiTextWrap,
+  RiUserFill,
 } from "@remixicon/react";
 import {
   Avatar,
@@ -34,6 +36,7 @@ import {
   EntityType,
   OrderType,
   PhaseName,
+  OperationMechanicsVersion,
 } from "@server/prisma/prisma.client";
 import {
   baseToolTipStyle,
@@ -202,12 +205,28 @@ const GameGeneralInfo = () => {
           classNames={{ base: baseToolTipStyle }}
           className={tooltipStyle}
           content={
-            <p className={tooltipParagraphStyle}>The global consumer pool.</p>
+            <div>
+              <p className={tooltipParagraphStyle}>The global consumer pool.</p>
+              {gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN && (
+                <p className={tooltipParagraphStyle}>
+                  Workers remaining: Available workers for factories, marketing, and research.
+                </p>
+              )}
+            </div>
           }
         >
-          <div className="flex items-center gap-2">
-            <RiTeamFill className="text-yellow-400" size={18} />
-            {gameState.consumerPoolNumber}
+          <div className="flex flex-col items-center gap-1">
+            <div className="flex items-center gap-2">
+              <RiTeamFill className="text-yellow-400" size={18} />
+              {gameState.consumerPoolNumber}
+            </div>
+            {gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN && (
+              <div className="flex items-center gap-2 text-xs text-gray-400">
+                <RiUserFill className="text-green-400" size={14} />
+                {/* If workforcePool is 0, default to DEFAULT_WORKERS (40) for new games */}
+                {gameState.workforcePool > 0 ? gameState.workforcePool : DEFAULT_WORKERS}
+              </div>
+            )}
           </div>
         </Tooltip>
       </div>

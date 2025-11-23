@@ -51,6 +51,8 @@ export class TransactionService {
           },
         },
         Shares: true,
+        GameTurn: true,
+        Phase: true,
       },
     });
   }
@@ -86,6 +88,8 @@ export class TransactionService {
           },
         },
         Shares: true,
+        GameTurn: true,
+        Phase: true,
       },
     });
   }
@@ -119,6 +123,8 @@ export class TransactionService {
             Share: true,
           },
         },
+        GameTurn: true,
+        Phase: true,
       },
     });
   }

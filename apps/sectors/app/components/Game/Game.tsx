@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import GameSidebar from "./GameSidebar";
 import GameTopBar from "./GameTopBar";
-import StockRoundOrderGrid from "./StockRoundOrderGrid";
+import { MarketsView } from "./MarketsView";
+import { OperationsView } from "./OperationsView";
 import TabView from "./TabView";
 import PendingOrders from "./PendingOrders";
 import StockChart from "./StockChart";
@@ -17,6 +18,7 @@ import {
   PhaseName,
   RoundType,
   StockRound,
+  OperationMechanicsVersion,
 } from "@server/prisma/prisma.client";
 import Meeting from "../Meeting/Meeting";
 import {
@@ -57,6 +59,26 @@ import StartTurnUpdates from "./StartTurnUpdates";
 import GamePlayersRecap from "./GamePlayerRecap";
 import Headlines from "./Headlines";
 import IpoVotes from "./IpoVote";
+import { ConsumptionPhase } from "./ConsumptionPhase";
+import { OperatingRoundRevenueVoteV2, OperatingRoundRevenueVoteResolveV2 } from "./OperatingRoundRevenueV2";
+import FactoryConstructionPhase from "./FactoryConstructionPhase";
+import { ResolveFactoryConstructionPhase } from "../Factory/ResolveFactoryConstruction";
+import MarketingAndResearchAction from "./MarketingAndResearchAction";
+import MarketingAndResearchActionResolve from "./MarketingAndResearchActionResolve";
+import { EarningsCall } from "./EarningsCall";
+import {
+  ConsumptionPhase as ModernConsumptionPhase,
+  FactoryConstructionPhase as ModernFactoryConstructionPhase,
+  FactoryConstructionResolvePhase as ModernFactoryConstructionResolvePhase,
+  EarningsCallPhase as ModernEarningsCallPhase,
+  MarketingAndResearchPhase as ModernMarketingAndResearchPhase,
+  MarketingAndResearchResolvePhase as ModernMarketingAndResearchResolvePhase,
+  ModernOperations as ModernOperationsPhase,
+  ModernOperationsResolve as ModernOperationsResolvePhase,
+  RustedFactoryUpgradePhase,
+} from "./ModernOperations/phases";
+import InsolvencyContributionComponent from "../Company/InsolvencyContribution";
+import { CompanyStatus } from "@server/prisma/prisma.client";
 
 const determineGameRound = (
   game: GameState
@@ -139,6 +161,20 @@ const Game = ({ gameId }: { gameId: string }) => {
   const [showPhaseList, setShowPhaseList] = useState<boolean>(true);
   const constraintsRef = useRef(null);
   const [isTimerAtZero, setIsTimerAtZero] = useState(false);
+  
+  // Track renders and view changes
+  const renderCountRef = useRef(0);
+  renderCountRef.current += 1;
+  if (renderCountRef.current % 10 === 0) {
+    console.log(`[Game] Render count: ${renderCountRef.current}, currentView: ${currentView}`);
+  }
+  
+  // Track view changes
+  const viewChangeCountRef = useRef(0);
+  useEffect(() => {
+    viewChangeCountRef.current += 1;
+    console.log(`[Game] View changed to: ${currentView} (change #${viewChangeCountRef.current})`);
+  }, [currentView]);
   const { isOpen, onOpen, onClose, onOpenChange } = useDisclosure();
   const {
     isOpen: isSidebarModalOpen,
@@ -163,6 +199,7 @@ const Game = ({ gameId }: { gameId: string }) => {
     return () => clearInterval(timer);
   }, [currentPhase?.name]);
   const handleCurrentView = (view: string) => {
+    console.log(`[Game] handleCurrentView called with: ${view}`);
     setCurrentView(view);
   };
   const currentRoundData = determineGameRound(gameState);
@@ -172,7 +209,7 @@ const Game = ({ gameId }: { gameId: string }) => {
     ) : currentRoundData?.phase.name === PhaseName.START_TURN ? (
       <div className="flex flex-col items-center justify-between h-full w-full gap-2">
         <StartTurnUpdates />
-        <Headlines />
+        {/* <Headlines /> */}
         <div className="flex flex-col gap-2 items-center">
           <h2 className="text-xl">Players Overview</h2>
           <GamePlayersRecap />
@@ -225,13 +262,21 @@ const Game = ({ gameId }: { gameId: string }) => {
     ) : currentRoundData?.phase.name === PhaseName.OPERATING_PRODUCTION ? (
       <OperatingRoundProduction />
     ) : currentRoundData?.phase.name === PhaseName.OPERATING_PRODUCTION_VOTE ? (
-      <OperatingRoundRevenueVote />
+      gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN ? (
+        <OperatingRoundRevenueVoteV2 />
+      ) : (
+        <OperatingRoundRevenueVote />
+      )
     ) : currentRoundData?.phase.name ===
       PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT ? (
       <OperatingRoundStockPriceAdjustment />
     ) : currentRoundData?.phase.name ===
       PhaseName.OPERATING_PRODUCTION_VOTE_RESOLVE ? (
-      <OperatingRoundRevenueVoteResolve />
+      gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN ? (
+        <OperatingRoundRevenueVoteResolveV2 />
+      ) : (
+        <OperatingRoundRevenueVoteResolve />
+      )
     ) : currentRoundData?.phase.name ===
       PhaseName.OPERATING_ACTION_COMPANY_VOTE ? (
       <CompanyActionSlider />
@@ -256,7 +301,68 @@ const Game = ({ gameId }: { gameId: string }) => {
       <InfluenceBid isRevealRound />
     ) : currentRoundData?.phase.name === PhaseName.STOCK_ACTION_SHORT_ORDER ? (
       <CoverShortOrders />
-    ) : null;
+    ) : currentRoundData?.phase.name === PhaseName.CONSUMPTION_PHASE ? (
+      gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN ? (
+        <ModernConsumptionPhase />
+      ) : (
+        <ConsumptionPhase />
+      )
+    ) : currentRoundData?.phase.name === PhaseName.EARNINGS_CALL ? (
+      gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN ? (
+        <ModernEarningsCallPhase />
+      ) : (
+        <EarningsCall />
+      )
+    ) : currentRoundData?.phase.name === PhaseName.FACTORY_CONSTRUCTION ? (
+      gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN ? (
+        <ModernMarketingAndResearchPhase /> // Use combined phase for modern operations
+      ) : (
+        <FactoryConstructionPhase />
+      )
+    ) : currentRoundData?.phase.name === PhaseName.FACTORY_CONSTRUCTION_RESOLVE ? (
+      gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN ? (
+        <ModernMarketingAndResearchResolvePhase /> // Use combined resolve for modern operations
+      ) : (
+        <ResolveFactoryConstructionPhase />
+      )
+    ) : currentRoundData?.phase.name === PhaseName.MARKETING_AND_RESEARCH_ACTION ? (
+      gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN ? (
+        <ModernMarketingAndResearchPhase /> // Combined: Factory + Marketing + Research
+      ) : (
+        <MarketingAndResearchAction />
+      )
+    ) : currentRoundData?.phase.name === PhaseName.MARKETING_AND_RESEARCH_ACTION_RESOLVE ? (
+      gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN ? (
+        <ModernMarketingAndResearchResolvePhase /> // Combined resolve
+      ) : (
+        <MarketingAndResearchActionResolve />
+      )
+    ) : currentRoundData?.phase.name === PhaseName.MODERN_OPERATIONS ? (
+      // New combined phase: Factory Construction + Marketing + Research
+      <ModernOperationsPhase />
+    ) : currentRoundData?.phase.name === PhaseName.RESOLVE_MODERN_OPERATIONS ? (
+      // New combined resolve phase
+      <ModernOperationsResolvePhase />
+    ) : currentRoundData?.phase.name === PhaseName.RUSTED_FACTORY_UPGRADE ? (
+      // Rusted factory upgrade phase
+      <RustedFactoryUpgradePhase />
+    ) : currentRoundData?.phase.name === PhaseName.RESOLVE_INSOLVENCY ? (
+      <div className="flex flex-col gap-4 p-4 w-full">
+        <h2 className="text-2xl font-bold">Resolve Insolvency</h2>
+        {gameState.Company.filter(c => c.status === CompanyStatus.INSOLVENT).length === 0 ? (
+          <div className="text-center p-4">
+            <p>No insolvent companies found. All companies are solvent.</p>
+          </div>
+        ) : (
+          gameState.Company.filter(c => c.status === CompanyStatus.INSOLVENT).map((company) => (
+            <div key={company.id} className="border rounded-lg p-4">
+              <InsolvencyContributionComponent company={company as any} />
+            </div>
+          ))
+        )}
+      </div>
+    )
+    : null;
 
   return (
     <>
@@ -308,8 +414,8 @@ const Game = ({ gameId }: { gameId: string }) => {
                 {currentView === "chart" && <StockChart />}
                 {currentView === "pending" && <PendingOrders />}
                 {currentView == "economy" && <EndTurnEconomy />}
-                {currentView == "markets" && <StockRoundOrderGrid />}
-                {currentView == "companies" && <CompanyActionSlider />}
+                {currentView == "markets" && <MarketsView />}
+                {currentView == "companies" && <OperationsView />}
                 {gameState.gameStatus == GameStatus.FINISHED && (
                   <GameResults
                     isOpen={isOpen}

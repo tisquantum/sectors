@@ -12,11 +12,14 @@ import { notFound } from "next/navigation";
 import {
   Company,
   CompanyStatus,
+  OperationMechanicsVersion,
   OrderType,
   Phase,
   PhaseName,
   Player,
   ShareLocation,
+  Sector,
+  AwardTrackType,
 } from "@server/prisma/prisma.client";
 import {
   CompanyWithRelations,
@@ -36,6 +39,7 @@ import DerivativesTable from "./DerivativesTable";
 import OrderResults from "./OrderResults";
 import { useDrawer } from "../Drawer.context";
 import CompanyAwardTrack from "../Company/CompanyAwardTrack";
+import { ResourceTracksContainer } from "./ResourceTracksContainer";
 
 function isOrderInputOpenPlayerOrderCounter(
   playerOrdersConcealed: PlayerOrderConcealed[],
@@ -236,6 +240,9 @@ const StockRoundOrderGrid = ({
             <Derivatives isInteractive={isInteractive} />
           </Tab>
         )}
+        <Tab key="resource-market" title="Resource Market">
+          <ResourceTracksContainer />
+        </Tab>
         <Tab key="table-view" title="Table View">
           <div className="p-4 max-w-full scrollbar">
             <h2 className="text-xl font-bold mb-4">Spot Market</h2>

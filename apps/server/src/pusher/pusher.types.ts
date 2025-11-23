@@ -23,7 +23,7 @@ export const EVENT_PING_PLAYERS = 'ping-players';
 export interface EVENT_NEW_PLAYER_ORDER_PLAYER_ID__PAYLOAD {
   playerId: string;
 }
-export const CHANNEL_ROOM_GLOBAL = 'room-global';
+export const CHANNEL_ROOM_GLOBAL = 'room-global'; // the room name for global room id MUST BE 'global'
 export const getRoomChannelId = (roomId: number) => `room-${roomId}`;
 export const getGameChannelId = (gameId: string) => `game-${gameId}`;
 export const getExecutiveGameChannelId = (gameId: string) => `executive-game-${gameId}`;

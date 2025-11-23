@@ -98,6 +98,21 @@ import { ExecutiveInfluenceVoteRoundService } from '@server/executive-influence-
 import executiveInfluenceVoteRoundRouter from './routers/executive-influence-vote-round.router';
 import executiveVoteMarkerRouter from './routers/executive-vote-marker.router';
 import { PrismaService } from '@server/prisma/prisma.service';
+import factoryRouter from './routers/factory.router';
+import marketingRouter from './routers/marketing.router';
+import { FactoryService } from '@server/factory/factory.service';
+import { MarketingService } from '@server/marketing/marketing.service';
+import { factoryConstructionRouter } from './routers/factory-construction.router';
+import { FactoryConstructionService } from '@server/factory-construction/factory-construction.service';
+import { FactoryConstructionOrderService } from '@server/factory-construction/factory-construction-order.service';
+import { ResourceService } from '@server/resource/resource.service';
+import { ConsumptionMarkerService } from '@server/consumption-marker/consumption-marker.service';
+import { FactoryProductionService } from '@server/factory-production/factory-production.service';
+import resourceRouter from './routers/resource.router';
+import consumptionMarkerRouter from './routers/consumption-marker.router';
+import factoryProductionRouter from './routers/factory-production.router';
+import modernOperationsRouter from './routers/modern-operations.router';
+
 @Injectable()
 export class TrpcRouter {
   constructor(
@@ -151,7 +166,14 @@ export class TrpcRouter {
     private readonly executiveInfluenceBidService: ExecutiveInfluenceBidService,
     private readonly executivePhaseService: ExecutivePhaseService,
     private readonly executiveInfluenceVoteRoundService: ExecutiveInfluenceVoteRoundService,
+    private readonly marketingService: MarketingService,
+    private readonly factoryService: FactoryService,
+    private readonly factoryConstructionService: FactoryConstructionService,
+    private readonly factoryConstructionOrderService: FactoryConstructionOrderService,
     private readonly prismaService: PrismaService,
+    private readonly resourceService: ResourceService,
+    private readonly consumptionMarkerService: ConsumptionMarkerService,
+    private readonly factoryProductionService: FactoryProductionService,
   ) {}
 
   appRouter = this.trpc.router({
@@ -193,6 +215,8 @@ export class TrpcRouter {
     company: companyRouter(this.trpc, {
       companyService: this.companyService,
       sectorService: this.sectorService,
+      phaseService: this.phaseService,
+      gamesService: this.gamesService
     }),
     sector: sectorRouter(this.trpc, {
       sectorService: this.sectorService,
@@ -348,6 +372,47 @@ export class TrpcRouter {
     }),
     executiveVoteMarker: executiveVoteMarkerRouter(this.trpc, {
       prismaService: this.prismaService,
+    }),
+    factory: factoryRouter(this.trpc, {
+      factoryService: this.factoryService,
+      prismaService: this.prismaService,
+    }),
+    marketing: marketingRouter(this.trpc, {
+      marketingService: this.marketingService,
+      gamesService: this.gamesService,
+      gameTurnService: this.gameTurnService,
+      prismaService: this.prismaService,
+    }),
+    factoryConstruction: factoryConstructionRouter(this.trpc, {
+      factoryConstructionService: this.factoryConstructionService,
+      factoryConstructionOrderService: this.factoryConstructionOrderService,
+      factoryService: this.factoryService,
+      prismaService: this.prismaService,
+      playerService: this.playersService,
+      phaseService: this.phaseService,
+      gamesService: this.gamesService,
+      gameTurnService: this.gameTurnService,
+      sectorService: this.sectorService,
+      companyService: this.companyService,
+    }),
+    resource: resourceRouter(this.trpc, {
+      resourceService: this.resourceService,
+    }),
+    consumptionMarker: consumptionMarkerRouter(this.trpc, {
+      consumptionMarkerService: this.consumptionMarkerService,
+    }),
+    factoryProduction: factoryProductionRouter(this.trpc, {
+      factoryProductionService: this.factoryProductionService,
+    }),
+    modernOperations: modernOperationsRouter(this.trpc, {
+      marketingService: this.marketingService,
+      companyService: this.companyService,
+      playerService: this.playersService,
+      phaseService: this.phaseService,
+      gamesService: this.gamesService,
+      prismaService: this.prismaService,
+      sectorService: this.sectorService,
+      gameTurnService: this.gameTurnService,
     }),
   });
 

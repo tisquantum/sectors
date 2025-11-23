@@ -51,10 +51,14 @@ import {
   AwardTrackType,
   GameTurn,
   CompanyIpoPriceVote,
+  OperationMechanicsVersion,
+  ResourceType,
+  ResourceTrackType,
 } from '@prisma/client';
 import { GamesService } from '@server/games/games.service';
 import { CompanyService } from '@server/company/company.service';
 import { SectorService } from '@server/sector/sector.service';
+import { FactoryProductionService } from '@server/factory-production/factory-production.service';
 import { gameDataJson } from '@server/data/gameData';
 import { StartGameInput } from './game-management.interface';
 import {
@@ -148,6 +152,12 @@ import {
   OUTSOURCE_PRESTIGE_PENALTY,
   AWARD_PRESTIGE_BONUS,
   stockGridPrices,
+  RESOURCE_PRICES_CIRCLE,
+  RESOURCE_PRICES_SQUARE,
+  RESOURCE_PRICES_TRIANGLE,
+  getSectorResourceForSectorName,
+  getResourcePriceForResourceType,
+  DEFAULT_WORKERS,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -230,6 +240,8 @@ import { randomUUID } from 'crypto';
 import { AiBotService } from '@server/ai-bot/ai-bot.service';
 import { RevenueDistributionVoteService } from '@server/revenue-distribution-vote/revenue-distribution-vote.service';
 import { OperatingRoundVoteService } from '@server/operating-round-vote/operating-round-vote.service';
+import { ModernOperationMechanicsService } from './modern-operation-mechanics.service';
+import { ResourceService } from '@server/resource/resource.service';
 
 type GroupedByPhase = {
   [key: string]: {
@@ -299,6 +311,9 @@ export class GameManagementService {
     private aiBotService: AiBotService,
     private revenueDistributionVoteService: RevenueDistributionVoteService,
     private operatingRoundVoteService: OperatingRoundVoteService,
+    private modernOperationMechanicsService: ModernOperationMechanicsService,
+    private resourceService: ResourceService,
+    private factoryProductionService: FactoryProductionService,
   ) {}
 
   /**
@@ -313,6 +328,20 @@ export class GameManagementService {
    * @returns
    */
   async handlePhase(phase: Phase, game: Game) {
+    // If game is using modern operation mechanics, try to handle it with the modern service
+    if (game.operationMechanicsVersion === OperationMechanicsVersion.MODERN) {
+      const handled = await this.modernOperationMechanicsService.handlePhase(
+        phase,
+        game,
+      );
+      // If the modern service handled the phase, we're done
+      if (handled) {
+        return;
+      }
+      // Otherwise, fall through to legacy handling
+    }
+
+    // Legacy phase handling
     switch (phase.name) {
       case PhaseName.START_TURN:
         const gameCache = this.gameCache.get(game.id);
@@ -371,6 +400,9 @@ export class GameManagementService {
       case PhaseName.STOCK_RESOLVE_MARKET_ORDER:
         //resolve stock round
         await this.resolveMarketOrdersSingleOrderResolve(phase, game);
+        if(game.operationMechanicsVersion === OperationMechanicsVersion.MODERN) {
+          await this.assignCeo(phase, game);
+        }
         break;
       case PhaseName.STOCK_RESOLVE_PENDING_OPTION_ORDER:
         await this.openOptionsOrders(phase);
@@ -402,6 +434,11 @@ export class GameManagementService {
         break;
       case PhaseName.OPERATING_PRODUCTION_VOTE_RESOLVE:
         await this.resolveOperatingProductionVotes(phase);
+        // AUTO-FORWARD: Execute Capital Gains and Divestment automatically before END_TURN
+        // These phases are processed but don't require player ready-up
+        // This handles the modern operations flow: OPERATING_PRODUCTION_VOTE_RESOLVE -> OPERATING_STOCK_PRICE_ADJUSTMENT -> (auto) CAPITAL_GAINS -> (auto) DIVESTMENT -> END_TURN
+        await this.resolveCapitalGainsViaTurnIncome(phase);
+        await this.resolveDivestment(phase);
         break;
       case PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT:
         await this.adjustStockPrices(phase);
@@ -410,6 +447,12 @@ export class GameManagementService {
         await this.decrementSectorDemandBonus(phase);
         await this.decrementCompanyTemporarySupplyBonus(phase);
         await this.decrementActiveCompanyDemand(phase);
+        
+        // AUTO-FORWARD: Execute Capital Gains and Divestment automatically before END_TURN
+        // These phases are processed but don't require player ready-up
+        await this.resolveCapitalGainsViaTurnIncome(phase);
+        await this.resolveDivestment(phase);
+        
         if (game.isTimerless) {
           await this.handlePhaseTransition({
             phase,
@@ -438,8 +481,15 @@ export class GameManagementService {
       case PhaseName.DIVESTMENT:
         await this.resolveDivestment(phase);
         break;
+      case PhaseName.FACTORY_CONSTRUCTION:
+        await this.resolveFactoryConstruction(phase);
+        break;
       case PhaseName.END_TURN:
-        await this.adjustEconomyScore(phase);
+        // Only adjust economy score for legacy mechanics
+        // Modern mechanics calculate economy score in updateWorkforceTrack (START_TURN phase)
+        if (game.operationMechanicsVersion !== OperationMechanicsVersion.MODERN) {
+          await this.adjustEconomyScore(phase);
+        }
         await this.resolveCompanyLoans(phase);
         await this.resolveCompanyAwards(phase);
         if (game.useOptionOrders) {
@@ -453,6 +503,141 @@ export class GameManagementService {
       default:
         return;
     }
+  }
+
+  // Iterate over all factory construction orders from the previous phase and construct factories
+  // Note: This is the LEGACY version, modern mechanics use ModernOperationMechanicsService
+  async resolveFactoryConstruction(phase: Phase) {
+    //get all factory construction orders from the previous phase
+    const factoryConstructionOrders = await this.prisma.factoryConstructionOrder.findMany({
+      where: { gameTurnId: phase.gameTurnId },
+    });
+    //iterate over factory construction orders and construct factories
+    const factoryConstructionPromises = factoryConstructionOrders.map(async (order) => {
+      // Get next slot for this company
+      const existingFactories = await this.prisma.factory.count({
+        where: { companyId: order.companyId, gameId: order.gameId },
+      });
+
+      //construct factory
+      await this.prisma.factory.create({
+        data: {
+          companyId: order.companyId,
+          sectorId: order.sectorId,
+          gameId: order.gameId,
+          size: order.size,
+          workers: 0, // Legacy: workers assigned separately
+          slot: existingFactories + 1,
+          isOperational: true, // Legacy: operational immediately
+          resourceTypes: order.resourceTypes,
+        },
+      });
+    });
+    await Promise.all(factoryConstructionPromises);
+  }
+  
+  async assignCeo(phase: Phase, game: Game) {
+    //iterate over all companies and check the share ownership of each company, the player with the most shares is the ceo, 
+    // in the case of a tie, the player with priority is the ceo
+    const companies = await this.companyService.companiesWithRelations({
+      where: { gameId: phase.gameId },
+    });
+    
+    // Get player priorities once for all companies
+    const playerPriorities = await this.playerPriorityService.listPlayerPriorities({
+      where: { gameTurnId: phase.gameTurnId },
+    });
+    
+    // Create a map of player priorities for quick lookup
+    const priorityMap = new Map<string, number>();
+    playerPriorities.forEach(pp => {
+      priorityMap.set(pp.playerId, pp.priority);
+    });
+    
+    // iterate over companies and get the player with the most shares
+    const ceoPromises = companies.map(async (company) => {
+      const shares = company.Share;
+      // Only count shares owned by players (location === PLAYER), not IPO or OPEN_MARKET
+      const playerShareCounts = shares
+        .filter(share => share.location === ShareLocation.PLAYER && share.Player?.id)
+        .reduce((acc, share) => {
+          const playerId = share.Player!.id;
+          if (acc[playerId]) {
+            acc[playerId] += 1;
+          } else {
+            acc[playerId] = 1;
+          }
+          return acc;
+        }, {} as Record<string, number>);
+      
+      // If no player-owned shares, disconnect CEO or skip
+      const playerIds = Object.keys(playerShareCounts);
+      if (playerIds.length === 0) {
+        // No player owns shares, disconnect CEO
+        await this.companyService.updateCompany({
+          where: { id: company.id },
+          data: { ceo: { disconnect: true } },
+        });
+        return;
+      }
+      
+      // Find the maximum share count
+      const maxShareCount = Math.max(...Object.values(playerShareCounts));
+      
+      // Find all players with the maximum share count (potential ties)
+      const playersWithMaxShares = playerIds.filter(
+        playerId => playerShareCounts[playerId] === maxShareCount
+      );
+      
+      let ceoPlayerId: string | null = null;
+      
+      if (playersWithMaxShares.length === 1) {
+        // No tie, use the player with most shares
+        ceoPlayerId = playersWithMaxShares[0];
+      } else {
+        // Tie exists, use player priority to break it
+        let highestPriority = -1;
+        for (const playerId of playersWithMaxShares) {
+          const priority = priorityMap.get(playerId) || 0;
+          if (priority > highestPriority) {
+            highestPriority = priority;
+            ceoPlayerId = playerId;
+          }
+        }
+        
+        // If still no CEO found (all have same priority or no priority), use first player
+        if (!ceoPlayerId) {
+          ceoPlayerId = playersWithMaxShares[0];
+        }
+      }
+      
+      // Verify player exists before connecting
+      if (ceoPlayerId) {
+        const playerExists = await this.prisma.player.findUnique({
+          where: { id: ceoPlayerId },
+        });
+        
+        if (playerExists) {
+          await this.companyService.updateCompany({
+            where: { id: company.id },
+            data: { ceo: { connect: { id: ceoPlayerId } } },
+          });
+        } else {
+          // Player doesn't exist, disconnect CEO
+          await this.companyService.updateCompany({
+            where: { id: company.id },
+            data: { ceo: { disconnect: true } },
+          });
+        }
+      } else {
+        // No valid CEO found, disconnect
+        await this.companyService.updateCompany({
+          where: { id: company.id },
+          data: { ceo: { disconnect: true } },
+        });
+      }
+    });
+    await Promise.all(ceoPromises);
   }
 
   async resolveSetCompanyAndIpoPrices(phase: Phase, gameId: string) {
@@ -2353,6 +2538,14 @@ export class GameManagementService {
     }
     const playerIds = players.map((player) => player.id);
     const playersIncome = await this.getTurnIncome(playerIds, game.currentTurn);
+    
+    // If no income transactions found, skip capital gains calculation
+    // This can happen in modern operations if all revenue was retained or no dividends were paid
+    if (playersIncome.length === 0) {
+      console.log(`[resolveCapitalGainsViaTurnIncome] No income transactions found for turn ${game.currentTurn}, skipping capital gains`);
+      return;
+    }
+    
     //charge capital gains
     const capitalGainsUpdates = [];
     const playerUpdatePromises = [];
@@ -2455,8 +2648,10 @@ export class GameManagementService {
       },
     });
 
+    // If no transactions found, return empty array (no income to tax)
+    // This can happen in modern operations if all revenue was retained or no dividends were paid
     if (!transactions || transactions.length === 0) {
-      throw new Error('No relevant transactions found for the turn.');
+      return [];
     }
 
     // Group transactions by player entityId
@@ -2694,6 +2889,379 @@ export class GameManagementService {
         continue;
       }
 
+      await this.gamesService.updateGameState({
+        where: { id: phase.gameId },
+        data: { bankPoolNumber: game.bankPoolNumber - moneyFromBank },
+      });
+    }
+  }
+
+  /**
+   * Calculate and distribute dividends for modern operations (using FactoryProduction records)
+   * This method is similar to calculateAndDistributeDividends but works with FactoryProduction
+   * instead of ProductionResult records.
+   */
+  async calculateAndDistributeDividendsModern(phase: Phase) {
+    console.log('calculateAndDistributeDividendsModern', phase);
+    if (!phase.operatingRoundId) {
+      throw new Error('Operating round not found');
+    }
+    if (!phase.gameTurnId) {
+      throw new Error('Game turn not found');
+    }
+
+    const operatingRound =
+      await this.operatingRoundService.operatingRoundWithRevenueDistributionVotes(
+        {
+          id: phase.operatingRoundId,
+        },
+      );
+    console.log('operatingRound', operatingRound);
+
+    if (!operatingRound) {
+      console.error('Operating round not found');
+      return;
+    }
+
+    // Group votes by company
+    type GroupedByCompany = {
+      [key: string]: RevenueDistributionVote[];
+    };
+
+    const groupedVotes =
+      operatingRound?.revenueDistributionVotes.reduce<GroupedByCompany>(
+        (acc, vote) => {
+          if (!acc[vote.companyId]) {
+            acc[vote.companyId] = [vote];
+          } else {
+            acc[vote.companyId].push(vote);
+          }
+          return acc;
+        },
+        {},
+      );
+    console.log('groupedVotes', groupedVotes);
+    if (!groupedVotes) {
+      console.error('No grouped votes found');
+      return;
+    }
+
+    const game = await this.gamesService.game({ id: phase.gameId });
+    if (!game) {
+      console.error('Game not found');
+      return;
+    }
+
+    // Get player priorities for tie-breaking
+    // TODO: This is not working as expected.  We need to get the player priorities for the current turn.  It appears our assumption that the player priorities are the same for all turns is incorrect.
+    const playerPriorities =
+      await this.playerPriorityService.listPlayerPriorities({
+        where: { gameTurnId: phase.gameTurnId },
+      });
+    playerPriorities.sort((a, b) => a.priority - b.priority);
+    console.log('playerPriorities', playerPriorities);
+    // Process each company
+    for (const [companyId, votes] of Object.entries(groupedVotes)) {
+      // Filter out votes with weight 0
+      const validVotes = votes.filter((vote) => vote.weight > 0);
+      if (validVotes.length === 0) {
+        continue;
+      }
+
+      // Calculate vote counts
+      const voteCount: { [key: string]: number } = {};
+      validVotes.forEach((vote) => {
+        if (!voteCount[vote.revenueDistribution]) {
+          voteCount[vote.revenueDistribution] = 0;
+        }
+        voteCount[vote.revenueDistribution] += vote.weight;
+      });
+
+      // Get the option with the most votes
+      const maxVotes = Math.max(...Object.values(voteCount));
+      const maxVoteOptions = Object.keys(voteCount).filter(
+        (key) => voteCount[key] === maxVotes,
+      );
+      console.log('maxVoteOptions', maxVoteOptions);
+
+      // Resolve tie using player priority
+      let revenueDistribution: RevenueDistribution | null = null;
+      for (const player of playerPriorities) {
+        const playerVote = validVotes.find(
+          (vote) =>
+            vote.playerId === player.playerId &&
+            maxVoteOptions.includes(vote.revenueDistribution),
+        );
+        if (playerVote) {
+          revenueDistribution = playerVote.revenueDistribution;
+          break;
+        }
+      }
+      console.log('revenueDistribution', revenueDistribution);
+
+      // Default to RETAINED if no vote found
+      if (!revenueDistribution) {
+        revenueDistribution = RevenueDistribution.RETAINED;
+      }
+
+      // Get company with shares
+      const company = await this.companyService.companyWithRelations({
+        id: companyId,
+      });
+      if (!company) {
+        console.error(`Company ${companyId} not found`);
+        continue;
+      }
+
+      // Get total revenue from FactoryProduction records for this company and turn
+      const totalRevenue = await this.factoryProductionService.getCompanyTurnRevenue(
+        companyId,
+        phase.gameTurnId,
+      );
+      console.log('totalRevenue', totalRevenue);
+      if (totalRevenue === 0) {
+        console.log(`No revenue to distribute for company ${company.name}`);
+        continue;
+      }
+
+      // Handle negative revenue (must be retained)
+      if (totalRevenue < 0) {
+        revenueDistribution = RevenueDistribution.RETAINED;
+      }
+
+      // Each company has 10 shares in rotation
+      const TOTAL_SHARES_IN_ROTATION = 10;
+
+      // Filter shares: only PLAYER and OPEN_MARKET shares get dividends (not IPO)
+      const playerShares = company.Share.filter(
+        (share) => share.location === ShareLocation.PLAYER && share.playerId,
+      );
+      const openMarketShares = company.Share.filter(
+        (share) => share.location === ShareLocation.OPEN_MARKET,
+      );
+      const sharesEligibleForDividends = playerShares.length + openMarketShares.length;
+
+      // Calculate dividend and company retention
+      let dividend = 0;
+      let moneyToCompany = 0;
+      const moneyFromBank = totalRevenue;
+
+      // Only calculate dividends if there are shares eligible for dividends
+      if (sharesEligibleForDividends === 0) {
+        console.log(`No shares eligible for dividends found for company ${company.name}, retaining all revenue`);
+        moneyToCompany = totalRevenue;
+      } else {
+        console.log('revenueDistribution', revenueDistribution);
+        console.log('playerShares', playerShares.length, 'openMarketShares', openMarketShares.length);
+        switch (revenueDistribution) {
+          case RevenueDistribution.DIVIDEND_FULL:
+            // For full dividend, distribute ALL revenue to eligible shares
+            // Dividend per share = revenue / eligible shares (rounded down)
+            dividend = Math.floor(totalRevenue / sharesEligibleForDividends);
+            // Company retains 0 - any remainder from rounding will be distributed to shareholders
+            moneyToCompany = 0;
+            break;
+          case RevenueDistribution.DIVIDEND_FIFTY_FIFTY:
+            // Half revenue per share = (revenue / 2) / 10 (rounded down)
+            dividend = Math.floor(Math.floor(totalRevenue / 2) / TOTAL_SHARES_IN_ROTATION);
+            // Total dividends paid = per share * number of eligible shares
+            // Company retains the remainder (which should be approximately half)
+            moneyToCompany = totalRevenue - (dividend * sharesEligibleForDividends);
+            break;
+          case RevenueDistribution.RETAINED:
+            moneyToCompany = totalRevenue;
+            break;
+          default:
+            moneyToCompany = totalRevenue;
+            break;
+        }
+      }
+      console.log('dividend', dividend);
+      console.log('moneyToCompany', moneyToCompany);
+      
+      // Calculate total dividends to be paid
+      let totalDividendsPaidToPlayers = 0;
+      let totalDividendsPaidToCompany = 0;
+      
+      // Distribute dividends to players (BANK → PLAYER)
+      if (dividend > 0 && playerShares.length > 0) {
+        const groupedSharesByPlayerId = playerShares.reduce<{
+          [key: string]: Share[];
+        }>((acc, share) => {
+          if (!share.playerId) {
+            console.warn(`Share ${share.id} has no playerId, skipping`);
+            return acc;
+          }
+          if (!acc[share.playerId]) {
+            acc[share.playerId] = [];
+          }
+          acc[share.playerId].push(share);
+          return acc;
+        }, {});
+
+        console.log(`[calculateAndDistributeDividendsModern] Company ${company.name}: totalRevenue=${totalRevenue}, dividend per share=${dividend}, playerShares=${playerShares.length}, players with shares=${Object.keys(groupedSharesByPlayerId).length}`);
+
+        // Calculate total dividends to be paid to players
+        totalDividendsPaidToPlayers = Object.entries(groupedSharesByPlayerId).reduce(
+          (total, [, shares]) => total + Math.floor(dividend * shares.length),
+          0
+        );
+
+        // For full dividend, calculate remainder from rounding and distribute it
+        let remainderToDistribute = 0;
+        if (revenueDistribution === RevenueDistribution.DIVIDEND_FULL) {
+          const totalDistributedToPlayers = totalDividendsPaidToPlayers;
+          const totalDistributedToOpenMarket = openMarketShares.length > 0 
+            ? Math.floor(dividend * openMarketShares.length) 
+            : 0;
+          const totalDistributed = totalDistributedToPlayers + totalDistributedToOpenMarket;
+          remainderToDistribute = totalRevenue - totalDistributed;
+        }
+
+        // Update player cash on hand
+        const sharePromises = Object.entries(groupedSharesByPlayerId).map(
+          async ([playerId, shares], index) => {
+            const player = await this.playersService.player({
+              id: playerId,
+            });
+            if (!player) {
+              console.error(`[calculateAndDistributeDividendsModern] Player ${playerId} not found`);
+              return;
+            }
+            let dividendTotal = Math.floor(dividend * shares.length);
+            // For full dividend, add remainder to first player to ensure company retains 0
+            if (revenueDistribution === RevenueDistribution.DIVIDEND_FULL && index === 0 && remainderToDistribute > 0) {
+              dividendTotal += remainderToDistribute;
+            }
+            console.log(`[calculateAndDistributeDividendsModern] Distributing $${dividendTotal} to player ${player.nickname} (${shares.length} shares)`);
+            
+            // Update player cash and bank pool (playerAddMoney creates BANK → PLAYER transaction)
+            await this.playerAddMoney({
+              gameId: phase.gameId,
+              gameTurnId: phase.gameTurnId,
+              phaseId: phase.id,
+              playerId: player.id,
+              amount: dividendTotal,
+              fromEntity: EntityType.BANK,
+              description: `Dividend payment: $${dividendTotal} to ${player.nickname} (${shares.length} shares) from ${company.name}`,
+              transactionSubType: TransactionSubType.DIVIDEND,
+            });
+            await this.gameLogService.createGameLog({
+              game: { connect: { id: phase.gameId } },
+              content: `Player ${player.nickname} has received dividends of $${dividendTotal} from ${company.name}.`,
+            });
+          },
+        );
+        await Promise.all(sharePromises);
+        
+        // Update totalDividendsPaidToPlayers to include remainder
+        if (revenueDistribution === RevenueDistribution.DIVIDEND_FULL && remainderToDistribute > 0) {
+          totalDividendsPaidToPlayers += remainderToDistribute;
+        }
+      }
+      
+      // Distribute dividends to company for open market shares (BANK → COMPANY)
+      if (dividend > 0 && openMarketShares.length > 0) {
+        totalDividendsPaidToCompany = Math.floor(dividend * openMarketShares.length);
+        console.log(`[calculateAndDistributeDividendsModern] Distributing $${totalDividendsPaidToCompany} to company ${company.name} for ${openMarketShares.length} open market shares`);
+        
+        // Create transaction for dividend payment (BANK → COMPANY)
+        if (company.entityId) {
+          try {
+            await this.transactionService.createTransactionEntityToEntity({
+              gameId: phase.gameId,
+              gameTurnId: phase.gameTurnId,
+              phaseId: phase.id,
+              fromEntityType: EntityType.BANK,
+              toEntityType: EntityType.COMPANY,
+              toEntityId: company.entityId,
+              amount: totalDividendsPaidToCompany,
+              transactionType: TransactionType.CASH,
+              transactionSubType: TransactionSubType.DIVIDEND,
+              toCompanyId: companyId,
+              companyInvolvedId: companyId,
+              description: `Dividend payment: $${totalDividendsPaidToCompany} to ${company.name} for ${openMarketShares.length} open market shares`,
+            });
+          } catch (error) {
+            console.error('Failed to create dividend transaction for open market shares:', error);
+          }
+        }
+        
+        // Update company cash and bank pool
+        await this.prisma.game.update({
+          where: { id: phase.gameId },
+          data: {
+            bankPoolNumber: {
+              decrement: totalDividendsPaidToCompany,
+            },
+          },
+        });
+        await this.companyService.updateCompany({
+          where: { id: company.id },
+          data: {
+            cashOnHand: {
+              increment: totalDividendsPaidToCompany,
+            },
+          },
+        });
+      }
+      
+      // Company cash is already updated:
+      // - totalRevenue was added in earnings call phase
+      // - Open market dividends were added above (BANK → COMPANY)
+      // - Company retains moneyToCompany (which is already in cash since totalRevenue was received)
+      // No additional cash update needed here
+
+      // Update company cash on hand (for retained revenue when no dividends)
+      if (moneyToCompany !== 0 && (dividend === 0 || playerShares.length === 0)) {
+        const companyUpdated = await this.companyService.updateCompany({
+          where: { id: company.id },
+          data: { cashOnHand: company.cashOnHand + moneyToCompany },
+        });
+        // If company has positive cash on hand, make sure it's active
+        if (companyUpdated.cashOnHand > 0) {
+          await this.companyService.updateCompany({
+            where: { id: company.id },
+            data: { status: CompanyStatus.ACTIVE },
+          });
+        }
+        
+        // Create transaction for revenue retention
+        if (moneyToCompany > 0 && company.entityId) {
+          try {
+            await this.transactionService.createTransactionEntityToEntity({
+              gameId: phase.gameId,
+              gameTurnId: phase.gameTurnId,
+              phaseId: phase.id,
+              fromEntityType: EntityType.BANK,
+              toEntityType: EntityType.COMPANY,
+              toEntityId: company.entityId,
+              amount: moneyToCompany,
+              transactionType: TransactionType.CASH,
+              transactionSubType: TransactionSubType.OPERATING_COST,
+              toCompanyId: companyId,
+              companyInvolvedId: companyId,
+              description: `Revenue retention: $${moneyToCompany} retained by ${company.name}`,
+            });
+          } catch (error) {
+            console.error('Failed to create revenue retention transaction:', error);
+          }
+        }
+        
+        if (moneyToCompany > 0) {
+          this.gameLogService.createGameLog({
+            game: { connect: { id: phase.gameId } },
+            content: `Company ${company.name} has retained $${moneyToCompany}.`,
+          });
+        } else {
+          this.gameLogService.createGameLog({
+            game: { connect: { id: phase.gameId } },
+            content: `Company ${company.name} has lost $${Math.abs(moneyToCompany)} from cash on hand.`,
+          });
+        }
+      }
+      console.log('moneyFromBank', moneyFromBank);
+      // Update bank pool
       await this.gamesService.updateGameState({
         where: { id: phase.gameId },
         data: { bankPoolNumber: game.bankPoolNumber - moneyFromBank },
@@ -4014,6 +4582,12 @@ export class GameManagementService {
       data: { cost },
     });
 
+    // Determine transaction type based on action
+    let transactionType: TransactionType = TransactionType.CASH;
+    if (companyAction.action === OperatingRoundAction.RESEARCH) {
+      transactionType = TransactionType.RESEARCH;
+    }
+
     //create entity transaction
     this.transactionService
       .createTransactionEntityToEntity({
@@ -4022,7 +4596,7 @@ export class GameManagementService {
         fromEntityType: EntityType.COMPANY,
         toEntityType: EntityType.BANK,
         amount: cost,
-        transactionType: TransactionType.CASH,
+        transactionType: transactionType,
         gameId: game.id,
         gameTurnId: game.currentTurn,
         phaseId: game.currentPhaseId || '',
@@ -4325,15 +4899,22 @@ export class GameManagementService {
       }
 
       if (maxVote) {
-        productionResultsUpdates.push({
-          where: {
-            id: validVotes[0].productionResultId,
-            operatingRoundId: phase.operatingRoundId,
-          },
-          data: {
-            revenueDistribution: maxVote as RevenueDistribution,
-          },
-        });
+        // Only update ProductionResult if productionResultId exists (legacy operations)
+        // Modern operations use FactoryProduction, so productionResultId will be null
+        const productionResultId = validVotes[0].productionResultId;
+        if (productionResultId !== null && productionResultId !== undefined) {
+          productionResultsUpdates.push({
+            where: {
+              id: productionResultId,
+              operatingRoundId: phase.operatingRoundId,
+            },
+            data: {
+              revenueDistribution: maxVote as RevenueDistribution,
+            },
+          });
+        }
+        // For modern operations (productionResultId is null), the revenue distribution
+        // is handled directly in the dividend calculation, not via ProductionResult
       }
     }
 
@@ -4344,7 +4925,13 @@ export class GameManagementService {
       ),
     );
     try {
-      await this.calculateAndDistributeDividends(phase);
+      // Check if this is modern operations
+      const game = await this.gamesService.game({ id: phase.gameId });
+      if (game?.operationMechanicsVersion === OperationMechanicsVersion.MODERN) {
+        await this.calculateAndDistributeDividendsModern(phase);
+      } else {
+        await this.calculateAndDistributeDividends(phase);
+      }
     } catch (error) {
       console.error('Error calculating and distributing dividends', error);
     }
@@ -4874,6 +5461,30 @@ export class GameManagementService {
         toEntityType: EntityType.BANK,
       });
     }
+
+    // Calculate total contribution value
+    const totalContributionValue = contribution.cashContribution + 
+      (contribution.shareContribution * (company.currentStockPrice || 0));
+
+    // Update company cash with the contribution
+    const updatedCompany = await this.companyService.updateCompany({
+      where: { id: company.id },
+      data: {
+        cashOnHand: company.cashOnHand + totalContributionValue,
+      },
+    });
+
+    // If company cash is now positive, set status to ACTIVE immediately
+    if (updatedCompany.cashOnHand >= 0 && company.status === CompanyStatus.INSOLVENT) {
+      await this.companyService.updateCompany({
+        where: { id: company.id },
+        data: { status: CompanyStatus.ACTIVE },
+      });
+      await this.gameLogService.createGameLog({
+        game: { connect: { id: game.id } },
+        content: `${company.name} has recovered from insolvency with cash of $${updatedCompany.cashOnHand}.`,
+      });
+    }
   }
   /**
    * Resolve the company votes, if there is a tie, we take priority in the vote priority order.
@@ -5350,7 +5961,10 @@ export class GameManagementService {
       useShortOrders,
       isTimerless,
       bots,
+      operationMechanicsVersion,
     } = input;
+
+    console.log('operationMechanicsVersion', operationMechanicsVersion);
 
     const gameData: Prisma.GameCreateInput = {
       name: roomName,
@@ -5371,6 +5985,9 @@ export class GameManagementService {
       useLimitOrders,
       useShortOrders,
       isTimerless,
+      operationMechanicsVersion,
+      workers: DEFAULT_WORKERS,
+      workforcePool: DEFAULT_WORKERS, // Initialize available workers to default (40)
     };
 
     const jsonData = gameDataJson;
@@ -5444,7 +6061,8 @@ export class GameManagementService {
         name: sector.name,
         sectorName: sector.sectorName,
         supply: sector.supply,
-        demand: sector.demand,
+        demand: 0, // Start with 0 demand - will be calculated from workers + brand bonus
+        baseDemand: 0, // No base demand - demand comes from workers + brand bonus only
         consumers: 0,
         demandMin: 0,
         demandMax: 0,
@@ -5504,9 +6122,10 @@ export class GameManagementService {
         }));
       });
       let companies;
+      let sectors: Sector[] = [];
       try {
         // Create sectors and companies
-        const sectors = await this.sectorService.createManySectors(sectorData);
+        sectors = await this.sectorService.createManySectors(sectorData);
         // sort sectors by default priority
         const sectorPrioritySorted = sectors.sort(
           (a, b) =>
@@ -5574,6 +6193,18 @@ export class GameManagementService {
       if (!influenceRound) {
         throw new Error('Failed to create influence round');
       }
+
+      //if modern operation mechanics version, create the initial resource track values
+      if(operationMechanicsVersion === OperationMechanicsVersion.MODERN) {
+        if (sectors.length === 0) {
+          // Fetch sectors from database if they weren't created (shouldn't happen, but safety check)
+          sectors = await this.sectorService.sectors({
+            where: { gameId: game.id },
+          });
+        }
+        await this.createInitialResourceTrackValues(game.id, sectors);
+        await this.initializeConsumptionBags(game.id, sectors);
+      }
       // Start the stock round phase
       const newPhase = await this.startPhase({
         gameId: game.id,
@@ -5635,6 +6266,81 @@ export class GameManagementService {
       console.error('Error starting game:', error);
       throw new Error('Failed to start the game');
     }
+  }
+
+  async createInitialResourceTrackValues(gameId: string, sectors: Sector[]) {
+    //create the three general resources, circle, square and triangle
+    let resources: any = [
+        {
+          gameId,
+          type: ResourceType.CIRCLE,
+          trackType: ResourceTrackType.GLOBAL,
+          price: RESOURCE_PRICES_CIRCLE[0],
+          trackPosition: 0,
+        },
+        {
+          gameId,
+          type: ResourceType.SQUARE,
+          trackType: ResourceTrackType.GLOBAL,
+          price: RESOURCE_PRICES_SQUARE[0],
+          trackPosition: 0,
+        },
+        {
+          gameId,
+          type: ResourceType.TRIANGLE,
+          trackType: ResourceTrackType.GLOBAL,
+          price: RESOURCE_PRICES_TRIANGLE[0],
+          trackPosition: 0,
+        },
+      ];
+      //iterate over sectors and add the resource track values to the resources array
+      sectors.forEach((sector) => {
+        const sectorResourceType = getSectorResourceForSectorName(sector.sectorName);
+        const priceArray = getResourcePriceForResourceType(sectorResourceType);
+        const initialPrice = priceArray.length > 0 ? priceArray[0] : 0;
+        
+        resources.push({
+          gameId,
+          type: sectorResourceType,
+          trackType: ResourceTrackType.SECTOR,
+          price: initialPrice,
+          trackPosition: 0,
+        });
+      });
+      //create the resources
+      await this.resourceService.createManyResources(resources);
+  }
+
+  /**
+   * Initialize consumption bags for all sectors with 5 permanent sector-specific markers each
+   */
+  async initializeConsumptionBags(gameId: string, sectors: Sector[]) {
+    const markers: any[] = [];
+    
+    for (const sector of sectors) {
+      const sectorResourceType = getSectorResourceForSectorName(sector.sectorName);
+      
+      // Add 5 permanent sector-specific markers to each sector's consumption bag
+      for (let i = 0; i < 5; i++) {
+        markers.push({
+          gameId,
+          sectorId: sector.id,
+          resourceType: sectorResourceType,
+          isPermanent: true,
+          companyId: null,
+        });
+      }
+    }
+
+    // Create all consumption markers
+    await this.prisma.consumptionMarker.createMany({
+      data: markers,
+    });
+
+    await this.gameLogService.createGameLog({
+      game: { connect: { id: gameId } },
+      content: 'Consumption bags initialized for all sectors',
+    });
   }
 
   async createAwardsTracks(gameId: string) {
@@ -6132,9 +6838,13 @@ export class GameManagementService {
       );
     }
 
-    const determinedNextPhase = determineNextGamePhase(phase.name, {
-      stockActionSubRoundIsOver: !!!hasOrdersInStockSubRound,
-    });
+    const determinedNextPhase = determineNextGamePhase(
+      phase.name,
+      {
+        stockActionSubRoundIsOver: !!!hasOrdersInStockSubRound,
+      },
+      gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN,
+    );
 
     let adjustedPhase = await this.findNextPhaseThatShouldBePlayed(
       determinedNextPhase,
@@ -6220,9 +6930,13 @@ export class GameManagementService {
     roundType: RoundType;
     companyId?: string;
   }> {
-    const determinedNextPhase = determineNextGamePhase(phase.name, {
-      stockActionSubRoundIsOver,
-    });
+    const determinedNextPhase = determineNextGamePhase(
+      phase.name,
+      {
+        stockActionSubRoundIsOver,
+      },
+      gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN,
+    );
 
     let nextPhaseTimer = Date.now();
     let nextPhase = await this.findNextPhaseThatShouldBePlayed(
@@ -6279,9 +6993,14 @@ export class GameManagementService {
     );
 
     while (!doesNextPhaseNeedToBePlayed) {
-      nextPhase = determineNextGamePhase(nextPhase.phaseName, {
-        stockActionSubRoundIsOver,
-      });
+      nextPhase = determineNextGamePhase(
+        nextPhase.phaseName,
+        {
+          stockActionSubRoundIsOver,
+        },
+        gameState.operationMechanicsVersion ===
+          OperationMechanicsVersion.MODERN,
+      );
       doesNextPhaseNeedToBePlayed = await this.doesNextPhaseNeedToBePlayed(
         nextPhase.phaseName,
         currentPhase,
@@ -8714,9 +9433,145 @@ export class GameManagementService {
         return;
       case PhaseName.STOCK_ACTION_OPTION_ORDER:
         return this.anyOptionOrdersToBeExercised(currentPhase?.gameId || '');
+      // AUTO-FORWARD: Skip if no factory construction orders were submitted
+      case PhaseName.FACTORY_CONSTRUCTION_RESOLVE:
+        return this.hasFactoryConstructionOrders(currentPhase);
+      // AUTO-FORWARD: Skip if no insolvent companies exist
+      case PhaseName.RESOLVE_INSOLVENCY:
+        return this.hasInsolventCompanies(currentPhase);
+      // AUTO-FORWARD: Skip if there are no earnings (profit > 0)
+      case PhaseName.EARNINGS_CALL:
+        return this.hasEarnings(currentPhase);
+      // AUTO-FORWARD: Skip if there are no consumers served this turn
+      case PhaseName.OPERATING_PRODUCTION_VOTE:
+      case PhaseName.OPERATING_PRODUCTION_VOTE_RESOLVE:
+        return this.hasConsumersServed(currentPhase);
+      // AUTO-FORWARD: Skip if no sector has advanced beyond research stage 1
+      case PhaseName.RUSTED_FACTORY_UPGRADE:
+        return this.hasAdvancedResearchStage(currentPhase);
+      // AUTO-FORWARD: Capital Gains and Divestment are always auto-processed before END_TURN
+      // They don't require player ready-up and are handled automatically
+      case PhaseName.CAPITAL_GAINS:
+      case PhaseName.DIVESTMENT:
+        return false;
       default:
         return true;
     }
+  }
+
+  /**
+   * Check if there are any insolvent companies in the game
+   * @param currentPhase - The current phase object
+   * @returns true if there are insolvent companies, false otherwise
+   */
+  async hasInsolventCompanies(currentPhase: Phase): Promise<boolean> {
+    if (!currentPhase?.gameId) {
+      return false;
+    }
+
+    // Check if there are any insolvent companies in the game
+    const insolventCompanies = await this.companyService.companies({
+      where: {
+        gameId: currentPhase.gameId,
+        status: CompanyStatus.INSOLVENT,
+      },
+    });
+
+    return insolventCompanies && insolventCompanies.length > 0;
+  }
+
+  /**
+   * Check if there are any factory construction orders for the current turn
+   * @param currentPhase - The current phase object
+   * @returns true if there are orders to resolve, false otherwise
+   */
+  async hasFactoryConstructionOrders(currentPhase: Phase): Promise<boolean> {
+    if (!currentPhase?.gameTurnId) {
+      return false;
+    }
+    
+    // Check if there are any factory construction orders for this turn
+    // Orders are created during FACTORY_CONSTRUCTION phase and resolved in FACTORY_CONSTRUCTION_RESOLVE
+    const orderCount = await this.prisma.factoryConstructionOrder.count({
+      where: { 
+        gameTurnId: currentPhase.gameTurnId,
+      },
+    });
+    
+    return orderCount > 0;
+  }
+
+  /**
+   * Check if there are any earnings (profit > 0) for the current turn
+   * @param currentPhase - The current phase object
+   * @returns true if there are earnings, false otherwise
+   */
+  async hasEarnings(currentPhase: Phase): Promise<boolean> {
+    if (!currentPhase?.gameTurnId) {
+      return false;
+    }
+
+    // Check if there are any FactoryProduction records with customersServed > 0 for this turn
+    // Note: We check customersServed (not profit) because profit is calculated DURING the earnings call phase
+    // If we checked profit > 0, the phase would always be skipped since profit starts at 0 until earnings call runs
+    // After earnings call runs, profit might be > 0, so we check if any records exist that need processing
+    const productionCount = await this.prisma.factoryProduction.count({
+      where: {
+        gameTurnId: currentPhase.gameTurnId,
+        customersServed: { gt: 0 },
+      },
+    });
+
+    return productionCount > 0;
+  }
+
+  /**
+   * Check if there are any consumers served for the current turn
+   * @param currentPhase - The current phase object
+   * @returns true if there are consumers served, false otherwise
+   */
+  async hasConsumersServed(currentPhase: Phase): Promise<boolean> {
+    if (!currentPhase?.gameTurnId) {
+      return false;
+    }
+
+    // Check if there are any FactoryProduction records with customersServed > 0 for this turn
+    const productionCount = await this.prisma.factoryProduction.count({
+      where: {
+        gameTurnId: currentPhase.gameTurnId,
+        customersServed: { gt: 0 },
+      },
+    });
+
+    return productionCount > 0;
+  }
+
+  /**
+   * Check if any sector has just transitioned to a new research stage
+   * The phase should only run when transitioning between stages:
+   * - Stage 1 → Stage 2: researchMarker = 6 (crossed from 0-5 to 6-10)
+   * - Stage 2 → Stage 3: researchMarker = 11 (crossed from 6-10 to 11-15)
+   * - Stage 3 → Stage 4: researchMarker = 16 (crossed from 11-15 to 16-20)
+   * @param currentPhase - The current phase object
+   * @returns true if any sector is at a stage boundary (6, 11, or 16), false otherwise
+   */
+  async hasAdvancedResearchStage(currentPhase: Phase): Promise<boolean> {
+    if (!currentPhase?.gameId) {
+      return false;
+    }
+
+    // Check if any sector is at a stage transition boundary
+    // Stage 1→2: researchMarker = 6
+    // Stage 2→3: researchMarker = 11
+    // Stage 3→4: researchMarker = 16
+    const sectorCount = await this.prisma.sector.count({
+      where: {
+        gameId: currentPhase.gameId,
+        researchMarker: { in: [6, 11, 16] },
+      },
+    });
+
+    return sectorCount > 0;
   }
 
   async isThereAnyCompanyIPOPriceToSet(gameId: string): Promise<boolean> {
@@ -9484,8 +10339,8 @@ export class GameManagementService {
       where: { gameId },
     });
 
-    // 3) Check how many human players there are and if they’re all ready
-    //    “Human players” = isBot == false OR isBot is null in DB.
+    // 3) Check how many human players there are and if they're all ready
+    //    "Human players" = isBot == false OR isBot is null in DB.
     const humanPlayers = allPlayers.filter((p) => !p.isBot);
 
     // 4) Are all human players ready?
@@ -9718,7 +10573,7 @@ export class GameManagementService {
         const sector = sectorMap.get(company.sectorId);
         if (!sector) continue;
 
-        // Filter stockGridPrices by the sector’s ipoMin/ipoMax
+        // Filter stockGridPrices by the sector's ipoMin/ipoMax
         const companyIpoPrices = stockGridPrices.filter(
           (price) => price >= sector.ipoMin && price <= sector.ipoMax,
         );

@@ -3,6 +3,7 @@ import {
   Card,
   Company,
   CompanyStatus,
+  FactorySize,
   OperatingRoundAction,
   OrderType,
   Phase,
@@ -39,6 +40,15 @@ import {
   PRESTIGE_TRACK_LENGTH,
   PrestigeTrack,
   PrestigeTrackItem,
+  RESOURCE_PRICES_CONSUMER_CYCLICAL,
+  RESOURCE_PRICES_CONSUMER_DEFENSIVE,
+  RESOURCE_PRICES_CONSUMER_DISCRETIONARY,
+  RESOURCE_PRICES_CONSUMER_STAPLES,
+  RESOURCE_PRICES_ENERGY,
+  RESOURCE_PRICES_HEALTHCARE,
+  RESOURCE_PRICES_INDUSTRIAL,
+  RESOURCE_PRICES_MATERIALS,
+  RESOURCE_PRICES_TECHNOLOGY,
   StockTierChartRange,
   companyActionsDescription,
   getStockPriceClosestEqualOrMore,
@@ -67,6 +77,7 @@ interface NextPhaseOptions {
 export function determineNextGamePhase(
   phaseName: PhaseName,
   options?: NextPhaseOptions,
+  modernOperations: boolean = false,
 ): {
   phaseName: PhaseName;
   roundType: RoundType;
@@ -87,7 +98,7 @@ export function determineNextGamePhase(
   switch (phaseName) {
     case PhaseName.START_TURN:
       return {
-        phaseName: PhaseName.HEADLINE_RESOLVE,
+        phaseName: PhaseName.SET_COMPANY_IPO_PRICES,
         roundType: RoundType.INFLUENCE,
       };
     case PhaseName.HEADLINE_RESOLVE:
@@ -193,11 +204,19 @@ export function determineNextGamePhase(
         phaseName: PhaseName.STOCK_RESULTS_OVERVIEW,
         roundType: RoundType.STOCK,
       };
-    case PhaseName.STOCK_RESULTS_OVERVIEW:
+    case PhaseName.STOCK_RESULTS_OVERVIEW: {
+      //if modern operations, move to modern operations phase
+      if (modernOperations) {
+        return {
+          phaseName: PhaseName.MODERN_OPERATIONS,
+          roundType: RoundType.OPERATING,
+        };
+      }
       return {
         phaseName: PhaseName.OPERATING_ACTION_COMPANY_VOTE,
         roundType: RoundType.OPERATING,
       };
+    }
     case PhaseName.OPERATING_ACTION_COMPANY_VOTE:
       return {
         phaseName: PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT,
@@ -224,15 +243,26 @@ export function determineNextGamePhase(
         roundType: RoundType.OPERATING,
       };
     case PhaseName.OPERATING_PRODUCTION_VOTE_RESOLVE:
+      if (modernOperations) {
+        return {
+          phaseName: PhaseName.CAPITAL_GAINS,
+          roundType: RoundType.OPERATING,
+        };
+      }
       return {
         phaseName: PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT,
         roundType: RoundType.OPERATING,
       };
-    case PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT:
+    case PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT: {
+      //if modern operations, move to factory construction
+      if (modernOperations) {
+        throw new Error('Modern operations not implemented');
+      }
       return {
         phaseName: PhaseName.CAPITAL_GAINS,
         roundType: RoundType.OPERATING,
       };
+    }
     //if you are over some threshold on stocks, you must pay a tax.
     case PhaseName.CAPITAL_GAINS:
       return {
@@ -249,6 +279,60 @@ export function determineNextGamePhase(
       return {
         phaseName: PhaseName.START_TURN,
         roundType: RoundType.GAME_UPKEEP,
+      };
+    // MODERN OPERATING MECHANICS PHASE FLOW
+    case PhaseName.CONSUMPTION_PHASE:
+      return {
+        phaseName: PhaseName.EARNINGS_CALL,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.EARNINGS_CALL:
+      return {
+        phaseName: PhaseName.RESOLVE_INSOLVENCY,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.RESOLVE_INSOLVENCY:
+      return {
+        phaseName: PhaseName.OPERATING_PRODUCTION_VOTE,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.FACTORY_CONSTRUCTION:
+      // Legacy support - route to new combined phase
+      return {
+        phaseName: PhaseName.RESOLVE_MODERN_OPERATIONS,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.FACTORY_CONSTRUCTION_RESOLVE:
+      // Legacy support - route to marketing/research or new combined phase
+      return {
+        phaseName: modernOperations ? PhaseName.RESOLVE_MODERN_OPERATIONS : PhaseName.MARKETING_AND_RESEARCH_ACTION,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.MARKETING_AND_RESEARCH_ACTION:
+      // Legacy support
+      return {
+        phaseName: PhaseName.MARKETING_AND_RESEARCH_ACTION_RESOLVE,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.MARKETING_AND_RESEARCH_ACTION_RESOLVE:
+      return {
+        phaseName: PhaseName.CONSUMPTION_PHASE,
+        roundType: RoundType.GAME_UPKEEP,
+      };
+    case PhaseName.MODERN_OPERATIONS:
+      return {
+        phaseName: PhaseName.RESOLVE_MODERN_OPERATIONS,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.RESOLVE_MODERN_OPERATIONS:
+      return {
+        phaseName: PhaseName.RUSTED_FACTORY_UPGRADE,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.RUSTED_FACTORY_UPGRADE:
+      return {
+        phaseName: PhaseName.CONSUMPTION_PHASE,
+        roundType: RoundType.OPERATING,
       };
     default:
       return {
@@ -996,5 +1080,60 @@ export function getPassiveEffectForSector(sector: SectorName) {
       return OperatingRoundAction.EXTRACT;
     default:
       return OperatingRoundAction.VETO;
+  }
+}
+
+export function getResourcePricesForSector(sector: SectorName) {
+  switch (sector) {
+    case SectorName.HEALTHCARE:
+      return RESOURCE_PRICES_HEALTHCARE;
+    case SectorName.TECHNOLOGY:
+      return RESOURCE_PRICES_TECHNOLOGY;
+    case SectorName.ENERGY:
+      return RESOURCE_PRICES_ENERGY;
+    case SectorName.CONSUMER_DEFENSIVE:
+      return RESOURCE_PRICES_CONSUMER_DEFENSIVE;
+    case SectorName.CONSUMER_CYCLICAL:
+      return RESOURCE_PRICES_CONSUMER_CYCLICAL;
+    case SectorName.INDUSTRIALS:
+      return RESOURCE_PRICES_INDUSTRIAL;
+    case SectorName.MATERIALS:
+      return RESOURCE_PRICES_MATERIALS;
+    case SectorName.CONSUMER_DISCRETIONARY:
+      return RESOURCE_PRICES_CONSUMER_DISCRETIONARY;
+    case SectorName.CONSUMER_STAPLES:
+      return RESOURCE_PRICES_CONSUMER_STAPLES;
+    default:
+      return [1];
+  }
+}
+
+export function getNumberForFactorySize(factorySize: FactorySize) {
+  switch (factorySize) {
+    case FactorySize.FACTORY_I:
+      return 1;
+    case FactorySize.FACTORY_II:
+      return 2;
+    case FactorySize.FACTORY_III:
+      return 3;
+    case FactorySize.FACTORY_IV:
+      return 4;
+    default:
+      return 0;
+  }
+}
+
+export function validFactorySizeForSectorTechnologyLevel(factorySize: FactorySize, sectorTechnologyLevel: number) {
+  switch (factorySize) {
+    case FactorySize.FACTORY_I:
+      return sectorTechnologyLevel >= 1 && sectorTechnologyLevel <= 3;
+    case FactorySize.FACTORY_II:
+      return sectorTechnologyLevel >= 2 && sectorTechnologyLevel <= 4;
+    case FactorySize.FACTORY_III:
+      return sectorTechnologyLevel >= 3;
+    case FactorySize.FACTORY_IV:
+      return sectorTechnologyLevel >= 4;
+    default:
+      return false;
   }
 }

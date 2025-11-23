@@ -56,6 +56,16 @@ import { ExecutivePhaseService } from '@server/executive-phase/executive-phase.s
 import { ExecutiveGameTurnService } from '@server/executive-game-turn/executive-game-turn.service';
 import { ExecutiveInfluenceVoteRoundService } from '@server/executive-influence-vote-round/executive-influence-vote-round.service';
 import { AiBotService } from '@server/ai-bot/ai-bot.service';
+import { MarketingService } from '@server/marketing/marketing.service';
+import { FactoryService } from '@server/factory/factory.service';
+import { FactoryConstructionModule } from '../factory-construction/factory-construction.module';
+import { factoryConstructionRouter } from './routers/factory-construction.router';
+import { FactoryConstructionService } from '@server/factory-construction/factory-construction.service';
+import { ModernOperationMechanicsService } from '@server/game-management/modern-operation-mechanics.service';
+import { FactoryConstructionOrderService } from '@server/factory-construction/factory-construction-order.service';
+import { ResourceService } from '@server/resource/resource.service';
+import { ConsumptionMarkerService } from '@server/consumption-marker/consumption-marker.service';
+import { FactoryProductionService } from '@server/factory-production/factory-production.service';
 
 @Module({
   imports: [PrismaModule],
@@ -118,7 +128,15 @@ import { AiBotService } from '@server/ai-bot/ai-bot.service';
     ExecutivePhaseService,
     ExecutiveInfluenceService,
     ExecutiveInfluenceVoteRoundService,
+    MarketingService,
+    FactoryService,
     AiBotService,
+    FactoryConstructionService,
+    ModernOperationMechanicsService,
+    FactoryConstructionOrderService,
+    ResourceService,
+    ConsumptionMarkerService,
+    FactoryProductionService,
   ],
 })
 export class TrpcModule {}

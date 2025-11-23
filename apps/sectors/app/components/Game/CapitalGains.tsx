@@ -10,16 +10,34 @@ const CapitalGains = () => {
     data: capitalGains,
     isLoading,
     error,
-  } = trpc.capitalGains.listCapitalGains.useQuery({
-    where: {
-      gameTurnId: currentTurn.id,
+  } = trpc.capitalGains.listCapitalGains.useQuery(
+    {
+      where: {
+        gameTurnId: currentTurn.id,
+      },
     },
-  });
+    {
+      staleTime: Infinity, // Data never goes stale - it's historical turn data
+      cacheTime: 1000 * 60 * 60, // Keep in cache for 1 hour
+      refetchOnMount: false, // Don't refetch when component mounts
+      refetchOnWindowFocus: false, // Don't refetch on window focus
+      refetchOnReconnect: false, // Don't refetch on reconnect
+    }
+  );
   const { data: playersIncome, isLoading: isLoadingPlayersIncome } =
-    trpc.game.getTurnIncome.useQuery({
-      gameId: gameId,
-      gameTurnId: currentTurn.id,
-    });
+    trpc.game.getTurnIncome.useQuery(
+      {
+        gameId: gameId,
+        gameTurnId: currentTurn.id,
+      },
+      {
+        staleTime: Infinity, // Data never goes stale - it's historical turn data
+        cacheTime: 1000 * 60 * 60, // Keep in cache for 1 hour
+        refetchOnMount: false, // Don't refetch when component mounts
+        refetchOnWindowFocus: false, // Don't refetch on window focus
+        refetchOnReconnect: false, // Don't refetch on reconnect
+      }
+    );
   if (isLoading) return <div>Loading...</div>;
   if (error) return <div>Error...</div>;
   if (!capitalGains) return null;

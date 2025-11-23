@@ -98,6 +98,18 @@ export function friendlyPhaseName(name: PhaseName | undefined): string {
       return "Company Vote Result";
     case PhaseName.OPERATING_COMPANY_VOTE_RESOLVE:
       return "Resolve Company Action";
+    case PhaseName.CONSUMPTION_PHASE:
+      return "Consumption Phase";
+    case PhaseName.FACTORY_CONSTRUCTION:
+      return "Factory Construction";
+    case PhaseName.FACTORY_CONSTRUCTION_RESOLVE:
+      return "Resolve Factory Construction";
+    case PhaseName.MARKETING_AND_RESEARCH_ACTION:
+      return "Marketing and Research";
+    case PhaseName.MARKETING_AND_RESEARCH_ACTION_RESOLVE:
+      return "Resolve Marketing and Research";
+    case PhaseName.EARNINGS_CALL:
+      return "Earnings Call";
     case PhaseName.CAPITAL_GAINS:
       return "Capital Gains";
     case PhaseName.DIVESTMENT:
@@ -114,6 +126,12 @@ export function friendlyPhaseName(name: PhaseName | undefined): string {
       return "Distribute Tranches";
     case PhaseName.PRIZE_DISTRIBUTE_RESOLVE:
       return "Resolve Tranches Distribution";
+    case PhaseName.MODERN_OPERATIONS:
+      return "Modern Operations";
+    case PhaseName.RESOLVE_MODERN_OPERATIONS:
+      return "Resolve Modern Operations";
+    case PhaseName.RUSTED_FACTORY_UPGRADE:
+      return "Rusted Factory Upgrade";
     default:
       return "Unknown Phase";
   }

@@ -135,6 +135,7 @@ const PlayerShares = ({
             className="flex flex-col justify-center items-center"
           >
             <ShareComponent
+              companyId={company.company?.id}
               name={company.company?.stockSymbol || ""}
               quantity={company.shareTotal}
               price={company.company?.currentStockPrice || 0}
@@ -158,6 +159,7 @@ const PlayerShares = ({
                   ([shortOrderId, aggregation]) => (
                     <div key={shortOrderId} className="flex flex-col gap-2">
                       <ShareComponent
+                        companyId={aggregation.company?.id}
                         name={aggregation.company?.stockSymbol || ""}
                         quantity={aggregation.totalShares}
                         price={aggregation.totalValue / aggregation.totalShares}

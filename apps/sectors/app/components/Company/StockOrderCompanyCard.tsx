@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Card, CardHeader, CardBody, Button } from "@nextui-org/react";
 import {
   Company,
+  OperationMechanicsVersion,
   Phase,
   PhaseName,
   Share,
@@ -24,6 +25,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Drawer } from "vaul";
 import { RiCurrencyFill } from "@remixicon/react";
 import { useGame } from "../Game/GameContext";
+import CompanyInfoV2 from "./CompanyV2/CompanyInfoV2";
 
 type CompanyCardProps = {
   company: CompanyWithRelations;
@@ -54,6 +56,8 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
   handleCompanySelect,
 }) => {
   const { gameState } = useGame();
+  const operationMechanicsVersion = gameState.operationMechanicsVersion;
+  console.log('operationMechanicsVersion',operationMechanicsVersion);
   const [showButton, setShowButton] = useState<boolean | undefined>(
     isOrderInputOpen
   );
@@ -177,7 +181,11 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
     >
       <CardHeader className="bg-gray-950">
         <div className="flex flex-col w-full">
-          <CompanyInfo companyId={company.id} showBarChart />
+          {operationMechanicsVersion == OperationMechanicsVersion.MODERN ? (
+            <CompanyInfoV2 companyId={company.id} showBarChart />
+          ) : (
+            <CompanyInfo companyId={company.id} showBarChart />
+          )}
         </div>
       </CardHeader>
       <CardBody>

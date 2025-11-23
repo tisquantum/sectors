@@ -113,7 +113,7 @@ export const checkIsPlayerActionBasedOnAuth = async (
 };
 
 export const checkSubmissionTime = async (
-  phaseName: PhaseName,
+  phaseName: PhaseName | PhaseName[],
   opts: any,
   phaseService: PhaseService,
   gameService: GamesService,
@@ -142,7 +142,9 @@ export const checkSubmissionTime = async (
       message: 'Phase not found',
     });
   }
-  if (phase.name !== phaseName) {
+  // Check if phase matches (supports single phase or array of phases)
+  const allowedPhases = Array.isArray(phaseName) ? phaseName : [phaseName];
+  if (!allowedPhases.includes(phase.name)) {
     console.error('Phase does not match');
     throw new TRPCError({
       code: 'FORBIDDEN',

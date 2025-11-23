@@ -1,11 +1,13 @@
-import { Divider } from "@nextui-org/react";
+import { Divider, Popover, PopoverContent, PopoverTrigger } from "@nextui-org/react";
 import { Player, Share } from "@server/prisma/prisma.client";
 import React from "react";
 import PlayerAvatar from "../Player/PlayerAvatar";
 import { RiFundsBoxLine, RiFundsFill } from "@remixicon/react";
+import CompanyInfoV2 from "./CompanyV2/CompanyInfoV2";
 
 const ShareComponent = ({
   name,
+  companyId,
   quantity,
   icon,
   price,
@@ -13,6 +15,7 @@ const ShareComponent = ({
 }: {
   name: string;
   quantity: number;
+  companyId?: string;
   icon?: React.ReactNode;
   price?: number;
   player?: Player;
@@ -28,7 +31,16 @@ const ShareComponent = ({
               <PlayerAvatar player={player} size="sm" />
             </div>
           )}
-          <div className="text-md font-semibold text-slate-900">{name}</div>
+            <Popover>
+              <PopoverTrigger className="cursor-pointer">
+                <div className="text-md font-semibold text-slate-900">{name}</div>
+              </PopoverTrigger>
+              <PopoverContent>
+                {companyId && (
+                  <CompanyInfoV2 companyId={companyId} />
+                )}
+              </PopoverContent>
+            </Popover>
         </>
       )}
       {price && (

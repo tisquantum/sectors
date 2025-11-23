@@ -43,6 +43,13 @@ import { CompanyAwardTrackSpaceModule } from '@server/company-award-track-space/
 import { AiBotModule } from '@server/ai-bot/ai-bot.module';
 import { RevenueDistributionVoteModule } from '@server/revenue-distribution-vote/revenue-distribution-vote.module';
 import { OperatingRoundVoteModule } from '@server/operating-round-vote/operating-round-vote.module';
+import { ModernOperationMechanicsService } from './modern-operation-mechanics.service';
+import { FactoryConstructionModule } from '@server/factory-construction/factory-construction.module';
+import { ResourceModule } from '@server/resource/resource.module';
+import { FactoryModule } from '@server/factory/factory.module';
+import { ConsumptionMarkerModule } from '@server/consumption-marker/consumption-marker.module';
+import { MarketingModule } from '@server/marketing/marketing.module';
+import { FactoryProductionModule } from '@server/factory-production/factory-production.module';
 
 @Module({
   imports: [
@@ -88,9 +95,18 @@ import { OperatingRoundVoteModule } from '@server/operating-round-vote/operating
     CompanyAwardTrackSpaceModule,
     AiBotModule,
     RevenueDistributionVoteModule,
-    OperatingRoundVoteModule
+    OperatingRoundVoteModule,
+    FactoryConstructionModule,
+    FactoryModule,
+    ResourceModule,
+    ConsumptionMarkerModule,
+    MarketingModule,
+    FactoryProductionModule,
   ],
-  providers: [GameManagementService],
+  providers: [
+    GameManagementService,
+    ModernOperationMechanicsService,
+  ],
   exports: [GameManagementService],
 })
 export class GameManagementModule {}

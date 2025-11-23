@@ -24,6 +24,7 @@ import {
   RiListOrdered2,
   RiTeamFill,
   RiTimeFill,
+  RiCalendarLine,
 } from "@remixicon/react";
 import { HandshakeIcon } from "lucide-react";
 interface RoomListProps {
@@ -123,6 +124,17 @@ const RoomListItem: React.FC<RoomListProps> = ({ room }) => {
     });
     router.push(`/rooms/${roomId}`);
   };
+  const formatDate = (date: Date | string) => {
+    const d = typeof date === "string" ? new Date(date) : date;
+    return d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
   return (
     <div className="flex flex-wrap items-center justify-between p-4 bg-gray-500 rounded-lg mb-4 gap-2">
       <div className="flex flex-col md:flex-row items-center gap-3">
@@ -134,6 +146,16 @@ const RoomListItem: React.FC<RoomListProps> = ({ room }) => {
             ))}
         </AvatarGroup>
         <h2 className="text-lg font-bold">{room.name}</h2>
+        <div className="flex flex-col gap-1 text-xs text-gray-300">
+          <div className="flex items-center gap-1">
+            <RiCalendarLine className="size-3" />
+            <span>Created: {formatDate(room.createdAt)}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <RiTimeFill className="size-3" />
+            <span>Updated: {formatDate(room.updatedAt)}</span>
+          </div>
+        </div>
         <div className="flex flex-col gap-1 items-center space-x-4">
           {/* Sectors Game Status */}
           {room.game?.length > 0 && (
