@@ -34,7 +34,7 @@
     "devalue": "^5.0.0",
     "fix-esm": "^1.0.1",
     "nestjs-pusher": "^2.1.0",
-    "nestjs-supabase-auth-v2": "^0.0.1",
+    "nestjs-supabase-auth": "^1.0.9",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "passport-jwt": "^4.0.1",
