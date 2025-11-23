@@ -12,13 +12,20 @@ import { Spinner } from '@nextui-org/react';
  * Sector Research Tracks Component
  * 
  * Displays research progress tracks for each sector showing:
- * - Sector-level research progress (20 spaces, 4 phases)
+ * - Sector-level research progress (20 spaces, 4 stages)
  * - Individual company progress within each sector
  * - Rewards at milestones (spaces 5, 10, 15, 20)
+ * - Research stage demand bonuses (Stage 1: +0, Stage 2: +2, Stage 3: +3, Stage 4: +5)
  * 
  * Each sector has one shared research track. Companies in that sector
  * advance research by allocating workers to research actions. Sector progress
  * advances as companies complete research milestones.
+ * 
+ * Research stages provide demand bonuses to the sector's baseline demand:
+ * - Stage 1 (0-5): +0 demand
+ * - Stage 2 (6-10): +2 demand
+ * - Stage 3 (11-15): +3 demand
+ * - Stage 4 (16-20): +5 demand
  */
 export function SectorResearchTracks() {
   const { gameId } = useGame();
@@ -106,7 +113,19 @@ export function SectorResearchTracks() {
       {activeSectors.map((sector: Sector) => {
         const sectorCompanies = companiesBySector[sector.id] || [];
         const sectorColor = sectorColors[sector.name] || '#ffffff';
-        const sectorProgress = sector.researchMarker || 0;
+        
+        // Calculate sector progress: use researchMarker if available, otherwise sum company progress
+        // This ensures the track shows progress even if researchMarker hasn't been updated yet
+        const sectorMarker = sector.researchMarker || 0;
+        const totalCompanyProgress = sectorCompanies.reduce(
+          (sum, company) => sum + (company.researchProgress || 0),
+          0
+        );
+        // Use the higher of the two to ensure we show progress (researchMarker should be updated, but fallback to sum)
+        const sectorProgress = Math.max(sectorMarker, totalCompanyProgress);
+        
+        // Calculate research stage for demand bonus display
+        const researchStage = Math.min(Math.floor(sectorProgress / 5) + 1, 4);
 
         return (
           <div
@@ -121,11 +140,19 @@ export function SectorResearchTracks() {
               <h3 className="text-lg font-semibold" style={{ color: sectorColor }}>
                 {sector.name}
               </h3>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-400">Sector Progress:</span>
-                <span className="px-2 py-1 bg-gray-700/50 rounded font-semibold text-gray-200">
-                  {sectorProgress}/20
-                </span>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-400">Sector Progress:</span>
+                  <span className="px-2 py-1 bg-gray-700/50 rounded font-semibold text-gray-200">
+                    {sectorProgress}/20
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500">Demand Bonus:</span>
+                  <span className="px-2 py-1 bg-green-900/30 border border-green-700/50 rounded text-xs font-semibold text-green-300">
+                    {researchStage === 1 ? '+0' : researchStage === 2 ? '+2' : researchStage === 3 ? '+3' : '+5'}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -134,7 +161,7 @@ export function SectorResearchTracks() {
               <ResearchTrack
                 spaces={createResearchSpaces(sectorProgress)}
                 currentProgress={sectorProgress}
-                currentPhase={Math.ceil(sectorProgress / 5) || 1}
+                currentStage={Math.ceil(sectorProgress / 5) || 1}
               />
             </div>
 

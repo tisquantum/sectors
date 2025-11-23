@@ -17,13 +17,13 @@ interface ResearchSpace {
 
 interface ResearchTrackProps {
   currentProgress: number;
-  currentPhase: number;
+  currentStage: number;
   spaces: ResearchSpace[];
 }
 
 export function ResearchTrack({ 
   currentProgress, 
-  currentPhase,
+  currentStage,
   spaces 
 }: ResearchTrackProps) {
   return (
@@ -39,7 +39,7 @@ export function ResearchTrack({
               key={space.id}
               className={cn(
                 'relative z-10 flex h-12 w-full items-center justify-center',
-                space.number % 5 === 0 && 'mb-8' // Add extra space for phase markers
+                space.number % 5 === 0 && 'mb-8' // Add extra space for stage markers
               )}
             >
               {/* Space circle */}
@@ -49,7 +49,7 @@ export function ResearchTrack({
                   space.isUnlocked && 'border-primary bg-primary/10',
                   !space.isUnlocked && 'border-muted bg-background',
                   space.number <= currentProgress && 'border-primary bg-primary',
-                  space.number > currentPhase * 5 && 'opacity-50'
+                  space.number > currentStage * 5 && 'opacity-50'
                 )}
               >
                 <div className="flex h-full items-center justify-center text-sm">
@@ -57,10 +57,32 @@ export function ResearchTrack({
                 </div>
               </div>
 
-              {/* Phase marker */}
+              {/* Stage marker */}
               {space.number % 5 === 0 && (
-                <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-muted-foreground">
-                  Phase {space.number / 5}
+                <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-0.5">
+                  <div className="text-xs text-muted-foreground">
+                    Stage {space.number / 5}
+                  </div>
+                  {space.number === 5 && (
+                    <div className="text-[10px] text-muted-foreground/70">
+                      +0 demand
+                    </div>
+                  )}
+                  {space.number === 10 && (
+                    <div className="text-[10px] text-green-400/80">
+                      +2 demand
+                    </div>
+                  )}
+                  {space.number === 15 && (
+                    <div className="text-[10px] text-green-400/80">
+                      +3 demand
+                    </div>
+                  )}
+                  {space.number === 20 && (
+                    <div className="text-[10px] text-green-400/80">
+                      +5 demand
+                    </div>
+                  )}
                 </div>
               )}
 

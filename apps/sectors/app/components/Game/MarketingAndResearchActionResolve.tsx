@@ -13,14 +13,15 @@ export default function MarketingAndResearchActionResolve() {
     company.status === 'ACTIVE' && company.isFloated
   );
 
-  const currentPhaseNumber = Math.ceil(Number(currentPhase?.name?.match(/\d+/)?.[0] || '1'));
+  // Calculate research stage based on sector research marker (for display purposes)
+  // In resolve phase, we show the stage based on each sector's progress
 
   return (
     <div className="flex flex-col gap-6 p-6 max-w-6xl mx-auto">
       <div className="text-center">
         <h1 className="text-2xl font-bold text-gray-200 mb-2">Marketing & Research Results</h1>
         <p className="text-gray-400">
-          Phase {currentPhaseNumber} - Resolving all marketing campaigns and research advances
+          Resolving all marketing campaigns and research advances
         </p>
       </div>
 
@@ -160,7 +161,7 @@ export default function MarketingAndResearchActionResolve() {
               
               <ResearchTrack
                 currentProgress={sector.researchMarker || 0}
-                currentPhase={currentPhaseNumber}
+                currentStage={Math.ceil((sector.researchMarker || 0) / 5) || 1}
                 spaces={Array.from({ length: 20 }, (_, i) => ({
                   id: `sector-${sector.id}-space-${i + 1}`,
                   number: i + 1,

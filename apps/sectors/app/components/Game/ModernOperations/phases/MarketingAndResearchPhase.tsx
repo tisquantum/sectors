@@ -29,10 +29,10 @@ import { cn } from "@/lib/utils";
 import PlayerAvatar from "../../../Player/PlayerAvatar";
 
 const RESEARCH_COSTS = {
-  1: 100, // Phase I
-  2: 200, // Phase II
-  3: 300, // Phase III
-  4: 400, // Phase IV
+  1: 100, // Stage 1 (researchMarker 0-5)
+  2: 200, // Stage 2 (researchMarker 6-10)
+  3: 300, // Stage 3 (researchMarker 11-15)
+  4: 400, // Stage 4 (researchMarker 16-20)
 };
 
 const MARKETING_CONFIG = {
@@ -247,11 +247,13 @@ export default function MarketingAndResearchPhase() {
     });
   };
 
-  const currentPhaseNumber = Math.ceil(
-    Number(currentPhase?.name?.match(/\d+/)?.[0] || "1")
-  );
+  // Calculate research cost based on sector research stage (researchMarker)
+  // Research track has 20 spaces divided into 4 stages of 5 spaces each
+  // Stage 1: 0-5 ($100), Stage 2: 6-10 ($200), Stage 3: 11-15 ($300), Stage 4: 16-20 ($400)
+  const sectorResearchMarker = currentSector?.researchMarker || 0;
+  const researchStage = Math.min(Math.floor(sectorResearchMarker / 5) + 1, 4);
   const researchCost =
-    RESEARCH_COSTS[currentPhaseNumber as keyof typeof RESEARCH_COSTS] || 100;
+    RESEARCH_COSTS[researchStage as keyof typeof RESEARCH_COSTS] || 100;
   const canResearch =
     hasCompanySelected &&
     currentCompany &&
@@ -641,7 +643,7 @@ export default function MarketingAndResearchPhase() {
                       Research Cost
                     </div>
                     <div className="text-sm text-gray-400">
-                      Phase {currentPhaseNumber}
+                      Stage {researchStage} (Progress: {sectorResearchMarker}/20)
                     </div>
                   </div>
                   <div className="text-right">
@@ -721,7 +723,7 @@ export default function MarketingAndResearchPhase() {
           <ModernOperationsSection title="Research Track">
             <ResearchTrack
               currentProgress={currentCompany.researchProgress || 0}
-              currentPhase={currentPhaseNumber}
+              currentStage={researchStage}
               spaces={Array.from({ length: 20 }, (_, i) => ({
                 id: `space-${i + 1}`,
                 number: i + 1,

@@ -2,6 +2,9 @@ import { trpc } from "@sectors/app/trpc";
 import { useGame } from "./GameContext";
 import { motion } from "framer-motion";
 import { autocomplete } from "@nextui-org/react";
+import { CompanyStatus } from "@server/prisma/prisma.client";
+import { sectorColors } from "@server/data/gameData";
+import { useMemo } from "react";
 
 const financialQuotes = [
   {
@@ -127,7 +130,33 @@ const FinancialQuote = () => {
 };
 
 const StartTurnUpdates = () => {
-  const { currentTurn } = useGame();
+  const { currentTurn, gameId } = useGame();
+
+  // Get companies created in the current turn (newly opened companies)
+  // We check for companies without IPO prices set, created after the turn started
+  const turnStartTime = useMemo(() => {
+    if (!currentTurn?.createdAt) return null;
+    return new Date(currentTurn.createdAt);
+  }, [currentTurn?.createdAt]);
+
+  const { data: newlyOpenedCompanies, isLoading: isLoadingNewCompanies } =
+    trpc.company.listCompaniesWithSector.useQuery(
+      {
+        where: {
+          gameId: gameId || '',
+          ipoAndFloatPrice: null, // New companies don't have IPO prices yet
+          status: CompanyStatus.INACTIVE, // New companies start as INACTIVE
+          ...(turnStartTime && {
+            createdAt: {
+              gte: turnStartTime,
+            },
+          }),
+        },
+      },
+      { enabled: !!gameId && !!currentTurn && !!turnStartTime }
+    );
+
+  const hasNewCompanies = newlyOpenedCompanies && newlyOpenedCompanies.length > 0;
 
   return (
     <motion.div
@@ -162,6 +191,49 @@ const StartTurnUpdates = () => {
           <FinancialQuote />
         )}
       </motion.div>
+      
+      {/* New Company Announcement */}
+      {!isLoadingNewCompanies && hasNewCompanies && (
+        <motion.div
+          className="w-full mt-4 p-4 bg-blue-900/30 rounded-lg border border-blue-500/50"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.6 }}
+        >
+          <h3 className="text-xl font-bold text-blue-300 mb-3">
+            🎉 New Company{newlyOpenedCompanies.length > 1 ? 'ies' : ''} Opened
+          </h3>
+          <div className="flex flex-col gap-3">
+            {newlyOpenedCompanies.map((company) => {
+              const sectorColor = company.Sector?.sectorName
+                ? sectorColors[company.Sector.sectorName] || 'primary'
+                : 'primary';
+              return (
+                <div
+                  key={company.id}
+                  className="flex items-center gap-3 p-3 bg-gray-800/50 rounded border border-gray-700"
+                >
+                  <div
+                    className="px-3 py-1 rounded text-sm font-semibold"
+                    style={{ backgroundColor: sectorColor }}
+                  >
+                    {company.Sector?.sectorName || 'Unknown'}
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-semibold text-white">{company.name}</div>
+                    <div className="text-sm text-gray-400">
+                      {company.stockSymbol} • Unit Price: ${company.unitPrice}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-sm text-gray-400 mt-3 italic">
+            IPO price voting will be available soon.
+          </p>
+        </motion.div>
+      )}
     </motion.div>
   );
 };

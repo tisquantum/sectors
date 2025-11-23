@@ -490,6 +490,7 @@ export function ConsumptionPhase() {
             <ConsumerFlowPerSector 
               sectors={sectorsData}
               companies={companiesData}
+              gameId={gameId}
             />
           ) : (
             <div className="text-center py-12 text-gray-400">

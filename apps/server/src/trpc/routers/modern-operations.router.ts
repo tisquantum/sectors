@@ -123,22 +123,23 @@ export default (trpc: TrpcService, ctx: Context) =>
           throw new Error('Game has no current turn');
         }
 
-        // Get current turn to determine research cost phase
-        const gameTurn = await ctx.gameTurnService.gameTurn({ id: game.currentTurn });
-        if (!gameTurn) {
-          throw new Error('Current turn not found');
-        }
-
         // Get current phase
         const currentPhase = await ctx.phaseService.currentPhase(input.gameId);
         if (!currentPhase) {
           throw new Error('Current phase not found');
         }
 
-        // Calculate research cost based on turn number (phases are 1-indexed)
-        // Turn 1 = Phase 1 ($100), Turn 2 = Phase 2 ($200), etc., capped at 4
-        const phaseNumber = Math.min(gameTurn.turn, 4);
-        const researchCost = RESEARCH_COSTS_BY_PHASE[phaseNumber - 1] || RESEARCH_COSTS_BY_PHASE[0];
+        // Get sector to determine research stage based on researchMarker
+        const sector = await ctx.sectorService.sector({ id: input.sectorId });
+        if (!sector) {
+          throw new Error('Sector not found');
+        }
+
+        // Calculate research cost based on sector research stage (researchMarker)
+        // Research track has 20 spaces divided into 4 stages of 5 spaces each
+        // Stage 1: 0-5 ($100), Stage 2: 6-10 ($200), Stage 3: 11-15 ($300), Stage 4: 16-20 ($400)
+        const researchStage = Math.min(Math.floor(sector.researchMarker / 5) + 1, 4);
+        const researchCost = RESEARCH_COSTS_BY_PHASE[researchStage - 1] || RESEARCH_COSTS_BY_PHASE[0];
 
         // Check if company can afford research
         if (company.cashOnHand < researchCost) {

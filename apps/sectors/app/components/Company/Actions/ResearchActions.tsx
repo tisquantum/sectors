@@ -15,10 +15,10 @@ interface ResearchActionsProps {
 }
 
 const RESEARCH_COSTS = {
-  1: 100, // Phase I
-  2: 200, // Phase II
-  3: 300, // Phase III
-  4: 400, // Phase IV
+  1: 100, // Stage 1 (researchMarker 0-5)
+  2: 200, // Stage 2 (researchMarker 6-10)
+  3: 300, // Stage 3 (researchMarker 11-15)
+  4: 400, // Stage 4 (researchMarker 16-20)
 };
 
 export function ResearchActions({

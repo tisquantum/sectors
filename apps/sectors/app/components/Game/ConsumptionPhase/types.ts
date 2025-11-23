@@ -40,6 +40,7 @@ export interface FlowLogEntry {
 export interface ConsumerFlowPerSectorProps {
   sectors: Sector[];
   companies: Company[];
+  gameId?: string;
 }
 
 export interface CompanyPerformanceProps {

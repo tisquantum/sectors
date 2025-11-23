@@ -1217,7 +1217,7 @@ export function getSectorValidIpoPrices(sector: Sector) {
 
 // Modern Operation Mechanics Constants
 export const MARKETING_SLOT_COSTS = [0, 100, 200, 300, 400]; // Cost for each concurrent marketing slot
-export const RESEARCH_COSTS_BY_PHASE = [100, 200, 300, 400]; // Research cost per phase level
+export const RESEARCH_COSTS_BY_PHASE = [100, 200, 300, 400]; // Research cost per research stage (based on sector researchMarker: Stage 1=0-5, Stage 2=6-10, Stage 3=11-15, Stage 4=16-20)
 export const DEFAULT_CONSUMPTION_MARKERS_PER_SECTOR = 5;
 export const FACTORY_WORKER_REQUIREMENTS = {
   FACTORY_I: 2,

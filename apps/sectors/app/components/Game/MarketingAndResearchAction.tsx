@@ -115,8 +115,10 @@ export default function MarketingAndResearchAction() {
     });
   };
 
-  const currentPhaseNumber = Math.ceil(Number(currentPhase?.name?.match(/\d+/)?.[0] || '1'));
-  const researchCost = RESEARCH_COSTS[currentPhaseNumber as keyof typeof RESEARCH_COSTS] || 100;
+  // Calculate research cost based on sector research stage (researchMarker)
+  const sectorResearchMarker = currentSector?.researchMarker || 0;
+  const researchStage = Math.min(Math.floor(sectorResearchMarker / 5) + 1, 4);
+  const researchCost = RESEARCH_COSTS[researchStage as keyof typeof RESEARCH_COSTS] || 100;
   const canResearch = currentCompany.cashOnHand >= researchCost;
 
   return (
@@ -202,7 +204,7 @@ export default function MarketingAndResearchAction() {
               <div className="flex justify-between items-center p-3 bg-gray-700/30 rounded-lg">
                 <div>
                   <div className="font-medium text-gray-200">Research Cost</div>
-                  <div className="text-sm text-gray-400">Phase {currentPhaseNumber}</div>
+                  <div className="text-sm text-gray-400">Stage {researchStage} (Progress: {sectorResearchMarker}/20)</div>
                 </div>
                 <div className="text-right">
                   <div className="font-bold text-gray-200">${researchCost}</div>
@@ -263,7 +265,7 @@ export default function MarketingAndResearchAction() {
         <CardBody>
           <ResearchTrack
             currentProgress={currentCompany.researchProgress || 0}
-            currentPhase={currentPhaseNumber}
+            currentStage={researchStage}
             spaces={Array.from({ length: 20 }, (_, i) => ({
               id: `space-${i + 1}`,
               number: i + 1,

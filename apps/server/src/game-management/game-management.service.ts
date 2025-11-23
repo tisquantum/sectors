@@ -3029,30 +3029,44 @@ export class GameManagementService {
         revenueDistribution = RevenueDistribution.RETAINED;
       }
 
-      // Filter to only player-held shares for dividend calculation
+      // Each company has 10 shares in rotation
+      const TOTAL_SHARES_IN_ROTATION = 10;
+
+      // Filter shares: only PLAYER and OPEN_MARKET shares get dividends (not IPO)
       const playerShares = company.Share.filter(
         (share) => share.location === ShareLocation.PLAYER && share.playerId,
       );
+      const openMarketShares = company.Share.filter(
+        (share) => share.location === ShareLocation.OPEN_MARKET,
+      );
+      const sharesEligibleForDividends = playerShares.length + openMarketShares.length;
 
       // Calculate dividend and company retention
       let dividend = 0;
       let moneyToCompany = 0;
       const moneyFromBank = totalRevenue;
 
-      // Only calculate dividends if there are player-held shares
-      if (playerShares.length === 0) {
-        console.log(`No player-held shares found for company ${company.name}, retaining all revenue`);
+      // Only calculate dividends if there are shares eligible for dividends
+      if (sharesEligibleForDividends === 0) {
+        console.log(`No shares eligible for dividends found for company ${company.name}, retaining all revenue`);
         moneyToCompany = totalRevenue;
       } else {
         console.log('revenueDistribution', revenueDistribution);
-        console.log('playerShares', playerShares);
+        console.log('playerShares', playerShares.length, 'openMarketShares', openMarketShares.length);
         switch (revenueDistribution) {
           case RevenueDistribution.DIVIDEND_FULL:
-            dividend = totalRevenue / company.Share.length;
+            // Dividend per share = revenue / 10 (rounded down)
+            dividend = Math.floor(totalRevenue / TOTAL_SHARES_IN_ROTATION);
+            // Total dividends paid = per share * number of eligible shares
+            // Company retains the remainder
+            moneyToCompany = totalRevenue - (dividend * sharesEligibleForDividends);
             break;
           case RevenueDistribution.DIVIDEND_FIFTY_FIFTY:
-            dividend = Math.floor(totalRevenue / 2) / company.Share.length;
-            moneyToCompany = Math.floor(totalRevenue / 2);
+            // Half revenue per share = (revenue / 2) / 10 (rounded down)
+            dividend = Math.floor(Math.floor(totalRevenue / 2) / TOTAL_SHARES_IN_ROTATION);
+            // Total dividends paid = per share * number of eligible shares
+            // Company retains the remainder (which should be approximately half)
+            moneyToCompany = totalRevenue - (dividend * sharesEligibleForDividends);
             break;
           case RevenueDistribution.RETAINED:
             moneyToCompany = totalRevenue;
@@ -3064,7 +3078,12 @@ export class GameManagementService {
       }
       console.log('dividend', dividend);
       console.log('moneyToCompany', moneyToCompany);
-      // Distribute dividends to players
+      
+      // Calculate total dividends to be paid
+      let totalDividendsPaidToPlayers = 0;
+      let totalDividendsPaidToCompany = 0;
+      
+      // Distribute dividends to players (BANK → PLAYER)
       if (dividend > 0 && playerShares.length > 0) {
         const groupedSharesByPlayerId = playerShares.reduce<{
           [key: string]: Share[];
@@ -3082,6 +3101,12 @@ export class GameManagementService {
 
         console.log(`[calculateAndDistributeDividendsModern] Company ${company.name}: totalRevenue=${totalRevenue}, dividend per share=${dividend}, playerShares=${playerShares.length}, players with shares=${Object.keys(groupedSharesByPlayerId).length}`);
 
+        // Calculate total dividends to be paid to players
+        totalDividendsPaidToPlayers = Object.entries(groupedSharesByPlayerId).reduce(
+          (total, [, shares]) => total + Math.floor(dividend * shares.length),
+          0
+        );
+
         // Update player cash on hand
         const sharePromises = Object.entries(groupedSharesByPlayerId).map(
           async ([playerId, shares]) => {
@@ -3095,30 +3120,7 @@ export class GameManagementService {
             const dividendTotal = Math.floor(dividend * shares.length);
             console.log(`[calculateAndDistributeDividendsModern] Distributing $${dividendTotal} to player ${player.nickname} (${shares.length} shares)`);
             
-            // Create transaction for dividend payment (company to player via bank)
-            if (company.entityId) {
-              try {
-                await this.transactionService.createTransactionEntityToEntity({
-                  gameId: phase.gameId,
-                  gameTurnId: phase.gameTurnId,
-                  phaseId: phase.id,
-                  fromEntityType: EntityType.COMPANY,
-                  toEntityType: EntityType.PLAYER,
-                  fromEntityId: company.entityId,
-                  toEntityId: player.entityId || undefined,
-                  amount: dividendTotal,
-                  transactionType: TransactionType.CASH,
-                  transactionSubType: TransactionSubType.DIVIDEND,
-                  fromCompanyId: companyId,
-                  toPlayerId: playerId,
-                  companyInvolvedId: companyId,
-                  description: `Dividend payment: $${dividendTotal} to ${player.nickname} (${shares.length} shares)`,
-                });
-              } catch (error) {
-                console.error('Failed to create dividend transaction:', error);
-              }
-            }
-            
+            // Update player cash and bank pool (playerAddMoney creates BANK → PLAYER transaction)
             await this.playerAddMoney({
               gameId: phase.gameId,
               gameTurnId: phase.gameTurnId,
@@ -3126,7 +3128,7 @@ export class GameManagementService {
               playerId: player.id,
               amount: dividendTotal,
               fromEntity: EntityType.BANK,
-              description: 'Dividends.',
+              description: `Dividend payment: $${dividendTotal} to ${player.nickname} (${shares.length} shares) from ${company.name}`,
               transactionSubType: TransactionSubType.DIVIDEND,
             });
             await this.gameLogService.createGameLog({
@@ -3136,12 +3138,62 @@ export class GameManagementService {
           },
         );
         await Promise.all(sharePromises);
-      } else if (dividend > 0 && playerShares.length === 0) {
-        console.warn(`[calculateAndDistributeDividendsModern] Dividend calculated (${dividend}) but no player shares found for company ${company.name}`);
       }
+      
+      // Distribute dividends to company for open market shares (BANK → COMPANY)
+      if (dividend > 0 && openMarketShares.length > 0) {
+        totalDividendsPaidToCompany = Math.floor(dividend * openMarketShares.length);
+        console.log(`[calculateAndDistributeDividendsModern] Distributing $${totalDividendsPaidToCompany} to company ${company.name} for ${openMarketShares.length} open market shares`);
+        
+        // Create transaction for dividend payment (BANK → COMPANY)
+        if (company.entityId) {
+          try {
+            await this.transactionService.createTransactionEntityToEntity({
+              gameId: phase.gameId,
+              gameTurnId: phase.gameTurnId,
+              phaseId: phase.id,
+              fromEntityType: EntityType.BANK,
+              toEntityType: EntityType.COMPANY,
+              toEntityId: company.entityId,
+              amount: totalDividendsPaidToCompany,
+              transactionType: TransactionType.CASH,
+              transactionSubType: TransactionSubType.DIVIDEND,
+              toCompanyId: companyId,
+              companyInvolvedId: companyId,
+              description: `Dividend payment: $${totalDividendsPaidToCompany} to ${company.name} for ${openMarketShares.length} open market shares`,
+            });
+          } catch (error) {
+            console.error('Failed to create dividend transaction for open market shares:', error);
+          }
+        }
+        
+        // Update company cash and bank pool
+        await this.prisma.game.update({
+          where: { id: phase.gameId },
+          data: {
+            bankPoolNumber: {
+              decrement: totalDividendsPaidToCompany,
+            },
+          },
+        });
+        await this.companyService.updateCompany({
+          where: { id: company.id },
+          data: {
+            cashOnHand: {
+              increment: totalDividendsPaidToCompany,
+            },
+          },
+        });
+      }
+      
+      // Company cash is already updated:
+      // - totalRevenue was added in earnings call phase
+      // - Open market dividends were added above (BANK → COMPANY)
+      // - Company retains moneyToCompany (which is already in cash since totalRevenue was received)
+      // No additional cash update needed here
 
-      // Update company cash on hand
-      if (moneyToCompany !== 0) {
+      // Update company cash on hand (for retained revenue when no dividends)
+      if (moneyToCompany !== 0 && (dividend === 0 || playerShares.length === 0)) {
         const companyUpdated = await this.companyService.updateCompany({
           where: { id: company.id },
           data: { cashOnHand: company.cashOnHand + moneyToCompany },

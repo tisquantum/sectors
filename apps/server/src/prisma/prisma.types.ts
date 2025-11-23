@@ -286,6 +286,8 @@ export type TransactionWithEntities = Transaction & {
   fromEntity: Entity & { Player: Player | null; Company: Company | null };
   toEntity: Entity & { Player: Player | null; Company: Company | null };
   Shares: TransactionsOnShares[];
+  GameTurn: GameTurn;
+  Phase: Phase;
 };
 
 export type PlayerResultWithRelations = PlayerResult & {

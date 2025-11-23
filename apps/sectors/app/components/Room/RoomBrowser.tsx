@@ -17,6 +17,8 @@ import {
   Switch,
   useDisclosure,
   Button,
+  Select,
+  SelectItem,
 } from "@nextui-org/react";
 import { GameStatus } from "@server/prisma/prisma.client";
 import { renderGameStatusColor } from "@sectors/app/helpers";
@@ -28,17 +30,27 @@ import { DefaultErrorShape } from "@trpc/server/unstable-core-do-not-import";
 export default function RoomBrowser() {
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
   const { user } = useAuthUser();
-  const {
-    data: rooms,
-    isLoading,
-    error,
-    refetch,
-  } = trpc.room.listRooms.useQuery({});
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<GameStatus | null>(
     GameStatus.PENDING
   );
   const [yourRoomsOnly, setYourRoomsOnly] = useState(false);
+  const [sortBy, setSortBy] = useState<"createdAt" | "updatedAt" | null>(null);
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+
+  // Build orderBy object for the query
+  const orderBy = sortBy
+    ? { [sortBy]: sortOrder }
+    : undefined;
+
+  const {
+    data: rooms,
+    isLoading,
+    error,
+    refetch,
+  } = trpc.room.listRooms.useQuery({
+    orderBy,
+  });
 
   return (
     <Suspense fallback={<div>Loading search parameters...</div>}>
@@ -57,6 +69,10 @@ export default function RoomBrowser() {
         setSelectedStatus={setSelectedStatus}
         yourRoomsOnly={yourRoomsOnly}
         setYourRoomsOnly={setYourRoomsOnly}
+        sortBy={sortBy}
+        setSortBy={setSortBy}
+        sortOrder={sortOrder}
+        setSortOrder={setSortOrder}
       />
     </Suspense>
   );
@@ -77,6 +93,10 @@ function RoomBrowserContent({
   setSelectedStatus,
   yourRoomsOnly,
   setYourRoomsOnly,
+  sortBy,
+  setSortBy,
+  sortOrder,
+  setSortOrder,
 }: {
   rooms: RoomWithUsersAndGames[] | undefined;
   isLoading: boolean;
@@ -103,6 +123,10 @@ function RoomBrowserContent({
   setSelectedStatus: any;
   yourRoomsOnly: boolean;
   setYourRoomsOnly: any;
+  sortBy: "createdAt" | "updatedAt" | null;
+  setSortBy: any;
+  sortOrder: "asc" | "desc";
+  setSortOrder: any;
 }) {
   const searchParams = useSearchParams();
   const isKicked = searchParams.get("kicked") === "true";
@@ -171,6 +195,45 @@ function RoomBrowserContent({
           >
             Your Rooms
           </Switch>
+        </div>
+        <div className="flex items-center gap-2">
+          <Select
+            label="Sort by"
+            placeholder="No sorting"
+            selectedKeys={sortBy ? [sortBy] : []}
+            onSelectionChange={(keys) => {
+              const selected = Array.from(keys)[0] as "createdAt" | "updatedAt" | null;
+              setSortBy(selected || null);
+            }}
+            className="w-40"
+            size="sm"
+          >
+            <SelectItem key="createdAt" value="createdAt">
+              Created At
+            </SelectItem>
+            <SelectItem key="updatedAt" value="updatedAt">
+              Updated At
+            </SelectItem>
+          </Select>
+          {sortBy && (
+            <Select
+              label="Order"
+              selectedKeys={[sortOrder]}
+              onSelectionChange={(keys) => {
+                const selected = Array.from(keys)[0] as "asc" | "desc";
+                setSortOrder(selected || "desc");
+              }}
+              className="w-32"
+              size="sm"
+            >
+              <SelectItem key="desc" value="desc">
+                Newest First
+              </SelectItem>
+              <SelectItem key="asc" value="asc">
+                Oldest First
+              </SelectItem>
+            </Select>
+          )}
         </div>
       </div>
       <div className="mb-4 relative">

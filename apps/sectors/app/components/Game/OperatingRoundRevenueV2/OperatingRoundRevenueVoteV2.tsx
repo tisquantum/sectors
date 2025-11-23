@@ -11,6 +11,7 @@ import {
 } from "@server/prisma/prisma.client";
 import { Radio, RadioGroup, Tooltip, Spinner } from "@nextui-org/react";
 import { useState, useMemo } from "react";
+import { ShareLocation } from "@server/prisma/prisma.client";
 import {
   CompanyTierData,
   FACTORY_CUSTOMER_LIMITS,
@@ -54,6 +55,69 @@ const DistributeSelectionV2 = ({
   const [isSubmit, setIsSubmit] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Fetch company shares to calculate dividends
+  const { data: companyShares } = trpc.share.listSharesWithRelations.useQuery(
+    {
+      where: { companyId: company.id },
+    },
+    { enabled: !!company.id }
+  );
+
+  // Calculate dividend information
+  const dividendInfo = useMemo(() => {
+    if (!companyShares || consumptionRevenue.revenue <= 0) {
+      return null;
+    }
+
+    // Each company has 10 shares in rotation
+    const TOTAL_SHARES_IN_ROTATION = 10;
+
+    // Filter shares eligible for dividends (PLAYER and OPEN_MARKET, not IPO)
+    const eligibleShares = companyShares.filter(
+      (share) =>
+        share.location === ShareLocation.PLAYER ||
+        share.location === ShareLocation.OPEN_MARKET
+    );
+    const totalEligibleShares = eligibleShares.length;
+
+    // Calculate dividend per share based on total shares in rotation (10)
+    // Dividend per share = revenue / 10 (rounded down)
+    const dividendFullPerShare = Math.floor(consumptionRevenue.revenue / TOTAL_SHARES_IN_ROTATION);
+    // Total dividends paid = per share * number of eligible shares
+    const totalDividendsFull = dividendFullPerShare * totalEligibleShares;
+    const companyRetainsFull = consumptionRevenue.revenue - totalDividendsFull;
+
+    // For half dividend: half revenue / 10 shares (rounded down)
+    const dividendHalfPerShare = Math.floor(
+      Math.floor(consumptionRevenue.revenue / 2) / TOTAL_SHARES_IN_ROTATION
+    );
+    const totalDividendsHalf = dividendHalfPerShare * totalEligibleShares;
+    const companyRetainsHalf = consumptionRevenue.revenue - totalDividendsHalf;
+
+    // Get player's shares in this company
+    const playerShares = eligibleShares.filter(
+      (share) =>
+        share.location === ShareLocation.PLAYER &&
+        share.playerId === authPlayer?.id
+    );
+    const playerShareCount = playerShares.length;
+
+    // Calculate player earnings (rounded down)
+    const playerEarningsFull = Math.floor(dividendFullPerShare * playerShareCount);
+    const playerEarningsHalf = Math.floor(dividendHalfPerShare * playerShareCount);
+
+    return {
+      dividendFullPerShare,
+      dividendHalfPerShare,
+      playerShareCount,
+      playerEarningsFull,
+      playerEarningsHalf,
+      companyRetainsFull,
+      companyRetainsHalf,
+      companyRetainsAll: consumptionRevenue.revenue,
+    };
+  }, [companyShares, consumptionRevenue.revenue, authPlayer?.id]);
+
   // If revenue is negative, must retain (company loses money from cash on hand)
   const isNegativeRevenue = consumptionRevenue.revenue < 0;
   const [selected, setSelected] = useState<RevenueDistribution>(() => {
@@ -89,15 +153,15 @@ const DistributeSelectionV2 = ({
   };
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-3">
       {isNegativeRevenue && (
-        <div className="text-yellow-400 text-sm mb-2 p-2 bg-yellow-900/20 rounded">
+        <div className="text-yellow-400 text-sm p-2 bg-yellow-900/20 rounded border border-yellow-700/50">
           ⚠️ Negative revenue must be retained. Company will lose $
           {Math.abs(consumptionRevenue.revenue)} from cash on hand.
         </div>
       )}
       <RadioGroup
-        orientation="horizontal"
+        orientation="vertical"
         value={selected}
         onValueChange={(value) => {
           // Prevent changing selection if revenue is negative
@@ -106,25 +170,148 @@ const DistributeSelectionV2 = ({
           }
         }}
         isDisabled={isNegativeRevenue}
+        classNames={{
+          wrapper: "gap-2",
+        }}
       >
         <Radio
           value={RevenueDistribution.DIVIDEND_FULL}
           isDisabled={isNegativeRevenue}
+          classNames={{
+            base: "max-w-full",
+            wrapper: "hidden",
+            label: "w-full",
+          }}
         >
-          Dividend Full
+          <div
+            className={`flex items-center justify-between w-full p-3 rounded-lg border-2 transition-all ${
+              selected === RevenueDistribution.DIVIDEND_FULL
+                ? "border-blue-500 bg-blue-500/10"
+                : "border-gray-700 bg-gray-800/50 hover:border-gray-600"
+            }`}
+          >
+            <div className="flex items-center gap-3 flex-1">
+              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+                selected === RevenueDistribution.DIVIDEND_FULL
+                  ? "border-blue-500 bg-blue-500"
+                  : "border-gray-500 bg-transparent"
+              }`}>
+                {selected === RevenueDistribution.DIVIDEND_FULL && (
+                  <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </div>
+              <div className="flex flex-col flex-1">
+                <span className="font-semibold text-white">Dividend Full</span>
+                {dividendInfo && (
+                  <div className="flex items-center gap-3 mt-1 text-sm">
+                    <span className="text-gray-400">
+                      ${dividendInfo.dividendFullPerShare.toFixed(2)}/share
+                    </span>
+                    {dividendInfo.playerShareCount > 0 && (
+                      <span className="text-green-400 font-medium">
+                        Your {dividendInfo.playerShareCount} shares: ${dividendInfo.playerEarningsFull.toFixed(2)}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </Radio>
         <Radio
           value={RevenueDistribution.DIVIDEND_FIFTY_FIFTY}
           isDisabled={isNegativeRevenue}
+          classNames={{
+            base: "max-w-full",
+            wrapper: "hidden",
+            label: "w-full",
+          }}
         >
-          Dividend Half
+          <div
+            className={`flex items-center justify-between w-full p-3 rounded-lg border-2 transition-all ${
+              selected === RevenueDistribution.DIVIDEND_FIFTY_FIFTY
+                ? "border-blue-500 bg-blue-500/10"
+                : "border-gray-700 bg-gray-800/50 hover:border-gray-600"
+            }`}
+          >
+            <div className="flex items-center gap-3 flex-1">
+              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+                selected === RevenueDistribution.DIVIDEND_FIFTY_FIFTY
+                  ? "border-blue-500 bg-blue-500"
+                  : "border-gray-500 bg-transparent"
+              }`}>
+                {selected === RevenueDistribution.DIVIDEND_FIFTY_FIFTY && (
+                  <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </div>
+              <div className="flex flex-col flex-1">
+                <span className="font-semibold text-white">Dividend Half</span>
+                {dividendInfo && (
+                  <div className="flex flex-col gap-1 mt-1 text-sm">
+                    <div className="flex items-center gap-3">
+                      <span className="text-gray-400">
+                        ${dividendInfo.dividendHalfPerShare.toFixed(2)}/share
+                      </span>
+                      {dividendInfo.playerShareCount > 0 && (
+                        <span className="text-green-400 font-medium">
+                          Your {dividendInfo.playerShareCount} shares: ${dividendInfo.playerEarningsHalf.toFixed(2)}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-blue-400 font-medium">
+                      Company retains: ${dividendInfo.companyRetainsHalf.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </Radio>
-        <Radio value={RevenueDistribution.RETAINED}>Company Retains</Radio>
+        <Radio
+          value={RevenueDistribution.RETAINED}
+          classNames={{
+            base: "max-w-full",
+            wrapper: "hidden",
+            label: "w-full",
+          }}
+        >
+          <div
+            className={`flex items-center gap-3 w-full p-3 rounded-lg border-2 transition-all ${
+              selected === RevenueDistribution.RETAINED
+                ? "border-blue-500 bg-blue-500/10"
+                : "border-gray-700 bg-gray-800/50 hover:border-gray-600"
+            }`}
+          >
+            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+              selected === RevenueDistribution.RETAINED
+                ? "border-blue-500 bg-blue-500"
+                : "border-gray-500 bg-transparent"
+            }`}>
+              {selected === RevenueDistribution.RETAINED && (
+                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </div>
+            <div className="flex flex-col flex-1">
+              <span className="font-semibold text-white">Company Retains</span>
+              {dividendInfo && (
+                <span className="text-blue-400 font-medium mt-1 text-sm">
+                  Company retains: ${dividendInfo.companyRetainsAll.toFixed(2)}
+                </span>
+              )}
+            </div>
+          </div>
+        </Radio>
       </RadioGroup>
       {isSubmit ? (
-        <div className="text-green-400 text-sm">Vote Submitted</div>
+        <div className="text-green-400 text-sm text-center py-2">✓ Vote Submitted</div>
       ) : (
-        <DebounceButton onClick={handleSubmit} isLoading={isLoading}>
+        <DebounceButton onClick={handleSubmit} isLoading={isLoading} className="w-full">
           Submit Vote
         </DebounceButton>
       )}

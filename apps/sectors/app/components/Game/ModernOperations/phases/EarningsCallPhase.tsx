@@ -8,9 +8,12 @@ import { ModernOperationsLayout, ModernOperationsSection } from '../layouts';
 import { Spinner } from '@nextui-org/react';
 import { ResourceIcon } from '../../ConsumptionPhase/ResourceIcon';
 import { useMemo } from 'react';
+import { LineChart } from '@tremor/react';
+import { sectorColors } from '@server/data/gameData';
+import { StockAction } from '@server/prisma/prisma.client';
 
 export function EarningsCallPhase() {
-  const { gameState, gameId, currentTurn } = useGame();
+  const { gameState, gameId, currentTurn, currentPhase } = useGame();
 
   // Fetch real production data for the current turn
   const { data: productionData, isLoading } = trpc.factoryProduction.getGameTurnProduction.useQuery({
@@ -21,6 +24,12 @@ export function EarningsCallPhase() {
   // Fetch resource prices for detailed breakdown
   const { data: resourcePrices } = trpc.resource.getAllResourcePrices.useQuery(
     { gameId: gameId || '' },
+    { enabled: !!gameId }
+  );
+
+  // Fetch companies with stock history to show stock performance
+  const { data: companiesWithStockHistory } = trpc.company.listCompaniesWithSectorAndStockHistory.useQuery(
+    { where: { gameId } },
     { enabled: !!gameId }
   );
 
@@ -74,17 +83,43 @@ export function EarningsCallPhase() {
     return acc;
   }, {} as Record<string, { company: any; productions: any[] }>);
 
-  const companies = Object.values(companiesMap).map(({ company, productions }) => ({
-    id: company.id,
-    name: company.name,
-    sector: company.Sector?.sectorName || company.Sector?.name || 'Unknown',
-    brandScore: company.brandScore || 0,
-    productions,
-    totalRevenue: productions.reduce((sum, p) => sum + p.revenue, 0),
-    totalCosts: productions.reduce((sum, p) => sum + p.costs, 0),
-    totalProfit: productions.reduce((sum, p) => sum + p.profit, 0),
-    totalCustomers: productions.reduce((sum, p) => sum + p.customersServed, 0),
-  }));
+  // Calculate stock price steps based on profit (same logic as backend)
+  const calculateStockPriceSteps = (profit: number): number => {
+    if (profit > 500) return 3;
+    if (profit > 200) return 2;
+    if (profit > 0) return 1;
+    if (profit < -200) return -2;
+    if (profit < 0) return -1;
+    return 0;
+  };
+
+  const companies = Object.values(companiesMap).map(({ company, productions }) => {
+    const totalProfit = productions.reduce((sum, p) => sum + p.profit, 0);
+    const stockPriceSteps = calculateStockPriceSteps(totalProfit);
+    
+    // Find stock history entry for this phase with PRODUCTION action
+    const stockHistoryEntry = companiesWithStockHistory
+      ?.find(c => c.id === company.id)
+      ?.StockHistory?.find(
+        sh => sh.phaseId === currentPhase?.id && sh.action === StockAction.PRODUCTION
+      );
+
+    return {
+      id: company.id,
+      name: company.name,
+      sector: company.Sector?.sectorName || company.Sector?.name || 'Unknown',
+      brandScore: company.brandScore || 0,
+      productions,
+      totalRevenue: productions.reduce((sum, p) => sum + p.revenue, 0),
+      totalCosts: productions.reduce((sum, p) => sum + p.costs, 0),
+      totalProfit,
+      totalCustomers: productions.reduce((sum, p) => sum + p.customersServed, 0),
+      stockPriceSteps,
+      stockHistoryEntry,
+      currentStockPrice: company.currentStockPrice || 0,
+      stockHistory: companiesWithStockHistory?.find(c => c.id === company.id)?.StockHistory || [],
+    };
+  });
 
   // Calculate summary statistics
   const totalRevenue = companies.reduce((sum, c) => sum + c.totalRevenue, 0);
@@ -190,7 +225,7 @@ export function EarningsCallPhase() {
                   <h4 className="text-sm font-semibold text-gray-300">Factory Performance</h4>
                   {company.productions.map((production) => {
                     const factory = production.Factory;
-                    const maxCustomers = FACTORY_CUSTOMER_LIMITS[factory.size];
+                    const maxCustomers = FACTORY_CUSTOMER_LIMITS[factory.size as keyof typeof FACTORY_CUSTOMER_LIMITS] || 0;
                     
                     return (
                       <div key={production.id} className="bg-gray-700 rounded-lg p-4 border border-gray-600">
@@ -246,7 +281,7 @@ export function EarningsCallPhase() {
                               <div className="text-gray-500">Revenue per unit = Sum of resource prices:</div>
                               <div className="pl-2 flex flex-wrap items-center gap-1.5">
                                 {factory.resourceTypes && factory.resourceTypes.length > 0 ? (
-                                  factory.resourceTypes.map((resourceType, idx) => {
+                                  (factory.resourceTypes as string[]).map((resourceType: string, idx: number) => {
                                     const price = resourcePriceMap.get(resourceType) || 0;
                                     return (
                                       <span key={idx} className="flex items-center gap-1 px-1.5 py-0.5 bg-gray-700 rounded">
@@ -263,12 +298,12 @@ export function EarningsCallPhase() {
                                 )}
                                 {factory.resourceTypes && factory.resourceTypes.length > 0 && (
                                   <span className="text-gray-400">
-                                    = ${factory.resourceTypes.reduce((sum, rt) => sum + (resourcePriceMap.get(rt) || 0), 0)}/unit
+                                    = ${(factory.resourceTypes as string[]).reduce((sum: number, rt: string) => sum + (resourcePriceMap.get(rt) || 0), 0)}/unit
                                   </span>
                                 )}
                               </div>
                               <div className="text-gray-400 pt-1">
-                                Total Revenue = {production.customersServed} customers × ${factory.resourceTypes?.reduce((sum, rt) => sum + (resourcePriceMap.get(rt) || 0), 0) || 0}/unit = <span className="text-blue-400 font-semibold">${production.revenue}</span>
+                                Total Revenue = {production.customersServed} customers × ${(factory.resourceTypes as string[])?.reduce((sum: number, rt: string) => sum + (resourcePriceMap.get(rt) || 0), 0) || 0}/unit = <span className="text-blue-400 font-semibold">${production.revenue}</span>
                               </div>
                             </div>
 
@@ -329,6 +364,65 @@ export function EarningsCallPhase() {
                       </div>
                     </div>
                   </div>
+                </div>
+
+                {/* Stock Performance */}
+                <div className="bg-gray-700 rounded-lg p-4 border border-gray-600">
+                  <h4 className="text-sm font-semibold text-gray-300 mb-4">Stock Performance</h4>
+                  
+                  {/* Stock Movement Info */}
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="bg-gray-600 rounded p-3">
+                      <div className="text-xs text-gray-400 mb-1">Current Stock Price</div>
+                      <div className="text-xl font-bold text-white">${company.currentStockPrice.toLocaleString()}</div>
+                    </div>
+                    {company.stockHistoryEntry && (
+                      <div className="bg-gray-600 rounded p-3">
+                        <div className="text-xs text-gray-400 mb-1">Stock Movement</div>
+                        <div className={`text-xl font-bold ${company.stockPriceSteps > 0 ? 'text-green-400' : company.stockPriceSteps < 0 ? 'text-red-400' : 'text-gray-400'}`}>
+                          {company.stockPriceSteps > 0 ? '+' : ''}{company.stockPriceSteps} {company.stockPriceSteps === 1 ? 'space' : 'spaces'}
+                        </div>
+                      </div>
+                    )}
+                    {company.stockPriceSteps !== 0 && !company.stockHistoryEntry && (
+                      <div className="bg-gray-600 rounded p-3">
+                        <div className="text-xs text-gray-400 mb-1">Expected Movement</div>
+                        <div className={`text-xl font-bold ${company.stockPriceSteps > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          {company.stockPriceSteps > 0 ? '+' : ''}{company.stockPriceSteps} {company.stockPriceSteps === 1 ? 'space' : 'spaces'}
+                        </div>
+                      </div>
+                    )}
+                    {company.stockPriceSteps === 0 && (
+                      <div className="bg-gray-600 rounded p-3">
+                        <div className="text-xs text-gray-400 mb-1">Stock Movement</div>
+                        <div className="text-sm text-gray-500 italic">No movement</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Stock Chart */}
+                  {company.stockHistory && company.stockHistory.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-gray-600">
+                      <div className="text-xs font-medium text-gray-300 mb-3">Stock Price History</div>
+                      <div className="h-64 w-full bg-gray-800/50 rounded-lg p-3">
+                        <LineChart
+                          data={company.stockHistory
+                            .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+                            .filter(sh => sh.price !== 0)
+                            .map((sh, index) => ({
+                              phaseId: `${index + 1} ${sh.Phase.name}`,
+                              stockPrice: sh.price,
+                            }))}
+                          index="phaseId"
+                          categories={['stockPrice']}
+                          yAxisLabel="Stock Price"
+                          xAxisLabel="Phase"
+                          colors={[sectorColors[company.sector] || '#3b82f6']}
+                          valueFormatter={(number) => `$${number.toLocaleString()}`}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>

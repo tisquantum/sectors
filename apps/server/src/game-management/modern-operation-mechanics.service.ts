@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Phase, PhaseName, Game, Company, Resource, MarketingCampaign, FactorySize, ResourceType, ResourceTrackType, OrderType, TransactionType, EntityType, SectorName, FactoryConstructionOrder, MarketingCampaignTier, MarketingCampaignStatus, StockAction, CompanyStatus, ShareLocation, TransactionSubType, Sector } from '@prisma/client';
+import { Phase, PhaseName, Game, Company, Resource, MarketingCampaign, FactorySize, ResourceType, ResourceTrackType, OrderType, TransactionType, EntityType, SectorName, FactoryConstructionOrder, MarketingCampaignTier, MarketingCampaignStatus, StockAction, CompanyStatus, ShareLocation, TransactionSubType, Sector, CompanyTier } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { GameLogService } from '../game-log/game-log.service';
 import { CompanyService } from '../company/company.service';
@@ -14,10 +14,12 @@ import { StockHistoryService } from '../stock-history/stock-history.service';
 import { GameTurnService } from '../game-turn/game-turn.service';
 import { GamesService } from '../games/games.service';
 import { TransactionService } from '../transaction/transaction.service';
-import { getResourcePriceForResourceType, getSectorResourceForSectorName, BASE_WORKER_SALARY, CompanyTierData, BANKRUPTCY_SHARE_PERCENTAGE_RETAINED } from '@server/data/constants';
+import { ShareService } from '../share/share.service';
+import { getResourcePriceForResourceType, getSectorResourceForSectorName, BASE_WORKER_SALARY, CompanyTierData, BANKRUPTCY_SHARE_PERCENTAGE_RETAINED, DEFAULT_SHARE_DISTRIBUTION } from '@server/data/constants';
 import { PlayerPriorityService } from '@server/player-priority/player-priority.service';
 import { PlayersService } from '@server/players/players.service';
-import { calculateNetWorth } from '@server/data/helpers';
+import { calculateAverageStockPrice, calculateNetWorth, getRandomCompany } from '@server/data/helpers';
+import { CompanyWithSector } from '@server/prisma/prisma.types';
 
 interface RequiredResource {
   type: ResourceType;
@@ -43,6 +45,7 @@ export class ModernOperationMechanicsService {
     private transactionService: TransactionService,
     private playerPriorityService: PlayerPriorityService,
     private playersService: PlayersService,
+    private shareService: ShareService,
   ) {}
 
   async handlePhase(phase: Phase, game: Game) {
@@ -53,6 +56,7 @@ export class ModernOperationMechanicsService {
         await this.makeFactoriesOperational(phase);
         await this.updateSectorDemand(phase);
         await this.determinePriorityOrderBasedOnNetWorth(phase);
+        await this.handleOpeningNewCompany(phase);
         break;
 
       case PhaseName.SHAREHOLDER_MEETING:
@@ -795,6 +799,196 @@ export class ModernOperationMechanicsService {
     }
   }
 
+    /**
+   * Helper function to create a company in a specific sector
+   */
+    private async createCompanyInSector(
+      phase: Phase,
+      sectorId: string,
+      sectorCompanies: CompanyWithSector[],
+      startingCompanyTier: CompanyTier = CompanyTier.GROWTH,
+    ) {
+      const sector = await this.sectorService.sector({ id: sectorId });
+      if (!sector) {
+        throw new Error('Sector not found');
+      }
+  
+      const newCompanyInfo = getRandomCompany(sector.sectorName);
+      const newCompany = await this.companyService.createCompany({
+        Game: { connect: { id: phase.gameId } },
+        Sector: { connect: { id: sectorId } },
+        status: CompanyStatus.INACTIVE,
+        currentStockPrice: null,
+        companyTier: startingCompanyTier,
+        name: newCompanyInfo.name,
+        stockSymbol: newCompanyInfo.symbol,
+        unitPrice: Math.floor(
+          Math.random() * (sector.unitPriceMax - sector.unitPriceMin + 1) +
+            sector.unitPriceMin,
+        ),
+        throughput: 0,
+        ipoAndFloatPrice: null,
+        cashOnHand: 0,
+        stockTier: undefined,
+        demandScore: 0,
+        baseDemand: 0,
+        supplyCurrent: 0,
+        supplyMax: CompanyTierData[startingCompanyTier].supplyMax,
+      });
+  
+      const shares = [];
+      for (let i = 0; i < DEFAULT_SHARE_DISTRIBUTION; i++) {
+        shares.push({
+          price: newCompany.ipoAndFloatPrice,
+          location: ShareLocation.IPO,
+          companyId: newCompany.id,
+          gameId: phase.gameId,
+        });
+      }
+      await this.shareService.createManyShares(shares);
+      //create stock history
+      await this.stockHistoryService.createStockHistory({
+        price: 0,
+        action: StockAction.INITIAL,
+        stepsMoved: 0,
+        Company: { connect: { id: newCompany.id } },
+        Game: { connect: { id: phase.gameId } },
+        Phase: { connect: { id: phase.id } },
+      });
+  
+      await this.gameLogService.createGameLog({
+        game: { connect: { id: phase.gameId } },
+        content: `A new company ${newCompany.name} has been established in the ${sector.sectorName} sector.`,
+      });
+      //add 1 base demand to the company sector
+      await this.sectorService.updateSector({
+        where: { id: sectorId },
+        data: { demand: (sector.demand || 0) + 1 },
+      });
+    }
+   /**
+   * Every third turn, look for the sector with the highest average stock price.
+   * A new company is opened in this sector. If there are zero companies active, we skip this.
+   * If there are no active, inactive or insolvent companies in a sector, we open a company in that sector.
+   * @param phase
+   */
+   async handleOpeningNewCompany(phase: Phase) {
+    // Get the current game turn
+    const gameTurn = await this.gameTurnService.getCurrentTurn(phase.gameId);
+    if (!gameTurn) {
+      throw new Error('Game turn not found');
+    }
+
+    // Get the game to check max turns
+    const game = await this.gamesService.game({ id: phase.gameId });
+    if (!game) {
+      throw new Error('Game not found');
+    }
+
+    // If game has 10 turns or less, create a new company every 2 turns
+    // Otherwise, create a new company every 3 turns
+    const turnInterval = game.gameMaxTurns && game.gameMaxTurns <= 10 ? 2 : 3;
+    if (gameTurn.turn % turnInterval !== 0) {
+      return;
+    }
+
+    //get all sectors for the game
+    const sectors = await this.sectorService.sectors({
+      where: { gameId: phase.gameId },
+    });
+    if (!sectors) {
+      throw new Error('Sectors not found');
+    }
+
+    // Get all active companies and group by sector
+    const companies = await this.companyService.companiesWithSector({
+      where: {
+        gameId: phase.gameId,
+        OR: [
+          { status: CompanyStatus.ACTIVE },
+          { status: CompanyStatus.INSOLVENT },
+        ],
+      },
+    });
+    if (!companies || companies.length === 0) {
+      throw new Error('No active companies found');
+    }
+
+    const groupedCompanies = companies.reduce(
+      (acc, company) => {
+        if (!acc[company.sectorId]) {
+          acc[company.sectorId] = [];
+        }
+        acc[company.sectorId].push(company);
+        return acc;
+      },
+      {} as { [key: string]: CompanyWithSector[] },
+    );
+
+    //find the average stock price of each sector
+    const sectorAverages = Object.entries(groupedCompanies).map(
+      ([sectorId, companies]) => {
+        const averageStockPrice = calculateAverageStockPrice(companies);
+        return { sectorId, averageStockPrice };
+      },
+    );
+
+    //find the sector with the highest average stock price
+    const topSector = sectorAverages.reduce((prev, curr) => {
+      return curr.averageStockPrice > prev.averageStockPrice ? curr : prev;
+    });
+
+    //create a new company in this sector
+    this.createCompanyInSector(
+      phase,
+      topSector.sectorId,
+      groupedCompanies[topSector.sectorId],
+      CompanyTier.GROWTH,
+    );
+
+    //if any sectors are empty, create one company in each of those sectors
+    const companiesThatArePlayableInSector =
+      await this.companyService.companiesWithSector({
+        where: {
+          gameId: phase.gameId,
+          OR: [
+            { status: CompanyStatus.ACTIVE },
+            { status: CompanyStatus.INACTIVE },
+            { status: CompanyStatus.INSOLVENT },
+          ],
+        },
+      });
+
+    // Group these companies by sector
+    const playableGroupedCompanies = companiesThatArePlayableInSector.reduce(
+      (acc, company) => {
+        if (!acc[company.sectorId]) {
+          acc[company.sectorId] = [];
+        }
+        acc[company.sectorId].push(company);
+        return acc;
+      },
+      {} as { [key: string]: CompanyWithSector[] },
+    );
+
+    // Check for any sectors without active, inactive, or insolvent companies
+    const emptySectors = sectors.filter(
+      (sector) => !playableGroupedCompanies[sector.id],
+    );
+    if (emptySectors.length === 0) {
+      return;
+    }
+    // Create one company in each empty sector
+    for (const emptySector of emptySectors) {
+      await this.createCompanyInSector(
+        phase,
+        emptySector.id,
+        [],
+        CompanyTier.STARTUP,
+      );
+    }
+  }
+
   async getFactoryCost(size: FactorySize, resources: RequiredResource[]): Promise<number> {
     let baseCost = 100;
     switch (size) {
@@ -1233,6 +1427,8 @@ export class ModernOperationMechanicsService {
       cashOnHand?: number;
       researchGrants?: number;
       marketFavors?: number;
+      sectorId?: string;
+      researchProgressGain?: number;
     }> = [];
     const researchGameLogEntries: Array<{ gameId: string; content: string }> = [];
     const researchOrderUpdates: Array<{
@@ -1272,6 +1468,8 @@ export class ModernOperationMechanicsService {
         id: company.id,
         researchProgress: newProgress,
         cashOnHand: company.cashOnHand - order.cost,
+        sectorId: company.sectorId, // Include sectorId to update sector marker
+        researchProgressGain, // Include gain to update sector marker
       });
 
       // Mark order with result
@@ -1316,6 +1514,31 @@ export class ModernOperationMechanicsService {
           });
         })
       );
+
+      // Update sector research markers based on research progress gains
+      const sectorGains = new Map<string, number>();
+      researchCompanyUpdates.forEach(update => {
+        if (update.sectorId && update.researchProgressGain !== undefined && update.researchProgressGain > 0) {
+          const current = sectorGains.get(update.sectorId) || 0;
+          sectorGains.set(update.sectorId, current + update.researchProgressGain);
+        }
+      });
+
+      // Batch update sector research markers
+      if (sectorGains.size > 0) {
+        await this.prisma.$transaction(
+          Array.from(sectorGains.entries()).map(([sectorId, gain]) =>
+            this.prisma.sector.update({
+              where: { id: sectorId },
+              data: {
+                researchMarker: {
+                  increment: gain,
+                },
+              },
+            })
+          )
+        );
+      }
     }
 
     // Check for research milestones after processing all orders
@@ -1927,12 +2150,18 @@ export class ModernOperationMechanicsService {
   }
 
   /**
-   * Calculate and update sector demand based on base sector demand + brand scores + worker allocation
-   * Effective Demand = base sector demand (from initialization) + sum of brand scores + worker allocation by sector
+   * Calculate and update sector demand based on base sector demand + brand scores + worker allocation + research stage bonus
+   * Effective Demand = base sector demand + sum of brand scores + worker allocation + research stage bonus
    * 
    * Worker allocation = total workers in factories + marketing campaigns + research for that sector
+   * Research stage bonus:
+   *   - Stage 1 (researchMarker 0-5): +0
+   *   - Stage 2 (researchMarker 6-10): +2
+   *   - Stage 3 (researchMarker 11-15): +3
+   *   - Stage 4 (researchMarker 16-20): +5
+   * 
    * The sector's `baseDemand` field stores the initial demand from gameData (preserved).
-   * The `demand` field is updated each turn to reflect effective demand (base + brand + workers).
+   * The `demand` field is updated each turn to reflect effective demand (base + brand + workers + research stage).
    */
   private async updateSectorDemand(phase: Phase) {
     // Query sectors with companies directly using Prisma to include Company relation
@@ -2014,12 +2243,18 @@ export class ModernOperationMechanicsService {
       // Worker allocation for this sector
       const workerAllocation = workerAllocationBySector.get(sector.id) || 0;
 
-      // Base demand should be 0 for modern operations - demand comes from workers + brand bonus only
-      // If baseDemand exists but is > 0, it's from old gameData and should be ignored
-      const baseDemand = 0; // No base demand - all demand comes from worker allocation + brand bonus
+      // Calculate research stage bonus based on sector researchMarker
+      // Stage 1 (0-5): +0, Stage 2 (6-10): +2, Stage 3 (11-15): +3, Stage 4 (16-20): +5
+      const researchMarker = sector.researchMarker || 0;
+      const researchStage = Math.min(Math.floor(researchMarker / 5) + 1, 4);
+      const researchStageBonus = researchStage === 1 ? 0 : researchStage === 2 ? 2 : researchStage === 3 ? 3 : 5;
 
-      // Effective demand = base demand + brand scores + worker allocation
-      const effectiveDemand = baseDemand + totalBrandScore + workerAllocation;
+      // Base demand should be 0 for modern operations - demand comes from workers + brand bonus + research stage only
+      // If baseDemand exists but is > 0, it's from old gameData and should be ignored
+      const baseDemand = 0; // No base demand - all demand comes from worker allocation + brand bonus + research stage
+
+      // Effective demand = base demand + brand scores + worker allocation + research stage bonus
+      const effectiveDemand = baseDemand + totalBrandScore + workerAllocation + researchStageBonus;
 
       // Update the sector's demand field to show effective demand
       if (effectiveDemand !== sector.demand) {
@@ -2030,7 +2265,7 @@ export class ModernOperationMechanicsService {
 
         gameLogEntries.push({
           gameId: phase.gameId,
-          content: `${sector.sectorName} effective demand: ${effectiveDemand} (base: ${baseDemand} + brand: ${totalBrandScore} + workers: ${workerAllocation})`,
+          content: `${sector.sectorName} effective demand: ${effectiveDemand} (base: ${baseDemand} + brand: ${totalBrandScore} + workers: ${workerAllocation} + research stage ${researchStage}: +${researchStageBonus})`,
         });
       }
     }

@@ -148,7 +148,22 @@ const OperatingRoundRevenueVoteResolveV2 = () => {
     return outcomes;
   }, [revenueDistributionVotes]);
 
-  if (productionLoading || companiesLoading || votesLoading) {
+  // Get all shares for all companies (to calculate dividends)
+  const companyIds = useMemo(() => 
+    consumptionRevenueData.map(c => c.companyId),
+    [consumptionRevenueData]
+  );
+  const { data: allCompanyShares, isLoading: sharesLoading } =
+    trpc.share.listSharesWithRelations.useQuery(
+      {
+        where: {
+          companyId: { in: companyIds },
+        },
+      },
+      { enabled: companyIds.length > 0 }
+    );
+
+  if (productionLoading || companiesLoading || votesLoading || sharesLoading) {
     return (
       <div className="p-6 rounded-lg shadow-md">
         <div className="flex items-center justify-center h-64">
@@ -215,24 +230,44 @@ const OperatingRoundRevenueVoteResolveV2 = () => {
           const voteOutcome = voteOutcomesByCompany.get(companyRevenue.companyId) || RevenueDistribution.RETAINED;
           const revenue = companyRevenue.revenue;
 
-          // Get shares for this company (only IPO shares are eligible for dividends)
-          const companyShares = playersWithShares
-            ?.flatMap(player => player.Share.filter(share => share.companyId === companyRevenue.companyId && share.location === ShareLocation.IPO))
-            || [];
+          // Get all shares for this company to calculate eligible shares for dividends
+          // Dividends are paid to PLAYER and OPEN_MARKET shares (not IPO)
+          const companyShares = (allCompanyShares || []).filter(
+            (share) => share.companyId === companyRevenue.companyId
+          );
+
+          // Each company has 10 shares in rotation
+          const TOTAL_SHARES_IN_ROTATION = 10;
+
+          // Filter shares eligible for dividends (PLAYER and OPEN_MARKET, not IPO)
+          const eligibleShares = companyShares.filter(
+            (share) =>
+              share.location === ShareLocation.PLAYER ||
+              share.location === ShareLocation.OPEN_MARKET
+          );
           
-          const shareCount = companyShares.length;
+          const shareCount = eligibleShares.length;
+          
+          // Get player-held shares only (for shareholder count and breakdown)
+          const playerShares = eligibleShares.filter(
+            (share) => share.location === ShareLocation.PLAYER && share.playerId
+          );
           
           let dividendTotal = 0;
           let dividendPerShare = 0;
           let retained = 0;
           
           if (voteOutcome === RevenueDistribution.DIVIDEND_FULL) {
-            dividendTotal = revenue;
-            dividendPerShare = shareCount > 0 ? Math.floor(revenue / shareCount) : 0;
-            retained = 0;
+            // Dividend per share = revenue / 10 (rounded down)
+            dividendPerShare = Math.floor(revenue / TOTAL_SHARES_IN_ROTATION);
+            // Total dividends paid = per share * number of eligible shares
+            dividendTotal = dividendPerShare * shareCount;
+            retained = revenue - dividendTotal;
           } else if (voteOutcome === RevenueDistribution.DIVIDEND_FIFTY_FIFTY) {
-            dividendTotal = Math.floor(revenue / 2);
-            dividendPerShare = shareCount > 0 ? Math.floor(dividendTotal / shareCount) : 0;
+            // Half revenue per share = (revenue / 2) / 10 (rounded down)
+            dividendPerShare = Math.floor(Math.floor(revenue / 2) / TOTAL_SHARES_IN_ROTATION);
+            // Total dividends paid = per share * number of eligible shares
+            dividendTotal = dividendPerShare * shareCount;
             retained = revenue - dividendTotal;
           } else {
             dividendTotal = 0;
@@ -240,14 +275,17 @@ const OperatingRoundRevenueVoteResolveV2 = () => {
             retained = revenue;
           }
 
-          // Group shares by player to calculate per-player dividends
+          // Group player shares by player to calculate per-player dividends
           const playerShareCounts = new Map<string, number>();
-          companyShares.forEach(share => {
+          playerShares.forEach(share => {
             if (share.playerId) {
               const currentCount = playerShareCounts.get(share.playerId) || 0;
               playerShareCounts.set(share.playerId, currentCount + 1);
             }
           });
+          
+          // Count unique shareholders (players who own shares)
+          const shareholderCount = playerShareCounts.size;
 
           return (
             <div key={companyRevenue.companyId} className="bg-gray-800 rounded-lg p-4 border border-gray-700">
@@ -292,7 +330,7 @@ const OperatingRoundRevenueVoteResolveV2 = () => {
                     {voteOutcome === RevenueDistribution.RETAINED && 'Retained'}
                   </Badge>
                 </div>
-                <div className="text-sm text-gray-300">Shareholders: <span className="font-bold text-blue-400">{shareCount}</span></div>
+                <div className="text-sm text-gray-300">Shareholders: <span className="font-bold text-blue-400">{shareholderCount}</span></div>
                 <div className="flex flex-col gap-1 mt-2">
                   <div className="text-sm text-green-400">Dividends Paid: <span className="font-bold">${dividendTotal.toLocaleString()}</span> {dividendTotal > 0 && shareCount > 0 && <span className="text-xs text-gray-400">(${dividendPerShare}/share)</span>}</div>
                   <div className="text-sm text-yellow-400">Retained by Company: <span className="font-bold">${retained.toLocaleString()}</span></div>
