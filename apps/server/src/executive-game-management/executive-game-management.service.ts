@@ -928,7 +928,7 @@ export class ExecutiveGameManagementService {
       ...currentCache,
       players,
     });
-    this.startPhase({
+    await this.startPhase({
       gameId: game.id,
       gameTurnId: turn.id,
       phaseName: ExecutivePhaseName.START_GAME,
@@ -1676,14 +1676,31 @@ export class ExecutiveGameManagementService {
           gameId,
         },
       }));
+    
+    if (!players || players.length === 0) {
+      throw new Error(`No players found for game ${gameId}`);
+    }
+    
+    if (handSize <= 0) {
+      throw new Error(`Invalid hand size: ${handSize} for game ${gameId}`);
+    }
+    
     // Draw enough cards for both hands and bribes for each player
     const totalCardsNeeded =
       players.length * handSize + players.length * BRIBE_CARD_HAND_SIZE;
+    
+    console.log(`[dealCards] Game ${gameId}: Dealing ${handSize} hand cards + ${BRIBE_CARD_HAND_SIZE} bribe card to ${players.length} players (${totalCardsNeeded} total cards)`);
+    
     const cards = await this.cardService.drawCards(gameId, totalCardsNeeded);
+    
+    if (cards.length !== totalCardsNeeded) {
+      throw new Error(`Expected ${totalCardsNeeded} cards but got ${cards.length}`);
+    }
 
     // Divide cards into hands and bribes
     const handCards = cards.slice(0, players.length * handSize);
     const bribeCards = cards.slice(players.length * handSize);
+    
     // Batch update all cards at once instead of per-player sequential updates
     const cardUpdates: Array<{ id: string; cardLocation: CardLocation; playerId: string }> = [];
     
@@ -1696,6 +1713,14 @@ export class ExecutiveGameManagementService {
         i * BRIBE_CARD_HAND_SIZE,
         (i + 1) * BRIBE_CARD_HAND_SIZE,
       );
+      
+      if (playerHandCards.length !== handSize) {
+        throw new Error(`Player ${playerId} (index ${i}): Expected ${handSize} hand cards but got ${playerHandCards.length}`);
+      }
+      
+      if (playerBribeCards.length !== BRIBE_CARD_HAND_SIZE) {
+        throw new Error(`Player ${playerId} (index ${i}): Expected ${BRIBE_CARD_HAND_SIZE} bribe cards but got ${playerBribeCards.length}`);
+      }
       
       // Collect all card updates
       playerHandCards.forEach((card) => {
@@ -1715,9 +1740,14 @@ export class ExecutiveGameManagementService {
       });
     }
     
+    if (cardUpdates.length !== totalCardsNeeded) {
+      throw new Error(`Expected ${totalCardsNeeded} card updates but prepared ${cardUpdates.length}`);
+    }
+    
     // Execute all card updates in parallel batches
+    // Use cardService.updateExecutiveCard to ensure cache is updated
     const updatePromises = cardUpdates.map((update) =>
-      this.prisma.executiveCard.update({
+      this.cardService.updateExecutiveCard({
         where: { id: update.id },
         data: {
           cardLocation: update.cardLocation,
@@ -1726,7 +1756,8 @@ export class ExecutiveGameManagementService {
       })
     );
     
-    await Promise.all(updatePromises);
+    const updateResults = await Promise.all(updatePromises);
+    console.log(`[dealCards] Game ${gameId}: Successfully updated ${updateResults.length} cards`);
     //take one card from the deck for the trump card
     const trumpCard = await this.cardService.drawCards(gameId, 1);
     //update the trump card
