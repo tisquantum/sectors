@@ -78,7 +78,7 @@ const CompanyPriorityList = ({
     return companyData.find((company) => company.id === sortedCompany.id)!;
   });
   return (
-    <div className="container mx-auto px-4">
+    <div className="container mx-auto px-4 flex flex-col">
       {!isRuleExplanation && (
         <>
           <h2 className="text-2xl font-bold mb-4">Company Priority List</h2>
@@ -129,10 +129,10 @@ const CompanyPriorityList = ({
         </>
       )}
       <div className="mt-6 p-4 border-t">
-        <h4 className="text-xl font-semibold mb-2">
+        <h4 className="text-lg lg text-xl font-semibold mb-2">
           Priority Sorting Explanation:
         </h4>
-        <ul className="list-disc list-inside">
+        <ul className="text-sm lg:text-base list-disc list-inside">
           <li>
             0: If a company has Economies of Scale, it is considered to be the
             cheapest company regardless of its unit price.

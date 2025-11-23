@@ -19,7 +19,16 @@ export default (trpc: TrpcService, ctx: Context) =>
         }
         return sector;
       }),
-
+    getSectorWithCompanies: trpc.procedure
+      .input(z.object({ id: z.string() }))
+      .query(async ({ input }) => {
+        const { id } = input;
+        const sector = await ctx.sectorService.sectorWithCompanies({ id });
+        if (!sector) {
+          throw new Error('Sector not found');
+        }
+        return sector;
+      }),
     listSectors: trpc.procedure
       .input(
         z.object({
@@ -62,66 +71,28 @@ export default (trpc: TrpcService, ctx: Context) =>
         });
       }),
 
-    createSector: trpc.procedure
+    updateResearchMarker: trpc.procedure
       .input(
         z.object({
-          name: z.string(),
-          supply: z.number(),
-          demand: z.number(),
-          marketingPrice: z.number(),
-          basePrice: z.number(),
-          ipoMin: z.number(),
-          ipoMax: z.number(),
-          Company: z.any().optional(),
-          Game: z.object({
-            connect: z.object({ id: z.string() }).optional(),
-          }),
+          sectorId: z.string(),
+          gameId: z.string(),
+          amount: z.number(),
         }),
       )
       .mutation(async ({ input }) => {
-        const data: Prisma.SectorCreateInput = input;
-        delete data.id;
-        return ctx.sectorService.createSector(data);
+        const { sectorId, gameId, amount } = input;
+        return ctx.sectorService.updateResearchMarker(sectorId, gameId, amount);
       }),
 
-    createManySectors: trpc.procedure
-      .input(z.array(z.any()))
-      .mutation(async ({ input }) => {
-        const data: Prisma.SectorCreateManyInput[] = input;
-        data.forEach((d) => delete d.id);
-        return ctx.sectorService.createManySectors(data);
-      }),
-
-    updateSector: trpc.procedure
+    getSectorResearchProgress: trpc.procedure
       .input(
         z.object({
-          id: z.string(),
-          data: z.object({
-            name: z.string().optional(),
-            supply: z.number().optional(),
-            demand: z.number().optional(),
-            marketingPrice: z.number().optional(),
-            basePrice: z.number().optional(),
-            ipoMin: z.number().optional(),
-            ipoMax: z.number().optional(),
-            Company: z.any().optional(),
-            Game: z
-              .object({
-                connect: z.object({ id: z.string() }).optional(),
-              })
-              .optional(),
-          }),
+          sectorId: z.string(),
+          gameId: z.string(),
         }),
       )
-      .mutation(async ({ input }) => {
-        const { id, data } = input;
-        return ctx.sectorService.updateSector({ where: { id }, data });
-      }),
-
-    deleteSector: trpc.procedure
-      .input(z.object({ id: z.string() }))
-      .mutation(async ({ input }) => {
-        const { id } = input;
-        return ctx.sectorService.deleteSector({ id });
+      .query(async ({ input }) => {
+        const { sectorId, gameId } = input;
+        return ctx.sectorService.getSectorResearchProgress(sectorId, gameId);
       }),
   });

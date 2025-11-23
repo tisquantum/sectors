@@ -3,14 +3,12 @@ import type * as express from 'express';
 import type { CreateNextContextOptions } from '@trpc/server/adapters/next';
 import { TRPCError } from '@trpc/server';
 import { NodeHTTPCreateContextFnOptions } from '@trpc/server/dist/adapters/node-http';
-import { PlayersService } from '@server/players/players.service';
 
 // Ensure Supabase client is created once
 const supabaseUrl = process.env.SUPABASE_URL!;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY!;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-interface ContextOptions extends Partial<CreateNextContextOptions> {}
 export type CreateExpressContextOptions = NodeHTTPCreateContextFnOptions<
   express.Request,
   express.Response
@@ -68,5 +66,3 @@ export const createContext = async (
     user,
   };
 };
-
-//export type Context = Awaited<ReturnType<typeof createContext>>;

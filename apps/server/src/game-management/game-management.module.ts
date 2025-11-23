@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { PrismaModule } from '@server/prisma/prisma.module';
 import { PlayersModule } from '@server/players/players.module';
 import { GameManagementService } from './game-management.service';
@@ -34,6 +34,22 @@ import { InsolvencyContributionModule } from '@server/insolvency-contribution/in
 import { PrizeModule } from '@server/prize/prize.module';
 import { PrizeVotesModule } from '@server/prize-votes/prize-votes.module';
 import { PrizeDistributionModule } from '@server/prize-distribution/prize-distribution.module';
+import { RoomUserModule } from '@server/room-user/room-user.module';
+import { CompanyActionOrderModule } from '@server/company-action-order/company-action-order.module';
+import { HeadlineModule } from '@server/headline/headline.module';
+import { StockSubRoundModule } from '@server/stock-sub-round/stock-sub-round.module';
+import { CompanyAwardTrackModule } from '@server/company-award-track/company-award-track.module';
+import { CompanyAwardTrackSpaceModule } from '@server/company-award-track-space/company-award-track-space.module';
+import { AiBotModule } from '@server/ai-bot/ai-bot.module';
+import { RevenueDistributionVoteModule } from '@server/revenue-distribution-vote/revenue-distribution-vote.module';
+import { OperatingRoundVoteModule } from '@server/operating-round-vote/operating-round-vote.module';
+import { ModernOperationMechanicsService } from './modern-operation-mechanics.service';
+import { FactoryConstructionModule } from '@server/factory-construction/factory-construction.module';
+import { ResourceModule } from '@server/resource/resource.module';
+import { FactoryModule } from '@server/factory/factory.module';
+import { ConsumptionMarkerModule } from '@server/consumption-marker/consumption-marker.module';
+import { MarketingModule } from '@server/marketing/marketing.module';
+import { FactoryProductionModule } from '@server/factory-production/factory-production.module';
 
 @Module({
   imports: [
@@ -71,8 +87,26 @@ import { PrizeDistributionModule } from '@server/prize-distribution/prize-distri
     PrizeModule,
     PrizeVotesModule,
     PrizeDistributionModule,
+    RoomUserModule,
+    CompanyActionOrderModule,
+    HeadlineModule,
+    StockSubRoundModule,
+    CompanyAwardTrackModule,
+    CompanyAwardTrackSpaceModule,
+    AiBotModule,
+    RevenueDistributionVoteModule,
+    OperatingRoundVoteModule,
+    FactoryConstructionModule,
+    FactoryModule,
+    ResourceModule,
+    ConsumptionMarkerModule,
+    MarketingModule,
+    FactoryProductionModule,
   ],
-  providers: [GameManagementService],
+  providers: [
+    GameManagementService,
+    ModernOperationMechanicsService,
+  ],
   exports: [GameManagementService],
 })
 export class GameManagementModule {}

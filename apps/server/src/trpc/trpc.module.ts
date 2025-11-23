@@ -40,10 +40,35 @@ import { InsolvencyContributionService } from '@server/insolvency-contribution/i
 import { PrizeService } from '@server/prize/prize.service';
 import { PrizeVotesService } from '@server/prize-votes/prize-votes.service';
 import { PrizeDistributionService } from '@server/prize-distribution/prize-distribution.service';
+import { CompanyActionOrderService } from '@server/company-action-order/company-action-order.service';
+import { HeadlineService } from '@server/headline/headline.service';
+import { PlayerHeadlineService } from '@server/player-headline/player-headline.service';
+import { StockSubRoundService } from '@server/stock-sub-round/stock-sub-round.service';
+import { CompanyAwardTrackService } from '@server/company-award-track/company-award-track.service';
+import { CompanyAwardTrackSpaceService } from '@server/company-award-track-space/company-award-track-space.service';
+import { ExecutiveGameService } from '@server/executive-game/executive-game.service';
+import { ExecutiveCardService } from '@server/executive-card/executive-card.service';
+import { ExecutiveInfluenceBidService } from '@server/executive-influence-bid/executive-influence-bid.service';
+import { ExecutiveInfluenceService } from '@server/executive-influence/executive-influence.service';
+import { ExecutivePlayerService } from '@server/executive-player/executive-player.service';
+import { ExecutiveGameManagementService } from '@server/executive-game-management/executive-game-management.service';
+import { ExecutivePhaseService } from '@server/executive-phase/executive-phase.service';
+import { ExecutiveGameTurnService } from '@server/executive-game-turn/executive-game-turn.service';
+import { ExecutiveInfluenceVoteRoundService } from '@server/executive-influence-vote-round/executive-influence-vote-round.service';
+import { AiBotService } from '@server/ai-bot/ai-bot.service';
+import { MarketingService } from '@server/marketing/marketing.service';
+import { FactoryService } from '@server/factory/factory.service';
+import { FactoryConstructionModule } from '../factory-construction/factory-construction.module';
+import { factoryConstructionRouter } from './routers/factory-construction.router';
+import { FactoryConstructionService } from '@server/factory-construction/factory-construction.service';
+import { ModernOperationMechanicsService } from '@server/game-management/modern-operation-mechanics.service';
+import { FactoryConstructionOrderService } from '@server/factory-construction/factory-construction-order.service';
+import { ResourceService } from '@server/resource/resource.service';
+import { ConsumptionMarkerService } from '@server/consumption-marker/consumption-marker.service';
+import { FactoryProductionService } from '@server/factory-production/factory-production.service';
 
 @Module({
   imports: [PrismaModule],
-  controllers: [],
   providers: [
     TrpcService,
     TrpcRouter,
@@ -86,6 +111,32 @@ import { PrizeDistributionService } from '@server/prize-distribution/prize-distr
     PrizeService,
     PrizeVotesService,
     PrizeDistributionService,
+    RoomUserService,
+    CompanyActionOrderService,
+    HeadlineService,
+    PlayerHeadlineService,
+    StockSubRoundService,
+    CompanyAwardTrackService,
+    CompanyAwardTrackSpaceService,
+    ExecutiveGameService,
+    ExecutiveGameTurnService,
+    ExecutivePlayerService,
+    ExecutiveCardService,
+    ExecutiveInfluenceBidService,
+    ExecutiveInfluenceService,
+    ExecutiveGameManagementService,
+    ExecutivePhaseService,
+    ExecutiveInfluenceService,
+    ExecutiveInfluenceVoteRoundService,
+    MarketingService,
+    FactoryService,
+    AiBotService,
+    FactoryConstructionService,
+    ModernOperationMechanicsService,
+    FactoryConstructionOrderService,
+    ResourceService,
+    ConsumptionMarkerService,
+    FactoryProductionService,
   ],
 })
 export class TrpcModule {}

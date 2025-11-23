@@ -123,7 +123,6 @@ const DerivativesTable = ({ isInteractive }: { isInteractive: boolean }) => {
           </AvatarGroup>
         );
       case "Owner":
-        console.log("contract PlayerOrders", contract);
         const owner = contract.PlayerOrders?.find(
           (playerOrder) =>
             playerOrder.orderStatus === OrderStatus.OPEN ||
@@ -184,7 +183,8 @@ const DerivativesTable = ({ isInteractive }: { isInteractive: boolean }) => {
       case "Place Order":
         return (
           <>
-            {isInteractive &&
+            {authPlayer &&
+              isInteractive &&
               contract.contractState == ContractState.FOR_SALE &&
               (!isSubmitted ? (
                 <div
@@ -216,10 +216,6 @@ const DerivativesTable = ({ isInteractive }: { isInteractive: boolean }) => {
                   <DebounceButton
                     className="bg-blue-500 text-white px-4 py-2 rounded-lg"
                     onClick={() => {
-                      console.log(
-                        "parseInt(bidAmounts[contract.id])",
-                        parseInt(bidAmounts[contract.id])
-                      );
                       setIsLoadingOrderButton(true);
                       try {
                         useCreatePlayerOrderMutation.mutate({

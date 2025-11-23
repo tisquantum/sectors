@@ -37,7 +37,6 @@ const ShareOwnershipTable = ({
   if (isLoading) return <div>Loading...</div>;
   if (isError) return <div>Error loading players with shares</div>;
   if (!playersWithShares) return <div>No players with shares</div>;
-  console.log("playersWithShares", playersWithShares);
   //   return (
   //     <Table>
   //       <TableHeader>
@@ -87,7 +86,6 @@ const ShareOwnershipTable = ({
     (player) =>
       player.Share.filter((share) => share.companyId === company.id).length > 0
   );
-  console.log("playersWithSharesAboveZero", playersWithSharesAboveZero.length);
   return (
     <div
       className={`relative flex flex-wrap gap-2 ${calculateWidthForLength(

@@ -8,26 +8,35 @@ import {
   ModalContent,
   ModalFooter,
   ModalHeader,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   Tooltip,
   useDisclosure,
 } from "@nextui-org/react";
 import {
   RiBankCard2Fill,
   RiBox2Fill,
+  RiBuilding3Fill,
   RiExpandUpDownFill,
   RiFundsBoxFill,
   RiFundsFill,
   RiGameFill,
+  RiGlasses2Fill,
   RiGovernmentFill,
   RiHandCoinFill,
   RiIncreaseDecreaseFill,
   RiPriceTag3Fill,
   RiSailboatFill,
+  RiShapesFill,
   RiSparkling2Fill,
+  RiStackFill,
   RiTeamFill,
+  RiUserFill,
   RiWallet3Fill,
 } from "@remixicon/react";
 import {
+  baseToolTipStyle,
   tooltipParagraphStyle,
   tooltipStyle,
 } from "@sectors/app/helpers/tailwind.helpers";
@@ -40,18 +49,35 @@ import {
 } from "@server/data/constants";
 import { sectorColors } from "@server/data/gameData";
 import { calculateCompanySupply, calculateDemand } from "@server/data/helpers";
-import { CompanyStatus, Share } from "@server/prisma/prisma.client";
-import { CompanyWithSector } from "@server/prisma/prisma.types";
-import { BarList } from "@tremor/react";
+import {
+  CompanyStatus,
+  OperationMechanicsVersion,
+  Player,
+  Share,
+  ShareLocation,
+} from "@server/prisma/prisma.client";
+import {
+  CompanyWithSector,
+  ShareWithPlayer,
+} from "@server/prisma/prisma.types";
+import { BarList, LineChart } from "@tremor/react";
 import ThroughputLegend from "../Game/ThroughputLegend";
 import { trpc } from "@sectors/app/trpc";
 import CompanyTiers from "./CompanyTiers";
 import { MoneyTransactionHistoryByCompany } from "../Game/MoneyTransactionHistory";
 import PassiveEffect from "./PassiveEffect";
+import { useGame } from "../Game/GameContext";
+import { useEffect } from "react";
+import ShareComponent from "./Share";
+import { renderLocationShortHand } from "@sectors/app/helpers";
+import PlayerAvatar from "../Player/PlayerAvatar";
+import { CompanyLineChart } from "./CompanyLineChart";
+import CompanyResearchCards from "./CompanyResearchCards";
+import { ModernCompany } from "./CompanyV2/ModernCompany";
 
-const buildBarChart = (share: Share[]) => {
+const buildBarChart = (shares: ShareWithPlayer[]) => {
   //group shares by location and sum the quantity
-  const groupedShares = share.reduce((acc, share) => {
+  const groupedShares = shares.reduce((acc, share) => {
     if (!acc[share.location]) {
       acc[share.location] = 0;
     }
@@ -59,10 +85,57 @@ const buildBarChart = (share: Share[]) => {
     return acc;
   }, {} as Record<string, number>);
   //convert object to array
-  return Object.entries(groupedShares).map(([location, quantity]) => ({
-    name: location,
-    value: quantity,
-  }));
+  return Object.entries(groupedShares).map(([location, quantity], index) =>
+    location == ShareLocation.PLAYER ? (
+      <Popover key={index}>
+        <PopoverTrigger>
+          <div className="flex justify-center items-center cursor-pointer">
+            <ShareComponent
+              name={"Player"}
+              icon={<RiUserFill className={"text-slate-800"} size={18} />}
+              quantity={quantity}
+            />
+          </div>
+        </PopoverTrigger>
+        <PopoverContent>
+          <div className="flex flex-wrap gap-1">
+            {Object.values(
+              shares
+                .filter((share) => share.location === ShareLocation.PLAYER)
+                .reduce((acc, share) => {
+                  const playerId = share.Player?.id;
+                  if (playerId && share.Player) {
+                    if (!acc[playerId]) {
+                      acc[playerId] = {
+                        quantity: 0,
+                        Player: share.Player,
+                      };
+                    }
+                    acc[playerId].quantity += 1; // Sum the quantity for each player
+                  }
+                  return acc;
+                }, {} as Record<string, { quantity: number; Player: Player }>) // Accumulate by player ID
+            ).map((shareData, index) => (
+              <div key={index} className="flex gap-2 items-center">
+                <div className="flex items-center">
+                  {shareData.Player && (
+                    <PlayerAvatar player={shareData.Player} />
+                  )}
+                </div>
+                <span>{shareData.quantity}</span>
+              </div>
+            ))}
+          </div>
+        </PopoverContent>
+      </Popover>
+    ) : (
+      <ShareComponent
+        key={index}
+        name={renderLocationShortHand(location as ShareLocation)}
+        quantity={quantity}
+      />
+    )
+  );
 };
 
 const CompanyMoreInfo = ({
@@ -73,14 +146,18 @@ const CompanyMoreInfo = ({
   showingProductionResults?: boolean;
 }) => {
   return (
-    <div className="flex gap-1 justify-start my-2">
+    <div className="flex gap-1 my-2">
       <div
         className="flex flex-col px-2 rounded-md"
         style={{ backgroundColor: sectorColors[company.Sector.name] }}
       >
-        <span>{company.Sector.name}</span>
+        <div className="flex items-center gap-1">
+          <RiShapesFill size={18} />
+          <span>{company.Sector.name}</span>
+        </div>
         <div className="flex items-center gap-1">
           <Tooltip
+            classNames={{ base: baseToolTipStyle }}
             className={tooltipStyle}
             content={
               <p className={tooltipParagraphStyle}>
@@ -99,6 +176,7 @@ const CompanyMoreInfo = ({
             </div>
           </Tooltip>
           <Tooltip
+            classNames={{ base: baseToolTipStyle }}
             className={tooltipStyle}
             content={
               <p className={tooltipParagraphStyle}>
@@ -113,23 +191,29 @@ const CompanyMoreInfo = ({
           </Tooltip>
         </div>
       </div>
-      <div className="grid grid-cols-2 items-center">
+      <div className="flex flex-wrap items-center">
         <Tooltip
+          classNames={{ base: baseToolTipStyle }}
           className={tooltipStyle}
           content={
             <p className={tooltipParagraphStyle}>
               Prestige tokens. While held, they help prioritize the company for
-              production. Can be spent for a bonus. Sell all of your companies
-              supply during an operating round to earn a prestige token.
+              production. Can be spent for a bonus. How to earn prestige: If a
+              company sells all of it&apos;s supply during an operating round,
+              it earns 1 prestige token.
             </p>
           }
         >
           <div className="flex items-center">
-            <RiSparkling2Fill className="ml-2 size-4 text-yellow-500" />
+            <RiSparkling2Fill
+              size={18}
+              className="ml-2 size-4 text-yellow-500"
+            />
             <span className="ml-1">{company.prestigeTokens}</span>
           </div>
         </Tooltip>
         <Tooltip
+          classNames={{ base: baseToolTipStyle }}
           className={tooltipStyle}
           content={
             <p className={tooltipParagraphStyle}>
@@ -140,13 +224,16 @@ const CompanyMoreInfo = ({
         >
           <div className="flex items-center">
             <RiHandCoinFill size={18} className="ml-2" />
-            <span className="ml-1">{company.demandScore}</span>
+            <span className="ml-1">
+              {calculateDemand(company.demandScore, company.baseDemand)}
+            </span>
             {showingProductionResults && (
               <span className="text-red-500"> -1</span>
             )}
           </div>
         </Tooltip>
         <Tooltip
+          classNames={{ base: baseToolTipStyle }}
           className={tooltipStyle}
           content={
             <p className={tooltipParagraphStyle}>
@@ -166,6 +253,7 @@ const CompanyMoreInfo = ({
           </div>
         </Tooltip>
         <Tooltip
+          classNames={{ base: baseToolTipStyle }}
           className={tooltipStyle}
           content={
             <div className="flex flex-col gap-2">
@@ -173,27 +261,32 @@ const CompanyMoreInfo = ({
                 Throughput. The companies demand minus it&apos;s supply. The
                 closer to zero, the more efficient the company is operating.
               </p>
-              <div className="flex flex-col gap-2">
-                <ThroughputLegend />
-              </div>
             </div>
           }
         >
-          <div className="flex items-center">
-            <RiIncreaseDecreaseFill size={18} className="ml-2" />
-            <div className="ml-1 flex">
-              <span>
-                {calculateDemand(company.demandScore, company.baseDemand) -
-                  calculateCompanySupply(
-                    company.supplyMax,
-                    company.supplyBase,
-                    company.supplyCurrent
-                  )}
-              </span>
-            </div>
-          </div>
+          <Popover backdrop="blur" className="max-w-[calc(100vw-20px)]">
+            <PopoverTrigger>
+              <div className="flex items-center cursor-pointer">
+                <RiIncreaseDecreaseFill size={18} className="ml-2" />
+                <div className="ml-1 flex">
+                  <span>
+                    {calculateDemand(company.demandScore, company.baseDemand) -
+                      calculateCompanySupply(
+                        company.supplyMax,
+                        company.supplyBase,
+                        company.supplyCurrent
+                      )}
+                  </span>
+                </div>
+              </div>
+            </PopoverTrigger>
+            <PopoverContent>
+              <ThroughputLegend />
+            </PopoverContent>
+          </Popover>
         </Tooltip>
         <Tooltip
+          classNames={{ base: baseToolTipStyle }}
           className={tooltipStyle}
           content={
             <p className={tooltipParagraphStyle}>
@@ -210,6 +303,7 @@ const CompanyMoreInfo = ({
           </div>
         </Tooltip>
         <Tooltip
+          classNames={{ base: baseToolTipStyle }}
           className={tooltipStyle}
           content={
             <p className={tooltipParagraphStyle}>
@@ -224,58 +318,109 @@ const CompanyMoreInfo = ({
         </Tooltip>
         {company.hasLoan && (
           <Tooltip
+            classNames={{ base: baseToolTipStyle }}
             className={tooltipStyle}
             content={
               <p className={tooltipParagraphStyle}>
                 This company has taken a loan. The company must pay back the
-                loan in interest at a fixed rate of $
-                {LOAN_AMOUNT * LOAN_INTEREST_RATE} per turn.
+                loan with 10% interest at a fixed rate of $
+                {Math.floor(
+                  (LOAN_AMOUNT + LOAN_AMOUNT * LOAN_INTEREST_RATE) *
+                    LOAN_INTEREST_RATE
+                )}{" "}
+                per turn.
               </p>
             }
           >
             <div className="flex items-center col-span-2">
               <RiBankCard2Fill size={18} className="ml-2" />
-              <span className="ml-1">${LOAN_AMOUNT * LOAN_INTEREST_RATE}</span>
+              <span className="ml-1">
+                $
+                {Math.floor(
+                  (LOAN_AMOUNT + LOAN_AMOUNT * LOAN_INTEREST_RATE) *
+                    LOAN_INTEREST_RATE
+                )}
+              </span>
             </div>
           </Tooltip>
         )}
       </div>
+      <Tooltip
+        classNames={{ base: baseToolTipStyle }}
+        className={tooltipStyle}
+        content={
+          <p className={tooltipParagraphStyle}>
+            The research cards this company owns.
+          </p>
+        }
+      >
+        <div className="flex items-center">
+          <Popover>
+            <PopoverTrigger>
+              <Button className="p-0 m-0" isIconOnly>
+                <RiGlasses2Fill size={18} />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent>
+              <CompanyResearchCards companyId={company.id} />
+            </PopoverContent>
+          </Popover>
+        </div>
+      </Tooltip>
     </div>
   );
 };
 
 const CompanyInfo = ({
-  company,
+  companyId,
   showBarChart,
   showingProductionResults,
   isMinimal,
 }: {
-  company: CompanyWithSector;
+  companyId: string;
   showBarChart?: boolean;
   showingProductionResults?: boolean;
   isMinimal?: boolean;
 }) => {
+  const { currentPhase, gameState } = useGame();
+  const {
+    data: company,
+    isLoading: isLoadingCompany,
+    refetch: refetchCompany,
+  } = trpc.company.getCompanyWithSector.useQuery({ id: companyId });
   const { data: companyActions, isLoading: isLoadingCompanyActions } =
     trpc.companyAction.listCompanyActions.useQuery({
-      where: { companyId: company.id },
+      where: { companyId },
     });
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
+  useEffect(() => {
+    refetchCompany();
+  }, [currentPhase?.id]);
   const companyHasPassiveAction = companyActions?.some(
     (action) => action.isPassive
   );
+  if (isLoadingCompany || isLoadingCompanyActions) {
+    return <div>Loading...</div>;
+  }
+  if (!company) {
+    return <div>No company found</div>;
+  }
+
   return (
     <>
-      <div className="flex flex-row gap-1 items-center h-full">
+      <div className="flex flex-row gap-1 items-center h-full w-full">
         <div className="flex flex-col gap-1">
           <div className="flex flex-col gap-1">
             <div className="flex flex-start gap-1 items-center justify-between">
-              <div className="flex gap-1 text-lg font-bold">
+              <div className="flex items-center gap-1 text-base lg:text-lg font-bold">
+                <RiBuilding3Fill size={18} />
                 <span>{company.name} </span>
               </div>
             </div>
             <div className="flex gap-1">
               <span>{company.stockSymbol}</span>
               <Tooltip
+                classNames={{ base: baseToolTipStyle }}
                 className={tooltipStyle}
                 content={
                   <p className={tooltipParagraphStyle}>
@@ -283,29 +428,34 @@ const CompanyInfo = ({
                   </p>
                 }
               >
-                <div className="flex items-center">
-                  <RiFundsFill size={20} />
-                  <span>${company.currentStockPrice}</span>
-                </div>
+                <Popover>
+                  <PopoverTrigger>
+                    <div className="flex items-center gap-1 cursor-pointer">
+                      <RiFundsFill size={20} />
+                      <span>${company.currentStockPrice}</span>
+                    </div>
+                  </PopoverTrigger>
+                  <PopoverContent>
+                    <CompanyLineChart companyId={company.id} />
+                  </PopoverContent>
+                </Popover>
               </Tooltip>
             </div>
             <div className="flex gap-1">
-              <Tooltip
-                className={tooltipStyle}
-                content={
-                  <div className="flex flex-col gap-2 w-full">
-                    <p className={tooltipParagraphStyle}>
-                      The company tier, this determines the operational costs
-                      and supply.
-                    </p>
-                    <CompanyTiers company={company} />
+              <Popover backdrop="blur" className="max-w-[calc(100vw-20px)]">
+                <PopoverTrigger>
+                  <div className="flex items-center gap-1 cursor-pointer">
+                    <RiStackFill size={20} />
+                    <span>{company.companyTier}</span>
                   </div>
-                }
-              >
-                <span>{company.companyTier}</span>
-              </Tooltip>
+                </PopoverTrigger>
+                <PopoverContent>
+                  <CompanyTiers company={company} />
+                </PopoverContent>
+              </Popover>
               |
               <Tooltip
+                classNames={{ base: baseToolTipStyle }}
                 className={tooltipStyle}
                 content={
                   <p className={tooltipParagraphStyle}>
@@ -316,8 +466,9 @@ const CompanyInfo = ({
                 <span>{company.status}</span>
               </Tooltip>
             </div>
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-3">
               <Tooltip
+                classNames={{ base: baseToolTipStyle }}
                 className={tooltipStyle}
                 content={
                   <p className={tooltipParagraphStyle}>
@@ -326,11 +477,12 @@ const CompanyInfo = ({
                   </p>
                 }
               >
-                <span className="flex items-center">
+                <span className="flex items-center gap-1">
                   <RiPriceTag3Fill size={20} /> ${company.unitPrice}
                 </span>
               </Tooltip>
               <Tooltip
+                classNames={{ base: baseToolTipStyle }}
                 className={tooltipStyle}
                 content={
                   <p className={tooltipParagraphStyle}>
@@ -338,11 +490,28 @@ const CompanyInfo = ({
                   </p>
                 }
               >
-                <span className="flex items-center" onClick={onOpen}>
-                  <RiWallet3Fill size={20} /> ${company.cashOnHand}
-                </span>
+                <div className="flex items-center gap-1" onClick={onOpen}>
+                  <RiWallet3Fill size={20} /> <span>${company.cashOnHand}</span>
+                </div>
               </Tooltip>
+              {company.ipoAndFloatPrice && (
+                <Tooltip
+                  classNames={{ base: baseToolTipStyle }}
+                  className={tooltipStyle}
+                  content={
+                    <p className={tooltipParagraphStyle}>
+                      The initial public offering price.
+                    </p>
+                  }
+                >
+                  <div className={`flex items-center gap-1`}>
+                    <span className="text-lg">IPO</span>
+                    <span>${company.ipoAndFloatPrice}</span>
+                  </div>
+                </Tooltip>
+              )}
               <Tooltip
+                classNames={{ base: baseToolTipStyle }}
                 className={tooltipStyle}
                 content={
                   <p className={tooltipParagraphStyle}>
@@ -351,8 +520,8 @@ const CompanyInfo = ({
                   </p>
                 }
               >
-                <span
-                  className={`flex items-center ${
+                <div
+                  className={`flex items-center gap-1 ${
                     company.status == CompanyStatus.ACTIVE
                       ? "text-green-500"
                       : company.status == CompanyStatus.INACTIVE
@@ -363,11 +532,11 @@ const CompanyInfo = ({
                   {(company.status == CompanyStatus.INACTIVE ||
                     company.status == CompanyStatus.ACTIVE) && (
                     <>
-                      <RiSailboatFill size={20} />{" "}
-                      {company.Sector.sharePercentageToFloat}%
+                      <RiSailboatFill size={20} />
+                      <span>{company.Sector.sharePercentageToFloat}%</span>
                     </>
                   )}
-                </span>
+                </div>
               </Tooltip>
               {companyHasPassiveAction && (
                 <PassiveEffect
@@ -398,18 +567,20 @@ const CompanyInfo = ({
               showingProductionResults={showingProductionResults}
             />
           )}
-          <div className="flex flex-col">
+          <div className="flex flex-col justify-center items-center">
             {showBarChart && (
-              <BarList
-                data={buildBarChart(company.Share || [])}
-                color="red"
-                className="mx-auto max-w-sm px-2 w-32"
-              />
+              <div className="flex gap-1 justify-between">
+                {buildBarChart(company.Share)}
+              </div>
             )}
           </div>
         </div>
       </div>
-      <Modal isOpen={isOpen} onOpenChange={onOpenChange} className="h-full">
+      <Modal
+        isOpen={isOpen}
+        onOpenChange={onOpenChange}
+        className="dark bg-slate-900 text-foreground h-full"
+      >
         <ModalContent>
           {(onClose) => (
             <>

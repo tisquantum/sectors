@@ -2,10 +2,10 @@
 
 import React, { useEffect, useRef } from "react";
 import MessageComponent from "./Message";
-import { RoomMessageWithUser } from "@server/prisma/prisma.types";
+import { RoomMessageWithRoomUser } from "@server/prisma/prisma.types";
 
 interface MessagePaneProps {
-  messages: RoomMessageWithUser[];
+  messages: RoomMessageWithRoomUser[];
 }
 
 const MessagePane: React.FC<MessagePaneProps> = ({ messages }) => {
@@ -21,7 +21,7 @@ const MessagePane: React.FC<MessagePaneProps> = ({ messages }) => {
   return (
     <div
       ref={containerRef}
-      className="bg-background p-4 overflow-y-auto flex flex-col basis-10/12 scrollbar"
+      className="bg-background p-1 md:p-4 overflow-y-auto flex flex-col scrollbar h-full basis-10/12"
     >
       {messages.map((message) => (
         <div key={message.id}>

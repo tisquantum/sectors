@@ -1,13 +1,33 @@
 import {
+  Agenda,
   CapitalGains,
   Card,
   Company,
   CompanyAction,
+  CompanyActionOrder,
+  CompanyAwardTrack,
+  CompanyAwardTrackSpace,
+  CompanySpace,
   Entity,
+  ExecutiveAgenda,
+  ExecutiveCard,
+  ExecutiveGame,
+  ExecutiveGameTurn,
+  ExecutiveInfluenceBid,
+  ExecutiveInfluenceVoteRound,
+  ExecutivePhase,
+  ExecutivePlayer,
+  ExecutivePlayerPass,
+  ExecutivePlayerVote,
+  ExecutiveTrick,
+  ExecutiveVictoryPoint,
   Game,
   GameLog,
   GameRecord,
   GameTurn,
+  Headline,
+  Influence,
+  InfluenceBid,
   InfluenceRound,
   InfluenceVote,
   InsolvencyContribution,
@@ -17,6 +37,7 @@ import {
   OptionContract,
   Phase,
   Player,
+  PlayerHeadline,
   PlayerOrder,
   PlayerPriority,
   PlayerResult,
@@ -30,21 +51,37 @@ import {
   RoomMessage,
   RoomUser,
   Sector,
+  SectorPriority,
   SectorPrize,
   Share,
   ShareContribution,
   ShortOrder,
   StockHistory,
   StockRound,
+  StockSubRound,
   Transaction,
   TransactionsOnShares,
+  TrickCard,
   User,
+  VoteMarker,
 } from '@prisma/client';
 
-export type RoomMessageWithUser = RoomMessage & { user: User };
+export type RoomMessageWithRoomUser = RoomMessage & {
+  roomUser: RoomUserWithUserAndPlayer;
+};
 
 export type RoomUserWithUser = RoomUser & {
   user: User;
+};
+export type RoomUserWithUserAndPlayer = RoomUser & {
+  user: User;
+  player: Player | null;
+};
+
+export type RoomUserWithRelations = RoomUser & {
+  user: User;
+  player: Player | null;
+  RoomMessage: RoomMessage[];
 };
 
 export type RoomWithUsers = Room & { users: { user: User }[] };
@@ -56,6 +93,7 @@ export type PlayerWithShares = Player & {
 };
 
 export type ShareWithPlayer = Share & { Player: Player | null };
+export type CompanyWithSectorOnly = Company & { Sector: Sector };
 export type CompanyWithSector = Company & {
   Sector: Sector;
   Share: ShareWithPlayer[];
@@ -86,11 +124,13 @@ export type GameState = Game & {
   InfluenceRound: InfluenceRound[];
   Phase: Phase[];
   GameRecord: GameRecord | null;
+  sectorPriority: SectorPriority[];
 };
 
 export type RoomWithUsersAndGames = Room & {
   users: { user: User }[];
   game: Game[];
+  executiveGame: ExecutiveGame[];
 };
 
 export type PlayerOrderHiddenFields =
@@ -118,6 +158,9 @@ export type CompanyWithShareAndCompanyActions = Company & {
 export type CompanyWithShareAndSector = Company & {
   Share: Share[];
   Sector: Sector;
+};
+export type CompanyWithCompanyActions = Company & {
+  CompanyActions: CompanyAction[];
 };
 export type PhaseWithStockRound = Phase & { StockRound: StockRound | null };
 export type PlayerOrderWithPlayerCompany = PlayerOrder & {
@@ -236,12 +279,15 @@ export type ShortOrderWithRelations = ShortOrder & {
 
 export type GameTurnWithRelations = GameTurn & {
   companyActions: CompanyAction[];
+  companyActionOrder: CompanyActionOrder[];
 };
 
 export type TransactionWithEntities = Transaction & {
   fromEntity: Entity & { Player: Player | null; Company: Company | null };
   toEntity: Entity & { Player: Player | null; Company: Company | null };
   Shares: TransactionsOnShares[];
+  GameTurn: GameTurn;
+  Phase: Phase;
 };
 
 export type PlayerResultWithRelations = PlayerResult & {
@@ -300,4 +346,111 @@ export type PrizeVoteWithRelations = PrizeVote & {
   Player: Player;
   GameTurn: GameTurn;
   Prize: Prize;
+};
+
+export type UserRestricted = {
+  id: string;
+  name: string;
+};
+
+export type PlayerHeadlineWithPlayer = PlayerHeadline & {
+  player: Player;
+};
+
+export type HeadlineWithRelations = Headline & {
+  company: Company | null;
+  sector: Sector | null;
+  playerHeadlines: PlayerHeadlineWithPlayer[];
+};
+
+export type StockRoundWithStockSubRounds = StockRound & {
+  stockSubRounds: StockSubRound[];
+};
+
+export type PhaseWithRelations = Phase & {
+  GameTurn: GameTurn;
+  StockRound: StockRound | null;
+  OperatingRound: OperatingRound | null;
+  StockSubRound: StockSubRound | null;
+};
+
+export type CompanySpaceWithCompany = CompanySpace & {
+  Company: CompanyWithSectorOnly;
+};
+
+export type AwardTrackSpaceWithRelations = CompanyAwardTrackSpace & {
+  companySpaces: CompanySpaceWithCompany[];
+};
+
+export type AwardTrackWithRelations = CompanyAwardTrack & {
+  companyAwardTrackSpaces: AwardTrackSpaceWithRelations[];
+};
+
+export type ExecutivePlayerWithRelations = ExecutivePlayer & {
+  user: User;
+  victoryPoints: ExecutiveVictoryPoint[];
+  cards: ExecutiveCard[];
+  selfInfluence: Influence[];
+  ownedByInfluence: Influence[];
+  agendas: ExecutiveAgenda[];
+  executiveTricks: ExecutiveTrick[];
+  voteMarkerVoted: VoteMarker[];
+  voteMarkerOwner: VoteMarker[];
+};
+
+export type ExecutivePlayerWithCards = ExecutivePlayer & {
+  cards: ExecutiveCard[];
+};
+
+export type ExecutiveGameWithRelations = ExecutiveGame & {
+  players: ExecutivePlayer[];
+  influence: Influence[];
+  ExecutiveVictoryPoint: ExecutiveVictoryPoint[];
+  ExecutiveAgenda: ExecutiveAgenda[];
+  phases: ExecutivePhase[];
+  gameTurn: ExecutiveGameTurn[];
+};
+
+export type InfluenceBidWithInfluence = InfluenceBid & { Influence: Influence };
+
+export type ExecutiveInfluenceBidWithRelations = ExecutiveInfluenceBid & {
+  toPlayer: ExecutivePlayer;
+  fromPlayer: ExecutivePlayer;
+  ExecutiveGameTurn: ExecutiveGameTurn | null;
+  influenceBids: InfluenceBidWithInfluence[];
+};
+
+export type TrickCardWithRelations = TrickCard & {
+  card: ExecutiveCard;
+  player: ExecutivePlayer;
+};
+
+export type ExecutiveTrickWithRelations = ExecutiveTrick & {
+  trickCards: TrickCardWithRelations[];
+};
+
+export type ExecutiveGameTurnWithRelations = ExecutiveGameTurn & {
+  phases: ExecutivePhase[];
+  tricks: ExecutiveTrickWithRelations[];
+  influenceBids: ExecutiveInfluenceBid[];
+  influenceVotes: ExecutiveInfluenceVoteRound[];
+  playerPasses: ExecutivePlayerPass[];
+};
+
+export type ExecutivePlayerVoteWithRelations = ExecutivePlayerVote & {
+  influence: Influence[];
+};
+
+export type ExecutivePlayerWithAgendas = ExecutivePlayer & {
+  agendas: ExecutiveAgenda[];
+};
+
+export type ExecutiveInfluenceVoteRoundWithRelations =
+  ExecutiveInfluenceVoteRound & {
+    playerVotes: ExecutivePlayerVoteWithRelations[];
+  };
+
+export type VoteMarkerWithRelations = VoteMarker & {
+  owningPlayer: ExecutivePlayer;
+  votedPlayer: ExecutivePlayer | null;
 };

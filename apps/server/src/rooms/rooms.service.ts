@@ -7,6 +7,7 @@ import {
   EVENT_ROOM_CREATED,
 } from '@server/pusher/pusher.types';
 import { RoomWithUsersAndGames } from '@server/prisma/prisma.types';
+import { GLOBAL_ROOM_ID } from '@server/data/constants';
 
 @Injectable()
 export class RoomService {
@@ -16,9 +17,15 @@ export class RoomService {
     roomWhereUniqueInput: Prisma.RoomWhereUniqueInput,
   ): Promise<RoomWithUsersAndGames | null> {
     return this.prisma.room.findUnique({
-      where: roomWhereUniqueInput,
+      where: {
+        ...roomWhereUniqueInput,
+        NOT: {
+          id: parseFloat(GLOBAL_ROOM_ID),
+        },
+      },
       include: {
         game: true,
+        executiveGame: true,
         users: {
           include: {
             user: true, // Assuming RoomUser has a relation to User
@@ -40,7 +47,12 @@ export class RoomService {
       skip,
       take,
       cursor,
-      where,
+      where: {
+        ...where,
+        NOT: {
+          id: parseFloat(GLOBAL_ROOM_ID),
+        },
+      },
       orderBy,
       include: {
         users: {
@@ -49,6 +61,7 @@ export class RoomService {
           },
         },
         game: true,
+        executiveGame: true,
       },
     });
   }

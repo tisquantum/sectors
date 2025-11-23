@@ -14,6 +14,7 @@ import {
 import {
   Company,
   CompanyStatus,
+  OperationMechanicsVersion,
   Share,
   ShareLocation,
 } from "@server/prisma/prisma.client";
@@ -41,6 +42,8 @@ import { CompanyTierData } from "@server/data/constants";
 import CompanyInfo from "./CompanyInfo";
 import { calculateCompanySupply, calculateDemand } from "@server/data/helpers";
 import CompanyResearchCards from "./CompanyResearchCards";
+import { useGame } from "../Game/GameContext";
+import CompanyInfoV2 from "./CompanyV2/CompanyInfoV2";
 
 type ShareGroupedByPlayer = {
   [key: string]: ShareWithPlayer[];
@@ -51,6 +54,7 @@ const CompaniesAccordion = ({
 }: {
   companies: CompanyWithRelations[];
 }) => {
+  const { gameState } = useGame();
   return (
     <Accordion selectionMode="multiple">
       {companies.map((company: CompanyWithRelations) => {
@@ -164,7 +168,12 @@ const CompaniesAccordion = ({
             }
             title={
               <div className="flex flex-col gap-2">
-                <CompanyInfo company={company} />
+                {gameState.operationMechanicsVersion ==
+                OperationMechanicsVersion.MODERN ? (
+                  <CompanyInfoV2 companyId={company.id} />
+                ) : (
+                  <CompanyInfo companyId={company.id} />
+                )}
               </div>
             }
             isCompact
@@ -185,7 +194,9 @@ const CompaniesAccordion = ({
                     ) || 0}
                   </p>
                   <p>
-                    <strong>Company Demand:</strong> {calculateDemand(company.demandScore, company.baseDemand) || 0}
+                    <strong>Company Demand:</strong>{" "}
+                    {calculateDemand(company.demandScore, company.baseDemand) ||
+                      0}
                   </p>
                   <p>
                     <strong>Sector Demand:</strong>{" "}
@@ -236,7 +247,7 @@ const CompaniesAccordion = ({
                   {renderPlayerShares(company.Share || [])}
                 </div>
               </div>
-              <div className="flex flex-col">
+              <div className="flex flex-col gap-1">
                 <span>Research Cards</span>
                 <CompanyResearchCards companyId={company.id} />
               </div>

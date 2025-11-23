@@ -20,7 +20,7 @@ const WalletInfo = ({ player }: { player: Player }) => {
       <div className="flex gap-1 items-center cursor-pointer" onClick={onOpen}>
         <RiWalletFill size={18} /> ${player.cashOnHand}
       </div>
-      <Modal isOpen={isOpen} onOpenChange={onOpenChange} className="h-full">
+      <Modal isOpen={isOpen} onOpenChange={onOpenChange} className="h-full dark bg-slate-900 text-foreground">
         <ModalContent>
           {(onClose) => (
             <>

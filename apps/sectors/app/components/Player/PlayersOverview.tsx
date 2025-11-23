@@ -24,7 +24,7 @@ import {
 } from "@remixicon/react";
 import PlayerAvatar from "./PlayerAvatar";
 import { useGame } from "../Game/GameContext";
-import { tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
+import { baseToolTipStyle, tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
 import { calculateNetWorth } from "@server/data/helpers";
 import WalletInfo from "../Game/WalletInfo";
 
@@ -48,7 +48,7 @@ const PlayersOverview = ({ gameId }: { gameId: string }) => {
               acc[companyId] = { totalShares: 0, totalValue: 0 };
             }
             acc[companyId].totalShares += 1;
-            acc[companyId].totalValue += price;
+            acc[companyId].totalValue += price || 0;
             return acc;
           },
           {}
@@ -72,6 +72,7 @@ const PlayersOverview = ({ gameId }: { gameId: string }) => {
             subtitle={
               <div className="flex gap-2">
                 <Tooltip
+                  classNames={{ base: baseToolTipStyle }}
                   className={tooltipStyle}
                   content={<p>Cash on hand.</p>}
                 >
@@ -80,10 +81,11 @@ const PlayersOverview = ({ gameId }: { gameId: string }) => {
                   </span>
                 </Tooltip>
                 <Tooltip
+                  classNames={{ base: baseToolTipStyle }}
                   className={tooltipStyle}
                   content={
                     <p>
-                      Share value total: the total value of all shares owned.
+                      Portfolio Value: the total value of all shares owned.
                     </p>
                   }
                 >
@@ -93,10 +95,11 @@ const PlayersOverview = ({ gameId }: { gameId: string }) => {
                   </span>
                 </Tooltip>
                 <Tooltip
+                  classNames={{ base: baseToolTipStyle }}
                   className={tooltipStyle}
                   content={
                     <p>
-                      Networth: The total value of all shares owned plus cash on
+                      Net worth: The total value of all shares owned plus cash on
                       hand.
                     </p>
                   }
@@ -111,6 +114,7 @@ const PlayersOverview = ({ gameId }: { gameId: string }) => {
                 </Tooltip>
                 {playerWithShares.marginAccount > 0 && (
                   <Tooltip
+                    classNames={{ base: baseToolTipStyle }}
                     className={tooltipStyle}
                     content={
                       <p>

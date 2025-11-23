@@ -4,6 +4,7 @@ import { useGame } from "./GameContext";
 import PlayerAvatar from "../Player/PlayerAvatar";
 import DebounceButton from "../General/DebounceButton";
 import { useState } from "react";
+import { toast } from "sonner";
 
 const CoverShortButton = ({ shortOrderId }: { shortOrderId: number }) => {
   const { gameId } = useGame();
@@ -12,6 +13,9 @@ const CoverShortButton = ({ shortOrderId }: { shortOrderId: number }) => {
   const useCoverShortMutation = trpc.game.coverShort.useMutation({
     onSettled: () => {
       setIsLoadingCoverShort(false);
+    },
+    onError: (error) => {
+      toast.error(`Error covering short order.`);
     },
   });
   return (
@@ -76,7 +80,8 @@ const CoverShortOrders = () => {
               Shares Price At Purchase:{" "}
               {shortOrder.ShortOrder?.shortStockPriceAtPurchase}
             </div>
-            {authPlayer.id == shortOrder.Player.id &&
+            {authPlayer &&
+              authPlayer.id == shortOrder.Player.id &&
               shortOrder.ShortOrder?.id && (
                 <CoverShortButton shortOrderId={shortOrder.ShortOrder.id} />
               )}

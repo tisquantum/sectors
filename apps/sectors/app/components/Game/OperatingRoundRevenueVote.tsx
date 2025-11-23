@@ -2,17 +2,27 @@ import { trpc } from "@sectors/app/trpc";
 import { useGame } from "./GameContext";
 import {
   Company,
+  CompanyStatus,
   ProductionResult,
   RevenueDistribution,
   Sector,
+  SectorName,
 } from "@server/prisma/prisma.client";
-import { Radio, RadioGroup } from "@nextui-org/react";
+import { Radio, RadioGroup, Tooltip } from "@nextui-org/react";
 import { useState } from "react";
 import { CompanyTierData } from "@server/data/constants";
 import CompanyInfo from "../Company/CompanyInfo";
 import ShareHolders from "../Company/ShareHolders";
 import Button from "@sectors/app/components/General/DebounceButton";
 import DebounceButton from "@sectors/app/components/General/DebounceButton";
+import { CompanyWithSector } from "@server/prisma/prisma.types";
+import SectorConsumerDistributionAnimation from "./SectorConsumerDistributionAnimation";
+import {
+  baseToolTipStyle,
+  tooltipStyle,
+} from "@sectors/app/helpers/tailwind.helpers";
+import CompanyPriorityList from "../Company/CompanyPriorityOperatingRound";
+import { Info } from "lucide-react";
 
 const DistributeSelection = ({
   company,
@@ -21,7 +31,7 @@ const DistributeSelection = ({
 }: {
   company: Company & { Sector: Sector };
   productionResult: ProductionResult;
-  operatingRoundId: number;
+  operatingRoundId: string;
 }) => {
   const { authPlayer, gameId } = useGame();
   const [isSubmit, setIsSubmit] = useState(false);
@@ -38,6 +48,10 @@ const DistributeSelection = ({
       },
     });
   const handleSubmit = async () => {
+    if (!authPlayer) {
+      return;
+    }
+    setIsLoading(true);
     //submit vote
     useVoteRevenueDistributionMutation.mutate({
       operatingRoundId: operatingRoundId,
@@ -81,17 +95,78 @@ const OperatingRoundRevenueVote = () => {
         id: currentPhase?.operatingRoundId,
       },
     });
+  const { data: companiesWithSector, isLoading: isLoadingCompanies } =
+    trpc.company.listCompaniesWithSector.useQuery({
+      where: {
+        gameId: currentPhase?.gameId,
+        status: CompanyStatus.ACTIVE,
+      },
+    });
+  if (isLoadingCompanies) {
+    return <div>Loading companies...</div>;
+  }
+  if (!companiesWithSector) {
+    return <div>No companies found</div>;
+  }
+
   if (isLoading) {
     return <div>Loading...</div>;
   }
   if (!operatingRound) {
     return <div>No operating round found</div>;
   }
+  //organize companies by sector
+  const companiesOrganizedBySector = companiesWithSector.reduce(
+    (acc, company: CompanyWithSector) => {
+      const sectorName = company.Sector.name as SectorName; // Explicitly cast to SectorName
+      if (!acc[sectorName]) {
+        acc[sectorName] = [];
+      }
+      acc[sectorName].push(company);
+      return acc;
+    },
+    {} as Record<SectorName, CompanyWithSector[]>
+  );
+  const sectorNames = Object.keys(companiesOrganizedBySector) as SectorName[];
+
   return (
     <div className="p-6 rounded-lg shadow-md">
-      <h1 className="text-2xl font-bold mb-4">
-        Operating Round Production Vote
-      </h1>
+      <div className="flex flex-col gap-2">
+        <h1 className="text-2xl font-bold mb-4">
+          Operating Round Production Vote
+        </h1>
+        <Tooltip
+          classNames={{ base: baseToolTipStyle }}
+          className={tooltipStyle}
+          content={<CompanyPriorityList companies={companiesWithSector} />}
+        >
+          <span className="flex flex-row gap-2">
+            <Info /> Company Priority List
+          </span>
+        </Tooltip>
+      </div>
+      <div className="flex flex-col gap-1">
+        {sectorNames.map((sectorName: SectorName) => (
+          <SectorConsumerDistributionAnimation
+            key={sectorName}
+            sector={companiesOrganizedBySector[sectorName][0].Sector}
+            companies={companiesOrganizedBySector[sectorName]}
+            consumerOveride={
+              companiesOrganizedBySector[sectorName][0].Sector.consumers +
+              operatingRound.productionResults
+                .filter(
+                  (productionResult) =>
+                    productionResult.Company.sectorId ===
+                    companiesOrganizedBySector[sectorName][0].Sector.id
+                )
+                .reduce(
+                  (acc, productionResult) => acc + productionResult.consumers,
+                  0
+                )
+            }
+          />
+        ))}
+      </div>
       <div className="grid 2xl:flex flex-wrap sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-1">
         {operatingRound.productionResults.map((productionResult) => {
           const operatingCosts =
@@ -111,9 +186,9 @@ const OperatingRoundRevenueVote = () => {
               className="flex flex-col bg-slate-800 p-4 rounded-lg shadow-md"
               key={productionResult.id}
             >
-              <div className="flex flex-col">
+              <div className="flex flex-col justify-between">
                 <div className="flex flex-col items-center gap-2">
-                  <CompanyInfo company={productionResult.Company} />
+                  <CompanyInfo companyId={productionResult.Company.id} />
                   <ShareHolders companyId={productionResult.Company.id} />
                 </div>
                 <div className="flex flex-col gap-2 rounded-md bg-gray-950 m-2 p-2">

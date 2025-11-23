@@ -26,7 +26,12 @@ export default (trpc: TrpcService, ctx: Context) =>
         const { gameId } = input;
         return ctx.gameTurnService.getCurrentTurn(gameId);
       }),
-
+    getCurrentGameTurnWithRelations: trpc.procedure
+      .input(z.object({ gameId: z.string() }))
+      .query(async ({ input }) => {
+        const { gameId } = input;
+        return ctx.gameTurnService.getCurrentTurnWithRelations(gameId);
+      }),
     listGameTurns: trpc.procedure
       .input(
         z.object({
@@ -46,56 +51,5 @@ export default (trpc: TrpcService, ctx: Context) =>
           where,
           orderBy,
         });
-      }),
-
-    createGameTurn: trpc.procedure
-      .input(
-        z.object({
-          gameId: z.string(),
-          turn: z.number(),
-        }),
-      )
-      .mutation(async ({ input }) => {
-        const { gameId, ...rest } = input;
-        return ctx.gameTurnService.createGameTurn({
-          ...rest,
-          game: { connect: { id: gameId } },
-        });
-      }),
-
-    createManyGameTurns: trpc.procedure
-      .input(
-        z.array(
-          z.object({
-            gameId: z.string(),
-            turn: z.number(),
-          }),
-        ),
-      )
-      .mutation(async ({ input }) => {
-        const data: Prisma.GameTurnCreateManyInput[] = input;
-        return ctx.gameTurnService.createManyGameTurns(data);
-      }),
-
-    updateGameTurn: trpc.procedure
-      .input(
-        z.object({
-          id: z.string(),
-          data: z.object({
-            gameId: z.string().optional(),
-            turn: z.number().optional(),
-          }),
-        }),
-      )
-      .mutation(async ({ input }) => {
-        const { id, data } = input;
-        return ctx.gameTurnService.updateGameTurn({ where: { id }, data });
-      }),
-
-    deleteGameTurn: trpc.procedure
-      .input(z.object({ id: z.string() }))
-      .mutation(async ({ input }) => {
-        const { id } = input;
-        return ctx.gameTurnService.deleteGameTurn({ id });
       }),
   });

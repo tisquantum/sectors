@@ -11,10 +11,15 @@ import { useGame } from "./GameContext";
 import { notFound } from "next/navigation";
 import {
   Company,
+  CompanyStatus,
+  OperationMechanicsVersion,
   OrderType,
   Phase,
   PhaseName,
   Player,
+  ShareLocation,
+  Sector,
+  AwardTrackType,
 } from "@server/prisma/prisma.client";
 import {
   CompanyWithRelations,
@@ -32,6 +37,9 @@ import { LineChart } from "@tremor/react";
 import SpotMarketTable from "./SpotMarketTable";
 import DerivativesTable from "./DerivativesTable";
 import OrderResults from "./OrderResults";
+import { useDrawer } from "../Drawer.context";
+import CompanyAwardTrack from "../Company/CompanyAwardTrack";
+import { ResourceTracksContainer } from "./ResourceTracksContainer";
 
 function isOrderInputOpenPlayerOrderCounter(
   playerOrdersConcealed: PlayerOrderConcealed[],
@@ -53,10 +61,17 @@ const StockRoundOrderGrid = ({
   handleOrder?: (company: Company, isIpo?: boolean) => void;
   forwardedRef?: HTMLDivElement | null;
 }) => {
+  const { closeDrawer } = useDrawer();
   const { gameId, currentPhase, gameState, authPlayer } = useGame();
+  const { data: companyAwardTracks, isLoading: isLoadingCompanyAwardTracks } =
+    trpc.companyAwardTrack.listCompanyAwardTracks.useQuery({
+      where: {
+        gameId,
+      },
+    });
   const { data: companies, isLoading } =
     trpc.company.listCompaniesWithRelations.useQuery({
-      where: { gameId },
+      where: { gameId, status: { not: CompanyStatus.BANKRUPT } },
     });
   const {
     data: playerOrdersConcealed,
@@ -64,7 +79,7 @@ const StockRoundOrderGrid = ({
     refetch: refetchPlayerOrdersConcealed,
   } = trpc.playerOrder.listPlayerOrdersConcealed.useQuery(
     {
-      where: { stockRoundId: gameState?.currentStockRoundId },
+      where: { stockRoundId: currentPhase?.stockRoundId },
     },
     {
       enabled: currentPhase?.name == PhaseName.STOCK_ACTION_REVEAL,
@@ -77,7 +92,7 @@ const StockRoundOrderGrid = ({
   } = trpc.playerOrder.listPlayerOrdersConcealed.useQuery(
     {
       where: {
-        stockRoundId: gameState?.currentStockRoundId,
+        stockRoundId: currentPhase?.stockRoundId,
         OR: [
           { orderType: OrderType.MARKET },
           { orderType: OrderType.LIMIT },
@@ -92,6 +107,7 @@ const StockRoundOrderGrid = ({
   const {
     data: playerOrdersRevealed,
     isLoading: isLoadingPlayerOrdersRevealed,
+    refetch: refetchPlayerOrdersRevealed,
   } = trpc.playerOrder.listPlayerOrdersWithPlayerRevealed.useQuery({
     where: {
       stockRoundId: currentPhase?.stockRoundId,
@@ -127,9 +143,10 @@ const StockRoundOrderGrid = ({
     refetchPlayerOrdersConcealed();
     refetchPlayerOrdersConcealedSpotMarket();
     refetchPhasesOfStockRound();
+    refetchPlayerOrdersRevealed();
   }, [currentPhase?.id]);
   useEffect(() => {
-    if (playerOrdersConcealed && currentPhase) {
+    if (authPlayer && playerOrdersConcealed && currentPhase) {
       isOrderInputOpenPlayerOrderCounter(
         playerOrdersConcealed,
         authPlayer,
@@ -137,16 +154,21 @@ const StockRoundOrderGrid = ({
         setIsOrderInputOpen
       );
     }
+    if (currentPhase?.name !== PhaseName.STOCK_ACTION_ORDER) {
+      closeDrawer();
+    }
   }, [playerOrdersConcealed, currentPhase]);
   const [isOrderInputOpen, setIsOrderInputOpen] = useState<boolean>(false);
   const [selectedCompanyOrder, setSelectedCompanyOrder] = useState<
     { company: CompanyWithRelations; isIpo: boolean } | undefined
   >(undefined);
-  if (isLoading) return null;
-  if (isLoadingPhases) return null;
-  if (companies == undefined) return notFound();
-  if (currentPhase == undefined) return notFound();
-  if (phasesOfStockRound == undefined) return notFound();
+  if (isLoading) return <div>Loading...</div>;
+  if (isLoadingPhases) return <div>Loading...</div>;
+  if (isLoadingCompanyAwardTracks) return <div>Loading...</div>;
+  if (!companies) return <div>No companies found</div>;
+  if (!currentPhase) return <div>No current phase found</div>;
+  if (!gameState) return <div>No game state found</div>;
+  if (!phasesOfStockRound) return <div>No phases of stock round found</div>;
   const isRevealRound = currentPhase?.name === PhaseName.STOCK_ACTION_REVEAL;
   const orders = playerOrdersConcealed ?? [];
   const companiesBySector = organizeCompaniesBySector(companies);
@@ -213,8 +235,13 @@ const StockRoundOrderGrid = ({
             )}
           </div>
         </Tab>
-        <Tab key="derivatives" title="Derivatives">
-          <Derivatives isInteractive={isInteractive} />
+        {gameState.useOptionOrders && (
+          <Tab key="derivatives" title="Derivatives">
+            <Derivatives isInteractive={isInteractive} />
+          </Tab>
+        )}
+        <Tab key="resource-market" title="Resource Market">
+          <ResourceTracksContainer />
         </Tab>
         <Tab key="table-view" title="Table View">
           <div className="p-4 max-w-full scrollbar">
@@ -229,8 +256,25 @@ const StockRoundOrderGrid = ({
               isInteractive={isInteractive}
               isRevealRound={isRevealRound}
             />
-            <h2 className="text-xl font-bold mt-8 mb-4">Derivatives</h2>
-            <DerivativesTable isInteractive={isInteractive} />
+            {gameState.useOptionOrders && (
+              <>
+                <h2 className="text-xl font-bold mt-8 mb-4">Derivatives</h2>
+                <DerivativesTable isInteractive={isInteractive} />
+              </>
+            )}
+          </div>
+        </Tab>
+        <Tab key="company-awards" title="Awards Track">
+          <div className="p-4 max-w-full scrollbar">
+            <div className="flex flex-col gap-4">
+              {companyAwardTracks &&
+                companyAwardTracks.map((awardTrack) => (
+                  <CompanyAwardTrack
+                    key={awardTrack.id}
+                    companyAwardTrackId={awardTrack.id}
+                  />
+                ))}
+            </div>
           </div>
         </Tab>
       </Tabs>
@@ -242,40 +286,52 @@ const StockRoundOrderGrid = ({
               <div className="flex flex-col justify-center items-center">
                 <h2 className="text-white text-2xl font-bold mb-2">
                   {selectedCompanyOrder.isIpo
-                    ? "IPO Order"
-                    : "Open Market Order"}
+                    ? `IPO Order ${
+                        selectedCompanyOrder.company.Share.filter(
+                          (share) => share.location === ShareLocation.IPO
+                        ).length
+                      }`
+                    : `Open Market Order ${
+                        selectedCompanyOrder.company.Share.filter(
+                          (share) =>
+                            share.location === ShareLocation.OPEN_MARKET
+                        ).length
+                      }`}
                 </h2>
-                <PlayerOrderInput
-                  currentOrder={selectedCompanyOrder.company}
-                  handleCancel={() => {}}
-                  isIpo={selectedCompanyOrder.isIpo} // Pass IPO state here
-                  handlePlayerInputConfirmed={() => {
-                    companyCardButtonClicked();
-                  }} // Callback on input confirmed
-                />
-
-                <div>
-                  <OrderResults
-                    playerOrdersConcealed={orders.filter(
-                      (order) =>
-                        order.companyId === selectedCompanyOrder.company.id
-                    )}
-                    playerOrdersRevealed={
-                      playerOrdersRevealed?.filter(
+                {currentPhase.name === PhaseName.STOCK_ACTION_ORDER && (
+                  <PlayerOrderInput
+                    currentOrder={selectedCompanyOrder.company}
+                    handleCancel={() => {}}
+                    isIpo={selectedCompanyOrder.isIpo} // Pass IPO state here
+                    handlePlayerInputConfirmed={() => {
+                      companyCardButtonClicked();
+                    }} // Callback on input confirmed
+                  />
+                )}
+                {gameState?.playerOrdersConcealed && (
+                  <div>
+                    <OrderResults
+                      playerOrdersConcealed={orders.filter(
                         (order) =>
                           order.companyId === selectedCompanyOrder.company.id
-                      ) || []
-                    }
-                    currentPhase={currentPhase}
-                    phasesOfStockRound={phasesOfStockRound}
-                    isRevealRound={isRevealRound}
-                  />
-                </div>
-                <Tabs>
+                      )}
+                      playerOrdersRevealed={
+                        playerOrdersRevealed?.filter(
+                          (order) =>
+                            order.companyId === selectedCompanyOrder.company.id
+                        ) || []
+                      }
+                      currentPhase={currentPhase}
+                      phasesOfStockRound={phasesOfStockRound}
+                      isRevealRound={isRevealRound}
+                    />
+                  </div>
+                )}
+                <Tabs className="mt-4">
                   <Tab key="drawer-company-info" title="Company Info">
                     <div className="h-96">
                       <CompanyInfo
-                        company={selectedCompanyOrder.company}
+                        companyId={selectedCompanyOrder.company.id}
                         showBarChart
                       />
                     </div>
@@ -284,14 +340,14 @@ const StockRoundOrderGrid = ({
                     <div className="h-96 w-80">
                       <LineChart
                         className="w-full"
-                        data={selectedCompanyOrder.company.StockHistory.map(
-                          (stockHistory, index) => ({
-                            phaseId: `${index + 1} ${stockHistory.Phase.name}`,
-                            stockPrice: stockHistory.price,
-                            stockAction: stockHistory.action,
-                            steps: stockHistory.stepsMoved,
-                          })
-                        )}
+                        data={selectedCompanyOrder.company.StockHistory.filter(
+                          (stockHistory) => stockHistory.price !== 0
+                        ).map((stockHistory, index) => ({
+                          phaseId: `${index + 1} ${stockHistory.Phase.name}`,
+                          stockPrice: stockHistory.price,
+                          stockAction: stockHistory.action,
+                          steps: stockHistory.stepsMoved,
+                        }))}
                         index="phaseId"
                         categories={["stockPrice"]}
                         yAxisLabel="Stock Price"

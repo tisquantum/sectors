@@ -20,6 +20,7 @@ import { GameLogService } from '@server/game-log/game-log.service';
 import { checkIsPlayerAction, checkSubmissionTime } from '../trpc.middleware';
 import { PhaseService } from '@server/phase/phase.service';
 import { GameManagementService } from '@server/game-management/game-management.service';
+import { GamesService } from '@server/games/games.service';
 
 type Context = {
   playerOrdersService: PlayerOrderService;
@@ -27,6 +28,7 @@ type Context = {
   pusherService: PusherService;
   phaseService: PhaseService;
   gameManagementService: GameManagementService;
+  gameService: GamesService;
   gameLogService: GameLogService;
 };
 
@@ -48,7 +50,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         z.object({
           skip: z.number().optional(),
           take: z.number().optional(),
-          cursor: z.number().optional(),
+          cursor: z.string().optional(),
           where: z.any().optional(),
           orderBy: z.any().optional(),
         }),
@@ -69,7 +71,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         z.object({
           skip: z.number().optional(),
           take: z.number().optional(),
-          cursor: z.number().optional(),
+          cursor: z.string().optional(),
           where: z.any().optional(),
           orderBy: z.any().optional(),
         }),
@@ -89,7 +91,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         z.object({
           skip: z.number().optional(),
           take: z.number().optional(),
-          cursor: z.number().optional(),
+          cursor: z.string().optional(),
           where: z.any().optional(),
           orderBy: z.any().optional(),
         }),
@@ -109,7 +111,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         z.object({
           skip: z.number().optional(),
           take: z.number().optional(),
-          cursor: z.number().optional(),
+          cursor: z.string().optional(),
           where: z.any().optional(),
           orderBy: z.any().optional(),
           gameId: z.string(),
@@ -131,14 +133,39 @@ export default (trpc: TrpcService, ctx: Context) =>
             message: 'Phase not found',
           });
         }
+        //get game
+        const game = await ctx.gameService.game({ id: gameId });
+        if (!game) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Game not found',
+          });
+        }
         if (
-          phase.name == PhaseName.STOCK_ACTION_ORDER ||
-          phase.name == PhaseName.STOCK_ACTION_RESULT
+          game.playerOrdersConcealed &&
+          (phase.name == PhaseName.STOCK_ACTION_ORDER ||
+            phase.name == PhaseName.STOCK_ACTION_RESULT)
         ) {
           throw new TRPCError({
             code: 'INTERNAL_SERVER_ERROR',
             message:
               'Cannot view orders during stock action order or result phase',
+          });
+        }
+        if (phase.name == PhaseName.STOCK_ACTION_ORDER) {
+          // We do not want to show orders made during this phase as players are not
+          // allowed to view orders until all players are ready to reveal them.
+          return ctx.playerOrdersService.playerOrdersWithPlayerRevealed({
+            skip,
+            take,
+            cursor: cursor ? { id: cursor } : undefined,
+            where: {
+              ...where,
+              phaseId: {
+                not: phase.id,
+              },
+            },
+            orderBy,
           });
         }
         return ctx.playerOrdersService.playerOrdersWithPlayerRevealed({
@@ -154,7 +181,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         z.object({
           skip: z.number().optional(),
           take: z.number().optional(),
-          cursor: z.number().optional(),
+          cursor: z.string().optional(),
           where: z.any().optional(),
           orderBy: z.any().optional(),
         }),
@@ -175,7 +202,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         z.object({
           skip: z.number().optional(),
           take: z.number().optional(),
-          cursor: z.number().optional(),
+          cursor: z.string().optional(),
           where: z.any().optional(),
           orderBy: z.any().optional(),
         }),
@@ -204,7 +231,14 @@ export default (trpc: TrpcService, ctx: Context) =>
         }),
       )
       .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
-      .use(async (opts) => checkSubmissionTime(opts, ctx.phaseService))
+      .use(async (opts) =>
+        checkSubmissionTime(
+          PhaseName.STOCK_ACTION_ORDER,
+          opts,
+          ctx.phaseService,
+          ctx.gameService,
+        ),
+      )
       .mutation(async ({ input, ctx: ctxMiddleware }) => {
         console.log('playerOrderInput', input);
         const { playerId, ...rest } = input;
@@ -230,7 +264,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           );
           //get player
           const player = await ctx.playerService.player({ id: playerId });
-          await ctx.gameLogService.createGameLog({
+          ctx.gameLogService.createGameLog({
             game: { connect: { id: ctxMiddleware.gameId } },
             content: `Player ${player?.nickname} created an order.`,
           });
@@ -245,8 +279,8 @@ export default (trpc: TrpcService, ctx: Context) =>
         } catch (error) {
           console.error(error);
           throw new TRPCError({
-            code: 'INTERNAL_SERVER_ERROR',
-            message: 'An error occurred while creating the player order',
+            code: 'BAD_REQUEST',
+            message: `An error occurred while creating the player order: ${error}`,
           });
         }
         return playerOrder;
@@ -255,7 +289,7 @@ export default (trpc: TrpcService, ctx: Context) =>
     updatePlayerOrder: trpc.procedure
       .input(
         z.object({
-          id: z.number(),
+          id: z.string(),
           data: z.object({
             stockRoundId: z.number().optional(),
             playerId: z.string().optional(),
@@ -275,12 +309,5 @@ export default (trpc: TrpcService, ctx: Context) =>
           where: { id },
           data,
         });
-      }),
-
-    deletePlayerOrder: trpc.procedure
-      .input(z.object({ id: z.number() }))
-      .mutation(async ({ input }) => {
-        const { id } = input;
-        return ctx.playerOrdersService.deletePlayerOrder({ id });
       }),
   });

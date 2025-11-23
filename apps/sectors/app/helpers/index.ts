@@ -4,7 +4,9 @@ import {
   GameStatus,
   OrderType,
   PhaseName,
+  ResearchCardEffect,
   Sector,
+  ShareLocation,
 } from "@server/prisma/prisma.client";
 import { CompanyWithSector } from "@server/prisma/prisma.types";
 
@@ -36,12 +38,18 @@ export function friendlyPhaseName(name: PhaseName | undefined): string {
     return "Unknown Phase";
   }
   switch (name) {
+    case PhaseName.HEADLINE_RESOLVE:
+      return "Resolve Headlines";
     case PhaseName.INFLUENCE_BID_ACTION:
       return "Influence Bid";
     case PhaseName.INFLUENCE_BID_REVEAL:
       return "Influence Bid Reveal";
     case PhaseName.INFLUENCE_BID_RESOLVE:
       return "Influence Bid Resolve";
+    case PhaseName.SET_COMPANY_IPO_PRICES:
+      return "Set IPO Prices";
+    case PhaseName.RESOLVE_SET_COMPANY_IPO_PRICES:
+      return "Resolve IPO Prices";
     case PhaseName.OPERATING_ACTION_COMPANY_VOTE:
       return "Company Vote";
     case PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT:
@@ -90,6 +98,18 @@ export function friendlyPhaseName(name: PhaseName | undefined): string {
       return "Company Vote Result";
     case PhaseName.OPERATING_COMPANY_VOTE_RESOLVE:
       return "Resolve Company Action";
+    case PhaseName.CONSUMPTION_PHASE:
+      return "Consumption Phase";
+    case PhaseName.FACTORY_CONSTRUCTION:
+      return "Factory Construction";
+    case PhaseName.FACTORY_CONSTRUCTION_RESOLVE:
+      return "Resolve Factory Construction";
+    case PhaseName.MARKETING_AND_RESEARCH_ACTION:
+      return "Marketing and Research";
+    case PhaseName.MARKETING_AND_RESEARCH_ACTION_RESOLVE:
+      return "Resolve Marketing and Research";
+    case PhaseName.EARNINGS_CALL:
+      return "Earnings Call";
     case PhaseName.CAPITAL_GAINS:
       return "Capital Gains";
     case PhaseName.DIVESTMENT:
@@ -106,6 +126,12 @@ export function friendlyPhaseName(name: PhaseName | undefined): string {
       return "Distribute Tranches";
     case PhaseName.PRIZE_DISTRIBUTE_RESOLVE:
       return "Resolve Tranches Distribution";
+    case PhaseName.MODERN_OPERATIONS:
+      return "Modern Operations";
+    case PhaseName.RESOLVE_MODERN_OPERATIONS:
+      return "Resolve Modern Operations";
+    case PhaseName.RUSTED_FACTORY_UPGRADE:
+      return "Rusted Factory Upgrade";
     default:
       return "Unknown Phase";
   }
@@ -166,3 +192,95 @@ export const friendlyDistributionStrategyName = (
       return "Unknown";
   }
 };
+
+export function renderLocationShortHand(location: ShareLocation) {
+  switch (location) {
+    case ShareLocation.DERIVATIVE_MARKET:
+      return "DM";
+    case ShareLocation.OPEN_MARKET:
+      return "OM";
+    case ShareLocation.IPO:
+      return "IPO";
+    case ShareLocation.PLAYER:
+      return "PLAYER";
+    default:
+      return location;
+  }
+}
+
+export function renderOrderTypeShortHand(orderType: OrderType) {
+  switch (orderType) {
+    case OrderType.LIMIT:
+      return "LO";
+    case OrderType.MARKET:
+      return "MO";
+    case OrderType.SHORT:
+      return "SO";
+    case OrderType.OPTION:
+      return "OO";
+    default:
+      return orderType;
+  }
+}
+
+export function friendlyResearchName(cardEffect: ResearchCardEffect) {
+  switch (cardEffect) {
+    case ResearchCardEffect.ARTIFICIAL_INTELLIGENCE:
+      return "Artificial Intelligence";
+    case ResearchCardEffect.AUTOMATION:
+      return "Automation";
+    case ResearchCardEffect.CLINICAL_TRIAL:
+      return "Clinical Trial";
+    case ResearchCardEffect.CORPORATE_ESPIONAGE:
+      return "Corporate Espionage";
+    case ResearchCardEffect.DIVERSIFICATION:
+      return "Diversification";
+    case ResearchCardEffect.ECOMMERCE:
+      return "E-Commerce";
+    case ResearchCardEffect.ECONOMIES_OF_SCALE:
+      return "Economies of Scale";
+    case ResearchCardEffect.ENERGY_SAVING:
+      return "Energy Saving";
+    case ResearchCardEffect.GLOBALIZATION:
+      return "Globalization";
+    case ResearchCardEffect.GOVERNMENT_GRANT:
+      return "Government Grant";
+    case ResearchCardEffect.INNOVATION:
+      return "Innovation";
+    case ResearchCardEffect.MARKET_EXPANSION:
+      return "Market Expansion";
+    case ResearchCardEffect.NEW_ALLOY:
+      return "New Alloy";
+    case ResearchCardEffect.NO_DISCERNIBLE_FINDINGS:
+      return "No Discernible Findings";
+    case ResearchCardEffect.PRODUCT_DEVELOPMENT:
+      return "Product Development";
+    case ResearchCardEffect.QUALITY_CONTROL:
+      return "Quality Control";
+    case ResearchCardEffect.RENEWABLE_ENERGY:
+      return "Renewable Energy";
+    case ResearchCardEffect.ROBOTICS:
+      return "Robotics";
+    case ResearchCardEffect.SPECIALIZATION:
+      return "Specialization";
+    default:
+      return "Unknown";
+  }
+}
+
+export function hashStringToColor(str: string): string {
+  // Simple hash function to generate a consistent hash from a string
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+
+  // Convert hash to a hex color
+  let color = "";
+  for (let i = 0; i < 3; i++) {
+    const value = (hash >> (i * 8)) & 0xff;
+    color += ("00" + value.toString(16)).slice(-2);
+  }
+
+  return color;
+}

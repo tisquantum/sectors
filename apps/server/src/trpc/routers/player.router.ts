@@ -18,7 +18,8 @@ export default (trpc: TrpcService, ctx: Context) =>
         const { where } = input;
         const player = await ctx.playersService.player(where);
         if (!player) {
-          throw new Error('Player not found');
+          console.error('Player not found getPlayer');
+          return null;
         }
         return player;
       }),
@@ -49,7 +50,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         const { where } = input;
         const player = await ctx.playersService.playerWithShares(where);
         if (!player) {
-          throw new Error('Player not found');
+          throw new Error('Player not found playerWithShares');
         }
         return player;
       }),
@@ -58,40 +59,6 @@ export default (trpc: TrpcService, ctx: Context) =>
       .query(async ({ input }) => {
         const { where } = input;
         return ctx.playersService.playersWithShares(where);
-      }),
-    createPlayer: trpc.procedure
-      .input(
-        z.object({
-          nickname: z.string(),
-          cashOnHand: z.number(),
-          userId: z.string(),
-          gameId: z.string(),
-          PlayerStock: z.any().optional(),
-        }),
-      )
-      .mutation(async ({ input }) => {
-        const data: Prisma.PlayerCreateInput = {
-          ...input,
-          marketOrderActions: 0,
-          limitOrderActions: 0,
-          shortOrderActions: 0,
-          marginAccount: 0,
-          User: { connect: { id: input.userId } },
-          Game: { connect: { id: input.gameId } },
-        };
-        const player = await ctx.playersService.createPlayer(data);
-        // Initialize the player as not ready for the game
-        // Initialize the player's ready status to false in the game
-        if (data.Game?.connect?.id || data.Game?.create?.id) {
-          const gameId = data.Game.connect?.id || data.Game.create?.id;
-          if (gameId) {
-            if (!gamePlayerReadyStatus.has(gameId)) {
-              gamePlayerReadyStatus.set(gameId, new Map<string, boolean>());
-            }
-            gamePlayerReadyStatus.get(gameId)!.set(player.id, false);
-          }
-        }
-        return player;
       }),
 
     updatePlayer: trpc.procedure
@@ -111,20 +78,13 @@ export default (trpc: TrpcService, ctx: Context) =>
         return ctx.playersService.updatePlayer({ where: { id }, data });
       }),
 
-    deletePlayer: trpc.procedure
-      .input(z.object({ id: z.string() }))
-      .mutation(async ({ input }) => {
-        const { id } = input;
-        return ctx.playersService.deletePlayer({ id });
-      }),
-
     playerReady: trpc.procedure
       .input(z.object({ playerId: z.string(), gameId: z.string() }))
       .mutation(async ({ input }) => {
         const { playerId, gameId } = input;
         const player = await ctx.playersService.player({ id: playerId });
         if (!player) {
-          throw new Error('Player not found');
+          throw new Error('Player not found playerReady');
         }
 
         // Mark the player as ready in the specified game

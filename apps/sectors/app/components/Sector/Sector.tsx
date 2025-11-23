@@ -2,7 +2,13 @@
 
 import React from "react";
 import Companies from "../Company/Companies";
-import { Accordion, AccordionItem, Avatar, Tooltip } from "@nextui-org/react";
+import {
+  Accordion,
+  AccordionItem,
+  Avatar,
+  Badge,
+  Tooltip,
+} from "@nextui-org/react";
 import {
   ArrowUturnUpIcon,
   ArrowsRightLeftIcon,
@@ -22,40 +28,58 @@ import { trpc } from "@sectors/app/trpc";
 import { sectorColors } from "@server/data/gameData";
 import { SectorWithCompanies } from "@server/prisma/prisma.types";
 import {
+  baseToolTipStyle,
   tooltipParagraphStyle,
   tooltipStyle,
 } from "@sectors/app/helpers/tailwind.helpers";
 import { calculateAverageStockPrice } from "@server/data/helpers";
 
 const SectorComponent = () => {
-  const { gameId } = useGame();
+  const { gameId, gameState } = useGame();
   const { data: sectorsWithCompanies, isLoading } =
-    trpc.sector.listSectorsWithCompanies.useQuery({
-      where: { gameId },
-    });
+    trpc.sector.listSectorsWithCompanies.useQuery(
+      {
+        where: { gameId },
+      },
+      {
+        // Prevent excessive refetching
+        refetchOnMount: false,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
+        staleTime: 30000, // 30 seconds
+      }
+    );
   if (isLoading) return <div>Loading...</div>;
   if (sectorsWithCompanies == undefined) return null;
   const getSectorColor = (sectorName: string) => {
     return sectorColors[sectorName];
   };
   return (
-    <Accordion selectionMode="multiple">
+    <Accordion selectionMode="multiple" className="p-0 w-full">
       {sectorsWithCompanies.map((sector: SectorWithCompanies) => (
         <AccordionItem
           key={sector.id}
           startContent={
-            <Avatar
-              className={`text-stone-200 font-extrabold`}
-              style={{ backgroundColor: getSectorColor(sector.name) }}
-              name={String(sector.name).toUpperCase()}
-              size="lg"
-            />
+            <Badge
+              content={
+                gameState.sectorPriority.find((p) => p.sectorId === sector.id)
+                  ?.priority
+              }
+            >
+              <Avatar
+                className={`text-stone-200 font-extrabold`}
+                style={{ backgroundColor: getSectorColor(sector.name) }}
+                name={String(sector.name).toUpperCase()}
+                size="lg"
+              />
+            </Badge>
           }
           title={sector.name}
           subtitle={
             <div className="flex flex-col">
               <div className="flex items-center">
                 <Tooltip
+                  classNames={{ base: baseToolTipStyle }}
                   className={tooltipStyle}
                   content={
                     <p className={tooltipParagraphStyle}>
@@ -71,6 +95,7 @@ const SectorComponent = () => {
                   </div>
                 </Tooltip>
                 <Tooltip
+                  classNames={{ base: baseToolTipStyle }}
                   className={tooltipStyle}
                   content={
                     <p className={tooltipParagraphStyle}>
@@ -87,6 +112,7 @@ const SectorComponent = () => {
                   </div>
                 </Tooltip>
                 <Tooltip
+                  classNames={{ base: baseToolTipStyle }}
                   className={tooltipStyle}
                   content={
                     <p className={tooltipParagraphStyle}>
@@ -101,6 +127,7 @@ const SectorComponent = () => {
               </div>
               <div className="flex items-center gap-2">
                 <Tooltip
+                  classNames={{ base: baseToolTipStyle }}
                   className={tooltipStyle}
                   content={
                     <p className={tooltipParagraphStyle}>
@@ -121,6 +148,7 @@ const SectorComponent = () => {
                   </div>
                 </Tooltip>
                 <Tooltip
+                  classNames={{ base: baseToolTipStyle }}
                   className={tooltipStyle}
                   content={
                     <p className={tooltipParagraphStyle}>
@@ -141,6 +169,7 @@ const SectorComponent = () => {
                   </div>
                 </Tooltip>
                 <Tooltip
+                  classNames={{ base: baseToolTipStyle }}
                   className={tooltipStyle}
                   content={
                     <p className={tooltipParagraphStyle}>

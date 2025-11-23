@@ -70,7 +70,7 @@ const SpotMarketTable = ({
         {columns.map((column, index) => (
           <TableColumn
             key={column}
-            className={`${index === 0 ? "sticky left-0 z-10" : "min-w-auto"}`}
+            className={`${index === 0 ? "sticky left-0" : "min-w-auto"}`}
           >
             {column}
           </TableColumn>
@@ -85,6 +85,7 @@ const SpotMarketTable = ({
                 className={`${
                   colIndex === 0 ? `sticky left-0 z-10 bg-gray-900` : ""
                 }`}
+                style={colIndex === 0 ? { zIndex: 99 } : {}}
               >
                 <div
                   className={`flex items-center gap-2 ${

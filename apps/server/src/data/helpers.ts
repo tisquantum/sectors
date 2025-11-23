@@ -1,7 +1,10 @@
 import {
+  AwardTrackType,
   Card,
   Company,
   CompanyStatus,
+  FactorySize,
+  OperatingRoundAction,
   OrderType,
   Phase,
   PhaseName,
@@ -12,6 +15,7 @@ import {
   RoundType,
   Sector,
   SectorName,
+  SectorPriority,
   Share,
   ShareLocation,
   StockTier,
@@ -25,14 +29,28 @@ import {
 } from '@server/prisma/prisma.types';
 import {
   AUTOMATION_EFFECT_OPERATIONS_REDUCTION,
+  AWARD_TRACK_SPACES_CATALYST,
+  AWARD_TRACK_SPACES_MARKETING,
+  AWARD_TRACK_SPACES_RESEARCH,
   BOOM_CYCLE_STOCK_CHART_BONUS,
+  CompanyActionCosts,
   DEFAULT_RESEARCH_DECK_SIZE,
   GOVERNMENT_GRANT_AMOUNT,
+  GeneralCompanyActionCosts,
   PRESTIGE_TRACK_LENGTH,
   PrestigeTrack,
   PrestigeTrackItem,
-  STOCK_ACTION_SUB_ROUND_MAX,
+  RESOURCE_PRICES_CONSUMER_CYCLICAL,
+  RESOURCE_PRICES_CONSUMER_DEFENSIVE,
+  RESOURCE_PRICES_CONSUMER_DISCRETIONARY,
+  RESOURCE_PRICES_CONSUMER_STAPLES,
+  RESOURCE_PRICES_ENERGY,
+  RESOURCE_PRICES_HEALTHCARE,
+  RESOURCE_PRICES_INDUSTRIAL,
+  RESOURCE_PRICES_MATERIALS,
+  RESOURCE_PRICES_TECHNOLOGY,
   StockTierChartRange,
+  companyActionsDescription,
   getStockPriceClosestEqualOrMore,
   stockGridPrices,
   stockTierChartRanges,
@@ -46,9 +64,10 @@ import {
   materials,
   technology,
 } from './gameData';
+import { get } from 'http';
 interface NextPhaseOptions {
   allCompaniesHaveVoted?: boolean;
-  stockActionSubRound?: number;
+  stockActionSubRoundIsOver?: boolean;
 }
 /**
  * Controls the flow of the game by determining the next phase.
@@ -58,6 +77,7 @@ interface NextPhaseOptions {
 export function determineNextGamePhase(
   phaseName: PhaseName,
   options?: NextPhaseOptions,
+  modernOperations: boolean = false,
 ): {
   phaseName: PhaseName;
   roundType: RoundType;
@@ -71,15 +91,30 @@ export function determineNextGamePhase(
   }
   if (phaseName === PhaseName.INFLUENCE_BID_RESOLVE) {
     return {
-      phaseName: PhaseName.STOCK_RESOLVE_LIMIT_ORDER,
+      phaseName: PhaseName.SET_COMPANY_IPO_PRICES,
       roundType: RoundType.STOCK,
     };
   }
   switch (phaseName) {
     case PhaseName.START_TURN:
       return {
-        phaseName: PhaseName.PRIZE_VOTE_ACTION,
+        phaseName: PhaseName.SET_COMPANY_IPO_PRICES,
         roundType: RoundType.INFLUENCE,
+      };
+    case PhaseName.HEADLINE_RESOLVE:
+      return {
+        phaseName: PhaseName.SET_COMPANY_IPO_PRICES,
+        roundType: RoundType.STOCK,
+      };
+    case PhaseName.SET_COMPANY_IPO_PRICES:
+      return {
+        phaseName: PhaseName.RESOLVE_SET_COMPANY_IPO_PRICES,
+        roundType: RoundType.STOCK,
+      };
+    case PhaseName.RESOLVE_SET_COMPANY_IPO_PRICES:
+      return {
+        phaseName: PhaseName.STOCK_RESOLVE_LIMIT_ORDER,
+        roundType: RoundType.STOCK,
       };
     case PhaseName.PRIZE_VOTE_ACTION:
       return {
@@ -112,25 +147,24 @@ export function determineNextGamePhase(
         roundType: RoundType.STOCK,
       };
     case PhaseName.STOCK_ACTION_RESULT:
-      if ((options?.stockActionSubRound || 0) <= STOCK_ACTION_SUB_ROUND_MAX) {
-        return {
-          phaseName: PhaseName.STOCK_ACTION_ORDER,
-          roundType: RoundType.STOCK,
-        };
-      } else {
-        return {
-          phaseName: PhaseName.STOCK_ACTION_REVEAL,
-          roundType: RoundType.STOCK,
-        };
-      }
+      return {
+        phaseName: PhaseName.STOCK_ACTION_REVEAL,
+        roundType: RoundType.STOCK,
+      };
     case PhaseName.STOCK_ACTION_REVEAL:
       return {
         phaseName: PhaseName.STOCK_RESOLVE_MARKET_ORDER,
         roundType: RoundType.STOCK,
       };
     case PhaseName.STOCK_RESOLVE_MARKET_ORDER:
+      if (options?.stockActionSubRoundIsOver) {
+        return {
+          phaseName: PhaseName.STOCK_SHORT_ORDER_INTEREST,
+          roundType: RoundType.STOCK,
+        };
+      }
       return {
-        phaseName: PhaseName.STOCK_SHORT_ORDER_INTEREST,
+        phaseName: PhaseName.STOCK_ACTION_ORDER,
         roundType: RoundType.STOCK,
       };
     case PhaseName.STOCK_SHORT_ORDER_INTEREST:
@@ -170,31 +204,19 @@ export function determineNextGamePhase(
         phaseName: PhaseName.STOCK_RESULTS_OVERVIEW,
         roundType: RoundType.STOCK,
       };
-    case PhaseName.STOCK_RESULTS_OVERVIEW:
-      return {
-        phaseName: PhaseName.OPERATING_PRODUCTION,
-        roundType: RoundType.OPERATING,
-      };
-    case PhaseName.OPERATING_PRODUCTION:
-      return {
-        phaseName: PhaseName.OPERATING_PRODUCTION_VOTE,
-        roundType: RoundType.OPERATING,
-      };
-    case PhaseName.OPERATING_PRODUCTION_VOTE:
-      return {
-        phaseName: PhaseName.OPERATING_PRODUCTION_VOTE_RESOLVE,
-        roundType: RoundType.OPERATING,
-      };
-    case PhaseName.OPERATING_PRODUCTION_VOTE_RESOLVE:
-      return {
-        phaseName: PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT,
-        roundType: RoundType.OPERATING,
-      };
-    case PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT:
+    case PhaseName.STOCK_RESULTS_OVERVIEW: {
+      //if modern operations, move to modern operations phase
+      if (modernOperations) {
+        return {
+          phaseName: PhaseName.MODERN_OPERATIONS,
+          roundType: RoundType.OPERATING,
+        };
+      }
       return {
         phaseName: PhaseName.OPERATING_ACTION_COMPANY_VOTE,
         roundType: RoundType.OPERATING,
       };
+    }
     case PhaseName.OPERATING_ACTION_COMPANY_VOTE:
       return {
         phaseName: PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT,
@@ -210,6 +232,37 @@ export function determineNextGamePhase(
         phaseName: PhaseName.OPERATING_ACTION_COMPANY_VOTE,
         roundType: RoundType.OPERATING,
       };
+    case PhaseName.OPERATING_PRODUCTION:
+      return {
+        phaseName: PhaseName.OPERATING_PRODUCTION_VOTE,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.OPERATING_PRODUCTION_VOTE:
+      return {
+        phaseName: PhaseName.OPERATING_PRODUCTION_VOTE_RESOLVE,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.OPERATING_PRODUCTION_VOTE_RESOLVE:
+      if (modernOperations) {
+        return {
+          phaseName: PhaseName.CAPITAL_GAINS,
+          roundType: RoundType.OPERATING,
+        };
+      }
+      return {
+        phaseName: PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT: {
+      //if modern operations, move to factory construction
+      if (modernOperations) {
+        throw new Error('Modern operations not implemented');
+      }
+      return {
+        phaseName: PhaseName.CAPITAL_GAINS,
+        roundType: RoundType.OPERATING,
+      };
+    }
     //if you are over some threshold on stocks, you must pay a tax.
     case PhaseName.CAPITAL_GAINS:
       return {
@@ -226,6 +279,60 @@ export function determineNextGamePhase(
       return {
         phaseName: PhaseName.START_TURN,
         roundType: RoundType.GAME_UPKEEP,
+      };
+    // MODERN OPERATING MECHANICS PHASE FLOW
+    case PhaseName.CONSUMPTION_PHASE:
+      return {
+        phaseName: PhaseName.EARNINGS_CALL,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.EARNINGS_CALL:
+      return {
+        phaseName: PhaseName.RESOLVE_INSOLVENCY,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.RESOLVE_INSOLVENCY:
+      return {
+        phaseName: PhaseName.OPERATING_PRODUCTION_VOTE,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.FACTORY_CONSTRUCTION:
+      // Legacy support - route to new combined phase
+      return {
+        phaseName: PhaseName.RESOLVE_MODERN_OPERATIONS,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.FACTORY_CONSTRUCTION_RESOLVE:
+      // Legacy support - route to marketing/research or new combined phase
+      return {
+        phaseName: modernOperations ? PhaseName.RESOLVE_MODERN_OPERATIONS : PhaseName.MARKETING_AND_RESEARCH_ACTION,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.MARKETING_AND_RESEARCH_ACTION:
+      // Legacy support
+      return {
+        phaseName: PhaseName.MARKETING_AND_RESEARCH_ACTION_RESOLVE,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.MARKETING_AND_RESEARCH_ACTION_RESOLVE:
+      return {
+        phaseName: PhaseName.CONSUMPTION_PHASE,
+        roundType: RoundType.GAME_UPKEEP,
+      };
+    case PhaseName.MODERN_OPERATIONS:
+      return {
+        phaseName: PhaseName.RESOLVE_MODERN_OPERATIONS,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.RESOLVE_MODERN_OPERATIONS:
+      return {
+        phaseName: PhaseName.RUSTED_FACTORY_UPGRADE,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.RUSTED_FACTORY_UPGRADE:
+      return {
+        phaseName: PhaseName.CONSUMPTION_PHASE,
+        roundType: RoundType.OPERATING,
       };
     default:
       return {
@@ -286,10 +393,6 @@ export const getPseudoSpend = (orders: PlayerOrderWithCompany[]) => {
       acc + (order.quantity ?? 0) * (order.Company.currentStockPrice ?? 0),
     0,
   );
-  console.log('totalBuyIpo', totalBuyIpo);
-  console.log('totalSellIpo', totalSellIpo);
-  console.log('totalBuyOpenMarket', totalBuyOpenMarket);
-  console.log('totalSellOpenMarket', totalSellOpenMarket);
   return totalBuyIpo - totalSellIpo + totalBuyOpenMarket - totalSellOpenMarket;
 };
 
@@ -472,6 +575,18 @@ export function calculateMarginAccountMinimum(shortOrderValue: number): number {
   return Math.ceil(shortOrderValue / 2);
 }
 
+/**
+ * Sorts an array of companies based on multiple criteria in ASCENDING order, where the lower the number, the higher the priority.
+ *
+ * The sorting logic is applied as follows:
+ * 1. Companies with the `ECONOMIES_OF_SCALE` advantage are given the highest priority and considered the "cheapest" (sorted first).
+ * 2. Companies are then sorted by their unit price in ascending order (cheapest first).
+ * 3. In the case of a tie in unit price, companies are further sorted by the number of prestige tokens in descending order (most tokens first).
+ * 4. Finally, if the previous criteria are still tied, companies are sorted by their demand score, calculated using `calculateDemand()`, in descending order (highest demand first).
+ *
+ * @param companies - An array of `CompanyOperationOrderPartial` objects to be sorted.
+ * @returns The sorted array of `CompanyOperationOrderPartial` objects.
+ */
 export function companyPriorityOrderOperations(
   companies: CompanyOperationOrderPartial[],
 ) {
@@ -658,7 +773,6 @@ export function createSeededResearchCards(seed: string): Card[] {
   ) {
     const effectIndex = Math.abs(Math.floor(rng() * (effects.length - 1)));
     const effect = effects[effectIndex];
-    console.log('effect', effect, effectIndex);
     cards.push({
       id: i + 1,
       name: effect,
@@ -682,7 +796,6 @@ export function createSeededResearchCards(seed: string): Card[] {
   }
   //remove any cards that are undefined
   cards = cards.filter((card) => card !== undefined);
-  console.log('cards', cards);
   return cards;
 }
 
@@ -756,7 +869,7 @@ export function calculateNetWorth(
   return (
     cashOnHand +
     activeShares.reduce(
-      (acc, share) => acc + share.Company.currentStockPrice,
+      (acc, share) => acc + (share.Company.currentStockPrice || 0),
       0,
     )
   );
@@ -841,9 +954,186 @@ export function groupBy<T>(array: T[], key: keyof T) {
 export function calculateAverageStockPrice(
   companiesInSector: CompanyWithSector[],
 ) {
-  return (
+  return Math.floor(
     companiesInSector.reduce((acc, company) => {
-      return acc + company.currentStockPrice;
-    }, 0) / companiesInSector.length
+      return acc + (company.currentStockPrice || 0);
+    }, 0) / companiesInSector.length,
   );
+}
+
+export function calculateStartingCompanyCount(playerCount: number) {
+  const minimumStartingCompanies = 3;
+  const maximumStartingCompanies = 6;
+  switch (playerCount) {
+    case 1:
+    case 2:
+    case 3:
+    case 4:
+      return minimumStartingCompanies;
+    case 5:
+    case 6:
+    case 7:
+      return playerCount - 1;
+    default:
+      return maximumStartingCompanies;
+  }
+}
+
+export function getCompanyActionCost(
+  companyAction: OperatingRoundAction,
+  companyStockPrice: number,
+  generalCompanyActionCount?: number,
+) {
+  if (companyAction == OperatingRoundAction.SHARE_BUYBACK) {
+    return companyStockPrice;
+  }
+  if (
+    companyActionsDescription.find(
+      (description) => description.name == companyAction,
+    )?.actionType == 'general'
+  ) {
+    const generalCompanyActionCost =
+      GeneralCompanyActionCosts[
+        companyAction as keyof typeof GeneralCompanyActionCosts
+      ];
+    return generalCompanyActionCost[
+      generalCompanyActionCount
+        ? Math.min(generalCompanyActionCount, generalCompanyActionCost.length)
+        : 0
+    ];
+  } else {
+    return CompanyActionCosts[companyAction as keyof typeof CompanyActionCosts];
+  }
+}
+
+/**
+ * Sorts an array of sector IDs based on their priority.
+ * @param sectorIds - The array of sector IDs to sort.
+ * @param sectorPriorities - The array of sector priority objects.
+ * @returns An array of sector IDs sorted by priority.
+ */
+export function sortSectorIdsByPriority(
+  sectorIds: string[],
+  sectorPriorities: SectorPriority[],
+): string[] {
+  // Create a lookup map for sector priorities
+  const priorityMap = sectorPriorities.reduce<{ [key: string]: number }>(
+    (map, sp) => {
+      map[sp.sectorId] = sp.priority;
+      return map;
+    },
+    {},
+  );
+
+  // Sort the sector IDs based on the priority
+  return sectorIds.slice().sort((a, b) => {
+    const priorityA = priorityMap[a] ?? Number.MAX_VALUE;
+    const priorityB = priorityMap[b] ?? Number.MAX_VALUE;
+    return priorityA - priorityB;
+  });
+}
+
+export function getSpacesForAwardTrackType(awardType: AwardTrackType) {
+  switch (awardType) {
+    case AwardTrackType.CATALYST:
+      return AWARD_TRACK_SPACES_CATALYST;
+    case AwardTrackType.MARKETING:
+      return AWARD_TRACK_SPACES_MARKETING;
+    case AwardTrackType.RESEARCH:
+      return AWARD_TRACK_SPACES_RESEARCH;
+    default:
+      return 0;
+  }
+}
+
+export function isAtSpaceLimit(
+  awardType: AwardTrackType,
+  currentSpace: number,
+) {
+  switch (awardType) {
+    case AwardTrackType.CATALYST:
+      return currentSpace >= AWARD_TRACK_SPACES_CATALYST - 1;
+    case AwardTrackType.MARKETING:
+      return currentSpace >= AWARD_TRACK_SPACES_MARKETING - 1;
+    case AwardTrackType.RESEARCH:
+      return currentSpace >= AWARD_TRACK_SPACES_RESEARCH - 1;
+    default:
+      return false;
+  }
+}
+
+export function getPassiveEffectForSector(sector: SectorName) {
+  switch (sector) {
+    case SectorName.HEALTHCARE:
+      return OperatingRoundAction.FASTTRACK_APPROVAL;
+    case SectorName.TECHNOLOGY:
+      return OperatingRoundAction.INNOVATION_SURGE;
+    case SectorName.ENERGY:
+      return OperatingRoundAction.CARBON_CREDIT;
+    case SectorName.CONSUMER_DEFENSIVE:
+      return OperatingRoundAction.STEADY_DEMAND;
+    case SectorName.CONSUMER_CYCLICAL:
+      return OperatingRoundAction.BOOM_CYCLE;
+    case SectorName.INDUSTRIALS:
+      return OperatingRoundAction.MANUFACTURE;
+    case SectorName.MATERIALS:
+      return OperatingRoundAction.EXTRACT;
+    default:
+      return OperatingRoundAction.VETO;
+  }
+}
+
+export function getResourcePricesForSector(sector: SectorName) {
+  switch (sector) {
+    case SectorName.HEALTHCARE:
+      return RESOURCE_PRICES_HEALTHCARE;
+    case SectorName.TECHNOLOGY:
+      return RESOURCE_PRICES_TECHNOLOGY;
+    case SectorName.ENERGY:
+      return RESOURCE_PRICES_ENERGY;
+    case SectorName.CONSUMER_DEFENSIVE:
+      return RESOURCE_PRICES_CONSUMER_DEFENSIVE;
+    case SectorName.CONSUMER_CYCLICAL:
+      return RESOURCE_PRICES_CONSUMER_CYCLICAL;
+    case SectorName.INDUSTRIALS:
+      return RESOURCE_PRICES_INDUSTRIAL;
+    case SectorName.MATERIALS:
+      return RESOURCE_PRICES_MATERIALS;
+    case SectorName.CONSUMER_DISCRETIONARY:
+      return RESOURCE_PRICES_CONSUMER_DISCRETIONARY;
+    case SectorName.CONSUMER_STAPLES:
+      return RESOURCE_PRICES_CONSUMER_STAPLES;
+    default:
+      return [1];
+  }
+}
+
+export function getNumberForFactorySize(factorySize: FactorySize) {
+  switch (factorySize) {
+    case FactorySize.FACTORY_I:
+      return 1;
+    case FactorySize.FACTORY_II:
+      return 2;
+    case FactorySize.FACTORY_III:
+      return 3;
+    case FactorySize.FACTORY_IV:
+      return 4;
+    default:
+      return 0;
+  }
+}
+
+export function validFactorySizeForSectorTechnologyLevel(factorySize: FactorySize, sectorTechnologyLevel: number) {
+  switch (factorySize) {
+    case FactorySize.FACTORY_I:
+      return sectorTechnologyLevel >= 1 && sectorTechnologyLevel <= 3;
+    case FactorySize.FACTORY_II:
+      return sectorTechnologyLevel >= 2 && sectorTechnologyLevel <= 4;
+    case FactorySize.FACTORY_III:
+      return sectorTechnologyLevel >= 3;
+    case FactorySize.FACTORY_IV:
+      return sectorTechnologyLevel >= 4;
+    default:
+      return false;
+  }
 }

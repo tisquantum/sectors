@@ -9,6 +9,7 @@ import {
   RoundType,
   GameStatus,
   OperatingRoundAction,
+  OperationMechanicsVersion,
 } from '@prisma/client';
 import { GameManagementService } from '@server/game-management/game-management.service';
 import {
@@ -97,6 +98,13 @@ export default (trpc: TrpcService, ctx: Context) =>
           startingCashOnHand: z.number(),
           distributionStrategy: z.nativeEnum(DistributionStrategy),
           gameMaxTurns: z.number(),
+          playerOrdersConcealed: z.boolean(),
+          useOptionOrders: z.boolean(),
+          useShortOrders: z.boolean(),
+          useLimitOrders: z.boolean(),
+          isTimerless: z.boolean().optional(),
+          bots: z.number(),
+          operationMechanicsVersion: z.nativeEnum(OperationMechanicsVersion).optional(),
           players: z.any().optional(),
           companies: z.any().optional(),
           Player: z.any().optional(),
@@ -118,6 +126,13 @@ export default (trpc: TrpcService, ctx: Context) =>
             bankPoolNumber: input.bankPoolNumber,
             distributionStrategy: input.distributionStrategy,
             gameMaxTurns: input.gameMaxTurns,
+            playerOrdersConcealed: input.playerOrdersConcealed,
+            useOptionOrders: input.useOptionOrders,
+            useShortOrders: input.useShortOrders,
+            useLimitOrders: input.useLimitOrders,
+            isTimerless: input.isTimerless || false,
+            bots: input.bots,
+            operationMechanicsVersion: input.operationMechanicsVersion,
           });
         } catch (error) {
           return {
@@ -189,41 +204,52 @@ export default (trpc: TrpcService, ctx: Context) =>
       .input(z.object({ gameId: z.string() }))
       .query(async ({ input }) => {
         const { gameId } = input;
-        return ctx.gamesService.getGameState(gameId);
+        const startTime = Date.now();
+        console.log(`[tRPC] getGameState called for gameId: ${gameId} at ${new Date().toISOString()}`);
+        try {
+          const result = await ctx.gamesService.getGameState(gameId);
+          const duration = Date.now() - startTime;
+          console.log(`[tRPC] getGameState completed for gameId: ${gameId} in ${duration}ms`);
+          return result;
+        } catch (error) {
+          const duration = Date.now() - startTime;
+          console.error(`[tRPC] getGameState ERROR for gameId: ${gameId} after ${duration}ms:`, error);
+          throw error;
+        }
       }),
 
-    forceNextPhase: trpc.procedure
-      .input(
-        z.object({
-          gameId: z.string(),
-          phaseName: z.nativeEnum(PhaseName),
-          roundType: z.nativeEnum(RoundType),
-          stockRoundId: z.number().optional(),
-          operatingRoundId: z.number().optional(),
-          influenceRoundId: z.number().optional(),
-          companyId: z.string().optional(),
-        }),
-      )
-      .mutation(async ({ input }) => {
-        const {
-          gameId,
-          phaseName,
-          roundType,
-          stockRoundId,
-          operatingRoundId,
-          influenceRoundId,
-          companyId,
-        } = input;
-        return ctx.gameManagementService.determineIfNewRoundAndStartPhase({
-          gameId,
-          phaseName,
-          roundType,
-          stockRoundId,
-          operatingRoundId,
-          influenceRoundId,
-          companyId,
-        });
-      }),
+    // forceNextPhase: trpc.procedure
+    //   .input(
+    //     z.object({
+    //       gameId: z.string(),
+    //       phaseName: z.nativeEnum(PhaseName),
+    //       roundType: z.nativeEnum(RoundType),
+    //       stockRoundId: z.number().optional(),
+    //       operatingRoundId: z.number().optional(),
+    //       influenceRoundId: z.number().optional(),
+    //       companyId: z.string().optional(),
+    //     }),
+    //   )
+    //   .mutation(async ({ input }) => {
+    //     const {
+    //       gameId,
+    //       phaseName,
+    //       roundType,
+    //       stockRoundId,
+    //       operatingRoundId,
+    //       influenceRoundId,
+    //       companyId,
+    //     } = input;
+    //     return ctx.gameManagementService.determineIfNewRoundAndStartPhase({
+    //       gameId,
+    //       phaseName,
+    //       roundType,
+    //       stockRoundId,
+    //       operatingRoundId,
+    //       influenceRoundId,
+    //       companyId,
+    //     });
+    //   }),
     retryPhase: trpc.procedure
       .input(z.object({ gameId: z.string() }))
       .mutation(async ({ input }) => {
@@ -247,13 +273,16 @@ export default (trpc: TrpcService, ctx: Context) =>
             id: z.string(),
             gameId: z.string(),
             gameTurnId: z.string(),
-            stockRoundId: z.number().nullable(),
-            operatingRoundId: z.number().nullable(),
+            stockRoundId: z.string().nullable(),
+            stockSubRoundId: z.string().nullable(),
+            operatingRoundId: z.string().nullable(),
             influenceRoundId: z.number().nullable(),
             companyId: z.string().nullable(),
             phaseTime: z.number(),
             createdAt: z.date(),
             updatedAt: z.date(),
+            phaseStartTime: z.date().nullable(),
+            sectorId: z.string().nullable(),
           }),
         }),
       )
@@ -268,7 +297,14 @@ export default (trpc: TrpcService, ctx: Context) =>
     coverShort: trpc.procedure
       .input(z.object({ shortId: z.number(), gameId: z.string() }))
       .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
-      .use(async (opts) => checkSubmissionTime(opts, ctx.phaseService))
+      .use(async (opts) =>
+        checkSubmissionTime(
+          PhaseName.STOCK_ACTION_SHORT_ORDER,
+          opts,
+          ctx.phaseService,
+          ctx.gamesService,
+        ),
+      )
       .mutation(async ({ input }) => {
         try {
           console.log('input short id', input);
@@ -290,7 +326,14 @@ export default (trpc: TrpcService, ctx: Context) =>
     prizeDistribution: trpc.procedure
       .input(prizeDistributionInputSchema)
       .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
-      .use(async (opts) => checkSubmissionTime(opts, ctx.phaseService))
+      .use(async (opts) =>
+        checkSubmissionTime(
+          PhaseName.PRIZE_DISTRIBUTE_ACTION,
+          opts,
+          ctx.phaseService,
+          ctx.gamesService,
+        ),
+      )
       .mutation(async ({ input, ctx: ctxMiddleware }) => {
         const { distributionData } = input;
         if (!distributionData) {
@@ -380,5 +423,39 @@ export default (trpc: TrpcService, ctx: Context) =>
 
         // Delegate the responsibility to GameManagementService
         return ctx.gameManagementService.listPlayerReadiness(gameId);
+      }),
+    getTurnIncome: trpc.procedure
+      .input(z.object({ gameId: z.string(), gameTurnId: z.string() }))
+      .query(async ({ input }) => {
+        const { gameId, gameTurnId } = input;
+        //get players for game
+        const players = await ctx.playerService.players({ where: { gameId } });
+        const playerIds = players.map((player) => player.id);
+        return ctx.gameManagementService.getTurnIncome(playerIds, gameTurnId);
+      }),
+    createIpoVote: trpc.procedure
+      .input(
+        z.object({
+          playerId: z.string(),
+          companyId: z.string(),
+          ipoPrice: z.number(),
+        }),
+      )
+      .mutation(async ({ input }) => {
+        const { playerId, companyId, ipoPrice } = input;
+        return ctx.gameManagementService.createIpoVote({
+          playerId,
+          companyId,
+          ipoPrice,
+        });
+      }),
+    getIpoVotesForGameTurn: trpc.procedure
+      .input(z.object({ gameTurnId: z.string() }))
+      .query(async ({ input }) => {
+        const { gameTurnId } = input;
+        if (!gameTurnId) {
+          throw new Error('Game Turn ID is required');
+        }
+        return ctx.gameManagementService.getIpoVotesForGameTurn(gameTurnId);
       }),
   });

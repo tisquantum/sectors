@@ -18,6 +18,32 @@ export class SectorService {
     });
   }
 
+  async sectorWithCompanies(
+    sectorWhereUniqueInput: Prisma.SectorWhereUniqueInput,
+  ): Promise<SectorWithCompanies | null> {
+    return this.prisma.sector.findUnique({
+      where: sectorWhereUniqueInput,
+      include: {
+        Company: {
+          include: {
+            Share: {
+              include: {
+                Player: true,
+              },
+            },
+            StockHistory: {
+              include: {
+                Phase: true,
+              },
+            },
+            Sector: true,
+            Cards: true,
+            CompanyActions: true,
+          },
+        },
+      },
+    });
+  }
   async sectors(params: {
     skip?: number;
     take?: number;
@@ -118,5 +144,66 @@ export class SectorService {
     return this.prisma.sector.delete({
       where,
     });
+  }
+
+  async updateResearchMarker(
+    sectorId: string,
+    gameId: string,
+    amount: number,
+  ): Promise<Sector> {
+    // First verify the sector belongs to the game
+    const sector = await this.prisma.sector.findFirst({
+      where: {
+        id: sectorId,
+        gameId,
+      },
+    });
+
+    if (!sector) {
+      throw new Error('Sector not found or does not belong to the specified game');
+    }
+
+    // Update the research marker
+    return this.prisma.sector.update({
+      where: { id: sectorId },
+      data: {
+        researchMarker: {
+          increment: amount,
+        },
+      },
+    });
+  }
+
+  async getSectorResearchProgress(
+    sectorId: string,
+    gameId: string,
+  ): Promise<{ researchMarker: number; companies: { id: string; researchProgress: number }[] }> {
+    // Get the sector with its companies
+    const sector = await this.prisma.sector.findFirst({
+      where: {
+        id: sectorId,
+        gameId,
+      },
+      include: {
+        Company: {
+          select: {
+            id: true,
+            researchProgress: true,
+          },
+        },
+      },
+    });
+
+    if (!sector) {
+      throw new Error('Sector not found or does not belong to the specified game');
+    }
+
+    return {
+      researchMarker: sector.researchMarker,
+      companies: sector.Company.map(company => ({
+        id: company.id,
+        researchProgress: company.researchProgress,
+      })),
+    };
   }
 }

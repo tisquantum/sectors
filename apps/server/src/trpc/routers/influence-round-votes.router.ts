@@ -5,11 +5,14 @@ import { PhaseService } from '@server/phase/phase.service';
 import { PhaseName } from '@prisma/client';
 import { checkIsPlayerAction, checkSubmissionTime } from '../trpc.middleware';
 import { PlayersService } from '@server/players/players.service';
+import { GamesService } from '@server/games/games.service';
+import { TRPCError } from '@trpc/server';
 
 type Context = {
   influenceRoundVotesService: InfluenceRoundVotesService;
   phaseService: PhaseService;
   playerService: PlayersService;
+  gamesService: GamesService;
 };
 
 export default (trpc: TrpcService, ctx: Context) =>
@@ -69,7 +72,14 @@ export default (trpc: TrpcService, ctx: Context) =>
         }),
       )
       .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
-      .use(async (opts) => checkSubmissionTime(opts, ctx.phaseService))
+      .use(async (opts) =>
+        checkSubmissionTime(
+          PhaseName.INFLUENCE_BID_ACTION,
+          opts,
+          ctx.phaseService,
+          ctx.gamesService,
+        ),
+      )
       .mutation(async ({ input, ctx: ctxMiddleware }) => {
         const { influenceRoundId, playerId, influence, gameId } = input;
         const data = {
@@ -81,7 +91,17 @@ export default (trpc: TrpcService, ctx: Context) =>
         // ensure current phase is influence voting round
         const currentPhase = await ctx.phaseService.currentPhase(gameId);
         if (currentPhase?.name == PhaseName.INFLUENCE_BID_ACTION) {
-          return ctx.influenceRoundVotesService.createInfluenceVote(data);
+          try {
+            return ctx.influenceRoundVotesService.createInfluenceVote(data);
+          } catch (error) {
+            throw new TRPCError({
+              code: 'INTERNAL_SERVER_ERROR',
+              message:
+                error instanceof Error
+                  ? error.message
+                  : 'An unexpected error occurred',
+            });
+          }
         } else {
           throw new Error(
             'Cannot create influence vote outside of influence voting round',

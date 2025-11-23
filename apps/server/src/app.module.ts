@@ -44,6 +44,29 @@ import { InsolvencyContributionModule } from './insolvency-contribution/insolven
 import { PrizeModule } from './prize/prize.module';
 import { PrizeVotesModule } from './prize-votes/prize-votes.module';
 import { PrizeDistributionModule } from './prize-distribution/prize-distribution.module';
+import { CompanyActionOrderModule } from './company-action-order/company-action-order.module';
+import { SectorPriorityModule } from './sector-priority/sector-priority.module';
+import { HeadlineModule } from './headline/headline.module';
+import { PlayerHeadlineModule } from './player-headline/player-headline.module';
+import { StockSubRoundModule } from './stock-sub-round/stock-sub-round.module';
+import { CompanyAwardTrackModule } from './company-award-track/company-award-track.module';
+import { CompanyAwardTrackSpaceModule } from './company-award-track-space/company-award-track-space.module';
+import { ExecutiveGameModule } from './executive-game/executive-game.module';
+import { ExecutiveGameManagementModule } from './executive-game-management/executive-game-management.module';
+import { ExecutivePlayerModule } from './executive-player/executive-player.module';
+import { ExecutiveCardModule } from './executive-card/executive-card.module';
+import { ExecutiveInfluenceBidModule } from './executive-influence-bid/executive-influence-bid.module';
+import { ExecutiveInfluenceModule } from './executive-influence/executive-influence.module';
+import { ExecutivePhaseModule } from './executive-phase/executive-phase.module';
+import { ExecutiveGameTurnModule } from './executive-game-turn/executive-game-turn.module';
+import { ExecutiveInfluenceVoteRoundModule } from './executive-influence-vote-round/executive-influence-vote-round.module';
+import { AiBotModule } from './ai-bot/ai-bot.module';
+import { FactoryConstructionModule } from './factory-construction/factory-construction.module';
+import { ResourceModule } from './resource/resource.module';
+import { ConsumptionMarkerModule } from './consumption-marker/consumption-marker.module';
+import { MarketingModule } from './marketing/marketing.module';
+import { FactoryModule } from './factory/factory.module';
+import { FactoryProductionModule } from './factory-production/factory-production.module';
 
 const yourPusherOptions = {
   cluster: process.env.PUSHER_CLUSTER ?? 'CLUSTER',
@@ -104,6 +127,29 @@ const chunkingOptions = {
     PrizeModule,
     PrizeVotesModule,
     PrizeDistributionModule,
+    CompanyActionOrderModule,
+    SectorPriorityModule,
+    HeadlineModule,
+    PlayerHeadlineModule,
+    StockSubRoundModule,
+    CompanyAwardTrackModule,
+    CompanyAwardTrackSpaceModule,
+    ExecutiveGameModule,
+    ExecutiveGameManagementModule,
+    ExecutivePlayerModule,
+    ExecutiveCardModule,
+    ExecutiveInfluenceBidModule,
+    ExecutiveInfluenceModule,
+    ExecutivePhaseModule,
+    ExecutiveGameTurnModule,
+    ExecutiveInfluenceVoteRoundModule,
+    AiBotModule,
+    FactoryConstructionModule,
+    ResourceModule,
+    ConsumptionMarkerModule,
+    MarketingModule,
+    FactoryModule,
+    FactoryProductionModule,
   ],
   controllers: [AppController],
   providers: [AppService],

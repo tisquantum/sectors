@@ -80,7 +80,7 @@ const DistributePrize = ({
   const [selectedPlayer, setSelectedPlayer] = useState<string>("");
   const [cashAmount, setCashAmount] = useState<number>(0);
   const [selectedCompany, setSelectedCompany] = useState<string>("");
-  const [prestigeAmount, setPrestigeAmount] = useState<number>(0);
+  const [prestigeAmount, setPrestigeAmount] = useState<number>(1);
   const [selectedSectorCompany, setSelectedSectorCompany] = useState<
     Record<string, string>
   >({});
@@ -127,7 +127,7 @@ const DistributePrize = ({
       ]);
       // Reset state after adding
       setSelectedCompany("");
-      setPrestigeAmount(0);
+      setPrestigeAmount(1);
     }
   };
 
@@ -177,10 +177,16 @@ const DistributePrize = ({
               {selectedPlayer && (
                 <>
                   <div className="flex flex-wrap gap-2">
-                    {[25, 50, 75, 100, 125, 150, 175, 200].map((amount) => (
+                    {[5, 10, 25, 50, 75, 100].map((amount) => (
                       <DebounceButton
                         key={amount}
-                        onClick={() => setCashAmount(amount)}
+                        onClick={() =>
+                          setCashAmount(
+                            amount > (prize.cashAmount || 0)
+                              ? prize.cashAmount || 0
+                              : amount
+                          )
+                        }
                         disabled={amount > (prize.cashAmount || 0)}
                         className={`${
                           cashAmount === amount ? "ring-2 ring-blue-500" : ""
@@ -253,7 +259,7 @@ const DistributePrize = ({
                     onChange={(event) =>
                       setPrestigeAmount(Number(event.target.value))
                     }
-                    min={0}
+                    min={1}
                     max={prize.prestigeAmount}
                   />
                   <DebounceButton onClick={handleAddPrestigeDistribution}>
@@ -545,9 +551,12 @@ const DistributePrizes = () => {
     return null;
   }
   const playerPrizes =
-    prizes.filter((prize) => prize.playerId === authPlayer.id) || [];
+    prizes.filter((prize) => prize.playerId === authPlayer?.id) || [];
 
   const handleFinalizeDistribution = () => {
+    if (!authPlayer) {
+      return;
+    }
     setIsLoadingSubmission(true);
     setIsSubmitted(true);
     usePrizeDistributionMutation.mutate({
@@ -566,15 +575,17 @@ const DistributePrizes = () => {
               <>
                 {playerPrizes.map((prize) => (
                   <div key={prize.id}>
-                    {prize.playerId && prize.playerId == authPlayer.id && (
-                      <>
-                        <DistributePrize
-                          prize={prize}
-                          setDistributionData={setDistributionData}
-                          distributionData={distributionData}
-                        />
-                      </>
-                    )}
+                    {authPlayer &&
+                      prize.playerId &&
+                      prize.playerId == authPlayer.id && (
+                        <>
+                          <DistributePrize
+                            prize={prize}
+                            setDistributionData={setDistributionData}
+                            distributionData={distributionData}
+                          />
+                        </>
+                      )}
                   </div>
                 ))}
                 <h2>Pending Distributions</h2>
@@ -583,12 +594,16 @@ const DistributePrizes = () => {
                   setDistributionData={setDistributionData}
                 />
                 <div className="flex justify-center">
-                  <DebounceButton
-                    onClick={handleFinalizeDistribution}
-                    isLoading={isLoadingSubmission}
-                  >
-                    Finalize Distribution
-                  </DebounceButton>
+                  {isSubmitted ? (
+                    <div>Finalized</div>
+                  ) : (
+                    <DebounceButton
+                      onClick={handleFinalizeDistribution}
+                      isLoading={isLoadingSubmission}
+                    >
+                      Finalize Distribution
+                    </DebounceButton>
+                  )}
                 </div>
               </>
             )}

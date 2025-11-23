@@ -4,15 +4,25 @@ import { PrizeVotesService } from '@server/prize-votes/prize-votes.service';
 import { TRPCError } from '@trpc/server';
 import { PlayersService } from '@server/players/players.service';
 import { PhaseService } from '@server/phase/phase.service';
-import { checkIsPlayerAction, checkIsPlayerActionBasedOnAuth, checkSubmissionTime } from '../trpc.middleware';
+import {
+  checkIsPlayerAction,
+  checkIsPlayerActionBasedOnAuth,
+  checkSubmissionTime,
+} from '../trpc.middleware';
 import { PusherService } from 'nestjs-pusher';
-import { EVENT_NEW_PRIZE_VOTE, getGameChannelId } from '@server/pusher/pusher.types';
+import {
+  EVENT_NEW_PRIZE_VOTE,
+  getGameChannelId,
+} from '@server/pusher/pusher.types';
+import { GamesService } from '@server/games/games.service';
+import { PhaseName } from '@prisma/client';
 
 type Context = {
   prizeVotesService: PrizeVotesService;
   phaseService: PhaseService;
   playersService: PlayersService;
   pusherService: PusherService;
+  gamesService: GamesService;
 };
 
 export default (trpc: TrpcService, ctx: Context) =>
@@ -27,7 +37,14 @@ export default (trpc: TrpcService, ctx: Context) =>
         }),
       )
       .use(async (opts) => checkIsPlayerAction(opts, ctx.playersService))
-      .use(async (opts) => checkSubmissionTime(opts, ctx.phaseService))
+      .use(async (opts) =>
+        checkSubmissionTime(
+          PhaseName.PRIZE_VOTE_ACTION,
+          opts,
+          ctx.phaseService,
+          ctx.gamesService,
+        ),
+      )
       .mutation(async ({ input, ctx: ctxMiddleware }) => {
         const { gameTurnId, prizeId } = input;
         if (!ctxMiddleware.gameId) {

@@ -8,16 +8,11 @@ import CompanyInfo from "./CompanyInfo";
 import PrestigeRewardComponent from "../Game/PrestigeReward";
 import {
   ACTION_ISSUE_SHARE_AMOUNT,
-  LARGE_MARKETING_CAMPAIGN_DEMAND,
-  MARKETING_CONSUMER_BONUS,
-  OURSOURCE_SUPPLY_BONUS,
-  PrestigeTrack,
-  SMALL_MARKETING_CAMPAIGN_DEMAND,
+  companyActionsDescription,
 } from "@server/data/constants";
 import PrestigeRewards from "../Game/PrestigeRewards";
 
 const ShareIssue = ({ companyAction }: { companyAction: CompanyAction }) => {
-  const { authPlayer } = useGame();
   //get company with shares
   const { data: company, isLoading } =
     trpc.company.getCompanyWithShares.useQuery({
@@ -86,35 +81,34 @@ const CompanyVoteResolve = () => {
           )[0]
         : null;
 
+    const actionName = (
+      <h4>
+        Action Name:{" "}
+        {
+          companyActionsDescription.find(
+            (description) => description.name == companyAction.action
+          )?.title
+        }
+      </h4>
+    );
+    const actionDescription = (
+      <p>
+        {
+          companyActionsDescription.find(
+            (description) => description.name === companyAction.action
+          )?.message
+        }
+      </p>
+    );
+    let actionContent;
+
     switch (companyAction.action) {
       case OperatingRoundAction.MARKETING:
-        return (
-          <div>
-            <span>Large Marketing Campaign</span>
-            <div>
-              <p>
-                The sector receives {MARKETING_CONSUMER_BONUS} additional
-                consumers. Your company receives +
-                {LARGE_MARKETING_CAMPAIGN_DEMAND} demand that decays 1 per
-                production phase.
-              </p>
-            </div>
-          </div>
-        );
+        break;
       case OperatingRoundAction.MARKETING_SMALL_CAMPAIGN:
-        return (
-          <div>
-            <span>Small Marketing Campaign</span>
-            <div>
-              <p>
-                The company receives +{SMALL_MARKETING_CAMPAIGN_DEMAND} demand
-                that decays 1 per production phase.
-              </p>
-            </div>
-          </div>
-        );
+        break;
       case OperatingRoundAction.RESEARCH:
-        return (
+        actionContent = (
           <div>
             <h1>Research</h1>
             <div>You drew a research card.</div>
@@ -124,31 +118,41 @@ const CompanyVoteResolve = () => {
             </div>
           </div>
         );
+        break;
       case OperatingRoundAction.EXPANSION:
-        return <div>Expansion</div>;
+        actionContent = <div>Expansion</div>;
+        break;
       case OperatingRoundAction.DOWNSIZE:
-        return <div>Downsize</div>;
+        actionContent = <div>Downsize</div>;
+        break;
       case OperatingRoundAction.MERGE:
-        return <div>Merge</div>;
+        actionContent = <div>Merge</div>;
+        break;
       case OperatingRoundAction.SHARE_BUYBACK:
-        return <div>Share Buyback</div>;
+        actionContent = <div>Share Buyback</div>;
+        break;
       case OperatingRoundAction.SHARE_ISSUE:
-        return (
+        actionContent = (
           <div>
             <span>Share Issue</span>
             <ShareIssue companyAction={companyAction} />
           </div>
         );
+        break;
       case OperatingRoundAction.INCREASE_PRICE:
-        return <div>Increase Price</div>;
+        actionContent = <div>Increase Price</div>;
+        break;
       case OperatingRoundAction.DECREASE_PRICE:
-        return <div>Decrease Price</div>;
+        actionContent = <div>Decrease Price</div>;
+        break;
       case OperatingRoundAction.LOAN:
-        return <div>Loan</div>;
+        actionContent = <div>Loan</div>;
+        break;
       case OperatingRoundAction.LOBBY:
-        return <div>Lobby</div>;
+        actionContent = <div>Lobby</div>;
+        break;
       case OperatingRoundAction.SPEND_PRESTIGE:
-        return (
+        actionContent = (
           <div>
             <span>Spent Prestige and received a reward.</span>
             <div>
@@ -158,37 +162,51 @@ const CompanyVoteResolve = () => {
                 </div>
               ))}
             </div>
+            <PrestigeRewards />
           </div>
         );
+        break;
       case OperatingRoundAction.OUTSOURCE:
-        return (
-          <div>
-            Outsource. The company outsources production. Increase supply by{" "}
-            {OURSOURCE_SUPPLY_BONUS} that decays once per turn. Lose all
-            prestige tokens.
-          </div>
-        );
+        break;
+      case OperatingRoundAction.LICENSING_AGREEMENT:
+        break;
       case OperatingRoundAction.VETO:
-        return (
-          <div>
-            Action vetoed. The next turn this company&apos;s operating costs are 50%
-            less.
-          </div>
-        );
+        break;
       default:
-        return <div>Unknown action</div>;
+        actionContent = <div>Unknown action</div>;
+        break;
     }
+
+    return (
+      <div>
+        {actionName}
+        {actionContent}
+        {actionDescription}
+      </div>
+    );
   };
 
   return (
-    <div>
-      <CompanyInfo company={company} showBarChart />
-      <div className="border-b-2 border-gray-200 my-4"></div>
-      {companyActions.map((companyAction) => (
-        <div key={companyAction.id} className="mb-4">
-          {renderAction(companyAction)}
-        </div>
-      ))}
+    <div className="flex flex-col h-full w-full">
+      <div className="flex flex-col justify-center items-center">
+        {companyActions.map((companyAction) => (
+          <div
+            key={companyAction.id}
+            className="w-full mb-6 p-4 border border-gray-300 rounded-lg shadow-md bg-white dark:bg-slate-800 transition-all duration-300 hover:shadow-lg"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
+                {companyAction.action}
+              </h3>
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                ${companyAction.cost}
+              </span>
+            </div>
+            <div className="border-t border-gray-200 my-2"></div>
+            {renderAction(companyAction)}
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

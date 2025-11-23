@@ -252,8 +252,9 @@ const config: Config = {
   darkMode: "class",
   plugins: [
     nextui({
+      addCommonColors: true,
       themes: {
-        purpleDark: {
+        "purple-dark": {
           extend: "dark", // <- inherit default values from dark theme
           colors: {
             background: "#0D001A",
@@ -401,6 +402,7 @@ const config: Config = {
     }),
     require("@headlessui/tailwindcss"),
     require("@tailwindcss/forms"),
+    require('@tailwindcss/container-queries'),
   ],
 };
 export default config;

@@ -32,10 +32,15 @@ import { sectorColors } from "@server/data/gameData";
 import DebounceButton from "../General/DebounceButton";
 import { AvatarGroup, Button, TableCell } from "@nextui-org/react";
 import { Drawer } from "vaul";
-import { CompanyStatus, OrderType } from "@server/prisma/prisma.client";
+import {
+  CompanyStatus,
+  OrderType,
+  ShareLocation,
+} from "@server/prisma/prisma.client";
 import PlayerAvatar from "../Player/PlayerAvatar";
 import { useGame } from "../Game/GameContext";
 import ShareOwnershipTable from "./ShareOwnershipTable";
+import OrderChipChitWithPlayer from "../Game/OrderChipChitWithPlayer";
 
 const CompanyInfoTable = ({
   company,
@@ -61,8 +66,10 @@ const CompanyInfoTable = ({
   isInteractive: boolean;
   isRevealRound: boolean;
 }) => {
-  const { authPlayer } = useGame();
+  const { authPlayer, gameState } = useGame();
   const [showOrderDetail, setShowOrderDetail] = useState(false);
+  isRevealRound = !gameState?.playerOrdersConcealed || isRevealRound;
+
   const renderCellContent = ({
     handleShowOrderDetail,
   }: {
@@ -91,15 +98,15 @@ const CompanyInfoTable = ({
             {isRevealRound
               ? ordersRevealed &&
                 ordersRevealed.length > 0 && (
-                  <AvatarGroup>
-                    {ordersRevealed
-                      .filter((order) => {
-                        return order.orderType !== OrderType.OPTION;
-                      })
-                      .map((order, index) => (
-                        <PlayerAvatar key={index} player={order.Player} />
-                      ))}
-                  </AvatarGroup>
+                  <div className="flex flex-wrap gap-1">
+                    {ordersRevealed.map((order, index) => (
+                      <OrderChipChitWithPlayer
+                        key={index}
+                        order={order}
+                        showStatus={true}
+                      />
+                    ))}
+                  </div>
                 )
               : ordersConcealed &&
                 ordersConcealed.length > 0 && (
@@ -128,7 +135,7 @@ const CompanyInfoTable = ({
                   <span>
                     {
                       company.Share.filter(
-                        (share) => share.location === "OPEN_MARKET"
+                        (share) => share.location === ShareLocation.OPEN_MARKET
                       ).length
                     }
                   </span>
@@ -140,7 +147,7 @@ const CompanyInfoTable = ({
                 <span>
                   {
                     company.Share.filter(
-                      (share) => share.location === "OPEN_MARKET"
+                      (share) => share.location === ShareLocation.OPEN_MARKET
                     ).length
                   }
                 </span>
@@ -170,8 +177,9 @@ const CompanyInfoTable = ({
                   <RiCurrencyFill />
                   <span>
                     {
-                      company.Share.filter((share) => share.location === "IPO")
-                        .length
+                      company.Share.filter(
+                        (share) => share.location === ShareLocation.IPO
+                      ).length
                     }
                   </span>
                 </Button>
@@ -181,8 +189,9 @@ const CompanyInfoTable = ({
                 <RiCurrencyFill />
                 <span>
                   {
-                    company.Share.filter((share) => share.location === "IPO")
-                      .length
+                    company.Share.filter(
+                      (share) => share.location === ShareLocation.IPO
+                    ).length
                   }
                 </span>
               </div>
@@ -190,7 +199,7 @@ const CompanyInfoTable = ({
           </>
         );
       case "Your Shares":
-        return (
+        return authPlayer ? (
           <span>
             {
               company.Share.filter(
@@ -198,6 +207,8 @@ const CompanyInfoTable = ({
               ).length
             }
           </span>
+        ) : (
+          <span>0</span>
         );
       case "Unit Price":
         return (
@@ -266,7 +277,11 @@ const CompanyInfoTable = ({
       case "Loan":
         return company.hasLoan ? (
           <>
-            <RiBankCard2Fill size={20} /> ${LOAN_AMOUNT * LOAN_INTEREST_RATE}
+            <RiBankCard2Fill size={20} /> $
+            {Math.floor(
+              (LOAN_AMOUNT + LOAN_AMOUNT * LOAN_INTEREST_RATE) *
+                LOAN_INTEREST_RATE
+            )}
           </>
         ) : (
           "No Loan"

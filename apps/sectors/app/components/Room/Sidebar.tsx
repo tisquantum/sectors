@@ -1,23 +1,44 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { DistributionStrategy, Room, User } from "@server/prisma/prisma.client";
-import { Avatar } from "@nextui-org/react";
+import React, { useState } from "react";
+import { DistributionStrategy, OperationMechanicsVersion } from "@server/prisma/prisma.client";
+import { Avatar, Tab, Tabs, Tooltip } from "@nextui-org/react";
 import { trpc } from "@sectors/app/trpc";
 import { useAuthUser } from "@sectors/app/components/AuthUser.context";
 import GameOptions from "./GameOptions";
+import ExectutiveGameOptions from "../Executives/GameOptions";
 import {
   RoomUserWithUser,
   RoomWithUsersAndGames,
 } from "@server/prisma/prisma.types";
-import { BeakerIcon, SunIcon } from "@heroicons/react/24/solid";
+import { BeakerIcon } from "@heroicons/react/24/solid";
 import { useRouter } from "next/navigation";
 import UserAvatar from "./UserAvatar";
 import Button from "../General/DebounceButton";
 import DebounceButton from "../General/DebounceButton";
+import {
+  GAME_SETUP_DEFAULT_BANK_POOL_NUMBER,
+  GAME_SETUP_DEFAULT_CONSUMER_POOL_NUMBER,
+  GAME_SETUP_DEFAULT_DISTRIBUTION_STRATEGY,
+  GAME_SETUP_DEFAULT_GAME_MAX_TURNS,
+  GAME_SETUP_DEFAULT_PLAYER_ORDERS_CONCEALED,
+  GAME_SETUP_DEFAULT_STARTING_CASH_ON_HAND,
+  GAME_SETUP_DEFAULT_TIMERLESS,
+} from "@server/data/constants";
+import { RiUserUnfollowFill } from "@remixicon/react";
+import {
+  baseToolTipStyle,
+  tooltipParagraphStyle,
+  tooltipStyle,
+} from "@sectors/app/helpers/tailwind.helpers";
+import { ConstructionIcon } from "lucide-react";
+
+const constructionYellow = "#FFCC00";
 interface SidebarProps {
   roomUsers: RoomUserWithUser[];
   room: RoomWithUsersAndGames;
+  isSectorsGame: boolean;
+  setIsSectorsGame: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 interface GameOptionsState {
@@ -26,29 +47,56 @@ interface GameOptionsState {
   startingCashOnHand: number;
   distributionStrategy: DistributionStrategy;
   gameMaxTurns: number;
+  playerOrdersConcealed: boolean;
+  useOptionOrders: boolean;
+  useShortOrders: boolean;
+  useLimitOrders: boolean;
+  isTimerless: boolean;
+  bots: number;
+  operationMechanicsVersion?: OperationMechanicsVersion;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
+const Sidebar: React.FC<SidebarProps> = ({
+  roomUsers,
+  room,
+  isSectorsGame,
+  setIsSectorsGame,
+}) => {
   const { user } = useAuthUser();
   const router = useRouter();
   const [startGameIsSubmitted, setStartGameIsSubmitted] = useState(false);
   const [isLoadingStartGame, setIsLoadingStartGame] = useState(false);
+  const [loadingState, setLoadingState] = useState<Record<number, boolean>>({});
   const [gameOptions, setGameOptions] = useState<GameOptionsState>({
-    bankPoolNumber: 12000,
-    consumerPoolNumber: 75,
-    startingCashOnHand: 300,
-    distributionStrategy: DistributionStrategy.BID_PRIORITY,
-    gameMaxTurns: 15,
+    bankPoolNumber: GAME_SETUP_DEFAULT_BANK_POOL_NUMBER,
+    consumerPoolNumber: GAME_SETUP_DEFAULT_CONSUMER_POOL_NUMBER,
+    startingCashOnHand: GAME_SETUP_DEFAULT_STARTING_CASH_ON_HAND,
+    distributionStrategy: GAME_SETUP_DEFAULT_DISTRIBUTION_STRATEGY,
+    gameMaxTurns: GAME_SETUP_DEFAULT_GAME_MAX_TURNS,
+    playerOrdersConcealed: GAME_SETUP_DEFAULT_PLAYER_ORDERS_CONCEALED,
+    useOptionOrders: false,
+    useShortOrders: false,
+    useLimitOrders: false,
+    isTimerless: GAME_SETUP_DEFAULT_TIMERLESS,
+    bots: 0,
+    operationMechanicsVersion: OperationMechanicsVersion.MODERN,
   });
   const joinRoomMutation = trpc.roomUser.joinRoom.useMutation();
   const leaveRoomMutation = trpc.roomUser.leaveRoom.useMutation();
+  const kickUserRoomMutation = trpc.roomUser.kickUser.useMutation();
   const startGameMutation = trpc.game.startGame.useMutation({
     onSettled: () => {
       setIsLoadingStartGame(false);
       setStartGameIsSubmitted(true);
     },
   });
-
+  const startExecutiveGameMutation = trpc.executiveGame.startGame.useMutation({
+    onSettled: () => {
+      setIsLoadingStartGame(false);
+      setStartGameIsSubmitted(true);
+    },
+  });
+  const isSmallDevice = true;
   let roomHostAuthUser: RoomUserWithUser | undefined;
   if (user && roomUsers) {
     roomHostAuthUser = roomUsers.find(
@@ -57,10 +105,6 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
   } else {
     return null;
   }
-
-  const handleOptionsChange = (options: GameOptionsState) => {
-    setGameOptions(options);
-  };
 
   if (!user) return null;
 
@@ -85,9 +129,15 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
     consumerPoolNumber: number,
     bankPoolNumber: number,
     distributionStrategy: DistributionStrategy,
-    gameMaxTurns: number
+    gameMaxTurns: number,
+    playerOrdersConcealed: boolean,
+    useOptionOrders: boolean,
+    useShortOrders: boolean,
+    useLimitOrders: boolean,
+    isTimerless: boolean,
+    bots: number,
+    operationMechanicsVersion?: OperationMechanicsVersion
   ) => {
-    //response happens through pusher to all clients.
     startGameMutation.mutate({
       roomId,
       roomName: room.name,
@@ -96,6 +146,20 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
       bankPoolNumber,
       distributionStrategy,
       gameMaxTurns,
+      playerOrdersConcealed,
+      useOptionOrders,
+      useShortOrders,
+      useLimitOrders,
+      isTimerless,
+      bots,
+      operationMechanicsVersion,
+    });
+  };
+
+  const handleExecutiveStartGame = (roomId: number, gameName: string) => {
+    startExecutiveGameMutation.mutate({
+      roomId,
+      gameName,
     });
   };
 
@@ -103,42 +167,83 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
     setGameOptions(options);
   };
 
+  const handleKickUser = (roomUser: RoomUserWithUser) => {
+    setLoadingState((prev) => ({ ...prev, [roomUser.user.id]: true }));
+    kickUserRoomMutation.mutate(
+      {
+        userId: roomUser.user.id,
+        roomId: room.id,
+      },
+      {
+        onSettled: () => {
+          setLoadingState((prev) => ({ ...prev, [roomUser.user.id]: false }));
+        },
+      }
+    );
+  };
+
   return (
-    <div className="w-1/4 bg-gray-800 text-white p-6 flex flex-col">
+    <div className="w-full bg-gray-800 text-white p-1 lg:p-6 flex flex-col relative overflow-y-auto scrollbar">
       <div className="mb-6">
-        <Button
-          color="primary"
-          onClick={() => handleLeave(room.id)}
-          className="mb-4 w-full"
-        >
-          Leave
-        </Button>
+        {room.game.length == 0 && !roomHostAuthUser?.roomHost && (
+          <Button
+            color="primary"
+            onClick={() => handleLeave(room.id)}
+            className="mb-4 w-full"
+          >
+            Leave
+          </Button>
+        )}
         {roomHostAuthUser?.roomHost && (
           <>
-            <GameOptions
-              initialBankPoolNumber={12000}
-              initialConsumerPoolNumber={75}
-              initialStartingCashOnHand={300}
-              initialDistributionStrategy={DistributionStrategy.BID_PRIORITY}
-              initialGameMaxTurns={15}
-              onOptionsChange={handleGameOptionsChange}
-            />
+            {room.game.length == 0 && (
+              <Tabs
+                onSelectionChange={(key) => {
+                  setIsSectorsGame(key == "sectors");
+                }}
+              >
+                <Tab title="Play Sectors" key="sectors">
+                  <GameOptions onOptionsChange={handleGameOptionsChange} />
+                </Tab>
+                <Tab
+                  title={
+                    <div className="flex items-center space-x-2">
+                      <ConstructionIcon color={constructionYellow} />
+                      <span>Play The Executives</span>
+                    </div>
+                  }
+                  key="executives"
+                >
+                  <ExectutiveGameOptions />
+                </Tab>
+              </Tabs>
+            )}
+
             {room.game.length == 0 &&
               (startGameIsSubmitted ? (
                 <div>Start Game Submitted</div>
               ) : (
                 <DebounceButton
-                  color="primary"
+                  color="secondary"
                   onClick={() => {
                     setIsLoadingStartGame(true);
-                    handleStartGame(
-                      room.id,
-                      gameOptions.startingCashOnHand,
-                      gameOptions.consumerPoolNumber,
-                      gameOptions.bankPoolNumber,
-                      gameOptions.distributionStrategy,
-                      gameOptions.gameMaxTurns
-                    );
+                    isSectorsGame
+                      ? handleStartGame(
+                          room.id,
+                          gameOptions.startingCashOnHand,
+                          gameOptions.consumerPoolNumber,
+                          gameOptions.bankPoolNumber,
+                          gameOptions.distributionStrategy,
+                          gameOptions.gameMaxTurns,
+                          gameOptions.playerOrdersConcealed,
+                          gameOptions.useOptionOrders,
+                          gameOptions.useShortOrders,
+                          gameOptions.useLimitOrders,
+                          gameOptions.isTimerless,
+                          gameOptions.bots,
+                          gameOptions.operationMechanicsVersion
+                        )
+                      : handleExecutiveStartGame(room.id, room.name);
                   }}
                   radius="none"
                   className="w-full rounded-b-md"
@@ -149,24 +254,65 @@ const Sidebar: React.FC<SidebarProps> = ({ roomUsers, room }) => {
               ))}
           </>
         )}
-        {room.game.length > 0 && (
-          <Button
-            color="primary"
-            className="w-full"
-            onClick={() => router.push(`/games/${room.game[0].id}`)}
-          >
-            Join Game In Progress
-          </Button>
-        )}
+        <div className="flex flex-col gap-2 mt-2">
+          {room.game.length > 0 && (
+            <Button
+              color="primary"
+              className="w-full"
+              onClick={() => router.push(`/games/${room.game[0].id}`)}
+            >
+              Join Sectors Game
+            </Button>
+          )}
+          {room.executiveGame.length > 0 && (
+            <Button
+              color="primary"
+              className="w-full"
+              onClick={() =>
+                router.push(`/games/executives/${room.executiveGame[0].id}`)
+              }
+            >
+              Join Executives Game
+            </Button>
+          )}
+        </div>
       </div>
-      <ul className="flex-1 overflow-y-auto scrollbar">
+      <ul className="flex-1 flex flex-col">
         {roomUsers.map((roomUser) => (
-          <li key={roomUser.user.id} className="flex items-center mb-4 gap-1">
+          <li
+            key={roomUser.user.id}
+            className="flex flex-wrap items-center justify-start mb-4 gap-1"
+          >
             <div className="flex items-center mr-1">
-              <UserAvatar user={roomUser.user} size="lg" />
+              {isSmallDevice ? (
+                <UserAvatar user={roomUser.user} size="sm" />
+              ) : (
+                <UserAvatar user={roomUser.user} size="lg" />
+              )}
             </div>
-            <span className="text-xl">{roomUser.user.name}</span>
+            <span className="max-w-[150px] md:max-w-[200px] lg:max-w-[250px] xl:max-w-[300px] text-xs md:text-lg lg:text-xl overflow-hidden text-ellipsis whitespace-nowrap">
+              {roomUser.user.name}
+            </span>
             {roomUser.roomHost && <BeakerIcon className="size-5" />}
+            {room.game.length == 0 &&
+              roomHostAuthUser?.roomHost &&
+              !roomUser.roomHost && (
+                <Tooltip
+                  classNames={{ base: baseToolTipStyle }}
+                  className={tooltipStyle}
+                  content={<p className={tooltipParagraphStyle}>Kick User</p>}
+                >
+                  <div>
+                    <DebounceButton
+                      color="danger"
+                      onClick={() => handleKickUser(roomUser)}
+                      className="ml-2"
+                    >
+                      <RiUserUnfollowFill className="size-5" />
+                    </DebounceButton>
+                  </div>
+                </Tooltip>
+              )}
           </li>
         ))}
       </ul>

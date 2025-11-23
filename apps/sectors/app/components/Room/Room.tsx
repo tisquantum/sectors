@@ -5,14 +5,16 @@ import { useEffect, useState } from "react";
 import { usePusher } from "@sectors/app/components/Pusher.context";
 import { Room, RoomUser, User } from "@server/prisma/prisma.client";
 import {
+  EVENT_EXECUTIVE_GAME_STARTED,
   EVENT_GAME_STARTED,
   EVENT_ROOM_JOINED,
+  EVENT_ROOM_KICK,
   EVENT_ROOM_LEFT,
   EVENT_ROOM_MESSAGE,
   getRoomChannelId,
 } from "@server/pusher/pusher.types";
 import {
-  RoomMessageWithUser,
+  RoomMessageWithRoomUser,
   RoomUserWithUser,
   RoomWithUsersAndGames,
 } from "@server/prisma/prisma.types";
@@ -22,62 +24,82 @@ import SendMessage from "./SendMessage";
 import { useAuthUser } from "@sectors/app/components/AuthUser.context";
 import CountdownModal from "../Modal/CountdownModal";
 import { useRouter } from "next/navigation";
+import { Drawer } from "vaul";
+import { toast } from "sonner";
 
 const RoomComponent = ({ room }: { room: RoomWithUsersAndGames }) => {
   const { user } = useAuthUser();
   const { pusher } = usePusher();
   const router = useRouter();
   const utils = trpc.useUtils();
+  const joinRoomMutation = trpc.roomUser.joinRoom.useMutation();
   const [error, setError] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [isSectorsGame, setIsSectorsGame] = useState(true);
   const [gameId, setGameId] = useState<string | null>(null);
-  const { id } = room;
-
-  const { data: roomUsers, isLoading: isLoadingRoomUsers } =
-    trpc.roomUser.listRoomUsers.useQuery({
-      where: { roomId: id },
-    });
-
   const { data: messages, isLoading: isLoadingMessages } =
     trpc.roomMessage.listRoomMessages.useQuery({
-      where: { roomId: id },
+      where: { roomId: room?.id },
     });
-
   const createRoomMessageMutation =
-    trpc.roomMessage.createRoomMessage.useMutation();
+    trpc.roomMessage.createRoomMessage.useMutation({
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
+  const {
+    data: roomUsers,
+    isLoading: isLoadingRoomUsers,
+    status: roomUsersStatus,
+    refetch: refetchRoomUsers,
+  } = trpc.roomUser.listRoomUsers.useQuery({
+    where: { roomId: room?.id },
+  });
+  useEffect(() => {
+    if (roomUsersStatus === "success") {
+      //check roomUsers for user
+      const userInRoom = roomUsers?.find(
+        (roomUser) => roomUser.user.id === user?.id
+      );
+      if (!userInRoom) {
+        handleJoin(room.id);
+      }
+    }
+  }, [roomUsersStatus]);
 
   useEffect(() => {
     if (!pusher) return;
 
-    const channel = pusher.subscribe(getRoomChannelId(id));
+    const channel = pusher.subscribe(getRoomChannelId(room?.id));
 
     channel.bind(EVENT_ROOM_JOINED, (data: RoomUserWithUser) => {
-      utils.roomUser.listRoomUsers.setData(
-        { where: { roomId: id } },
-        (oldData: RoomUserWithUser[] | undefined) => [...(oldData || []), data]
-      );
+      refetchRoomUsers();
     });
 
     channel.bind(EVENT_ROOM_LEFT, (data: RoomUser) => {
-      utils.roomUser.listRoomUsers.setData(
-        { where: { roomId: id } },
-        (oldData: RoomUserWithUser[] | undefined) =>
-          oldData?.filter((user) => user.user.id !== data.userId)
-      );
+      refetchRoomUsers();
     });
 
-    channel.bind(EVENT_ROOM_MESSAGE, (data: RoomMessageWithUser) => {
+    channel.bind(EVENT_ROOM_MESSAGE, (data: RoomMessageWithRoomUser) => {
       // Ensure timestamp remains a string in the cache
-      utils.roomMessage.listRoomMessages.setData(
-        { where: { roomId: id } },
-        (oldData: RoomMessageWithUser[] | undefined) => [
-          ...(oldData || []),
-          { ...data, timestamp: new Date(data.timestamp).toISOString() }, // Keep as string
-        ]
-      );
+      handleRoomMessage(data, room?.id);
+    });
+
+    channel.bind(EVENT_ROOM_KICK, (data: RoomUser) => {
+      if (data.userId === user?.id) {
+        router.push("/rooms?kicked=true");
+      }
+      //refetch room users
+      refetchRoomUsers();
     });
 
     channel.bind(EVENT_GAME_STARTED, (data: { gameId: string }) => {
+      setIsOpen(true);
+      setGameId(data.gameId);
+    });
+
+    channel.bind(EVENT_EXECUTIVE_GAME_STARTED, (data: { gameId: string }) => {
+      setIsSectorsGame(false);
       setIsOpen(true);
       setGameId(data.gameId);
     });
@@ -87,10 +109,33 @@ const RoomComponent = ({ room }: { room: RoomWithUsersAndGames }) => {
       channel.unbind(EVENT_ROOM_LEFT);
       channel.unbind(EVENT_ROOM_MESSAGE);
       channel.unbind(EVENT_GAME_STARTED);
+      channel.unbind(EVENT_ROOM_KICK);
+      channel.unbind(EVENT_EXECUTIVE_GAME_STARTED);
       channel.unsubscribe();
     };
-  }, [pusher, id, isLoadingRoomUsers, isLoadingMessages]);
+  }, [pusher, room?.id, isLoadingRoomUsers, isLoadingMessages]);
 
+  if (!user) return null;
+
+  const handleJoin = (roomId: number) => {
+    joinRoomMutation.mutate({
+      roomId,
+      userId: user.id,
+    });
+  };
+  const handleRoomMessage = (data: RoomMessageWithRoomUser, roomId: number) => {
+    utils.roomMessage.listRoomMessages.setData(
+      { where: { roomId } },
+      (oldData: RoomMessageWithRoomUser[] | undefined) => {
+        const exists = oldData?.some((msg) => msg.id === data.id);
+        if (exists) return oldData;
+        return [
+          ...(oldData || []),
+          { ...data, timestamp: new Date(data.timestamp).toISOString() },
+        ];
+      }
+    );
+  };
   if (isLoadingRoomUsers || isLoadingMessages) {
     return <div>Loading Inner Component...</div>;
   }
@@ -105,7 +150,7 @@ const RoomComponent = ({ room }: { room: RoomWithUsersAndGames }) => {
 
   const handleSendMessage = (content: string) => {
     createRoomMessageMutation.mutate({
-      roomId: id,
+      roomId: room?.id,
       userId: user.id,
       content,
       timestamp: new Date().toISOString(),
@@ -113,21 +158,56 @@ const RoomComponent = ({ room }: { room: RoomWithUsersAndGames }) => {
   };
 
   const handleGameStart = () => {
-    router.push(`/games/${gameId}`);
+    if (isSectorsGame) {
+      router.push(`/games/${gameId}`);
+    } else {
+      router.push(`/games/executives/${gameId}`);
+    }
   };
 
   return (
     <>
-      <div className="flex h-screen overflow-hidden">
-        {roomUsers && <Sidebar roomUsers={roomUsers} room={room} />}
-        <div className="flex flex-col flex-grow bg-gray-100">
-          <div className="bg-gray-800 text-white p-4">
-            <h1 className="text-xl font-bold">{room.name}</h1>
+      <Drawer.Root>
+        <div className="flex h-screen overflow-hidden">
+          <Drawer.Portal>
+            <Drawer.Content className="lg:hidden z-50 bg-slate-900 flex flex-col rounded-t-[10px] h-full w-full fixed top-0 left-0">
+              <div className="relative p-2 flex flex-col overflow-y-auto">
+                <div className="h-[20px]"></div>
+                {roomUsers && (
+                  <Sidebar
+                    roomUsers={roomUsers}
+                    room={room}
+                    isSectorsGame={isSectorsGame}
+                    setIsSectorsGame={setIsSectorsGame}
+                  />
+                )}
+              </div>
+            </Drawer.Content>
+          </Drawer.Portal>
+          {roomUsers && (
+            <div className="hidden h-full lg:block lg:w-1/4 bg-gray-800">
+              <Sidebar
+                roomUsers={roomUsers}
+                room={room}
+                isSectorsGame={isSectorsGame}
+                setIsSectorsGame={setIsSectorsGame}
+              />
+            </div>
+          )}
+          <div className="flex flex-col flex-grow bg-gray-100">
+            <div className="bg-gray-800 text-white p-2 md:p-4 flex gap-2 items-center">
+              <h1 className="text-md md:text-xl font-bold">{room.name}</h1>
+              <Drawer.Trigger>
+                <div className="block lg:hidden p-2 rounded-medium bg-slate-800">
+                  Info
+                </div>
+              </Drawer.Trigger>
+            </div>
+            {messages && <MessagePane messages={messages} />}
+            <SendMessage onSendMessage={handleSendMessage} />
           </div>
-          {messages && <MessagePane messages={messages} />}
-          <SendMessage onSendMessage={handleSendMessage} />
         </div>
-      </div>
+      </Drawer.Root>
       <CountdownModal
         title={"Game Started"}
         countdownTime={5}

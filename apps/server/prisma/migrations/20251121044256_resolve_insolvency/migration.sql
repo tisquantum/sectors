@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "PhaseName" ADD VALUE 'RESOLVE_INSOLVENCY';

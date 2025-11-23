@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { TrpcService } from '../trpc.service';
 import { InsolvencyContributionService } from '@server/insolvency-contribution/insolvency-contribution.service';
-import { InsolvencyContribution, Prisma } from '@prisma/client';
+import { InsolvencyContribution, PhaseName, Prisma } from '@prisma/client';
 import { checkIsPlayerAction, checkSubmissionTime } from '../trpc.middleware';
 import { PlayersService } from '@server/players/players.service';
 import { PhaseService } from '@server/phase/phase.service';
@@ -21,6 +21,7 @@ type Context = {
   phaseService: PhaseService;
   pusherService: PusherService;
   gameManagementService: GameManagementService;
+  gamesService: GamesService;
 };
 
 export default (trpc: TrpcService, ctx: Context) =>
@@ -72,7 +73,14 @@ export default (trpc: TrpcService, ctx: Context) =>
         }),
       )
       .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
-      .use(async (opts) => checkSubmissionTime(opts, ctx.phaseService))
+      .use(async (opts) =>
+        checkSubmissionTime(
+          PhaseName.RESOLVE_INSOLVENCY,
+          opts,
+          ctx.phaseService,
+          ctx.gamesService,
+        ),
+      )
       .mutation(async ({ input, ctx: ctxMiddleware }) => {
         if (!ctxMiddleware.gameId) {
           //throw

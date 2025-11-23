@@ -51,6 +51,8 @@ export class TransactionService {
           },
         },
         Shares: true,
+        GameTurn: true,
+        Phase: true,
       },
     });
   }
@@ -86,6 +88,8 @@ export class TransactionService {
           },
         },
         Shares: true,
+        GameTurn: true,
+        Phase: true,
       },
     });
   }
@@ -119,6 +123,8 @@ export class TransactionService {
             Share: true,
           },
         },
+        GameTurn: true,
+        Phase: true,
       },
     });
   }
@@ -130,14 +136,6 @@ export class TransactionService {
     playerId?: string,
     companyId?: string,
   ): Promise<Entity> {
-    console.log(
-      'getEntityOrCreate',
-      gameId,
-      entityId,
-      entityType,
-      playerId,
-      companyId,
-    );
     let entity;
     if (
       (entityId && entityType === EntityType.PLAYER) ||
@@ -157,7 +155,6 @@ export class TransactionService {
         where: { entityType, gameId: gameId },
       });
     }
-    console.log('getEntityOrCreate', entity);
     if (!entity) {
       switch (entityType) {
         case EntityType.BANK:
@@ -189,7 +186,6 @@ export class TransactionService {
           });
           break;
         case EntityType.COMPANY:
-          console.log('creating company entity', companyId);
           entity = await this.prisma.entity.create({
             data: {
               entityType,

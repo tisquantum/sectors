@@ -10,6 +10,7 @@ import {
 import PlayerAvatar from "../Player/PlayerAvatar";
 import { TransactionWithEntities } from "@server/prisma/prisma.types";
 import { useState } from "react";
+import { friendlyPhaseName } from "@sectors/app/helpers";
 
 const TransactionHistory = ({
   transactions,
@@ -96,6 +97,16 @@ const TransactionHistory = ({
                   </div>
                 </div>
                 <p>Amount: ${transaction.amount.toFixed(2)}</p>
+                {transaction.GameTurn && (
+                  <p className="text-sm text-gray-400">
+                    Turn: {transaction.GameTurn.turn}
+                  </p>
+                )}
+                {transaction.Phase && (
+                  <p className="text-sm text-gray-400">
+                    Phase: {friendlyPhaseName(transaction.Phase.name)}
+                  </p>
+                )}
               </div>
             </div>
             <div className="text-sm text-gray-500">

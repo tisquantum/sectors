@@ -4,10 +4,14 @@ import { TrpcService } from '../trpc.service';
 import { Prisma, RoundType } from '@prisma/client';
 import { SectorService } from '@server/sector/sector.service';
 import { determineFloatPrice } from '@server/data/helpers';
+import { GamesService } from '@server/games/games.service';
+import { PhaseService } from '@server/phase/phase.service';
 
 type Context = {
   companyService: CompanyService;
   sectorService: SectorService;
+  phaseService: PhaseService;
+  gamesService: GamesService;
 };
 
 export default (trpc: TrpcService, ctx: Context) =>
@@ -52,6 +56,16 @@ export default (trpc: TrpcService, ctx: Context) =>
           throw new Error('Company not found');
         }
         return company;
+      }),
+    companyWithSectorFindFirst: trpc.procedure
+      .input(
+        z.object({
+          where: z.any().optional(),
+          orderBy: z.any().optional(),
+        }),
+      )
+      .query(async ({ input }) => {
+        return ctx.companyService.companyWithSectorFindFirst(input);
       }),
     listCompanies: trpc.procedure
       .input(

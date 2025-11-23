@@ -1,8 +1,12 @@
-import { Avatar, Badge, Tooltip } from "@nextui-org/react";
+import { Avatar, Badge, BadgeProps, Tooltip } from "@nextui-org/react";
 import { Player, User } from "@server/prisma/prisma.client";
 import { lorelei } from "@dicebear/collection";
 import { createAvatar } from "@dicebear/core";
-import { useMemo } from "react";
+import React, { useMemo } from "react";
+import {
+  baseToolTipStyle,
+  tooltipStyle,
+} from "@sectors/app/helpers/tailwind.helpers";
 
 function hashStringToColor(str: string): string {
   // Simple hash function to generate a consistent hash from a string
@@ -25,11 +29,15 @@ const UserAvatar = ({
   user,
   showNameLabel,
   badgeContent,
+  badgeIsOneChar,
+  badgePlacement,
   size = "md",
 }: {
-  user: User;
+  user: { name: string };
   showNameLabel?: boolean;
-  badgeContent?: number | string;
+  badgeContent?: number | string | React.ReactNode;
+  badgeIsOneChar?: BadgeProps["isOneChar"];
+  badgePlacement?: BadgeProps["placement"];
   size?: "sm" | "md" | "lg" | undefined;
 }) => {
   const getSize = (size: "sm" | "md" | "lg" | undefined) => {
@@ -50,14 +58,23 @@ const UserAvatar = ({
       seed: user.name,
       backgroundColor: [hashStringToColor(user.name)],
     }).toDataUri();
-  }, []);
+  }, [user.name]);
 
   return (
     <div className="flex flex-col items-center">
-      <Tooltip content={user.name}>
+      <Tooltip
+        classNames={{ base: baseToolTipStyle }}
+        className={tooltipStyle}
+        content={user.name}
+      >
         <div className="flex items-center">
           {badgeContent ? (
-            <Badge color="secondary" content={badgeContent}>
+            <Badge
+              color="secondary"
+              content={badgeContent}
+              isOneChar={badgeIsOneChar}
+              placement={badgePlacement}
+            >
               <Avatar size={size} name={user.name} src={avatar} />
             </Badge>
           ) : (

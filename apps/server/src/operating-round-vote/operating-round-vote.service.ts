@@ -52,7 +52,7 @@ export class OperatingRoundVoteService {
       where: {
         playerId: newData.Player.connect?.id || '',
         companyId: newData.Company.connect?.id || '',
-        operatingRoundId: newData.OperatingRound.connect?.id || 0,
+        operatingRoundId: newData.OperatingRound.connect?.id ||'',
       },
     });
     if (existingVotes && existingVotes.length >= companyTier.companyActions) {

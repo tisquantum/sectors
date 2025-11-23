@@ -5,11 +5,13 @@ import { RevenueDistributionVoteService } from '@server/revenue-distribution-vot
 import { checkIsPlayerAction, checkSubmissionTime } from '../trpc.middleware';
 import { PhaseService } from '@server/phase/phase.service';
 import { PlayersService } from '@server/players/players.service';
+import { GamesService } from '@server/games/games.service';
 
 type Context = {
   revenueDistributionVoteService: RevenueDistributionVoteService;
   phaseService: PhaseService;
   playerService: PlayersService;
+  gamesService: GamesService;
 };
 
 export default (trpc: TrpcService, ctx: Context) =>
@@ -87,8 +89,8 @@ export default (trpc: TrpcService, ctx: Context) =>
     createRevenueDistributionVote: trpc.procedure
       .input(
         z.object({
-          operatingRoundId: z.number(),
-          productionResultId: z.number(),
+          operatingRoundId: z.string(),
+          productionResultId: z.number().optional(), // Optional for modern operations
           playerId: z.string(),
           companyId: z.string(),
           revenueDistribution: z.nativeEnum(RevenueDistribution),
@@ -96,7 +98,14 @@ export default (trpc: TrpcService, ctx: Context) =>
         }),
       )
       .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
-      .use(async (opts) => checkSubmissionTime(opts, ctx.phaseService))
+      .use(async (opts) =>
+        checkSubmissionTime(
+          PhaseName.OPERATING_PRODUCTION_VOTE,
+          opts,
+          ctx.phaseService,
+          ctx.gamesService,
+        ),
+      )
       .mutation(async ({ input, ctx: ctxMiddleware }) => {
         const {
           playerId,
@@ -111,7 +120,10 @@ export default (trpc: TrpcService, ctx: Context) =>
           OperatingRound: { connect: { id: operatingRoundId } },
           Player: { connect: { id: playerId } },
           Company: { connect: { id: companyId } },
-          ProductionResult: { connect: { id: productionResultId } },
+          // Only connect ProductionResult if productionResultId is provided (legacy operations)
+          ...(productionResultId !== undefined && productionResultId !== null && productionResultId !== 0
+            ? { ProductionResult: { connect: { id: productionResultId } } }
+            : {}),
           submissionStamp: ctxMiddleware.submissionStamp,
         };
         return ctx.revenueDistributionVoteService.createRevenueDistributionVote(

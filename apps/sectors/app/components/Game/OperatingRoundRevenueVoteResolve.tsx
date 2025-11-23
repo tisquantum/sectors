@@ -102,6 +102,20 @@ const OperatingRoundRevenueVoteResolve = () => {
       ? Math.floor((productionResult.revenue / totalShares) * shareCount)
       : 0;
   };
+
+  const friendlyDistributionName = (distribution: RevenueDistribution) => {
+    switch (distribution) {
+      case RevenueDistribution.DIVIDEND_FULL:
+        return "Full";
+      case RevenueDistribution.DIVIDEND_FIFTY_FIFTY:
+        return "Fifty Fifty";
+      case RevenueDistribution.RETAINED:
+        return "Retained";
+      default:
+        return "Unknown";
+    }
+  };
+
   return (
     <div>
       <h1 className="text-2xl">Operating Round Revenue Vote Resolution</h1>
@@ -119,14 +133,17 @@ const OperatingRoundRevenueVoteResolve = () => {
               shareCount > 0 ? Math.floor(revenue / shareCount) : 0;
             const dividendHalf =
               shareCount > 0 ? Math.floor(revenue / 2 / shareCount) : 0;
-            const retainedRevenueHalf = revenue / 2;
+            const retainedRevenueHalf = Math.floor(revenue / 2);
 
             return (
               <div
                 className="flex flex-col bg-slate-800 p-4"
                 key={productionResult.id}
               >
-                <CompanyInfo company={productionResult.Company} showBarChart />
+                <CompanyInfo
+                  companyId={productionResult.Company.id}
+                  showBarChart
+                />
                 <div className="flex flex-col gap-2 rounded-md bg-gray-950 m-2 p-2">
                   <span className="text-lg">Production Results</span>
                   <span>
@@ -228,8 +245,8 @@ const OperatingRoundRevenueVoteResolve = () => {
                   </div>
                 </div>
                 <div className="flex flex-col">
-                  <span className="mb-1">Vote Results</span>
-                  <div className="flex flex-col my-2 gap-3">
+                  <span className="mb-1">Dividend Vote Results</span>
+                  <div className="flex flex-wrap my-2 gap-3">
                     {revenueDistributionVote
                       .filter(
                         (vote: RevenueDistributionVoteWithRelations) =>
@@ -242,11 +259,13 @@ const OperatingRoundRevenueVoteResolve = () => {
                           avatar={
                             <PlayerAvatar
                               player={vote.Player}
-                              badgeContent={vote.weight}
+                              badgeContent={vote.weight.toString()}
                             />
                           }
                         >
-                          <span>{vote.revenueDistribution}</span>
+                          <span>
+                            {friendlyDistributionName(vote.revenueDistribution)}
+                          </span>
                         </Chip>
                       ))}
                   </div>

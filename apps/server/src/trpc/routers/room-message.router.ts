@@ -7,8 +7,10 @@ import {
   EVENT_ROOM_MESSAGE,
   getRoomChannelId,
 } from '@server/pusher/pusher.types';
-import { RoomMessageWithUser } from '@server/prisma/prisma.types';
+import { RoomMessageWithRoomUser } from '@server/prisma/prisma.types';
 import { checkIsUserAction } from '../trpc.middleware';
+import { companyActionsDescription, ROOM_MESSAGE_MAX_LENGTH } from '@server/data/constants';
+import { TRPCError } from '@trpc/server';
 
 type Context = {
   roomMessageService: RoomMessageService;
@@ -61,7 +63,18 @@ export default (trpc: TrpcService, ctx: Context) =>
       .use(checkIsUserAction)
       .mutation(async ({ input }) => {
         const { roomId, userId, content, timestamp } = input;
-
+        if (!content) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Content is required',
+          });
+        }
+        if (content.length > ROOM_MESSAGE_MAX_LENGTH) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: `Content must be less than ${ROOM_MESSAGE_MAX_LENGTH} characters`,
+          });
+        }
         try {
           const roomMessage = await ctx.roomMessageService.createRoomMessage({
             content,
@@ -69,11 +82,15 @@ export default (trpc: TrpcService, ctx: Context) =>
             room: {
               connect: { id: roomId },
             },
-            user: {
-              connect: { id: userId },
+            roomUser: {
+              connect: {
+                userId_roomId: {
+                  userId: userId,
+                  roomId: roomId,
+                },
+              },
             },
           });
-
           //pusher logic
           ctx.pusherService
             .trigger(getRoomChannelId(roomId), EVENT_ROOM_MESSAGE, roomMessage)

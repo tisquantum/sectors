@@ -42,19 +42,27 @@ const OperatingRoundStockPriceAdjustment = () => {
       </div>
     ));
   };
-  
+
   return (
     <div className="p-6 rounded-lg shadow-md">
       <h1 className="text-2xl font-bold mb-6">
         Operating Round Stock Price Adjustment
       </h1>
+      <p>
+        <ul>
+          <li>Adjusting Stock Price</li>
+          <li>Decrement any Sector Demand Bonuses</li>
+          <li>Decrement any Company Temporary Supply Bonuses</li>
+          <li>Decrement any Active/Insolvent Company Demand</li>
+        </ul>
+      </p>
       <div className="flex flex-wrap gap-3">
         {companies.map((company) => (
           <div
             className="flex flex-col p-4 bg-slate-800 rounded-lg shadow-md"
             key={company.id}
           >
-            <CompanyInfo company={company} showBarChart isMinimal/>
+            <CompanyInfo companyId={company.id} showBarChart isMinimal />
             <div className="mt-4">
               <span className="block text-lg font-semibold mb-2">
                 Current Stock Price: ${company.currentStockPrice}

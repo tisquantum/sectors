@@ -207,8 +207,7 @@ const SectorSubject = ({
 
 const MeetingInput = () => {
   const { gameId, authPlayer, gameState } = useGame();
-  const meetingMessageMutation =
-    trpc.meetingMessage.createMessage.useMutation();
+  const meetingMessageMutation = () => {};
   const [isSubmit, setIsSubmit] = useState(false);
   const [selectedTopic, setSelectedTopic] = useState<Topic | undefined>(
     undefined
@@ -241,23 +240,6 @@ const MeetingInput = () => {
     } else if (selectedTopic?.key === "sector") {
       content = `${selectedSectorTopic} ${selectedComplement} ${selectedSectorSubject}`;
     }
-    meetingMessageMutation.mutate(
-      {
-        content,
-        gameId,
-        playerId: authPlayer.id,
-        gameStep: 1,
-        timestamp: new Date().toISOString(),
-      },
-      {
-        onSuccess: () => {
-          setIsSubmit(false);
-        },
-        onError: () => {
-          setIsSubmit(false);
-        },
-      }
-    );
   };
 
   const handlePlayerSelect = (identifier: string) => {

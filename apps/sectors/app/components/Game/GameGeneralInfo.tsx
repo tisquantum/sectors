@@ -1,24 +1,20 @@
-import {
-  friendlyDistributionStrategyName,
-  friendlyPhaseName,
-} from "@sectors/app/helpers";
-import { trpc } from "@sectors/app/trpc";
+import { friendlyDistributionStrategyName } from "@sectors/app/helpers";
 import { notFound } from "next/navigation";
 import React from "react";
 import { useGame } from "./GameContext";
+import { DEFAULT_WORKERS } from "@server/data/constants";
 import {
-  CircleStackIcon,
-  CurrencyDollarIcon,
-  SquaresPlusIcon,
-  UserIcon,
-} from "@heroicons/react/24/solid";
-import {
-  RiWalletFill,
   RiFunctionAddFill,
   RiTeamFill,
   RiBankFill,
   RiTicket2Fill,
   RiDiscountPercentFill,
+  RiScalesFill,
+  RiDiscFill,
+  RiListOrdered2,
+  RiCurrencyFill,
+  RiTextWrap,
+  RiUserFill,
 } from "@remixicon/react";
 import {
   Avatar,
@@ -28,6 +24,9 @@ import {
   ModalContent,
   ModalFooter,
   ModalHeader,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   Tooltip,
   useDisclosure,
 } from "@nextui-org/react";
@@ -37,21 +36,19 @@ import {
   EntityType,
   OrderType,
   PhaseName,
+  OperationMechanicsVersion,
 } from "@server/prisma/prisma.client";
 import {
+  baseToolTipStyle,
   tooltipParagraphStyle,
   tooltipStyle,
 } from "@sectors/app/helpers/tailwind.helpers";
-import {
-  MoneyTransactionByEntityType,
-  MoneyTransactionHistoryByPlayer,
-} from "./MoneyTransactionHistory";
+import { MoneyTransactionByEntityType } from "./MoneyTransactionHistory";
 import WalletInfo from "./WalletInfo";
-import {
-  DEFAULT_SHARE_DISTRIBUTION,
-  DEFAULT_SHARE_LIMIT,
-  MAX_SHARE_PERCENTAGE,
-} from "@server/data/constants";
+import { MAX_SHARE_PERCENTAGE } from "@server/data/constants";
+import PlayerShares from "../Player/PlayerShares";
+import { calculateNetWorth } from "@server/data/helpers";
+import SymbolLegend from "./SymbolLegend";
 
 const BankInfo = () => {
   const { gameState, gameId } = useGame();
@@ -59,9 +56,14 @@ const BankInfo = () => {
   return (
     <>
       <div className="flex gap-1 items-center cursor-pointer" onClick={onOpen}>
-        <RiBankFill size={18} /> ${gameState.bankPoolNumber}
+        <RiBankFill className="text-red-400" size={18} /> $
+        {gameState.bankPoolNumber}
       </div>
-      <Modal isOpen={isOpen} onOpenChange={onOpenChange} className="h-full">
+      <Modal
+        isOpen={isOpen}
+        onOpenChange={onOpenChange}
+        className="dark bg-slate-900 text-foreground"
+      >
         <ModalContent>
           {(onClose) => (
             <>
@@ -88,82 +90,154 @@ const BankInfo = () => {
 };
 
 const GameGeneralInfo = () => {
-  const { gameState, currentTurn, authPlayer, currentPhase } = useGame();
+  const {
+    gameState,
+    currentTurn,
+    authPlayer,
+    currentPhase,
+    playersWithShares,
+  } = useGame();
   if (!gameState) return notFound();
-  const pseudoSpend = authPlayer.PlayerOrder?.filter(
+  const pseudoSpend = authPlayer?.PlayerOrder?.filter(
     (order) =>
-      order.stockRoundId === gameState.currentStockRoundId &&
+      order.stockSubRoundId === currentPhase?.stockSubRoundId &&
       order.orderType == OrderType.MARKET
   ).reduce((acc, order) => {
     const orderValue = (order.value || 0) * (order.quantity || 0);
     return order.isSell ? acc - orderValue : acc + orderValue;
   }, 0);
+  const authPlayerWithShares = playersWithShares.find(
+    (player) => player.id === authPlayer?.id
+  );
   return (
-    <div className="flex space-x-4 items-center">
-      <div className="flex items-center gap-2">
-        <PlayerAvatar player={authPlayer} />
-        <div className="flex flex-col">
-          <div className="flex items-center text-md font-bold">
-            <WalletInfo player={authPlayer} />{" "}
-            {(currentPhase?.name == PhaseName.STOCK_ACTION_ORDER ||
-              currentPhase?.name == PhaseName.STOCK_ACTION_RESULT) && (
-              <Tooltip
-                className={tooltipStyle}
-                content={
-                  <div>
-                    <p className={tooltipParagraphStyle}>
-                      The potential maximum amount of money you&apos;ve queued
-                      for orders this stock round.
-                    </p>
+    <div className="flex flex-wrap space-x-4 items-center">
+      <div className="flex flex-wrap items-center gap-2">
+        {authPlayer ? (
+          <>
+            <PlayerAvatar player={authPlayer} />
+            <div className="flex flex-col gap-1">
+              <div className="flex gap-1 items-center text-md font-bold">
+                <WalletInfo player={authPlayer} />{" "}
+                {(currentPhase?.name === PhaseName.STOCK_ACTION_ORDER ||
+                  currentPhase?.name === PhaseName.STOCK_ACTION_RESULT) && (
+                  <Tooltip
+                    classNames={{ base: baseToolTipStyle }}
+                    className={tooltipStyle}
+                    content={
+                      <p className={tooltipParagraphStyle}>
+                        The potential maximum amount of money you&apos;ve queued
+                        for orders this stock round.
+                      </p>
+                    }
+                  >
+                    {"($" + pseudoSpend + ")"}
+                  </Tooltip>
+                )}
+                {authPlayerWithShares && (
+                  <div className="flex gap-1 items-center content-center">
+                    <RiScalesFill className="h-5 w-5" /> $
+                    {calculateNetWorth(
+                      authPlayerWithShares.cashOnHand,
+                      authPlayerWithShares.Share
+                    )}
                   </div>
-                }
-              >
-                {"($" + pseudoSpend + ")"}
-              </Tooltip>
-            )}
-          </div>
-          <Tooltip
-            className={tooltipStyle}
-            content={
-              <div>
+                )}
+              </div>
+              {authPlayerWithShares && (
+                <div className="flex gap-1 items-center">
+                  <Popover>
+                    <PopoverTrigger>
+                      <div className="flex items-center gap-1 cursor-pointer">
+                        <RiTicket2Fill size={18} />
+                        {authPlayerWithShares?.Share.length || 0}
+                      </div>
+                    </PopoverTrigger>
+                    <PopoverContent>
+                      <div className="flex">
+                        <PlayerShares playerWithShares={authPlayerWithShares} />
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                  <span className="flex items-center content-center">
+                    <RiCurrencyFill className="h-6 w-6" /> $
+                    {calculateNetWorth(0, authPlayerWithShares.Share)}
+                  </span>
+                </div>
+              )}
+            </div>
+            <Tooltip
+              classNames={{ base: baseToolTipStyle }}
+              className={tooltipStyle}
+              content={
                 <p className={tooltipParagraphStyle}>
                   The remaining actions you have for order types in a stock
                   round. Limit Order and Short Order actions only replenish as
                   existing orders are filled or rejected. Market Orders
                   replenish each stock round.
                 </p>
+              }
+            >
+              <div className="flex items-center text-md">
+                {(gameState?.useLimitOrders ||
+                  gameState?.useShortOrders ||
+                  gameState?.useOptionOrders) && (
+                  <RiFunctionAddFill size={24} />
+                )}
+                {gameState?.useLimitOrders && (
+                  <>LO {authPlayer.limitOrderActions}</>
+                )}
+                {gameState?.useShortOrders && (
+                  <> SO {authPlayer.shortOrderActions} </>
+                )}
               </div>
-            }
-          >
-            <div className="flex items-center text-md">
-              <RiFunctionAddFill size={24} /> LO {authPlayer.limitOrderActions}{" "}
-              SO {authPlayer.shortOrderActions}
-            </div>
-          </Tooltip>
-        </div>
+            </Tooltip>
+          </>
+        ) : (
+          <div className="flex justify-center items-center ">
+            <span className="text-sm font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 drop-shadow-lg tracking-wide">
+              SPECTATOR MODE
+            </span>
+          </div>
+        )}
       </div>
       <div>
         <Tooltip
+          classNames={{ base: baseToolTipStyle }}
           className={tooltipStyle}
           content={
-            <p className={tooltipParagraphStyle}>The global consumer pool.</p>
+            <div>
+              <p className={tooltipParagraphStyle}>The global consumer pool.</p>
+              {gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN && (
+                <p className={tooltipParagraphStyle}>
+                  Workers remaining: Available workers for factories, marketing, and research.
+                </p>
+              )}
+            </div>
           }
         >
-          <div className="flex items-center gap-2">
-            <RiTeamFill size={18} />
-            {gameState.consumerPoolNumber}
+          <div className="flex flex-col items-center gap-1">
+            <div className="flex items-center gap-2">
+              <RiTeamFill className="text-yellow-400" size={18} />
+              {gameState.consumerPoolNumber}
+            </div>
+            {gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN && (
+              <div className="flex items-center gap-2 text-xs text-gray-400">
+                <RiUserFill className="text-green-400" size={14} />
+                {/* If workforcePool is 0, default to DEFAULT_WORKERS (40) for new games */}
+                {gameState.workforcePool > 0 ? gameState.workforcePool : DEFAULT_WORKERS}
+              </div>
+            )}
           </div>
         </Tooltip>
       </div>
       <div>
         <Tooltip
+          classNames={{ base: baseToolTipStyle }}
           className={tooltipStyle}
           content={
-            <div>
-              <p className={tooltipParagraphStyle}>
-                The bank pool. Once the bank pool is exhausted, the game ends.
-              </p>
-            </div>
+            <p className={tooltipParagraphStyle}>
+              The bank pool. Once the bank pool is exhausted, the game ends.
+            </p>
           }
         >
           <BankInfo />
@@ -172,14 +246,13 @@ const GameGeneralInfo = () => {
       <div className="flex flex-col gap-1 items-start">
         <div>
           <Tooltip
+            classNames={{ base: baseToolTipStyle }}
             className={tooltipStyle}
             content={
-              <div>
-                <p className={tooltipParagraphStyle}>
-                  The share limit. If a player exceeds this limit, they must
-                  divest down to the limit.
-                </p>
-              </div>
+              <p className={tooltipParagraphStyle}>
+                The share limit. If a player exceeds this limit, they must
+                divest down to the limit.
+              </p>
             }
           >
             <div className="flex gap-1 items-center">
@@ -189,16 +262,15 @@ const GameGeneralInfo = () => {
         </div>
         <div>
           <Tooltip
+            classNames={{ base: baseToolTipStyle }}
             className={tooltipStyle}
             content={
-              <div>
-                <p className={tooltipParagraphStyle}>
-                  The company ownership limit percentage. A player may never own
-                  more shares than this percentage of a company unless they
-                  incidentally fall above this percentage due to company share
-                  issues or share buybacks.
-                </p>
-              </div>
+              <p className={tooltipParagraphStyle}>
+                The company ownership limit percentage. A player may never own
+                more shares than this percentage of a company unless they
+                incidentally fall above this percentage due to company share
+                issues or share buybacks.
+              </p>
             }
           >
             <div className="flex gap-1 items-center">
@@ -212,42 +284,39 @@ const GameGeneralInfo = () => {
         <div>{gameState.currentRound ?? "0"}</div>
       </div>
       <Tooltip
+        classNames={{ base: baseToolTipStyle }}
         className={tooltipStyle}
         content={
-          <div>
-            <p className={tooltipParagraphStyle}>
-              The current turn out of the maximum turns in the game. The game
-              ends in one of two ways, either the bank pool is exhausted or the
-              maximum turns are reached.
-            </p>
-          </div>
+          <p className={tooltipParagraphStyle}>
+            The current turn out of the maximum turns in the game. The game ends
+            in one of two ways, either the bank pool is exhausted or the maximum
+            turns are reached.
+          </p>
         }
       >
-        <div>
-          <div className="text-lg font-bold">Turn</div>
+        <div className="flex flex-col items-center">
+          <div className="text-lg font-bold">
+            <RiListOrdered2 className="text-green-400" />
+          </div>
           <div>
             {currentTurn.turn ?? "0"} of {gameState.gameMaxTurns}
           </div>
         </div>
       </Tooltip>
       <Tooltip
+        classNames={{ base: baseToolTipStyle }}
         className={tooltipStyle}
         content={
           gameState.distributionStrategy ==
           DistributionStrategy.BID_PRIORITY ? (
             <p className={tooltipParagraphStyle}>
-              <p>
-                Bids are placed in priority according to the highest ask price
-                of the market order. This ask price is quoted per share. If
-                there are not enough shares to resolve the order, it is
-                rejected.
-              </p>
-              <p>
-                If shares are still contested (ie: a tie-breaker for players who
-                purchase the same amount of shares), they are resolved by
-                priority where the player with the lowest player priority takes
-                precedence.
-              </p>
+              Bids are placed in priority according to the highest ask price of
+              the market order. This ask price is quoted per share. If there are
+              not enough shares to resolve the order, it is rejected.
+              <br />
+              If shares are still contested (ie: a tie-breaker for players who
+              purchase the same amount of shares), they are resolved by priority
+              where the player with the lowest player priority takes precedence.
             </p>
           ) : gameState.distributionStrategy ==
             DistributionStrategy.PRIORITY ? (
@@ -265,13 +334,23 @@ const GameGeneralInfo = () => {
           )
         }
       >
-        <div>
-          <div className="text-lg font-bold">Distribution</div>
+        <div className="flex flex-col items-center">
+          <div className="text-lg font-bold">
+            <RiDiscFill className="text-blue-400" />
+          </div>
           <div>
             {friendlyDistributionStrategyName(gameState.distributionStrategy)}
           </div>
         </div>
       </Tooltip>
+      <Popover>
+        <PopoverTrigger>
+          <Button>Icon Legend</Button>
+        </PopoverTrigger>
+        <PopoverContent>
+          <SymbolLegend />
+        </PopoverContent>
+      </Popover>
     </div>
   );
 };

@@ -8,4 +8,11 @@ export interface StartGameInput {
   bankPoolNumber: number;
   distributionStrategy: DistributionStrategy;
   gameMaxTurns?: number;
+  playerOrdersConcealed: boolean;
+  useLimitOrders: boolean;
+  useShortOrders: boolean;
+  useOptionOrders: boolean;
+  isTimerless: boolean;
+  bots: number;
+  operationMechanicsVersion?: 'LEGACY' | 'MODERN';
 }

@@ -7,6 +7,8 @@ import {
   Input,
   Radio,
   RadioGroup,
+  Select,
+  SelectItem,
   Slider,
   Tab,
   Tabs,
@@ -30,10 +32,12 @@ import React, {
 import { useGame } from "../Game/GameContext";
 import {
   BORROW_RATE,
+  getSectorValidIpoPrices,
   MAX_LIMIT_ORDER_ACTIONS,
   MAX_MARKET_ORDER_ACTIONS,
   MAX_SHORT_ORDER_ACTIONS,
   MAX_SHORT_ORDER_QUANTITY,
+  stockGridPrices,
 } from "@server/data/constants";
 import { PlayerOrderWithCompany } from "@server/prisma/prisma.types";
 import { getPseudoSpend } from "@server/data/helpers";
@@ -42,6 +46,9 @@ import { set } from "lodash";
 import PlayerShares from "./PlayerShares";
 import ShareComponent from "../Company/Share";
 import { Drawer } from "vaul";
+import { toast } from "sonner";
+import DebounceButton from "@sectors/app/components/General/DebounceButton";
+import { useDrawer } from "../Drawer.context";
 
 const RiskAssessment = () => {
   return (
@@ -152,7 +159,7 @@ const LimitOrderInput = ({
 }) => {
   const { authPlayer } = useGame();
   const { data: shares, isLoading } = trpc.share.listShares.useQuery({
-    where: { playerId: authPlayer.id },
+    where: { playerId: authPlayer?.id },
   });
   const [limitOrderValue, setLimitOrderValue] = useState<number>(
     defaultValue || 0
@@ -249,6 +256,7 @@ interface TabContentProps {
   isBuy?: boolean;
   sharesInMarket: number;
   minBidValue?: number;
+  company?: Company;
 }
 
 const TabContentMO: React.FC<TabContentProps> = ({
@@ -263,8 +271,8 @@ const TabContentMO: React.FC<TabContentProps> = ({
   isBuy,
   sharesInMarket,
   minBidValue,
+  company,
 }) => {
-  console.log("mo values", isBuy, maxValue, minValue, defaultValue);
   const { gameState } = useGame();
   const [shareValue, setShareValue] = useState<number>(1);
   const [marketOrderBidValue, setMarketOrderBidValue] = useState<number>(
@@ -282,6 +290,7 @@ const TabContentMO: React.FC<TabContentProps> = ({
         ordersRemaining={ordersRemaining}
         maxOrders={MAX_MARKET_ORDER_ACTIONS}
       /> */}
+
       <BuyOrSell
         handleSelectionIsBuy={handleSelectionIsBuy}
         isIpo={isIpo}
@@ -443,7 +452,7 @@ const PseudoBalance = ({
   currentOrderValue,
   runningOrderValue,
 }: {
-  stockRoundId: number;
+  stockRoundId: string;
   currentOrderValue?: number;
   runningOrderValue?: number;
 }) => {
@@ -453,26 +462,19 @@ const PseudoBalance = ({
     isLoading,
     refetch,
   } = trpc.playerOrder.listPlayerOrdersWithCompany.useQuery({
-    where: { playerId: authPlayer.id, stockRoundId },
+    where: { playerId: authPlayer?.id, stockRoundId },
   });
   useEffect(() => {
     refetch();
   }, [currentPhase?.name]);
   if (isLoading) return null;
-
-  const pseudoSpend = playerOrders ? getPseudoSpend(playerOrders) : 0;
-  const netSpend = pseudoSpend - (runningOrderValue || 0);
+  if (!authPlayer) return null;
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-1">
         <span>Cash On Hand</span>
         <CurrencyDollarIcon className="w-6 h-6 size-3" />
         <span>{authPlayer.cashOnHand}</span>
-      </div>
-      <div className="flex items-center gap-1">
-        <span>Previous Placed Order Cost This Round</span>
-        <CurrencyDollarIcon className="w-6 h-6 size-3" />
-        <span>{netSpend}</span>
       </div>
       <div className="flex items-center gap-1">
         <span>Current Order Cost</span>
@@ -482,9 +484,7 @@ const PseudoBalance = ({
       <div className="flex items-center gap-1">
         <span>Remaining Cash</span>
         <CurrencyDollarIcon className="w-6 h-6" />
-        <span>
-          {authPlayer.cashOnHand - netSpend + (currentOrderValue || 0)}
-        </span>
+        <span>{authPlayer.cashOnHand + (currentOrderValue || 0)}</span>
       </div>
     </div>
   );
@@ -546,6 +546,7 @@ const PlayerOrderInput = ({
   isIpo: boolean;
   handlePlayerInputConfirmed: () => void;
 }) => {
+  const { closeDrawer } = useDrawer();
   const { gameId, gameState, authPlayer, currentPhase, refetchAuthPlayer } =
     useGame();
   const { data: playerOrders } =
@@ -557,7 +558,7 @@ const PlayerOrderInput = ({
     });
   const { data: playerWithShares, isLoading: isLoadingPlayerWithShares } =
     trpc.player.playerWithShares.useQuery({
-      where: { id: authPlayer.id },
+      where: { id: authPlayer?.id },
     });
   const { data: company, isLoading: companyLoading } =
     trpc.company.getCompanyWithShares.useQuery({
@@ -565,8 +566,17 @@ const PlayerOrderInput = ({
     });
   const [isLoadingPlayerOrder, setIsLoadingPlayerOrder] = useState(false);
   const createPlayerOrder = trpc.playerOrder.createPlayerOrder.useMutation({
+    onSuccess: () => {
+      handlePlayerInputConfirmed();
+      closeDrawer();
+      refetchAuthPlayer();
+      setIsSubmit(true);
+    },
     onSettled: () => {
       setIsLoadingPlayerOrder(false);
+    },
+    onError: (error) => {
+      toast.error(error.message);
     },
   });
   const [share, setShare] = useState(1);
@@ -576,6 +586,7 @@ const PlayerOrderInput = ({
   const [orderType, setOrderType] = useState<OrderType>(OrderType.MARKET);
   const [maxValue, setMaxValue] = useState(10);
   const [minValue, setMinValue] = useState(1);
+  const [ipoFloatValue, setIpoFloatValue] = useState<number | null>(null);
   let runningOrderValue = 0;
   if (playerOrders) {
     runningOrderValue = calculateRunningOrderValue(playerOrders);
@@ -585,7 +596,6 @@ const PlayerOrderInput = ({
   }, [currentPhase?.name]);
   useEffect(() => {
     if (orderType === OrderType.MARKET) {
-      console.log("order mo", isBuy, isIpo);
       if (isBuy) {
         if (isIpo) {
           setMaxValue(
@@ -615,8 +625,10 @@ const PlayerOrderInput = ({
       setMaxValue(company?.Share.length || 0);
     }
   }, [isBuy, isIpo, company?.Share]);
-
-  if (!gameId || !gameState) return null;
+  const companySector = gameState.sectors.find(
+    (sector) => sector.id === currentOrder.sectorId
+  );
+  if (!gameId || !gameState || !authPlayer) return null;
   const currentOrderValue = calculatePseudoOrderValue({
     orderType,
     quantity: share,
@@ -635,9 +647,6 @@ const PlayerOrderInput = ({
       orderType,
       location: isIpo ? ShareLocation.IPO : ShareLocation.OPEN_MARKET,
     });
-    setIsSubmit(true);
-    refetchAuthPlayer();
-    handlePlayerInputConfirmed();
   };
   const handleSelectionChange = (key: React.Key) => {
     switch (key) {
@@ -645,11 +654,7 @@ const PlayerOrderInput = ({
         if (isIpo) {
           setIsBuy(true);
         } else {
-          setIsBuy(
-            (company?.Share.filter(
-              (share) => share.location === ShareLocation.OPEN_MARKET
-            ).length || 0) > 0
-          );
+          setIsBuy(true);
         }
         setOrderType(OrderType.MARKET);
         break;
@@ -661,6 +666,9 @@ const PlayerOrderInput = ({
         setOrderType(OrderType.SHORT);
         break;
     }
+  };
+  const handleIpoFloatValueChange = (value: number) => {
+    setIpoFloatValue(value);
   };
   const sharesOwnedInCompany =
     playerWithShares?.Share.filter(
@@ -674,12 +682,12 @@ const PlayerOrderInput = ({
           <ShareComponent
             name={currentOrder.name}
             quantity={sharesOwnedInCompany}
-            price={currentOrder.currentStockPrice}
+            price={currentOrder.currentStockPrice || 0}
           />
         )}
       </div>
       <PseudoBalance
-        stockRoundId={currentPhase?.stockRoundId ?? 0}
+        stockRoundId={currentPhase?.stockRoundId ?? ""}
         currentOrderValue={currentOrderValue}
         runningOrderValue={runningOrderValue}
       />
@@ -695,7 +703,7 @@ const PlayerOrderInput = ({
             onSelectionChange={handleSelectionChange}
           >
             <Tab key="mo" title={"MARKET ORDER"} className="w-full">
-              <Card>
+              <Card className="min-w-[250px]">
                 <CardBody>
                   <TabContentMO
                     handleSelectionIsBuy={setIsBuy}
@@ -707,13 +715,13 @@ const PlayerOrderInput = ({
                     minValue={minValue}
                     defaultValue={
                       isIpo
-                        ? currentOrder.ipoAndFloatPrice
-                        : currentOrder.currentStockPrice
+                        ? currentOrder.ipoAndFloatPrice || 0
+                        : currentOrder.currentStockPrice || 0
                     }
                     minBidValue={
                       isIpo
-                        ? currentOrder.ipoAndFloatPrice
-                        : currentOrder.currentStockPrice
+                        ? currentOrder.ipoAndFloatPrice || 0
+                        : currentOrder.currentStockPrice || 0
                     }
                     isBuy={isBuy}
                     sharesInMarket={
@@ -725,11 +733,12 @@ const PlayerOrderInput = ({
                             : ShareLocation.OPEN_MARKET)
                       ).length || 0
                     }
+                    company={currentOrder}
                   />
                 </CardBody>
               </Card>
             </Tab>
-            {!isIpo && (
+            {!isIpo && gameState.useLimitOrders && (
               <Tab key="lo" title={"LIMIT ORDER"} className="w-full">
                 <Card>
                   <CardBody>
@@ -742,13 +751,13 @@ const PlayerOrderInput = ({
                       minValue={minValue}
                       handleShares={setShare}
                       handleValueChange={setOrderValue}
-                      defaultValue={currentOrder.currentStockPrice}
+                      defaultValue={currentOrder.currentStockPrice || 0}
                     />
                   </CardBody>
                 </Card>
               </Tab>
             )}
-            {!isIpo && (
+            {!isIpo && gameState.useShortOrders && (
               <Tab key="so" title={"SHORT ORDER"} className="w-full">
                 <Card>
                   <CardBody>
@@ -765,11 +774,12 @@ const PlayerOrderInput = ({
             )}
           </Tabs>
           <div className="flex justify-center gap-2">
-            <Drawer.Close asChild>
-              <Button onClick={handleConfirm} isLoading={isLoadingPlayerOrder}>
-                Confirm
-              </Button>
-            </Drawer.Close>
+            <DebounceButton
+              onClick={handleConfirm}
+              isLoading={isLoadingPlayerOrder}
+            >
+              Confirm
+            </DebounceButton>
             <Drawer.Close asChild>
               <Button onClick={handleCancel}>Cancel</Button>
             </Drawer.Close>

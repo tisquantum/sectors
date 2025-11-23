@@ -1,15 +1,28 @@
 //make a map between PhaseName and phase times
 import {
   Company,
+  CompanyActionOrder,
   CompanyTier,
+  DistributionStrategy,
   OperatingRoundAction,
   PhaseName,
   PrestigeReward,
+  ResourceType,
   Sector,
   SectorName,
   StockTier,
 } from '@prisma/client';
-import { companyPriorityOrderOperations } from './helpers';
+export const GLOBAL_ROOM_ID = process.env.NEXT_PUBLIC_GLOBAL_ROOM_ID ?? '1';
+export const GAME_SETUP_DEFAULT_BANK_POOL_NUMBER = 7500;
+export const GAME_SETUP_DEFAULT_CONSUMER_POOL_NUMBER = 75;
+export const GAME_SETUP_DEFAULT_STARTING_CASH_ON_HAND = 300;
+export const GAME_SETUP_DEFAULT_DISTRIBUTION_STRATEGY =
+  DistributionStrategy.PRIORITY;
+export const GAME_SETUP_DEFAULT_GAME_MAX_TURNS = 8;
+export const GAME_SETUP_DEFAULT_PLAYER_ORDERS_CONCEALED = false;
+export const GAME_SETUP_DEFAULT_TIMERLESS = true;
+
+export const ROOM_NAME_CHAR_LIMIT = 30;
 
 export const USER_NAME_MAX_LENGTH = 20;
 
@@ -41,7 +54,7 @@ export const DEFAULT_RESEARCH_DECK_SIZE = 12;
 
 export const GOVERNMENT_GRANT_AMOUNT = 500;
 
-export const MARKETING_CONSUMER_BONUS = 3;
+export const MARKETING_CONSUMER_BONUS = 2;
 export const LARGE_MARKETING_CAMPAIGN_DEMAND = 4;
 export const SMALL_MARKETING_CAMPAIGN_DEMAND = 3;
 
@@ -59,7 +72,7 @@ export const AUTOMATION_EFFECT_OPERATIONS_REDUCTION = 20;
 export const CAPITAL_INJECTION_STARTER = 200;
 export const CAPITAL_INJECTION_BOOSTER = 100;
 export const CORPORATE_ESPIONAGE_PRESTIGE_REDUCTION = 2;
-export const LOBBY_DEMAND_BOOST = 3;
+export const LOBBY_DEMAND_BOOST = 4;
 export const ACTION_ISSUE_SHARE_AMOUNT = 2;
 export const BANKRUPTCY_SHARE_PERCENTAGE_RETAINED = 10;
 export const OURSOURCE_SUPPLY_BONUS = 3;
@@ -72,19 +85,33 @@ export const BOOM_CYCLE_STOCK_CHART_BONUS = 3;
 export const PRIZE_FREEZE_AMOUNT = 2;
 export const FASTTRACK_APPROVAL_AMOUNT_DEMAND = 2;
 export const FASTTRACK_APPROVAL_AMOUNT_CONSUMERS = 3;
+export const INNOVATION_SURGE_CARD_DRAW_BONUS = 2;
+export const B2B_COMPANY_BONUS = 2;
+export const LICENSING_AGREEMENT_UNIT_PRICE_BONUS = 20;
+export const ROOM_MESSAGE_MAX_LENGTH = 150;
+export const DEFAULT_SECTOR_AMOUNT = 3;
+export const PRIZE_CASH_SUM = 100;
+export const INACTIVE_COMPANY_PER_TURN_DISCOUNT = 5;
+export const AWARD_TRACK_SPACES_RESEARCH = 5;
+export const AWARD_TRACK_SPACES_CATALYST = 6;
+export const AWARD_TRACK_SPACES_MARKETING = 9;
+export const AWARD_PRESTIGE_BONUS = 2;
+export const OUTSOURCE_PRESTIGE_PENALTY = 1;
 
 /**
  * Phase times in milliseconds
  */
-export const phaseTimes = {
-  [PhaseName.INFLUENCE_BID_ACTION]: 40 * 1000,
+export const phaseTimes: Record<PhaseName, number> = {
+  [PhaseName.INFLUENCE_BID_ACTION]: 55 * 1000,
   [PhaseName.INFLUENCE_BID_REVEAL]: 10 * 1000,
   [PhaseName.INFLUENCE_BID_RESOLVE]: 15 * 1000,
   [PhaseName.STOCK_RESOLVE_LIMIT_ORDER]: 15 * 1000,
   [PhaseName.STOCK_MEET]: 30 * 1000,
-  [PhaseName.STOCK_ACTION_ORDER]: 45 * 1000,
+  [PhaseName.STOCK_ACTION_ORDER]: 55 * 1000,
   [PhaseName.STOCK_ACTION_RESULT]: 10 * 1000,
   [PhaseName.STOCK_ACTION_REVEAL]: 12 * 1000,
+  [PhaseName.RESOLVE_SET_COMPANY_IPO_PRICES]: 15 * 1000,
+  [PhaseName.SET_COMPANY_IPO_PRICES]: 15 * 1000,
   [PhaseName.STOCK_RESOLVE_MARKET_ORDER]: 12 * 1000,
   [PhaseName.STOCK_SHORT_ORDER_INTEREST]: 12 * 1000,
   [PhaseName.STOCK_ACTION_SHORT_ORDER]: 12 * 1000,
@@ -95,11 +122,11 @@ export const phaseTimes = {
   [PhaseName.STOCK_OPEN_LIMIT_ORDERS]: 10 * 1000,
   [PhaseName.STOCK_RESULTS_OVERVIEW]: 15 * 1000,
   [PhaseName.OPERATING_PRODUCTION]: 15 * 1000,
-  [PhaseName.OPERATING_PRODUCTION_VOTE]: 45 * 1000,
+  [PhaseName.OPERATING_PRODUCTION_VOTE]: 50 * 1000,
   [PhaseName.OPERATING_PRODUCTION_VOTE_RESOLVE]: 10 * 1000,
   [PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT]: 15 * 1000,
   [PhaseName.OPERATING_MEET]: 30 * 1000,
-  [PhaseName.OPERATING_ACTION_COMPANY_VOTE]: 30 * 1000,
+  [PhaseName.OPERATING_ACTION_COMPANY_VOTE]: 40 * 1000,
   [PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT]: 10 * 1000,
   [PhaseName.OPERATING_COMPANY_VOTE_RESOLVE]: 10 * 1000,
   [PhaseName.CAPITAL_GAINS]: 12 * 1000,
@@ -107,10 +134,26 @@ export const phaseTimes = {
   [PhaseName.SECTOR_NEW_COMPANY]: 10 * 1000,
   [PhaseName.START_TURN]: 30 * 1000,
   [PhaseName.END_TURN]: 20 * 1000,
-  [PhaseName.PRIZE_VOTE_ACTION]: 50 * 1000,
+  [PhaseName.PRIZE_VOTE_ACTION]: 55 * 1000,
   [PhaseName.PRIZE_VOTE_RESOLVE]: 12 * 1000,
   [PhaseName.PRIZE_DISTRIBUTE_ACTION]: 50 * 1000,
   [PhaseName.PRIZE_DISTRIBUTE_RESOLVE]: 12 * 1000,
+  [PhaseName.HEADLINE_RESOLVE]: 12 * 1000,
+  [PhaseName.FACTORY_CONSTRUCTION]: 12 * 1000, // Legacy - kept for backward compatibility
+  [PhaseName.FACTORY_CONSTRUCTION_RESOLVE]: 12 * 1000, // Legacy - kept for backward compatibility
+  [PhaseName.MODERN_OPERATIONS]: 60 * 1000, // Combined: Factory Construction + Marketing + Research
+  [PhaseName.RESOLVE_MODERN_OPERATIONS]: 12 * 1000, // Combined resolve for all operations
+  [PhaseName.RUSTED_FACTORY_UPGRADE]: 12 * 1000, // Resolve rusted factory upgrades
+  [PhaseName.MARKETING_CAMPAIGN]: 50 * 1000,
+  [PhaseName.MARKETING_CAMPAIGN_RESOLVE]: 12 * 1000,
+  [PhaseName.RESEARCH_ACTION]: 50 * 1000,
+  [PhaseName.RESEARCH_ACTION_RESOLVE]: 12 * 1000,
+  [PhaseName.CONSUMPTION_PHASE]: 60 * 1000,
+  [PhaseName.EARNINGS_CALL]: 12 * 1000,
+  [PhaseName.RESOLVE_INSOLVENCY]: 60 * 1000,
+  [PhaseName.SHAREHOLDER_MEETING]: 60 * 1000, 
+  [PhaseName.MARKETING_AND_RESEARCH_ACTION]: 60 * 1000, 
+  [PhaseName.MARKETING_AND_RESEARCH_ACTION_RESOLVE]: 12 * 1000,
 };
 
 //Stock Grid Prices
@@ -121,6 +164,104 @@ export const stockGridPrices = [
   291, 302, 313, 324, 335, 346, 358, 370, 382, 394, 406, 418, 431, 444, 457,
   470, 484, 498, 512, 526, 540, 555, 570, 585, 600,
 ];
+
+// Worker track values account for the economy score + the worker salaries.
+// As workers are added to factories, the economy score increases because the global workforce is increasing strengthing the economy.
+// As workers are added to factories, the worker salaries increase because the global workforce is increasing strengthing the economy.
+export const workerTrackValues = [
+  10, 10, 10, 10, 11, 11, 11, 11, 12, 12,
+  13, 13, 13, 13, 14, 14, 14, 14, 15, 15,
+  15, 15, 16, 16, 16, 16, 17, 17, 17, 17,
+  18, 18, 18, 18, 19, 19, 19, 19, 20, 20,
+  20, 20, 21, 21, 21, 21, 22, 22, 22, 22,
+  23, 23, 23, 23, 24, 24, 24, 24, 25, 25,
+  25, 25, 26, 26, 26, 26, 27, 27, 27, 27,
+  28, 28, 28, 28, 29, 29, 29, 29, 30, 30
+]
+
+export const DEFAULT_WORKERS = 40;
+
+export function getSectorResourceForSectorName(sectorName: SectorName) {
+  switch(sectorName) {
+    case SectorName.CONSUMER_DEFENSIVE:
+      return ResourceType.CONSUMER_DEFENSIVE;
+    case SectorName.CONSUMER_CYCLICAL:
+      return ResourceType.CONSUMER_CYCLICAL;
+    case SectorName.CONSUMER_DISCRETIONARY:
+      return ResourceType.CONSUMER_DISCRETIONARY;
+    case SectorName.CONSUMER_STAPLES:
+      return ResourceType.CONSUMER_STAPLES;
+    case SectorName.ENERGY:
+      return ResourceType.ENERGY;
+    case SectorName.HEALTHCARE:
+      return ResourceType.HEALTHCARE;
+    case SectorName.INDUSTRIALS:
+      return ResourceType.INDUSTRIALS;
+    case SectorName.MATERIALS:
+      return ResourceType.MATERIALS;
+    case SectorName.TECHNOLOGY:
+      return ResourceType.TECHNOLOGY;
+    default:
+      return ResourceType.GENERAL;
+  }
+}
+
+export const RESOURCE_PRICES_CIRCLE = [12, 15, 17, 14, 18, 16, 20, 19, 22, 24, 26, 23, 28, 25, 30, 27, 32, 29, 35, 31, 33, 36, 34, 38, 40]
+
+export const RESOURCE_PRICES_SQUARE = [5, 6, 7, 8, 10, 11, 12, 14, 15, 17, 18, 20, 21, 23, 24, 26, 27, 29, 30, 32]
+
+export const RESOURCE_PRICES_TRIANGLE = [8, 11, 14, 7, 16, 20, 6, 18, 25, 5, 22, 27, 9, 24, 30, 10, 35, 12, 40, 15, 38, 19, 43, 17, 46, 21, 50, 26, 55, 60]
+
+export const RESOURCE_PRICES_GEAR = [20, 22, 24, 27, 30, 34, 38, 42, 47, 53, 58, 65, 72, 80, 90]
+
+export const RESOURCE_PRICES_TECHNOLOGY = [15, 18, 22, 28, 20, 35, 25, 40, 30, 50]
+
+export const RESOURCE_PRICES_INDUSTRIAL = [10, 12, 14, 13, 16, 17, 18, 20, 21, 23]
+
+export const RESOURCE_PRICES_ENERGY = [8, 20, 5, 25, 10, 30, 7, 35, 6, 40]
+
+export const RESOURCE_PRICES_HEALTHCARE = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+export const RESOURCE_PRICES_CONSUMER_DEFENSIVE = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+export const RESOURCE_PRICES_CONSUMER_CYCLICAL = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+export const RESOURCE_PRICES_CONSUMER_DISCRETIONARY = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+export const RESOURCE_PRICES_CONSUMER_STAPLES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+export const RESOURCE_PRICES_MATERIALS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+export function getResourcePriceForResourceType(resourceType: ResourceType) {
+  switch(resourceType) {
+    case ResourceType.CIRCLE:
+      return RESOURCE_PRICES_CIRCLE
+    case ResourceType.SQUARE:
+      return RESOURCE_PRICES_SQUARE;
+    case ResourceType.TRIANGLE:
+      return RESOURCE_PRICES_TRIANGLE;
+    case ResourceType.CONSUMER_DEFENSIVE:
+      return RESOURCE_PRICES_CONSUMER_DEFENSIVE;
+    case ResourceType.CONSUMER_CYCLICAL:
+      return RESOURCE_PRICES_CONSUMER_CYCLICAL;
+    case ResourceType.CONSUMER_DISCRETIONARY:
+      return RESOURCE_PRICES_CONSUMER_DISCRETIONARY;
+    case ResourceType.CONSUMER_STAPLES:
+      return RESOURCE_PRICES_CONSUMER_STAPLES;
+    case ResourceType.ENERGY:
+      return RESOURCE_PRICES_ENERGY;
+    case ResourceType.HEALTHCARE:
+      return RESOURCE_PRICES_HEALTHCARE;
+    case ResourceType.INDUSTRIALS:
+      return RESOURCE_PRICES_INDUSTRIAL;
+    case ResourceType.MATERIALS:
+      return RESOURCE_PRICES_MATERIALS;
+    case ResourceType.TECHNOLOGY:
+      return RESOURCE_PRICES_TECHNOLOGY;
+    default:
+      return [];
+  }
+}
 
 export const getStockPriceClosestEqualOrLess = (price: number): number => {
   const index = stockGridPrices.findIndex((value) => value >= price);
@@ -279,22 +420,23 @@ export const companyVoteActionPriority = (
   actions: OperatingRoundAction[],
 ): OperatingRoundAction => {
   const actionPriority = [
-    OperatingRoundAction.DOWNSIZE,
+    OperatingRoundAction.VETO,
     OperatingRoundAction.EXPANSION,
-    OperatingRoundAction.MARKETING,
     OperatingRoundAction.MARKETING_SMALL_CAMPAIGN,
+    OperatingRoundAction.MARKETING,
+    OperatingRoundAction.OUTSOURCE,
+    OperatingRoundAction.LOAN,
+    OperatingRoundAction.DOWNSIZE,
+    OperatingRoundAction.SPEND_PRESTIGE,
+    OperatingRoundAction.INCREASE_PRICE,
+    OperatingRoundAction.DECREASE_PRICE,
     OperatingRoundAction.MERGE,
     OperatingRoundAction.RESEARCH,
     OperatingRoundAction.SHARE_BUYBACK,
     OperatingRoundAction.SHARE_ISSUE,
     OperatingRoundAction.PRODUCTION,
-    OperatingRoundAction.SPEND_PRESTIGE,
-    OperatingRoundAction.VETO,
-    OperatingRoundAction.INCREASE_PRICE,
-    OperatingRoundAction.DECREASE_PRICE,
     OperatingRoundAction.LOBBY,
-    OperatingRoundAction.OUTSOURCE,
-    OperatingRoundAction.LOAN,
+    OperatingRoundAction.LICENSING_AGREEMENT,
     OperatingRoundAction.VISIONARY,
     OperatingRoundAction.STRATEGIC_RESERVE,
     OperatingRoundAction.RAPID_EXPANSION,
@@ -328,24 +470,27 @@ export const sectorPriority = [
   SectorName.GENERAL,
 ];
 
-export const getCompanyOperatingRoundTurnOrder = (
+export const getCompanyActionOperatingRoundTurnOrder = (
   companies: Company[],
+  companyActionOrder: CompanyActionOrder[],
 ): Company[] => {
-  //get companies with sector
-  const companiesSortedPartial = companyPriorityOrderOperations(companies);
-  //copy companies in same order
-  return companies.sort(
-    (a, b) =>
-      companiesSortedPartial.indexOf(a) - companiesSortedPartial.indexOf(b),
-  );
+  return companyActionOrder
+    .sort((a, b) => a.orderPriority - b.orderPriority)
+    .map((companyActionOrder) =>
+      companies.find((company) => company.id == companyActionOrder.companyId),
+    )
+    .filter((company): company is Company => company != undefined);
 };
 
 export const getNextCompanyOperatingRoundTurn = (
   companies: Company[],
+  companyActionOrder: CompanyActionOrder[],
   currentCompanyId?: string,
 ): Company => {
-  const sortedCompanies = getCompanyOperatingRoundTurnOrder(companies);
-
+  const sortedCompanies = getCompanyActionOperatingRoundTurnOrder(
+    companies,
+    companyActionOrder,
+  );
   if (!currentCompanyId) {
     return sortedCompanies[0];
   }
@@ -356,7 +501,6 @@ export const getNextCompanyOperatingRoundTurn = (
 
   // Handle the case where currentCompanyId is not found
   if (currentIndex === -1) {
-    // You can decide how to handle this case, for example, returning the first company
     return sortedCompanies[0];
   }
 
@@ -425,30 +569,34 @@ export const throughputRewardOrPenalty = (
   }
 };
 
+export const GeneralCompanyActionCosts = {
+  [OperatingRoundAction.LICENSING_AGREEMENT]: [150, 200, 250],
+  [OperatingRoundAction.MARKETING]: [125, 175, 225],
+  [OperatingRoundAction.OUTSOURCE]: [200, 250, 300],
+  [OperatingRoundAction.LOBBY]: [100, 150, 200],
+};
+
 export const CompanyActionCosts = {
   [OperatingRoundAction.DOWNSIZE]: 50,
-  [OperatingRoundAction.EXPANSION]: 300,
-  [OperatingRoundAction.MARKETING]: 220,
-  [OperatingRoundAction.MARKETING_SMALL_CAMPAIGN]: 100,
+  [OperatingRoundAction.EXPANSION]: 150,
+  [OperatingRoundAction.MARKETING_SMALL_CAMPAIGN]: 75,
   [OperatingRoundAction.MERGE]: 1000,
-  [OperatingRoundAction.RESEARCH]: 200,
+  [OperatingRoundAction.RESEARCH]: 25,
   [OperatingRoundAction.SHARE_BUYBACK]: 0,
-  [OperatingRoundAction.SHARE_ISSUE]: 50,
+  [OperatingRoundAction.SHARE_ISSUE]: 25,
   [OperatingRoundAction.PRODUCTION]: 0,
   [OperatingRoundAction.SPEND_PRESTIGE]: 0,
   [OperatingRoundAction.VETO]: 0,
-  [OperatingRoundAction.LOBBY]: 120,
   [OperatingRoundAction.INCREASE_PRICE]: 0,
   [OperatingRoundAction.DECREASE_PRICE]: 0,
-  [OperatingRoundAction.OUTSOURCE]: 200,
   [OperatingRoundAction.LOAN]: 0,
-  [OperatingRoundAction.VISIONARY]: 400,
-  [OperatingRoundAction.STRATEGIC_RESERVE]: 400,
-  [OperatingRoundAction.RAPID_EXPANSION]: 400,
-  [OperatingRoundAction.FASTTRACK_APPROVAL]: 400,
-  [OperatingRoundAction.PRICE_FREEZE]: 400,
-  [OperatingRoundAction.REBRAND]: 400,
-  [OperatingRoundAction.SURGE_PRICING]: 400,
+  [OperatingRoundAction.VISIONARY]: 200,
+  [OperatingRoundAction.STRATEGIC_RESERVE]: 200,
+  [OperatingRoundAction.RAPID_EXPANSION]: 200,
+  [OperatingRoundAction.FASTTRACK_APPROVAL]: 200,
+  [OperatingRoundAction.PRICE_FREEZE]: 200,
+  [OperatingRoundAction.REBRAND]: 200,
+  [OperatingRoundAction.SURGE_PRICING]: 200,
   [OperatingRoundAction.INNOVATION_SURGE]: 0,
   [OperatingRoundAction.REGULATORY_SHIELD]: 0,
   [OperatingRoundAction.EXTRACT]: 25,
@@ -475,14 +623,15 @@ export const CompanyActionPrestigeCosts = {
   [OperatingRoundAction.DECREASE_PRICE]: 0,
   [OperatingRoundAction.OUTSOURCE]: 0,
   [OperatingRoundAction.LOAN]: 0,
+  [OperatingRoundAction.LICENSING_AGREEMENT]: 0,
   //active effects
-  [OperatingRoundAction.VISIONARY]: 3,
-  [OperatingRoundAction.STRATEGIC_RESERVE]: 3,
-  [OperatingRoundAction.RAPID_EXPANSION]: 3,
-  [OperatingRoundAction.FASTTRACK_APPROVAL]: 3,
-  [OperatingRoundAction.PRICE_FREEZE]: 3,
-  [OperatingRoundAction.REBRAND]: 3,
-  [OperatingRoundAction.SURGE_PRICING]: 3,
+  [OperatingRoundAction.VISIONARY]: 2,
+  [OperatingRoundAction.STRATEGIC_RESERVE]: 2,
+  [OperatingRoundAction.RAPID_EXPANSION]: 2,
+  [OperatingRoundAction.FASTTRACK_APPROVAL]: 2,
+  [OperatingRoundAction.PRICE_FREEZE]: 2,
+  [OperatingRoundAction.REBRAND]: 2,
+  [OperatingRoundAction.SURGE_PRICING]: 2,
   //passive effects
   [OperatingRoundAction.INNOVATION_SURGE]: 0,
   [OperatingRoundAction.REGULATORY_SHIELD]: 0,
@@ -498,43 +647,43 @@ export const CompanyTierData = {
     operatingCosts: 10,
     supplyMax: 2,
     companyActions: 1,
-    insolvencyShortFall: 100,
+    insolvencyShortFall: 50,
   },
   [CompanyTier.STARTUP]: {
     operatingCosts: 20,
     supplyMax: 3,
     companyActions: 1,
-    insolvencyShortFall: 150,
+    insolvencyShortFall: 100,
   },
   [CompanyTier.GROWTH]: {
-    operatingCosts: 30,
+    operatingCosts: 40,
     supplyMax: 4,
-    companyActions: 1,
-    insolvencyShortFall: 200,
+    companyActions: 2,
+    insolvencyShortFall: 150,
   },
   [CompanyTier.ESTABLISHED]: {
     operatingCosts: 50,
     supplyMax: 5,
     companyActions: 2,
-    insolvencyShortFall: 400,
+    insolvencyShortFall: 200,
   },
   [CompanyTier.ENTERPRISE]: {
     operatingCosts: 70,
     supplyMax: 6,
-    companyActions: 2,
-    insolvencyShortFall: 600,
+    companyActions: 3,
+    insolvencyShortFall: 250,
   },
   [CompanyTier.CONGLOMERATE]: {
-    operatingCosts: 100,
+    operatingCosts: 80,
     supplyMax: 8,
-    companyActions: 2,
-    insolvencyShortFall: 900,
+    companyActions: 3,
+    insolvencyShortFall: 300,
   },
   [CompanyTier.TITAN]: {
-    operatingCosts: 150,
+    operatingCosts: 100,
     supplyMax: 10,
-    companyActions: 3,
-    insolvencyShortFall: 1500,
+    companyActions: 4,
+    insolvencyShortFall: 400,
   },
 };
 
@@ -568,40 +717,38 @@ export const getPreviousCompanyTier = (
   return tierOrder[currentIndex - 1];
 };
 
-export const STOCK_ACTION_SUB_ROUND_MAX = 2;
-
 export const MARGIN_ACCOUNT_ID_PREFIX = 'MA__';
 
 export const CapitalGainsTiers = [
   {
     minNetWorth: 0,
-    maxNetWorth: 500,
+    maxNetWorth: 100,
     taxPercentage: 0,
   },
   {
-    minNetWorth: 500,
-    maxNetWorth: 750,
-    taxPercentage: 2,
-  },
-  {
-    minNetWorth: 751,
-    maxNetWorth: 1000,
-    taxPercentage: 3,
-  },
-  {
-    minNetWorth: 1001,
-    maxNetWorth: 1500,
-    taxPercentage: 4,
-  },
-  {
-    minNetWorth: 1501,
-    maxNetWorth: 2000,
+    minNetWorth: 100,
+    maxNetWorth: 200,
     taxPercentage: 5,
   },
   {
-    minNetWorth: 2001,
-    maxNetWorth: Number.MAX_SAFE_INTEGER,
+    minNetWorth: 200,
+    maxNetWorth: 300,
+    taxPercentage: 6,
+  },
+  {
+    minNetWorth: 300,
+    maxNetWorth: 400,
     taxPercentage: 7,
+  },
+  {
+    minNetWorth: 400,
+    maxNetWorth: 500,
+    taxPercentage: 8,
+  },
+  {
+    minNetWorth: 500,
+    maxNetWorth: Number.MAX_SAFE_INTEGER,
+    taxPercentage: 10,
   },
 ];
 
@@ -640,7 +787,7 @@ export const PrestigeTrack = [
     name: 'Capital Injection',
     description: `The company receives the money on this space of the track. If you pass over this, all capital injections rewards receive another $${CAPITAL_INJECTION_BOOSTER}.`,
     probability: 0.12,
-    cost: 3,
+    cost: 2,
   },
   {
     type: PrestigeReward.BULL_SIGNAL,
@@ -654,7 +801,7 @@ export const PrestigeTrack = [
     name: 'Influencer',
     description: 'The company receives +1 permanent demand.',
     probability: 0.08,
-    cost: 4,
+    cost: 3,
   },
 ];
 
@@ -665,7 +812,7 @@ export const StartingTier = {
   },
   [SectorName.CONSUMER_DEFENSIVE]: {
     sector: 'Consumer Defensive',
-    tier: CompanyTier.GROWTH,
+    tier: CompanyTier.STARTUP,
   },
   [SectorName.INDUSTRIALS]: {
     sector: 'Industrial',
@@ -769,7 +916,12 @@ export type PlayerReadiness = {
   isReady: boolean;
 };
 
-export type CompanyActionType = 'general' | 'sector-active' | 'sector-passive';
+export type CompanyActionType =
+  | 'general'
+  | 'internal'
+  | 'sector'
+  | 'sector-active'
+  | 'sector-passive';
 export interface CompanyActionDescription {
   id: number;
   title: string;
@@ -783,7 +935,7 @@ export const companyActionsDescription: CompanyActionDescription[] = [
     id: 1,
     title: 'Large Marketing Campaign',
     name: OperatingRoundAction.MARKETING,
-    message: `The sector receives an additional ${MARKETING_CONSUMER_BONUS} consumers. Your company receives +${LARGE_MARKETING_CAMPAIGN_DEMAND} demand that decays 1 per production phase.`,
+    message: `Your company receives +${LARGE_MARKETING_CAMPAIGN_DEMAND} demand that decays 1 per production phase. The sector receives an additional ${MARKETING_CONSUMER_BONUS} demand that decays 1 per production phase.`,
     actionType: 'general',
   },
   {
@@ -791,7 +943,7 @@ export const companyActionsDescription: CompanyActionDescription[] = [
     title: 'Small Marketing Campaign',
     name: OperatingRoundAction.MARKETING_SMALL_CAMPAIGN,
     message: `The company receives +${SMALL_MARKETING_CAMPAIGN_DEMAND} demand that decays 1 per production phase.`,
-    actionType: 'general',
+    actionType: 'internal',
   },
   {
     id: 3,
@@ -799,7 +951,7 @@ export const companyActionsDescription: CompanyActionDescription[] = [
     name: OperatingRoundAction.RESEARCH,
     message:
       'Invest in research to gain a competitive edge. Draw one card from the research deck.',
-    actionType: 'general',
+    actionType: 'internal',
   },
   {
     id: 4,
@@ -807,7 +959,7 @@ export const companyActionsDescription: CompanyActionDescription[] = [
     name: OperatingRoundAction.EXPANSION,
     message:
       'Increase company size (base operational costs per OR) to meet higher demand and increase supply.',
-    actionType: 'general',
+    actionType: 'internal',
   },
   {
     id: 5,
@@ -815,7 +967,7 @@ export const companyActionsDescription: CompanyActionDescription[] = [
     name: OperatingRoundAction.DOWNSIZE,
     message:
       'Reduce company size (base operational costs per OR) to lower operation costs and decrease supply.',
-    actionType: 'general',
+    actionType: 'internal',
   },
   {
     id: 6,
@@ -823,42 +975,42 @@ export const companyActionsDescription: CompanyActionDescription[] = [
     name: OperatingRoundAction.SHARE_BUYBACK,
     message:
       'Buy back a share from the open market. This share is taken out of rotation from the game.',
-    actionType: 'general',
+    actionType: 'internal',
   },
   {
     id: 7,
     title: 'Share Issue',
     name: OperatingRoundAction.SHARE_ISSUE,
     message: `Issue ${ACTION_ISSUE_SHARE_AMOUNT} share(s) to the open market.`,
-    actionType: 'general',
+    actionType: 'internal',
   },
   {
     id: 8,
     title: 'Increase Unit Price',
     name: OperatingRoundAction.INCREASE_PRICE,
-    message: `Increase the unit price of the company's product by ${DEFAULT_INCREASE_UNIT_PRICE}. This will increase the company's revenue. Be careful as consumers choose the company with the cheapest product in the sector first!`,
-    actionType: 'general',
+    message: `Increase the unit price of the company's product by $${DEFAULT_INCREASE_UNIT_PRICE}. The company loses 1 demand.`,
+    actionType: 'internal',
   },
   {
     id: 9,
     title: 'Decrease Unit Price',
     name: OperatingRoundAction.DECREASE_PRICE,
-    message: `Decrease the unit price of the company's product by ${DEFAULT_DECREASE_UNIT_PRICE}. This will decrease the company's revenue.`,
-    actionType: 'general',
+    message: `Decrease the unit price of the company's product by $${DEFAULT_DECREASE_UNIT_PRICE}.`,
+    actionType: 'internal',
   },
   {
     id: 10,
     title: 'Spend Prestige',
     name: OperatingRoundAction.SPEND_PRESTIGE,
     message: `Purchase the current prestige track item at it's cost to receive the reward on the prestige track and move it forward by 1. If the company does not have enough prestige, move the prestige track forward by 1.`,
-    actionType: 'general',
+    actionType: 'internal',
   },
   {
     id: 11,
     title: 'Loan',
     name: OperatingRoundAction.LOAN,
     message: `Take out a loan of $${LOAN_AMOUNT} to increase cash on hand. Be careful, loans must be paid back with interest @ %${LOAN_INTEREST_RATE} per turn. This action can only be taken once per game.`,
-    actionType: 'general',
+    actionType: 'internal',
   },
   {
     id: 12,
@@ -871,21 +1023,28 @@ export const companyActionsDescription: CompanyActionDescription[] = [
     id: 13,
     title: 'Outsource',
     name: OperatingRoundAction.OUTSOURCE,
-    message: `The company outsources production.  Increase supply by ${OURSOURCE_SUPPLY_BONUS} that decays once per turn.  Lose all prestige tokens. A company may only ever have up to twice of the maximum supply it's company tier allows.`,
+    message: `The company outsources production.  Increase supply by ${OURSOURCE_SUPPLY_BONUS} that decays once per turn.  Lose ${OUTSOURCE_PRESTIGE_PENALTY} prestige tokens. A company may only ever have up to twice of the maximum supply it's company tier allows.`,
     actionType: 'general',
   },
   {
     id: 14,
+    title: 'Licensing Agreement',
+    name: OperatingRoundAction.LICENSING_AGREEMENT,
+    message: `Increase the companies unit price by $${LICENSING_AGREEMENT_UNIT_PRICE_BONUS}.`,
+    actionType: 'general',
+  },
+  {
+    id: 15,
     title: 'Veto',
     name: OperatingRoundAction.VETO,
     message:
-      'The company does nothing this turn. Pick this to ensure the company will not act on any other proposal. Additionally, the next turn this companies operating costs are 50% less.',
-    actionType: 'general',
+      "The company does nothing this turn. The next turn this company's operating costs are 50% less.",
+    actionType: 'internal',
   },
   //sector specific actions active effects
   //technology
   {
-    id: 15,
+    id: 16,
     title: 'Visionary',
     name: OperatingRoundAction.VISIONARY,
     message:
@@ -894,7 +1053,7 @@ export const companyActionsDescription: CompanyActionDescription[] = [
   },
   //materials
   {
-    id: 16,
+    id: 17,
     title: 'Strategic Reserve',
     name: OperatingRoundAction.STRATEGIC_RESERVE,
     message: `The company has no production cost next turn and revenue is increased ${STRATEGIC_RESERVE_REVENUE_MULTIPLIER_PERCENTAGE}%.`,
@@ -902,7 +1061,7 @@ export const companyActionsDescription: CompanyActionDescription[] = [
   },
   //industrial
   {
-    id: 17,
+    id: 18,
     title: 'Rapid Expansion',
     name: OperatingRoundAction.RAPID_EXPANSION,
     message: 'The company expands two levels.',
@@ -910,7 +1069,7 @@ export const companyActionsDescription: CompanyActionDescription[] = [
   },
   //Healthcare
   {
-    id: 18,
+    id: 19,
     title: 'Fast-track Approval',
     name: OperatingRoundAction.FASTTRACK_APPROVAL,
     message: `Take up to ${FASTTRACK_APPROVAL_AMOUNT_CONSUMERS} consumers from each other sector and add them to the Healthcare sector, the company gets +${FASTTRACK_APPROVAL_AMOUNT_DEMAND} temporary demand.`,
@@ -918,7 +1077,7 @@ export const companyActionsDescription: CompanyActionDescription[] = [
   },
   //consumer defensive
   {
-    id: 19,
+    id: 20,
     title: 'Price Freeze',
     name: OperatingRoundAction.PRICE_FREEZE,
     message: `During the marketing action resolve round, the company stock price will move a maximum of ${PRIZE_FREEZE_AMOUNT} spaces next turn.`,
@@ -926,7 +1085,7 @@ export const companyActionsDescription: CompanyActionDescription[] = [
   },
   //consumer cyclical
   {
-    id: 20,
+    id: 21,
     title: 'Re-Brand',
     name: OperatingRoundAction.REBRAND,
     message:
@@ -935,7 +1094,7 @@ export const companyActionsDescription: CompanyActionDescription[] = [
   },
   //energy
   {
-    id: 21,
+    id: 22,
     title: 'Surge Pricing',
     name: OperatingRoundAction.SURGE_PRICING,
     message: `Next turn, company revenue is increased ${SURGE_PRICING_REVENUE_MULTIPLIER_PERCENTAGE}%.`,
@@ -944,15 +1103,15 @@ export const companyActionsDescription: CompanyActionDescription[] = [
   //passive effect badges
   //technology
   {
-    id: 21,
+    id: 23,
     title: 'Innovation Surge',
     name: OperatingRoundAction.INNOVATION_SURGE,
-    message: 'Should the company draw a research card, draw 2 cards instead.',
+    message: `Should the company draw a research card, draw ${INNOVATION_SURGE_CARD_DRAW_BONUS} cards instead.`,
     actionType: 'sector-passive',
   },
   //healthcare
   {
-    id: 22,
+    id: 24,
     title: 'Regulatory Shield',
     name: OperatingRoundAction.REGULATORY_SHIELD,
     message:
@@ -960,7 +1119,7 @@ export const companyActionsDescription: CompanyActionDescription[] = [
     actionType: 'sector-passive',
   },
   {
-    id: 23,
+    id: 25,
     title: 'Extract',
     name: OperatingRoundAction.EXTRACT,
     message:
@@ -968,7 +1127,7 @@ export const companyActionsDescription: CompanyActionDescription[] = [
     actionType: 'sector-passive',
   },
   {
-    id: 24,
+    id: 26,
     title: 'Manufacture',
     name: OperatingRoundAction.MANUFACTURE,
     message:
@@ -977,26 +1136,101 @@ export const companyActionsDescription: CompanyActionDescription[] = [
   },
   //consumer defensive
   {
-    id: 25,
+    id: 27,
     title: 'Steady Demand',
     name: OperatingRoundAction.STEADY_DEMAND,
-    message: `Should the company have remaining demand but no consumers are available, sell up to ${STEADY_DEMAND_CONSUMER_BONUS} demand anyway.`,
+    message: `Should the company have remaining demand to fill but no consumers are available, sell up to ${STEADY_DEMAND_CONSUMER_BONUS} demand anyway given there is enough supply left to sell.`,
     actionType: 'sector-passive',
   },
   //consumer cyclical
   {
-    id: 26,
+    id: 28,
     title: 'Boom Cycle',
     name: OperatingRoundAction.BOOM_CYCLE,
-    message: `Would the companies stock price be stopped by a new price tier, allow it to move up at least ${BOOM_CYCLE_STOCK_CHART_BONUS} spaces further.`,
+    message: `Would the companies stock price be stopped by a new price tier as it's price increases, allow it to move up at least ${BOOM_CYCLE_STOCK_CHART_BONUS} spaces further.`,
     actionType: 'sector-passive',
   },
   //energy
   {
-    id: 27,
+    id: 29,
     title: 'Carbon Credit',
     name: OperatingRoundAction.CARBON_CREDIT,
-    message: 'This companies throughput can never be less than 1.',
+    message:
+      'This companies throughput can never be less than -1 or greater than 1.',
     actionType: 'sector-passive',
   },
 ];
+
+export const phasesInOrder = [
+  PhaseName.INFLUENCE_BID_ACTION,
+  PhaseName.INFLUENCE_BID_RESOLVE,
+  PhaseName.START_TURN,
+  // PhaseName.HEADLINE_RESOLVE,
+  PhaseName.SET_COMPANY_IPO_PRICES,
+  PhaseName.RESOLVE_SET_COMPANY_IPO_PRICES,
+  PhaseName.PRIZE_VOTE_ACTION,
+  PhaseName.PRIZE_VOTE_RESOLVE,
+  PhaseName.PRIZE_DISTRIBUTE_ACTION,
+  PhaseName.PRIZE_DISTRIBUTE_RESOLVE,
+  //PhaseName.STOCK_MEET,
+  PhaseName.STOCK_RESOLVE_LIMIT_ORDER,
+  PhaseName.STOCK_ACTION_ORDER,
+  PhaseName.STOCK_ACTION_RESULT,
+  PhaseName.STOCK_ACTION_REVEAL,
+  PhaseName.STOCK_RESOLVE_MARKET_ORDER,
+  PhaseName.STOCK_SHORT_ORDER_INTEREST,
+  PhaseName.STOCK_ACTION_SHORT_ORDER,
+  PhaseName.STOCK_RESOLVE_PENDING_SHORT_ORDER,
+  PhaseName.STOCK_RESOLVE_OPTION_ORDER, //this is the first thing that has to happen, as it expires you will no chance to act on it that turn
+  PhaseName.STOCK_RESOLVE_PENDING_OPTION_ORDER,
+  PhaseName.STOCK_ACTION_OPTION_ORDER, //exercise option orders, this can currently happen the turn they are opened
+  PhaseName.STOCK_OPEN_LIMIT_ORDERS,
+  PhaseName.STOCK_RESULTS_OVERVIEW,
+  // PhaseName.OPERATING_MEET,
+  // PhaseName.OPERATING_ACTION_COMPANY_VOTE,
+  // PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT,
+  // PhaseName.OPERATING_COMPANY_VOTE_RESOLVE,
+  // PhaseName.OPERATING_PRODUCTION,
+  //OPERATIONS V2 PHASES
+  // PhaseName.FACTORY_CONSTRUCTION,
+  // PhaseName.FACTORY_CONSTRUCTION_RESOLVE,
+  // PhaseName.MARKETING_AND_RESEARCH_ACTION,
+  // PhaseName.MARKETING_AND_RESEARCH_ACTION_RESOLVE,
+  PhaseName.MODERN_OPERATIONS,
+  PhaseName.RESOLVE_MODERN_OPERATIONS,
+  PhaseName.RUSTED_FACTORY_UPGRADE,
+  PhaseName.CONSUMPTION_PHASE,
+  PhaseName.EARNINGS_CALL,
+  PhaseName.OPERATING_PRODUCTION_VOTE,
+  PhaseName.OPERATING_PRODUCTION_VOTE_RESOLVE,
+  // PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT,
+  PhaseName.CAPITAL_GAINS,
+  PhaseName.DIVESTMENT,
+  PhaseName.END_TURN,
+];
+
+export function getSectorValidIpoPrices(sector: Sector) {
+  const sectorMinIpoPrice = sector.ipoMin;
+  const sectorMaxIpoPrice = sector.ipoMax;
+  return stockGridPrices.filter(
+    (price) => price >= sectorMinIpoPrice && price <= sectorMaxIpoPrice,
+  );
+}
+
+// Modern Operation Mechanics Constants
+export const MARKETING_SLOT_COSTS = [0, 100, 200, 300, 400]; // Cost for each concurrent marketing slot
+export const RESEARCH_COSTS_BY_PHASE = [100, 200, 300, 400]; // Research cost per research stage (based on sector researchMarker: Stage 1=0-5, Stage 2=6-10, Stage 3=11-15, Stage 4=16-20)
+export const DEFAULT_CONSUMPTION_MARKERS_PER_SECTOR = 5;
+export const FACTORY_WORKER_REQUIREMENTS = {
+  FACTORY_I: 2,
+  FACTORY_II: 4,
+  FACTORY_III: 6,
+  FACTORY_IV: 8,
+};
+export const FACTORY_CUSTOMER_LIMITS = {
+  FACTORY_I: 3,
+  FACTORY_II: 4,
+  FACTORY_III: 5,
+  FACTORY_IV: 6,
+};
+export const BASE_WORKER_SALARY = 10;

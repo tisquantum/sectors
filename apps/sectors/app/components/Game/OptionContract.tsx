@@ -77,25 +77,32 @@ const OptionContract = ({
   if (isLoading) return <div>Loading...</div>;
   if (!company) return <div>No company found</div>;
   return (
-    <div className="bg-black p-4 rounded-lg shadow-lg flex items-center gap-4 border-4 border-blue-500 relative">
+    <div className="bg-black p-4 rounded-lg shadow-lg flex-col items-center gap-4 border-4 border-blue-500 relative max-w-[500px]">
       {contract.contractState === "FOR_SALE" && (
         <div className="absolute top-0 right-0 m-2 bg-red-500 text-white px-2 py-1 rounded-full flex items-center gap-1">
           <span>For Sale</span>
         </div>
       )}
+      {contract.contractState == ContractState.PURCHASED &&
+        playerOrderPurchased && (
+          <div className="absolute top-0 right-0 m-2 px-2 py-1 rounded-full flex items-center gap-1">
+            <PlayerAvatar player={playerOrderPurchased} showNameLabel />
+          </div>
+        )}
       {(contract.contractState === ContractState.FOR_SALE ||
         contract.contractState === ContractState.QUEUED) && (
         <span className="text-2xl">{contract.tableauSlot}</span>
       )}
       <div className="flex-1">
         <div className="text-xl font-bold">
-          <CompanyInfo company={company} isMinimal />
+          <CompanyInfo companyId={company.id} isMinimal />
         </div>
         <div className="border-b border-gray-200 my-2"></div>
         <OptionContractMinimal contract={contract} />
       </div>
       <div>
-        {isInteractive &&
+        {authPlayer &&
+          isInteractive &&
           (!isSubmitted ? (
             <div className="flex flex-col gap-2">
               {gameState.distributionStrategy ==
@@ -166,8 +173,6 @@ const OptionContract = ({
           )}
         </div>
       )}
-      {contract.contractState == ContractState.PURCHASED &&
-        playerOrderPurchased && <PlayerAvatar player={playerOrderPurchased} />}
     </div>
   );
 };

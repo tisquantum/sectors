@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import GameSidebar from "./GameSidebar";
 import GameTopBar from "./GameTopBar";
-import StockRoundOrderGrid from "./StockRoundOrderGrid";
+import { MarketsView } from "./MarketsView";
+import { OperationsView } from "./OperationsView";
 import TabView from "./TabView";
 import PendingOrders from "./PendingOrders";
 import StockChart from "./StockChart";
@@ -17,6 +18,7 @@ import {
   PhaseName,
   RoundType,
   StockRound,
+  OperationMechanicsVersion,
 } from "@server/prisma/prisma.client";
 import Meeting from "../Meeting/Meeting";
 import {
@@ -38,13 +40,45 @@ import Divestment from "./Divestment";
 import InfluenceBid from "./InfluenceBid";
 import ExerciseOptionOrders from "./ExerciseOptionOrders";
 import CoverShortOrders from "./CoverShortOrders";
-import { Button, Spinner, useDisclosure } from "@nextui-org/react";
+import {
+  Button,
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  Spinner,
+  useDisclosure,
+} from "@nextui-org/react";
 import { isActivePhase } from "@server/data/helpers";
 import GameResults from "./GameResults";
 import { Drawer } from "vaul";
 import { useDrawer } from "../Drawer.context";
 import PrizeRound from "./PrizeVote";
 import DistributePrizes from "./DistributePrize";
+import StartTurnUpdates from "./StartTurnUpdates";
+import GamePlayersRecap from "./GamePlayerRecap";
+import Headlines from "./Headlines";
+import IpoVotes from "./IpoVote";
+import { ConsumptionPhase } from "./ConsumptionPhase";
+import { OperatingRoundRevenueVoteV2, OperatingRoundRevenueVoteResolveV2 } from "./OperatingRoundRevenueV2";
+import FactoryConstructionPhase from "./FactoryConstructionPhase";
+import { ResolveFactoryConstructionPhase } from "../Factory/ResolveFactoryConstruction";
+import MarketingAndResearchAction from "./MarketingAndResearchAction";
+import MarketingAndResearchActionResolve from "./MarketingAndResearchActionResolve";
+import { EarningsCall } from "./EarningsCall";
+import {
+  ConsumptionPhase as ModernConsumptionPhase,
+  FactoryConstructionPhase as ModernFactoryConstructionPhase,
+  FactoryConstructionResolvePhase as ModernFactoryConstructionResolvePhase,
+  EarningsCallPhase as ModernEarningsCallPhase,
+  MarketingAndResearchPhase as ModernMarketingAndResearchPhase,
+  MarketingAndResearchResolvePhase as ModernMarketingAndResearchResolvePhase,
+  ModernOperations as ModernOperationsPhase,
+  ModernOperationsResolve as ModernOperationsResolvePhase,
+  RustedFactoryUpgradePhase,
+} from "./ModernOperations/phases";
+import InsolvencyContributionComponent from "../Company/InsolvencyContribution";
+import { CompanyStatus } from "@server/prisma/prisma.client";
 
 const determineGameRound = (
   game: GameState
@@ -127,16 +161,36 @@ const Game = ({ gameId }: { gameId: string }) => {
   const [showPhaseList, setShowPhaseList] = useState<boolean>(true);
   const constraintsRef = useRef(null);
   const [isTimerAtZero, setIsTimerAtZero] = useState(false);
+  
+  // Track renders and view changes
+  const renderCountRef = useRef(0);
+  renderCountRef.current += 1;
+  if (renderCountRef.current % 10 === 0) {
+    console.log(`[Game] Render count: ${renderCountRef.current}, currentView: ${currentView}`);
+  }
+  
+  // Track view changes
+  const viewChangeCountRef = useRef(0);
+  useEffect(() => {
+    viewChangeCountRef.current += 1;
+    console.log(`[Game] View changed to: ${currentView} (change #${viewChangeCountRef.current})`);
+  }, [currentView]);
   const { isOpen, onOpen, onClose, onOpenChange } = useDisclosure();
+  const {
+    isOpen: isSidebarModalOpen,
+    onOpen: openSidebarModal,
+    onClose: closeSidebarModal,
+    onOpenChange: onSidebarModalOpenChange,
+  } = useDisclosure();
   const gameActionContainerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     onOpen();
   }, [onOpen]);
   useEffect(() => {
     const timer = setInterval(() => {
-      if (currentPhase) {
+      if (currentPhase && currentPhase.phaseStartTime) {
         const now = Date.now();
-        const phaseStart = new Date(currentPhase.createdAt).getTime();
+        const phaseStart = new Date(currentPhase.phaseStartTime).getTime();
         const phaseDuration = currentPhase.phaseTime;
         const timeLeft = phaseStart + phaseDuration - now;
         setIsTimerAtZero(timeLeft <= 0);
@@ -145,6 +199,7 @@ const Game = ({ gameId }: { gameId: string }) => {
     return () => clearInterval(timer);
   }, [currentPhase?.name]);
   const handleCurrentView = (view: string) => {
+    console.log(`[Game] handleCurrentView called with: ${view}`);
     setCurrentView(view);
   };
   const currentRoundData = determineGameRound(gameState);
@@ -152,8 +207,22 @@ const Game = ({ gameId }: { gameId: string }) => {
     currentRoundData?.phase.name === PhaseName.STOCK_MEET ? (
       <Meeting />
     ) : currentRoundData?.phase.name === PhaseName.START_TURN ? (
-      <Meeting />
-    ) : currentRoundData?.phase.name === PhaseName.PRIZE_VOTE_ACTION ? (
+      <div className="flex flex-col items-center justify-between h-full w-full gap-2">
+        <StartTurnUpdates />
+        {/* <Headlines /> */}
+        <div className="flex flex-col gap-2 items-center">
+          <h2 className="text-xl">Players Overview</h2>
+          <GamePlayersRecap />
+        </div>
+      </div>
+    ) : currentRoundData?.phase.name === PhaseName.HEADLINE_RESOLVE ? (
+      <Headlines />
+    ) : currentRoundData?.phase.name === PhaseName.SET_COMPANY_IPO_PRICES ? (
+      <IpoVotes isInteractive />
+    ) : currentRoundData?.phase.name === PhaseName.RESOLVE_SET_COMPANY_IPO_PRICES ? (
+      <IpoVotes />
+    ) :
+    currentRoundData?.phase.name === PhaseName.PRIZE_VOTE_ACTION ? (
       <PrizeRound />
     ) : currentRoundData?.phase.name === PhaseName.PRIZE_VOTE_RESOLVE ? (
       <PrizeRound isRevealRound />
@@ -193,13 +262,21 @@ const Game = ({ gameId }: { gameId: string }) => {
     ) : currentRoundData?.phase.name === PhaseName.OPERATING_PRODUCTION ? (
       <OperatingRoundProduction />
     ) : currentRoundData?.phase.name === PhaseName.OPERATING_PRODUCTION_VOTE ? (
-      <OperatingRoundRevenueVote />
+      gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN ? (
+        <OperatingRoundRevenueVoteV2 />
+      ) : (
+        <OperatingRoundRevenueVote />
+      )
     ) : currentRoundData?.phase.name ===
       PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT ? (
       <OperatingRoundStockPriceAdjustment />
     ) : currentRoundData?.phase.name ===
       PhaseName.OPERATING_PRODUCTION_VOTE_RESOLVE ? (
-      <OperatingRoundRevenueVoteResolve />
+      gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN ? (
+        <OperatingRoundRevenueVoteResolveV2 />
+      ) : (
+        <OperatingRoundRevenueVoteResolve />
+      )
     ) : currentRoundData?.phase.name ===
       PhaseName.OPERATING_ACTION_COMPANY_VOTE ? (
       <CompanyActionSlider />
@@ -208,7 +285,10 @@ const Game = ({ gameId }: { gameId: string }) => {
       <CompanyActionSlider withResult />
     ) : currentRoundData?.phase.name ===
       PhaseName.OPERATING_COMPANY_VOTE_RESOLVE ? (
-      <CompanyVoteResolve />
+      <div className="flex flex-col items-center justify-between h-full w-full gap-2">
+        <CompanyActionSlider withResult />
+        <CompanyVoteResolve />
+      </div>
     ) : currentRoundData?.phase.name === PhaseName.CAPITAL_GAINS ? (
       <CapitalGains />
     ) : currentRoundData?.phase.name === PhaseName.DIVESTMENT ? (
@@ -221,7 +301,68 @@ const Game = ({ gameId }: { gameId: string }) => {
       <InfluenceBid isRevealRound />
     ) : currentRoundData?.phase.name === PhaseName.STOCK_ACTION_SHORT_ORDER ? (
       <CoverShortOrders />
-    ) : null;
+    ) : currentRoundData?.phase.name === PhaseName.CONSUMPTION_PHASE ? (
+      gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN ? (
+        <ModernConsumptionPhase />
+      ) : (
+        <ConsumptionPhase />
+      )
+    ) : currentRoundData?.phase.name === PhaseName.EARNINGS_CALL ? (
+      gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN ? (
+        <ModernEarningsCallPhase />
+      ) : (
+        <EarningsCall />
+      )
+    ) : currentRoundData?.phase.name === PhaseName.FACTORY_CONSTRUCTION ? (
+      gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN ? (
+        <ModernMarketingAndResearchPhase /> // Use combined phase for modern operations
+      ) : (
+        <FactoryConstructionPhase />
+      )
+    ) : currentRoundData?.phase.name === PhaseName.FACTORY_CONSTRUCTION_RESOLVE ? (
+      gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN ? (
+        <ModernMarketingAndResearchResolvePhase /> // Use combined resolve for modern operations
+      ) : (
+        <ResolveFactoryConstructionPhase />
+      )
+    ) : currentRoundData?.phase.name === PhaseName.MARKETING_AND_RESEARCH_ACTION ? (
+      gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN ? (
+        <ModernMarketingAndResearchPhase /> // Combined: Factory + Marketing + Research
+      ) : (
+        <MarketingAndResearchAction />
+      )
+    ) : currentRoundData?.phase.name === PhaseName.MARKETING_AND_RESEARCH_ACTION_RESOLVE ? (
+      gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN ? (
+        <ModernMarketingAndResearchResolvePhase /> // Combined resolve
+      ) : (
+        <MarketingAndResearchActionResolve />
+      )
+    ) : currentRoundData?.phase.name === PhaseName.MODERN_OPERATIONS ? (
+      // New combined phase: Factory Construction + Marketing + Research
+      <ModernOperationsPhase />
+    ) : currentRoundData?.phase.name === PhaseName.RESOLVE_MODERN_OPERATIONS ? (
+      // New combined resolve phase
+      <ModernOperationsResolvePhase />
+    ) : currentRoundData?.phase.name === PhaseName.RUSTED_FACTORY_UPGRADE ? (
+      // Rusted factory upgrade phase
+      <RustedFactoryUpgradePhase />
+    ) : currentRoundData?.phase.name === PhaseName.RESOLVE_INSOLVENCY ? (
+      <div className="flex flex-col gap-4 p-4 w-full">
+        <h2 className="text-2xl font-bold">Resolve Insolvency</h2>
+        {gameState.Company.filter(c => c.status === CompanyStatus.INSOLVENT).length === 0 ? (
+          <div className="text-center p-4">
+            <p>No insolvent companies found. All companies are solvent.</p>
+          </div>
+        ) : (
+          gameState.Company.filter(c => c.status === CompanyStatus.INSOLVENT).map((company) => (
+            <div key={company.id} className="border rounded-lg p-4">
+              <InsolvencyContributionComponent company={company as any} />
+            </div>
+          ))
+        )}
+      </div>
+    )
+    : null;
 
   return (
     <>
@@ -230,30 +371,20 @@ const Game = ({ gameId }: { gameId: string }) => {
         onOpenChange={toggleDrawer}
         direction="right"
       >
-        <div className="relative flex flex-col lg:flex-row flex-grow w-full overflow-y scrollbar lg:overflow-hidden">
-          <GameSidebar />
-          {/* <motion.div
-        className="absolute inset-0 z-10 pointer-events-none"
-        ref={constraintsRef}
-      >
-        <motion.div
-          drag
-          dragConstraints={constraintsRef}
-          className="absolute pointer-events-auto"
-        >
-          <TabView gameId={gameId} />
-        </motion.div>
-      </motion.div> */}
-          <div className="flex flex-col relative w-full lg:w-3/4">
+        <div className="relative flex flex-col lg:flex-row flex-grow w-full overflow-y scrollbar lg:overflow-hidden bg-background">
+          <div className="hidden lg:block">
+            <GameSidebar />
+          </div>
+          <div className="flex flex-col relative w-full">
             {gameState.gameStatus == GameStatus.FINISHED && (
               <Button
                 color="primary"
-                className="h-44 w-[90%] bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg transform transition-transform duration-300 hover:scale-90 hover:shadow-2xl"
+                className="h-44 bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg transform transition-transform duration-300 hover:scale-90 hover:shadow-2xl"
                 onPress={onOpen}
               >
                 <div className="flex flex-col gap-2 items-center">
                   <span className="text-2xl font-bold animate-pulse">
-                    Game Is Finished!
+                    Game Has Ended!
                   </span>
                   <span className="text-xl font-medium">View Game Results</span>
                 </div>
@@ -277,15 +408,14 @@ const Game = ({ gameId }: { gameId: string }) => {
                   </div>
                 )} */}
               <div
-                className={`active-panel flex flex-col h-full max-h-full w-full p-4 overflow-y-auto scrollbar ${
-                  showPhaseList && "basis-10/12"
-                }`}
+                className={`@container active-panel flex flex-col h-full max-h-full w-full p-4 overflow-y-auto scrollbar`}
               >
                 {currentView === "action" && renderCurrentPhase}
                 {currentView === "chart" && <StockChart />}
                 {currentView === "pending" && <PendingOrders />}
                 {currentView == "economy" && <EndTurnEconomy />}
-                {currentView == "markets" && <StockRoundOrderGrid />}
+                {currentView == "markets" && <MarketsView />}
+                {currentView == "companies" && <OperationsView />}
                 {gameState.gameStatus == GameStatus.FINISHED && (
                   <GameResults
                     isOpen={isOpen}
@@ -310,6 +440,28 @@ const Game = ({ gameId }: { gameId: string }) => {
               </AnimatePresence>
             </div>
           </div>
+          <div className="z-50 fixed bottom-4 right-4 lg:hidden">
+            <Button
+              className="bg-blue-500 text-white p-3 rounded-full shadow-lg"
+              onPress={() => openSidebarModal()}
+            >
+              Overview
+            </Button>
+          </div>
+          <Modal
+            isOpen={isSidebarModalOpen}
+            onOpenChange={onSidebarModalOpenChange}
+            size="full"
+          >
+            <ModalContent>
+              <ModalBody className="h-full">
+                <GameSidebar />
+              </ModalBody>
+              <ModalFooter>
+                <Button onPress={() => closeSidebarModal()}>Close</Button>
+              </ModalFooter>
+            </ModalContent>
+          </Modal>
         </div>
       </Drawer.Root>
     </>

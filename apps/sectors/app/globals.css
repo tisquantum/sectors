@@ -16,14 +16,12 @@
   }
 }
 
-body {
+html, body {
+  scrollbar-width: thin;
+  scrollbar-color: black;
+
   color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+  background: black;
 }
 
 @layer utilities {
@@ -44,5 +42,16 @@ body {
 
   .scrollbar::-webkit-scrollbar-thumb:hover {
     @apply bg-slate-200;
+  }
+
+  /* Hide scrollbar for Webkit browsers */
+  .hidden-scrollbar::-webkit-scrollbar {
+    @apply hidden;
+  }
+
+  /* Hide scrollbar for IE, Edge, and Firefox */
+  .hidden-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
   }
 }

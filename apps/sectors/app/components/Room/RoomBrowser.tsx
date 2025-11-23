@@ -1,82 +1,176 @@
 "use client";
 
 import { trpc } from "@sectors/app/trpc";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import RoomListItem from "./RoomList";
-import { RoomWithUsers } from "@server/prisma/prisma.types";
-import { notFound } from "next/navigation";
-import Button from "@sectors/app/components/General/DebounceButton";
+import { notFound, useSearchParams } from "next/navigation";
 import CreateRoom from "./CreateRoom";
-import { ArrowPathIcon, CheckCircleIcon } from "@heroicons/react/24/solid";
+import { ArrowPathIcon } from "@heroicons/react/24/solid";
 import { useAuthUser } from "../AuthUser.context";
-import { Chip, Switch } from "@nextui-org/react";
+import {
+  Chip,
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  Switch,
+  useDisclosure,
+  Button,
+  Select,
+  SelectItem,
+} from "@nextui-org/react";
 import { GameStatus } from "@server/prisma/prisma.client";
 import { renderGameStatusColor } from "@sectors/app/helpers";
-import {
-  RiCheckboxCircleFill,
-  RiCheckFill,
-  RiCloseCircleFill,
-} from "@remixicon/react";
-import DebounceButton from "@sectors/app/components/General/DebounceButton";
+import { RiCheckboxCircleFill, RiCloseCircleFill } from "@remixicon/react";
+import { RoomWithUsersAndGames } from "@server/prisma/prisma.types";
+import { TRPCClientErrorLike } from "@trpc/client";
+import { DefaultErrorShape } from "@trpc/server/unstable-core-do-not-import";
 
 export default function RoomBrowser() {
+  const { isOpen, onOpen, onOpenChange } = useDisclosure();
   const { user } = useAuthUser();
-  const {
-    data: rooms,
-    isLoading,
-    error,
-    refetch,
-  } = trpc.room.listRooms.useQuery({});
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<GameStatus | null>(
     GameStatus.PENDING
   );
   const [yourRoomsOnly, setYourRoomsOnly] = useState(false);
-  if (isLoading) {
-    return <div>Loading...</div>;
-  }
-  if (error) {
-    return <div>Error: {error.message}</div>;
-  }
-  if (rooms == undefined) {
-    return notFound();
-  }
+  const [sortBy, setSortBy] = useState<"createdAt" | "updatedAt" | null>(null);
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
-  const handleRefresh = () => {
-    refetch();
-  };
+  // Build orderBy object for the query
+  const orderBy = sortBy
+    ? { [sortBy]: sortOrder }
+    : undefined;
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const {
+    data: rooms,
+    isLoading,
+    error,
+    refetch,
+  } = trpc.room.listRooms.useQuery({
+    orderBy,
+  });
+
+  return (
+    <Suspense fallback={<div>Loading search parameters...</div>}>
+      <RoomBrowserContent
+        rooms={rooms}
+        isLoading={isLoading}
+        error={error}
+        refetch={refetch}
+        user={user}
+        isOpen={isOpen}
+        onOpen={onOpen}
+        onOpenChange={onOpenChange}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        selectedStatus={selectedStatus}
+        setSelectedStatus={setSelectedStatus}
+        yourRoomsOnly={yourRoomsOnly}
+        setYourRoomsOnly={setYourRoomsOnly}
+        sortBy={sortBy}
+        setSortBy={setSortBy}
+        sortOrder={sortOrder}
+        setSortOrder={setSortOrder}
+      />
+    </Suspense>
+  );
+}
+
+function RoomBrowserContent({
+  rooms,
+  isLoading,
+  error,
+  refetch,
+  user,
+  isOpen,
+  onOpen,
+  onOpenChange,
+  searchQuery,
+  setSearchQuery,
+  selectedStatus,
+  setSelectedStatus,
+  yourRoomsOnly,
+  setYourRoomsOnly,
+  sortBy,
+  setSortBy,
+  sortOrder,
+  setSortOrder,
+}: {
+  rooms: RoomWithUsersAndGames[] | undefined;
+  isLoading: boolean;
+  error: TRPCClientErrorLike<{
+    input: {
+      skip?: number | undefined;
+      take?: number | undefined;
+      cursor?: number | undefined;
+      where?: any;
+      orderBy?: any;
+    };
+    output: RoomWithUsersAndGames[];
+    transformer: true;
+    errorShape: DefaultErrorShape;
+  }> | null;
+  refetch: any;
+  user: any;
+  isOpen: boolean;
+  onOpen: any;
+  onOpenChange: any;
+  searchQuery: string;
+  setSearchQuery: any;
+  selectedStatus: GameStatus | null;
+  setSelectedStatus: any;
+  yourRoomsOnly: boolean;
+  setYourRoomsOnly: any;
+  sortBy: "createdAt" | "updatedAt" | null;
+  setSortBy: any;
+  sortOrder: "asc" | "desc";
+  setSortOrder: any;
+}) {
+  const searchParams = useSearchParams();
+  const isKicked = searchParams.get("kicked") === "true";
+
+  useEffect(() => {
+    if (isKicked) {
+      onOpen(); // Open the modal if kicked
+    }
+  }, [isKicked, onOpen]);
+
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  if (!rooms) return notFound();
+
+  const handleRefresh = () => refetch();
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) =>
     setSearchQuery(e.target.value);
-  };
-
-  const handleClearSearch = () => {
-    setSearchQuery("");
-  };
-
-  const handleChipClick = (status: GameStatus) => {
-    setSelectedStatus(status);
-  };
-
-  const handleYourRoomsClick = () => {
-    setYourRoomsOnly(!yourRoomsOnly);
-  };
+  const handleClearSearch = () => setSearchQuery("");
+  const handleChipClick = (status: GameStatus) => setSelectedStatus(status);
+  const handleYourRoomsClick = () => setYourRoomsOnly(!yourRoomsOnly);
 
   const filteredRooms = rooms.filter((room) => {
     const matchesSearch = room.name
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
-    const gameStatus = room.game?.[0]?.gameStatus || "PENDING";
+
+    // Check both game statuses
+    const gameStatus =
+      room.game?.[0]?.gameStatus ||
+      room.executiveGame?.[0]?.gameStatus ||
+      "PENDING";
     const matchesStatus = selectedStatus ? gameStatus === selectedStatus : true;
+
+    // Check if the user is part of the room
     const matchesUser = yourRoomsOnly
       ? room.users.some((roomUser) => roomUser.user.id === user?.id)
       : true;
+
     return matchesSearch && matchesStatus && matchesUser;
   });
 
   return (
-    <div className="container mx-auto">
-      <div className="flex items-center justify-between content-center my-4">
+    <div className="h-full flex flex-col p-1 bg-background">
+      <div className="flex items-center justify-between my-4">
         <h1 className="text-2xl font-bold">Rooms</h1>
         <Button color="primary" onClick={handleRefresh}>
           <ArrowPathIcon className="size-4" />
@@ -85,13 +179,13 @@ export default function RoomBrowser() {
       <div className="flex flex-wrap gap-2 mb-4">
         {Object.values(GameStatus).map((status, index) => (
           <Chip
+            key={index}
             className="cursor-pointer"
             startContent={selectedStatus === status && <RiCheckboxCircleFill />}
-            key={index}
             color={renderGameStatusColor(status)}
             onClick={() => handleChipClick(status)}
           >
-            {status}
+            {status == "FINISHED" ? "COMPLETED" : status}
           </Chip>
         ))}
         <div className="flex items-center gap-2">
@@ -101,6 +195,45 @@ export default function RoomBrowser() {
           >
             Your Rooms
           </Switch>
+        </div>
+        <div className="flex items-center gap-2">
+          <Select
+            label="Sort by"
+            placeholder="No sorting"
+            selectedKeys={sortBy ? [sortBy] : []}
+            onSelectionChange={(keys) => {
+              const selected = Array.from(keys)[0] as "createdAt" | "updatedAt" | null;
+              setSortBy(selected || null);
+            }}
+            className="w-40"
+            size="sm"
+          >
+            <SelectItem key="createdAt" value="createdAt">
+              Created At
+            </SelectItem>
+            <SelectItem key="updatedAt" value="updatedAt">
+              Updated At
+            </SelectItem>
+          </Select>
+          {sortBy && (
+            <Select
+              label="Order"
+              selectedKeys={[sortOrder]}
+              onSelectionChange={(keys) => {
+                const selected = Array.from(keys)[0] as "asc" | "desc";
+                setSortOrder(selected || "desc");
+              }}
+              className="w-32"
+              size="sm"
+            >
+              <SelectItem key="desc" value="desc">
+                Newest First
+              </SelectItem>
+              <SelectItem key="asc" value="asc">
+                Oldest First
+              </SelectItem>
+            </Select>
+          )}
         </div>
       </div>
       <div className="mb-4 relative">
@@ -120,12 +253,29 @@ export default function RoomBrowser() {
           </button>
         )}
       </div>
-      <div className="grid grid-flow-row auto-rows-max">
+      <div className="grid grid-flow-row auto-rows-max overflow-y-auto">
         {filteredRooms.map((room) => (
           <RoomListItem room={room} key={room.id} />
         ))}
       </div>
       {user && <CreateRoom />}
+      <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1">Notice</ModalHeader>
+              <ModalBody>
+                <p>You have been kicked from the room.</p>
+              </ModalBody>
+              <ModalFooter>
+                <Button color="danger" variant="light" onPress={onClose}>
+                  Close
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
     </div>
   );
 }

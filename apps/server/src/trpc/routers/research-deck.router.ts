@@ -130,4 +130,24 @@ export default (trpc: TrpcService, ctx: Context) =>
         const { id } = input;
         return ctx.researchDeckService.deleteResearchDeck({ id });
       }),
+
+    drawResearchCard: trpc.procedure
+      .input(z.object({
+        companyId: z.string(),
+        gameId: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        const { companyId, gameId } = input;
+        // This would need to be implemented in the backend
+        // For now, return a mock result
+        return {
+          success: true,
+          spacesMoved: Math.floor(Math.random() * 3), // 0, 1, or 2 spaces
+          cardDrawn: {
+            name: "Research Card",
+            description: "A research card was drawn",
+            effect: "NO_DISCERNIBLE_FINDINGS" as any,
+          },
+        };
+      }),
   });

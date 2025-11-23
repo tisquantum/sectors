@@ -14,6 +14,9 @@ import {
   CardBody,
   CardHeader,
   Chip,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
 } from "@nextui-org/react";
 import "./PendingOrders.css";
 import { trpc } from "@sectors/app/trpc";
@@ -37,11 +40,13 @@ import { create } from "domain";
 import { sectorColors } from "@server/data/gameData";
 import { motion, AnimatePresence } from "framer-motion";
 import OrderChipWithPlayer from "./OrderChipWithPlayer";
-import { RiCloseCircleFill } from "@remixicon/react";
+import { RiCloseCircleFill, RiFundsFill } from "@remixicon/react";
 import { flushAllTraces } from "next/dist/trace";
 import PlayerAvatar from "../Player/PlayerAvatar";
 import OptionContract from "./OptionContract";
 import { useEffect, useMemo } from "react";
+import OrderChipChitWithPlayer from "./OrderChipChitWithPlayer";
+import CompanyInfo from "../Company/CompanyInfo";
 
 const containerVariants = {
   hidden: { opacity: 0, y: -20 }, // Defines the initial state of the component: invisible and slightly shifted upward
@@ -210,47 +215,54 @@ const PendingMarketOrders = ({
                     backgroundColor: sectorColors[orders[0].Sector.name],
                   }}
                 >
-                  <div className="text-lg font-bold flex gap-2 bg-stone-600 p-2 content-center items-center">
-                    <ArrowTrendingUpIcon className="size-4" /> $
-                    {orders[0].Company.currentStockPrice}
-                    <span>{company}</span>
-                  </div>
-                  <div className="flex flex-col gap-2">
+                  <Popover>
+                    <PopoverTrigger>
+                      <div className="text-lg font-bold flex gap-2 bg-stone-600 p-2 content-center items-center cursor-pointer">
+                        <RiFundsFill size={20} /> $
+                        {orders[0].Company.currentStockPrice}
+                        <span>{company}</span>
+                      </div>
+                    </PopoverTrigger>
+                    <PopoverContent>
+                      <CompanyInfo companyId={orders[0].companyId} />
+                    </PopoverContent>
+                  </Popover>
+                  <div className="flex flex-wrap gap-2">
                     {Object.entries(groupedOrdersByPhase).map(
                       ([phaseId, { orders, subRound }], index) => (
-                        <div className="flex flex-col" key={index}>
-                          {status == OrderStatus.PENDING && (
-                            <div>
-                              <span> Stock Round {subRound} </span>
-                            </div>
-                          )}
-                          <div className="flex flex-col">
-                            {orders.map((order, index) => (
-                              <motion.div
-                                key={index}
-                                initial="hidden"
-                                animate="visible"
-                                variants={containerVariants}
-                                className="flex"
-                              >
-                                <OrderChipWithPlayer
+                        <>
+                          {orders.map((order, index) => (
+                            <motion.div
+                              key={index}
+                              initial="hidden"
+                              animate="visible"
+                              variants={containerVariants}
+                              className="flex"
+                            >
+                              <>
+                                {/* <OrderChipWithPlayer
+                                    order={order}
+                                    status={order.orderStatus}
+                                    endContent={
+                                      order.orderStatus ==
+                                      OrderStatus.FILLED ? (
+                                        <CheckCircleIcon className="size-5 text-green-500" />
+                                      ) : order.orderStatus ==
+                                        OrderStatus.REJECTED ? (
+                                        <RiCloseCircleFill className="size-5 text-red-500" />
+                                      ) : (
+                                        <ClockIcon className="size-5 text-yellow-500" />
+                                      )
+                                    }
+                                  /> */}
+                                <OrderChipChitWithPlayer
                                   order={order}
-                                  status={order.orderStatus}
-                                  endContent={
-                                    order.orderStatus == OrderStatus.FILLED ? (
-                                      <CheckCircleIcon className="size-5 text-green-500" />
-                                    ) : order.orderStatus ==
-                                      OrderStatus.REJECTED ? (
-                                      <RiCloseCircleFill className="size-5 text-red-500" />
-                                    ) : (
-                                      <ClockIcon className="size-5 text-yellow-500" />
-                                    )
-                                  }
+                                  showStatus={true}
                                 />
-                              </motion.div>
-                            ))}
-                          </div>
-                        </div>
+                              </>
+                            </motion.div>
+                          ))}
+                        </>
                       )
                     )}
                   </div>
@@ -329,22 +341,13 @@ const PendingLimitOrders = ({
                           backgroundColor: sectorColors[order.Sector.name],
                         }}
                       >
-                        <PlayerAvatar player={order.Player} />
                         <div>{order.Company.name}</div>
-                        <div>
-                          {String(order.orderType).toUpperCase()} @{" "}
-                          {order.value}
+                        <div className="flex">
+                          <OrderChipChitWithPlayer
+                            order={order}
+                            showStatus={true}
+                          />
                         </div>
-                        {order.orderStatus === OrderStatus.OPEN ? (
-                          <ClockIcon className="size-5 text-yellow-500" />
-                        ) : order.orderStatus ===
-                          OrderStatus.FILLED_PENDING_SETTLEMENT ? (
-                          <ClockIcon className="size-5 text-green-500" />
-                        ) : order.orderStatus === OrderStatus.FILLED ? (
-                          <CheckCircleIcon className="size-5 text-green-500" />
-                        ) : (
-                          <ClockIcon className="size-5 text-red-500" />
-                        )}
                       </div>
                     ))}
                   </div>
@@ -370,32 +373,23 @@ const PendingShortOrders = ({
       {shortOrders.map((order, index) => (
         <div
           key={index}
-          className="bg-gray-500 p-2 rounded flex items-center gap-2"
+          className="bg-gray-500 p-2 rounded flex flex-col items-center gap-2"
         >
-          <PlayerAvatar player={order.Player} />
           <div>{order.Company.name}</div>
           <div className="flex flex-col gap-2">
-            <div className="flex gap-2">
-              <span>
-                $
-                {order.ShortOrder?.shortStockPriceAtPurchase ??
-                  order.Company.currentStockPrice}
-              </span>
-              <span>
-                {order.quantity} SHARES @ {BORROW_RATE}%
-              </span>
-              <span>{order.orderStatus}</span>
+            <div className="flex">
+              <OrderChipChitWithPlayer order={order} showStatus={true} />
             </div>
-            <span>
-              Margin Account Minimum $
-              {order.ShortOrder?.marginAccountMinimum ??
-                Math.floor(
-                  ((order.Company.currentStockPrice || 0) *
-                    (order.quantity || 0)) /
-                    2
-                )}
-            </span>
           </div>
+          <span>
+            Margin Account Minimum $
+            {order.ShortOrder?.marginAccountMinimum ??
+              Math.floor(
+                ((order.Company.currentStockPrice || 0) *
+                  (order.quantity || 0)) /
+                  2
+              )}
+          </span>
         </div>
       ))}
     </div>
@@ -413,7 +407,7 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
       createdAt: Prisma.SortOrder.asc,
     },
     where: {
-      isConcealed: false,
+      ...(gameState.playerOrdersConcealed && { isConcealed: false }),
       Game: {
         id: gameId,
       },
@@ -433,7 +427,6 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
   }, [currentPhase?.name]);
   if (isLoading) return <div>Loading...</div>;
   if (!playerOrders) return <div>No pending orders.</div>;
-  console.log('playerOrders', playerOrders);
   const limitOrdersPendingSettlement = playerOrders.filter(
     (order) =>
       order.orderType === OrderType.LIMIT &&
@@ -457,45 +450,49 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
   return (
     <div className="flex flex-col">
       <div className="flex justify-center flex-wrap gap-3 z-0">
-        <Card
-          className={`flex ${
-            currentPhase?.name === PhaseName.STOCK_RESOLVE_LIMIT_ORDER &&
-            "ring-2 ring-blue-500"
-          }`}
-        >
-          <CardHeader className="z-0">
-            Limit Orders Pending Settlement
-          </CardHeader>
-          <CardBody>
-            <PendingLimitOrders
-              limitOrders={limitOrdersPendingSettlement}
-              isResolving={isResolving}
-            />
-          </CardBody>
-        </Card>
-        <div className="flex gap-4 items-center">
-          <div className="flex items-center">
-            <ArrowRightIcon className="size-5" />
-          </div>
-          <div className="flex items-center">
-            <div className="vertical-text">
-              <span>S</span>
-              <span>T</span>
-              <span>O</span>
-              <span>C</span>
-              <span>K</span>
-              <span> </span>
-              <span>R</span>
-              <span>O</span>
-              <span>U</span>
-              <span>N</span>
-              <span>D</span>
+        {gameState.useLimitOrders && (
+          <>
+            <Card
+              className={`flex ${
+                currentPhase?.name === PhaseName.STOCK_RESOLVE_LIMIT_ORDER &&
+                "ring-2 ring-blue-500"
+              }`}
+            >
+              <CardHeader className="z-0">
+                Limit Orders Pending Settlement
+              </CardHeader>
+              <CardBody>
+                <PendingLimitOrders
+                  limitOrders={limitOrdersPendingSettlement}
+                  isResolving={isResolving}
+                />
+              </CardBody>
+            </Card>
+            <div className="flex gap-4 items-center">
+              <div className="flex items-center">
+                <ArrowRightIcon className="size-5" />
+              </div>
+              <div className="flex items-center">
+                <div className="vertical-text">
+                  <span>S</span>
+                  <span>T</span>
+                  <span>O</span>
+                  <span>C</span>
+                  <span>K</span>
+                  <span> </span>
+                  <span>R</span>
+                  <span>O</span>
+                  <span>U</span>
+                  <span>N</span>
+                  <span>D</span>
+                </div>
+              </div>
+              <div className="flex items-center">
+                <ArrowRightIcon className="size-5" />
+              </div>
             </div>
-          </div>
-          <div className="flex items-center">
-            <ArrowRightIcon className="size-5" />
-          </div>
-        </div>
+          </>
+        )}
         <Card
           className={`flex ${
             currentPhase?.name === PhaseName.STOCK_RESOLVE_MARKET_ORDER &&
@@ -510,60 +507,68 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
             />
           </CardBody>
         </Card>
-        <Card
-          className={`flex ${
-            (currentPhase?.name ===
-              PhaseName.STOCK_RESOLVE_PENDING_SHORT_ORDER ||
-              currentPhase?.name === PhaseName.STOCK_SHORT_ORDER_INTEREST) &&
-            "ring-2 ring-blue-500"
-          }`}
-        >
-          <CardHeader>Short Orders</CardHeader>
-          <CardBody>
-            <PendingShortOrders shortOrders={shortOrders} />
-          </CardBody>
-        </Card>
-        <Card
-          className={`flex ${
-            currentPhase?.name === PhaseName.STOCK_RESOLVE_OPTION_ORDER &&
-            "ring-2 ring-blue-500"
-          }`}
-        >
-          <CardHeader className="z-0">Options Contracts</CardHeader>
-          <CardBody>
-            <OpenOptionContracts />
-          </CardBody>
-        </Card>
-        <Card
-          className={`flex ${
-            currentPhase?.name === PhaseName.STOCK_OPEN_LIMIT_ORDERS &&
-            "ring-2 ring-blue-500"
-          }`}
-        >
-          <CardHeader className="z-0">Limit Orders</CardHeader>
-          <CardBody>
-            <PendingLimitOrders limitOrders={limitOrdersPendingToOpen} />
-          </CardBody>
-        </Card>
+        {gameState.useShortOrders && (
+          <Card
+            className={`flex ${
+              (currentPhase?.name ===
+                PhaseName.STOCK_RESOLVE_PENDING_SHORT_ORDER ||
+                currentPhase?.name === PhaseName.STOCK_SHORT_ORDER_INTEREST) &&
+              "ring-2 ring-blue-500"
+            }`}
+          >
+            <CardHeader>Short Orders</CardHeader>
+            <CardBody>
+              <PendingShortOrders shortOrders={shortOrders} />
+            </CardBody>
+          </Card>
+        )}
+        {gameState.useOptionOrders && (
+          <Card
+            className={`flex ${
+              currentPhase?.name === PhaseName.STOCK_RESOLVE_OPTION_ORDER &&
+              "ring-2 ring-blue-500"
+            }`}
+          >
+            <CardHeader className="z-0">Options Contracts</CardHeader>
+            <CardBody>
+              <OpenOptionContracts />
+            </CardBody>
+          </Card>
+        )}
+        {gameState.useLimitOrders && (
+          <Card
+            className={`flex ${
+              currentPhase?.name === PhaseName.STOCK_OPEN_LIMIT_ORDERS &&
+              "ring-2 ring-blue-500"
+            }`}
+          >
+            <CardHeader className="z-0">Limit Orders</CardHeader>
+            <CardBody>
+              <PendingLimitOrders limitOrders={limitOrdersPendingToOpen} />
+            </CardBody>
+          </Card>
+        )}
       </div>
-      <div className="mt-4">
-        <Card>
-          <CardHeader>Purchased and Open Options Contracts</CardHeader>
-          <CardBody>
-            {openOptionContracts?.map((contract, index) => (
-              <OptionContract contract={contract} key={index} />
-            ))}
-          </CardBody>
-        </Card>
-      </div>
+      {gameState.useOptionOrders && (
+        <div className="mt-4">
+          <Card>
+            <CardHeader>Purchased and Open Options Contracts</CardHeader>
+            <CardBody>
+              {openOptionContracts?.map((contract, index) => (
+                <OptionContract contract={contract} key={index} />
+              ))}
+            </CardBody>
+          </Card>
+        </div>
+      )}
       <div className="mt-4">
         <Card>
           <CardHeader>
             <div className="flex flex-col justify-start gap-2">
               <h3>Distribution Strategy</h3>
               <p>
-                When shares are contested in a stock round, they are resolved
-                according to the distribution strategy.
+                Shares are resolved in a sub stock round according to the
+                distribution strategy.
               </p>
             </div>
           </CardHeader>
@@ -601,8 +606,9 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
               <div className="flex flex-col gap-2">
                 <span>Priority</span>
                 <p>
-                  Orders are filled in priority. If there are not enough shares
-                  to resolve the order, the order is rejected.
+                  Orders are filled in ascending player priority order. If there
+                  are not enough shares to resolve the order, the order is
+                  rejected.
                 </p>
               </div>
             ) : (

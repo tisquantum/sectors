@@ -5,34 +5,57 @@ import { CapitalGainsTiers } from "@server/data/constants";
 import { calculateNetWorth } from "@server/data/helpers";
 
 const CapitalGains = () => {
-  const { currentTurn } = useGame();
+  const { gameId, currentTurn } = useGame();
   const {
     data: capitalGains,
     isLoading,
     error,
-  } = trpc.capitalGains.listCapitalGains.useQuery({
-    where: {
-      gameTurnId: currentTurn.id,
+  } = trpc.capitalGains.listCapitalGains.useQuery(
+    {
+      where: {
+        gameTurnId: currentTurn.id,
+      },
     },
-  });
+    {
+      staleTime: Infinity, // Data never goes stale - it's historical turn data
+      cacheTime: 1000 * 60 * 60, // Keep in cache for 1 hour
+      refetchOnMount: false, // Don't refetch when component mounts
+      refetchOnWindowFocus: false, // Don't refetch on window focus
+      refetchOnReconnect: false, // Don't refetch on reconnect
+    }
+  );
+  const { data: playersIncome, isLoading: isLoadingPlayersIncome } =
+    trpc.game.getTurnIncome.useQuery(
+      {
+        gameId: gameId,
+        gameTurnId: currentTurn.id,
+      },
+      {
+        staleTime: Infinity, // Data never goes stale - it's historical turn data
+        cacheTime: 1000 * 60 * 60, // Keep in cache for 1 hour
+        refetchOnMount: false, // Don't refetch when component mounts
+        refetchOnWindowFocus: false, // Don't refetch on window focus
+        refetchOnReconnect: false, // Don't refetch on reconnect
+      }
+    );
   if (isLoading) return <div>Loading...</div>;
   if (error) return <div>Error...</div>;
   if (!capitalGains) return null;
+  if (isLoadingPlayersIncome) return <div>Loading players income...</div>;
+
   return (
     <div className="flex flex-col gap-4 p-4">
       <h1 className="text-2xl font-bold">Capital Gains</h1>
       <p className="text-lg">
-        Capital Gains is taxation based on your net worth. This tax is paid out
-        from your cash on hand.
+        Capital Gains is taxation based on your income per turn. This tax is
+        paid out from your cash on hand.
       </p>
       <div className="flex flex-wrap gap-4">
         {CapitalGainsTiers.map((tier, index) => (
           <div key={index} className="p-4 border rounded-lg shadow-md">
+            <div className="font-semibold">Min Income: ${tier.minNetWorth}</div>
             <div className="font-semibold">
-              Min Net Worth: ${tier.minNetWorth}
-            </div>
-            <div className="font-semibold">
-              Max Net Worth: $
+              Max Income: $
               {tier.maxNetWorth == Number.MAX_SAFE_INTEGER
                 ? "∞"
                 : tier.maxNetWorth}
@@ -45,11 +68,9 @@ const CapitalGains = () => {
       </div>
       <div className="flex flex-col gap-4 justify-center items-center">
         {capitalGains.map((capitalGain) => {
-          const netWorth = calculateNetWorth(
-            capitalGain.Player?.cashOnHand || 0,
-            capitalGain.Player?.Share || []
+          const playerIncome = playersIncome?.find(
+            (playerIncome) => playerIncome.playerId === capitalGain.playerId
           );
-
           return (
             <div
               key={capitalGain.id}
@@ -59,7 +80,7 @@ const CapitalGains = () => {
                 <div className="flex items-center gap-4">
                   <PlayerAvatar player={capitalGain.Player} showNameLabel />
                   <div className="text-xl font-semibold">
-                    Net Worth: ${netWorth}
+                    Turn Income: ${playerIncome?.totalIncome}
                   </div>
                   <div className="text-xl font-semibold">
                     Cash on Hand: ${capitalGain.Player.cashOnHand}
@@ -69,8 +90,9 @@ const CapitalGains = () => {
                     {
                       CapitalGainsTiers.find(
                         (tier) =>
-                          netWorth >= tier.minNetWorth &&
-                          netWorth <= tier.maxNetWorth
+                          (playerIncome?.totalIncome || 0) >=
+                            tier.minNetWorth &&
+                          (playerIncome?.totalIncome || 0) <= tier.maxNetWorth
                       )?.taxPercentage
                     }
                     %
@@ -78,8 +100,9 @@ const CapitalGains = () => {
                 </div>
               )}
               <div className="flex flex-col gap-2 mt-4">
-                <div className="text-lg">
-                  Capital Gains Payment: ${capitalGain.capitalGains}
+                <div className="text-xl p-2 bg-slate-500 rounded-md">
+                  Capital Gains Payment:{" "}
+                  <span className="font-bold">${capitalGain.capitalGains}</span>
                 </div>
                 <div className="text-lg">
                   Capital Gains Tax Percentage: {capitalGain.taxPercentage}%
