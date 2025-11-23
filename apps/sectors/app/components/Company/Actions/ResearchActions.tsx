@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/shadcn/button';
 import { Card } from '@/components/shadcn/card';
-import { api } from '@/trpc/react';
+import { trpc } from '@sectors/app/trpc';
 
 interface ResearchActionsProps {
   companyId: string;
@@ -31,7 +31,11 @@ export function ResearchActions({
 }: ResearchActionsProps) {
   const [isLoading, setIsLoading] = useState(false);
 
-  const research = api.research.research.useMutation({
+  const { data: company } = trpc.company.getCompanyWithSector.useQuery({
+    id: companyId,
+  });
+
+  const research = trpc.modernOperations.submitResearchAction.useMutation({
     onSuccess: () => {
       setIsLoading(false);
       onActionComplete?.();
@@ -47,6 +51,8 @@ export function ResearchActions({
     research.mutate({
       companyId,
       gameId,
+      playerId: companyId,
+      sectorId: company?.sectorId || '',
     });
   };
 

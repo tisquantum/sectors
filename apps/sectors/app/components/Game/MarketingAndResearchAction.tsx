@@ -68,17 +68,6 @@ export default function MarketingAndResearchAction() {
     enabled: !!currentCompany.sectorId,
   });
 
-  const createMarketingCampaign = trpc.modernOperations.submitMarketingCampaign.useMutation({
-    onSuccess: () => {
-      setShowMarketingCreation(false);
-      setSelectedMarketingTier(null);
-    },
-    onError: (error) => {
-      console.error('Failed to create marketing campaign:', error);
-      alert(`Error: ${error.message}`);
-    },
-  });
-
   const submitResearch = trpc.modernOperations.submitResearchAction.useMutation({
     onSuccess: () => {
       setIsResearching(false);
@@ -91,16 +80,12 @@ export default function MarketingAndResearchAction() {
     },
   });
 
-  const handleCreateMarketingCampaign = async (tier: MarketingCampaignTier) => {
+  const handleCreateMarketingCampaign = (tier: MarketingCampaignTier) => {
     if (!currentCompany || !authPlayer) return;
-
-    createMarketingCampaign.mutate({
-      companyId: currentCompany.id,
-      gameId: gameState.id,
-      playerId: authPlayer.id,
-      tier,
-      slot: 1, // Default slot
-    });
+    
+    // Open the marketing creation modal with the selected tier
+    setSelectedMarketingTier(tier);
+    setShowMarketingCreation(true);
   };
 
   const handleResearch = async () => {
@@ -173,13 +158,13 @@ export default function MarketingAndResearchAction() {
                         <Button
                           size="sm"
                           color="primary"
-                          disabled={!canAfford || createMarketingCampaign.isPending}
+                          disabled={!canAfford}
                           onClick={(e) => {
                             e.stopPropagation();
                             handleCreateMarketingCampaign(tier);
                           }}
                         >
-                          {createMarketingCampaign.isPending ? <Spinner size="sm" /> : 'Create'}
+                          Create
                         </Button>
                       </div>
                     </CardBody>
@@ -197,7 +182,7 @@ export default function MarketingAndResearchAction() {
           </CardHeader>
           <CardBody className="space-y-4">
             <p className="text-gray-400 text-sm">
-              Invest in research to advance your sector's technology track and gain advantages.
+              Invest in research to advance your sector&apos;s technology track and gain advantages.
             </p>
             
             <div className="space-y-3">

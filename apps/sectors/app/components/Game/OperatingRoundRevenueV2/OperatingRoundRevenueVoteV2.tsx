@@ -323,13 +323,6 @@ const OperatingRoundRevenueVoteV2 = () => {
   const { gameId, currentPhase, currentTurn, gameState, authPlayer } =
     useGame();
 
-  // Only render for modern operation mechanics
-  if (
-    gameState.operationMechanicsVersion !== OperationMechanicsVersion.MODERN
-  ) {
-    return null;
-  }
-
   // Get production data for current turn
   const { data: productionWithRelations, isLoading: productionLoading } =
     trpc.factoryProduction.getGameTurnProduction.useQuery(
@@ -337,7 +330,7 @@ const OperatingRoundRevenueVoteV2 = () => {
         gameId: gameId || "",
         gameTurnId: currentTurn?.id || "",
       },
-      { enabled: !!gameId && !!currentTurn?.id }
+      { enabled: !!gameId && !!currentTurn?.id && gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN }
     );
 
   // Get companies with sectors
@@ -349,7 +342,7 @@ const OperatingRoundRevenueVoteV2 = () => {
           status: { in: [CompanyStatus.ACTIVE, CompanyStatus.INSOLVENT] },
         },
       },
-      { enabled: !!gameId }
+      { enabled: !!gameId && gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN }
     );
 
   // Get player's shares to determine which companies they own
@@ -358,7 +351,7 @@ const OperatingRoundRevenueVoteV2 = () => {
       {
         where: { id: authPlayer?.id },
       },
-      { enabled: !!authPlayer?.id }
+      { enabled: !!authPlayer?.id && gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN }
     );
 
   // Get companies the player owns shares in
@@ -471,6 +464,13 @@ const OperatingRoundRevenueVoteV2 = () => {
 
     return filtered;
   }, [productionWithRelations, companiesWithSector, playerOwnedCompanyIds]);
+
+  // Only render for modern operation mechanics
+  if (
+    gameState.operationMechanicsVersion !== OperationMechanicsVersion.MODERN
+  ) {
+    return null;
+  }
 
   if (productionLoading || companiesLoading || sharesLoading) {
     return (

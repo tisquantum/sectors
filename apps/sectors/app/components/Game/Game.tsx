@@ -27,6 +27,7 @@ import {
 } from "@server/prisma/prisma.types";
 import { useGame } from "./GameContext";
 import StockRoundAction from "./StockRoundAction";
+import StockRoundOrderGrid from "./StockRoundOrderGrid";
 import OperatingRoundProduction from "./OperatingRoundProduction";
 import StockRoundResults from "./StockRoundResults";
 import OperatingRoundRevenueVote from "./OperatingRoundRevenueVote";

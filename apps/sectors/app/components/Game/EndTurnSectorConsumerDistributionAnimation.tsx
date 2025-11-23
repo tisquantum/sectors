@@ -144,12 +144,6 @@ const EndTurnSectorConsumerDistributionAnimation = ({
 }) => {
   const { gameState } = useGame();
   
-  // Safety check: ensure sectors array is valid
-  if (!sectors || sectors.length === 0) {
-    console.warn(`[EndTurnSectorConsumerDistributionAnimation] No sectors provided`);
-    return <div>No sectors available</div>;
-  }
-
   const [currentConsumerPool, setCurrentConsumerPool] = useState(
     gameState?.consumerPoolNumber || 0
   );
@@ -159,6 +153,12 @@ const EndTurnSectorConsumerDistributionAnimation = ({
   const [cumulativeConsumers, setCumulativeConsumers] = useState(
     calculatePreviousSectorConsumers(sectors, gameState?.economyScore || 0)
   );
+  
+  // Safety check: ensure sectors array is valid
+  if (!sectors || sectors.length === 0) {
+    console.warn(`[EndTurnSectorConsumerDistributionAnimation] No sectors provided`);
+    return <div>No sectors available</div>;
+  }
   
   // Safety check: ensure currentSectorIndex is valid
   const safeSectorIndex = Math.max(0, Math.min(currentSectorIndex, sectors.length - 1));

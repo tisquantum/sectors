@@ -48,7 +48,6 @@ const RESOURCE_COLORS: Record<ResourceType, string> = {
     TRIANGLE: 'bg-yellow-500',
     SQUARE: 'bg-blue-500',
     CIRCLE: 'bg-green-500',
-    STAR: 'bg-red-500',
     MATERIALS: 'bg-gray-500',
     INDUSTRIALS: 'bg-orange-500',
     CONSUMER_DISCRETIONARY: 'bg-purple-500',

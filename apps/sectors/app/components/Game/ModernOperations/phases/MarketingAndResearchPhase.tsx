@@ -514,7 +514,7 @@ export default function MarketingAndResearchPhase() {
             
             {playerCompanies.length === 0 && (
               <div className="text-center py-8 text-gray-400">
-                You don't own any companies yet.
+                You don&apos;t own any companies yet.
               </div>
             )}
           </div>
@@ -626,7 +626,7 @@ export default function MarketingAndResearchPhase() {
           <ModernOperationsSection title="Research & Development">
             <div className="space-y-4">
               <p className="text-gray-400 text-sm">
-                Invest in research to advance your sector's technology track and
+                Invest in research to advance your sector&apos;s technology track and
                 gain advantages.
               </p>
 

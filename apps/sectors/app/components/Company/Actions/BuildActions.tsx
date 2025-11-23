@@ -3,9 +3,9 @@
 import { useState } from 'react';
 import { Button } from '@/components/shadcn/button';
 import { Card } from '@/components/shadcn/card';
-import { FactorySize, FactoryBlueprintType } from '@prisma/client';
-import { api } from '@/trpc/react';
 import { cn } from '@/lib/utils';
+import { FactorySize, ResourceType } from '@server/prisma/prisma.client';
+import { trpc } from '@sectors/app/trpc';
 
 interface BuildActionsProps {
   companyId: string;
@@ -17,25 +17,25 @@ interface BuildActionsProps {
 }
 
 const FACTORY_CONFIG = {
-  [FactorySize.I]: {
+  [FactorySize.FACTORY_I]: {
     workers: 1,
     resources: 1,
     sectorResources: 1,
     maxCustomers: 3,
   },
-  [FactorySize.II]: {
+  [FactorySize.FACTORY_II]: {
     workers: 2,
     resources: 2,
     sectorResources: 1,
     maxCustomers: 4,
   },
-  [FactorySize.III]: {
+  [FactorySize.FACTORY_III]: {
     workers: 3,
     resources: 3,
     sectorResources: 1,
     maxCustomers: 5,
   },
-  [FactorySize.IV]: {
+  [FactorySize.FACTORY_IV]: {
     workers: 4,
     resources: 4,
     sectorResources: 1,
@@ -52,10 +52,10 @@ export function BuildActions({
   onActionComplete,
 }: BuildActionsProps) {
   const [selectedSize, setSelectedSize] = useState<FactorySize | null>(null);
-  const [selectedBlueprint, setSelectedBlueprint] = useState<FactoryBlueprintType | null>(null);
+  const [selectedBlueprint, setSelectedBlueprint] = useState<ResourceType[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const buildFactory = api.factory.buildFactory.useMutation({
+  const buildFactory = trpc.factory.buildFactory.useMutation({
     onSuccess: () => {
       setIsLoading(false);
       setSelectedSize(null);
@@ -76,7 +76,7 @@ export function BuildActions({
       companyId,
       gameId,
       size: selectedSize,
-      blueprintType: selectedBlueprint,
+      resourceTypes: selectedBlueprint,
     });
   };
 
@@ -119,16 +119,16 @@ export function BuildActions({
         <div className="mt-4">
           <h4 className="mb-2 font-semibold">Select Blueprint</h4>
           <div className="grid grid-cols-3 gap-4">
-            {Object.values(FactoryBlueprintType).map((type) => (
+            {Object.values(ResourceType).map((type) => (
               <Card
                 key={type}
                 className={cn(
                   'cursor-pointer p-4 transition-colors',
-                  selectedBlueprint === type
+                  selectedBlueprint?.includes(type)
                     ? 'border-primary bg-primary/10'
                     : 'hover:border-primary/50'
                 )}
-                onClick={() => setSelectedBlueprint(type)}
+                onClick={() => setSelectedBlueprint(prev => prev ? [...prev, type] : [type])}
               >
                 <h5 className="font-semibold">{type}</h5>
                 <div className="mt-2 text-sm text-muted-foreground">

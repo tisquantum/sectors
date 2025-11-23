@@ -4,6 +4,7 @@ import { useGame } from './GameContext';
 import { Card, CardBody, CardHeader, Chip } from '@nextui-org/react';
 import { ResearchTrack } from '../Company/Research/ResearchTrack';
 import PlayerAvatar from '../Player/PlayerAvatar';
+import { Player } from '@server/prisma/prisma.client';
 
 export default function MarketingAndResearchActionResolve() {
   const { gameState, currentPhase } = useGame();

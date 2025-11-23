@@ -4,10 +4,7 @@ import { Card } from '@/components/shadcn/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/shadcn/tabs';
 import { BuildActions } from './BuildActions';
 import { ResearchActions } from './ResearchActions';
-import { MarketingActions } from './MarketingActions';
-import { GeneralActions } from './GeneralActions';
-import { SectorActions } from './SectorActions';
-import { OperationMechanicsVersion } from '@prisma/client';
+import { OperationMechanicsVersion } from '@server/prisma/prisma.client';
 
 interface CompanyActionsProps {
   companyId: string;
@@ -75,36 +72,15 @@ export function CompanyActions({
         </TabsContent>
 
         <TabsContent value="marketing">
-          <MarketingActions
-            companyId={companyId}
-            gameId={gameId}
-            phase={phase}
-            availableWorkers={availableWorkers}
-            availableCash={availableCash}
-            operationMechanicsVersion={operationMechanicsVersion}
-            onActionComplete={onActionComplete}
-          />
+          <div>test</div>
         </TabsContent>
 
         <TabsContent value="general">
-          <GeneralActions
-            companyId={companyId}
-            gameId={gameId}
-            availableCash={availableCash}
-            availablePrestige={availablePrestige}
-            onActionComplete={onActionComplete}
-          />
+          <div>test</div>
         </TabsContent>
 
         <TabsContent value="sector">
-          <SectorActions
-            companyId={companyId}
-            gameId={gameId}
-            sectorName={sectorName}
-            availableCash={availableCash}
-            availablePrestige={availablePrestige}
-            onActionComplete={onActionComplete}
-          />
+          <div>test</div>
         </TabsContent>
       </Tabs>
     </Card>

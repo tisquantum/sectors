@@ -34,7 +34,6 @@ export function CompanyTableau({ companyId, gameId, currentPhase }: CompanyTable
             <MarketingSlots
               companyId={companyId}
               gameId={gameId}
-              currentPhase={currentPhase}
             />
           </TabsContent>
         </Tabs>

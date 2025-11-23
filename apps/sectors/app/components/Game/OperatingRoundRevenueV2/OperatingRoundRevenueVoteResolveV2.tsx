@@ -3,9 +3,8 @@
 import { trpc } from "@sectors/app/trpc";
 import { useGame } from "../GameContext";
 import { RevenueDistribution, CompanyStatus, ShareLocation } from "@server/prisma/prisma.client";
-import { Badge, Chip, Spinner } from "@nextui-org/react";
-import CompanyInfo from "../../Company/CompanyInfo";
-import { CompanyTierData, FACTORY_CUSTOMER_LIMITS } from "@server/data/constants";
+import { Badge, Spinner } from "@nextui-org/react";
+import { FACTORY_CUSTOMER_LIMITS } from "@server/data/constants";
 import PlayerAvatar from "../../Player/PlayerAvatar";
 import { OperationMechanicsVersion } from "@server/prisma/prisma.client";
 import { useMemo } from "react";
@@ -28,11 +27,6 @@ interface ConsumptionRevenue {
 const OperatingRoundRevenueVoteResolveV2 = () => {
   const { currentPhase, gameState, playersWithShares, gameId, currentTurn } = useGame();
   
-  // Only render for modern operation mechanics
-  if (gameState.operationMechanicsVersion !== OperationMechanicsVersion.MODERN) {
-    return null;
-  }
-
   // Get production data for current turn
   const { data: productionWithRelations, isLoading: productionLoading } = 
     trpc.factoryProduction.getGameTurnProduction.useQuery(
@@ -40,7 +34,7 @@ const OperatingRoundRevenueVoteResolveV2 = () => {
         gameId: gameId || '',
         gameTurnId: currentTurn?.id || '',
       },
-      { enabled: !!gameId && !!currentTurn?.id }
+      { enabled: !!gameId && !!currentTurn?.id && gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN }
     );
 
   // Get companies with sectors
@@ -51,7 +45,7 @@ const OperatingRoundRevenueVoteResolveV2 = () => {
         status: { in: [CompanyStatus.ACTIVE, CompanyStatus.INSOLVENT] },
       },
     },
-    { enabled: !!gameId }
+    { enabled: !!gameId && gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN }
     );
 
   // Get revenue distribution votes
@@ -63,7 +57,7 @@ const OperatingRoundRevenueVoteResolveV2 = () => {
         },
         gameId: gameId || '',
       },
-      { enabled: !!gameId && !!currentPhase?.operatingRoundId }
+      { enabled: !!gameId && !!currentPhase?.operatingRoundId && gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN }
     );
 
   // Transform production data into ConsumptionRevenue format
@@ -84,7 +78,7 @@ const OperatingRoundRevenueVoteResolveV2 = () => {
       }
 
       const companyId = company.id;
-      const maxCustomers = FACTORY_CUSTOMER_LIMITS[factory.size] || 0;
+      const maxCustomers = FACTORY_CUSTOMER_LIMITS[factory.size as keyof typeof FACTORY_CUSTOMER_LIMITS] || 0;
 
       if (!companyRevenueMap.has(companyId)) {
         companyRevenueMap.set(companyId, {
@@ -160,8 +154,13 @@ const OperatingRoundRevenueVoteResolveV2 = () => {
           companyId: { in: companyIds },
         },
       },
-      { enabled: companyIds.length > 0 }
+      { enabled: companyIds.length > 0 && gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN }
     );
+
+  // Only render for modern operation mechanics
+  if (gameState.operationMechanicsVersion !== OperationMechanicsVersion.MODERN) {
+    return null;
+  }
 
   if (productionLoading || companiesLoading || votesLoading || sharesLoading) {
     return (

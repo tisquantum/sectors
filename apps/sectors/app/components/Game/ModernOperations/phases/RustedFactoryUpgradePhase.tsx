@@ -236,7 +236,7 @@ export function RustedFactoryUpgradePhase() {
         <div>
           <p className="font-medium text-gray-300 mb-1">What are Rusted Factories?</p>
           <p className="text-xs">
-            As research stages advance, factory slot requirements change. Factories that no longer meet the minimum requirements become "rusted" and must be upgraded.
+            As research stages advance, factory slot requirements change. Factories that no longer meet the minimum requirements become &quot;rusted&quot; and must be upgraded.
           </p>
         </div>
         <div>

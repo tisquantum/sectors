@@ -2,7 +2,6 @@ import { trpc } from "@sectors/app/trpc";
 import { useGame } from "./GameContext";
 import PlayerAvatar from "../Player/PlayerAvatar";
 import { CapitalGainsTiers } from "@server/data/constants";
-import { calculateNetWorth } from "@server/data/helpers";
 
 const CapitalGains = () => {
   const { gameId, currentTurn } = useGame();
@@ -18,8 +17,6 @@ const CapitalGains = () => {
     },
     {
       staleTime: Infinity, // Data never goes stale - it's historical turn data
-      cacheTime: 1000 * 60 * 60, // Keep in cache for 1 hour
-      refetchOnMount: false, // Don't refetch when component mounts
       refetchOnWindowFocus: false, // Don't refetch on window focus
       refetchOnReconnect: false, // Don't refetch on reconnect
     }
@@ -32,7 +29,6 @@ const CapitalGains = () => {
       },
       {
         staleTime: Infinity, // Data never goes stale - it's historical turn data
-        cacheTime: 1000 * 60 * 60, // Keep in cache for 1 hour
         refetchOnMount: false, // Don't refetch when component mounts
         refetchOnWindowFocus: false, // Don't refetch on window focus
         refetchOnReconnect: false, // Don't refetch on reconnect

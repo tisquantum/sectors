@@ -373,7 +373,7 @@ export function ConsumptionPhase() {
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                           {sectorFactories.map((factory: any) => {
                             const company = factory.company || gameState?.Company?.find((c: any) => c.id === factory.companyId);
-                            const maxCustomers = FACTORY_CUSTOMER_LIMITS[factory.size] || 0;
+                            const maxCustomers = FACTORY_CUSTOMER_LIMITS[factory.size as keyof typeof FACTORY_CUSTOMER_LIMITS] || 0;
                             
                             return (
                               <div key={factory.id} className="bg-gray-700 rounded-lg p-3 border border-gray-600">

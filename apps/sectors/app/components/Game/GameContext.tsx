@@ -83,20 +83,21 @@ export const GameProvider: React.FC<{
       staleTime: 10000, // 10 seconds
       retry: 1, // Only retry once on failure
       retryDelay: 1000,
-      onSuccess: () => {
-        gameStateQueryCountRef.current += 1;
-        if (gameStateQueryCountRef.current % 10 === 0) {
-          console.log(`[GameContext] GameState query succeeded ${gameStateQueryCountRef.current} times`);
-        }
-        if (gameStateQueryCountRef.current > 50) {
-          console.error(`[GameContext] POTENTIAL LOOP: GameState query succeeded ${gameStateQueryCountRef.current} times!`);
-        }
-      },
-      onError: (error) => {
-        console.error(`[GameContext] GameState query error:`, error);
-      },
     }
   );
+  
+  // Handle query success
+  useEffect(() => {
+    if (gameState && !gameStateIsLoading && !gameStateIsError) {
+      gameStateQueryCountRef.current += 1;
+      if (gameStateQueryCountRef.current % 10 === 0) {
+        console.log(`[GameContext] GameState query succeeded ${gameStateQueryCountRef.current} times`);
+      }
+      if (gameStateQueryCountRef.current > 50) {
+        console.error(`[GameContext] POTENTIAL LOOP: GameState query succeeded ${gameStateQueryCountRef.current} times!`);
+      }
+    }
+  }, [gameState, gameStateIsLoading, gameStateIsError]);
   
   // Log 207 status code issues
   useEffect(() => {
@@ -110,6 +111,7 @@ export const GameProvider: React.FC<{
     data: currentTurn,
     isLoading: currentTurnIsLoading,
     isError: currentTurnIsError,
+    error: currentTurnError,
     refetch: refetchCurrentTurn,
   } = trpc.gameTurn.getCurrentGameTurn.useQuery(
     { gameId },
@@ -121,20 +123,28 @@ export const GameProvider: React.FC<{
       staleTime: 10000, // 10 seconds
       retry: 1,
       retryDelay: 1000,
-      onSuccess: () => {
-        currentTurnQueryCountRef.current += 1;
-        if (currentTurnQueryCountRef.current % 10 === 0) {
-          console.log(`[GameContext] CurrentTurn query succeeded ${currentTurnQueryCountRef.current} times`);
-        }
-        if (currentTurnQueryCountRef.current > 50) {
-          console.error(`[GameContext] POTENTIAL LOOP: CurrentTurn query succeeded ${currentTurnQueryCountRef.current} times!`);
-        }
-      },
-      onError: (error) => {
-        console.error(`[GameContext] CurrentTurn query error:`, error);
-      },
     }
   );
+  
+  // Handle currentTurn query success
+  useEffect(() => {
+    if (currentTurn && !currentTurnIsLoading && !currentTurnIsError) {
+      currentTurnQueryCountRef.current += 1;
+      if (currentTurnQueryCountRef.current % 10 === 0) {
+        console.log(`[GameContext] CurrentTurn query succeeded ${currentTurnQueryCountRef.current} times`);
+      }
+      if (currentTurnQueryCountRef.current > 50) {
+        console.error(`[GameContext] POTENTIAL LOOP: CurrentTurn query succeeded ${currentTurnQueryCountRef.current} times!`);
+      }
+    }
+  }, [currentTurn, currentTurnIsLoading, currentTurnIsError]);
+  
+  // Handle currentTurn query error
+  useEffect(() => {
+    if (currentTurnError) {
+      console.error(`[GameContext] CurrentTurn query error:`, currentTurnError);
+    }
+  }, [currentTurnError]);
   const {
     data: player,
     isLoading,
@@ -147,7 +157,7 @@ export const GameProvider: React.FC<{
   const { data: playersWithShares, refetch: refetchPlayersWithShares } =
     trpc.game.getPlayersWithShares.useQuery({ gameId });
   const phaseQueryCountRef = useRef(0);
-  const { data: currentPhase, refetch: refetchCurrentPhase } =
+  const { data: currentPhase, refetch: refetchCurrentPhase, error: phaseError } =
     trpc.phase.getPhase.useQuery(
       { where: { id: gameState?.currentPhaseId } },
       {
@@ -159,17 +169,25 @@ export const GameProvider: React.FC<{
         staleTime: 10000, // 10 seconds
         retry: 1,
         retryDelay: 1000,
-        onSuccess: () => {
-          phaseQueryCountRef.current += 1;
-          if (phaseQueryCountRef.current % 10 === 0) {
-            console.log(`[GameContext] Phase query succeeded ${phaseQueryCountRef.current} times`);
-          }
-        },
-        onError: (error) => {
-          console.error(`[GameContext] Phase query error:`, error);
-        },
       }
     );
+  
+  // Handle phase query success
+  useEffect(() => {
+    if (currentPhase) {
+      phaseQueryCountRef.current += 1;
+      if (phaseQueryCountRef.current % 10 === 0) {
+        console.log(`[GameContext] Phase query succeeded ${phaseQueryCountRef.current} times`);
+      }
+    }
+  }, [currentPhase]);
+  
+  // Handle phase query error
+  useEffect(() => {
+    if (phaseError) {
+      console.error(`[GameContext] Phase query error:`, phaseError);
+    }
+  }, [phaseError]);
 
   const { refetch: refetchPlayerOrder } =
     trpc.playerOrder.listPlayerOrdersWithCompany.useQuery(
@@ -357,7 +375,8 @@ export const GameProvider: React.FC<{
   
   useEffect(() => {
     const currentPhaseId = gameState?.currentPhaseId;
-    const currentPhaseName = gameState?.Phase?.name;
+    const currentPhase = gameState?.Phase?.find(p => p.id === currentPhaseId);
+    const currentPhaseName = currentPhase?.name;
     
     // Only refetch if phaseId or phaseName actually changed
     if (currentPhaseId === lastPhaseIdRef.current && currentPhaseName === lastPhaseNameRef.current) {
@@ -369,7 +388,7 @@ export const GameProvider: React.FC<{
     }
     
     // Update refs
-    lastPhaseIdRef.current = currentPhaseId;
+    lastPhaseIdRef.current = currentPhaseId || undefined;
     lastPhaseNameRef.current = currentPhaseName;
     
     // Debounce: Don't refetch if called too recently
@@ -402,7 +421,7 @@ export const GameProvider: React.FC<{
       newPhaseName: currentPhaseName,
     });
     refetchCurrentPhase();
-  }, [gameState?.Phase?.name, gameState?.currentPhaseId, refetchCurrentPhase]);
+  }, [gameState?.Phase, gameState?.currentPhaseId, refetchCurrentPhase]);
 
   // Circuit breaker: If queries are failing or looping excessively, show error
   const hasExcessiveQueries = 

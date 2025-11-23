@@ -113,7 +113,7 @@ export default function ModernOperations() {
 
             {playerCompanies.length === 0 ? (
               <div className="text-center py-8 text-gray-400">
-                You don't own any companies yet.
+                You don&apos;t own any companies yet.
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -256,6 +256,14 @@ export class ExecutiveGameManagementService {
   }
 
   async prefetchInfluenceBidData(gameTurnId: string) {
+    // Get gameId from the turn to use correct cache key
+    const gameTurn = await this.gameTurnService.getExecutiveGameTurn({
+      id: gameTurnId,
+    });
+    if (!gameTurn) {
+      return;
+    }
+    
     //influenceBids
     let influenceBids =
       await this.influenceBidService.listExecutiveInfluenceBids({
@@ -264,8 +272,8 @@ export class ExecutiveGameManagementService {
         },
       });
     if (influenceBids) {
-      const currentCache = this.gameCache.get(gameTurnId);
-      this.gameCache.set(gameTurnId, { ...currentCache, influenceBids });
+      const currentCache = this.gameCache.get(gameTurn.gameId);
+      this.gameCache.set(gameTurn.gameId, { ...currentCache, influenceBids });
     }
   }
 
@@ -606,18 +614,22 @@ export class ExecutiveGameManagementService {
         },
       },
     });
-    //move all cards back to deck and update player to null
-    await Promise.all(
-      cardsInPlay.map((card) =>
-        this.cardService.updateExecutiveCard({
-          where: { id: card.id },
-          data: {
-            cardLocation: CardLocation.DECK,
-            player: { disconnect: true }, //TODO: have we forgot to do this in other places?
-          },
-        }),
-      ),
-    );
+    
+    if (cardsInPlay.length === 0) {
+      return;
+    }
+
+    // Batch update all cards at once instead of individual updates
+    const cardIds = cardsInPlay.map((card) => card.id);
+    await this.prisma.executiveCard.updateMany({
+      where: {
+        id: { in: cardIds },
+      },
+      data: {
+        cardLocation: CardLocation.DECK,
+        playerId: null,
+      },
+    });
   }
 
   async newTrickOrTurn(gameId: string, gameTurn: ExecutiveGameTurn) {
@@ -705,22 +717,31 @@ export class ExecutiveGameManagementService {
     if (!players) {
       throw new Error('Players not found');
     }
-    //get the latest trick being played this turn
-    const trick = await this.prisma.executiveTrick.findFirst({
-      where: {
-        turnId: gameTurn.id,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      include: {
-        trickCards: true,
-        phases: true,
-      },
-    });
+    
+    // Fetch trick and current phase in parallel for better performance
+    const [trick, currentPhase] = await Promise.all([
+      this.prisma.executiveTrick.findFirst({
+        where: {
+          turnId: gameTurn.id,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        include: {
+          trickCards: true,
+          phases: true,
+        },
+      }),
+      this.phaseService.getCurrentPhase(gameTurn.gameId),
+    ]);
+    
     if (!trick) {
       throw new Error('Trick not found');
     }
+    if (!currentPhase) {
+      throw new Error('Current phase not found');
+    }
+    
     //if the trick has cards played equal to the number of players, start the next phase
     if (trick.trickCards.length === players.length) {
       return await this.startPhase({
@@ -728,13 +749,6 @@ export class ExecutiveGameManagementService {
         gameTurnId: gameTurn.id,
         phaseName: ExecutivePhaseName.RESOLVE_TRICK,
       });
-    }
-    //get the current phase
-    const currentPhase = await this.phaseService.getCurrentPhase(
-      gameTurn.gameId,
-    );
-    if (!currentPhase) {
-      throw new Error('Current phase not found');
     }
     //get the previous phase
     const previousSelectTrickOfExecutiveTrickPhase = trick.phases
@@ -1565,45 +1579,38 @@ export class ExecutiveGameManagementService {
 
     stepStart = logStep('Trick leader determined', stepStart);
 
-    // 5. Update the CEO influence to the trick-winner
+    // 5-7. Update all database operations in parallel for better performance
     try {
-      this.influenceService.updateInfluence({
-        where: { id: ceoInfluence[0].id },
-        data: {
-          ownedByPlayer: { connect: { id: trickLeader.playerId } },
-          influenceLocation: InfluenceLocation.OWNED_BY_PLAYER,
-        },
-      });
+      await Promise.all([
+        // Update the CEO influence to the trick-winner
+        this.influenceService.updateInfluence({
+          where: { id: ceoInfluence[0].id },
+          data: {
+            ownedByPlayer: { connect: { id: trickLeader.playerId } },
+            influenceLocation: InfluenceLocation.OWNED_BY_PLAYER,
+          },
+        }),
+        // Update the trick winner
+        this.prisma.executiveTrick.update({
+          where: { id: executiveTrick.id },
+          data: { trickWinnerId: trickLeader.playerId },
+        }),
+        // Remove COO from everyone
+        this.playerService.updateManyExecutivePlayers({
+          where: { gameId: executiveTrick.gameId },
+          data: { isCOO: false },
+        }),
+        // Set the winner as COO
+        this.playerService.updateExecutivePlayer({
+          where: { id: trickLeader.playerId },
+          data: { isCOO: true },
+        }),
+      ]);
     } catch (error) {
-      console.error('[resolveTrickWinner] Error updating influence', error);
-      throw new Error('Influence not found');
+      console.error('[resolveTrickWinner] Error updating database', error);
+      throw new Error('Database update failed');
     }
-    stepStart = logStep('Influence updated', stepStart);
-
-    // 6. Update the trick winner
-    try {
-      this.prisma.executiveTrick.update({
-        where: { id: executiveTrick.id },
-        data: { trickWinnerId: trickLeader.playerId },
-      });
-    } catch (error) {
-      console.error('[resolveTrickWinner] Error updating trick winner', error);
-      throw new Error('Trick winner not found');
-    }
-    stepStart = logStep('Trick winner updated', stepStart);
-
-    // 7. Remove COO from everyone, then set the winner as COO
-    this.playerService.updateManyExecutivePlayers({
-      where: { gameId: executiveTrick.gameId },
-      data: { isCOO: false },
-    });
-    stepStart = logStep('Old COO removed', stepStart);
-
-    this.playerService.updateExecutivePlayer({
-      where: { id: trickLeader.playerId },
-      data: { isCOO: true },
-    });
-    stepStart = logStep('New COO assigned', stepStart);
+    stepStart = logStep('All updates completed', stepStart);
 
     // 8. Update the local cache
     const gameCache = this.gameCache.get(gameId);
@@ -1677,7 +1684,9 @@ export class ExecutiveGameManagementService {
     // Divide cards into hands and bribes
     const handCards = cards.slice(0, players.length * handSize);
     const bribeCards = cards.slice(players.length * handSize);
-    // Assign hand and bribe cards to each player
+    // Batch update all cards at once instead of per-player sequential updates
+    const cardUpdates: Array<{ id: string; cardLocation: CardLocation; playerId: string }> = [];
+    
     for (let i = 0; i < players.length; i++) {
       const playerId = players[i].id;
 
@@ -1687,28 +1696,37 @@ export class ExecutiveGameManagementService {
         i * BRIBE_CARD_HAND_SIZE,
         (i + 1) * BRIBE_CARD_HAND_SIZE,
       );
-      // Update hand cards
-      await this.cardService.updateManyExecutiveCards({
-        where: {
-          id: { in: playerHandCards.map((card) => card.id) },
-        },
-        data: {
+      
+      // Collect all card updates
+      playerHandCards.forEach((card) => {
+        cardUpdates.push({
+          id: card.id,
           cardLocation: CardLocation.HAND,
           playerId,
-        },
+        });
       });
-
-      // Update bribe cards
-      await this.cardService.updateManyExecutiveCards({
-        where: {
-          id: { in: playerBribeCards.map((card) => card.id) },
-        },
-        data: {
+      
+      playerBribeCards.forEach((card) => {
+        cardUpdates.push({
+          id: card.id,
           cardLocation: CardLocation.BRIBE,
           playerId,
-        },
+        });
       });
     }
+    
+    // Execute all card updates in parallel batches
+    const updatePromises = cardUpdates.map((update) =>
+      this.prisma.executiveCard.update({
+        where: { id: update.id },
+        data: {
+          cardLocation: update.cardLocation,
+          playerId: update.playerId,
+        },
+      })
+    );
+    
+    await Promise.all(updatePromises);
     //take one card from the deck for the trump card
     const trumpCard = await this.cardService.drawCards(gameId, 1);
     //update the trump card

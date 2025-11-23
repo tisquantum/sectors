@@ -1586,6 +1586,8 @@ model ExecutivePlayer {
   @@index([gameId])
   @@index([userId])
   @@index([seatIndex]) // if you query often by seatIndex
+  @@index([gameId, isCOO]) // Composite index for frequent queries filtering by gameId and isCOO
+  @@index([gameId, isGeneralCounsel]) // Composite index for frequent queries filtering by gameId and isGeneralCounsel
 }
 
 model VoteMarker {
@@ -1689,6 +1691,8 @@ model ExecutiveCard {
 
   @@index([gameId])
   @@index([playerId])
+  @@index([gameId, cardLocation]) // Composite index for frequent queries filtering by gameId and cardLocation
+  @@index([gameId, playerId]) // Composite index for queries filtering by gameId and playerId
 }
 
 enum ExecutiveGameStatus {

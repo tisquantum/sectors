@@ -187,7 +187,7 @@ export default function ModernOperationsResolve() {
 
             {playerCompanies.length === 0 ? (
               <div className="text-center py-8 text-gray-400">
-                You don't own any companies yet.
+                You don&apos;t own any companies yet.
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -218,7 +218,7 @@ export default function ModernOperationsResolve() {
                       ) : company.ceoPlayer ? (
                         <div className="absolute top-2 right-2 flex items-center gap-1 text-gray-400 text-xs">
                           <span>CEO:</span>
-                          <PlayerAvatar player={company.ceoPlayer} size="xs" />
+                          <PlayerAvatar player={company.ceoPlayer} size="sm" />
                           <span className="text-gray-300">
                             {company.ceoPlayer.nickname}
                           </span>

@@ -4,6 +4,7 @@ import { useGame } from './GameContext';
 import { trpc } from '@sectors/app/trpc';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
 import { FACTORY_CUSTOMER_LIMITS } from '@server/data/constants';
+import { ResourceType } from '@server/prisma/prisma.client';
 
 export function EarningsCall() {
   const { gameState, gameId, currentTurn } = useGame();
@@ -132,7 +133,7 @@ export function EarningsCall() {
                   <h4 className="text-sm font-semibold text-gray-300">Factory Performance</h4>
                   {company.productions.map((production) => {
                     const factory = production.Factory;
-                    const maxCustomers = FACTORY_CUSTOMER_LIMITS[factory.size];
+                    const maxCustomers = FACTORY_CUSTOMER_LIMITS[factory.size as keyof typeof FACTORY_CUSTOMER_LIMITS];
                     
                     return (
                       <div key={production.id} className="bg-gray-700 rounded-lg p-4 border border-gray-600">
@@ -182,7 +183,7 @@ export function EarningsCall() {
                           <div className="mt-3 pt-3 border-t border-gray-600">
                             <div className="text-xs text-gray-400 mb-1">Resources:</div>
                             <div className="flex gap-2">
-                              {factory.resourceTypes.map((type, idx) => (
+                              {factory.resourceTypes.map((type: ResourceType, idx: number) => (
                                 <span key={idx} className="px-2 py-1 bg-gray-800 text-gray-300 rounded text-xs">
                                   {type.replace('_', ' ')}
                                 </span>

@@ -213,7 +213,7 @@ export default function MarketingAndResearchResolvePhase() {
                   ) : company.ceoPlayer ? (
                     <div className="absolute top-2 right-2 flex items-center gap-1 text-gray-400 text-xs">
                       <span>CEO:</span>
-                      <PlayerAvatar player={company.ceoPlayer} size="xs" />
+                      <PlayerAvatar player={company.ceoPlayer} size="sm" />
                       <span className="text-gray-300">
                         {company.ceoPlayer.nickname}
                       </span>
@@ -368,13 +368,13 @@ export default function MarketingAndResearchResolvePhase() {
                         {selectedCompany.researchProgress || 0} spaces
                       </span>
                     </div>
-                    {resolvedOrders.length > 0 && (
+                    {resolvedOrders?.length && resolvedOrders?.length > 0 && (
                       <div className="mt-3 pt-3 border-t border-gray-600">
                         <div className="text-xs text-gray-400 mb-2">
                           Research Orders Resolved:
                         </div>
                         <div className="space-y-2">
-                          {resolvedOrders.map((order) => (
+                          {resolvedOrders?.map((order) => (
                             <div
                               key={order.id}
                               className={cn(

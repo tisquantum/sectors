@@ -118,21 +118,21 @@ export function ResearchSlot({ companyId, gameId }: ResearchSlotProps) {
                 <p>Current Research Progress: <span className="font-semibold">{researchProgress}</span></p>
                 <p>Cost: <span className="font-semibold">${researchCost}</span></p>
                 <p className="text-sm text-gray-400 mt-2">
-                  Research investment will increase your company's research progress by a random amount (0-2).
+                  Research investment will increase your company&apos;s research progress by a random amount (0-2).
                 </p>
               </div>
               <div className="flex gap-3">
                 <button
                   onClick={handleResearch}
-                  disabled={!canResearch || submitResearch.isLoading}
+                  disabled={!canResearch || submitResearch.isPending}
                   className={cn(
                     'flex-1 px-4 py-2 rounded font-medium transition-colors',
-                    canResearch && !submitResearch.isLoading
+                    canResearch && !submitResearch.isPending
                       ? 'bg-blue-600 hover:bg-blue-700 text-white'
                       : 'bg-gray-600 text-gray-400 cursor-not-allowed'
                   )}
                 >
-                  {submitResearch.isLoading ? 'Processing...' : `Invest $${researchCost}`}
+                  {submitResearch.isPending ? 'Processing...' : `Invest $${researchCost}`}
                 </button>
                 <button
                   onClick={() => setShowResearchCreation(false)}

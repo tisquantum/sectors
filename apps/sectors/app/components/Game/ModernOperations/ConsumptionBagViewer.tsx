@@ -1,7 +1,6 @@
 'use client';
 
 import { trpc } from '@sectors/app/trpc';
-import { ResourceType } from '@prisma/client';
 import { cn } from '@/lib/utils';
 
 interface Props {

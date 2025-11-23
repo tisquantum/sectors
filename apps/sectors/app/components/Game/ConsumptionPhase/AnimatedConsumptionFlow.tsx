@@ -4,10 +4,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@nextui-org/react';
 import { RiPlayFill, RiPauseFill, RiSkipForwardFill, RiRestartLine, RiTeamFill } from '@remixicon/react';
-import { ConsumerFlowPerSectorProps, Company, Factory, FlowLogEntry } from './types';
+import { ConsumerFlowPerSectorProps, FlowLogEntry } from './types';
 import { ResourceIcon } from './ResourceIcon';
-import { FACTORY_CUSTOMER_LIMITS } from '@server/data/constants';
-import { FactorySize } from '@server/prisma/prisma.client';
 
 interface AnimationStep {
   step: number;
@@ -26,7 +24,7 @@ interface AnimationStep {
   factoryStates: Map<string, { current: number; max: number }>;
 }
 
-interface AnimatedConsumptionFlowProps extends ConsumerFlowPerSectorProps {
+interface AnimatedConsumptionFlowProps extends Omit<ConsumerFlowPerSectorProps, "sectors"> {
   flowLog: FlowLogEntry[];
   consumptionBags: Array<{
     id: string;
@@ -152,6 +150,20 @@ export function AnimatedConsumptionFlow({
   const totalSteps = animationSteps.length;
   const currentStepData = animationSteps[currentStep];
 
+  // Auto-play animation
+  useEffect(() => {
+    if (!isPlaying || currentStep >= totalSteps - 1) {
+      setIsPlaying(false);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setCurrentStep(prev => Math.min(prev + 1, totalSteps - 1));
+    }, animationSpeed);
+
+    return () => clearTimeout(timer);
+  }, [isPlaying, currentStep, totalSteps, animationSpeed]);
+
   // If no animation steps, show message
   if (totalSteps === 0) {
     return (
@@ -167,20 +179,6 @@ export function AnimatedConsumptionFlow({
       </div>
     );
   }
-
-  // Auto-play animation
-  useEffect(() => {
-    if (!isPlaying || currentStep >= totalSteps - 1) {
-      setIsPlaying(false);
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      setCurrentStep(prev => Math.min(prev + 1, totalSteps - 1));
-    }, animationSpeed);
-
-    return () => clearTimeout(timer);
-  }, [isPlaying, currentStep, totalSteps, animationSpeed]);
 
   const handlePlay = () => {
     if (currentStep >= totalSteps - 1) {
@@ -406,8 +404,9 @@ export function AnimatedConsumptionFlow({
             <div className="space-y-4">
               {currentStepData.customerAssigned && (() => {
                 const assignedCompany = companies.find(c => 
-                  c.name === currentStepData.customerAssigned.companyName
+                  c.name === currentStepData.customerAssigned?.companyName
                 );
+                if (!assignedCompany) return null;
                 return (
                   <motion.div
                     initial={{ opacity: 0, x: -20 }}
