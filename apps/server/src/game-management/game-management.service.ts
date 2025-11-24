@@ -3004,20 +3004,21 @@ export class GameManagementService {
         revenueDistribution = RevenueDistribution.RETAINED;
       }
 
-      // Get company with shares
-      const company = await this.companyService.companyWithRelations({
-        id: companyId,
-      });
+      // OPTIMIZATION: Fetch company and revenue in parallel
+      const [company, totalRevenue] = await Promise.all([
+        this.companyService.companyWithRelations({
+          id: companyId,
+        }),
+        this.factoryProductionService.getCompanyTurnRevenue(
+          companyId,
+          phase.gameTurnId,
+        ),
+      ]);
+      
       if (!company) {
         console.error(`Company ${companyId} not found`);
         continue;
       }
-
-      // Get total revenue from FactoryProduction records for this company and turn
-      const totalRevenue = await this.factoryProductionService.getCompanyTurnRevenue(
-        companyId,
-        phase.gameTurnId,
-      );
       console.log('totalRevenue', totalRevenue);
       if (totalRevenue === 0) {
         console.log(`No revenue to distribute for company ${company.name}`);
@@ -5064,10 +5065,19 @@ export class GameManagementService {
       [companyId: string]: boolean;
     } = {};
 
+    // OPTIMIZATION: Fetch all sectors in parallel before processing
+    const sectorIds = Object.keys(groupedCompanies);
+    const sectors = await Promise.all(
+      sectorIds.map(id => this.sectorService.sector({ id }))
+    );
+    const sectorMap = new Map(
+      sectors.filter(s => s !== null).map(s => [s!.id, s!])
+    );
+
     for (const [sectorId, sectorCompanies] of Object.entries(
       groupedCompanies,
     )) {
-      const sector = await this.sectorService.sector({ id: sectorId });
+      const sector = sectorMap.get(sectorId);
       if (!sector) {
         console.error('Sector not found');
         continue;
@@ -5357,8 +5367,8 @@ export class GameManagementService {
       steps: number;
     }[],
   ) {
-    // Process stock penalties
-    for (const penalty of stockPenalties) {
+    // OPTIMIZATION: Process all stock penalties in parallel
+    const penaltyPromises = stockPenalties.map(async (penalty) => {
       const newHistory = await this.stockHistoryService.moveStockPriceDown(
         penalty.gameId,
         penalty.companyId,
@@ -5373,10 +5383,10 @@ export class GameManagementService {
         newHistory.price,
         penalty.companyId,
       );
-    }
+    });
 
-    // Process stock rewards
-    for (const reward of stockRewards) {
+    // OPTIMIZATION: Process all stock rewards in parallel
+    const rewardPromises = stockRewards.map(async (reward) => {
       const newHistory = await this.stockHistoryService.moveStockPriceUp(
         reward.gameId,
         reward.companyId,
@@ -5391,7 +5401,10 @@ export class GameManagementService {
         newHistory.price,
         reward.companyId,
       );
-    }
+    });
+
+    // Wait for all operations to complete
+    await Promise.all([...penaltyPromises, ...rewardPromises]);
   }
 
   async createManyProductionResults(

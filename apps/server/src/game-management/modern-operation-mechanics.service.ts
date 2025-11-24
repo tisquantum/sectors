@@ -1059,6 +1059,18 @@ export class ModernOperationMechanicsService {
     const sectorUpdates: Array<{ id: string; consumers: number }> = [];
     let totalConsumersReturnedToPool = 0;
 
+    // OPTIMIZATION: Fetch all consumption markers in parallel before processing
+    const markerPromises = sectors.map(sector =>
+      this.consumptionMarkerService.consumptionMarkersBySector(
+        sector.id,
+        phase.gameId,
+      )
+    );
+    const allMarkers = await Promise.all(markerPromises);
+    const markersBySectorId = new Map(
+      sectors.map((sector, index) => [sector.id, allMarkers[index]])
+    );
+
     for (const sector of sectors) {
       console.log('sector', sector.sectorName, 'consumers', sector.consumers);
       const customerCount = sector.consumers;
@@ -1067,11 +1079,8 @@ export class ModernOperationMechanicsService {
         continue;
       }
 
-      // Get all consumption markers for this sector
-      const markers = await this.consumptionMarkerService.consumptionMarkersBySector(
-        sector.id,
-        phase.gameId,
-      );
+      // Get all consumption markers for this sector (from pre-fetched data)
+      const markers = markersBySectorId.get(sector.id) || [];
 
       if (markers.length === 0) {
         await this.gameLogService.createGameLog({
@@ -2644,12 +2653,18 @@ export class ModernOperationMechanicsService {
         upgradeCost: number;
       }> = [];
 
-      // Calculate upgrade costs for each rusted factory
+      // OPTIMIZATION: Collect all required resource types first, then fetch prices in one query
+      const allRequiredResourceTypes = new Set<ResourceType>();
+      const factoryUpgradeData: Array<{
+        factory: typeof rustedFactories[0];
+        newSize: FactorySize;
+        requiredResources: RequiredResource[];
+      }> = [];
+
+      // First pass: determine new sizes and collect resource types
       for (const factory of companyFactories) {
         const slotIndex = factory.slot - 1;
         if (slotIndex < 0 || slotIndex >= slotPhases.length) {
-          // Slot doesn't exist - factory must be removed or company goes insolvent
-          // For now, we'll require upgrading to the minimum size of the first available slot
           continue;
         }
 
@@ -2668,9 +2683,6 @@ export class ModernOperationMechanicsService {
           [FactorySize.FACTORY_IV]: 4,
         }[slotPhase.min];
 
-        // Determine new factory size (must be at least slotPhase.min)
-        // If factory is already at or above minimum and within max, it can stay
-        // Otherwise, upgrade to minimum required size
         const maxSizeOrder = {
           [FactorySize.FACTORY_I]: 1,
           [FactorySize.FACTORY_II]: 2,
@@ -2680,34 +2692,39 @@ export class ModernOperationMechanicsService {
 
         let newSize: FactorySize;
         if (currentSizeOrder >= minSizeOrder && currentSizeOrder <= maxSizeOrder) {
-          // Factory size is already within supported range - shouldn't be rusted
-          // This shouldn't happen, but if it does, keep current size
           newSize = factory.size;
         } else {
-          // Factory must upgrade to at least the minimum size
           newSize = slotPhase.min;
         }
 
-        // Calculate upgrade cost
-        // Upgrade cost = Full blueprint fee - 50% of original construction cost
+        const requiredResources = await this.getRequiredResourcesForFactory(newSize, sector.sectorName);
+        requiredResources.forEach(r => allRequiredResourceTypes.add(r.type));
+        factoryUpgradeData.push({ factory, newSize, requiredResources });
+      }
+
+      // OPTIMIZATION: Fetch all resource prices in one query
+      const currentResourcePrices = allRequiredResourceTypes.size > 0
+        ? await this.prisma.resource.findMany({
+            where: {
+              gameId: phase.gameId,
+              type: { in: Array.from(allRequiredResourceTypes) },
+            },
+          })
+        : [];
+
+      const resourcePriceMap = new Map(
+        currentResourcePrices.map(r => [r.type, r.price])
+      );
+
+      // Second pass: calculate upgrade costs using cached resource prices
+      for (const { factory, newSize, requiredResources } of factoryUpgradeData) {
         const originalCost = factory.originalConstructionCost || 0;
         const refundAmount = Math.floor(originalCost * 0.5);
 
-        // Get required resources for new factory size
-        const requiredResources = await this.getRequiredResourcesForFactory(newSize, sector.sectorName);
-        const resourceTypes = requiredResources.map(r => r.type);
-        
-        const currentResourcePrices = await this.prisma.resource.findMany({
-          where: {
-            gameId: phase.gameId,
-            type: { in: resourceTypes },
-          },
-        });
-
-        // Calculate resource cost based on required quantities
+        // Calculate resource cost using cached prices
         const resourceCost = requiredResources.reduce((sum, req) => {
-          const resource = currentResourcePrices.find(r => r.type === req.type);
-          return sum + (resource?.price || 0) * req.quantity;
+          const price = resourcePriceMap.get(req.type) || 0;
+          return sum + price * req.quantity;
         }, 0);
 
         const baseCost = {
@@ -2745,34 +2762,46 @@ export class ModernOperationMechanicsService {
       }
 
       // Company can afford upgrades - perform them
-      for (const { factory, newSize, upgradeCost } of upgrades) {
-        // Deduct upgrade cost
-        await this.companyService.updateCompany({
-          where: { id: company.id },
-          data: { cashOnHand: { decrement: upgradeCost } },
-        });
+      // OPTIMIZATION: Deduct total upgrade cost once instead of per factory
+      await this.companyService.updateCompany({
+        where: { id: company.id },
+        data: { cashOnHand: { decrement: totalUpgradeCost } },
+      });
 
-        // Update factory size and clear rusted status
-        await this.prisma.factory.update({
-          where: { id: factory.id },
-          data: {
-            size: newSize,
-            isRusted: false,
-            originalConstructionCost: upgradeCost + Math.floor((factory.originalConstructionCost || 0) * 0.5), // New construction cost
-            // Update workers based on new size
-            workers: {
-              [FactorySize.FACTORY_I]: 2,
-              [FactorySize.FACTORY_II]: 4,
-              [FactorySize.FACTORY_III]: 6,
-              [FactorySize.FACTORY_IV]: 8,
-            }[newSize],
-          },
-        });
+      // OPTIMIZATION: Batch update all factories
+      const factoryUpdates = upgrades.map(({ factory, newSize }) => ({
+        where: { id: factory.id },
+        data: {
+          size: newSize,
+          isRusted: false,
+          originalConstructionCost: upgrades.find(u => u.factory.id === factory.id)!.upgradeCost + Math.floor((factory.originalConstructionCost || 0) * 0.5),
+          workers: {
+            [FactorySize.FACTORY_I]: 2,
+            [FactorySize.FACTORY_II]: 4,
+            [FactorySize.FACTORY_III]: 6,
+            [FactorySize.FACTORY_IV]: 8,
+          }[newSize],
+        },
+      }));
 
-        await this.gameLogService.createGameLog({
-          game: { connect: { id: phase.gameId } },
-          content: `${company.name} upgraded factory in slot ${factory.slot} from ${factory.size} to ${newSize} for $${upgradeCost}.`,
-        });
+      // Batch update factories in a transaction
+      await this.prisma.$transaction(
+        factoryUpdates.map(update => this.prisma.factory.update(update))
+      );
+
+      // OPTIMIZATION: Batch create game logs
+      const gameLogEntries = upgrades.map(({ factory, newSize, upgradeCost }) => ({
+        gameId: phase.gameId,
+        content: `${company.name} upgraded factory in slot ${factory.slot} from ${factory.size} to ${newSize} for $${upgradeCost}.`,
+      }));
+
+      if (gameLogEntries.length > 0) {
+        await this.gameLogService.createManyGameLogs(
+          gameLogEntries.map(entry => ({
+            gameId: entry.gameId,
+            content: entry.content,
+          }))
+        );
       }
     }
   }
