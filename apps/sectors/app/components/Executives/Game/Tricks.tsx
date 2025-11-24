@@ -125,7 +125,7 @@ export const Tricks = ({
                       cardNumber={card.card.cardValue}
                       cardSuit={card.card.cardSuit}
                       isBordered={isWinner}
-                      isWinning={isCurrentlyWinning}
+                      isWinning={isCurrentlyWinning ?? undefined}
                     />
                   </Badge>
                 );
