@@ -182,9 +182,21 @@ export class ExecutiveCardService {
     }
 
     // Resolve data fields for the simulated updated card
+    // Handle Prisma relation syntax (e.g., { player: { connect: { id: ... } } })
+    let resolvedPlayerId = cachedCard.playerId;
+    if (data.player && typeof data.player === 'object' && 'connect' in data.player) {
+      const connect = (data.player as { connect?: { id?: string } }).connect;
+      if (connect?.id) {
+        resolvedPlayerId = connect.id;
+      }
+    }
+
     const updatedCard: ExecutiveCard = {
       ...cachedCard,
-      ...(data as Partial<ExecutiveCard>), // Cast data to match ExecutiveCard structure
+      playerId: resolvedPlayerId, // Ensure playerId is properly resolved from relation
+      ...(Object.fromEntries(
+        Object.entries(data).filter(([key]) => key !== 'player')
+      ) as Partial<ExecutiveCard>), // Cast data to match ExecutiveCard structure, excluding 'player' relation
       updatedAt: new Date(), // Simulate the updated timestamp
     };
 
@@ -251,6 +263,20 @@ export class ExecutiveCardService {
         playerId: where.playerId,
       },
     });
+
+    // OPTIMIZATION: Update cache with fetched cards to avoid future database queries
+    if (allCards.length > 0) {
+      const gameId = allCards[0].gameId;
+      const currentCache = this.cardCache.get(gameId) || [];
+      const cacheMap = new Map(currentCache.map(c => [c.id, c]));
+      
+      // Add or update cards in cache
+      allCards.forEach(card => {
+        cacheMap.set(card.id, card);
+      });
+      
+      this.cardCache.set(gameId, Array.from(cacheMap.values()));
+    }
 
     // Conceal `cardValue` and `cardSuit` for cards in HAND
     const concealedCards = allCards.map((card) => {
@@ -335,9 +361,13 @@ export class ExecutiveCardService {
     const index = cards.findIndex((c) => c.id === card.id);
 
     if (index >= 0) {
+      // Update existing card
       cards[index] = card;
-      this.cardCache.set(gameId, cards);
+    } else {
+      // Add new card if not in cache
+      cards.push(card);
     }
+    this.cardCache.set(gameId, cards);
   }
 
   private removeFromCache(gameId: string, cardId: string): void {
