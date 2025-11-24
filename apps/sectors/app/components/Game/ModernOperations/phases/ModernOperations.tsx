@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useGame } from "../../GameContext";
 import { trpc } from "@sectors/app/trpc";
-import { Spinner } from "@nextui-org/react";
+import { Spinner, Switch } from "@nextui-org/react";
 import { RiVipCrown2Fill } from "@remixicon/react";
 import { cn } from "@/lib/utils";
 import PlayerAvatar from "../../../Player/PlayerAvatar";
@@ -25,6 +25,7 @@ export default function ModernOperations() {
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(
     null
   );
+  const [showAllCompanies, setShowAllCompanies] = useState(false);
 
   // Get all players with shares in the game
   const { data: playersWithShares, isLoading: playersLoading } =
@@ -68,6 +69,23 @@ export default function ModernOperations() {
       });
   }, [playersWithShares, allCompanies, authPlayer]);
 
+  // All companies with CEO info
+  const allCompaniesWithCEO = useMemo(() => {
+    if (!playersWithShares || !allCompanies || !authPlayer) return [];
+    return allCompanies.map((company) => {
+      const isCEO = company.ceoId === authPlayer.id;
+      const ceoPlayer = playersWithShares.find((p) => p.id === company.ceoId);
+      return {
+        ...company,
+        isCEO,
+        ceoPlayer: ceoPlayer || null,
+      };
+    });
+  }, [playersWithShares, allCompanies, authPlayer]);
+
+  // Companies to display based on filter
+  const displayedCompanies = showAllCompanies ? allCompaniesWithCEO : playerCompanies;
+
   // Get current phase number for research track
   const currentPhaseNumber = currentPhase?.name?.match(/\d+/)?.[0]
     ? Math.ceil(Number(currentPhase.name.match(/\d+/)?.[0]))
@@ -75,12 +93,12 @@ export default function ModernOperations() {
 
   // Auto-select first company if none selected
   useEffect(() => {
-    if (playerCompanies.length > 0 && !selectedCompanyId) {
-      setSelectedCompanyId(playerCompanies[0].id);
+    if (displayedCompanies.length > 0 && !selectedCompanyId) {
+      setSelectedCompanyId(displayedCompanies[0].id);
     }
-  }, [playerCompanies, selectedCompanyId]);
+  }, [displayedCompanies, selectedCompanyId]);
 
-  const selectedCompany = playerCompanies.find(
+  const selectedCompany = displayedCompanies.find(
     (c) => c.id === selectedCompanyId
   );
 
@@ -104,20 +122,34 @@ export default function ModernOperations() {
     >
       <div className="space-y-6">
         {/* Company Selection Grid */}
-        <ModernOperationsSection title="Your Companies">
+        <ModernOperationsSection title={showAllCompanies ? "All Companies" : "Your Companies"}>
           <div className="space-y-4">
-            <p className="text-gray-400 text-sm">
-              Select a company you own to view or operate. You can only operate
-              companies where you are the CEO.
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-gray-400 text-sm">
+                {showAllCompanies 
+                  ? "Select any company to view. You can only operate companies where you are the CEO."
+                  : "Select a company you own to view or operate. You can only operate companies where you are the CEO."}
+              </p>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-400">Your Companies</span>
+                <Switch
+                  isSelected={showAllCompanies}
+                  onValueChange={setShowAllCompanies}
+                  size="sm"
+                />
+                <span className="text-sm text-gray-400">All Companies</span>
+              </div>
+            </div>
 
-            {playerCompanies.length === 0 ? (
+            {displayedCompanies.length === 0 ? (
               <div className="text-center py-8 text-gray-400">
-                You don&apos;t own any companies yet.
+                {showAllCompanies 
+                  ? "No companies found."
+                  : "You don&apos;t own any companies yet."}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {playerCompanies.map((company) => {
+                {displayedCompanies.map((company) => {
                   const isSelected = selectedCompanyId === company.id;
                   const isCEO = company.isCEO;
 

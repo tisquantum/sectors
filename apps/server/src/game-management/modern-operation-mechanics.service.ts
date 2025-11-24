@@ -2175,10 +2175,11 @@ export class ModernOperationMechanicsService {
   }
 
   /**
-   * Calculate and update sector demand based on base sector demand + brand scores + worker allocation + research stage bonus
-   * Effective Demand = base sector demand + sum of brand scores + worker allocation + research stage bonus
+   * Calculate and update sector demand based on base sector demand + brand scores + worker allocation (divided by 2) + research stage bonus
+   * Effective Demand = base sector demand + sum of brand scores + (worker allocation / 2) + research stage bonus
    * 
    * Worker allocation = total workers in factories + marketing campaigns + research for that sector
+   * Worker allocation is divided by 2 before being added to demand.
    * Research stage bonus:
    *   - Stage 1 (researchMarker 0-5): +0
    *   - Stage 2 (researchMarker 6-10): +2
@@ -2186,7 +2187,7 @@ export class ModernOperationMechanicsService {
    *   - Stage 4 (researchMarker 16-20): +5
    * 
    * The sector's `baseDemand` field stores the initial demand from gameData (preserved).
-   * The `demand` field is updated each turn to reflect effective demand (base + brand + workers + research stage).
+   * The `demand` field is updated each turn to reflect effective demand (base + brand + workers/2 + research stage).
    */
   private async updateSectorDemand(phase: Phase) {
     // Query sectors with companies directly using Prisma to include Company relation
@@ -2278,8 +2279,12 @@ export class ModernOperationMechanicsService {
       // If baseDemand exists but is > 0, it's from old gameData and should be ignored
       const baseDemand = 0; // No base demand - all demand comes from worker allocation + brand bonus + research stage
 
-      // Effective demand = base demand + brand scores + worker allocation + research stage bonus
-      const effectiveDemand = baseDemand + totalBrandScore + workerAllocation + researchStageBonus;
+      // Worker allocation contribution: divide by 2 and round down (no decimals allowed)
+      // Math.floor ensures we always round down: 19/2 = 9, 20/2 = 10, 21/2 = 10
+      const workerAllocationContribution = Math.floor(workerAllocation / 2);
+
+      // Effective demand = base demand + brand scores + (worker allocation / 2, rounded down) + research stage bonus
+      const effectiveDemand = baseDemand + totalBrandScore + workerAllocationContribution + researchStageBonus;
 
       // Update the sector's demand field to show effective demand
       if (effectiveDemand !== sector.demand) {
@@ -2290,7 +2295,7 @@ export class ModernOperationMechanicsService {
 
         gameLogEntries.push({
           gameId: phase.gameId,
-          content: `${sector.sectorName} effective demand: ${effectiveDemand} (base: ${baseDemand} + brand: ${totalBrandScore} + workers: ${workerAllocation} + research stage ${researchStage}: +${researchStageBonus})`,
+          content: `${sector.sectorName} effective demand: ${effectiveDemand} (base: ${baseDemand} + brand: ${totalBrandScore} + workers: ${workerAllocation}/2=${workerAllocationContribution} + research stage ${researchStage}: +${researchStageBonus})`,
         });
       }
     }
