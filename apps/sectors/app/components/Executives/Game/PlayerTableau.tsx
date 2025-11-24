@@ -25,7 +25,7 @@ import {
 import { RELATIONSHIP_TRACK_LENGTH } from "@server/data/executive_constants";
 import { ActionWrapper } from "./ActionWrapper";
 import { InfluenceMultiInput } from "../Player/InfluenceMultiInput";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { CardList } from "./CardList";
 import { InfluenceBidWithInfluence } from "@server/prisma/prisma.types";
 import DebounceButton from "../../General/DebounceButton";
@@ -68,6 +68,60 @@ const InfluenceBids = ({
   useEffect(() => {
     refetch();
   }, [pingCounter, currentPhase?.id]);
+
+  // Create a stable key for all selfPlayerIds in the bids
+  const bidsKey = useMemo(() => {
+    if (!executiveInfluenceBids || executiveInfluenceBids.length === 0) return '';
+    const allSelfPlayerIds: string[] = [];
+    executiveInfluenceBids.forEach((bid) => {
+      bid.influenceBids.forEach((influenceBid) => {
+        const selfPlayerId = influenceBid.Influence.selfPlayerId;
+        if (selfPlayerId && !allSelfPlayerIds.includes(selfPlayerId)) {
+          allSelfPlayerIds.push(selfPlayerId);
+        }
+      });
+    });
+    return allSelfPlayerIds.sort().join(',');
+  }, [executiveInfluenceBids]);
+
+  // Initialize default influence destinations to OWNED_BY_PLAYER (Influence)
+  useEffect(() => {
+    if (executiveInfluenceBids && executiveInfluenceBids.length > 0) {
+      const defaults: Record<string, InfluenceLocation> = {};
+      let needsUpdate = false;
+
+      executiveInfluenceBids.forEach((bid) => {
+        const groupedInfluenceBids = bid.influenceBids.reduce(
+          (acc, influenceBid) => {
+            const selfPlayerId = influenceBid.Influence.selfPlayerId;
+            if (!selfPlayerId) {
+              return acc;
+            }
+            if (!acc[selfPlayerId]) {
+              acc[selfPlayerId] = [];
+            }
+            acc[selfPlayerId].push(influenceBid);
+            return acc;
+          },
+          {} as Record<string, InfluenceBidWithInfluence[]>
+        );
+
+        Object.keys(groupedInfluenceBids).forEach((key) => {
+          const selfPlayerId = groupedInfluenceBids[key][0].Influence.selfPlayerId || "";
+          if (selfPlayerId && !influenceDestinations[selfPlayerId]) {
+            defaults[selfPlayerId] = InfluenceLocation.OWNED_BY_PLAYER;
+            needsUpdate = true;
+          }
+        });
+      });
+
+      if (needsUpdate) {
+        setInfluenceDestinations((prev) => ({ ...prev, ...defaults }));
+      }
+    }
+    // Only depend on bidsKey to avoid loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bidsKey]);
   if (!gameId) {
     return <div>Game ID not found</div>;
   }
@@ -144,7 +198,7 @@ const InfluenceBids = ({
                           influenceDestinations[
                             groupedInfluenceBids[key][0].Influence
                               .selfPlayerId || ""
-                          ], // Assume influenceDestinations is a state mapping playerId to location
+                          ] || InfluenceLocation.OWNED_BY_PLAYER, // Default to OWNED_BY_PLAYER if not set
                       }));
 
                       moveInfluenceBidToPlayer.mutate(
@@ -178,8 +232,8 @@ const InfluenceBids = ({
                               influenceDestinations[
                                 groupedInfluenceBids[key][0].Influence
                                   .selfPlayerId || ""
-                              ]
-                            } // Assume influenceDestinations is a state
+                              ] || InfluenceLocation.OWNED_BY_PLAYER
+                            } // Default to OWNED_BY_PLAYER if not set
                             onValueChange={(value) =>
                               setInfluenceDestinations((prev) => ({
                                 ...prev,

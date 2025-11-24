@@ -1,5 +1,6 @@
 import { Input } from "@nextui-org/react";
 import Influence from "../Game/Influence";
+import { useEffect, useMemo } from "react";
 
 export const InfluenceMultiInput = ({
   influenceValues,
@@ -21,6 +22,34 @@ export const InfluenceMultiInput = ({
   >;
 }) => {
   console.log("influences", influences);
+  
+  // Memoize influence keys to use as stable dependency
+  const influenceKeys = useMemo(() => {
+    return Object.keys(influences || {}).sort().join(',');
+  }, [influences]);
+  
+  // Initialize all influence values to 1 if they're not set or are 0
+  useEffect(() => {
+    if (influences) {
+      const initialized: Record<string, number> = {};
+      let needsUpdate = false;
+      
+      Object.keys(influences).forEach((influenceKey) => {
+        const currentValue = influenceValues[influenceKey];
+        if (currentValue === undefined || currentValue === 0) {
+          initialized[influenceKey] = 1;
+          needsUpdate = true;
+        }
+      });
+      
+      if (needsUpdate) {
+        setInfluenceValues((prev) => ({ ...prev, ...initialized }));
+      }
+    }
+    // Only depend on influence keys, not influenceValues to avoid loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [influenceKeys]);
+  
   if (!influences) {
     return null;
   }
@@ -35,18 +64,20 @@ export const InfluenceMultiInput = ({
           <Input
             type="number"
             value={
-              influenceValues[influenceKey]?.toString() || ""
+              (influenceValues[influenceKey] || 1).toString()
             }
             onChange={(e) => {
               const value = parseFloat(e.target.value);
+              // Prevent 0 or negative values, default to 1
+              const clampedValue = isNaN(value) || value <= 0
+                ? 1
+                : Math.min(value, influences[influenceKey].count);
               setInfluenceValues((prev) => ({
                 ...prev,
-                [influenceKey]: isNaN(value)
-                  ? 0
-                  : Math.min(value, influences[influenceKey].count),
+                [influenceKey]: clampedValue,
               }));
             }}
-            min={0}
+            min={1}
             max={influences[influenceKey].count}
           />
         </div>
