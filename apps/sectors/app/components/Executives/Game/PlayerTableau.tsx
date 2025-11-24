@@ -353,8 +353,25 @@ const Gifts = ({
   playerId: string;
   isInteractive?: boolean;
 }) => {
-  const playTrickMutation = trpc.executiveGame.playTrick.useMutation();
-  const { pingCounter, currentPhase, gameId } = useExecutiveGame();
+  const { pingCounter, currentPhase, gameId, authPlayer } = useExecutiveGame();
+  const utils = trpc.useUtils();
+  const playTrickMutation = trpc.executiveGame.playTrick.useMutation({
+    onSuccess: () => {
+      // Invalidate queries to force refetch of game state
+      if (gameId && authPlayer) {
+        utils.executiveGame.getExecutiveGame.invalidate({ id: gameId });
+        utils.executiveGameTurn.getLatestTurn.invalidate({ gameId });
+        utils.executivePhase.getCurrentPhase.invalidate({ gameId });
+        utils.executivePlayer.getExecutivePlayerByUserIdAndGameId.invalidate({
+          userId: authPlayer.userId,
+          gameId,
+        });
+        // Also invalidate card queries to ensure card locations are updated
+        utils.executiveCard.listConcealedCards.invalidate();
+        utils.executiveCard.listExecutiveCards.invalidate();
+      }
+    },
+  });
   const {
     data: playerGifts,
     isLoading,

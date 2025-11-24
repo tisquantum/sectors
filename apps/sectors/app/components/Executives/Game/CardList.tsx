@@ -16,10 +16,25 @@ export const CardList = ({
 }) => {
   //TODO: Is authPlayer a safe assumption to use here for the mutation?
   const { gameId, authPlayer } = useExecutiveGame();
+  const utils = trpc.useUtils();
   if (!authPlayer) {
     return <div>Auth player not found</div>;
   }
-  const playTrickMutation = trpc.executiveGame.playTrick.useMutation();
+  const playTrickMutation = trpc.executiveGame.playTrick.useMutation({
+    onSuccess: () => {
+      // Invalidate queries to force refetch of game state
+      utils.executiveGame.getExecutiveGame.invalidate({ id: gameId });
+      utils.executiveGameTurn.getLatestTurn.invalidate({ gameId });
+      utils.executivePhase.getCurrentPhase.invalidate({ gameId });
+      utils.executivePlayer.getExecutivePlayerByUserIdAndGameId.invalidate({
+        userId: authPlayer.userId,
+        gameId,
+      });
+      // Also invalidate card queries to ensure card locations are updated
+      utils.executiveCard.listConcealedCards.invalidate();
+      utils.executiveCard.listExecutiveCards.invalidate();
+    },
+  });
   return (
     <div className={`${isGrid ? "grid grid-cols-5" : "flex flex-row"} gap-2`}>
       {cards.map((card) => (

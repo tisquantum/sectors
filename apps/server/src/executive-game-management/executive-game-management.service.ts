@@ -1446,7 +1446,7 @@ export class ExecutiveGameManagementService {
     logStep('START'); // e.g. "START | total: 0 ms"
 
     // 2. Fetch the needed data in parallel
-    const [trick, card, player] = await Promise.all([
+    const [trick, card, player, existingTrickCard] = await Promise.all([
       this.prisma.executiveTrick.findFirst({
         where: { turnId: gameTurnId },
         include: {
@@ -1456,6 +1456,10 @@ export class ExecutiveGameManagementService {
       }),
       this.cardService.getExecutiveCard({ id: cardId }),
       this.playerService.getExecutivePlayerWithCards({ id: playerId }),
+      // Check if card has already been played in any trick
+      this.prisma.trickCard.findFirst({
+        where: { cardId },
+      }),
     ]);
 
     stepStart = logStep('Data fetched', stepStart);
@@ -1464,7 +1468,55 @@ export class ExecutiveGameManagementService {
     if (!card) throw new Error('Card not found');
     if (!player) throw new Error('Player not found');
 
-    // ... your validation logic (playerHasPlayedCard, must follow suit, etc.) ...
+    // VALIDATION: Check if trick has already been resolved
+    if (trick.trickWinnerId) {
+      throw new Error('Trick has already been resolved');
+    }
+
+    // VALIDATION: Check if card has already been played (already in a trick)
+    if (existingTrickCard) {
+      throw new Error('Card has already been played in a trick');
+    }
+
+    // VALIDATION: Check if card is in player's hand or gift
+    if (card.cardLocation !== CardLocation.HAND && card.cardLocation !== CardLocation.GIFT) {
+      throw new Error(`Card is not in player's hand or gift. Current location: ${card.cardLocation}`);
+    }
+
+    // VALIDATION: Check if card belongs to the player
+    if (card.playerId !== playerId) {
+      throw new Error('Card does not belong to this player');
+    }
+
+    // VALIDATION: Check if player has already played a card in this trick
+    const playerHasPlayedInTrick = trick.trickCards.some(
+      (tc) => tc.playerId === playerId,
+    );
+    if (playerHasPlayedInTrick) {
+      throw new Error('Player has already played a card in this trick');
+    }
+
+    // VALIDATION: Check if it's the player's turn
+    const currentPhase = await this.phaseService.getCurrentExecutivePhase({
+      gameId,
+    });
+    if (!currentPhase) {
+      throw new Error('No active phase found');
+    }
+
+    if (currentPhase.phaseName !== ExecutivePhaseName.SELECT_TRICK) {
+      throw new Error(`Cannot play card in phase: ${currentPhase.phaseName}`);
+    }
+
+    if (currentPhase.activePlayerId !== playerId) {
+      throw new Error('It is not this player\'s turn to play a card');
+    }
+
+    // VALIDATION: Check if the trick matches the current phase's trick
+    if (currentPhase.executiveTrickId && currentPhase.executiveTrickId !== trick.id) {
+      throw new Error('Trick does not match the current phase');
+    }
+
     stepStart = logStep('Validations complete', stepStart);
 
     // 3. Update the card
