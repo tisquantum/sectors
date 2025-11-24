@@ -14,7 +14,9 @@ export default (trpc: TrpcService, ctx: Context) =>
       .query(async ({ input }) => {
         const { gameId } = input;
         const deck = await ctx.executiveCardService.getDeck(gameId);
-        if (!deck) {
+        // deck can be an empty array, which is valid (empty deck)
+        // Only throw error if the result is null/undefined (which shouldn't happen)
+        if (deck === null || deck === undefined) {
           throw new Error('Deck not found');
         }
         return deck;
@@ -24,11 +26,13 @@ export default (trpc: TrpcService, ctx: Context) =>
       .input(z.object({ gameId: z.string() }))
       .query(async ({ input }) => {
         const { gameId } = input;
-        const deck = await ctx.executiveCardService.getDeckCardCount(gameId);
-        if (!deck) {
+        const deckCount = await ctx.executiveCardService.getDeckCardCount(gameId);
+        // deckCount can be 0, which is a valid value (empty deck)
+        // Only throw error if the result is undefined/null (which shouldn't happen)
+        if (deckCount === undefined || deckCount === null) {
           throw new Error('Deck not found');
         }
-        return deck;
+        return deckCount;
       }),
 
     // Retrieve a specific ExecutiveCard by unique input
