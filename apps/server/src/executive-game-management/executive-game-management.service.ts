@@ -600,7 +600,8 @@ export class ExecutiveGameManagementService {
   }
 
   async boardCleanup(gameId: string) {
-    //get all cards that are in trick or trump
+    // Only clean up cards from the previous turn (TRICK and TRUMP)
+    // Do NOT clear HAND and BRIBE cards as those are for the current turn
     const cardsInPlay = await this.cardService.listExecutiveCards({
       where: {
         gameId,
@@ -608,8 +609,8 @@ export class ExecutiveGameManagementService {
           in: [
             CardLocation.TRICK,
             CardLocation.TRUMP,
-            CardLocation.BRIBE,
-            CardLocation.HAND,
+            // NOTE: We intentionally exclude HAND and BRIBE here
+            // because those are dealt fresh each turn and should not be cleared
           ],
         },
       },
@@ -630,6 +631,19 @@ export class ExecutiveGameManagementService {
         playerId: null,
       },
     });
+    
+    // Invalidate cache for this game since we've moved cards back to deck
+    // This ensures the card service cache reflects the updated card locations
+    const cachedCards = this.cardService['cardCache']?.get(gameId);
+    if (cachedCards) {
+      cardIds.forEach((cardId) => {
+        const card = cachedCards.find((c) => c.id === cardId);
+        if (card) {
+          card.cardLocation = CardLocation.DECK;
+          card.playerId = null;
+        }
+      });
+    }
   }
 
   async newTrickOrTurn(gameId: string, gameTurn: ExecutiveGameTurn) {
