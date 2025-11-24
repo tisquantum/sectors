@@ -1751,7 +1751,7 @@ export class ExecutiveGameManagementService {
         where: { id: update.id },
         data: {
           cardLocation: update.cardLocation,
-          playerId: update.playerId,
+          player: { connect: { id: update.playerId } },
         },
       })
     );
