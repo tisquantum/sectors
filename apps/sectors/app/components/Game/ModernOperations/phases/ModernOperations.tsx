@@ -143,6 +143,38 @@ export default function ModernOperations() {
           </div>
         </ModernOperationsSection>
 
+        {/* Selected Company Operations */}
+        {selectedCompany && (
+          <ModernOperationsSection title="Company Operations">
+            {selectedCompany.isCEO ? (
+              <ModernCompany
+                companyId={selectedCompany.id}
+                gameId={gameId}
+                isCEO={true}
+              />
+            ) : (
+              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+                <p className="text-yellow-400">
+                  You are not the CEO of this company. Only the CEO can perform operations actions.
+                  {selectedCompany.ceoPlayer && (
+                    <span className="block mt-2 text-sm text-gray-300">
+                      CEO: <strong>{selectedCompany.ceoPlayer.nickname}</strong>
+                    </span>
+                  )}
+                </p>
+                {/* Show read-only view */}
+                <div className="mt-4">
+                  <ModernCompany
+                    companyId={selectedCompany.id}
+                    gameId={gameId}
+                    isCEO={false}
+                  />
+                </div>
+              </div>
+            )}
+          </ModernOperationsSection>
+        )}
+
         {/* Research Track */}
         <SectorResearchTracks />
       </div>

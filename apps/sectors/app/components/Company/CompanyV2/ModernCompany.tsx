@@ -12,12 +12,14 @@ interface ModernCompanyProps {
   companyId: string;
   gameId: string;
   currentPhase?: string;
+  isCEO?: boolean;
 }
 
 export function ModernCompany({
   companyId,
   gameId,
   currentPhase,
+  isCEO = false,
 }: ModernCompanyProps) {
   const { data: company } = trpc.company.getCompanyWithSector.useQuery({
     id: companyId,
@@ -38,6 +40,7 @@ export function ModernCompany({
           <FactorySlots
             companyId={companyId}
             gameId={gameId}
+            isCEO={isCEO}
           />
         </div>
       </div>
@@ -52,6 +55,7 @@ export function ModernCompany({
           <MarketingSlots
             companyId={companyId}
             gameId={gameId}
+            isCEO={isCEO}
           />
         </div>
       </div>
@@ -66,6 +70,7 @@ export function ModernCompany({
           <ResearchSlot
             companyId={companyId}
             gameId={gameId}
+            isCEO={isCEO}
           />
         </div>
       </div>

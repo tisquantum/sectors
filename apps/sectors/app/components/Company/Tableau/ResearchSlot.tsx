@@ -10,6 +10,7 @@ import { PhaseName } from '@server/prisma/prisma.client';
 interface ResearchSlotProps {
   companyId: string;
   gameId: string;
+  isCEO?: boolean;
 }
 
 const RESEARCH_COSTS = {
@@ -19,7 +20,7 @@ const RESEARCH_COSTS = {
   4: 400, // Stage 4 (researchMarker 16-20)
 };
 
-export function ResearchSlot({ companyId, gameId }: ResearchSlotProps) {
+export function ResearchSlot({ companyId, gameId, isCEO = false }: ResearchSlotProps) {
   const [showResearchCreation, setShowResearchCreation] = useState(false);
   const { currentPhase } = useGame();
 
@@ -61,8 +62,8 @@ export function ResearchSlot({ companyId, gameId }: ResearchSlotProps) {
   const canResearch = company && company.cashOnHand >= researchCost;
 
   const handleSlotClick = () => {
-    // Only allow clicks during MODERN_OPERATIONS phase
-    if (!isModernOperationsPhase) return;
+    // Only allow clicks during MODERN_OPERATIONS phase and if user is CEO
+    if (!isModernOperationsPhase || !isCEO) return;
     if (canResearch && !showResearchCreation) {
       setShowResearchCreation(true);
     }
@@ -92,12 +93,12 @@ export function ResearchSlot({ companyId, gameId }: ResearchSlotProps) {
         className={cn(
           'relative w-full rounded border transition-all flex flex-col items-center justify-center p-2',
           researchProgress > 0 && 'border-blue-400 bg-blue-400/20 text-blue-200 cursor-default h-auto min-h-[48px]',
-          // Only allow interaction during MODERN_OPERATIONS phase
-          isModernOperationsPhase && canResearch && researchProgress === 0
+          // Only allow interaction during MODERN_OPERATIONS phase and if user is CEO
+          isModernOperationsPhase && isCEO && canResearch && researchProgress === 0
             ? 'border-blue-400/60 bg-blue-400/10 text-blue-300 hover:bg-blue-400/20 h-auto min-h-[48px] cursor-pointer'
             : 'border-gray-600/40 bg-gray-700/30 text-gray-500 cursor-not-allowed h-12',
-          // Dim if not in correct phase
-          !isModernOperationsPhase && canResearch && researchProgress === 0 && 'opacity-50'
+          // Dim if not in correct phase or not CEO
+          (!isModernOperationsPhase || !isCEO) && canResearch && researchProgress === 0 && 'opacity-50'
         )}
       >
         {researchProgress > 0 ? (

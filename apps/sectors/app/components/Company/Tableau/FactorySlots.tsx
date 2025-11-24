@@ -40,9 +40,10 @@ interface FactorySlotsProps {
   companyId: string;
   gameId: string;
   currentPhase?: number;
+  isCEO?: boolean;
 }
 
-export function FactorySlots({ companyId, gameId, currentPhase }: FactorySlotsProps) {
+export function FactorySlots({ companyId, gameId, currentPhase, isCEO = false }: FactorySlotsProps) {
   const { currentPhase: gamePhase } = useGame();
   const [showFactoryCreation, setShowFactoryCreation] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<FactorySlot | null>(null);
@@ -216,8 +217,8 @@ export function FactorySlots({ companyId, gameId, currentPhase }: FactorySlotsPr
   }, [currentResearchStage]);
 
   const handleSlotClick = (slot: FactorySlot) => {
-    // Only allow clicks during MODERN_OPERATIONS phase
-    if (!isModernOperationsPhase) return;
+    // Only allow clicks during MODERN_OPERATIONS phase and if user is CEO
+    if (!isModernOperationsPhase || !isCEO) return;
     if (slot.isAvailable && !slot.isOccupied) {
       setSelectedSlot(slot);
       setShowFactoryCreation(true);
@@ -301,12 +302,12 @@ export function FactorySlots({ companyId, gameId, currentPhase }: FactorySlotsPr
                 'relative w-full rounded border transition-all flex items-center justify-center',
                 slot.isOccupied ? 'h-auto' : 'h-8',
                 slot.isOccupied && 'border-orange-400 bg-orange-400/20 text-orange-200 cursor-default',
-                // Only allow interaction during MODERN_OPERATIONS phase
-                isModernOperationsPhase && slot.isAvailable && !slot.isOccupied
+                // Only allow interaction during MODERN_OPERATIONS phase and if user is CEO
+                isModernOperationsPhase && isCEO && slot.isAvailable && !slot.isOccupied
                   ? 'border-orange-400/60 bg-orange-400/10 text-orange-300 hover:bg-orange-400/20 cursor-pointer hover:border-orange-400'
                   : 'border-gray-600/40 bg-gray-700/30 text-gray-500 cursor-not-allowed',
-                // Dim available slots if not in correct phase
-                !isModernOperationsPhase && slot.isAvailable && !slot.isOccupied && 'opacity-50'
+                // Dim available slots if not in correct phase or not CEO
+                (!isModernOperationsPhase || !isCEO) && slot.isAvailable && !slot.isOccupied && 'opacity-50'
               )}
             >
               {slot.isOccupied && slot.factory ? (

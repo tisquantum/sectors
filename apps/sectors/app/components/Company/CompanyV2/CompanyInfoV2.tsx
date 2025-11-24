@@ -285,7 +285,7 @@ const CompanyInfoV2 = ({
   showingProductionResults?: boolean;
   isMinimal?: boolean;
 }) => {
-  const { currentPhase, gameState } = useGame();
+  const { currentPhase, gameState, authPlayer } = useGame();
   const {
     data: company,
     isLoading: isLoadingCompany,
@@ -548,6 +548,7 @@ const CompanyInfoV2 = ({
         companyId={company.id}
         gameId={company.gameId}
         currentPhase={currentPhase?.id}
+        isCEO={company.ceoId === authPlayer?.id}
       />
       {!isMinimal && (
         <Accordion className="mt-2">

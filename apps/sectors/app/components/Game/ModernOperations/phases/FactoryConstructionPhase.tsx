@@ -130,6 +130,7 @@ const FactoryConstructionPhase = () => {
                             companyId={company.id}
                             gameId={gameId}
                             currentPhase={currentPhase?.id}
+                            isCEO={true}
                           />
                         </div>
 
