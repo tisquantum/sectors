@@ -770,14 +770,31 @@ export class ExecutiveGameManagementService {
       .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())[0];
     let nextPlayer: ExecutivePlayer | null = null;
     if (!previousSelectTrickOfExecutiveTrickPhase) {
-      //get the COO player
-      nextPlayer = await this.playerService.findExecutivePlayer({
-        gameId: gameTurn.gameId,
-        isCOO: true,
-      });
-      if (!nextPlayer) {
-        console.error('COO not found');
-        throw new Error('COO not found');
+      //get the COO player - check cache first, then database
+      const cachedCOO = players.find((p) => p.isCOO);
+      if (cachedCOO) {
+        nextPlayer = cachedCOO;
+      } else {
+        // If not in cache, query database
+        nextPlayer = await this.playerService.findExecutivePlayer({
+          gameId: gameTurn.gameId,
+          isCOO: true,
+        });
+        if (!nextPlayer) {
+          console.error('COO not found in cache or database');
+          throw new Error('COO not found');
+        }
+        // Update cache with the COO player
+        const gameCache = this.gameCache.get(gameTurn.gameId);
+        if (gameCache) {
+          this.gameCache.set(gameTurn.gameId, {
+            ...gameCache,
+            players: players.map((p) => ({
+              ...p,
+              isCOO: p.id === nextPlayer!.id,
+            })),
+          });
+        }
       }
     } else {
       if (!previousSelectTrickOfExecutiveTrickPhase.activePlayerId) {
@@ -818,6 +835,63 @@ export class ExecutiveGameManagementService {
   }
 
   async startTrick(gameId: string, gameTurnId: string) {
+    // Discard any bribe cards that were not bid on (not selected)
+    // Bribe cards that are not bid on should be discarded, not put back in the deck
+    const allBribeCards = await this.cardService.listExecutiveCards({
+      where: {
+        gameId,
+        cardLocation: CardLocation.BRIBE,
+      },
+    });
+
+    // Get all selected influence bids for this turn
+    const selectedBids = await this.influenceBidService.listExecutiveInfluenceBids({
+      where: {
+        executiveGameTurnId: gameTurnId,
+        isSelected: true,
+      },
+    });
+
+    // Get player IDs who have selected bids (their bribe cards were taken)
+    const playersWithSelectedBids = new Set(
+      selectedBids.map((bid) => bid.toPlayerId),
+    );
+
+    // Find bribe cards that were NOT bid on (not selected)
+    const unbiddedBribeCards = allBribeCards.filter(
+      (card) => card.playerId && !playersWithSelectedBids.has(card.playerId),
+    );
+
+    if (unbiddedBribeCards.length > 0) {
+      console.log(
+        `[startTrick] Game ${gameId}: Discarding ${unbiddedBribeCards.length} unbidded bribe cards`,
+      );
+
+      // Move unbidded bribe cards to DISCARD
+      const unbiddedCardIds = unbiddedBribeCards.map((card) => card.id);
+      await this.prisma.executiveCard.updateMany({
+        where: {
+          id: { in: unbiddedCardIds },
+        },
+        data: {
+          cardLocation: CardLocation.DISCARD,
+          playerId: null,
+        },
+      });
+
+      // Update cache
+      const cachedCards = this.cardService['cardCache']?.get(gameId);
+      if (cachedCards) {
+        unbiddedCardIds.forEach((cardId) => {
+          const card = cachedCards.find((c) => c.id === cardId);
+          if (card) {
+            card.cardLocation = CardLocation.DISCARD;
+            card.playerId = null;
+          }
+        });
+      }
+    }
+
     //create the trick
     await this.prisma.executiveTrick.create({
       data: {
@@ -970,6 +1044,12 @@ export class ExecutiveGameManagementService {
     }
   }
 
+  /**
+   * Determines the next player for influence bid selection.
+   * IMPORTANT: This method moves to the next player in sequence regardless of whether
+   * they have bids or not. Players with no bids must explicitly select "Take No Bid"
+   * to proceed - they are NOT automatically skipped.
+   */
   async determineInfluenceBidSelector(
     gameTurnId: string,
     gameId: string,
@@ -1019,7 +1099,8 @@ export class ExecutiveGameManagementService {
         throw new Error('COO not found');
       }
       try {
-        //update the phase
+        //update the phase - NOTE: We do NOT check if player has bids.
+        //Players with no bids must explicitly select "Take No Bid"
         return await this.phaseService.updateExecutivePhase({
           where: { id: currentPhaseId },
           data: {
@@ -1032,6 +1113,8 @@ export class ExecutiveGameManagementService {
       }
     } else {
       //otherwise, the next player is the player to the left of the previous player
+      //NOTE: We move to the next player in sequence regardless of whether they have bids.
+      //Players with no bids will need to select "Take No Bid" to proceed.
       if (!previousPhase.activePlayerId) {
         throw new Error('Active player not found');
       }
@@ -1051,7 +1134,7 @@ export class ExecutiveGameManagementService {
         throw new Error('Previous player not found');
       }
       try {
-        //get the next player
+        //get the next player in sequence (regardless of whether they have bids)
         nextPlayer = this.findNewActivePlayer(previousPlayer, players);
       } catch (error) {
         console.error('error', error);
@@ -1074,6 +1157,8 @@ export class ExecutiveGameManagementService {
           throw new Error('Next player not found');
         }
         try {
+          //update the phase - NOTE: We do NOT check if player has bids.
+          //Players with no bids must explicitly select "Take No Bid"
           return await this.phaseService.updateExecutivePhase({
             where: { id: currentPhaseId },
             data: {
@@ -1678,14 +1763,22 @@ export class ExecutiveGameManagementService {
     }
     stepStart = logStep('All updates completed', stepStart);
 
-    // 8. Update the local cache
+    // 8. Update the local cache - refresh players from database to ensure COO is updated
     const gameCache = this.gameCache.get(gameId);
-    const players =
-      gameCache?.players ??
-      (await this.playerService.listExecutivePlayersNoRelations({
-        where: { gameId },
-      }));
+    // Always refresh players from database after COO update to ensure consistency
+    const players = await this.playerService.listExecutivePlayersNoRelations({
+      where: { gameId },
+    });
     if (!players) throw new Error('Players not found');
+
+    // Verify the COO was set correctly in the database
+    const cooPlayer = players.find((p) => p.isCOO);
+    if (!cooPlayer || cooPlayer.id !== trickLeader.playerId) {
+      console.error(
+        `[resolveTrickWinner] COO mismatch: expected ${trickLeader.playerId}, found ${cooPlayer?.id || 'none'}`,
+      );
+      // This shouldn't happen, but log it for debugging
+    }
 
     this.gameCache.set(gameId, {
       ...gameCache,
@@ -1749,6 +1842,44 @@ export class ExecutiveGameManagementService {
     
     if (handSize <= 0) {
       throw new Error(`Invalid hand size: ${handSize} for game ${gameId}`);
+    }
+    
+    // IMPORTANT: Clear any existing BRIBE cards before dealing new ones
+    // This ensures players never have more than one bribe card per turn
+    // NOTE: Existing bribe cards should have been discarded in startTrick,
+    // but we clear any remaining ones here as a safety measure
+    const existingBribeCards = await this.cardService.listExecutiveCards({
+      where: {
+        gameId,
+        cardLocation: CardLocation.BRIBE,
+      },
+    });
+    
+    if (existingBribeCards.length > 0) {
+      console.log(`[dealCards] Game ${gameId}: Discarding ${existingBribeCards.length} existing bribe cards before dealing new ones`);
+      // Discard existing bribe cards (they should have been discarded in startTrick, but clear any remaining)
+      const bribeCardIds = existingBribeCards.map((card) => card.id);
+      await this.prisma.executiveCard.updateMany({
+        where: {
+          id: { in: bribeCardIds },
+        },
+        data: {
+          cardLocation: CardLocation.DISCARD,
+          playerId: null,
+        },
+      });
+      
+      // Update cache
+      const cachedCards = this.cardService['cardCache']?.get(gameId);
+      if (cachedCards) {
+        bribeCardIds.forEach((cardId) => {
+          const card = cachedCards.find((c) => c.id === cardId);
+          if (card) {
+            card.cardLocation = CardLocation.DISCARD;
+            card.playerId = null;
+          }
+        });
+      }
     }
     
     // Draw enough cards for both hands and bribes for each player
@@ -1824,6 +1955,53 @@ export class ExecutiveGameManagementService {
     
     const updateResults = await Promise.all(updatePromises);
     console.log(`[dealCards] Game ${gameId}: Successfully updated ${updateResults.length} cards`);
+    
+    // VALIDATION: Verify each player has exactly one bribe card
+    for (const player of players) {
+      const playerBribeCards = await this.cardService.listExecutiveCards({
+        where: {
+          gameId,
+          playerId: player.id,
+          cardLocation: CardLocation.BRIBE,
+        },
+      });
+      
+      if (playerBribeCards.length > 1) {
+        console.error(`[dealCards] ERROR: Player ${player.id} has ${playerBribeCards.length} bribe cards! Expected 1.`);
+        // Move extra bribe cards back to deck
+        const extraCards = playerBribeCards.slice(1);
+        const extraCardIds = extraCards.map((card) => card.id);
+        await this.prisma.executiveCard.updateMany({
+          where: {
+            id: { in: extraCardIds },
+          },
+          data: {
+            cardLocation: CardLocation.DECK,
+            playerId: null,
+          },
+        });
+        
+        // Update cache
+        const cachedCards = this.cardService['cardCache']?.get(gameId);
+        if (cachedCards) {
+          extraCardIds.forEach((cardId) => {
+            const card = cachedCards.find((c) => c.id === cardId);
+            if (card) {
+              card.cardLocation = CardLocation.DECK;
+              card.playerId = null;
+            }
+          });
+        }
+        
+        throw new Error(`Player ${player.id} ended up with ${playerBribeCards.length} bribe cards. This should never happen.`);
+      }
+      
+      if (playerBribeCards.length === 0) {
+        console.error(`[dealCards] ERROR: Player ${player.id} has no bribe cards! Expected 1.`);
+        throw new Error(`Player ${player.id} has no bribe cards after dealing.`);
+      }
+    }
+    
     //take one card from the deck for the trump card
     const trumpCard = await this.cardService.drawCards(gameId, 1);
     //update the trump card

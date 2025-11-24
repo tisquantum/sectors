@@ -112,6 +112,8 @@ export const Tricks = ({
                   card.card.cardValue === winningCard.cardValue &&
                   card.card.cardSuit === winningCard.cardSuit;
 
+                const isLead = card.isLead;
+
                 return (
                   <Badge
                     className="top-[-1px] w-8 h-8"
@@ -126,6 +128,7 @@ export const Tricks = ({
                       cardSuit={card.card.cardSuit}
                       isBordered={isWinner}
                       isWinning={isCurrentlyWinning ?? undefined}
+                      isLead={isLead}
                     />
                   </Badge>
                 );

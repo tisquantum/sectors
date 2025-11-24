@@ -31,7 +31,7 @@ import { InfluenceBidWithInfluence } from "@server/prisma/prisma.types";
 import DebounceButton from "../../General/DebounceButton";
 import { PlayerPassed } from "../Player/PlayerPassed";
 import { toast } from "sonner";
-import { RiLock2Fill, RiLockUnlockFill } from "@remixicon/react";
+import { RiLock2Fill, RiLockUnlockFill, RiStarFill } from "@remixicon/react";
 import { TakeNoBid } from "../Player/TakeNoBid";
 import { Votes } from "../Player/Votes";
 import { Agendas } from "../Player/Agenda";
@@ -812,7 +812,7 @@ const Bribe = ({
 };
 
 export const PlayerTableau = ({ playerId }: { playerId: string }) => {
-  const { gameState, currentPhase, isAuthPlayerPhasing, authPlayer } =
+  const { gameState, currentPhase, isAuthPlayerPhasing, authPlayer, currentTurn } =
     useExecutiveGame();
   const player = gameState.players.find((p) => p.id === playerId);
   if (!player) {
@@ -823,6 +823,12 @@ export const PlayerTableau = ({ playerId }: { playerId: string }) => {
   }
   const isAuthPlayerAndPhasing =
     isAuthPlayerPhasing && player.id == authPlayer?.id;
+
+  // Check if this player set the lead in the current trick
+  const currentTrick = currentTurn?.tricks?.find((trick) => !trick.trickWinnerId);
+  const leadCard = currentTrick?.trickCards?.find((tc) => tc.isLead);
+  const playerSetLead = leadCard?.playerId === playerId && 
+    currentPhase?.phaseName === ExecutivePhaseName.SELECT_TRICK;
   return (
     <div
       className={`flex flex-col gap-3 p-5 rounded-md items-center justify-center ${
@@ -860,6 +866,13 @@ export const PlayerTableau = ({ playerId }: { playerId: string }) => {
                         ExecutivePhaseName.INFLUENCE_BID_SELECTION && (
                         <TakeNoBid />
                       )}
+                    {/* Lead indicator - show when player set the lead */}
+                    {playerSetLead && (
+                      <div className="flex items-center gap-1 px-2 py-1 bg-blue-500 rounded-md text-white text-xs font-semibold">
+                        <RiStarFill size={14} />
+                        <span>Lead</span>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div

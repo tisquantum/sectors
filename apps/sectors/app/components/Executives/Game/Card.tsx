@@ -1,5 +1,5 @@
 import { Avatar } from "@nextui-org/react";
-import { RiLock2Fill } from "@remixicon/react";
+import { RiLock2Fill, RiStarFill } from "@remixicon/react";
 import { CardSuit } from "@server/prisma/prisma.client";
 import { ClubIcon, DiamondIcon, HeartIcon, SpadeIcon } from "lucide-react";
 
@@ -9,12 +9,14 @@ const PlayingCard = ({
   isLocked,
   isBordered,
   isWinning,
+  isLead,
 }: {
   cardNumber: number;
   cardSuit: CardSuit;
   isLocked?: boolean;
   isBordered?: boolean;
   isWinning?: boolean;
+  isLead?: boolean;
 }) => {
   const suitIcon = {
     [CardSuit.SPADE]: <SpadeIcon fill="white" size={24} />,
@@ -58,6 +60,16 @@ const PlayingCard = ({
           color="yellow"
           className="absolute top-2 right-2 text-lg"
         />
+      )}
+      {/* Lead card indicator */}
+      {isLead && (
+        <div className="absolute -top-1 -right-1 bg-blue-500 rounded-full p-0.5 shadow-lg">
+          <RiStarFill
+            color="white"
+            className="text-xs"
+            size={12}
+          />
+        </div>
       )}
     </div>
   );
