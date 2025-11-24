@@ -15,6 +15,19 @@ export class ExecutivePhaseService {
     });
   }
 
+  async getCurrentExecutivePhase({
+    gameId,
+  }: {
+    gameId: string;
+  }): Promise<ExecutivePhase | null> {
+    return this.prisma.executivePhase.findFirst({
+      where: { gameId },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
   // List all ExecutivePhases with optional filtering, pagination, and sorting
   async listExecutivePhases(params: {
     skip?: number;
