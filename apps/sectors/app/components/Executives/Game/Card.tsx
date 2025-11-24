@@ -8,11 +8,13 @@ const PlayingCard = ({
   cardSuit,
   isLocked,
   isBordered,
+  isWinning,
 }: {
   cardNumber: number;
   cardSuit: CardSuit;
   isLocked?: boolean;
   isBordered?: boolean;
+  isWinning?: boolean;
 }) => {
   const suitIcon = {
     [CardSuit.SPADE]: <SpadeIcon fill="white" size={24} />,
@@ -23,11 +25,20 @@ const PlayingCard = ({
 
   const color = ["SPADE", "CLUB"].includes(cardSuit) ? "default" : "danger";
 
+  // Determine border styling - winning card gets a more prominent highlight
+  const borderClass = isWinning
+    ? "border-4 border-yellow-400 shadow-lg shadow-yellow-400/50 ring-2 ring-yellow-300"
+    : isBordered
+    ? "border-2 border-gray-400"
+    : "";
+
   return (
     <div
-      className={`relative flex items-center justify-center w-14 h-14 rounded-medium ${
-        isBordered ? "border-2 border-gray-400" : ""
-      } ${color === "danger" ? "bg-red-600" : "bg-gray-800"}`}
+      className={`relative flex items-center justify-center w-14 h-14 rounded-medium transition-all duration-300 ${
+        borderClass
+      } ${color === "danger" ? "bg-red-600" : "bg-gray-800"} ${
+        isWinning ? "scale-110 z-10" : ""
+      }`}
     >
       {/* Locked effect */}
       {isLocked && (
