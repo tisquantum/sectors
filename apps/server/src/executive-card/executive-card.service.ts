@@ -12,21 +12,28 @@ export class ExecutiveCardService {
   async getDeck(gameId: string): Promise<ExecutiveCard[]> {
     // Check cache for the deck
     if (this.cardCache.has(gameId)) {
-      //if deck is empty, look at tdb
-      if (this.cardCache.get(gameId)?.length === 0) {
-        const deck = await this.listExecutiveCards({
-          where: {
-            gameId,
-            cardLocation: CardLocation.DECK,
-          },
-        });
-        return deck;
+      const cachedCards = this.cardCache.get(gameId) || [];
+      const cachedDeck = cachedCards.filter((card) => card.cardLocation === CardLocation.DECK);
+      
+      // If we have cached cards, return the filtered deck
+      // But also verify the cache is complete by checking if we have a reasonable number of cards
+      // (A full deck has 40 cards, so if cache has cards but deck is suspiciously small, refresh)
+      if (cachedCards.length > 0) {
+        // If deck seems too small but we have cached cards, refresh from DB to be safe
+        if (cachedDeck.length < 10 && cachedCards.length > 10) {
+          // Cache might be stale - refresh from database
+          const dbDeck = await this.listExecutiveCards({
+            where: {
+              gameId,
+              cardLocation: CardLocation.DECK,
+            },
+          });
+          // Update cache with fresh deck data
+          await this.refreshCacheForGame(gameId);
+          return dbDeck;
+        }
+        return cachedDeck;
       }
-      return (
-        this.cardCache
-          .get(gameId)
-          ?.filter((card) => card.cardLocation === CardLocation.DECK) || []
-      );
     }
 
     // Fetch from database if not cached
@@ -36,6 +43,13 @@ export class ExecutiveCardService {
         cardLocation: CardLocation.DECK,
       },
     });
+
+    // OPTIMIZATION: Populate cache with all cards for this game when fetching deck
+    // This ensures the cache is complete for future operations
+    // Only refresh if we don't have a cache entry to avoid unnecessary DB calls
+    if (!this.cardCache.has(gameId)) {
+      await this.refreshCacheForGame(gameId);
+    }
 
     return deck;
   }
@@ -86,19 +100,28 @@ export class ExecutiveCardService {
     gameId: string,
     cardsToDraw: number,
   ): Promise<ExecutiveCard[]> {
-    // Retrieve the current deck
+    // Retrieve the current deck - this will refresh cache if needed
     let deck = await this.getDeck(gameId);
+
+    // If the deck is empty or fewer cards than requested are available, throw an error
+    if (deck.length < cardsToDraw) {
+      // Before throwing, try refreshing the cache one more time from the database
+      await this.refreshCacheForGame(gameId);
+      deck = await this.getDeck(gameId);
+      
+      if (deck.length < cardsToDraw) {
+        throw new Error(`Not enough cards left in the deck. Requested ${cardsToDraw}, but only ${deck.length} available.`);
+      }
+    }
 
     // Shuffle the deck
     deck = await this.shuffle(deck);
 
-    // If the deck is empty or fewer cards than requested are available, throw an error
-    if (deck.length < cardsToDraw) {
-      throw new Error('Not enough cards left in the deck');
-    }
-
     // Draw the specified number of cards
     const drawnCards = deck.slice(0, cardsToDraw);
+
+    // NOTE: We don't update cache here because the cards will be updated via updateExecutiveCard
+    // when they're moved to HAND/BRIBE/TRUMP, which will update the cache properly
 
     return drawnCards;
   }
@@ -410,29 +433,45 @@ export class ExecutiveCardService {
       data,
     });
 
-    // Update the cache
-    const updatedCards = await this.prisma.executiveCard.findMany({
-      where,
-    });
+    // OPTIMIZATION: Refresh the entire cache for affected games to ensure consistency
+    // This is more reliable than trying to update individual cards in the cache
+    if (where.gameId) {
+      // If we have a gameId filter, refresh that game's cache
+      await this.refreshCacheForGame(where.gameId as string);
+    } else {
+      // If no gameId filter, we need to find which games were affected
+      const updatedCards = await this.prisma.executiveCard.findMany({
+        where,
+        select: { gameId: true },
+        distinct: ['gameId'],
+      });
 
-    if (updatedCards.length > 0) {
-      const gameId = updatedCards[0].gameId;
-      const currentCache = this.cardCache.get(gameId) || [];
-
-      // Update or replace cards in the cache
-      const updatedCache = currentCache.map(
-        (card) =>
-          updatedCards.find((updatedCard) => updatedCard.id === card.id) ||
-          card,
+      // Refresh cache for all affected games
+      await Promise.all(
+        updatedCards.map(card => this.refreshCacheForGame(card.gameId))
       );
-
-      this.cardCache.set(gameId, updatedCache);
     }
 
     return result;
+  }
+
+  /**
+   * Refresh the cache for a specific game by fetching all cards from the database
+   * This ensures the cache is complete and up-to-date
+   */
+  async refreshCacheForGame(gameId: string): Promise<void> {
+    const allCards = await this.listExecutiveCards({
+      where: {
+        gameId,
+      },
+    });
+    
+    // Update the cache with all cards for this game
+    this.cardCache.set(gameId, allCards);
   }
 
   clearCache(): void {
     this.cardCache.clear();
   }
 }
+
