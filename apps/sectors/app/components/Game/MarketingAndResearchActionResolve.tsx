@@ -152,7 +152,13 @@ export default function MarketingAndResearchActionResolve() {
                 <h3 className="text-lg font-semibold text-gray-200">{sector.name}</h3>
                 <div className="flex gap-2">
                   <Chip size="sm" color="primary" variant="flat">
-                    Technology Level: {sector.technologyLevel || 0}
+                    Research Stage: {(() => {
+                      const researchMarker = sector.researchMarker || 0;
+                      if (researchMarker >= 16) return 4;
+                      if (researchMarker >= 11) return 3;
+                      if (researchMarker >= 6) return 2;
+                      return 1;
+                    })()}
                   </Chip>
                   <Chip size="sm" color="secondary" variant="flat">
                     Research Marker: {sector.researchMarker || 0}

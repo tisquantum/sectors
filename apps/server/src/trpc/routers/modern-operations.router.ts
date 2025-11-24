@@ -274,10 +274,21 @@ export default (trpc: TrpcService, ctx: Context) =>
           throw new Error('Sector not found');
         }
 
+        // Calculate research stage from researchMarker (0-5 = Stage 1, 6-10 = Stage 2, 11-15 = Stage 3, 16-20+ = Stage 4)
+        const researchMarker = sector.researchMarker || 0;
+        let researchStage = 1;
+        if (researchMarker >= 16) {
+          researchStage = 4;
+        } else if (researchMarker >= 11) {
+          researchStage = 3;
+        } else if (researchMarker >= 6) {
+          researchStage = 2;
+        }
+
         return {
           sectorId: sector.id,
           sectorName: sector.sectorName,
-          technologyLevel: sector.technologyLevel,
+          researchStage,
           researchMarker: sector.researchMarker,
         };
       }),
@@ -292,12 +303,25 @@ export default (trpc: TrpcService, ctx: Context) =>
           where: { gameId: input.gameId },
         });
 
-        return sectors.map(sector => ({
-          sectorId: sector.id,
-          sectorName: sector.sectorName,
-          technologyLevel: sector.technologyLevel,
-          researchMarker: sector.researchMarker,
-        }));
+        return sectors.map(sector => {
+          // Calculate research stage from researchMarker (0-5 = Stage 1, 6-10 = Stage 2, 11-15 = Stage 3, 16-20+ = Stage 4)
+          const researchMarker = sector.researchMarker || 0;
+          let researchStage = 1;
+          if (researchMarker >= 16) {
+            researchStage = 4;
+          } else if (researchMarker >= 11) {
+            researchStage = 3;
+          } else if (researchMarker >= 6) {
+            researchStage = 2;
+          }
+
+          return {
+            sectorId: sector.id,
+            sectorName: sector.sectorName,
+            researchStage,
+            researchMarker: sector.researchMarker,
+          };
+        });
       }),
 
     // Get worker allocation by sector for workforce track display

@@ -30,15 +30,24 @@ interface MarketingSlotsProps {
   isCEO?: boolean;
 }
 
-// Helper to get max marketing slots based on technology level (same as factories)
-const getMaxMarketingSlots = (technologyLevel: number): number => {
-  switch (technologyLevel) {
+// Helper to get max marketing slots based on research stage (same as factories)
+// Research stages: 0-5 = Stage 1, 6-10 = Stage 2, 11-15 = Stage 3, 16-20+ = Stage 4
+const getMaxMarketingSlots = (researchStage: number): number => {
+  switch (researchStage) {
     case 1: return 2;
     case 2: return 3;
     case 3: return 4;
     case 4: return 5;
     default: return 2;
   }
+};
+
+// Calculate research stage from researchMarker
+const getResearchStage = (researchMarker: number): number => {
+  if (researchMarker >= 16) return 4;
+  if (researchMarker >= 11) return 3;
+  if (researchMarker >= 6) return 2;
+  return 1;
 };
 
 export function MarketingSlots({ companyId, gameId, isCEO = false }: MarketingSlotsProps) {
@@ -66,9 +75,10 @@ export function MarketingSlots({ companyId, gameId, isCEO = false }: MarketingSl
     return getSectorResourceForSectorName(company.Sector.sectorName as SectorName);
   }, [company]);
 
-  // Get technology level to determine slot availability
-  const technologyLevel = company?.Sector?.technologyLevel || 0;
-  const maxSlots = getMaxMarketingSlots(technologyLevel);
+  // Get research stage to determine slot availability
+  const researchMarker = company?.Sector?.researchMarker || 0;
+  const researchStage = getResearchStage(researchMarker);
+  const maxSlots = getMaxMarketingSlots(researchStage);
 
   // Build slot configuration from real campaign data
   const SLOT_CONFIG: MarketingSlot[] = useMemo(() => {

@@ -287,12 +287,19 @@ export class ModernOperationMechanicsService {
         continue;
       }
 
-      // Check factory limit based on sector technology level
+      // Check factory limit based on research stage (slots available)
       const existingFactories = factoryCountMap.get(company.id) || 0;
       
-      const maxFactories = this.getMaxFactories(company.Sector.technologyLevel);
+      // Get research stage to determine available slots
+      const researchStage = this.getResearchStage(company.Sector.researchMarker || 0);
+      const slotPhases = this.getSlotPhasesForResearchStage(researchStage);
+      const slotsAvailable = slotPhases.length;
+      
+      // Max factories = number of slots available for current research stage
+      const maxFactories = slotsAvailable;
+      
       if (existingFactories >= maxFactories) {
-        const failureReason = `Factory limit reached. Maximum factories allowed: ${maxFactories} (based on sector technology level ${company.Sector.technologyLevel})`;
+        const failureReason = `Factory limit reached. Maximum factories allowed: ${maxFactories} (${slotsAvailable} slots available in Research Stage ${researchStage})`;
         orderUpdates.push({ id: order.id, failureReason });
         gameLogEntries.push({
           gameId: phase.gameId,
@@ -712,20 +719,6 @@ export class ModernOperationMechanicsService {
     });
   }
 
-  private getMaxFactories(technologyLevel: number): number {
-    switch (technologyLevel) {
-      case 1:
-        return 2;
-      case 2:
-        return 3;
-      case 3:
-        return 4;
-      case 4:
-        return 5;
-      default:
-        return 2;
-    }
-  }
 
   private getRequiredWorkers(size: FactorySize): number {
     switch (size) {
@@ -2129,49 +2122,10 @@ export class ModernOperationMechanicsService {
   }
 
   private async updateResearchProgress(phase: Phase) {
-    // Update sector technology levels based on research progress
-    const sectors = await this.sectorService.sectors({
-      where: { gameId: phase.gameId },
-    });
-
-    for (const sector of sectors) {
-      // Get total research progress from all companies in sector
-      const companies = await this.companyService.companies({
-        where: {
-          sectorId: sector.id,
-          gameId: phase.gameId,
-        },
-      });
-
-      const totalResearch = companies.reduce(
-        (sum, company) => sum + company.researchProgress,
-        0,
-      );
-
-      // Update technology level based on milestones
-      let newTechLevel = sector.technologyLevel;
-      if (totalResearch >= 50 && sector.technologyLevel < 4) {
-        newTechLevel = 4;
-      } else if (totalResearch >= 30 && sector.technologyLevel < 3) {
-        newTechLevel = 3;
-      } else if (totalResearch >= 15 && sector.technologyLevel < 2) {
-        newTechLevel = 2;
-      } else if (totalResearch >= 5 && sector.technologyLevel < 1) {
-        newTechLevel = 1;
-      }
-
-      if (newTechLevel > sector.technologyLevel) {
-        await this.sectorService.updateSector({
-          where: { id: sector.id },
-          data: { technologyLevel: newTechLevel },
-        });
-
-        await this.gameLogService.createGameLog({
-          game: { connect: { id: phase.gameId } },
-          content: `${sector.sectorName} technology advanced to level ${newTechLevel}! New factory phases unlocked.`,
-        });
-      }
-    }
+    // Research stages are calculated dynamically from researchMarker
+    // No need to update a separate technology level field
+    // Research stages: 0-5 → Stage 1, 6-10 → Stage 2, 11-15 → Stage 3, 16-20+ → Stage 4
+    // This method is kept for potential future research-related updates
   }
 
   /**

@@ -7,16 +7,15 @@ interface Props {
   gameId: string;
 }
 
-const getTechnologyLevelName = (level: number): string => {
-  const names = ['Basic', 'Level 1', 'Level 2', 'Level 3', 'Level 4'];
-  return names[level] || `Level ${level}`;
+const getResearchStageName = (stage: number): string => {
+  return `Stage ${stage}`;
 };
 
-const getUnlockedFactorySizes = (level: number): string[] => {
-  if (level === 0) return ['Factory I'];
-  if (level === 1) return ['Factory I', 'Factory II'];
-  if (level === 2) return ['Factory I', 'Factory II', 'Factory III'];
-  return ['Factory I', 'Factory II', 'Factory III', 'Factory IV'];
+const getUnlockedFactorySizes = (stage: number): string[] => {
+  if (stage === 1) return ['Factory I'];
+  if (stage === 2) return ['Factory I', 'Factory II'];
+  if (stage === 3) return ['Factory II', 'Factory III'];
+  return ['Factory III', 'Factory IV'];
 };
 
 export function ResearchProgressTracker({ gameId }: Props) {
@@ -34,10 +33,21 @@ export function ResearchProgressTracker({ gameId }: Props) {
       
       <div className="space-y-4">
         {sectorsProgress.map((sector) => {
-          const nextMilestone = sector.technologyLevel + 1;
-          const requiredMarkers = RESEARCH_COSTS_BY_PHASE[nextMilestone] || 999;
-          const progressPercentage = (sector.researchMarker / requiredMarkers) * 100;
-          const unlockedSizes = getUnlockedFactorySizes(sector.technologyLevel);
+          // Calculate research stage from researchMarker (0-5 = Stage 1, 6-10 = Stage 2, 11-15 = Stage 3, 16-20+ = Stage 4)
+          const researchMarker = sector.researchMarker || 0;
+          let researchStage = 1;
+          if (researchMarker >= 16) {
+            researchStage = 4;
+          } else if (researchMarker >= 11) {
+            researchStage = 3;
+          } else if (researchMarker >= 6) {
+            researchStage = 2;
+          }
+
+          const nextMilestone = researchStage < 4 ? researchStage + 1 : 4;
+          const requiredMarkers = nextMilestone === 2 ? 6 : nextMilestone === 3 ? 11 : nextMilestone === 4 ? 16 : 20;
+          const progressPercentage = researchStage === 4 ? 100 : ((researchMarker / requiredMarkers) * 100);
+          const unlockedSizes = getUnlockedFactorySizes(researchStage);
 
           return (
             <div key={sector.sectorId} className="sector-progress bg-gray-900 p-4 rounded border border-gray-700">
@@ -48,11 +58,11 @@ export function ResearchProgressTracker({ gameId }: Props) {
                     {sector.sectorName.replace(/_/g, ' ')}
                   </h5>
                   <span className="px-2 py-1 bg-blue-900 text-blue-200 rounded text-xs">
-                    {getTechnologyLevelName(sector.technologyLevel)}
+                    {getResearchStageName(researchStage)}
                   </span>
                 </div>
                 <span className="text-sm text-gray-400">
-                  {sector.researchMarker} / {requiredMarkers} markers
+                  {researchMarker} / {requiredMarkers} markers
                 </span>
               </div>
 
@@ -75,9 +85,9 @@ export function ResearchProgressTracker({ gameId }: Props) {
                     {size}
                   </span>
                 ))}
-                {nextMilestone <= 3 && (
+                {nextMilestone <= 4 && researchStage < 4 && (
                   <span className="text-xs text-gray-500">
-                    → Next: Factory {nextMilestone + 1} ({requiredMarkers - sector.researchMarker} markers needed)
+                    → Next: Stage {nextMilestone} ({requiredMarkers - researchMarker} markers needed)
                   </span>
                 )}
               </div>

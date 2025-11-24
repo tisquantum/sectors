@@ -7,7 +7,7 @@ import { TrpcService } from '../trpc.service';
 import { PlayersService } from '@server/players/players.service';
 import { PhaseService } from '@server/phase/phase.service';
 import { GamesService } from '@server/games/games.service';
-import { getNumberForFactorySize, validFactorySizeForSectorTechnologyLevel } from '@server/data/helpers';
+import { getNumberForFactorySize, validFactorySizeForResearchStage } from '@server/data/helpers';
 import { SectorService } from '@server/sector/sector.service';
 import { CompanyService } from '@server/company/company.service';
 import { FactoryConstructionOrderService } from '../../factory-construction/factory-construction-order.service';
@@ -68,13 +68,25 @@ export const factoryConstructionRouter = (trpc: TrpcService, ctx: Context) => ro
         throw new Error('Company has no sector assigned');
       }
       
-      //ensure factory size is valid for the sector technologyLevel
+      // Ensure factory size is valid for the sector research stage
       const sector = await ctx.sectorService.sector({ id: company.sectorId });
       if(!sector) {
         throw new Error('Sector not found');
       }
-      if(validFactorySizeForSectorTechnologyLevel(input.size, sector.technologyLevel)) {
-        throw new Error('Factory size is not valid for the sector technology level');
+      
+      // Calculate research stage from researchMarker (0-5 = Stage 1, 6-10 = Stage 2, 11-15 = Stage 3, 16-20+ = Stage 4)
+      const researchMarker = sector.researchMarker || 0;
+      let researchStage = 1;
+      if (researchMarker >= 16) {
+        researchStage = 4;
+      } else if (researchMarker >= 11) {
+        researchStage = 3;
+      } else if (researchMarker >= 6) {
+        researchStage = 2;
+      }
+      
+      if(!validFactorySizeForResearchStage(input.size, researchStage)) {
+        throw new Error(`Factory size ${input.size} is not valid for research stage ${researchStage} (researchMarker: ${researchMarker})`);
       }
 
       //ensure resource types don't exceed the factory size

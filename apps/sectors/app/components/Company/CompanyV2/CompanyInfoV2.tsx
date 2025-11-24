@@ -252,16 +252,25 @@ const ResearchInfo = ({ companyId, gameId }: { companyId: string; gameId: string
   );
 
   const researchProgressValue = company?.researchProgress || 0;
-  const technologyLevel = (researchProgress as any)?.technologyLevel || company?.Sector?.technologyLevel || 0;
+  // Calculate research stage from researchMarker (0-5 = Stage 1, 6-10 = Stage 2, 11-15 = Stage 3, 16-20+ = Stage 4)
+  const researchMarker = company?.Sector?.researchMarker || 0;
+  let researchStage = 1;
+  if (researchMarker >= 16) {
+    researchStage = 4;
+  } else if (researchMarker >= 11) {
+    researchStage = 3;
+  } else if (researchMarker >= 6) {
+    researchStage = 2;
+  }
 
   return (
     <div className="mt-2 space-y-2">
       <div className="text-sm text-gray-400">
         Company Progress: <span className="text-blue-300 font-medium">{researchProgressValue}</span> spaces
       </div>
-      {(researchProgress || company?.Sector?.technologyLevel) && (
+      {researchMarker > 0 && (
         <div className="text-sm text-gray-400">
-          Sector Technology: Level <span className="text-blue-300 font-medium">{technologyLevel}</span>
+          Sector Research Stage: <span className="text-blue-300 font-medium">{researchStage}</span> (Marker: {researchMarker})
         </div>
       )}
       {(researchProgressValue >= 5 || researchProgressValue >= 10) && (

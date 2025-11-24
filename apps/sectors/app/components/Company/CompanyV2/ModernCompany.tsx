@@ -75,7 +75,7 @@ export function ModernCompany({
         </div>
       </div>
 
-      {/* Construction Orders & History */}
+      {/* Construction Orders & History - Visible to all players (not just CEO) */}
       <div className="space-y-2 pt-2 border-t border-gray-700">
         <ConstructionOrders companyId={companyId} gameId={gameId} showHistory={false} />
       </div>

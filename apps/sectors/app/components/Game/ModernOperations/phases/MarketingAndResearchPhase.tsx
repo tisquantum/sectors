@@ -402,7 +402,13 @@ export default function MarketingAndResearchPhase() {
                     {researchProgress && (
                       <li className="text-blue-300">
                         Sector Tech: Level{" "}
-                        {researchProgress.technologyLevel || 0}
+                        {(() => {
+                          const researchMarker = researchProgress?.researchMarker || 0;
+                          if (researchMarker >= 16) return 4;
+                          if (researchMarker >= 11) return 3;
+                          if (researchMarker >= 6) return 2;
+                          return 1;
+                        })()}
                       </li>
                     )}
                   </>

@@ -1123,17 +1123,33 @@ export function getNumberForFactorySize(factorySize: FactorySize) {
   }
 }
 
-export function validFactorySizeForSectorTechnologyLevel(factorySize: FactorySize, sectorTechnologyLevel: number) {
+/**
+ * Check if a factory size is valid for a given research stage
+ * Research stages determine which factory sizes are available:
+ * Stage 1 (0-5): FACTORY_I only
+ * Stage 2 (6-10): FACTORY_I, FACTORY_II
+ * Stage 3 (11-15): FACTORY_II, FACTORY_III
+ * Stage 4 (16-20+): FACTORY_III, FACTORY_IV
+ */
+export function validFactorySizeForResearchStage(factorySize: FactorySize, researchStage: number): boolean {
   switch (factorySize) {
     case FactorySize.FACTORY_I:
-      return sectorTechnologyLevel >= 1 && sectorTechnologyLevel <= 3;
+      return researchStage >= 1 && researchStage <= 2; // Available in stages 1-2
     case FactorySize.FACTORY_II:
-      return sectorTechnologyLevel >= 2 && sectorTechnologyLevel <= 4;
+      return researchStage >= 2 && researchStage <= 3; // Available in stages 2-3
     case FactorySize.FACTORY_III:
-      return sectorTechnologyLevel >= 3;
+      return researchStage >= 3 && researchStage <= 4; // Available in stages 3-4
     case FactorySize.FACTORY_IV:
-      return sectorTechnologyLevel >= 4;
+      return researchStage >= 4; // Available in stage 4+
     default:
       return false;
   }
+}
+
+// Deprecated: Use validFactorySizeForResearchStage instead
+export function validFactorySizeForSectorTechnologyLevel(factorySize: FactorySize, sectorTechnologyLevel: number) {
+  // Map old technology level to research stage for backwards compatibility
+  // Technology level 0 = research stage 1, etc.
+  const researchStage = sectorTechnologyLevel === 0 ? 1 : sectorTechnologyLevel;
+  return validFactorySizeForResearchStage(factorySize, researchStage);
 }
