@@ -223,6 +223,9 @@ export const GameProvider: React.FC<{
     console.log(`[GameContext] Render count: ${renderCountRef.current}`);
   }
 
+  // Create ref for currentTurn to access latest value in event handlers
+  const currentTurnRef = useRef(currentTurn);
+  
   // Update refs when values change
   useEffect(() => {
     console.log('[GameContext] Updating refs');
@@ -230,9 +233,10 @@ export const GameProvider: React.FC<{
     refetchAuthPlayerRef.current = refetchAuthPlayer;
     refetchPlayersWithSharesRef.current = refetchPlayersWithShares;
     refetchCurrentTurnRef.current = refetchCurrentTurn;
+    currentTurnRef.current = currentTurn;
     refetchPlayerOrderRef.current = refetchPlayerOrder;
     trpcUtilsRef.current = trpcUtils;
-  }, [refetchGameState, refetchAuthPlayer, refetchPlayersWithShares, refetchCurrentTurn, refetchPlayerOrder, trpcUtils]);
+  }, [refetchGameState, refetchAuthPlayer, refetchPlayersWithShares, refetchCurrentTurn, currentTurn, refetchPlayerOrder, trpcUtils]);
 
   // Track event handler call counts
   const eventCallCountRef = useRef({
@@ -277,8 +281,16 @@ export const GameProvider: React.FC<{
           phaseName === PhaseName.STOCK_RESOLVE_LIMIT_ORDER) {
         // IPO prices are set during RESOLVE_SET_COMPANY_IPO_PRICES
         // Invalidate gameState to ensure companies show updated ipoAndFloatPrice
-        console.log('[GameContext] Invalidating gameState after IPO price resolution');
+        console.log('[GameContext] Invalidating gameState and IPO votes after IPO price resolution');
         trpcUtilsRef.current.game.getGameState.invalidate({ gameId });
+        // Also invalidate IPO votes query to ensure resolution phase shows correct data
+        // Use ref to get latest currentTurn value
+        const latestTurn = currentTurnRef.current;
+        if (latestTurn?.id) {
+          trpcUtilsRef.current.game.getIpoVotesForGameTurn.invalidate({
+            gameTurnId: latestTurn.id,
+          });
+        }
       }
       
       if (phaseName === PhaseName.EARNINGS_CALL) {
