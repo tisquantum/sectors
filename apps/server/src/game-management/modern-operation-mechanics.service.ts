@@ -251,9 +251,15 @@ export class ModernOperationMechanicsService {
       company: CompanyWithSector;
       blueprintCost: number;
       requiredWorkers: number;
-      existingFactories: number;
+      slot: number; // Track the slot number for this factory
       factoryOutputResource: ResourceType;
     }> = [];
+    
+    // Track factories created per company during this resolution phase
+    // This ensures multiple factories from the same company get different slots
+    const factoriesCreatedThisPhase = new Map<string, number>();
+    // Track total workers needed for all orders (to check availability)
+    let totalWorkersNeeded = 0;
 
     for (const order of factoryConstructionOrders) {
       // Get company from map (already fetched)
@@ -289,6 +295,8 @@ export class ModernOperationMechanicsService {
 
       // Check factory limit based on research stage (slots available)
       const existingFactories = factoryCountMap.get(company.id) || 0;
+      const factoriesCreatedForCompany = factoriesCreatedThisPhase.get(company.id) || 0;
+      const totalFactoriesAfterThis = existingFactories + factoriesCreatedForCompany;
       
       // Get research stage to determine available slots
       const researchStage = this.getResearchStage(company.Sector.researchMarker || 0);
@@ -298,7 +306,7 @@ export class ModernOperationMechanicsService {
       // Max factories = number of slots available for current research stage
       const maxFactories = slotsAvailable;
       
-      if (existingFactories >= maxFactories) {
+      if (totalFactoriesAfterThis >= maxFactories) {
         const failureReason = `Factory limit reached. Maximum factories allowed: ${maxFactories} (${slotsAvailable} slots available in Research Stage ${researchStage})`;
         orderUpdates.push({ id: order.id, failureReason });
         gameLogEntries.push({
@@ -307,11 +315,15 @@ export class ModernOperationMechanicsService {
         });
         continue;
       }
+      
+      // Calculate slot number: existing factories + factories created this phase + 1 (1-indexed)
+      const slot = existingFactories + factoriesCreatedForCompany + 1;
 
-      // Check worker availability
+      // Check worker availability (cumulative for all orders)
       const requiredWorkers = this.getRequiredWorkers(order.size);
-      if (game.workers < requiredWorkers) {
-        const failureReason = `Insufficient workers in workforce pool. Required: ${requiredWorkers}, Available: ${game.workers}`;
+      const workersNeededAfterThis = totalWorkersNeeded + requiredWorkers;
+      if (game.workers < workersNeededAfterThis) {
+        const failureReason = `Insufficient workers in workforce pool. Required: ${workersNeededAfterThis} (cumulative), Available: ${game.workers}`;
         orderUpdates.push({ id: order.id, failureReason });
         gameLogEntries.push({
           gameId: phase.gameId,
@@ -326,13 +338,19 @@ export class ModernOperationMechanicsService {
       // Determine factory output resource: use sector resource type if available, otherwise first resource
       const factoryOutputResource = sectorResourceType || order.resourceTypes[0];
       
+      // Increment factories created for this company
+      factoriesCreatedThisPhase.set(company.id, factoriesCreatedForCompany + 1);
+      
+      // Track workers needed for this order (only if order passes all checks)
+      totalWorkersNeeded += requiredWorkers;
+      
       // Store successful operation for batch processing
       successfulOperations.push({
         order,
         company,
         blueprintCost,
         requiredWorkers,
-        existingFactories,
+        slot, // Use calculated slot number
         factoryOutputResource, // Sector resource type or first resource in blueprint
       });
     }
@@ -398,7 +416,7 @@ export class ModernOperationMechanicsService {
               gameId: phase.gameId,
               size: op.order.size,
               workers: op.requiredWorkers,
-              slot: op.existingFactories + 1,
+              slot: op.slot, // Use the slot calculated during validation
               isOperational: false,
               resourceTypes: factoryResourceTypes,
               originalConstructionCost: fullConstructionCost, // Store for upgrade calculations
@@ -1454,18 +1472,27 @@ export class ModernOperationMechanicsService {
       researchProgressGain: number;
       failureReason?: string;
     }> = [];
+    
+    // Track cash and progress per company during this resolution phase
+    // This ensures multiple orders from the same company are processed correctly
+    const companyCashTracking = new Map<string, number>();
+    const companyProgressTracking = new Map<string, number>();
 
     // Process each research order
     for (const order of researchOrders) {
       const company = order.company;
       
-      // Check if company can still afford the research (cash may have changed)
-      if (company.cashOnHand < order.cost) {
+      // Get current cash and progress for this company (accounting for previous orders in this batch)
+      const currentCash = companyCashTracking.get(company.id) ?? company.cashOnHand;
+      const currentProgress = companyProgressTracking.get(company.id) ?? (company.researchProgress || 0);
+      
+      // Check if company can still afford the research (accounting for previous orders)
+      if (currentCash < order.cost) {
         // Mark order as failed
         researchOrderUpdates.push({
           id: order.id,
           researchProgressGain: 0,
-          failureReason: `Insufficient funds. Required: $${order.cost}, Available: $${company.cashOnHand}`,
+          failureReason: `Insufficient funds. Required: $${order.cost}, Available: $${currentCash}`,
         });
         
         researchGameLogEntries.push({
@@ -1478,17 +1505,34 @@ export class ModernOperationMechanicsService {
       // Generate random research progress gain (0, 1, or 2)
       const researchProgressGain = Math.floor(Math.random() * 3); // 0, 1, or 2
 
-      // Collect company update
-      const currentProgress = company.researchProgress || 0;
+      // Update tracking for this company
+      const newCash = currentCash - order.cost;
       const newProgress = currentProgress + researchProgressGain;
+      companyCashTracking.set(company.id, newCash);
+      companyProgressTracking.set(company.id, newProgress);
 
-      researchCompanyUpdates.push({
-        id: company.id,
-        researchProgress: newProgress,
-        cashOnHand: company.cashOnHand - order.cost,
-        sectorId: company.sectorId, // Include sectorId to update sector marker
-        researchProgressGain, // Include gain to update sector marker
-      });
+      // Check if we already have an update for this company
+      const existingUpdateIndex = researchCompanyUpdates.findIndex(u => u.id === company.id);
+      
+      if (existingUpdateIndex >= 0) {
+        // Update existing entry (accumulate progress gain, use latest cash)
+        const existing = researchCompanyUpdates[existingUpdateIndex];
+        researchCompanyUpdates[existingUpdateIndex] = {
+          ...existing,
+          researchProgress: newProgress,
+          cashOnHand: newCash,
+          researchProgressGain: (existing.researchProgressGain || 0) + researchProgressGain,
+        };
+      } else {
+        // Create new entry
+        researchCompanyUpdates.push({
+          id: company.id,
+          researchProgress: newProgress,
+          cashOnHand: newCash,
+          sectorId: company.sectorId, // Include sectorId to update sector marker
+          researchProgressGain, // Include gain to update sector marker
+        });
+      }
 
       // Mark order with result
       researchOrderUpdates.push({
