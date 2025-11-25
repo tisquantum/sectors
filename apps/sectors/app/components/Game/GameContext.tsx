@@ -271,6 +271,23 @@ export const GameProvider: React.FC<{
 
       console.log(`[GameContext] handleNewPhase: ${phaseName} (call #${callCount})`);
       
+      // Invalidate specific queries before refetching to ensure fresh data
+      // Invalidate gameState when IPO prices are resolved to ensure companies show updated IPO prices
+      if (phaseName === PhaseName.RESOLVE_SET_COMPANY_IPO_PRICES || 
+          phaseName === PhaseName.STOCK_RESOLVE_LIMIT_ORDER) {
+        // IPO prices are set during RESOLVE_SET_COMPANY_IPO_PRICES
+        // Invalidate gameState to ensure companies show updated ipoAndFloatPrice
+        console.log('[GameContext] Invalidating gameState after IPO price resolution');
+        trpcUtilsRef.current.game.getGameState.invalidate({ gameId });
+      }
+      
+      if (phaseName === PhaseName.EARNINGS_CALL) {
+        // Factory production records created during CONSUMPTION_PHASE resolution
+        // Invalidate production queries so consumption phase can show results
+        console.log('[GameContext] Invalidating factory production queries');
+        trpcUtilsRef.current.factoryProduction.getGameTurnProduction.invalidate();
+      }
+      
       // Debounce refetches - only refetch if last refetch was > 200ms ago
       const now = Date.now();
       const DEBOUNCE_MS = 200;
@@ -310,12 +327,6 @@ export const GameProvider: React.FC<{
       }
       if (phaseName === PhaseName.CONSUMPTION_PHASE) {
         // Consumption bags drawn
-      }
-      if (phaseName === PhaseName.EARNINGS_CALL) {
-        // Factory production records created during CONSUMPTION_PHASE resolution
-        // Invalidate production queries so consumption phase can show results
-        console.log('[GameContext] Invalidating factory production queries');
-        trpcUtilsRef.current.factoryProduction.getGameTurnProduction.invalidate();
       }
       if (phaseName === PhaseName.MARKETING_AND_RESEARCH_ACTION_RESOLVE) {
         // Marketing campaigns activated

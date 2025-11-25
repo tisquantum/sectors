@@ -10478,6 +10478,114 @@ export class GameManagementService {
     });
   }
 
+  async createIpoVotesBatch(
+    votes: Array<{
+      playerId: string;
+      companyId: string;
+      ipoPrice: number;
+    }>,
+  ) {
+    if (votes.length === 0) {
+      throw new Error('At least one vote is required');
+    }
+
+    // Get all unique company IDs and player ID (should be same for all)
+    const companyIds = [...new Set(votes.map((v) => v.companyId))];
+    const playerId = votes[0].playerId;
+
+    // Validate all votes have the same player
+    if (!votes.every((v) => v.playerId === playerId)) {
+      throw new Error('All votes must be from the same player');
+    }
+
+    // Fetch all companies in parallel
+    const companies = await this.prisma.company.findMany({
+      where: { id: { in: companyIds } },
+      include: { Sector: true },
+    });
+
+    if (companies.length !== companyIds.length) {
+      throw new Error('One or more companies not found');
+    }
+
+    // Get gameId and gameTurnId from first company (all should be in same game)
+    const gameId = companies[0].gameId;
+    const gameTurnId =
+      this.gameCache.get(gameId)?.currentGameTurnId ??
+      (await this.gameTurnService.getCurrentTurn(gameId))?.id;
+    if (!gameTurnId) {
+      throw new Error('Game turn not found');
+    }
+
+    // Validate all companies are in the same game
+    if (!companies.every((c) => c.gameId === gameId)) {
+      throw new Error('All companies must be in the same game');
+    }
+
+    // Create a map for quick lookup
+    const companyMap = new Map(companies.map((c) => [c.id, c]));
+
+    // Validate all votes before creating any
+    for (const vote of votes) {
+      const company = companyMap.get(vote.companyId);
+      if (!company) {
+        throw new Error(`Company ${vote.companyId} not found`);
+      }
+
+      // Check if company is inactive
+      if (company.status !== CompanyStatus.INACTIVE) {
+        throw new Error(`Company ${company.name} is not inactive`);
+      }
+
+      // Validate IPO price is valid
+      if (!stockGridPrices.includes(vote.ipoPrice)) {
+        throw new Error(`IPO price ${vote.ipoPrice} is not a valid stock price`);
+      }
+
+      // Validate IPO price is within sector range
+      const sector = company.Sector;
+      if (!sector) {
+        throw new Error(`Sector not found for company ${company.name}`);
+      }
+      if (vote.ipoPrice < sector.ipoMin || vote.ipoPrice > sector.ipoMax) {
+        throw new Error(
+          `IPO price ${vote.ipoPrice} is not within sector range (${sector.ipoMin}-${sector.ipoMax}) for company ${company.name}`,
+        );
+      }
+    }
+
+    // Check for existing votes in a single query
+    const existingVotes = await this.prisma.companyIpoPriceVote.findMany({
+      where: {
+        playerId,
+        companyId: { in: companyIds },
+        gameTurnId,
+      },
+    });
+
+    if (existingVotes.length > 0) {
+      const existingCompanyIds = existingVotes.map((v) => v.companyId);
+      throw new Error(
+        `Player has already cast votes for companies: ${existingCompanyIds.join(', ')}`,
+      );
+    }
+
+    // Create all votes in a transaction
+    return await this.prisma.$transaction(
+      votes.map((vote) =>
+        this.prisma.companyIpoPriceVote.create({
+          data: {
+            Player: { connect: { id: playerId } },
+            Company: { connect: { id: vote.companyId } },
+            Game: { connect: { id: gameId } },
+            GameTurn: { connect: { id: gameTurnId } },
+            ipoPrice: vote.ipoPrice,
+          },
+        }),
+      ),
+    );
+  }
+
   async getIpoVotesForGameTurn(gameTurnId: string) {
     return await this.prisma.companyIpoPriceVote.findMany({
       where: {

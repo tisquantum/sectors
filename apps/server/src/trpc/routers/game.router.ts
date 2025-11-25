@@ -449,6 +449,21 @@ export default (trpc: TrpcService, ctx: Context) =>
           ipoPrice,
         });
       }),
+    createIpoVotesBatch: trpc.procedure
+      .input(
+        z.object({
+          votes: z.array(
+            z.object({
+              playerId: z.string(),
+              companyId: z.string(),
+              ipoPrice: z.number(),
+            }),
+          ),
+        }),
+      )
+      .mutation(async ({ input }) => {
+        return ctx.gameManagementService.createIpoVotesBatch(input.votes);
+      }),
     getIpoVotesForGameTurn: trpc.procedure
       .input(z.object({ gameTurnId: z.string() }))
       .query(async ({ input }) => {

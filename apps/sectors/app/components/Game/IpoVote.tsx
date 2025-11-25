@@ -9,7 +9,6 @@ import {
 import DebounceButton from "../General/DebounceButton";
 import { trpc } from "@sectors/app/trpc";
 import { useGame } from "./GameContext";
-import { set } from "lodash";
 import PlayerAvatar from "../Player/PlayerAvatar";
 import {
   Chip,
@@ -26,23 +25,16 @@ const CompanyIpoVote = ({
   company,
   sector,
   isInteractive,
+  selectedPrice,
+  onPriceSelect,
 }: {
   company: Company;
   sector: Sector;
   isInteractive?: boolean;
+  selectedPrice: number | null;
+  onPriceSelect: (price: number | null) => void;
 }) => {
   const { authPlayer, currentTurn, currentPhase, gameState } = useGame();
-  const [isLoadingIpoVoteSubmission, setIsLoadingIpoVoteSubmission] =
-    useState(false);
-  const [ipoVoteSubmitted, setIpoVoteSubmitted] = useState(false);
-  const useIpoVoteSubmitMutation = trpc.game.createIpoVote.useMutation({
-    onSettled: () => {
-      setIsLoadingIpoVoteSubmission(false);
-    },
-    onSuccess: () => {
-      setIpoVoteSubmitted(true);
-    },
-  });
   const {
     data: ipoVotes,
     isLoading: isLoadingIpoVotes,
@@ -51,10 +43,9 @@ const CompanyIpoVote = ({
   } = trpc.game.getIpoVotesForGameTurn.useQuery({
     gameTurnId: currentTurn.id,
   });
-  const [selectedPrice, setSelectedPrice] = useState<number | null>(null);
   useEffect(() => {
     refetchIpoVotes();
-  }, [currentPhase?.id]);
+  }, [currentPhase?.id, refetchIpoVotes]);
   const { Company, sectors } = gameState;
   const companyIpoPrices = stockGridPrices.filter(
     (price) => price >= sector.ipoMin && price <= sector.ipoMax
@@ -103,7 +94,7 @@ const CompanyIpoVote = ({
           isInteractive ? (
             <button
               key={price}
-              onClick={() => setSelectedPrice(price)}
+              onClick={() => onPriceSelect(price)}
               className={`py-2 px-4 rounded-md border text-sm font-medium 
           ${
             selectedPrice === price
@@ -159,37 +150,22 @@ const CompanyIpoVote = ({
           )
         )}
       </div>
-
-      {/* Submit Button */}
-      {isInteractive &&
-        (ipoVoteSubmitted ? (
-          <div>Vote Submitted </div>
-        ) : (
-          <DebounceButton
-            disabled={!selectedPrice}
-            onClick={() => {
-              if (selectedPrice) {
-                setIsLoadingIpoVoteSubmission(true);
-                useIpoVoteSubmitMutation.mutate({
-                  companyId: company.id,
-                  playerId: authPlayer.id,
-                  ipoPrice: selectedPrice,
-                });
-              }
-            }}
-            isLoading={isLoadingIpoVoteSubmission}
-          >
-            Submit Vote
-          </DebounceButton>
-        ))}
     </div>
   );
 };
 
 const IpoVotes = ({ isInteractive }: { isInteractive?: boolean }) => {
   const { gameState, authPlayer, currentTurn, currentPhase } = useGame();
-  if (!gameState || !authPlayer) return null;
-  const { Company, sectors } = gameState;
+  const [selectedPrices, setSelectedPrices] = useState<Record<string, number | null>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [votesSubmitted, setVotesSubmitted] = useState(false);
+  const utils = trpc.useUtils();
+  
+  const createIpoVotesBatchMutation = trpc.game.createIpoVotesBatch.useMutation({
+    onSettled: () => {
+      setIsSubmitting(false);
+    },
+  });
   
   // Get IPO votes for the current turn
   const { data: ipoVotes } = trpc.game.getIpoVotesForGameTurn.useQuery(
@@ -198,6 +174,25 @@ const IpoVotes = ({ isInteractive }: { isInteractive?: boolean }) => {
     },
     { enabled: !!currentTurn?.id }
   );
+  
+  // Check if user has already submitted votes
+  useEffect(() => {
+    if (ipoVotes && authPlayer) {
+      const userVotes = ipoVotes.filter((vote) => vote.playerId === authPlayer.id);
+      if (userVotes.length > 0) {
+        setVotesSubmitted(true);
+        // Pre-populate selected prices from existing votes
+        const prices: Record<string, number | null> = {};
+        userVotes.forEach((vote) => {
+          prices[vote.companyId] = vote.ipoPrice;
+        });
+        setSelectedPrices(prices);
+      }
+    }
+  }, [ipoVotes, authPlayer]);
+  
+  if (!gameState || !authPlayer) return null;
+  const { Company, sectors } = gameState;
   
   // In voting phase: show companies without IPO prices
   // In resolution phase: show companies that have votes (regardless of IPO price status)
@@ -219,6 +214,47 @@ const IpoVotes = ({ isInteractive }: { isInteractive?: boolean }) => {
     );
   }
   
+  const handlePriceSelect = (companyId: string, price: number | null) => {
+    setSelectedPrices((prev) => ({
+      ...prev,
+      [companyId]: price,
+    }));
+  };
+  
+  const handleSubmitAllVotes = async () => {
+    if (!authPlayer) return;
+    
+    // Get all companies that have a selected price
+    const votesToSubmit = companiesToShow
+      .filter((company) => selectedPrices[company.id] !== null && selectedPrices[company.id] !== undefined)
+      .map((company) => ({
+        playerId: authPlayer.id,
+        companyId: company.id,
+        ipoPrice: selectedPrices[company.id]!,
+      }));
+    
+    if (votesToSubmit.length === 0) return;
+    
+    setIsSubmitting(true);
+    
+    try {
+      // Submit all votes in a single batch request
+      await createIpoVotesBatchMutation.mutateAsync({
+        votes: votesToSubmit,
+      });
+      
+      setVotesSubmitted(true);
+      // Invalidate queries to refresh the UI
+      await utils.game.getIpoVotesForGameTurn.invalidate({
+        gameTurnId: currentTurn.id,
+      });
+    } catch (error) {
+      console.error("Error submitting IPO votes:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
   if (companiesToShow.length === 0) {
     return (
       <div className="flex flex-col gap-4 p-4">
@@ -231,6 +267,10 @@ const IpoVotes = ({ isInteractive }: { isInteractive?: boolean }) => {
     );
   }
   
+  const hasAllVotesSelected = companiesToShow.every(
+    (company) => selectedPrices[company.id] !== null && selectedPrices[company.id] !== undefined
+  );
+  
   return (
     <div className="flex flex-col gap-4">
       {companiesToShow.map((company) => {
@@ -242,9 +282,29 @@ const IpoVotes = ({ isInteractive }: { isInteractive?: boolean }) => {
             company={company}
             sector={sector}
             isInteractive={isInteractive}
+            selectedPrice={selectedPrices[company.id] || null}
+            onPriceSelect={(price) => handlePriceSelect(company.id, price)}
           />
         );
       })}
+      
+      {/* Single Submit Votes Button */}
+      {isInteractive && !isResolutionPhase && (
+        <div className="flex justify-center mt-4">
+          {votesSubmitted ? (
+            <div className="text-green-400 font-semibold">Votes Submitted</div>
+          ) : (
+            <DebounceButton
+              disabled={!hasAllVotesSelected || isSubmitting}
+              onClick={handleSubmitAllVotes}
+              isLoading={isSubmitting}
+              className="px-8 py-3 text-lg"
+            >
+              Submit Votes
+            </DebounceButton>
+          )}
+        </div>
+      )}
     </div>
   );
 };
