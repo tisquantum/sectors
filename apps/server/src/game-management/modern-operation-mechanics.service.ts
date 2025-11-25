@@ -306,7 +306,9 @@ export class ModernOperationMechanicsService {
       // Max factories = number of slots available for current research stage
       const maxFactories = slotsAvailable;
       
-      if (totalFactoriesAfterThis >= maxFactories) {
+      // Check if adding this factory would exceed the limit
+      // Use > instead of >= because if maxFactories = 3, we can have factories in slots 1, 2, 3 (total = 3)
+      if (totalFactoriesAfterThis > maxFactories) {
         const failureReason = `Factory limit reached. Maximum factories allowed: ${maxFactories} (${slotsAvailable} slots available in Research Stage ${researchStage})`;
         orderUpdates.push({ id: order.id, failureReason });
         gameLogEntries.push({
