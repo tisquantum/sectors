@@ -56,7 +56,7 @@ const SpotMarketTable = ({
     "Operational Cost",
     "Actions / OR",
     "Float %",
-    "Prestige",
+    // "Prestige", // Removed - not used in modern game
     "Demand",
     "Sector",
     "Sector Demand",

@@ -41,7 +41,7 @@ const CompanyAwardTrack = ({
       case AwardTrackType.CATALYST:
         return "Every time a company issues shares or lobbies during operations advance one space on this track.";
       default:
-        return "The company with the most prestige at the end of the game wins.";
+        return "Company award track description.";
     }
   };
   if (isLoadingAwardTrack || isLoadingAwardTrackSpaces)

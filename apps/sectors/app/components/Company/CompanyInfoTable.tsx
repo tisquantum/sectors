@@ -259,12 +259,8 @@ const CompanyInfoTable = ({
           </span>
         );
       case "Prestige":
-        return (
-          <>
-            <RiSparkling2Fill size={20} className="text-yellow-500" />{" "}
-            {company.prestigeTokens}
-          </>
-        );
+        // Prestige removed - not used in modern game
+        return null;
       case "Demand":
         return (
           <>

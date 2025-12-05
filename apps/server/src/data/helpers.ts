@@ -157,14 +157,10 @@ export function determineNextGamePhase(
         roundType: RoundType.STOCK,
       };
     case PhaseName.STOCK_RESOLVE_MARKET_ORDER:
-      if (options?.stockActionSubRoundIsOver) {
-        return {
-          phaseName: PhaseName.STOCK_SHORT_ORDER_INTEREST,
-          roundType: RoundType.STOCK,
-        };
-      }
+      // NEW: No more sub-rounds - proceed directly to next phase
+      // All orders are placed in one STOCK_ACTION_ORDER phase, then resolved
       return {
-        phaseName: PhaseName.STOCK_ACTION_ORDER,
+        phaseName: PhaseName.STOCK_SHORT_ORDER_INTEREST,
         roundType: RoundType.STOCK,
       };
     case PhaseName.STOCK_SHORT_ORDER_INTEREST:

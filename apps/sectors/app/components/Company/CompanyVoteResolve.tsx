@@ -5,12 +5,11 @@ import {
   OperatingRoundAction,
 } from "@server/prisma/prisma.client";
 import CompanyInfo from "./CompanyInfo";
-import PrestigeRewardComponent from "../Game/PrestigeReward";
+// Prestige imports removed - not used in modern game
 import {
   ACTION_ISSUE_SHARE_AMOUNT,
   companyActionsDescription,
 } from "@server/data/constants";
-import PrestigeRewards from "../Game/PrestigeRewards";
 
 const ShareIssue = ({ companyAction }: { companyAction: CompanyAction }) => {
   //get company with shares
@@ -50,18 +49,9 @@ const CompanyVoteResolve = () => {
       id: currentPhase?.companyId || "",
     });
 
-  const { data: prestigeRewards, isLoading: prestigeRewardsLoading } =
-    trpc.prestigeReward.listPrestigeRewards.useQuery({
-      where: {
-        gameTurnId: currentTurn?.id || "",
-        companyId: currentPhase?.companyId || "",
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+  // Prestige rewards query removed - not used in modern game
 
-  if (isLoading || companyLoading || prestigeRewardsLoading) {
+  if (isLoading || companyLoading) {
     return <div>Loading...</div>;
   }
 
@@ -152,19 +142,8 @@ const CompanyVoteResolve = () => {
         actionContent = <div>Lobby</div>;
         break;
       case OperatingRoundAction.SPEND_PRESTIGE:
-        actionContent = (
-          <div>
-            <span>Spent Prestige and received a reward.</span>
-            <div>
-              {prestigeRewards?.map((reward) => (
-                <div key={reward.id}>
-                  <PrestigeRewardComponent prestigeReward={reward} />
-                </div>
-              ))}
-            </div>
-            <PrestigeRewards />
-          </div>
-        );
+        // Prestige removed - not used in modern game
+        actionContent = <div>Prestige action not available in modern game.</div>;
         break;
       case OperatingRoundAction.OUTSOURCE:
         break;

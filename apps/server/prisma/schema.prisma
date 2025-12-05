@@ -757,6 +757,7 @@ model Sector {
   supplyMin              Int               @default(0)
   supplyMax              Int               @default(1)
   researchMarker         Int               @default(0)
+  waitingArea             Int               @default(0) // Consumers waiting for service
   Company                Company[]
   PlayerOrder            PlayerOrder[]
   Game                   Game?             @relation(fields: [gameId], references: [id])

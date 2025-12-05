@@ -1,4 +1,4 @@
-import { ButtonGroup, Navbar, Spinner } from "@nextui-org/react";
+import { ButtonGroup, Navbar, Spinner, Badge } from "@nextui-org/react";
 import GameGeneralInfo from "./GameGeneralInfo";
 import Timer from "./Timer";
 import { useGame } from "./GameContext";
@@ -6,8 +6,10 @@ import { useState } from "react";
 import { isActivePhase } from "@server/data/helpers";
 import Button from "@sectors/app/components/General/DebounceButton";
 import { friendlyPhaseName } from "@sectors/app/helpers";
-import { RiClockwiseFill, RiTextWrap } from "@remixicon/react";
+import { getPhaseColor } from "@sectors/app/helpers/phaseColors";
+import { RiClockwiseFill, RiTextWrap, RiWallet3Fill } from "@remixicon/react";
 import PlayerPriorities from "./PlayerPriorities";
+import { trpc } from "@sectors/app/trpc";
 
 const PassiveLoading = () => <Spinner color="secondary" />;
 
@@ -21,7 +23,27 @@ const GameTopBar = ({
   isTimerAtZero?: boolean;
 }) => {
   const [currentView, setCurrentView] = useState<string>("action");
-  const { currentPhase, gameState } = useGame();
+  const { currentPhase, gameState, authPlayer } = useGame();
+  
+  // Get pending orders count for badge
+  const { data: playerOrders } = trpc.playerOrder.listPlayerOrdersWithCompany.useQuery(
+    {
+      where: {
+        stockRoundId: currentPhase?.stockRoundId,
+        playerId: authPlayer?.id,
+      },
+    },
+    {
+      enabled: !!currentPhase?.stockRoundId && !!authPlayer?.id,
+      // Optimize: Only refetch when needed, cache for 5 seconds
+      refetchOnMount: false,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      staleTime: 5000,
+    }
+  );
+  
+  const pendingOrdersCount = playerOrders?.length || 0;
 
   const handleViewChange = (view: string) => {
     setCurrentView(view);
@@ -40,20 +62,30 @@ const GameTopBar = ({
             className={getButtonClass("action")}
             onClick={() => handleViewChange("action")}
             size="sm"
+            title="Switch to Action view (Press 1)"
           >
             Action
           </Button>
-          <Button
-            className={getButtonClass("pending")}
-            onClick={() => handleViewChange("pending")}
-            size="sm"
+          <Badge 
+            content={pendingOrdersCount} 
+            color="danger" 
+            isInvisible={pendingOrdersCount === 0 || currentView === "pending"}
+            size="lg"
           >
-            Orders
-          </Button>
+            <Button
+              className={getButtonClass("pending")}
+              onClick={() => handleViewChange("pending")}
+              size="sm"
+              title="View pending orders (Press 2)"
+            >
+              Orders
+            </Button>
+          </Badge>
           <Button
             className={getButtonClass("chart")}
             onClick={() => handleViewChange("chart")}
             size="sm"
+            title="View stock chart (Press 3)"
           >
             Chart
           </Button>
@@ -61,6 +93,7 @@ const GameTopBar = ({
             className={getButtonClass("markets")}
             onClick={() => handleViewChange("markets")}
             size="sm"
+            title="View markets (Press 4)"
           >
             Markets
           </Button>
@@ -68,6 +101,7 @@ const GameTopBar = ({
             className={getButtonClass("economy")}
             onClick={() => handleViewChange("economy")}
             size="sm"
+            title="View economy (Press 5)"
           >
             Economy
           </Button>
@@ -75,12 +109,22 @@ const GameTopBar = ({
             className={getButtonClass("companies")}
             onClick={() => handleViewChange("companies")}
             size="sm"
+            title="View operations (Press 6)"
           >
             Operations
           </Button>
         </ButtonGroup>
       </div>
       <div className="flex justify-between items-center gap-1 p-2 flex-wrap">
+        {authPlayer && (
+          <div className="flex items-center gap-2 px-3 py-1 bg-green-900/50 rounded-lg border border-green-500/30">
+            <RiWallet3Fill className="text-green-400" size={20} />
+            <span className="text-lg font-bold text-green-400">
+              ${authPlayer.cashOnHand.toLocaleString()}
+            </span>
+            <span className="text-xs text-gray-400">Cash</span>
+          </div>
+        )}
         <PlayerPriorities />
         {currentPhase?.name && !isActivePhase(currentPhase.name) && (
           <div
@@ -94,13 +138,16 @@ const GameTopBar = ({
         {currentPhase &&
           currentPhase.phaseStartTime &&
           !gameState.isTimerless && (
-            <Timer
-              countdownTime={currentPhase.phaseTime / 1000} //convert from seconds to milliseconds
-              startDate={new Date(currentPhase.phaseStartTime)} // attempt to cast to Date
-              size={16}
-              textSize={1}
-              onEnd={() => {}}
-            />
+            <div className="flex flex-col items-center gap-1">
+              <Timer
+                countdownTime={currentPhase.phaseTime / 1000} //convert from seconds to milliseconds
+                startDate={new Date(currentPhase.phaseStartTime)} // attempt to cast to Date
+                size={24}
+                textSize={2}
+                onEnd={() => {}}
+              />
+              <span className="text-xs text-gray-400">Time Remaining</span>
+            </div>
           )}
         {gameState.isTimerless && (
           <div className="flex flex-col items-center">
@@ -109,12 +156,21 @@ const GameTopBar = ({
           </div>
         )}
         <GameGeneralInfo />
-        <Button onClick={handleTogglePhaseList}>
-          <div className="flex items-center gap-1">
-            <RiTextWrap className="text-yellow-400" />
-            {friendlyPhaseName(currentPhase?.name)}
-          </div>
-        </Button>
+        {(() => {
+          const phaseColors = getPhaseColor(currentPhase?.name);
+          return (
+            <Button 
+              onClick={handleTogglePhaseList}
+              className={`bg-gradient-to-r ${phaseColors.gradient} text-white font-bold px-4 py-2 shadow-lg hover:opacity-90 transition-all`}
+              title="Toggle phase list (Press Ctrl+K or Cmd+K)"
+            >
+              <div className="flex items-center gap-2">
+                <RiTextWrap className="text-white" size={20} />
+                <span className="text-lg font-extrabold">{friendlyPhaseName(currentPhase?.name)}</span>
+              </div>
+            </Button>
+          );
+        })()}
       </div>
     </div>
   );

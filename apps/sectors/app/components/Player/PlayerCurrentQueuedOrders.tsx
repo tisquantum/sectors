@@ -1,9 +1,9 @@
 import { trpc } from "@sectors/app/trpc";
 import { useGame } from "../Game/GameContext";
-import { Card, CardBody, CardHeader } from "@nextui-org/react";
+import { Card, CardBody, CardHeader, Spinner } from "@nextui-org/react";
 import { OrderType, ShareLocation } from "@server/prisma/prisma.client";
 import { PlayerOrderWithCompany } from "@server/prisma/prisma.types";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import OrderChip from "../Game/OrderChip";
 
 const renderBasedOnOrderType = (playerOrder: PlayerOrderWithCompany) => {
@@ -34,21 +34,51 @@ const PlayerCurrentQueuedOrders = ({
     data: playerOrders,
     isLoading,
     refetch,
-  } = trpc.playerOrder.listPlayerOrdersWithCompany.useQuery({
-    where: {
-      stockRoundId: currentPhase?.stockRoundId,
-      playerId: authPlayer?.id,
+  } = trpc.playerOrder.listPlayerOrdersWithCompany.useQuery(
+    {
+      where: {
+        stockRoundId: currentPhase?.stockRoundId,
+        playerId: authPlayer?.id,
+      },
     },
-  });
+    {
+      enabled: !!currentPhase?.stockRoundId && !!authPlayer?.id,
+      // Prevent excessive refetching
+      refetchOnMount: false,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      staleTime: 5000, // 5 seconds - orders change more frequently
+    }
+  );
+  
+  // Only refetch when phase actually changes (not on every render)
+  const lastPhaseIdRef = useRef<string | null | undefined>(undefined);
   useEffect(() => {
-    refetch();
-  }, [currentPhase?.name]);
-  useEffect(() => {
-    if (newOrderCount > 0) {
+    const currentStockRoundId = currentPhase?.stockRoundId ?? null;
+    if (currentStockRoundId !== lastPhaseIdRef.current) {
+      lastPhaseIdRef.current = currentStockRoundId;
       refetch();
     }
-  }, [newOrderCount]);
-  if (isLoading) return <div>Loading...</div>;
+  }, [currentPhase?.stockRoundId, refetch]);
+  
+  // Debounce newOrderCount refetches
+  const lastOrderCountRef = useRef(0);
+  useEffect(() => {
+    if (newOrderCount > lastOrderCountRef.current) {
+      lastOrderCountRef.current = newOrderCount;
+      // Small delay to batch multiple order updates
+      const timeoutId = setTimeout(() => {
+        refetch();
+      }, 300);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [newOrderCount, refetch]);
+  if (isLoading) return (
+    <div className="flex items-center justify-center gap-2 p-4">
+      <Spinner size="sm" color="primary" />
+      <span className="text-sm text-gray-400">Loading orders...</span>
+    </div>
+  );
   if (playerOrders == undefined) return null;
 
   return (

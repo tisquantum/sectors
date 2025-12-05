@@ -54,7 +54,7 @@ const CompanyActionVote = ({ company }: { company?: Company }) => {
     { name: OperatingRoundAction.SHARE_ISSUE, label: "Issue Shares" },
     { name: OperatingRoundAction.INCREASE_PRICE, label: "Increase Price" },
     { name: OperatingRoundAction.DECREASE_PRICE, label: "Decrease Price" },
-    { name: OperatingRoundAction.SPEND_PRESTIGE, label: "Prestige" },
+    // { name: OperatingRoundAction.SPEND_PRESTIGE, label: "Prestige" }, // Removed - not used in modern game
     { name: OperatingRoundAction.LOAN, label: "Loan" },
     { name: OperatingRoundAction.LOBBY, label: "Lobby" },
     { name: OperatingRoundAction.OUTSOURCE, label: "Outsource" },

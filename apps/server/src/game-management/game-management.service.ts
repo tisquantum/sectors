@@ -596,19 +596,21 @@ export class GameManagementService {
         ceoPlayerId = playersWithMaxShares[0];
       } else {
         // Tie exists, use player priority to break it
+        // Higher priority number wins (priority 1 is lowest, higher numbers are better)
         let highestPriority = -1;
+        let selectedPlayerId: string | null = null;
+        
         for (const playerId of playersWithMaxShares) {
           const priority = priorityMap.get(playerId) || 0;
           if (priority > highestPriority) {
             highestPriority = priority;
-            ceoPlayerId = playerId;
+            selectedPlayerId = playerId;
           }
         }
         
-        // If still no CEO found (all have same priority or no priority), use first player
-        if (!ceoPlayerId) {
-          ceoPlayerId = playersWithMaxShares[0];
-        }
+        // If we found a player with highest priority, use them
+        // If all players have the same priority (or no priority), use the first one as fallback
+        ceoPlayerId = selectedPlayerId || playersWithMaxShares[0];
       }
       
       // Verify player exists before connecting
@@ -6844,26 +6846,22 @@ export class GameManagementService {
       return;
     }
 
-    let hasOrdersInStockSubRound = false;
-    if (phase.stockSubRoundId) {
-      hasOrdersInStockSubRound = await this.stockSubRoundService.hasOrders(
-        phase.stockSubRoundId,
-      );
-    }
-
+    // NEW: Stock rounds no longer use sub-rounds - all orders are placed in one phase
+    // The stockActionSubRoundIsOver option is no longer needed for the new single-round system
     const determinedNextPhase = determineNextGamePhase(
       phase.name,
       {
-        stockActionSubRoundIsOver: !!!hasOrdersInStockSubRound,
+        stockActionSubRoundIsOver: true, // Always true now - no more sub-rounds
       },
       gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN,
     );
 
+    // NEW: Stock rounds no longer use sub-rounds, so stockActionSubRoundIsOver is always true
     let adjustedPhase = await this.findNextPhaseThatShouldBePlayed(
       determinedNextPhase,
       phase,
       gameState,
-      !!!hasOrdersInStockSubRound,
+      true, // Always true now - no more sub-rounds
     );
 
     //start new round if necessary
@@ -6884,7 +6882,7 @@ export class GameManagementService {
         phase,
         gameId,
         gameState,
-        stockActionSubRoundIsOver: !!!hasOrdersInStockSubRound,
+        stockActionSubRoundIsOver: true, // Always true now - no more sub-rounds
       });
     let startTime = Date.now();
     const nextPhase = await this.determineIfNewRoundAndStartPhase({

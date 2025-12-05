@@ -1059,17 +1059,41 @@ export class ModernOperationMechanicsService {
 
   /**
    * CONSUMPTION_PHASE
-   * Draw goods from sector consumption bags for each customer.
-   * Customers go to the company with highest attraction rating (lowest effective price).
-   * Track which factories fill up and service customers.
+   * Draw consumption markers and assign customers to factories
+   * 
+   * Consumer Routing Logic:
+   * 1. Consumer draws a marker (resource preference)
+   * 2. Consumer goes to factory that produces that resource
+   * 3. If multiple factories match, prefer cheaper factory (lower total unit price = sum of resource prices)
+   * 4. If price tied, use company priority (higher share value = higher priority)
+   * 5. If share value tied, use "top to bottom" order (factory slot, lower = better)
+   * 6. Factories have maxCustomers limit - once full, consumers go to next available factory
+   * 7. If no factory available, consumer goes to waiting area
+   * 8. If waiting area exceeds capacity, all consumers return to pool and sector loses 1 demand
+   * 9. If waiting area doesn't fill, consumers return to draw bag for next turn
    */
   private async handleConsumptionPhase(phase: Phase) {
     const sectors = await this.sectorService.sectors({
       where: { gameId: phase.gameId },
     });
 
-    // Track sector updates and total consumers returned to pool
-    const sectorUpdates: Array<{ id: string; consumers: number }> = [];
+    // Fetch all resource prices once for all sectors
+    const allResources = await this.resourceService.resourcesByGame(phase.gameId);
+    const resourcePriceMap = new Map<ResourceType, number>();
+    await Promise.all(
+      allResources.map(async (resource) => {
+        const price = await this.resourceService.getCurrentResourcePrice(resource);
+        resourcePriceMap.set(resource.type, price);
+      })
+    );
+
+    // Track sector updates
+    const sectorUpdates: Array<{ 
+      id: string; 
+      consumers: number; 
+      waitingArea: number;
+      demand?: number;
+    }> = [];
     let totalConsumersReturnedToPool = 0;
 
     // OPTIMIZATION: Fetch all consumption markers in parallel before processing
@@ -1103,7 +1127,7 @@ export class ModernOperationMechanicsService {
         continue;
       }
 
-      // Get all operational factories in this sector
+      // Get all operational factories in this sector with company data
       const factories = await this.prisma.factory.findMany({
         where: {
           sectorId: sector.id,
@@ -1111,15 +1135,10 @@ export class ModernOperationMechanicsService {
           isOperational: true,
         },
         include: {
-          company: {
-            include: {
-              marketingCampaigns: {
-                where: {
-                  status: { in: [MarketingCampaignStatus.ACTIVE, MarketingCampaignStatus.DECAYING] },
-                },
-              },
-            },
-          },
+          company: true,
+        },
+        orderBy: {
+          slot: 'asc', // Order by slot for "top to bottom" tie-breaker
         },
       });
 
@@ -1132,9 +1151,12 @@ export class ModernOperationMechanicsService {
       }
 
       let customersServed = 0;
+      let customersInWaitingArea = sector.waitingArea || 0;
       const markersDrawn: string[] = [];
       // OPTIMIZATION: Collect markers to delete for batch deletion
       const markersToDelete: string[] = [];
+      // Track markers that should return to bag (from waiting area)
+      const markersToReturnToBag: string[] = [];
 
       // Draw from consumption bag for each customer
       for (let i = 0; i < customerCount; i++) {
@@ -1162,85 +1184,123 @@ export class ModernOperationMechanicsService {
           markersDrawn.push(drawnMarker.id);
         }
 
-        // Find factories that can produce this resource, sorted by attraction rating
-        const eligibleFactories = factories
+        // Find factories that can produce this resource
+        const matchingFactories = factories.filter(f => {
+          // Check if factory can produce the resource
+          let canProduceResource: boolean;
+          if (drawnMarker.resourceType === ResourceType.GENERAL) {
+            const generalResourceTypes: ResourceType[] = [ResourceType.TRIANGLE, ResourceType.SQUARE, ResourceType.CIRCLE];
+            canProduceResource = f.resourceTypes.some(rt => generalResourceTypes.includes(rt as ResourceType));
+          } else {
+            const sectorResourceType = this.getSectorResourceType(sector.sectorName);
+            const hasExactType = f.resourceTypes.includes(drawnMarker.resourceType);
+            const matchesSectorResource = sectorResourceType !== null && drawnMarker.resourceType === sectorResourceType;
+            canProduceResource = hasExactType || matchesSectorResource;
+          }
+          return canProduceResource;
+        });
+
+        // Filter out full factories and sort by routing priority
+        const eligibleFactories = matchingFactories
           .filter(f => {
             const currentCustomers = factoryCustomerCounts.get(f.id) || 0;
-            console.log('factory', f.id, 'currentCustomers', currentCustomers);
             const maxCustomers = this.getFactoryConsumerLimit(f.size);
-            console.log('factory', f.id, 'maxCustomers', maxCustomers);
-            
-            // Check if factory can produce the resource
-            // GENERAL is a wildcard that matches any factory with general resources (TRIANGLE, SQUARE, CIRCLE)
-            let canProduceResource: boolean;
-            if (drawnMarker.resourceType === ResourceType.GENERAL) {
-              // GENERAL matches any factory that has at least one general resource type
-              const generalResourceTypes: ResourceType[] = [ResourceType.TRIANGLE, ResourceType.SQUARE, ResourceType.CIRCLE];
-              canProduceResource = f.resourceTypes.some(rt => generalResourceTypes.includes(rt as ResourceType));
-            } else {
-              // For specific resource types, check if:
-              // 1. Factory has that exact type in resourceTypes, OR
-              // 2. The marker type matches the factory's sector resource type (factories can always produce their sector's resource)
-              const sectorResourceType = this.getSectorResourceType(sector.sectorName);
-              const hasExactType = f.resourceTypes.includes(drawnMarker.resourceType);
-              const matchesSectorResource = sectorResourceType !== null && drawnMarker.resourceType === sectorResourceType;
-              canProduceResource = hasExactType || matchesSectorResource;
-            }
-            
-            console.log('factory', f.id, 'canProduceResource', canProduceResource, 'markerType', drawnMarker.resourceType, 'factoryTypes', f.resourceTypes, 'sectorResourceType', this.getSectorResourceType(sector.sectorName));
-            return canProduceResource && currentCustomers < maxCustomers;
+            return currentCustomers < maxCustomers;
           })
           .sort((a, b) => {
-            // Sort by attraction rating (unit price - brand score)
-            // Customers prefer most complex factories (higher size) with lowest effective price
-            const aAttractionRating = this.calculateAttractionRating(a.company);
-            const bAttractionRating = this.calculateAttractionRating(b.company);
+            // 1. Sort by total unit price (sum of resource prices) - lower is better
+            const aTotalPrice = this.calculateFactoryTotalPrice(a, resourcePriceMap);
+            const bTotalPrice = this.calculateFactoryTotalPrice(b, resourcePriceMap);
             
-            if (aAttractionRating === bAttractionRating) {
-              // Tie-breaker: prefer more complex factories
-              return this.getFactoryComplexity(b.size) - this.getFactoryComplexity(a.size);
+            if (aTotalPrice !== bTotalPrice) {
+              return aTotalPrice - bTotalPrice;
             }
             
-            return aAttractionRating - bAttractionRating;
+            // 2. If price tied, sort by company share value (currentStockPrice) - higher is better
+            const aShareValue = a.company.currentStockPrice || 0;
+            const bShareValue = b.company.currentStockPrice || 0;
+            
+            if (aShareValue !== bShareValue) {
+              return bShareValue - aShareValue; // Descending (higher is better)
+            }
+            
+            // 3. If share value tied, use "top to bottom" order (factory slot) - lower is better
+            return a.slot - b.slot;
           });
 
-        console.log('eligibleFactories', eligibleFactories.length);
-
         if (eligibleFactories.length > 0) {
+          // Assign to best factory
           const selectedFactory = eligibleFactories[0];
-          factoryCustomerCounts.set(
-            selectedFactory.id,
-            (factoryCustomerCounts.get(selectedFactory.id) || 0) + 1
-          );
-          customersServed++;
-          console.log('selectedFactory', selectedFactory.id, 'customersServed', customersServed);
-        }
-
-        // Collect temporary markers for batch deletion
-        if (!drawnMarker.isPermanent) {
-          markersToDelete.push(drawnMarker.id);
+          const currentCount = factoryCustomerCounts.get(selectedFactory.id) || 0;
+          const maxCustomers = this.getFactoryConsumerLimit(selectedFactory.size);
+          
+          // Double-check we're not exceeding limit (safety check)
+          if (currentCount < maxCustomers) {
+            factoryCustomerCounts.set(selectedFactory.id, currentCount + 1);
+            customersServed++;
+            console.log(`Assigned consumer to factory ${selectedFactory.id} (${currentCount + 1}/${maxCustomers})`);
+            // Collect temporary markers for batch deletion (only if served)
+            if (!drawnMarker.isPermanent) {
+              markersToDelete.push(drawnMarker.id);
+            }
+          } else {
+            // Factory became full, add to waiting area
+            customersInWaitingArea++;
+            markersToReturnToBag.push(drawnMarker.id);
+            console.log(`Factory ${selectedFactory.id} is full, consumer added to waiting area`);
+          }
+        } else {
+          // No factory available, add to waiting area
+          customersInWaitingArea++;
+          markersToReturnToBag.push(drawnMarker.id);
+          console.log(`No factory available for resource ${drawnMarker.resourceType}, consumer added to waiting area`);
         }
       }
 
-      // OPTIMIZATION: Batch delete temporary markers
+      // Get research stage to determine waiting area capacity
+      const researchStage = this.getResearchStage(sector.researchMarker || 0);
+      const waitingAreaCapacity = this.getWaitingAreaCapacity(researchStage);
+      
+      // Handle waiting area overflow
+      let demandReduction = 0;
+      if (customersInWaitingArea > waitingAreaCapacity) {
+        // Waiting area filled - all consumers return to pool and sector loses 1 demand
+        totalConsumersReturnedToPool += customersInWaitingArea;
+        customersInWaitingArea = 0;
+        demandReduction = 1;
+        await this.gameLogService.createGameLog({
+          game: { connect: { id: phase.gameId } },
+          content: `${sector.sectorName} waiting area overflowed (capacity: ${waitingAreaCapacity}). All waiting consumers returned to pool. Sector demand reduced by 1.`,
+        });
+        // Clear markers to return to bag since they're going to pool
+        markersToReturnToBag.length = 0;
+      } else if (customersInWaitingArea > 0) {
+        // Waiting area didn't fill - consumers stay in waiting area and markers return to bag
+        await this.gameLogService.createGameLog({
+          game: { connect: { id: phase.gameId } },
+          content: `${sector.sectorName} waiting area: ${customersInWaitingArea}/${waitingAreaCapacity} consumers waiting.`,
+        });
+      }
+
+      // OPTIMIZATION: Batch delete temporary markers (only those that were served)
       if (markersToDelete.length > 0) {
         await this.prisma.consumptionMarker.deleteMany({
           where: { id: { in: markersToDelete } },
         });
       }
 
-      // Track sector update: remove serviced consumers from sector
-      if (customersServed > 0) {
-        sectorUpdates.push({
-          id: sector.id,
-          consumers: Math.max(0, sector.consumers - customersServed),
-        });
-        totalConsumersReturnedToPool += customersServed;
-      }
+      // Note: Markers in waiting area (markersToReturnToBag) stay in the bag for next turn
+      // They are not deleted, so they can be drawn again
 
-      // Note: Sector demand is now calculated based on base sector demand + brand scores
-      // No longer updated based on service quality
-      const unservedCustomers = customerCount - customersServed;
+      // Track sector update
+      const newConsumers = Math.max(0, sector.consumers - customersServed);
+      sectorUpdates.push({
+        id: sector.id,
+        consumers: newConsumers,
+        waitingArea: customersInWaitingArea,
+        ...(demandReduction > 0 && { demand: Math.max(0, (sector.demand || 0) - demandReduction) }),
+      });
+      totalConsumersReturnedToPool += customersServed;
 
       // OPTIMIZATION: Collect game log entries for batch creation
       const sectorGameLogEntries: Array<{ gameId: string; content: string }> = [];
@@ -1250,24 +1310,26 @@ export class ModernOperationMechanicsService {
         if (customers > 0) {
           const factory = factories.find(f => f.id === factoryId);
           if (factory) {
+            const maxCustomers = this.getFactoryConsumerLimit(factory.size);
             sectorGameLogEntries.push({
               gameId: phase.gameId,
-              content: `${factory.company.name}'s factory served ${customers} customers`,
+              content: `${factory.company.name}'s factory (slot ${factory.slot}) served ${customers}/${maxCustomers} customers`,
             });
           }
         }
       }
 
       // Add sector-level log entries
-      if (unservedCustomers > 0) {
+      if (customersServed === customerCount) {
         sectorGameLogEntries.push({
           gameId: phase.gameId,
-          content: `${sector.sectorName} failed to service ${unservedCustomers} customers.`,
+          content: `${sector.sectorName} serviced all ${customersServed} customers!`,
         });
       } else {
+        const unserved = customerCount - customersServed;
         sectorGameLogEntries.push({
           gameId: phase.gameId,
-          content: `${sector.sectorName} serviced all customers!`,
+          content: `${sector.sectorName} serviced ${customersServed}/${customerCount} customers. ${unserved} consumers in waiting area.`,
         });
       }
 
@@ -1304,15 +1366,22 @@ export class ModernOperationMechanicsService {
       }
     }
 
-    // Batch update sectors: remove serviced consumers
+    // Batch update sectors
     if (sectorUpdates.length > 0) {
       await this.prisma.$transaction(
-        sectorUpdates.map(update =>
-          this.prisma.sector.update({
+        sectorUpdates.map(update => {
+          const updateData: any = {
+            consumers: update.consumers,
+            waitingArea: update.waitingArea,
+          };
+          if (update.demand !== undefined) {
+            updateData.demand = update.demand;
+          }
+          return this.prisma.sector.update({
             where: { id: update.id },
-            data: { consumers: update.consumers },
-          })
-        )
+            data: updateData,
+          });
+        })
       );
     }
 
@@ -2495,6 +2564,34 @@ export class ModernOperationMechanicsService {
     if (researchMarker >= 11) return 3;
     if (researchMarker >= 6) return 2;
     return 1;
+  }
+
+  /**
+   * Get waiting area capacity based on research stage
+   * Stage 1: 3 spaces, Stage 2: 5 spaces, Stage 3: 7 spaces, Stage 4: 10 spaces
+   */
+  private getWaitingAreaCapacity(researchStage: number): number {
+    switch (researchStage) {
+      case 1: return 3;
+      case 2: return 5;
+      case 3: return 7;
+      case 4: return 10;
+      default: return 3;
+    }
+  }
+
+  /**
+   * Calculate total unit price for a factory (sum of all resource prices)
+   */
+  private calculateFactoryTotalPrice(
+    factory: any,
+    resourcePriceMap: Map<ResourceType, number>
+  ): number {
+    let totalPrice = 0;
+    for (const resourceType of factory.resourceTypes) {
+      totalPrice += resourcePriceMap.get(resourceType as ResourceType) || 0;
+    }
+    return totalPrice;
   }
 
   /**

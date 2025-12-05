@@ -50,7 +50,7 @@ const SymbolLegend = () => (
     <LegendItem symbol={<RiGlasses2Fill />} label="Research Card" />
     <LegendItem symbol={<RiPercentFill />} label="Percentage" />
     <LegendItem symbol={<RiTicket2Fill />} label="Share" />
-    <LegendItem symbol={<RiSparkling2Fill />} label="Prestige" />
+    {/* Prestige removed - not used in modern game */}
     <LegendItem symbol={<RiWallet3Fill />} label="Cash on Hand" />
     <LegendItem symbol={<RiScalesFill />} label="Net Worth" />
     <LegendItem symbol={<RiFundsFill />} label="Stock Price" />

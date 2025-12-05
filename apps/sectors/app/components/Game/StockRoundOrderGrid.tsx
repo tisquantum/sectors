@@ -146,18 +146,12 @@ const StockRoundOrderGrid = ({
     refetchPlayerOrdersRevealed();
   }, [currentPhase?.id]);
   useEffect(() => {
-    if (authPlayer && playerOrdersConcealed && currentPhase) {
-      isOrderInputOpenPlayerOrderCounter(
-        playerOrdersConcealed,
-        authPlayer,
-        currentPhase,
-        setIsOrderInputOpen
-      );
-    }
+    // NEW: Allow multiple orders per phase - don't auto-close drawer after first order
+    // Players can manually close the drawer when done placing orders
     if (currentPhase?.name !== PhaseName.STOCK_ACTION_ORDER) {
       closeDrawer();
     }
-  }, [playerOrdersConcealed, currentPhase]);
+  }, [currentPhase]);
   const [isOrderInputOpen, setIsOrderInputOpen] = useState<boolean>(false);
   const [selectedCompanyOrder, setSelectedCompanyOrder] = useState<
     { company: CompanyWithRelations; isIpo: boolean } | undefined

@@ -251,6 +251,15 @@ const ResearchInfo = ({ companyId, gameId }: { companyId: string; gameId: string
     { enabled: !!company?.sectorId }
   );
 
+  // Get research workers count (each research order = 1 worker)
+  const { data: researchWorkers = 0 } = trpc.modernOperations.getResearchWorkers.useQuery(
+    {
+      companyId,
+      gameId,
+    },
+    { enabled: !!companyId && !!gameId }
+  );
+
   const researchProgressValue = company?.researchProgress || 0;
   // Calculate research stage from researchMarker (0-5 = Stage 1, 6-10 = Stage 2, 11-15 = Stage 3, 16-20+ = Stage 4)
   const researchMarker = company?.Sector?.researchMarker || 0;
@@ -268,6 +277,11 @@ const ResearchInfo = ({ companyId, gameId }: { companyId: string; gameId: string
       <div className="text-sm text-gray-400">
         Company Progress: <span className="text-blue-300 font-medium">{researchProgressValue}</span> spaces
       </div>
+      {researchWorkers > 0 && (
+        <div className="text-sm text-gray-400">
+          Workers: <span className="text-blue-300 font-medium">{researchWorkers}</span>
+        </div>
+      )}
       {researchMarker > 0 && (
         <div className="text-sm text-gray-400">
           Sector Research Stage: <span className="text-blue-300 font-medium">{researchStage}</span> (Marker: {researchMarker})

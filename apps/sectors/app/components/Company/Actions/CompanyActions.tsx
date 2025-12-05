@@ -12,7 +12,7 @@ interface CompanyActionsProps {
   phase: number;
   availableWorkers: number;
   availableCash: number;
-  availablePrestige: number;
+  // availablePrestige removed - not used in modern game
   operationMechanicsVersion: OperationMechanicsVersion;
   sectorName: string;
   onActionComplete?: () => void;
@@ -24,7 +24,7 @@ export function CompanyActions({
   phase,
   availableWorkers,
   availableCash,
-  availablePrestige,
+  // availablePrestige removed - not used in modern game
   operationMechanicsVersion,
   sectorName,
   onActionComplete,
@@ -36,7 +36,7 @@ export function CompanyActions({
         <div className="mt-2 flex gap-4 text-sm text-muted-foreground">
           <div>Available Workers: {availableWorkers}</div>
           <div>Available Cash: ${availableCash}</div>
-          <div>Available Prestige: {availablePrestige}</div>
+          {/* Available Prestige removed - not used in modern game */}
         </div>
       </div>
 

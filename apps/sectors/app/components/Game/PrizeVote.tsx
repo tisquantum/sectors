@@ -47,14 +47,7 @@ const PrizeComponent = ({
               <div className="flex gap-1">${prize.cashAmount}</div>
             </div>
           )}
-          {prize.prestigeAmount && (
-            <div className="flex flex-col gap-1">
-              <h4>Prestige Reward</h4>
-              <div className="flex gap-1">
-                <RiSparkling2Fill /> {prize.prestigeAmount}
-              </div>
-            </div>
-          )}
+          {/* Prestige reward removed - not used in modern game */}
         </div>
         <div className="flex gap-1">
           {prize.SectorPrizes &&
@@ -165,7 +158,7 @@ const PrizeRound = ({ isRevealRound = false }: { isRevealRound?: boolean }) => {
       </p>
       <ul>
         <li>Cash</li>
-        <li>Prestige</li>
+        {/* Prestige removed - not used in modern game */}
         <li>
           Passive Sector Effects:
           <ul>

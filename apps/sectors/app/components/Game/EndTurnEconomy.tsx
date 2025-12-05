@@ -9,7 +9,7 @@ import {
   RiSparkling2Fill,
   RiTeamFill,
 } from "@remixicon/react";
-import PrestigeRewards from "./PrestigeRewards";
+// PrestigeRewards import removed - not used in modern game
 import ResearchDeck from "../ResearchDeck/ResearchDeck";
 import { Tooltip, Tabs, Tab } from "@nextui-org/react";
 import {

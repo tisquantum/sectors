@@ -35,20 +35,30 @@ const Timer: React.FC<TimerProps> = ({ countdownTime = 10, size = 36, textSize =
     return () => clearInterval(interval);
   }, [value, countdownTime, onEnd]);
 
+  // Determine color based on time remaining
+  const getColor = () => {
+    const percentage = (value / countdownTime) * 100;
+    if (percentage <= 20) return "danger"; // Red when < 20% remaining
+    if (percentage <= 40) return "warning"; // Yellow when < 40% remaining
+    return "success"; // Green otherwise
+  };
+
   return (
-    <CircularProgress
-      classNames={{
-        svg: `w-${size} h-${size} drop-shadow-md`,
-        indicator: "stroke-white",
-        track: "stroke-white/10",
-        value: `text-${textSize}xl font-semibold text-white`,
-      }}
-      aria-label="Loading..."
-      value={(value / countdownTime) * 100}
-      color="warning"
-      showValueLabel={true}
-      valueLabel={`${value}s`}
-    />
+    <div className="flex flex-col items-center">
+      <CircularProgress
+        classNames={{
+          svg: `w-${size} h-${size} drop-shadow-lg`,
+          indicator: value <= countdownTime * 0.2 ? "stroke-red-500" : value <= countdownTime * 0.4 ? "stroke-yellow-500" : "stroke-green-500",
+          track: "stroke-white/10",
+          value: `text-${textSize}xl font-bold text-white drop-shadow-md`,
+        }}
+        aria-label="Phase timer"
+        value={(value / countdownTime) * 100}
+        color={getColor()}
+        showValueLabel={true}
+        valueLabel={`${value}s`}
+      />
+    </div>
   );
 };
 

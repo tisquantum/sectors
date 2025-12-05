@@ -47,6 +47,7 @@ import PlayerShares from "./PlayerShares";
 import ShareComponent from "../Company/Share";
 import { Drawer } from "vaul";
 import { toast } from "sonner";
+import { SuccessAnimation } from "../Game/SuccessAnimation";
 import DebounceButton from "@sectors/app/components/General/DebounceButton";
 import { useDrawer } from "../Drawer.context";
 
@@ -566,17 +567,62 @@ const PlayerOrderInput = ({
     });
   const [isLoadingPlayerOrder, setIsLoadingPlayerOrder] = useState(false);
   const createPlayerOrder = trpc.playerOrder.createPlayerOrder.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Show success animation
+      const orderTypeText = isBuy ? 'Buy' : 'Sell';
+      const location = isIpo ? 'IPO' : 'Market';
+      setSuccessMessage(`${orderTypeText} Order Placed!`);
+      setSuccessDescription(
+        `${share} share(s) of ${currentOrder.name} at $${orderValue || currentOrder.currentStockPrice} (${location})`
+      );
+      // setShowSuccessAnimation(true);
+      
+      // Also show toast for accessibility
+      toast.success(
+        `${orderTypeText} order placed successfully!`,
+        {
+          description: `${share} share(s) of ${currentOrder.name} at $${orderValue || currentOrder.currentStockPrice} (${location})`,
+          duration: 3000,
+        }
+      );
+      
       handlePlayerInputConfirmed();
-      closeDrawer();
+      // NEW: Keep drawer open to allow multiple orders - player can manually close
+      // closeDrawer(); // Removed to allow multiple orders
       refetchAuthPlayer();
       setIsSubmit(true);
+      // Reset form for next order
+      setShare(1);
+      setOrderValue(0);
     },
     onSettled: () => {
       setIsLoadingPlayerOrder(false);
     },
     onError: (error) => {
-      toast.error(error.message);
+      // Provide more descriptive error messages
+      let errorMessage = error.message;
+      
+      // Map common error messages to user-friendly versions
+      if (error.message.includes('60%') || error.message.includes('ownership limit')) {
+        errorMessage = `Cannot place order: This would exceed the 60% ownership limit for ${currentOrder.name}. You can own a maximum of 60% of any company's shares.`;
+      } else if (error.message.includes('buy and sell') || error.message.includes('same company')) {
+        errorMessage = `Cannot place order: You cannot both buy and sell shares of ${currentOrder.name} in the same stock round. Please choose either buying or selling.`;
+      } else if (error.message.includes('insufficient') || error.message.includes('cash')) {
+        errorMessage = `Cannot place order: Insufficient cash. You have $${authPlayer?.cashOnHand || 0}, but this order requires more.`;
+      } else if (error.message.includes('IPO') && error.message.includes('sell')) {
+        errorMessage = `Cannot place order: You cannot sell shares into the IPO market. Only buying is allowed for IPO shares.`;
+      } else if (error.message.includes('Only market orders')) {
+        errorMessage = `Cannot place order: Only market orders are allowed for IPO shares. Please select "Market Order" as the order type.`;
+      } else if (error.message.includes('not found')) {
+        errorMessage = `Error: ${error.message}. Please refresh the page and try again.`;
+      } else if (error.message.includes('Invalid data')) {
+        errorMessage = `Error: Invalid order data. Please check your order details and try again.`;
+      }
+      
+      toast.error(errorMessage, {
+        duration: 5000,
+        description: error.message !== errorMessage ? `Technical details: ${error.message}` : undefined,
+      });
     },
   });
   const [share, setShare] = useState(1);
@@ -587,6 +633,9 @@ const PlayerOrderInput = ({
   const [maxValue, setMaxValue] = useState(10);
   const [minValue, setMinValue] = useState(1);
   const [ipoFloatValue, setIpoFloatValue] = useState<number | null>(null);
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [successDescription, setSuccessDescription] = useState("");
   let runningOrderValue = 0;
   if (playerOrders) {
     runningOrderValue = calculateRunningOrderValue(playerOrders);
@@ -674,6 +723,64 @@ const PlayerOrderInput = ({
     playerWithShares?.Share.filter(
       (share) => share.companyId === currentOrder.id
     ).length || 0;
+  
+  // Validation hints for new stock round rules
+  const checkBuySellConflict = (): string | null => {
+    if (!playerOrders || !currentPhase || orderType !== OrderType.MARKET) return null;
+    
+    const existingOrders = playerOrders.filter(
+      order => order.companyId === currentOrder.id && 
+               order.stockRoundId === currentPhase.stockRoundId &&
+               order.orderType === OrderType.MARKET
+    );
+    const hasBuyOrder = existingOrders.some(o => !o.isSell);
+    const hasSellOrder = existingOrders.some(o => o.isSell);
+    
+    if (isBuy && hasSellOrder) {
+      return "⚠️ You already have a sell order for this company in this stock round.";
+    }
+    if (!isBuy && hasBuyOrder) {
+      return "⚠️ You already have a buy order for this company in this stock round.";
+    }
+    return null;
+  };
+
+  const checkOwnershipLimit = (): string | null => {
+    if (!isBuy || !company || orderType !== OrderType.MARKET) return null;
+    
+    const totalCompanyShares = company.Share.length;
+    const maxSharesAllowed = Math.floor(totalCompanyShares * 0.6);
+    
+    const currentShares = company.Share.filter(
+      s => s.location === ShareLocation.PLAYER && 
+           s.playerId === authPlayer?.id
+    ).length;
+    
+    const pendingBuyOrders = playerOrders?.filter(
+      order => order.companyId === currentOrder.id && 
+               !order.isSell && 
+               order.orderType === OrderType.MARKET &&
+               order.stockRoundId === currentPhase?.stockRoundId
+    ) || [];
+    
+    const pendingShares = pendingBuyOrders.reduce((sum, o) => sum + (o.quantity || 0), 0);
+    const totalAfterOrder = currentShares + pendingShares + share;
+    
+    if (totalAfterOrder > maxSharesAllowed) {
+      return `⚠️ This order would exceed 60% ownership limit. Current: ${currentShares}, Pending: ${pendingShares}, This order: ${share}, Max: ${maxSharesAllowed}`;
+    }
+    
+    // Show info if close to limit
+    if (totalAfterOrder > maxSharesAllowed * 0.9) {
+      return `ℹ️ Close to 60% limit. After this order: ${totalAfterOrder}/${maxSharesAllowed} shares (${Math.round((totalAfterOrder / maxSharesAllowed) * 100)}%)`;
+    }
+    
+    return null;
+  };
+
+  const buySellConflictWarning = checkBuySellConflict();
+  const ownershipLimitWarning = checkOwnershipLimit();
+  
   return (
     <div className="flex flex-col justify-center items-center gap-1 min-w-80 max-w-96">
       <div className="flex items-center gap-1">
@@ -686,6 +793,21 @@ const PlayerOrderInput = ({
           />
         )}
       </div>
+      {/* Validation warnings */}
+      {buySellConflictWarning && (
+        <div className="text-yellow-600 text-sm bg-yellow-50 p-2 rounded border border-yellow-200 w-full">
+          {buySellConflictWarning}
+        </div>
+      )}
+      {ownershipLimitWarning && (
+        <div className={`text-sm p-2 rounded border w-full ${
+          ownershipLimitWarning.startsWith('⚠️') 
+            ? 'text-red-600 bg-red-50 border-red-200' 
+            : 'text-blue-600 bg-blue-50 border-blue-200'
+        }`}>
+          {ownershipLimitWarning}
+        </div>
+      )}
       <PseudoBalance
         stockRoundId={currentPhase?.stockRoundId ?? ""}
         currentOrderValue={currentOrderValue}
@@ -785,6 +907,16 @@ const PlayerOrderInput = ({
             </Drawer.Close>
           </div>
         </div>
+      )}
+      
+      {/* Success Animation */}
+      {showSuccessAnimation && (
+        <SuccessAnimation
+          message={successMessage}
+          description={successDescription}
+          onComplete={() => setShowSuccessAnimation(false)}
+          duration={1500}
+        />
       )}
     </div>
   );

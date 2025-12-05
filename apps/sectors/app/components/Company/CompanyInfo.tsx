@@ -192,26 +192,7 @@ const CompanyMoreInfo = ({
         </div>
       </div>
       <div className="flex flex-wrap items-center">
-        <Tooltip
-          classNames={{ base: baseToolTipStyle }}
-          className={tooltipStyle}
-          content={
-            <p className={tooltipParagraphStyle}>
-              Prestige tokens. While held, they help prioritize the company for
-              production. Can be spent for a bonus. How to earn prestige: If a
-              company sells all of it&apos;s supply during an operating round,
-              it earns 1 prestige token.
-            </p>
-          }
-        >
-          <div className="flex items-center">
-            <RiSparkling2Fill
-              size={18}
-              className="ml-2 size-4 text-yellow-500"
-            />
-            <span className="ml-1">{company.prestigeTokens}</span>
-          </div>
-        </Tooltip>
+        {/* Prestige removed - not used in modern game */}
         <Tooltip
           classNames={{ base: baseToolTipStyle }}
           className={tooltipStyle}

@@ -61,6 +61,15 @@ export function ResearchSlot({ companyId, gameId, isCEO = false }: ResearchSlotP
   const researchProgress = company?.researchProgress || 0;
   const canResearch = company && company.cashOnHand >= researchCost;
 
+  // Get research workers count (each research order = 1 worker)
+  const { data: researchWorkers = 0 } = trpc.modernOperations.getResearchWorkers.useQuery(
+    {
+      companyId,
+      gameId,
+    },
+    { enabled: !!companyId && !!gameId }
+  );
+
   const handleSlotClick = () => {
     // Only allow clicks during MODERN_OPERATIONS phase and if user is CEO
     if (!isModernOperationsPhase || !isCEO) return;
@@ -105,6 +114,12 @@ export function ResearchSlot({ companyId, gameId, isCEO = false }: ResearchSlotP
           <div className="flex flex-col items-center gap-1">
             <div className="text-xs font-bold">Research</div>
             <div className="text-sm font-semibold">{researchProgress}</div>
+            {researchWorkers > 0 && (
+              <div className="flex items-center gap-1 text-xs text-blue-300">
+                <span>👷</span>
+                <span>{researchWorkers}</span>
+              </div>
+            )}
           </div>
         ) : (
           <span className="text-xs font-medium">Research</span>

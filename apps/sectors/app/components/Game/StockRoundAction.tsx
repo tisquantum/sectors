@@ -38,7 +38,12 @@ const StockRoundAction = ({
       </div>
       <div className="flex justify-center items-center gap-10 basis-1/4">
         {isCurrentPhaseInteractive(currentPhase?.name) ? (
-          <div>Place an Order With A Company to Start.</div>
+          <div className="text-center">
+            <div>Place orders with companies.</div>
+            <div className="text-sm text-gray-400 mt-1">
+              You can place multiple orders, but cannot buy and sell from the same company.
+            </div>
+          </div>
         ) : (
           <div>Viewing results.</div>
         )}

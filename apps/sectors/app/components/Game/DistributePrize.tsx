@@ -44,11 +44,7 @@ type DistributionData =
       playerId: string;
       amount: number;
     }
-  | {
-      prizetype: "prestige";
-      companyId: string;
-      amount: number;
-    }
+  // Prestige removed - not used in modern game
   | {
       prizetype: "passive";
       companyId: string;
@@ -79,8 +75,7 @@ const DistributePrize = ({
 
   const [selectedPlayer, setSelectedPlayer] = useState<string>("");
   const [cashAmount, setCashAmount] = useState<number>(0);
-  const [selectedCompany, setSelectedCompany] = useState<string>("");
-  const [prestigeAmount, setPrestigeAmount] = useState<number>(1);
+  // Prestige removed - not used in modern game
   const [selectedSectorCompany, setSelectedSectorCompany] = useState<
     Record<string, string>
   >({});
@@ -115,21 +110,7 @@ const DistributePrize = ({
     }
   };
 
-  const handleAddPrestigeDistribution = () => {
-    if (selectedCompany && prestigeAmount > 0) {
-      setDistributionData((prev) => [
-        ...prev,
-        {
-          prizetype: "prestige",
-          companyId: selectedCompany,
-          amount: prestigeAmount,
-        },
-      ]);
-      // Reset state after adding
-      setSelectedCompany("");
-      setPrestigeAmount(1);
-    }
-  };
+  // handleAddPrestigeDistribution removed - prestige not used in modern game
 
   const handleAddPassiveEffectDistribution = (
     sectorId: string,
@@ -215,62 +196,7 @@ const DistributePrize = ({
           )}
         </div>
       )}
-      {prize.prestigeAmount && (
-        <div className="flex flex-col gap-1 p-2 rounded-md bg-slate-900">
-          <div className="flex gap-1">
-            <h3>Distribute Prestige</h3>
-            <div className="flex gap-1">
-              <RiSparkling2Fill /> {prize.prestigeAmount}
-            </div>
-          </div>
-          {distributionData.length > 0 &&
-          distributionData.reduce(
-            (acc, curr) =>
-              curr.prizetype === "prestige" ? acc + curr.amount : acc,
-            0
-          ) >= prize.prestigeAmount ? (
-            <div>Prize fully distributed</div>
-          ) : (
-            <>
-              <Select
-                label="Distribute Prestige"
-                placeholder="Select a company"
-                className="max-w-xs"
-                onChange={(event) => setSelectedCompany(event.target.value)}
-              >
-                {Object.entries(companiesBySector).map(
-                  ([sectorId, { sector, companies }]) => (
-                    <SelectSection key={sectorId} title={sector.name}>
-                      {companies.map((company) => (
-                        <SelectItem key={company.id} value={company.id}>
-                          {company.name}
-                        </SelectItem>
-                      ))}
-                    </SelectSection>
-                  )
-                )}
-              </Select>
-              {selectedCompany && (
-                <>
-                  <Input
-                    type="number"
-                    placeholder="Amount"
-                    value={prestigeAmount.toString()}
-                    onChange={(event) =>
-                      setPrestigeAmount(Number(event.target.value))
-                    }
-                    min={1}
-                    max={prize.prestigeAmount}
-                  />
-                  <DebounceButton onClick={handleAddPrestigeDistribution}>
-                    Add To Distribution
-                  </DebounceButton>
-                </>
-              )}
-            </>
-          )}
-        </div>
-      )}
+      {/* Prestige distribution removed - not used in modern game */}
       {prize.SectorPrizes &&
         prize.SectorPrizes.map((sectorPrize) => {
           const sectorDistributed = distributionData.some(
@@ -393,11 +319,7 @@ const DistributionTable = ({
                     })()}
                   </div>
                 )}
-                {item.prizetype === "prestige" && item.companyId && (
-                  <div>
-                    {Company.find((c) => c.id === item.companyId)?.name}
-                  </div>
-                )}
+                {/* Prestige removed - not used in modern game */}
                 {item.prizetype === "passive" && item.companyId && (
                   <div>
                     {Company.find((c) => c.id === item.companyId)?.name}
@@ -406,12 +328,7 @@ const DistributionTable = ({
               </TableCell>
               <TableCell>
                 {item.prizetype === "cash" && `$${item.amount}`}
-                {item.prizetype === "prestige" && (
-                  <div className="flex gap-1 items-center">
-                    <RiSparkling2Fill />
-                    <span>{item.amount}</span>
-                  </div>
-                )}
+                {/* Prestige removed - not used in modern game */}
                 {item.prizetype === "passive" && (
                   <div className="flex gap-1 items-center">
                     <RiGameFill />
@@ -480,11 +397,7 @@ const PrizeDistributionsTable = ({
                     />
                   </div>
                 )}
-              {prizeDistribution.distributionType ==
-                PrizeDistributionType.PRESTIGE &&
-                prizeDistribution.Company && (
-                  <div>{prizeDistribution.Company.name}</div>
-                )}
+              {/* Prestige distribution removed - not used in modern game */}
               {prizeDistribution.distributionType ===
                 PrizeDistributionType.PASSIVE_EFFECT &&
                 prizeDistribution.Company && (
@@ -495,13 +408,7 @@ const PrizeDistributionsTable = ({
               {prizeDistribution.distributionType ===
                 PrizeDistributionType.CASH &&
                 `$${prizeDistribution.cashAmount}`}
-              {prizeDistribution.distributionType ==
-                PrizeDistributionType.PRESTIGE && (
-                <div className="flex gap-1 items-center">
-                  <RiSparkling2Fill />
-                  <span>{prizeDistribution.prestigeAmount}</span>
-                </div>
-              )}
+              {/* Prestige distribution removed - not used in modern game */}
               {prizeDistribution.distributionType ===
                 PrizeDistributionType.PASSIVE_EFFECT && (
                 <div className="flex gap-1 items-center">

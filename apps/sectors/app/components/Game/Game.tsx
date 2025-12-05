@@ -54,9 +54,11 @@ import { isActivePhase } from "@server/data/helpers";
 import GameResults from "./GameResults";
 import { Drawer } from "vaul";
 import { useDrawer } from "../Drawer.context";
+import { useKeyboardShortcuts } from "@sectors/app/hooks/useKeyboardShortcuts";
 import PrizeRound from "./PrizeVote";
 import DistributePrizes from "./DistributePrize";
 import StartTurnUpdates from "./StartTurnUpdates";
+import { PhaseTransition } from "./PhaseTransition";
 import GamePlayersRecap from "./GamePlayerRecap";
 import Headlines from "./Headlines";
 import IpoVotes from "./IpoVote";
@@ -163,6 +165,10 @@ const Game = ({ gameId }: { gameId: string }) => {
   const constraintsRef = useRef(null);
   const [isTimerAtZero, setIsTimerAtZero] = useState(false);
   
+  // Phase transition tracking
+  const previousPhaseRef = useRef<PhaseName | undefined>(undefined);
+  const [showPhaseTransition, setShowPhaseTransition] = useState(false);
+  
   // Track renders and view changes
   const renderCountRef = useRef(0);
   renderCountRef.current += 1;
@@ -187,6 +193,18 @@ const Game = ({ gameId }: { gameId: string }) => {
   useEffect(() => {
     onOpen();
   }, [onOpen]);
+  // Track phase changes for transitions
+  useEffect(() => {
+    if (currentPhase?.name && currentPhase.name !== previousPhaseRef.current) {
+      // Phase changed - show transition
+      if (previousPhaseRef.current) {
+        setShowPhaseTransition(true);
+      }
+      previousPhaseRef.current = currentPhase.name;
+    }
+  }, [currentPhase?.name]);
+
+  // Calculate time remaining for timer
   useEffect(() => {
     const timer = setInterval(() => {
       if (currentPhase && currentPhase.phaseStartTime) {
@@ -198,11 +216,26 @@ const Game = ({ gameId }: { gameId: string }) => {
       }
     }, 1000);
     return () => clearInterval(timer);
-  }, [currentPhase?.name]);
+  }, [currentPhase?.name, currentPhase?.phaseStartTime, currentPhase?.phaseTime]);
   const handleCurrentView = (view: string) => {
     console.log(`[Game] handleCurrentView called with: ${view}`);
     setCurrentView(view);
   };
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts({
+    onEscape: () => {
+      if (drawerIsOpen) {
+        closeDrawer();
+      }
+      if (isSidebarModalOpen) {
+        closeSidebarModal();
+      }
+    },
+    onViewChange: handleCurrentView,
+    onTogglePhaseList: () => setShowPhaseList((prev) => !prev),
+    enabled: true,
+  });
   const currentRoundData = determineGameRound(gameState);
   const renderCurrentPhase =
     currentRoundData?.phase.name === PhaseName.STOCK_MEET ? (
@@ -367,6 +400,15 @@ const Game = ({ gameId }: { gameId: string }) => {
 
   return (
     <>
+      {/* Phase Transition Animation */}
+      {showPhaseTransition && currentPhase?.name && (
+        <PhaseTransition
+          previousPhase={previousPhaseRef.current}
+          currentPhase={currentPhase.name}
+          onComplete={() => setShowPhaseTransition(false)}
+        />
+      )}
+
       <Drawer.Root
         open={drawerIsOpen}
         onOpenChange={toggleDrawer}
@@ -411,12 +453,80 @@ const Game = ({ gameId }: { gameId: string }) => {
               <div
                 className={`@container active-panel flex flex-col h-full max-h-full w-full p-4 overflow-y-auto scrollbar`}
               >
-                {currentView === "action" && renderCurrentPhase}
-                {currentView === "chart" && <StockChart />}
-                {currentView === "pending" && <PendingOrders />}
-                {currentView == "economy" && <EndTurnEconomy />}
-                {currentView == "markets" && <MarketsView />}
-                {currentView == "companies" && <OperationsView />}
+                <AnimatePresence mode="wait">
+                  {currentView === "action" && renderCurrentPhase && (
+                    <motion.div
+                      key={`action-${currentRoundData?.phase.name || 'default'}`}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.3, ease: "easeInOut" }}
+                      className="h-full"
+                    >
+                      {renderCurrentPhase}
+                    </motion.div>
+                  )}
+                  {currentView === "chart" && (
+                    <motion.div
+                      key="chart"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.3, ease: "easeInOut" }}
+                      className="h-full"
+                    >
+                      <StockChart />
+                    </motion.div>
+                  )}
+                  {currentView === "pending" && (
+                    <motion.div
+                      key="pending"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.3, ease: "easeInOut" }}
+                      className="h-full"
+                    >
+                      <PendingOrders />
+                    </motion.div>
+                  )}
+                  {currentView == "economy" && (
+                    <motion.div
+                      key="economy"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.3, ease: "easeInOut" }}
+                      className="h-full"
+                    >
+                      <EndTurnEconomy />
+                    </motion.div>
+                  )}
+                  {currentView == "markets" && (
+                    <motion.div
+                      key="markets"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.3, ease: "easeInOut" }}
+                      className="h-full"
+                    >
+                      <MarketsView />
+                    </motion.div>
+                  )}
+                  {currentView == "companies" && (
+                    <motion.div
+                      key="companies"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.3, ease: "easeInOut" }}
+                      className="h-full"
+                    >
+                      <OperationsView />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
                 {gameState.gameStatus == GameStatus.FINISHED && (
                   <GameResults
                     isOpen={isOpen}

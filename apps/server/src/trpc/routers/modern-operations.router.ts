@@ -224,6 +224,23 @@ export default (trpc: TrpcService, ctx: Context) =>
         });
       }),
 
+    // Get total research workers allocated for a company (count of all research orders)
+    getResearchWorkers: trpc.procedure
+      .input(z.object({
+        companyId: z.string(),
+        gameId: z.string(),
+      }))
+      .query(async ({ input }) => {
+        // Count all research orders for this company (each order = 1 worker)
+        const count = await ctx.prismaService.researchOrder.count({
+          where: {
+            companyId: input.companyId,
+            gameId: input.gameId,
+          },
+        });
+        return count;
+      }),
+
     // Get company's available workers for allocation
     getCompanyWorkforceStatus: trpc.procedure
       .input(z.object({

@@ -251,16 +251,9 @@ export class PlayerOrderService {
   async createPlayerOrder(
     data: Prisma.PlayerOrderCreateInput,
   ): Promise<PlayerOrder> {
-    //if the player has already placed a player order this phase, throw an error
-    const playerOrder = await this.prisma.playerOrder.findFirst({
-      where: {
-        playerId: data.Player.connect?.id,
-        phaseId: data.Phase.connect?.id,
-      },
-    });
-    if (playerOrder) {
-      throw new Error('Player has already placed an order this phase');
-    }
+    // Note: Players can now place multiple orders per phase, but with restrictions:
+    // 1. Cannot buy and sell from the same company in the same stock round
+    // 2. Cannot exceed 60% ownership limit across all buy orders
     //get game
     const game = await this.prisma.game.findUnique({
       where: { id: data.Game.connect?.id },
@@ -381,15 +374,61 @@ export class PlayerOrderService {
         //   );
         // }
       }*/
+      // NEW RULE: Cannot buy and sell from the same company in the same stock round
       if (data.isSell) {
-        //check is player has created any other sell orders for this company this stock round
+        // Check if player has any buy orders for this company in this stock round
+        const playerBuyOrders = playerOrders.filter(
+          (order) => !order.isSell && order.companyId === companyId && order.orderType === OrderType.MARKET,
+        );
+        if (playerBuyOrders.length > 0) {
+          throw new Error(
+            'Cannot place a sell order for a company if you have a buy order for the same company in this stock round.',
+          );
+        }
+      } else {
+        // Check if player has any sell orders for this company in this stock round
         const playerSellOrders = playerOrders.filter(
-          (order) => order.isSell && order.companyId === companyId,
+          (order) => order.isSell && order.companyId === companyId && order.orderType === OrderType.MARKET,
         );
         if (playerSellOrders.length > 0) {
           throw new Error(
-            'Player has already placed a sell order for this company this stock round.',
+            'Cannot place a buy order for a company if you have a sell order for the same company in this stock round.',
           );
+        }
+        
+        // NEW RULE: Check that total buy orders won't exceed 60% ownership limit
+        const companyWithShares = await this.prisma.company.findUnique({
+          where: { id: companyId },
+          include: { Share: true },
+        });
+        
+        if (companyWithShares) {
+          const totalCompanyShares = companyWithShares.Share.length;
+          const maxSharesAllowed = Math.floor(totalCompanyShares * (MAX_SHARE_PERCENTAGE / 100));
+          
+          // Count current shares owned by player
+          const currentPlayerShares = player.Share.filter(
+            (share) => share.companyId === companyId && share.location === ShareLocation.PLAYER,
+          ).length;
+          
+          // Count shares from pending buy orders in this stock round
+          const pendingBuyOrders = playerOrders.filter(
+            (order) => !order.isSell && order.companyId === companyId && order.orderType === OrderType.MARKET,
+          );
+          const sharesFromPendingOrders = pendingBuyOrders.reduce(
+            (sum, order) => sum + (order.quantity || 0),
+            0,
+          );
+          
+          // Check if this new order would exceed the limit
+          const totalSharesAfterOrders = currentPlayerShares + sharesFromPendingOrders + (data.quantity || 0);
+          
+          if (totalSharesAfterOrders > maxSharesAllowed) {
+            throw new Error(
+              `This buy order would exceed the maximum share percentage of ${MAX_SHARE_PERCENTAGE}% for ${companyWithShares.name}. ` +
+              `Current: ${currentPlayerShares}, Pending: ${sharesFromPendingOrders}, This order: ${data.quantity}, Max allowed: ${maxSharesAllowed}`,
+            );
+          }
         }
       }
     }

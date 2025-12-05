@@ -1,21 +1,12 @@
 import { PhaseName } from "@server/prisma/prisma.client";
 import { useGame } from "./GameContext";
 import { friendlyPhaseName } from "@sectors/app/helpers";
+import { getPhaseColor } from "@sectors/app/helpers/phaseColors";
 import { phasesInOrder } from "@server/data/constants";
 import _ from "lodash";
 
 const PhaseListComponent = () => {
   const { currentPhase, gameState, currentTurn } = useGame();
-  const getPhaseBorderColor = (phaseName: PhaseName) => {
-    switch (phaseName) {
-      case PhaseName.STOCK_ACTION_ORDER:
-        return "border-yellow-500";
-      case PhaseName.STOCK_ACTION_RESULT:
-        return "border-yellow-500";
-      default:
-        return "border-slate-400";
-    }
-  };
   let _phasesInOrder = [...phasesInOrder];
   if (currentTurn.turn > 1) {
     _phasesInOrder = phasesInOrder.filter(
@@ -60,20 +51,24 @@ const PhaseListComponent = () => {
     <div className="flex flex-col gap-2 max-w-[150px] md:max-w-[250px] lg:max-w-[300px] xl:max-w-[450px]">
       {_phasesInOrder.map((phase) => (
         <div key={phase}>
-          <div
-            className={`flex items-center p-1 border-3 ${
-              phase === currentPhase?.name
-                ? "border-pink-500/100"
-                : getPhaseBorderColor(phase)
-            }`}
-          >
-            <div>
-              {friendlyPhaseName(phase) || phase}{" "}
-              {phase == PhaseName.STOCK_ACTION_ORDER &&
-                currentPhase?.StockSubRound?.roundNumber &&
-                `(${currentPhase?.StockSubRound?.roundNumber})`}
-            </div>
-          </div>
+          {(() => {
+            const phaseColors = getPhaseColor(phase);
+            const isCurrentPhase = phase === currentPhase?.name;
+            return (
+              <div
+                className={`flex items-center p-1 border-3 ${
+                  isCurrentPhase
+                    ? `border-pink-500 bg-pink-500/20 ${phaseColors.bg}/20`
+                    : `${phaseColors.border} ${phaseColors.bg}/10`
+                }`}
+              >
+                <div className={isCurrentPhase ? phaseColors.text : "text-gray-300"}>
+                  {friendlyPhaseName(phase) || phase}
+                  {/* Removed sub-round display - stock rounds no longer use sub-rounds */}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       ))}
     </div>

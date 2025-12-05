@@ -88,7 +88,7 @@ const CompanyPriorityList = ({
               <TableColumn>Company Name</TableColumn>
               <TableColumn>Sector</TableColumn>
               <TableColumn>Unit Price</TableColumn>
-              <TableColumn>Prestige Tokens</TableColumn>
+              {/* Prestige Tokens column removed - not used in modern game */}
               <TableColumn>Demand Score</TableColumn>
               <TableColumn>Has Economies of Scale</TableColumn>
             </TableHeader>
@@ -100,15 +100,7 @@ const CompanyPriorityList = ({
                     <TableCell>{company.name}</TableCell>
                     <TableCell>{company.Sector.name}</TableCell>
                     <TableCell>${company.unitPrice.toFixed(2)}</TableCell>
-                    <TableCell>
-                      <span className="flex items-center content-center justify-center gap-1">
-                        <RiSparkling2Fill
-                          size={18}
-                          className="text-yellow-500"
-                        />
-                        {company.prestigeTokens}
-                      </span>
-                    </TableCell>
+                    {/* Prestige Tokens cell removed - not used in modern game */}
                     <TableCell>
                       <span className="flex items-center content-center justify-center gap-1">
                         <RiHandCoinFill size={18} />
@@ -142,7 +134,7 @@ const CompanyPriorityList = ({
             first).
           </li>
           <li>
-            2: Companies are sorted by prestige tokens in descending order.
+            2: Companies are sorted by unit price in ascending order (cheapest first).
           </li>
           <li>3: Companies are sorted by demand score in descending order.</li>
         </ul>

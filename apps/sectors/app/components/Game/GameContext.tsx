@@ -152,10 +152,26 @@ export const GameProvider: React.FC<{
     refetch: refetchAuthPlayer,
   } = trpc.player.getPlayer.useQuery(
     { where: { userId: user?.id, gameId: gameId } },
-    { enabled: !!user }
+    {
+      enabled: !!user,
+      // Prevent excessive refetching
+      refetchOnMount: false,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      staleTime: 15000, // 15 seconds
+    }
   );
   const { data: playersWithShares, refetch: refetchPlayersWithShares } =
-    trpc.game.getPlayersWithShares.useQuery({ gameId });
+    trpc.game.getPlayersWithShares.useQuery(
+      { gameId },
+      {
+        // Prevent excessive refetching
+        refetchOnMount: false,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
+        staleTime: 15000, // 15 seconds - players don't change that often
+      }
+    );
   const phaseQueryCountRef = useRef(0);
   const { data: currentPhase, refetch: refetchCurrentPhase, error: phaseError } =
     trpc.phase.getPhase.useQuery(
@@ -300,9 +316,9 @@ export const GameProvider: React.FC<{
         trpcUtilsRef.current.factoryProduction.getGameTurnProduction.invalidate();
       }
       
-      // Debounce refetches - only refetch if last refetch was > 200ms ago
+      // Debounce refetches - only refetch if last refetch was > 500ms ago (increased for better performance)
       const now = Date.now();
-      const DEBOUNCE_MS = 200;
+      const DEBOUNCE_MS = 500;
       
       if (now - lastRefetchTimeRef.current.gameState > DEBOUNCE_MS) {
         lastRefetchTimeRef.current.gameState = now;

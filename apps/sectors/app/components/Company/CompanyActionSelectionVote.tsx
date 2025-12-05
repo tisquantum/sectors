@@ -21,7 +21,7 @@ import { useGame } from "../Game/GameContext";
 import {
   ACTION_ISSUE_SHARE_AMOUNT,
   CompanyActionCosts,
-  CompanyActionPrestigeCosts,
+  // CompanyActionPrestigeCosts removed - not used in modern game
   companyActionsDescription,
   CompanyTierData,
   DEFAULT_DECREASE_UNIT_PRICE,
@@ -34,7 +34,7 @@ import {
   LOBBY_DEMAND_BOOST,
   MARKETING_CONSUMER_BONUS,
   OURSOURCE_SUPPLY_BONUS,
-  OUTSOURCE_PRESTIGE_PENALTY,
+  // OUTSOURCE_PRESTIGE_PENALTY removed - not used in modern game
   SectorEffects,
   SMALL_MARKETING_CAMPAIGN_DEMAND,
 } from "@server/data/constants";
@@ -53,7 +53,7 @@ import ShareHolders from "./ShareHolders";
 import { sectorColors } from "@server/data/gameData";
 import PlayerAvatar from "../Player/PlayerAvatar";
 import CompanyInfo from "./CompanyInfo";
-import PrestigeRewards from "../Game/PrestigeRewards";
+// PrestigeRewards import removed - not used in modern game
 import DebounceButton from "@sectors/app/components/General/DebounceButton";
 import {
   RiArrowLeftFill,
@@ -302,12 +302,7 @@ const renderSymbolDisplay = (operatingRoundAction: OperatingRoundAction) => {
               <RiListOrdered2 size={18} />
             </div>
           </Row>
-          <Row variant="flat" color="danger">
-            <IconWithText
-              icon={<RiSparkling2Fill size={18} />}
-              text={`-${OUTSOURCE_PRESTIGE_PENALTY}`}
-            />
-          </Row>
+          {/* Prestige penalty removed - not used in modern game */}
         </div>
       );
 
@@ -393,8 +388,7 @@ const CompanyActionSelectionVote = ({
       ) > company.cashOnHand
     )
       return true;
-    if (CompanyActionPrestigeCosts[actionName] > company.prestigeTokens)
-      return true;
+    // Prestige cost check removed - not used in modern game
     if (actionName === OperatingRoundAction.LOAN && company.hasLoan)
       return true;
     return false;
@@ -687,10 +681,7 @@ const CompanyActionSelectionVote = ({
                       <CardBody>
                         <div className="flex flex-col">
                           {renderSymbolDisplay(action.name)}
-                          {action.name ===
-                            OperatingRoundAction.SPEND_PRESTIGE && (
-                            <PrestigeRewards layout="minimalist" />
-                          )}
+                          {/* SPEND_PRESTIGE removed - not used in modern game */}
                           {action.name === OperatingRoundAction.LOAN && (
                             <Chip className="mt-2" color="warning">
                               One time only
@@ -750,14 +741,7 @@ const CompanyActionSelectionVote = ({
                                 ${cost}
                               </span>
                             ))}
-                            {CompanyActionPrestigeCosts[action.name] > 0 && (
-                              <div className="flex gap-1 items-center">
-                                <RiSparkling2Fill />
-                                <span className="text-sm xl:text-base">
-                                  {CompanyActionPrestigeCosts[action.name]}
-                                </span>
-                              </div>
-                            )}
+                            {/* Prestige cost display removed - not used in modern game */}
                           </div>
                         </div>
                       </CardFooter>

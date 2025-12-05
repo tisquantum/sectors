@@ -220,11 +220,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
               <div className="flex flex-col gap-4 w-full">
                 {Object.keys(groupedIpoOrdersByPhase).map((index, indexInt) => (
                   <div className="flex flex-col" key={index}>
-                    <div className="flex items-center justify-center">
-                      <span className="text-sm text-gray-400">
-                        {groupedIpoOrdersByPhase[index]?.subRound}
-                      </span>
-                    </div>
+                    {/* Removed sub-round display - stock rounds no longer use sub-rounds */}
                     <div className="flex items-center justify-center">
                       <PlayerOrderConcealed
                         orders={ipoOrders.filter(
@@ -250,11 +246,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
               <div className="flex flex-col gap-4 w-full">
                 {Object.keys(groupedIpoOrdersByPhase).map((index, indexInt) => (
                   <div className="flex flex-col" key={index}>
-                    <div className="flex items-center justify-center">
-                      <span className="text-sm text-gray-400">
-                        {groupedIpoOrdersByPhase[index]?.subRound}
-                      </span>
-                    </div>
+                    {/* Removed sub-round display - stock rounds no longer use sub-rounds */}
                     <div className="flex items-center justify-center">
                       <PlayerOrder
                         orders={playerOrdersRevealed.filter(
@@ -315,7 +307,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
                     <div className="flex flex-col" key={index}>
                       <div className="flex items-center justify-center">
                         <span className="text-sm text-gray-400">
-                          {groupedOpenMarketOrdersByPhase[index]?.subRound}
+                          {/* Removed sub-round display - stock rounds no longer use sub-rounds */}
                         </span>
                       </div>
                       <div className="flex items-center justify-center">
@@ -347,7 +339,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
                     <div className="flex flex-col" key={index}>
                       <div className="flex items-center justify-center">
                         <span className="text-sm text-gray-400">
-                          {groupedOpenMarketOrdersByPhase[index]?.subRound}
+                          {/* Removed sub-round display - stock rounds no longer use sub-rounds */}
                         </span>
                       </div>
                       <div className="flex items-center justify-center">
