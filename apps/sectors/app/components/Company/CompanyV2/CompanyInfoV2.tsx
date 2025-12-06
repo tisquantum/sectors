@@ -35,6 +35,7 @@ import {
   RiUserFill,
   RiWallet3Fill,
   RiVipCrown2Fill,
+  RiHashtag,
 } from "@remixicon/react";
 import {
   baseToolTipStyle,
@@ -147,7 +148,7 @@ const CompanyMoreInfo = ({
   showingProductionResults?: boolean;
 }) => {
   return (
-    <div className="flex gap-1 my-2">
+    <div className="flex gap-1">
       <div
         className="flex flex-col px-2 rounded-md"
         style={{ backgroundColor: sectorColors[company.Sector.name] }}
@@ -323,6 +324,11 @@ const CompanyInfoV2 = ({
     { where: { id: company?.ceoId || "" } },
     { enabled: !!company?.ceoId }
   );
+  // Fetch company priority (global and sector)
+  const { data: companyPriority } = trpc.company.getCompanyPriority.useQuery(
+    { companyId, gameId: company?.gameId || "" },
+    { enabled: !!company?.gameId && !!companyId }
+  );
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
   useEffect(() => {
     refetchCompany();
@@ -424,17 +430,58 @@ const CompanyInfoV2 = ({
 
   return (
     <>
-      <div className="flex flex-row gap-1 items-center h-full w-full">
-        <div className="flex flex-col gap-1">
-          <div className="flex flex-col gap-1">
-            <div className="flex flex-start gap-1 items-center justify-between">
-              <div className="flex items-center gap-1 text-base lg:text-lg font-bold">
-                <RiBuilding3Fill size={18} />
-                <span>{company.name} v2 </span>
-              </div>
+      <div className="flex flex-row gap-1 items-start h-full w-full">
+        <div className="flex flex-col gap-1 flex-1">
+          {/* Condensed Header */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1 text-base lg:text-lg font-bold">
+              <RiBuilding3Fill size={18} />
+              <span>{company.name}</span>
             </div>
-            <div className="flex gap-1">
-              <span>{company.stockSymbol}</span>
+            {companyPriority && (companyPriority.global || companyPriority.sector) && (
+              <div className="flex items-center gap-1">
+                {companyPriority.global && (
+                  <Tooltip
+                    classNames={{ base: baseToolTipStyle }}
+                    className={tooltipStyle}
+                    content={
+                      <p className={tooltipParagraphStyle}>
+                        Global company priority based on stock price (highest to lowest), then stacking order across all sectors.
+                      </p>
+                    }
+                  >
+                    <div className="flex items-center gap-1 px-2 py-1 rounded bg-gray-700/50 border border-gray-600">
+                      <RiHashtag size={14} />
+                      <span className="text-sm font-semibold">{companyPriority.global}</span>
+                    </div>
+                  </Tooltip>
+                )}
+                {companyPriority.sector && (
+                  <Tooltip
+                    classNames={{ base: baseToolTipStyle }}
+                    className={tooltipStyle}
+                    content={
+                      <p className={tooltipParagraphStyle}>
+                        Sector company priority based on stock price (highest to lowest), then stacking order within this sector.
+                      </p>
+                    }
+                  >
+                    <div
+                      className="flex items-center gap-1 px-2 py-1 rounded border"
+                      style={{
+                        backgroundColor: company?.Sector ? `${sectorColors[company.Sector.name]}80` : 'rgba(59, 130, 246, 0.5)',
+                        borderColor: company?.Sector ? sectorColors[company.Sector.name] : 'rgb(37, 99, 235)',
+                      }}
+                    >
+                      <RiHashtag size={14} />
+                      <span className="text-sm font-semibold">{companyPriority.sector}</span>
+                    </div>
+                  </Tooltip>
+                )}
+              </div>
+            )}
+            <div className="flex items-center gap-1">
+              <span className="text-sm text-gray-400">{company.stockSymbol}</span>
               <Tooltip
                 classNames={{ base: baseToolTipStyle }}
                 className={tooltipStyle}
@@ -447,8 +494,8 @@ const CompanyInfoV2 = ({
                 <Popover>
                   <PopoverTrigger>
                     <div className="flex items-center gap-1 cursor-pointer">
-                      <RiFundsFill size={20} />
-                      <span>${company.currentStockPrice}</span>
+                      <RiFundsFill size={18} />
+                      <span className="text-sm">${company.currentStockPrice}</span>
                     </div>
                   </PopoverTrigger>
                   <PopoverContent>
@@ -457,157 +504,110 @@ const CompanyInfoV2 = ({
                 </Popover>
               </Tooltip>
             </div>
-            <div className="flex gap-1 flex-wrap">
+            <Tooltip
+              classNames={{ base: baseToolTipStyle }}
+              className={tooltipStyle}
+              content={
+                <p className={tooltipParagraphStyle}>
+                  The company status. INACTIVE companies have not yet floated.
+                </p>
+              }
+            >
+              <span className={`text-sm ${
+                company.status == CompanyStatus.ACTIVE
+                  ? "text-green-500"
+                  : company.status == CompanyStatus.INACTIVE
+                  ? "text-yellow-500"
+                  : "text-red-500"
+              }`}>
+                {company.status}
+              </span>
+            </Tooltip>
+            <Tooltip
+              classNames={{ base: baseToolTipStyle }}
+              className={tooltipStyle}
+              content={
+                <p className={tooltipParagraphStyle}>
+                  Corporate treasury or cash on hand.
+                </p>
+              }
+            >
+              <div className="flex items-center gap-1 cursor-pointer" onClick={onOpen}>
+                <RiWallet3Fill size={18} />
+                <span className="text-sm">${company.cashOnHand}</span>
+              </div>
+            </Tooltip>
+            {company.ipoAndFloatPrice && (
               <Tooltip
                 classNames={{ base: baseToolTipStyle }}
                 className={tooltipStyle}
                 content={
                   <p className={tooltipParagraphStyle}>
-                    The company status. INACTIVE companies have not yet floated.
+                    The initial public offering price.
                   </p>
                 }
               >
-                <span>{company.status}</span>
+                <div className="flex items-center gap-1 text-sm">
+                  <span>IPO</span>
+                  <span>${company.ipoAndFloatPrice}</span>
+                </div>
               </Tooltip>
-              {ceoPlayer && (
-                <Tooltip
-                  classNames={{ base: baseToolTipStyle }}
-                  className={tooltipStyle}
-                  content={
-                    <p className={tooltipParagraphStyle}>
-                      The CEO (Chief Executive Officer) of this company.
-                    </p>
-                  }
-                >
-                  <div className="flex items-center gap-1">
-                    <RiVipCrown2Fill size={20} />
-                    <PlayerAvatar player={ceoPlayer as Player} size="sm" showNameLabel />
-                  </div>
-                </Tooltip>
-              )}
-            </div>
-            <div className="flex gap-1 justify-between items-center">
-              <div className="flex flex-col gap-1">
-                <Tooltip
-                  classNames={{ base: baseToolTipStyle }}
-                  className={tooltipStyle}
-                  content={
-                    <p className={tooltipParagraphStyle}>
-                      Corporate treasury or cash on hand.
-                    </p>
-                  }
-                >
-                  <div className="flex items-center gap-1" onClick={onOpen}>
-                    <RiWallet3Fill size={20} />{" "}
-                    <span>${company.cashOnHand}</span>
-                  </div>
-                </Tooltip>
-                {company.ipoAndFloatPrice && (
-                  <Tooltip
-                    classNames={{ base: baseToolTipStyle }}
-                    className={tooltipStyle}
-                    content={
-                      <p className={tooltipParagraphStyle}>
-                        The initial public offering price.
-                      </p>
-                    }
-                  >
-                    <div className={`flex items-center gap-1`}>
-                      <span className="text-lg">IPO</span>
-                      <span>${company.ipoAndFloatPrice}</span>
-                    </div>
-                  </Tooltip>
-                )}
-                <Tooltip
-                  classNames={{ base: baseToolTipStyle }}
-                  className={tooltipStyle}
-                  content={
-                    <p className={tooltipParagraphStyle}>
-                      Company status, inactive companies have not yet been
-                      floated.
-                    </p>
-                  }
-                >
-                  <div
-                    className={`flex items-center gap-1 ${
-                      company.status == CompanyStatus.ACTIVE
-                        ? "text-green-500"
-                        : company.status == CompanyStatus.INACTIVE
-                        ? "text-yellow-500"
-                        : "text-red-500"
-                    }`}
-                  >
-                    {(company.status == CompanyStatus.INACTIVE ||
-                      company.status == CompanyStatus.ACTIVE) && (
-                      <>
-                        <RiSailboatFill size={20} />
-                        <span>{company.Sector.sharePercentageToFloat}%</span>
-                      </>
-                    )}
-                  </div>
-                </Tooltip>
-              </div>
-              <div>
-                {isMinimal ? null : (
-                  <CompanyMoreInfo
-                    company={company}
-                    showingProductionResults={showingProductionResults}
-                  />
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col justify-center items-center">
-            {showBarChart && (
-              <div className="flex gap-1 justify-between">
-                {buildBarChart(company.Share)}
-              </div>
+            )}
+            {ceoPlayer && (
+              <Tooltip
+                classNames={{ base: baseToolTipStyle }}
+                className={tooltipStyle}
+                content={
+                  <p className={tooltipParagraphStyle}>
+                    The CEO (Chief Executive Officer) of this company.
+                  </p>
+                }
+              >
+                <div className="flex items-center gap-1">
+                  <RiVipCrown2Fill size={18} />
+                  <PlayerAvatar player={ceoPlayer as Player} size="sm" showNameLabel />
+                </div>
+              </Tooltip>
             )}
           </div>
+
+          {!isMinimal && (
+            <div className="mt-1">
+              <CompanyMoreInfo
+                company={company}
+                showingProductionResults={showingProductionResults}
+              />
+            </div>
+          )}
+
+          {showBarChart && (
+            <div className="flex gap-1 justify-between mt-1">
+              {buildBarChart(company.Share)}
+            </div>
+          )}
+
+          {/* Operations Accordion */}
+          <Accordion className="mt-1">
+            <AccordionItem
+              key="operations"
+              aria-label="Operations"
+              title={
+                <div className="flex items-center gap-2">
+                  <RiSparkling2Fill size={18} />
+                  <span>Operations</span>
+                </div>
+              }
+            >
+              <ModernCompany
+                companyId={company.id}
+                gameId={company.gameId}
+                currentPhase={currentPhase?.id}
+                isCEO={company.ceoId === authPlayer?.id}
+              />
+            </AccordionItem>
+          </Accordion>
         </div>
       </div>
-      <ModernCompany
-        companyId={company.id}
-        gameId={company.gameId}
-        currentPhase={currentPhase?.id}
-        isCEO={company.ceoId === authPlayer?.id}
-      />
-      {!isMinimal && (
-        <Accordion className="mt-2">
-          <AccordionItem
-            key="marketing-research"
-            aria-label="Marketing & Research"
-            title={
-              <div className="flex items-center gap-2">
-                <RiSparkling2Fill size={18} />
-                <span>Marketing & Research</span>
-              </div>
-            }
-          >
-            <div className="space-y-4 p-2">
-              {/* Marketing Section */}
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-2 h-2 bg-purple-400 rounded"></div>
-                  <span className="font-medium text-gray-300">Marketing Campaigns</span>
-                </div>
-                <MarketingSlots companyId={company.id} gameId={company.gameId} />
-                <MarketingCampaignInfo companyId={company.id} gameId={company.gameId} />
-              </div>
-
-              {/* Research Section */}
-              <div className="pt-2 border-t border-gray-700">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-2 h-2 bg-blue-400 rounded"></div>
-                  <span className="font-medium text-gray-300">Research Progress</span>
-                </div>
-                <ResearchInfo companyId={company.id} gameId={company.gameId} />
-              </div>
-            </div>
-          </AccordionItem>
-        </Accordion>
-      )}
       <Modal
         isOpen={isOpen}
         onOpenChange={onOpenChange}

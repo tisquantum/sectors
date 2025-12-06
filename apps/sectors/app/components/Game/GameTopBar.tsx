@@ -116,15 +116,6 @@ const GameTopBar = ({
         </ButtonGroup>
       </div>
       <div className="flex justify-between items-center gap-1 p-2 flex-wrap">
-        {authPlayer && (
-          <div className="flex items-center gap-2 px-3 py-1 bg-green-900/50 rounded-lg border border-green-500/30">
-            <RiWallet3Fill className="text-green-400" size={20} />
-            <span className="text-lg font-bold text-green-400">
-              ${authPlayer.cashOnHand.toLocaleString()}
-            </span>
-            <span className="text-xs text-gray-400">Cash</span>
-          </div>
-        )}
         <PlayerPriorities />
         {currentPhase?.name && !isActivePhase(currentPhase.name) && (
           <div

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { CompanyService } from '@server/company/company.service';
 import { TrpcService } from '../trpc.service';
-import { Prisma, RoundType } from '@prisma/client';
+import { Prisma, RoundType, CompanyStatus } from '@prisma/client';
 import { SectorService } from '@server/sector/sector.service';
 import { determineFloatPrice } from '@server/data/helpers';
 import { GamesService } from '@server/games/games.service';
@@ -318,5 +318,77 @@ export default (trpc: TrpcService, ctx: Context) =>
       .mutation(async ({ input }) => {
         const { id } = input;
         return ctx.companyService.deleteCompany({ id });
+      }),
+
+    getCompanyPriority: trpc.procedure
+      .input(z.object({ companyId: z.string(), gameId: z.string() }))
+      .query(async ({ input }) => {
+        const { companyId, gameId } = input;
+        
+        // Get the company to find its sector
+        const company = await ctx.companyService.company({ id: companyId });
+        if (!company) {
+          return { global: null, sector: null };
+        }
+
+        // Get all active and insolvent companies in the game
+        const allCompanies = await ctx.companyService.companies({
+          where: {
+            gameId,
+            status: { in: [CompanyStatus.ACTIVE, CompanyStatus.INSOLVENT] },
+          },
+        });
+
+        // Map to only the fields we need and sort by stock price (highest to lowest), then by createdAt (stacking order)
+        const sortedAllCompanies = allCompanies
+          .map(c => ({
+            id: c.id,
+            currentStockPrice: c.currentStockPrice,
+            createdAt: c.createdAt,
+          }))
+          .sort((a, b) => {
+            const priceA = a.currentStockPrice || 0;
+            const priceB = b.currentStockPrice || 0;
+            
+            if (priceA !== priceB) {
+              return priceB - priceA; // Higher price first
+            }
+            
+            // If prices are equal, sort by createdAt (earlier = higher priority)
+            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          });
+
+        // Find global priority (1-indexed)
+        const globalPriority = sortedAllCompanies.findIndex(c => c.id === companyId) + 1;
+
+        // Get companies in the same sector
+        const sectorCompanies = allCompanies.filter(c => c.sectorId === company.sectorId);
+        
+        // Sort sector companies by the same criteria
+        const sortedSectorCompanies = sectorCompanies
+          .map(c => ({
+            id: c.id,
+            currentStockPrice: c.currentStockPrice,
+            createdAt: c.createdAt,
+          }))
+          .sort((a, b) => {
+            const priceA = a.currentStockPrice || 0;
+            const priceB = b.currentStockPrice || 0;
+            
+            if (priceA !== priceB) {
+              return priceB - priceA; // Higher price first
+            }
+            
+            // If prices are equal, sort by createdAt (earlier = higher priority)
+            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          });
+
+        // Find sector priority (1-indexed)
+        const sectorPriority = sortedSectorCompanies.findIndex(c => c.id === companyId) + 1;
+        
+        return {
+          global: globalPriority > 0 ? globalPriority : null,
+          sector: sectorPriority > 0 ? sectorPriority : null,
+        };
       }),
   });

@@ -46,13 +46,22 @@ export function SpotMarket({
     { company: any; isIpo: boolean } | undefined
   >(undefined);
 
-  // Fetch companies
+  // Fetch companies - optimized with caching
   const { data: companies, isLoading: isLoadingCompanies } =
-    trpc.company.listCompaniesWithRelations.useQuery({
-      where: { gameId, status: { not: CompanyStatus.BANKRUPT } },
-    });
+    trpc.company.listCompaniesWithRelations.useQuery(
+      {
+        where: { gameId, status: { not: CompanyStatus.BANKRUPT } },
+      },
+      {
+        staleTime: 10000, // 10 seconds
+        refetchOnMount: false,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
+        enabled: !!gameId,
+      }
+    );
 
-  // Fetch player orders
+  // Fetch player orders - only when needed
   const {
     data: playerOrdersConcealed,
     isLoading: isLoadingOrders,
@@ -62,40 +71,70 @@ export function SpotMarket({
       where: { stockRoundId: currentPhase?.stockRoundId },
     },
     {
-      enabled: currentPhase?.name === PhaseName.STOCK_ACTION_REVEAL,
+      enabled: currentPhase?.name === PhaseName.STOCK_ACTION_REVEAL && !!currentPhase?.stockRoundId,
+      staleTime: 5000,
+      refetchOnMount: false,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
     }
   );
 
   const {
     data: playerOrdersRevealed,
     isLoading: isLoadingPlayerOrdersRevealed,
-  } = trpc.playerOrder.listPlayerOrdersWithPlayerRevealed.useQuery({
-    where: {
-      stockRoundId: currentPhase?.stockRoundId,
+  } = trpc.playerOrder.listPlayerOrdersWithPlayerRevealed.useQuery(
+    {
+      where: {
+        stockRoundId: currentPhase?.stockRoundId,
+      },
+      gameId,
     },
-    gameId,
-  });
+    {
+      enabled: !!currentPhase?.stockRoundId && !!gameId,
+      staleTime: 5000,
+      refetchOnMount: false,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+    }
+  );
 
-  // Fetch phases for stock round
+  // Fetch phases for stock round - only when needed
   const {
     data: phasesOfStockRound,
     refetch: refetchPhasesOfStockRound,
-  } = trpc.phase.listPhases.useQuery({
-    where: {
-      stockRoundId: currentPhase?.stockRoundId,
-      name: PhaseName.STOCK_ACTION_ORDER,
+  } = trpc.phase.listPhases.useQuery(
+    {
+      where: {
+        stockRoundId: currentPhase?.stockRoundId,
+        name: PhaseName.STOCK_ACTION_ORDER,
+      },
+      orderBy: { createdAt: 'asc' },
     },
-    orderBy: { createdAt: 'asc' },
-  });
+    {
+      enabled: !!currentPhase?.stockRoundId,
+      staleTime: 10000,
+      refetchOnMount: false,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+    }
+  );
 
   const isInteractive = isCurrentPhaseInteractive(currentPhase?.name);
   const isRevealRound = currentPhase?.name === PhaseName.STOCK_ACTION_REVEAL;
 
-  // Refetch on phase change
+  // Refetch on phase change - debounced to prevent excessive calls
   useEffect(() => {
-    refetchPlayerOrdersConcealed();
-    refetchPhasesOfStockRound();
-  }, [currentPhase?.id]);
+    if (!currentPhase?.id) return;
+    
+    const timeoutId = setTimeout(() => {
+      if (currentPhase?.name === PhaseName.STOCK_ACTION_REVEAL) {
+        refetchPlayerOrdersConcealed();
+      }
+      refetchPhasesOfStockRound();
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [currentPhase?.id, currentPhase?.name]);
 
   if (isLoadingCompanies || isLoadingOrders) {
     return (

@@ -100,13 +100,22 @@ const PendingMarketOrders = ({
 }) => {
   const { currentPhase } = useGame();
   const { data: phasesOfStockRound, isLoading: isLoadingPhases } =
-    trpc.phase.listPhases.useQuery({
-      where: {
-        stockRoundId: currentPhase?.stockRoundId,
-        name: PhaseName.STOCK_ACTION_ORDER,
+    trpc.phase.listPhases.useQuery(
+      {
+        where: {
+          stockRoundId: currentPhase?.stockRoundId,
+          name: PhaseName.STOCK_ACTION_ORDER,
+        },
+        orderBy: { createdAt: "asc" },
       },
-      orderBy: { createdAt: "asc" },
-    });
+      {
+        enabled: !!currentPhase?.stockRoundId,
+        staleTime: 10000,
+        refetchOnMount: false,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
+      }
+    );
 
   if (isLoadingPhases) return <div>Loading...</div>;
   if (!phasesOfStockRound) return <div>No phases found.</div>;
@@ -402,30 +411,73 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
     data: playerOrders,
     isLoading,
     refetch: refetchPlayerOrders,
-  } = trpc.playerOrder.listPlayerOrdersAllRelations.useQuery({
-    orderBy: {
-      createdAt: Prisma.SortOrder.asc,
-    },
-    where: {
-      ...(gameState.playerOrdersConcealed && { isConcealed: false }),
-      Game: {
-        id: gameId,
+  } = trpc.playerOrder.listPlayerOrdersAllRelations.useQuery(
+    {
+      orderBy: {
+        createdAt: Prisma.SortOrder.asc,
       },
-    },
-  });
-  const { data: openOptionContracts, isLoading: isLoadingOpenOptionContracts } =
-    trpc.optionContract.listOptionContracts.useQuery({
       where: {
+        ...(gameState?.playerOrdersConcealed && { isConcealed: false }),
         Game: {
           id: gameId,
         },
-        contractState: ContractState.PURCHASED,
       },
-    });
+    },
+    {
+      enabled: !!gameId && !!gameState,
+      staleTime: 5000,
+      refetchOnMount: false,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+    }
+  );
+  const { data: openOptionContracts, isLoading: isLoadingOpenOptionContracts } =
+    trpc.optionContract.listOptionContracts.useQuery(
+      {
+        where: {
+          Game: {
+            id: gameId,
+          },
+          contractState: ContractState.PURCHASED,
+        },
+      },
+      {
+        enabled: !!gameId,
+        staleTime: 10000,
+        refetchOnMount: false,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
+      }
+    );
+  
+  // Refetch on phase change - debounced to prevent excessive calls
   useEffect(() => {
-    refetchPlayerOrders();
-  }, [currentPhase?.name]);
-  if (isLoading) return <div>Loading...</div>;
+    if (!currentPhase?.name) return;
+    
+    const timeoutId = setTimeout(() => {
+      refetchPlayerOrders();
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [currentPhase?.name, currentPhase?.id, refetchPlayerOrders]);
+  
+  // Show loading state if gameState is not ready yet
+  if (!gameState) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div>Loading game state...</div>
+      </div>
+    );
+  }
+  
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div>Loading orders...</div>
+      </div>
+    );
+  }
+  
   if (!playerOrders) return <div>No pending orders.</div>;
   const limitOrdersPendingSettlement = playerOrders.filter(
     (order) =>

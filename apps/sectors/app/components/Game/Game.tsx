@@ -58,8 +58,9 @@ import { useKeyboardShortcuts } from "@sectors/app/hooks/useKeyboardShortcuts";
 import PrizeRound from "./PrizeVote";
 import DistributePrizes from "./DistributePrize";
 import StartTurnUpdates from "./StartTurnUpdates";
-import { PhaseTransition } from "./PhaseTransition";
 import GamePlayersRecap from "./GamePlayerRecap";
+import { toast } from "sonner";
+import { friendlyPhaseName } from "@sectors/app/helpers";
 import Headlines from "./Headlines";
 import IpoVotes from "./IpoVote";
 import { ConsumptionPhase } from "./ConsumptionPhase";
@@ -167,7 +168,6 @@ const Game = ({ gameId }: { gameId: string }) => {
   
   // Phase transition tracking
   const previousPhaseRef = useRef<PhaseName | undefined>(undefined);
-  const [showPhaseTransition, setShowPhaseTransition] = useState(false);
   
   // Track renders and view changes
   const renderCountRef = useRef(0);
@@ -196,9 +196,11 @@ const Game = ({ gameId }: { gameId: string }) => {
   // Track phase changes for transitions
   useEffect(() => {
     if (currentPhase?.name && currentPhase.name !== previousPhaseRef.current) {
-      // Phase changed - show transition
+      // Phase changed - show toast notification
       if (previousPhaseRef.current) {
-        setShowPhaseTransition(true);
+        toast.success(`Phase transition: ${friendlyPhaseName(currentPhase.name)}`, {
+          duration: 2000,
+        });
       }
       previousPhaseRef.current = currentPhase.name;
     }
@@ -400,15 +402,6 @@ const Game = ({ gameId }: { gameId: string }) => {
 
   return (
     <>
-      {/* Phase Transition Animation */}
-      {showPhaseTransition && currentPhase?.name && (
-        <PhaseTransition
-          previousPhase={previousPhaseRef.current}
-          currentPhase={currentPhase.name}
-          onComplete={() => setShowPhaseTransition(false)}
-        />
-      )}
-
       <Drawer.Root
         open={drawerIsOpen}
         onOpenChange={toggleDrawer}
