@@ -111,7 +111,7 @@ const PendingMarketOrders = ({
       {
         enabled: !!currentPhase?.stockRoundId,
         staleTime: 10000,
-        refetchOnMount: false,
+        refetchOnMount: true, // Refetch when component mounts to ensure fresh phase data
         refetchOnWindowFocus: false,
         refetchOnReconnect: false,
       }
@@ -426,7 +426,7 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
     {
       enabled: !!gameId && !!gameState,
       staleTime: 5000,
-      refetchOnMount: false,
+      refetchOnMount: true, // Always refetch when component mounts, especially important when navigating to this phase
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
     }
@@ -450,16 +450,13 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
       }
     );
   
-  // Refetch on phase change - debounced to prevent excessive calls
+  // Refetch on phase change - immediate refetch to ensure data is fresh
   useEffect(() => {
-    if (!currentPhase?.name) return;
+    if (!currentPhase?.id || !gameId || !gameState) return;
     
-    const timeoutId = setTimeout(() => {
-      refetchPlayerOrders();
-    }, 300);
-
-    return () => clearTimeout(timeoutId);
-  }, [currentPhase?.name, currentPhase?.id, refetchPlayerOrders]);
+    // Immediately refetch when phase changes, especially for resolve phases
+    refetchPlayerOrders();
+  }, [currentPhase?.id, gameId, gameState, refetchPlayerOrders]);
   
   // Show loading state if gameState is not ready yet
   if (!gameState) {
