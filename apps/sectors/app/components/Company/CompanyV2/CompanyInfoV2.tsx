@@ -394,6 +394,31 @@ const CompanyInfoV2 = ({
               {company.status}
             </span>
           </Tooltip>
+          {(company.status == CompanyStatus.INACTIVE ||
+            company.status == CompanyStatus.ACTIVE) && (
+            <Tooltip
+              classNames={{ base: baseToolTipStyle }}
+              className={tooltipStyle}
+              content={
+                <p className={tooltipParagraphStyle}>
+                  Share percentage required to float companies in this sector.
+                </p>
+              }
+            >
+              <div
+                className={`flex items-center gap-1 ${
+                  company.status == CompanyStatus.ACTIVE
+                    ? "text-green-500"
+                    : company.status == CompanyStatus.INACTIVE
+                    ? "text-yellow-500"
+                    : "text-red-500"
+                }`}
+              >
+                <RiSailboatFill size={20} />
+                <span>{company.Sector.sharePercentageToFloat}%</span>
+              </div>
+            </Tooltip>
+          )}
           <Tooltip
             classNames={{ base: baseToolTipStyle }}
             className={tooltipStyle}
@@ -523,6 +548,29 @@ const CompanyInfoV2 = ({
                 {company.status}
               </span>
             </Tooltip>
+            {(company.status == CompanyStatus.INACTIVE ||
+              company.status == CompanyStatus.ACTIVE) && (
+              <Tooltip
+                classNames={{ base: baseToolTipStyle }}
+                className={tooltipStyle}
+                content={
+                  <p className={tooltipParagraphStyle}>
+                    Share percentage required to float companies in this sector.
+                  </p>
+                }
+              >
+                <div className={`flex items-center gap-1 text-sm ${
+                  company.status == CompanyStatus.ACTIVE
+                    ? "text-green-500"
+                    : company.status == CompanyStatus.INACTIVE
+                    ? "text-yellow-500"
+                    : "text-red-500"
+                }`}>
+                  <RiSailboatFill size={18} />
+                  <span>{company.Sector.sharePercentageToFloat}%</span>
+                </div>
+              </Tooltip>
+            )}
             <Tooltip
               classNames={{ base: baseToolTipStyle }}
               className={tooltipStyle}
