@@ -584,6 +584,76 @@ export class GameManagementService {
       // Find the maximum share count
       const maxShareCount = Math.max(...Object.values(playerShareCounts));
       
+      // If company already has a CEO, only reassign if someone has MORE shares (not equal)
+      // Ties do not exchange CEO - current CEO keeps position if tied
+      if (company.ceoId) {
+        const currentCeoShareCount = playerShareCounts[company.ceoId] || 0;
+        
+        // Check if current CEO still has the max share count
+        if (currentCeoShareCount >= maxShareCount) {
+          // Current CEO still has max shares (or is tied), keep them as CEO
+          // No need to update - CEO stays the same
+          return;
+        }
+        
+        // Current CEO has fewer shares, check if someone has MORE than current CEO
+        const playersWithMoreShares = playerIds.filter(
+          playerId => playerShareCounts[playerId] > currentCeoShareCount
+        );
+        
+        if (playersWithMoreShares.length === 0) {
+          // No one has more shares than current CEO, keep current CEO
+          return;
+        }
+        
+        // Someone has more shares, find who has the most (will reassign)
+        const newMaxShareCount = Math.max(
+          ...playersWithMoreShares.map(playerId => playerShareCounts[playerId])
+        );
+        const playersWithNewMaxShares = playersWithMoreShares.filter(
+          playerId => playerShareCounts[playerId] === newMaxShareCount
+        );
+        
+        // Determine new CEO (use priority for ties, otherwise use the one with most shares)
+        let ceoPlayerId: string | null = null;
+        if (playersWithNewMaxShares.length === 1) {
+          ceoPlayerId = playersWithNewMaxShares[0];
+        } else {
+          // Tie exists among players with more shares, use player priority to break it
+          // Lower priority number wins (priority 1 is better than priority 2)
+          let lowestPriority = Infinity;
+          let selectedPlayerId: string | null = null;
+          
+          for (const playerId of playersWithNewMaxShares) {
+            const priority = priorityMap.get(playerId);
+            if (priority !== undefined) {
+              if (priority < lowestPriority) {
+                lowestPriority = priority;
+                selectedPlayerId = playerId;
+              }
+            }
+          }
+          
+          ceoPlayerId = selectedPlayerId || playersWithNewMaxShares[0];
+        }
+        
+        // Reassign CEO to the player with more shares
+        if (ceoPlayerId) {
+          const playerExists = await this.prisma.player.findUnique({
+            where: { id: ceoPlayerId },
+          });
+          
+          if (playerExists) {
+            await this.companyService.updateCompany({
+              where: { id: company.id },
+              data: { ceo: { connect: { id: ceoPlayerId } } },
+            });
+          }
+        }
+        return;
+      }
+      
+      // No existing CEO - assign new CEO based on most shares
       // Find all players with the maximum share count (potential ties)
       const playersWithMaxShares = playerIds.filter(
         playerId => playerShareCounts[playerId] === maxShareCount
@@ -596,20 +666,23 @@ export class GameManagementService {
         ceoPlayerId = playersWithMaxShares[0];
       } else {
         // Tie exists, use player priority to break it
-        // Higher priority number wins (priority 1 is lowest, higher numbers are better)
-        let highestPriority = -1;
+        // Lower priority number wins (priority 1 is better than priority 2)
+        let lowestPriority = Infinity;
         let selectedPlayerId: string | null = null;
         
         for (const playerId of playersWithMaxShares) {
-          const priority = priorityMap.get(playerId) || 0;
-          if (priority > highestPriority) {
-            highestPriority = priority;
-            selectedPlayerId = playerId;
+          const priority = priorityMap.get(playerId);
+          // Only consider players who have a priority assigned
+          if (priority !== undefined) {
+            if (priority < lowestPriority) {
+              lowestPriority = priority;
+              selectedPlayerId = playerId;
+            }
           }
         }
         
-        // If we found a player with highest priority, use them
-        // If all players have the same priority (or no priority), use the first one as fallback
+        // If we found a player with lowest priority, use them
+        // If no players have priority assigned (or all have same priority), use the first one as fallback
         ceoPlayerId = selectedPlayerId || playersWithMaxShares[0];
       }
       
