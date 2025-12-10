@@ -291,14 +291,15 @@ export const GameProvider: React.FC<{
 
       console.log(`[GameContext] handleNewPhase: ${phaseName} (call #${callCount})`);
       
+      // CRITICAL: Always invalidate gameState on phase change to ensure gameState.Phase array includes the new phase
+      // This is essential - determineGameRound() looks for the phase in gameState.Phase, and if it's missing,
+      // renderCurrentPhase becomes null, causing a black screen
+      trpcUtilsRef.current.game.getGameState.invalidate({ gameId });
+      
       // Invalidate specific queries before refetching to ensure fresh data
-      // Invalidate gameState when IPO prices are resolved to ensure companies show updated IPO prices
       if (phaseName === PhaseName.RESOLVE_SET_COMPANY_IPO_PRICES || 
           phaseName === PhaseName.STOCK_RESOLVE_LIMIT_ORDER) {
         // IPO prices are set during RESOLVE_SET_COMPANY_IPO_PRICES
-        // Invalidate gameState to ensure companies show updated ipoAndFloatPrice
-        console.log('[GameContext] Invalidating gameState and IPO votes after IPO price resolution');
-        trpcUtilsRef.current.game.getGameState.invalidate({ gameId });
         // Also invalidate IPO votes query to ensure resolution phase shows correct data
         // Use ref to get latest currentTurn value
         const latestTurn = currentTurnRef.current;
@@ -316,15 +317,34 @@ export const GameProvider: React.FC<{
         trpcUtilsRef.current.factoryProduction.getGameTurnProduction.invalidate();
       }
       
-      // Debounce refetches - only refetch if last refetch was > 500ms ago (increased for better performance)
+      // Refetch gameState immediately (don't debounce) to ensure phase data is available
+      // This prevents black screens when transitioning phases
       const now = Date.now();
       const DEBOUNCE_MS = 500;
       
-      if (now - lastRefetchTimeRef.current.gameState > DEBOUNCE_MS) {
-        lastRefetchTimeRef.current.gameState = now;
-        refetchGameStateRef.current();
+      // Always refetch gameState immediately on phase change to prevent black screens
+      lastRefetchTimeRef.current.gameState = now;
+      refetchGameStateRef.current();
+      
+      // Debounce other refetches
+      if (now - lastRefetchTimeRef.current.authPlayer > DEBOUNCE_MS) {
+        lastRefetchTimeRef.current.authPlayer = now;
+        refetchAuthPlayerRef.current();
       } else {
-        console.warn(`[GameContext] Skipping gameState refetch - debounced`);
+        // Schedule delayed refetch if debounced
+        setTimeout(() => {
+          refetchAuthPlayerRef.current();
+        }, DEBOUNCE_MS - (now - lastRefetchTimeRef.current.authPlayer));
+      }
+      
+      if (now - lastRefetchTimeRef.current.playersWithShares > DEBOUNCE_MS) {
+        lastRefetchTimeRef.current.playersWithShares = now;
+        refetchPlayersWithSharesRef.current();
+      } else {
+        // Schedule delayed refetch if debounced
+        setTimeout(() => {
+          refetchPlayersWithSharesRef.current();
+        }, DEBOUNCE_MS - (now - lastRefetchTimeRef.current.playersWithShares));
       }
       
       if (now - lastRefetchTimeRef.current.authPlayer > DEBOUNCE_MS) {

@@ -447,16 +447,39 @@ const Game = ({ gameId }: { gameId: string }) => {
                 className={`@container active-panel flex flex-col h-full max-h-full w-full p-4 overflow-y-auto scrollbar`}
               >
                 <AnimatePresence mode="wait">
-                  {currentView === "action" && renderCurrentPhase && (
+                  {currentView === "action" && (
                     <motion.div
-                      key={`action-${currentRoundData?.phase.name || 'default'}`}
+                      key={`action-${currentRoundData?.phase.name || currentPhase?.name || 'default'}`}
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -20 }}
                       transition={{ duration: 0.3, ease: "easeInOut" }}
                       className="h-full"
                     >
-                      {renderCurrentPhase}
+                      {!currentRoundData || !currentPhase ? (
+                        <div className="flex items-center justify-center h-full">
+                          <div className="text-center">
+                            <div className="text-lg font-semibold mb-2">Loading phase...</div>
+                            <div className="text-sm text-gray-400">
+                              {currentPhase?.name ? `Preparing ${friendlyPhaseName(currentPhase.name)}` : 'Waiting for phase data'}
+                            </div>
+                          </div>
+                        </div>
+                      ) : renderCurrentPhase ? (
+                        renderCurrentPhase
+                      ) : (
+                        <div className="flex items-center justify-center h-full">
+                          <div className="text-center">
+                            <div className="text-lg font-semibold mb-2">Phase Component Not Found</div>
+                            <div className="text-sm text-gray-400">
+                              Phase: {friendlyPhaseName(currentPhase.name)}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-2">
+                              If this phase should have a component, please check the Game.tsx render logic.
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </motion.div>
                   )}
                   {currentView === "chart" && (
