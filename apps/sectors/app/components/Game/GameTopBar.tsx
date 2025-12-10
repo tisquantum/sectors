@@ -24,25 +24,26 @@ const GameTopBar = ({
 }) => {
   const [currentView, setCurrentView] = useState<string>("action");
   const { currentPhase, gameState, authPlayer } = useGame();
-  
+
   // Get pending orders count for badge
-  const { data: playerOrders } = trpc.playerOrder.listPlayerOrdersWithCompany.useQuery(
-    {
-      where: {
-        stockRoundId: currentPhase?.stockRoundId,
-        playerId: authPlayer?.id,
+  const { data: playerOrders } =
+    trpc.playerOrder.listPlayerOrdersWithCompany.useQuery(
+      {
+        where: {
+          stockRoundId: currentPhase?.stockRoundId,
+          playerId: authPlayer?.id,
+        },
       },
-    },
-    {
-      enabled: !!currentPhase?.stockRoundId && !!authPlayer?.id,
-      // Optimize: Only refetch when needed, cache for 5 seconds
-      refetchOnMount: false,
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: false,
-      staleTime: 5000,
-    }
-  );
-  
+      {
+        enabled: !!currentPhase?.stockRoundId && !!authPlayer?.id,
+        // Optimize: Only refetch when needed, cache for 5 seconds
+        refetchOnMount: false,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
+        staleTime: 5000,
+      }
+    );
+
   const pendingOrdersCount = playerOrders?.length || 0;
 
   const handleViewChange = (view: string) => {
@@ -66,21 +67,14 @@ const GameTopBar = ({
           >
             Action
           </Button>
-          <Badge 
-            content={pendingOrdersCount} 
-            color="danger" 
-            isInvisible={pendingOrdersCount === 0 || currentView === "pending"}
-            size="lg"
+          <Button
+            className={getButtonClass("pending")}
+            onClick={() => handleViewChange("pending")}
+            size="sm"
+            title="View pending orders (Press 2)"
           >
-            <Button
-              className={getButtonClass("pending")}
-              onClick={() => handleViewChange("pending")}
-              size="sm"
-              title="View pending orders (Press 2)"
-            >
-              Orders
-            </Button>
-          </Badge>
+            Orders
+          </Button>
           <Button
             className={getButtonClass("chart")}
             onClick={() => handleViewChange("chart")}
@@ -150,14 +144,16 @@ const GameTopBar = ({
         {(() => {
           const phaseColors = getPhaseColor(currentPhase?.name);
           return (
-            <Button 
+            <Button
               onClick={handleTogglePhaseList}
               className={`bg-gradient-to-r ${phaseColors.gradient} text-white font-bold px-4 py-2 shadow-lg hover:opacity-90 transition-all`}
               title="Toggle phase list (Press Ctrl+K or Cmd+K)"
             >
               <div className="flex items-center gap-2">
                 <RiTextWrap className="text-white" size={20} />
-                <span className="text-lg font-extrabold">{friendlyPhaseName(currentPhase?.name)}</span>
+                <span className="text-lg font-extrabold">
+                  {friendlyPhaseName(currentPhase?.name)}
+                </span>
               </div>
             </Button>
           );
