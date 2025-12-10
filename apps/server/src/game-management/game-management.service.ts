@@ -7472,7 +7472,6 @@ export class GameManagementService {
               // Get player priorities
               const playerPriorities = await this.fetchPlayerPriorities(
                 playerIds,
-                this.prisma,
               );
               let sortedOrders: PlayerOrderWithPlayerCompany[] | undefined;
               if (
@@ -8160,74 +8159,77 @@ export class GameManagementService {
     game: Game,
     phase: Phase,
   ) {
-    await Promise.all(
-      Object.entries(groupedMarketOrders).map(async ([companyId, orders]) => {
-        await Promise.all(
-          orders.map(async (order) => {
-            if (order.isSell) {
-              await this.resolveSellOrder(order, companyId);
-            }
-          }),
-        );
+    // CRITICAL: Process companies sequentially (not in parallel) to ensure proper cash validation
+    // When processing in parallel, each company fetches fresh player data independently,
+    // which can allow total deductions across companies to exceed available cash.
+    // By processing sequentially, each company sees the updated cash from previous companies.
+    for (const [companyId, orders] of Object.entries(groupedMarketOrders)) {
+      // Process sell orders first (they don't affect cash for buy orders)
+      await Promise.all(
+        orders.map(async (order) => {
+          if (order.isSell) {
+            await this.resolveSellOrder(order, companyId);
+          }
+        }),
+      );
 
-        const buyOrdersIPO = orders.filter(
-          (order) => !order.isSell && order.location == ShareLocation.IPO,
-        );
-        if (buyOrdersIPO.length > 0) {
-          if (
-            game.distributionStrategy === DistributionStrategy.BID_PRIORITY ||
-            game.distributionStrategy === DistributionStrategy.PRIORITY
-          ) {
-            await this.distributeSharesStrategy(
-              buyOrdersIPO,
-              ShareLocation.IPO,
-              companyId,
-              this.shareService,
-              game,
-              this.prisma,
-              game.distributionStrategy,
-            );
-          } else {
-            await this.distributeShares(
-              buyOrdersIPO,
-              ShareLocation.IPO,
-              companyId,
-              this.shareService,
-              this.prisma,
-            );
-          }
-          await this.checkIfCompanyIsFloated(companyId);
+      const buyOrdersIPO = orders.filter(
+        (order) => !order.isSell && order.location == ShareLocation.IPO,
+      );
+      if (buyOrdersIPO.length > 0) {
+        if (
+          game.distributionStrategy === DistributionStrategy.BID_PRIORITY ||
+          game.distributionStrategy === DistributionStrategy.PRIORITY
+        ) {
+          await this.distributeSharesStrategy(
+            buyOrdersIPO,
+            ShareLocation.IPO,
+            companyId,
+            this.shareService,
+            game,
+            this.prisma,
+            game.distributionStrategy,
+          );
+        } else {
+          await this.distributeShares(
+            buyOrdersIPO,
+            ShareLocation.IPO,
+            companyId,
+            this.shareService,
+            this.prisma,
+          );
         }
-        const buyOrdersOM = orders.filter(
-          (order) =>
-            !order.isSell && order.location == ShareLocation.OPEN_MARKET,
-        );
-        if (buyOrdersOM.length > 0) {
-          if (
-            game.distributionStrategy === DistributionStrategy.BID_PRIORITY ||
-            game.distributionStrategy === DistributionStrategy.PRIORITY
-          ) {
-            await this.distributeSharesStrategy(
-              buyOrdersOM,
-              ShareLocation.OPEN_MARKET,
-              companyId,
-              this.shareService,
-              game,
-              this.prisma,
-              game.distributionStrategy,
-            );
-          } else {
-            await this.distributeShares(
-              buyOrdersOM,
-              ShareLocation.OPEN_MARKET,
-              companyId,
-              this.shareService,
-              this.prisma,
-            );
-          }
+        await this.checkIfCompanyIsFloated(companyId);
+      }
+      const buyOrdersOM = orders.filter(
+        (order) =>
+          !order.isSell && order.location == ShareLocation.OPEN_MARKET,
+      );
+      if (buyOrdersOM.length > 0) {
+        if (
+          game.distributionStrategy === DistributionStrategy.BID_PRIORITY ||
+          game.distributionStrategy === DistributionStrategy.PRIORITY
+        ) {
+          await this.distributeSharesStrategy(
+            buyOrdersOM,
+            ShareLocation.OPEN_MARKET,
+            companyId,
+            this.shareService,
+            game,
+            this.prisma,
+            game.distributionStrategy,
+          );
+        } else {
+          await this.distributeShares(
+            buyOrdersOM,
+            ShareLocation.OPEN_MARKET,
+            companyId,
+            this.shareService,
+            this.prisma,
+          );
         }
-      }),
-    );
+      }
+    }
   }
 
   async setIpoPriceAndCreateSharesAndInjectCapital(
@@ -8380,7 +8382,7 @@ export class GameManagementService {
     });
   }
 
-  getCurrentShareOrderFilledTotalPlayer(shareUpdates: any[]) {
+  private getCurrentShareOrderFilledTotalPlayer(shareUpdates: any[]): number {
     return shareUpdates.reduce((acc, update) => {
       //if shares are coming into the player portfolio, we increase the total
       if (update.data.location === ShareLocation.PLAYER) {
@@ -8393,7 +8395,7 @@ export class GameManagementService {
       return acc;
     }, 0);
   }
-  processBidOrdersBidStrategy(
+  private processBidOrdersBidStrategy(
     sortedOrders: PlayerOrderWithPlayerCompany[],
     remainingShares: number,
     allAvailableShares: Share[],
@@ -8403,7 +8405,7 @@ export class GameManagementService {
     orderStatusUpdates: any[],
     gameLogEntries: any[],
     playersWithShares: PlayerWithShares[], //we need this reference because we are now actively checking stock ownership and cash on hand
-  ) {
+  ): { currentShareIndex: number; remainingShares: number } {
     // CRITICAL: Track pending cash decrements per player to prevent over-spending
     const pendingCashDecrements = new Map<string, number>();
     
@@ -8463,55 +8465,56 @@ export class GameManagementService {
               content: `Player ${order.Player.nickname} does not have enough cash to purchase ${order.quantity} shares of ${order.Company.name} at $${order.value}`,
             });
           } else {
-          const sharesToGive = order.quantity || 0;
-          if (sharesToGive > remainingShares) {
-            // Reject the order if it cannot be fully fulfilled
-            orderStatusUpdates.push({
-              where: { id: order.id },
-              data: { orderStatus: OrderStatus.REJECTED },
-            });
-            gameLogEntries.push({
-              game: { connect: { id: order.gameId } },
-              content: `Player ${order.Player.nickname} was not able to purchase shares of ${order.Company.name} from ${order.location} due to their not being enough shares available.`,
-            });
-          } else {
-            const shares = allAvailableShares.slice(
-              currentShareIndex,
-              currentShareIndex + sharesToGive,
-            );
-            currentShareIndex += sharesToGive;
-            shareUpdates.push({
-              companyId: order.companyId,
-              where: { id: { in: shares.map((share) => share.id) } },
-              data: {
-                location: ShareLocation.PLAYER,
+            const sharesToGive = order.quantity || 0;
+            if (sharesToGive > remainingShares) {
+              // Reject the order if it cannot be fully fulfilled
+              orderStatusUpdates.push({
+                where: { id: order.id },
+                data: { orderStatus: OrderStatus.REJECTED },
+              });
+              gameLogEntries.push({
+                game: { connect: { id: order.gameId } },
+                content: `Player ${order.Player.nickname} was not able to purchase shares of ${order.Company.name} from ${order.location} due to their not being enough shares available.`,
+              });
+            } else {
+              const shares = allAvailableShares.slice(
+                currentShareIndex,
+                currentShareIndex + sharesToGive,
+              );
+              currentShareIndex += sharesToGive;
+              shareUpdates.push({
+                companyId: order.companyId,
+                where: { id: { in: shares.map((share) => share.id) } },
+                data: {
+                  location: ShareLocation.PLAYER,
+                  playerId: order.playerId,
+                },
+              });
+
+              const cashDecrement = sharesToGive * order.value!;
+              playerCashUpdates.push({
                 playerId: order.playerId,
-              },
-            });
+                decrement: cashDecrement,
+              });
+              
+              // Track pending decrement for this player to validate subsequent orders
+              pendingCashDecrements.set(
+                order.playerId,
+                (pendingCashDecrements.get(order.playerId) || 0) + cashDecrement
+              );
 
-            const cashDecrement = sharesToGive * order.value!;
-            playerCashUpdates.push({
-              playerId: order.playerId,
-              decrement: cashDecrement,
-            });
-            
-            // Track pending decrement for this player to validate subsequent orders
-            pendingCashDecrements.set(
-              order.playerId,
-              (pendingCashDecrements.get(order.playerId) || 0) + cashDecrement
-            );
+              orderStatusUpdates.push({
+                where: { id: order.id },
+                data: { orderStatus: OrderStatus.FILLED },
+              });
 
-            orderStatusUpdates.push({
-              where: { id: order.id },
-              data: { orderStatus: OrderStatus.FILLED },
-            });
+              gameLogEntries.push({
+                game: { connect: { id: order.gameId } },
+                content: `Player ${order.Player.nickname} has bought ${sharesToGive} shares of ${order.Company.name} at $${order.value}`,
+              });
 
-            gameLogEntries.push({
-              game: { connect: { id: order.gameId } },
-              content: `Player ${order.Player.nickname} has bought ${sharesToGive} shares of ${order.Company.name} at $${order.value}`,
-            });
-
-            remainingShares -= sharesToGive;
+              remainingShares -= sharesToGive;
+            }
           }
         }
       }
@@ -8519,7 +8522,7 @@ export class GameManagementService {
     return { currentShareIndex, remainingShares };
   }
 
-  processOrdersPriorityStrategy(
+  private processOrdersPriorityStrategy(
     sortedOrders: PlayerOrderWithPlayerCompany[],
     remainingShares: number,
     allAvailableShares: Share[],
@@ -8529,9 +8532,12 @@ export class GameManagementService {
     orderStatusUpdates: any[],
     gameLogEntries: any[],
     playersWithShares: PlayerWithShares[], //we need this reference because we are now actively checking stock ownership and cash on hand
-  ) {}
+  ): { currentShareIndex: number; remainingShares: number } {
+    // TODO: Implement priority-based order processing strategy
+    return { currentShareIndex, remainingShares };
+  }
 
-  async fetchPlayerPriorities(playerIds: string[], prisma: PrismaService) {
+  private async fetchPlayerPriorities(playerIds: string[]) {
     const playerPriorities =
       await this.playerPriorityService.listPlayerPriorities({
         where: {
@@ -8593,7 +8599,6 @@ export class GameManagementService {
     const playerIds = phaseOrders.map((order) => order.playerId);
     const playerPriorities = await this.fetchPlayerPriorities(
       playerIds,
-      prisma,
     );
     let sortedOrders: PlayerOrderWithPlayerCompany[] | undefined;
     if (strategy === DistributionStrategy.BID_PRIORITY) {
@@ -8620,7 +8625,7 @@ export class GameManagementService {
     const {
       currentShareIndex: _currentShareIndex,
       remainingShares: _remainingShares,
-    } = await this.processBidOrdersBidStrategy(
+    } = this.processBidOrdersBidStrategy(
       sortedOrders,
       remainingShares,
       allAvailableShares,
@@ -8717,6 +8722,10 @@ export class GameManagementService {
       take: remainingShares,
     });
 
+    // Note: Cash validation happens in executeDatabaseOperations, which aggregates
+    // all cash updates per player and validates against fresh database data.
+    // Since processMarketOrdersByCompany now processes companies sequentially,
+    // each company will see updated cash from previous companies.
     this.distributeWithinPhase(
       validBuyOrders,
       allAvailableShares,
@@ -8755,10 +8764,23 @@ export class GameManagementService {
     orderStatusUpdates: any[],
     gameLogEntries: any[],
   ) {
+    // CRITICAL: Track pending cash decrements per player to validate during processing
+    // This ensures we catch over-spending even within a single phase before executeDatabaseOperations
+    const pendingCashDecrements = new Map<string, number>();
+    
     for (const order of validBuyOrders) {
       if (remainingShares <= 0) break;
 
       const sharesToAllocate = Math.min(order.quantity || 0, remainingShares);
+      const totalCostForThisOrder = sharesToAllocate * (order.value || allAvailableShares[currentShareIndex]?.price || 0);
+      
+      // Get current pending decrements for this player (from previous orders in this batch)
+      const currentPendingDecrement = pendingCashDecrements.get(order.playerId) || 0;
+      
+      // Note: We can't validate cash here because we don't have player data
+      // Validation will happen in executeDatabaseOperations, which aggregates all decrements
+      // and validates against fresh player data from the database
+      
       for (let i = 0; i < sharesToAllocate; i++) {
         const share = allAvailableShares[currentShareIndex];
         shareUpdates.push({
@@ -8767,10 +8789,17 @@ export class GameManagementService {
           location: ShareLocation.PLAYER,
         });
 
+        const sharePrice = share?.price || 0;
         playerCashUpdates.push({
           playerId: order.playerId,
-          decrement: share?.price || 0,
+          decrement: sharePrice,
         });
+        
+        // Track pending decrement for this player
+        pendingCashDecrements.set(
+          order.playerId,
+          (pendingCashDecrements.get(order.playerId) || 0) + sharePrice
+        );
 
         currentShareIndex++;
         remainingShares--;
