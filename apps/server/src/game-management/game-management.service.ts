@@ -2047,7 +2047,8 @@ export class GameManagementService {
         netWorth: calculateNetWorth(player.cashOnHand, player.Share),
       };
     });
-
+    
+    //sort in ASCENDING order
     const priorityPlayerOrder = netWorths.sort(
       (a, b) => a.netWorth - b.netWorth,
     );

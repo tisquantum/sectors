@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useGame } from "../../GameContext";
 import { trpc } from "@sectors/app/trpc";
-import { Spinner, Switch } from "@nextui-org/react";
+import { Spinner, Switch, Tab, Tabs } from "@nextui-org/react";
 import { RiVipCrown2Fill } from "@remixicon/react";
 import { cn } from "@/lib/utils";
 import PlayerAvatar from "../../../Player/PlayerAvatar";
@@ -12,6 +12,7 @@ import { ModernCompany } from "../../../Company/CompanyV2/ModernCompany";
 import { ResearchTrack } from "../../../Company/Research/ResearchTrack";
 import { ModernOperationsLayout, ModernOperationsSection } from "../layouts";
 import { SectorResearchTracks } from "../../Tracks";
+import { ResourceTracksContainer } from "../../ResourceTracksContainer";
 
 /**
  * ModernOperations Phase Component
@@ -207,8 +208,21 @@ export default function ModernOperations() {
           </ModernOperationsSection>
         )}
 
-        {/* Research Track */}
-        <SectorResearchTracks />
+        {/* Research Track & Resource Tracks - Tabbed */}
+        <ModernOperationsSection title="Research & Resources">
+          <Tabs aria-label="Research and Resources" className="w-full">
+            <Tab key="research" title="Research">
+              <div className="w-full h-full p-4">
+                <SectorResearchTracks />
+              </div>
+            </Tab>
+            <Tab key="resource-tracks" title="Resource Tracks">
+              <div className="w-full h-full">
+                <ResourceTracksContainer />
+              </div>
+            </Tab>
+          </Tabs>
+        </ModernOperationsSection>
       </div>
     </ModernOperationsLayout>
   );
