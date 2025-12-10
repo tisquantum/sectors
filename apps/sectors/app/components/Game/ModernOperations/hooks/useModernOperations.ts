@@ -26,7 +26,11 @@ export function useModernOperations() {
   // Consumption bags for all sectors
   const consumptionBags = trpc.consumptionMarker.getAllConsumptionBags.useQuery(
     { gameId: isValidGameId ? gameId : '' },
-    { enabled: isValidGameId }
+    { 
+      enabled: isValidGameId,
+      refetchOnMount: true, // Refetch when component mounts to ensure fresh data
+      refetchOnWindowFocus: false,
+    }
   );
 
   // Current turn production data
@@ -35,7 +39,11 @@ export function useModernOperations() {
       gameId: isValidGameId ? gameId : '',
       gameTurnId: currentTurn?.id || '',
     },
-    { enabled: isValidGameId && !!currentTurn?.id }
+    { 
+      enabled: isValidGameId && !!currentTurn?.id,
+      refetchOnMount: true, // Refetch when component mounts to ensure fresh data
+      refetchOnWindowFocus: false,
+    }
   );
 
   // All sectors research progress

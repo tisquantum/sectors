@@ -22,7 +22,7 @@ import { ResourceIcon } from '../../ConsumptionPhase/ResourceIcon';
 export function ConsumptionPhase() {
   const [activeTab, setActiveTab] = useState('flow');
   const { gameId, currentTurn, gameState } = useGame();
-  const { productionData, sectors, consumptionBags, isLoading } = useModernOperations();
+  const { productionData, sectors, consumptionBags, isLoading, refetch: refetchModernOps } = useModernOperations();
 
   // Get tRPC utils for invalidating queries
   const trpcUtils = trpc.useUtils();
@@ -44,6 +44,19 @@ export function ConsumptionPhase() {
       refetchOnWindowFocus: false,
     }
   );
+
+  // Refetch all data when navigating to Consumption Phase
+  useEffect(() => {
+    if (!currentPhase?.id || !gameId || !currentTurn?.id) return;
+    
+    // Immediately refetch when phase changes to CONSUMPTION_PHASE
+    if (currentPhase?.name === 'CONSUMPTION_PHASE') {
+      refetchProduction();
+      // Refetch all modern operations data (consumption bags, sectors, etc.)
+      refetchModernOps.consumptionBags();
+      refetchModernOps.sectors();
+    }
+  }, [currentPhase?.id, currentPhase?.name, gameId, currentTurn?.id, refetchProduction, refetchModernOps]);
 
   // Refetch production data when phase transitions to EARNINGS_CALL
   // (This is when production records are created from consumption phase resolution)
@@ -72,7 +85,11 @@ export function ConsumptionPhase() {
   // MUST be called before any conditional returns to follow React hooks rules
   const { data: allFactoriesData } = trpc.factory.getGameFactories.useQuery(
     { gameId },
-    { enabled: !!gameId && (!productionWithRelations || productionWithRelations.length === 0) }
+    { 
+      enabled: !!gameId && (!productionWithRelations || productionWithRelations.length === 0),
+      refetchOnMount: true, // Refetch when component mounts to ensure fresh data
+      refetchOnWindowFocus: false,
+    }
   );
 
   // Filter to operational factories
