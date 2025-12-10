@@ -1573,8 +1573,8 @@ export class ModernOperationMechanicsService {
         continue;
       }
 
-      // Generate random research progress gain (0, 1, or 2)
-      const researchProgressGain = Math.floor(Math.random() * 3); // 0, 1, or 2
+      // Generate random research progress gain (1, or 2)
+      const researchProgressGain = Math.floor(Math.random() * 2) + 1; // 1 or 2
 
       // Update tracking for this company
       const newCash = currentCash - order.cost;
