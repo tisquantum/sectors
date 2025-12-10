@@ -8404,6 +8404,9 @@ export class GameManagementService {
     gameLogEntries: any[],
     playersWithShares: PlayerWithShares[], //we need this reference because we are now actively checking stock ownership and cash on hand
   ) {
+    // CRITICAL: Track pending cash decrements per player to prevent over-spending
+    const pendingCashDecrements = new Map<string, number>();
+    
     for (const order of sortedOrders) {
       if (remainingShares <= 0) {
         orderStatusUpdates.push({
@@ -8442,19 +8445,24 @@ export class GameManagementService {
             game: { connect: { id: order.gameId } },
             content: `Player ${order.Player.nickname} has exceeded the maximum share percentage of ${MAX_SHARE_PERCENTAGE}% for ${order.Company.name}`,
           });
-        } else if (
-          player.cashOnHand <
-          (order.value || 0) * (order.quantity || 0)
-        ) {
-          orderStatusUpdates.push({
-            where: { id: order.id },
-            data: { orderStatus: OrderStatus.REJECTED },
-          });
-          gameLogEntries.push({
-            game: { connect: { id: order.gameId } },
-            content: `Player ${order.Player.nickname} does not have enough cash to purchase ${order.quantity} shares of ${order.Company.name} at $${order.value}`,
-          });
         } else {
+          // Calculate order cost
+          const orderCost = (order.value || 0) * (order.quantity || 0);
+          // Get current pending decrements for this player (from previous orders in this batch)
+          const currentPendingDecrement = pendingCashDecrements.get(order.playerId) || 0;
+          // Check if player has enough cash AFTER accounting for pending decrements
+          if (
+            player.cashOnHand < orderCost + currentPendingDecrement
+          ) {
+            orderStatusUpdates.push({
+              where: { id: order.id },
+              data: { orderStatus: OrderStatus.REJECTED },
+            });
+            gameLogEntries.push({
+              game: { connect: { id: order.gameId } },
+              content: `Player ${order.Player.nickname} does not have enough cash to purchase ${order.quantity} shares of ${order.Company.name} at $${order.value}`,
+            });
+          } else {
           const sharesToGive = order.quantity || 0;
           if (sharesToGive > remainingShares) {
             // Reject the order if it cannot be fully fulfilled
@@ -8481,10 +8489,17 @@ export class GameManagementService {
               },
             });
 
+            const cashDecrement = sharesToGive * order.value!;
             playerCashUpdates.push({
               playerId: order.playerId,
-              decrement: sharesToGive * order.value!,
+              decrement: cashDecrement,
             });
+            
+            // Track pending decrement for this player to validate subsequent orders
+            pendingCashDecrements.set(
+              order.playerId,
+              (pendingCashDecrements.get(order.playerId) || 0) + cashDecrement
+            );
 
             orderStatusUpdates.push({
               where: { id: order.id },
@@ -9128,6 +9143,36 @@ export class GameManagementService {
     try {
       const BATCH_SIZE = 4;
       const MAX_RETRIES = 3;
+      
+      // CRITICAL: Validate all cash updates BEFORE any database operations to prevent negative balances
+      // This must happen BEFORE share updates to ensure atomicity - if cash validation fails,
+      // no changes should be made
+      if (playerCashUpdates.length > 0) {
+        // Aggregate cash updates per player to catch over-spending
+        const aggregatedCashUpdates = new Map<string, number>();
+        for (const update of playerCashUpdates) {
+          const currentTotal = aggregatedCashUpdates.get(update.playerId) || 0;
+          aggregatedCashUpdates.set(update.playerId, currentTotal + update.decrement);
+        }
+        
+        // Validate each player has sufficient funds for their total decrements
+        const playerIds = Array.from(aggregatedCashUpdates.keys());
+        const players = await prisma.player.findMany({
+          where: { id: { in: playerIds } },
+          select: { id: true, cashOnHand: true, nickname: true },
+        });
+        
+        for (const player of players) {
+          const totalDecrement = aggregatedCashUpdates.get(player.id) || 0;
+          if (player.cashOnHand < totalDecrement) {
+            throw new Error(
+              `Insufficient funds: Player ${player.nickname || player.id} has $${player.cashOnHand} but total decrements are $${totalDecrement}. Transaction aborted to prevent negative balance.`
+            );
+          }
+        }
+      }
+      
+      // Now safe to proceed with database operations
       for (let i = 0; i < shareUpdates.length; i += BATCH_SIZE) {
         const batch = shareUpdates.slice(i, i + BATCH_SIZE);
         await prisma.$transaction(
@@ -9260,15 +9305,22 @@ export class GameManagementService {
     if (!player) {
       throw new Error('Player not found');
     }
-    //the lowest player cash can go is 0
-    const cashToRemove = Math.min(player.cashOnHand, amount);
+    
+    // CRITICAL: Validate player has sufficient funds BEFORE processing
+    // Negative balances should NEVER occur - fail the transaction if insufficient funds
+    if (player.cashOnHand < amount) {
+      throw new Error(
+        `Insufficient funds: Player ${playerId} attempted to remove $${amount} but only has $${player.cashOnHand}. Transaction failed to prevent negative balance.`
+      );
+    }
+    
     //create transaction
     this.transactionService
       .createTransactionEntityToEntity({
         gameId,
         gameTurnId,
         phaseId,
-        amount: cashToRemove,
+        amount,
         fromEntityId: player.entityId || undefined,
         fromEntityType: EntityType.PLAYER,
         fromPlayerId: playerId,
@@ -9285,7 +9337,7 @@ export class GameManagementService {
       where: { id: gameId },
       data: {
         bankPoolNumber: {
-          increment: cashToRemove,
+          increment: amount,
         },
       },
     });
@@ -9293,7 +9345,7 @@ export class GameManagementService {
       where: { id: playerId },
       data: {
         cashOnHand: {
-          decrement: cashToRemove,
+          decrement: amount,
         },
       },
     });
