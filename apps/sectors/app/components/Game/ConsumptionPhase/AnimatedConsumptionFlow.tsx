@@ -104,7 +104,11 @@ export function AnimatedConsumptionFlow({
 
       // Get current factory state
       const factoryState = factoryStates.get(factory.id)!;
-      const newCurrent = factoryState.current + 1;
+      
+      // Only increment if factory hasn't reached its max capacity
+      // This ensures we never show more customers than the factory limit
+      const canAcceptCustomer = factoryState.current < factoryState.max;
+      const newCurrent = canAcceptCustomer ? factoryState.current + 1 : factoryState.current;
 
       // Find consumption marker for this resource (simulate drawing)
       // Count how many markers have been drawn for this sector so far
@@ -131,17 +135,20 @@ export function AnimatedConsumptionFlow({
           resourceType: markerToDraw.resourceType,
           isPermanent: markerToDraw.isPermanent,
         } : null,
-        customerAssigned: {
+        // Only show customer assigned if factory can accept it
+        customerAssigned: canAcceptCustomer ? {
           factoryId: factory.id,
           companyName,
           factorySize,
           reason: entry.reason,
-        },
+        } : null,
         factoryStates: new Map(factoryStates), // Clone current state
       });
 
-      // Update factory state for next iteration
-      factoryState.current = newCurrent;
+      // Update factory state for next iteration (only if customer was actually accepted)
+      if (canAcceptCustomer) {
+        factoryState.current = newCurrent;
+      }
     });
 
     return steps;

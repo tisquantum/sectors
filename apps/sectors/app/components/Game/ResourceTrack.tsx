@@ -29,19 +29,12 @@ interface ResourceTrackProps {
 export function ResourceTrack({ resourceType, title, track, currentPrice }: ResourceTrackProps) {
   const resourceColor = RESOURCE_COLORS[resourceType] || 'bg-gray-500';
   const currentIndex = track.indexOf(currentPrice);
-  
-  // Calculate the next available price (first grey space after the cubes)
-  // Cubes occupy positions 0 through currentIndex, so next available is currentIndex + 1
-  const nextAvailableIndex = currentIndex + 1;
-  const nextAvailablePrice = nextAvailableIndex < track.length 
-    ? track[nextAvailableIndex] 
-    : track[track.length - 1]; // If at end of track, show last price
 
   return (
     <div className="p-4 bg-gray-800 rounded-lg">
       <div className="flex justify-between items-center mb-2">
         <h3 className="text-lg font-semibold text-white">{title || resourceType}</h3>
-        <span className="text-lg font-bold text-green-400">${nextAvailablePrice}</span>
+        <span className="text-lg font-bold text-green-400">${currentPrice}</span>
       </div>
       <div className="flex flex-wrap gap-1 min-h-12">
         {track.map((price, index) => {
