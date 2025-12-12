@@ -18,7 +18,7 @@ import { ShareService } from '../share/share.service';
 import { getResourcePriceForResourceType, getSectorResourceForSectorName, BASE_WORKER_SALARY, CompanyTierData, BANKRUPTCY_SHARE_PERCENTAGE_RETAINED, DEFAULT_SHARE_DISTRIBUTION } from '@server/data/constants';
 import { PlayerPriorityService } from '@server/player-priority/player-priority.service';
 import { PlayersService } from '@server/players/players.service';
-import { calculateAverageStockPrice, calculateNetWorth, getRandomCompany } from '@server/data/helpers';
+import { calculateAverageStockPrice, calculateNetWorth, getRandomCompany, getNumberForFactorySize } from '@server/data/helpers';
 import { CompanyWithSector } from '@server/prisma/prisma.types';
 
 interface RequiredResource {
@@ -272,19 +272,23 @@ export class ModernOperationMechanicsService {
         continue;
       }
 
-      // Calculate total blueprint cost
-      let blueprintCost = 0;
+      // Calculate total resource cost (sum of current resource prices)
+      let totalResourceCost = 0;
       const resourcesNeeded: { type: ResourceType; count: number }[] = [];
       
       for (const resourceType of order.resourceTypes) {
         const price = resourcePriceMap.get(resourceType) || 0;
-        blueprintCost += price;
+        totalResourceCost += price;
         resourcesNeeded.push({ type: resourceType, count: 1 });
       }
 
+      // Calculate factory construction cost: (sum of resource prices) × factory size + $100
+      const factorySizeNumber = getNumberForFactorySize(order.size);
+      const constructionCost = (totalResourceCost * factorySizeNumber) + 100;
+
       // Check if company can afford it
-      if (company.cashOnHand < blueprintCost) {
-        const failureReason = `Insufficient cash. Required: $${blueprintCost}, Available: $${company.cashOnHand}`;
+      if (company.cashOnHand < constructionCost) {
+        const failureReason = `Insufficient cash. Required: $${constructionCost}, Available: $${company.cashOnHand}`;
         orderUpdates.push({ id: order.id, failureReason });
         gameLogEntries.push({
           gameId: phase.gameId,
@@ -350,7 +354,7 @@ export class ModernOperationMechanicsService {
       successfulOperations.push({
         order,
         company,
-        blueprintCost,
+        blueprintCost: constructionCost, // Using blueprintCost field name for backwards compatibility
         requiredWorkers,
         slot, // Use calculated slot number
         factoryOutputResource, // Sector resource type or first resource in blueprint
@@ -394,20 +398,11 @@ export class ModernOperationMechanicsService {
         }
         
         await this.prisma.$transaction(async (tx) => {
-          // Deduct cash from company
+          // Deduct cash from company (construction cost = resource prices × factory size + $100)
           await tx.company.update({
             where: { id: op.company.id },
             data: { cashOnHand: { decrement: op.blueprintCost } },
           });
-
-          // Calculate full construction cost (base cost + resource costs)
-          const baseCost = {
-            [FactorySize.FACTORY_I]: 100,
-            [FactorySize.FACTORY_II]: 200,
-            [FactorySize.FACTORY_III]: 300,
-            [FactorySize.FACTORY_IV]: 400,
-          }[op.order.size];
-          const fullConstructionCost = baseCost + op.blueprintCost;
 
           // Create factory (will be operational next turn)
           // Always ensure sector resource type is first, and replace GENERAL with sector resource
@@ -421,7 +416,7 @@ export class ModernOperationMechanicsService {
               slot: op.slot, // Use the slot calculated during validation
               isOperational: false,
               resourceTypes: factoryResourceTypes,
-              originalConstructionCost: fullConstructionCost, // Store for upgrade calculations
+              originalConstructionCost: op.blueprintCost, // Store for upgrade calculations (cost = resource prices × factory size + $100)
             },
           });
           
@@ -453,7 +448,7 @@ export class ModernOperationMechanicsService {
               transactionType: TransactionType.FACTORY_CONSTRUCTION,
               fromCompanyId: op.company.id,
               companyInvolvedId: op.company.id,
-              description: `Factory construction: ${op.order.size} factory built for $${op.blueprintCost}`,
+              description: `Factory construction: ${op.order.size} factory built for $${op.blueprintCost} (resource prices × factory size + $100)`,
             });
           } catch (error) {
             // Log error but don't fail the factory construction
@@ -1019,25 +1014,6 @@ export class ModernOperationMechanicsService {
   }
 
   async getFactoryCost(size: FactorySize, resources: RequiredResource[]): Promise<number> {
-    let baseCost = 100;
-    switch (size) {
-      case FactorySize.FACTORY_I:
-        baseCost = 100;
-        break;
-      case FactorySize.FACTORY_II:
-        baseCost = 200;
-        break;
-      case FactorySize.FACTORY_III:
-        baseCost = 300;
-        break;
-      case FactorySize.FACTORY_IV:
-        baseCost = 400;
-        break;
-      default:
-        baseCost = 100;
-        break;
-    }
-
     // Get current resource prices from the game
     const resourcePrices = await this.prisma.resource.findMany({
       where: {
@@ -1047,13 +1023,15 @@ export class ModernOperationMechanicsService {
       },
     });
 
-    // Calculate total resource cost
-    const resourceCost = resources.reduce((sum, resource) => {
+    // Calculate total resource cost (sum of current prices, one of each resource type)
+    const totalResourceCost = resources.reduce((sum, resource) => {
       const price = resourcePrices.find(r => r.type === resource.type)?.price || 0;
-      return sum + (price * resource.quantity);
+      return sum + price; // Sum prices (one of each type)
     }, 0);
 
-    return baseCost + resourceCost;
+    // Factory construction cost = (sum of resource prices) × factory size + $100
+    const factorySizeNumber = getNumberForFactorySize(size);
+    return (totalResourceCost * factorySizeNumber) + 100;
   }
 
 
@@ -2820,24 +2798,15 @@ export class ModernOperationMechanicsService {
 
       // Second pass: calculate upgrade costs using cached resource prices
       for (const { factory, newSize, requiredResources } of factoryUpgradeData) {
-        const originalCost = factory.originalConstructionCost || 0;
-        const refundAmount = Math.floor(originalCost * 0.5);
-
-        // Calculate resource cost using cached prices
-        const resourceCost = requiredResources.reduce((sum, req) => {
+        // Calculate blueprint cost (sum of current resource prices, one of each type)
+        const blueprintCost = requiredResources.reduce((sum, req) => {
           const price = resourcePriceMap.get(req.type) || 0;
-          return sum + price * req.quantity;
+          return sum + price; // Sum prices (one of each type, regardless of quantity)
         }, 0);
 
-        const baseCost = {
-          [FactorySize.FACTORY_I]: 100,
-          [FactorySize.FACTORY_II]: 200,
-          [FactorySize.FACTORY_III]: 300,
-          [FactorySize.FACTORY_IV]: 400,
-        }[newSize];
-
-        const fullBlueprintCost = baseCost + resourceCost;
-        const upgradeCost = fullBlueprintCost - refundAmount;
+        // Upgrade fee = blueprint cost × factory size (no $100 base, no refund)
+        const factorySizeNumber = getNumberForFactorySize(newSize);
+        const upgradeCost = blueprintCost * factorySizeNumber;
 
         totalUpgradeCost += upgradeCost;
         upgrades.push({
@@ -2876,7 +2845,7 @@ export class ModernOperationMechanicsService {
         data: {
           size: newSize,
           isRusted: false,
-          originalConstructionCost: upgrades.find(u => u.factory.id === factory.id)!.upgradeCost + Math.floor((factory.originalConstructionCost || 0) * 0.5),
+          originalConstructionCost: upgrades.find(u => u.factory.id === factory.id)!.upgradeCost, // Store upgrade cost for future upgrade calculations
           workers: {
             [FactorySize.FACTORY_I]: 2,
             [FactorySize.FACTORY_II]: 4,

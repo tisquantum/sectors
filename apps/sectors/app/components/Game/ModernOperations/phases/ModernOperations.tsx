@@ -13,6 +13,7 @@ import { ResearchTrack } from "../../../Company/Research/ResearchTrack";
 import { ModernOperationsLayout, ModernOperationsSection } from "../layouts";
 import { SectorResearchTracks } from "../../Tracks";
 import { ResourceTracksContainer } from "../../ResourceTracksContainer";
+import { SectorWorkerSalaries } from "../components/SectorWorkerSalaries";
 
 /**
  * ModernOperations Phase Component
@@ -222,6 +223,11 @@ export default function ModernOperations() {
               </div>
             </Tab>
           </Tabs>
+        </ModernOperationsSection>
+
+        {/* Sector Worker Salaries & Demand Ranking */}
+        <ModernOperationsSection title="Worker Salaries & Sector Rankings">
+          <SectorWorkerSalaries />
         </ModernOperationsSection>
       </div>
     </ModernOperationsLayout>
