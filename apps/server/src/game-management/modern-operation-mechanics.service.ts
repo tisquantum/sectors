@@ -1635,6 +1635,22 @@ export class ModernOperationMechanicsService {
         }
       });
 
+      // Track previous research stages to detect milestone crossings
+      const sectorsToUpdate = Array.from(sectorGains.keys());
+      const previousSectorStages = new Map<string, number>();
+      
+      if (sectorsToUpdate.length > 0) {
+        const sectorsBeforeUpdate = await this.prisma.sector.findMany({
+          where: { id: { in: sectorsToUpdate } },
+          select: { id: true, researchMarker: true, sectorName: true },
+        });
+        
+        for (const sector of sectorsBeforeUpdate) {
+          const previousStage = this.getResearchStage(sector.researchMarker || 0);
+          previousSectorStages.set(sector.id, previousStage);
+        }
+      }
+
       // Batch update sector research markers
       if (sectorGains.size > 0) {
         await this.prisma.$transaction(
@@ -1649,6 +1665,71 @@ export class ModernOperationMechanicsService {
             })
           )
         );
+      }
+
+      // Check for sector research milestone crossings (Stage II, III, or IV)
+      // When a sector reaches a new research stage, remove 1 resource from that sector's resource track (economies of scale)
+      const sectorsAfterUpdate = sectorsToUpdate.length > 0
+        ? await this.prisma.sector.findMany({
+            where: { id: { in: sectorsToUpdate } },
+            select: { id: true, researchMarker: true, sectorName: true },
+          })
+        : [];
+
+      const resourceConsumptionsForMilestones: Array<{ type: ResourceType; count: number }> = [];
+      
+      for (const sector of sectorsAfterUpdate) {
+        const previousStage = previousSectorStages.get(sector.id) || 1;
+        const newStage = this.getResearchStage(sector.researchMarker || 0);
+        
+        // Check if sector crossed into Stage 2, 3, or 4 (check each milestone independently)
+        // This allows multiple milestones to trigger if stages are skipped
+        const sectorResourceType = this.getSectorResourceType(sector.sectorName);
+        if (!sectorResourceType) continue;
+
+        if (previousStage < 2 && newStage >= 2) {
+          // Crossed into Stage II
+          resourceConsumptionsForMilestones.push({ type: sectorResourceType, count: 1 });
+          researchGameLogEntries.push({
+            gameId: phase.gameId,
+            content: `${sector.sectorName} reached Research Stage II! Economies of scale achieved - 1 ${sectorResourceType} resource removed from track (prices decreased).`,
+          });
+        }
+        
+        if (previousStage < 3 && newStage >= 3) {
+          // Crossed into Stage III
+          resourceConsumptionsForMilestones.push({ type: sectorResourceType, count: 1 });
+          researchGameLogEntries.push({
+            gameId: phase.gameId,
+            content: `${sector.sectorName} reached Research Stage III! Economies of scale achieved - 1 ${sectorResourceType} resource removed from track (prices decreased).`,
+          });
+        }
+        
+        if (previousStage < 4 && newStage >= 4) {
+          // Crossed into Stage IV
+          resourceConsumptionsForMilestones.push({ type: sectorResourceType, count: 1 });
+          researchGameLogEntries.push({
+            gameId: phase.gameId,
+            content: `${sector.sectorName} reached Research Stage IV! Economies of scale achieved - 1 ${sectorResourceType} resource removed from track (prices decreased).`,
+          });
+        }
+      }
+
+      // Consume resources for milestone achievements (economies of scale)
+      if (resourceConsumptionsForMilestones.length > 0) {
+        // Aggregate by resource type
+        const aggregatedConsumptions = new Map<ResourceType, number>();
+        for (const consumption of resourceConsumptionsForMilestones) {
+          const current = aggregatedConsumptions.get(consumption.type) || 0;
+          aggregatedConsumptions.set(consumption.type, current + consumption.count);
+        }
+
+        const consumptions = Array.from(aggregatedConsumptions.entries()).map(
+          ([type, count]) => ({ type, count })
+        );
+
+        await this.resourceService.consumeResources(phase.gameId, consumptions);
+        await this.resourceService.updateResourcePrices(phase.gameId);
       }
     }
 
