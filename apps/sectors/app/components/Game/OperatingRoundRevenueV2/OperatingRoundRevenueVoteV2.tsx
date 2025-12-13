@@ -27,6 +27,7 @@ import {
 import CompanyPriorityList from "../../Company/CompanyPriorityOperatingRound";
 import { Info } from "lucide-react";
 import { OperationMechanicsVersion } from "@server/prisma/prisma.client";
+import CompanyInfoV2 from "../../Company/CompanyV2/CompanyInfoV2";
 
 // Consumption phase revenue data structure
 interface ConsumptionRevenue {
@@ -540,13 +541,22 @@ const OperatingRoundRevenueVoteV2 = () => {
               key={companyRevenue.companyId}
               className="flex flex-col bg-slate-800 p-4 rounded-lg shadow-md border border-gray-700"
             >
-              <div className="flex flex-col gap-2">
-                <span className="text-lg font-semibold text-white">
-                  {company.name}
-                </span>
-                <span className={`${revenueColor} font-bold`}>
-                  Revenue: ${companyRevenue.revenue}
-                </span>
+              <div className="flex flex-col gap-4">
+                {/* Company Info in minimal mode */}
+                <CompanyInfoV2 companyId={company.id} isMinimal />
+                
+                {/* Share Breakdown */}
+                <div className="flex flex-col gap-2">
+                  <span className="text-sm font-medium text-gray-300">
+                    Share Breakdown:
+                  </span>
+                  <ShareHolders companyId={company.id} />
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <span className={`${revenueColor} font-bold`}>
+                    Revenue: ${companyRevenue.revenue}
+                  </span>
                 {companyRevenue.consumersReceived > 0 ? (
                   <span className="text-md my-2 text-gray-300">
                     Consumers Received: {companyRevenue.consumersReceived}
@@ -635,6 +645,7 @@ const OperatingRoundRevenueVoteV2 = () => {
                     </p>
                   </div>
                 )}
+                </div>
               </div>
             </div>
           );
