@@ -489,11 +489,25 @@ export class ModernOperationMechanicsService {
     // Only consume resources for orders that succeeded (tracked before deletion)
     for (const order of factoryConstructionOrders) {
       if (successfulOrderIds.has(order.id)) {
+        // Consume blueprint resources (what the player selected)
         for (const resourceType of order.resourceTypes) {
           totalResourceConsumptions.set(
             resourceType,
             (totalResourceConsumptions.get(resourceType) || 0) + 1
           );
+        }
+        
+        // Also consume the sector base resource (required for factory construction)
+        // Get the company to find its sector
+        const company = companyMap.get(order.companyId);
+        if (company) {
+          const sectorResourceType = this.getSectorResourceType(company.Sector.sectorName);
+          if (sectorResourceType) {
+            totalResourceConsumptions.set(
+              sectorResourceType,
+              (totalResourceConsumptions.get(sectorResourceType) || 0) + 1
+            );
+          }
         }
       }
     }
