@@ -1,9 +1,9 @@
 "use client";
 
-import { useGame } from "../../../GameContext";
 import { trpc } from "@sectors/app/trpc";
 import { Spinner, Card, CardBody } from "@nextui-org/react";
 import { RiMoneyDollarCircleFill, RiTrophyFill, RiUserFill } from "@remixicon/react";
+import { useGame } from "../../GameContext";
 
 /**
  * Component to display sector demand ranking and worker salaries
