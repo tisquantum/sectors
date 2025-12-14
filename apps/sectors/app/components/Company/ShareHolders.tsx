@@ -1,10 +1,18 @@
 import { trpc } from "@sectors/app/trpc";
 import ShareComponent from "./Share";
-import { ShareLocation } from "@server/prisma/prisma.client";
+import { Player, ShareLocation } from "@server/prisma/prisma.client";
 import { ShareWithRelations } from "@server/prisma/prisma.types";
 import { RiUserFill } from "@remixicon/react";
+import { Popover, PopoverContent, PopoverTrigger } from "@nextui-org/react";
+import PlayerAvatar from "../Player/PlayerAvatar";
 
-const ShareHolders = ({ companyId, isMinimal }: { companyId: string, isMinimal?: boolean }) => {
+const ShareHolders = ({
+  companyId,
+  isMinimal,
+}: {
+  companyId: string;
+  isMinimal?: boolean;
+}) => {
   const { data: companyShares, isLoading } =
     trpc.share.listSharesWithRelations.useQuery({
       where: { companyId },
@@ -24,17 +32,20 @@ const ShareHolders = ({ companyId, isMinimal }: { companyId: string, isMinimal?:
     }
     acc[share.location].push(share);
     return acc;
-  }, {} as { [key: string]: any[] });
+  }, {} as { [key: string]: ShareWithRelations[] });
 
   // Split location PLAYER by player id
   const playerShares = shareGroups[ShareLocation.PLAYER] || [];
   const playerSharesByPlayerId: {
     [key: string]: ShareWithRelations[];
   } = playerShares.reduce((acc, share) => {
-    if (!acc[share.playerId]) {
-      acc[share.playerId] = [];
+    if (!share.playerId) {
+      return acc;
     }
-    acc[share.playerId].push(share);
+    if (!acc[share.playerId!]) {
+      acc[share.playerId!] = [];
+    }
+    acc[share.playerId!].push(share);
     return acc;
   }, {} as { [key: string]: ShareWithRelations[] });
 
@@ -49,11 +60,47 @@ const ShareHolders = ({ companyId, isMinimal }: { companyId: string, isMinimal?:
         quantity={shareGroups[ShareLocation.IPO]?.length || 0}
       />
       {isMinimal ? (
-        <ShareComponent
-          name="Player"
-          icon={<RiUserFill className={"text-slate-800"} size={18} />}
-          quantity={playerShares.length}
-        />
+        <Popover>
+          <PopoverTrigger>
+            <div className="flex justify-center items-center cursor-pointer">
+              <ShareComponent
+                name="Player"
+                icon={<RiUserFill className={"text-slate-800"} size={18} />}
+                quantity={playerShares.length}
+              />
+            </div>
+          </PopoverTrigger>
+          <PopoverContent>
+            <div className="flex flex-wrap gap-1">
+              {Object.values(
+                playerShares
+                  .filter((share) => share.location === ShareLocation.PLAYER)
+                  .reduce((acc, share) => {
+                    const playerId = share.Player?.id;
+                    if (playerId && share.Player) {
+                      if (!acc[playerId]) {
+                        acc[playerId] = {
+                          quantity: 0,
+                          Player: share.Player,
+                        };
+                      }
+                      acc[playerId].quantity += 1; // Sum the quantity for each player
+                    }
+                    return acc;
+                  }, {} as Record<string, { quantity: number; Player: Player }>) // Accumulate by player ID
+              ).map((shareData, index) => (
+                <div key={index} className="flex gap-2 items-center">
+                  <div className="flex items-center">
+                    {shareData.Player && (
+                      <PlayerAvatar player={shareData.Player} />
+                    )}
+                  </div>
+                  <span>{shareData.quantity}</span>
+                </div>
+              ))}
+            </div>
+          </PopoverContent>
+        </Popover>
       ) : (
         <>
           {Object.entries(playerSharesByPlayerId).map(([playerId, shares]) => {
