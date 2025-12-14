@@ -2,8 +2,9 @@ import { trpc } from "@sectors/app/trpc";
 import ShareComponent from "./Share";
 import { ShareLocation } from "@server/prisma/prisma.client";
 import { ShareWithRelations } from "@server/prisma/prisma.types";
+import { RiUserFill } from "@remixicon/react";
 
-const ShareHolders = ({ companyId }: { companyId: string }) => {
+const ShareHolders = ({ companyId, isMinimal }: { companyId: string, isMinimal?: boolean }) => {
   const { data: companyShares, isLoading } =
     trpc.share.listSharesWithRelations.useQuery({
       where: { companyId },
@@ -47,20 +48,30 @@ const ShareHolders = ({ companyId }: { companyId: string }) => {
         name="IPO"
         quantity={shareGroups[ShareLocation.IPO]?.length || 0}
       />
-      {Object.entries(playerSharesByPlayerId).map(([playerId, shares]) => {
-        if (shares[0].Player == null) {
-          return null;
-        } else {
-          return (
-            <ShareComponent
-              key={playerId}
-              name={shares[0].Player?.nickname || "Unknown Player"}
-              quantity={shares.length}
-              player={shares[0].Player}
-            />
-          );
-        }
-      })}
+      {isMinimal ? (
+        <ShareComponent
+          name="Player"
+          icon={<RiUserFill className={"text-slate-800"} size={18} />}
+          quantity={playerShares.length}
+        />
+      ) : (
+        <>
+          {Object.entries(playerSharesByPlayerId).map(([playerId, shares]) => {
+            if (shares[0].Player == null) {
+              return null;
+            } else {
+              return (
+                <ShareComponent
+                  key={playerId}
+                  name={shares[0].Player?.nickname || "Unknown Player"}
+                  quantity={shares.length}
+                  player={shares[0].Player}
+                />
+              );
+            }
+          })}
+        </>
+      )}
     </div>
   );
 };

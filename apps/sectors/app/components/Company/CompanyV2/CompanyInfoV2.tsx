@@ -194,7 +194,7 @@ const CompanyMoreInfo = ({
           </Tooltip>
         </div>
       </div>
-      <ShareHolders companyId={company.id} />
+      <ShareHolders companyId={company.id} isMinimal/>
     </div>
   );
 };
