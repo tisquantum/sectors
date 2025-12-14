@@ -76,6 +76,7 @@ import CompanyResearchCards from "../CompanyResearchCards";
 import { ModernCompany } from "./ModernCompany";
 import ShareComponent from "../Share";
 import { MarketingSlots } from "../Tableau/MarketingSlots";
+import ShareHolders from "../ShareHolders";
 
 const buildBarChart = (shares: ShareWithPlayer[]) => {
   //group shares by location and sum the quantity
@@ -193,6 +194,7 @@ const CompanyMoreInfo = ({
           </Tooltip>
         </div>
       </div>
+      <ShareHolders companyId={company.id} />
     </div>
   );
 };
