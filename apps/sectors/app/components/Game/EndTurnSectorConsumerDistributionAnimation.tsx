@@ -2,12 +2,9 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { RiHandCoinFill, RiTeamFill, RiInformationLine } from "@remixicon/react";
 import { Tooltip, Accordion, AccordionItem } from "@nextui-org/react";
-import EconomySector from "./EconomySector";
 import { Sector } from "@server/prisma/prisma.client";
 import { useGame } from "./GameContext";
 import { sectorColors } from "@server/data/gameData";
-import { sectorPriority } from "@server/data/constants";
-import SectorComponent from "../Sector/Sector";
 import {
   baseToolTipStyle,
   tooltipStyle,
@@ -234,7 +231,7 @@ const EndTurnSectorConsumerDistributionAnimation = ({
             <div className="bg-gray-900/50 p-3 rounded border border-gray-700">
               <h4 className="font-semibold text-white mb-2">Sector Demand Calculation</h4>
               <p className={tooltipParagraphStyle}>
-                Each sector's effective demand determines how many consumers it can attract:
+                Each sector&apos;s effective demand determines how many consumers it can attract:
               </p>
               <div className="mt-2 space-y-1 text-xs">
                 <div className="flex items-start gap-2">
@@ -265,7 +262,7 @@ const EndTurnSectorConsumerDistributionAnimation = ({
                     <span className="text-blue-400 font-medium">1. Distribution Amount:</span> The Economy Score determines how many consumers can be distributed. This equals the number of consumers that move from the Consumer Pool to sectors.
                   </div>
                   <div>
-                    <span className="text-blue-400 font-medium">2. Proportional Distribution:</span> Consumers are distributed proportionally based on each sector's effective demand relative to total sector demand.
+                    <span className="text-blue-400 font-medium">2. Proportional Distribution:</span> Consumers are distributed proportionally based on each sector&apos;s effective demand relative to total sector demand.
                   </div>
                   <div>
                     <span className="text-blue-400 font-medium">3. Priority Order:</span> Sectors are processed in priority order (left to right). Each sector receives consumers equal to its demand value per cycle, cycling through sectors until the Economy Score is fully consumed.
