@@ -874,16 +874,9 @@ export class ModernOperationMechanicsService {
         supplyMax: CompanyTierData[startingCompanyTier].supplyMax,
       });
   
-      const shares = [];
-      for (let i = 0; i < DEFAULT_SHARE_DISTRIBUTION; i++) {
-        shares.push({
-          price: newCompany.ipoAndFloatPrice,
-          location: ShareLocation.IPO,
-          companyId: newCompany.id,
-          gameId: phase.gameId,
-        });
-      }
-      await this.shareService.createManyShares(shares);
+      // Note: IPO shares are created later when the IPO price is set via setIpoPriceAndCreateSharesAndInjectCapital
+      // Do not create shares here to avoid creating duplicate shares
+  
       //create stock history
       await this.stockHistoryService.createStockHistory({
         price: 0,
