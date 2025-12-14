@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { RiHandCoinFill, RiTeamFill } from "@remixicon/react";
-import { Tooltip } from "@nextui-org/react";
+import { RiHandCoinFill, RiTeamFill, RiInformationLine } from "@remixicon/react";
+import { Tooltip, Accordion, AccordionItem } from "@nextui-org/react";
 import EconomySector from "./EconomySector";
 import { Sector } from "@server/prisma/prisma.client";
 import { useGame } from "./GameContext";
@@ -11,6 +11,7 @@ import SectorComponent from "../Sector/Sector";
 import {
   baseToolTipStyle,
   tooltipStyle,
+  tooltipParagraphStyle,
 } from "@sectors/app/helpers/tailwind.helpers";
 
 const SectorComponentAnimation = ({
@@ -41,9 +42,29 @@ const SectorComponentAnimation = ({
         </div>
       )}
       <div className="text-base lg:text-xl">{sector.name}</div>
-      <div className="text-base lg:text-xl flex gap-2">
-        <RiHandCoinFill /> {sector.demand + (sector.demandBonus || 0)}
-      </div>
+      <Tooltip
+        classNames={{ base: baseToolTipStyle }}
+        className={tooltipStyle}
+        content={
+          <div>
+            <p className={tooltipParagraphStyle}>
+              <strong>Effective Demand:</strong> {sector.demand + (sector.demandBonus || 0)}
+            </p>
+            <p className={tooltipParagraphStyle}>
+              This is the number of consumers this sector can attract per distribution cycle.
+            </p>
+            <div className="mt-2 text-xs space-y-1">
+              <div>Base Demand: {sector.baseDemand || 0}</div>
+              <div>Demand Bonus: {sector.demandBonus || 0}</div>
+              <div>Research Stage: {sector.researchMarker >= 16 ? 4 : sector.researchMarker >= 11 ? 3 : sector.researchMarker >= 6 ? 2 : 1}</div>
+            </div>
+          </div>
+        }
+      >
+        <div className="text-base lg:text-xl flex gap-2 cursor-help">
+          <RiHandCoinFill /> {sector.demand + (sector.demandBonus || 0)}
+        </div>
+      </Tooltip>
       <div className="text-base lg:text-xl">Consumers {cumulativeConsumers + consumersMoving}</div>
 
       {/* Static Consumers */}
@@ -172,8 +193,93 @@ const EndTurnSectorConsumerDistributionAnimation = ({
   
   const sectorDemand = (currentSector.demand || 0) + (currentSector.demandBonus || 0);
 
+  // Calculate research stage for display
+  const getResearchStage = (researchMarker: number): number => {
+    if (researchMarker >= 16) return 4;
+    if (researchMarker >= 11) return 3;
+    if (researchMarker >= 6) return 2;
+    return 1;
+  };
+
+  const getResearchStageBonus = (researchMarker: number): number => {
+    const stage = getResearchStage(researchMarker);
+    switch (stage) {
+      case 2: return 2;
+      case 3: return 3;
+      case 4: return 5;
+      default: return 0;
+    }
+  };
+
   return (
-    <div className="flex flex-col gap-2 text-xl">
+    <div className="flex flex-col gap-4 text-xl">
+      {/* Explanatory Information Section */}
+      <Accordion className="w-full bg-gray-800/50 rounded-lg">
+        <AccordionItem
+          key="explanation"
+          aria-label="How Consumer Distribution Works"
+          title={
+            <div className="flex items-center gap-2">
+              <RiInformationLine size={20} />
+              <span className="text-base font-semibold">How Consumer Distribution Works</span>
+            </div>
+          }
+          classNames={{
+            title: "text-white",
+            content: "text-gray-300 text-sm space-y-4 pt-2",
+          }}
+        >
+          <div className="space-y-4 pb-2">
+            {/* Sector Demand Calculation */}
+            <div className="bg-gray-900/50 p-3 rounded border border-gray-700">
+              <h4 className="font-semibold text-white mb-2">Sector Demand Calculation</h4>
+              <p className={tooltipParagraphStyle}>
+                Each sector's effective demand determines how many consumers it can attract:
+              </p>
+              <div className="mt-2 space-y-1 text-xs">
+                <div className="flex items-start gap-2">
+                  <span className="text-blue-400 font-medium">Effective Demand =</span>
+                </div>
+                <div className="ml-4 space-y-1">
+                  <div>• Base Sector Demand (from game initialization)</div>
+                  <div>• + Sum of Brand Scores (all companies in the sector)</div>
+                  <div>• + (Worker Allocation ÷ 2)</div>
+                  <div className="ml-4 text-gray-400">Worker Allocation = Factory Workers + Marketing Workers + Research Workers</div>
+                  <div>• + Research Stage Bonus</div>
+                  <div className="ml-4 text-gray-400">
+                    Stage 1 (0-5): +0 | Stage 2 (6-10): +2 | Stage 3 (11-15): +3 | Stage 4 (16-20): +5
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Consumer Distribution Calculation */}
+            <div className="bg-gray-900/50 p-3 rounded border border-gray-700">
+              <h4 className="font-semibold text-white mb-2">Consumer Distribution Process</h4>
+              <p className={tooltipParagraphStyle}>
+                Consumers are distributed from the Consumer Pool based on the Economy Score:
+              </p>
+              <div className="mt-2 space-y-1 text-xs">
+                <div className="space-y-2">
+                  <div>
+                    <span className="text-blue-400 font-medium">1. Distribution Amount:</span> The Economy Score determines how many consumers can be distributed. This equals the number of consumers that move from the Consumer Pool to sectors.
+                  </div>
+                  <div>
+                    <span className="text-blue-400 font-medium">2. Proportional Distribution:</span> Consumers are distributed proportionally based on each sector's effective demand relative to total sector demand.
+                  </div>
+                  <div>
+                    <span className="text-blue-400 font-medium">3. Priority Order:</span> Sectors are processed in priority order (left to right). Each sector receives consumers equal to its demand value per cycle, cycling through sectors until the Economy Score is fully consumed.
+                  </div>
+                  <div>
+                    <span className="text-blue-400 font-medium">4. Consumer Pool:</span> Consumers move from the Consumer Pool (shown above) into sectors based on their demand. The pool depletes as the Economy Score is consumed.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </AccordionItem>
+      </Accordion>
+
       <div className="flex flex-col gap-2">
         <div className="flex gap-2">
           {/* Consumer Pool Section */}
@@ -195,7 +301,19 @@ const EndTurnSectorConsumerDistributionAnimation = ({
             <Tooltip
               classNames={{ base: baseToolTipStyle }}
               className={tooltipStyle}
-              content="The economy score reflects the overall economic status."
+              content={
+                <div>
+                  <p className={tooltipParagraphStyle}>
+                    The Economy Score determines how many consumers can be distributed from the Consumer Pool to sectors.
+                  </p>
+                  <p className={tooltipParagraphStyle}>
+                    It starts at 10 and increases by 1 for every 2 workers allocated to factories, marketing campaigns, or research.
+                  </p>
+                  <p className={tooltipParagraphStyle}>
+                    Higher economy score = more consumers can be distributed to sectors this turn.
+                  </p>
+                </div>
+              }
             >
               <div className="flex gap-2 text-base lg:text-xl">
                 <span>Economy Score</span>
