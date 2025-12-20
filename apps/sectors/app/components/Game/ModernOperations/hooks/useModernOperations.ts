@@ -28,8 +28,9 @@ export function useModernOperations() {
     { gameId: isValidGameId ? gameId : '' },
     { 
       enabled: isValidGameId,
-      refetchOnMount: true, // Refetch when component mounts to ensure fresh data
+      refetchOnMount: false, // Prevent excessive refetching
       refetchOnWindowFocus: false,
+      staleTime: 5000, // 5 seconds
     }
   );
 
@@ -41,8 +42,9 @@ export function useModernOperations() {
     },
     { 
       enabled: isValidGameId && !!currentTurn?.id,
-      refetchOnMount: true, // Refetch when component mounts to ensure fresh data
+      refetchOnMount: false, // Prevent excessive refetching
       refetchOnWindowFocus: false,
+      staleTime: 5000, // 5 seconds - data is relatively stable
     }
   );
 

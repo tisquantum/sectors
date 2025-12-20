@@ -331,7 +331,12 @@ const OperatingRoundRevenueVoteV2 = () => {
         gameId: gameId || "",
         gameTurnId: currentTurn?.id || "",
       },
-      { enabled: !!gameId && !!currentTurn?.id && gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN }
+      { 
+        enabled: !!gameId && !!currentTurn?.id && gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN,
+        refetchOnMount: false,
+        refetchOnWindowFocus: false,
+        staleTime: 5000, // 5 seconds
+      }
     );
 
   // Get companies with sectors

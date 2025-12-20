@@ -13,6 +13,10 @@ export function EarningsCall() {
   const { data: productionData, isLoading } = trpc.factoryProduction.getGameTurnProduction.useQuery({
     gameId,
     gameTurnId: currentTurn.id,
+  }, {
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    staleTime: 5000, // 5 seconds
   });
 
   if (isLoading) return <div className="text-gray-400">Loading earnings data...</div>;

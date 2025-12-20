@@ -39,47 +39,39 @@ export function ConsumptionPhase() {
     },
     { 
       enabled: !!gameId && !!currentTurn?.id,
-      // Refetch when phase changes to catch resolution
-      refetchOnMount: true,
+      // Prevent excessive refetching
+      refetchOnMount: false,
       refetchOnWindowFocus: false,
+      staleTime: 5000, // 5 seconds - data is relatively stable
     }
   );
 
   // Refetch all data when navigating to Consumption Phase
+  // Use a ref to track if we've already refetched for this phase
+  const lastRefetchedPhaseIdRef = useRef<string | null>(null);
   useEffect(() => {
     if (!currentPhase?.id || !gameId || !currentTurn?.id) return;
     
-    // Immediately refetch when phase changes to CONSUMPTION_PHASE
-    if (currentPhase?.name === 'CONSUMPTION_PHASE') {
+    // Only refetch once per phase change
+    if (currentPhase?.name === 'CONSUMPTION_PHASE' && lastRefetchedPhaseIdRef.current !== currentPhase.id) {
+      lastRefetchedPhaseIdRef.current = currentPhase.id;
       refetchProduction();
       // Refetch all modern operations data (consumption bags, sectors, etc.)
       refetchModernOps.consumptionBags();
       refetchModernOps.sectors();
     }
-  }, [currentPhase?.id, currentPhase?.name, gameId, currentTurn?.id, refetchProduction, refetchModernOps]);
+  }, [currentPhase?.id, currentPhase?.name, gameId, currentTurn?.id]);
 
   // Refetch production data when phase transitions to EARNINGS_CALL
   // (This is when production records are created from consumption phase resolution)
-  const productionRefetchCountRef = useRef(0);
+  const earningsCallRefetchRef = useRef<string | null>(null);
   useEffect(() => {
-    if (currentPhase?.name === 'EARNINGS_CALL' && currentTurn?.id) {
-      productionRefetchCountRef.current += 1;
-      const count = productionRefetchCountRef.current;
-      
-      if (count > 5) {
-        console.warn(`[ConsumptionPhase] refetchProduction called ${count} times`);
-      }
-      
-      if (count > 20) {
-        console.error(`[ConsumptionPhase] POTENTIAL INFINITE LOOP: refetchProduction called ${count} times!`);
-        return;
-      }
-
-      console.log(`[ConsumptionPhase] Refetching production data (call #${count})`);
+    if (currentPhase?.name === 'EARNINGS_CALL' && currentTurn?.id && currentPhase.id !== earningsCallRefetchRef.current) {
+      earningsCallRefetchRef.current = currentPhase.id;
       // Production records should now exist, refetch to show results
       refetchProduction();
     }
-  }, [currentPhase?.name, currentTurn?.id, refetchProduction]);
+  }, [currentPhase?.id, currentPhase?.name, currentTurn?.id]);
 
   // Get operational factories for preview (when phase hasn't resolved yet)
   // MUST be called before any conditional returns to follow React hooks rules
@@ -87,8 +79,9 @@ export function ConsumptionPhase() {
     { gameId },
     { 
       enabled: !!gameId && (!productionWithRelations || productionWithRelations.length === 0),
-      refetchOnMount: true, // Refetch when component mounts to ensure fresh data
+      refetchOnMount: false, // Prevent excessive refetching
       refetchOnWindowFocus: false,
+      staleTime: 5000, // 5 seconds
     }
   );
 

@@ -19,7 +19,12 @@ export function EarningsCallPhase() {
   const { data: productionData, isLoading } = trpc.factoryProduction.getGameTurnProduction.useQuery({
     gameId,
     gameTurnId: currentTurn?.id || '',
-  }, { enabled: !!gameId && !!currentTurn?.id });
+  }, { 
+    enabled: !!gameId && !!currentTurn?.id,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    staleTime: 5000, // 5 seconds
+  });
 
   // Fetch resource prices for detailed breakdown
   const { data: resourcePrices } = trpc.resource.getAllResourcePrices.useQuery(
