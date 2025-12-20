@@ -104,6 +104,17 @@ const ForecastPhase = () => {
     },
   });
 
+  // Initialize quarters mutation
+  const initializeQuartersMutation = trpc.forecast.initializeQuarters.useMutation({
+    onSuccess: () => {
+      refetchQuarters();
+      toast.success("Forecast quarters initialized!");
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to initialize quarters");
+    },
+  });
+
   // Group shares by sector
   const sharesBySector = React.useMemo(() => {
     if (!playerShares || !gameState?.sectors) return {};
@@ -194,17 +205,6 @@ const ForecastPhase = () => {
       </div>
     );
   }
-
-  // Initialize quarters mutation
-  const initializeQuartersMutation = trpc.forecast.initializeQuarters.useMutation({
-    onSuccess: () => {
-      refetchQuarters();
-      toast.success("Forecast quarters initialized!");
-    },
-    onError: (error) => {
-      toast.error(error.message || "Failed to initialize quarters");
-    },
-  });
 
   if (!quarters || quarters.length === 0) {
     return (

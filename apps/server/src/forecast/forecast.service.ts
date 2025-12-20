@@ -181,48 +181,6 @@ export class ForecastService {
       );
     }
 
-    // Check shares are not president certificates (20%)
-    const companyIds = [...new Set(shares.map((s) => s.companyId))];
-    for (const companyId of companyIds) {
-      const company = await this.prisma.company.findUnique({
-        where: { id: companyId },
-        include: { Share: true },
-      });
-
-      if (!company) continue;
-
-      const totalShares = company.Share.length;
-      const playerSharesInCompany = shares.filter(
-        (s) => s.companyId === companyId,
-      ).length;
-      const playerSharePercentage =
-        (playerSharesInCompany / totalShares) * 100;
-
-      // Check if any of these shares would be part of the president certificate (20%)
-      // We need to check if player owns exactly 20% or more
-      const allPlayerShares = await this.prisma.share.findMany({
-        where: {
-          companyId,
-          playerId,
-          location: 'PLAYER',
-        },
-      });
-
-      const totalPlayerOwnership = (allPlayerShares.length / totalShares) * 100;
-
-      // If player owns 20% or more, they have the president certificate
-      // We need to ensure we're not committing shares that would drop them below 20%
-      // Actually, simpler: just check if committing these shares would mean they lose president status
-      // But the requirement says "president certificate cannot be committed"
-      // So we need to identify which shares are the "president certificate" (the 20% block)
-      // For simplicity, we'll prevent committing if player owns >= 20%
-      if (totalPlayerOwnership >= 20) {
-        throw new Error(
-          'Cannot commit shares from a company where you own the president certificate (20% or more)',
-        );
-      }
-    }
-
     // Create commitment
     const commitment = await this.prisma.forecastCommitment.create({
       data: {

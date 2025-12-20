@@ -242,6 +242,7 @@ import { RevenueDistributionVoteService } from '@server/revenue-distribution-vot
 import { OperatingRoundVoteService } from '@server/operating-round-vote/operating-round-vote.service';
 import { ModernOperationMechanicsService } from './modern-operation-mechanics.service';
 import { ResourceService } from '@server/resource/resource.service';
+import { ForecastService } from '@server/forecast/forecast.service';
 
 type GroupedByPhase = {
   [key: string]: {
@@ -314,6 +315,7 @@ export class GameManagementService {
     private modernOperationMechanicsService: ModernOperationMechanicsService,
     private resourceService: ResourceService,
     private factoryProductionService: FactoryProductionService,
+    private forecastService: ForecastService,
   ) {}
 
   /**
@@ -6101,6 +6103,9 @@ export class GameManagementService {
 
       //create research deck
       await this.createResearchDeck(game.id);
+
+      // Initialize forecast quarters
+      await this.forecastService.initializeForecastQuarters(game.id);
 
       // Add players to the game
       const players = await this.addPlayersToGame(
