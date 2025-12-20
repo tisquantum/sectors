@@ -824,7 +824,7 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
   useEffect(() => {
     refetchCompanyVoteResults();
     refetchCompanyAction();
-  }, [currentPhase?.id]);
+  }, [currentPhase?.id, refetchCompanyVoteResults, refetchCompanyAction]);
   if (isLoadingCompanies) return <div>Loading...</div>;
   if (!companies) return <div>No companies found</div>;
   if (!currentPhase) return <div>No current phase found</div>;

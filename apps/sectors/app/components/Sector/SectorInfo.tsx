@@ -11,12 +11,11 @@ const SectorInfo = ({ sector }: { sector: SectorWithCompanies }) => (
       <Tooltip
         classNames={{ base: baseToolTipStyle }}
         className={tooltipStyle}
-        content={
-          <p className={tooltipParagraphStyle}>
-            The base demand for this sector. Determines how many many customers
-            will be &apos;spooled&apos; to sector during economy phase.
-          </p>
-        }
+            content={
+              <p className={tooltipParagraphStyle}>
+                Historical sector demand value. Both consumer distribution and worker salaries are now determined by Forecast rankings (from share commitments to forecast quarters).
+              </p>
+            }
       >
         <div className="ml-2 text-small text-default-500 flex">
           <RiHandCoinFill size={18} className="mr-1" />{" "}

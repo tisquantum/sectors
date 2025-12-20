@@ -45,10 +45,10 @@ const SectorComponentAnimation = ({
         content={
           <div>
             <p className={tooltipParagraphStyle}>
-              <strong>Effective Demand:</strong> {sector.demand + (sector.demandBonus || 0)}
+              <strong>Sector Demand:</strong> {sector.demand + (sector.demandBonus || 0)}
             </p>
             <p className={tooltipParagraphStyle}>
-              This is the number of consumers this sector can attract per distribution cycle.
+              Historical sector demand value. Both consumer distribution and worker salaries are now determined by Forecast rankings.
             </p>
             <div className="mt-2 text-xs space-y-1">
               <div>Base Demand: {sector.baseDemand || 0}</div>
@@ -227,24 +227,25 @@ const EndTurnSectorConsumerDistributionAnimation = ({
           }}
         >
           <div className="space-y-4 pb-2">
-            {/* Sector Demand Calculation */}
+            {/* Forecast System Explanation */}
             <div className="bg-gray-900/50 p-3 rounded border border-gray-700">
-              <h4 className="font-semibold text-white mb-2">Sector Demand Calculation</h4>
+              <h4 className="font-semibold text-white mb-2">Forecast System</h4>
               <p className={tooltipParagraphStyle}>
-                Each sector&apos;s effective demand determines how many consumers it can attract:
+                Consumer distribution is determined by the Forecast system, where players commit shares to forecast quarters:
               </p>
               <div className="mt-2 space-y-1 text-xs">
-                <div className="flex items-start gap-2">
-                  <span className="text-blue-400 font-medium">Effective Demand =</span>
-                </div>
-                <div className="ml-4 space-y-1">
-                  <div>• Base Sector Demand (from game initialization)</div>
-                  <div>• + Sum of Brand Scores (all companies in the sector)</div>
-                  <div>• + (Worker Allocation ÷ 2)</div>
-                  <div className="ml-4 text-gray-400">Worker Allocation = Factory Workers + Marketing Workers + Research Workers</div>
-                  <div>• + Research Stage Bonus</div>
-                  <div className="ml-4 text-gray-400">
-                    Stage 1 (0-5): +0 | Stage 2 (6-10): +2 | Stage 3 (11-15): +3 | Stage 4 (16-20): +5
+                <div className="space-y-2">
+                  <div>
+                    <span className="text-blue-400 font-medium">1. Share Commitments:</span> Players commit shares from one sector to forecast quarters (Q1=4 shares, Q2=3, Q3=2, Q4=1).
+                  </div>
+                  <div>
+                    <span className="text-blue-400 font-medium">2. Demand Counters:</span> Each quarter calculates demand counters = total shares committed ÷ quarter cost.
+                  </div>
+                  <div>
+                    <span className="text-blue-400 font-medium">3. Sector Ranking:</span> Sectors are ranked by total demand counters across all quarters.
+                  </div>
+                  <div>
+                    <span className="text-blue-400 font-medium">4. Distribution:</span> 1st place sector gets 50% of economy score, 2nd gets 30%, 3rd gets 20%.
                   </div>
                 </div>
               </div>
@@ -254,21 +255,21 @@ const EndTurnSectorConsumerDistributionAnimation = ({
             <div className="bg-gray-900/50 p-3 rounded border border-gray-700">
               <h4 className="font-semibold text-white mb-2">Consumer Distribution Process</h4>
               <p className={tooltipParagraphStyle}>
-                Consumers are distributed from the Consumer Pool based on the Economy Score:
+                Consumers are distributed from the Consumer Pool based on Forecast rankings:
               </p>
               <div className="mt-2 space-y-1 text-xs">
                 <div className="space-y-2">
                   <div>
-                    <span className="text-blue-400 font-medium">1. Distribution Amount:</span> The Economy Score determines how many consumers can be distributed. This equals the number of consumers that move from the Consumer Pool to sectors.
+                    <span className="text-blue-400 font-medium">1. Distribution Amount:</span> The Economy Score determines how many consumers can be distributed from the Consumer Pool.
                   </div>
                   <div>
-                    <span className="text-blue-400 font-medium">2. Proportional Distribution:</span> Consumers are distributed proportionally based on each sector&apos;s effective demand relative to total sector demand.
+                    <span className="text-blue-400 font-medium">2. Forecast Rankings:</span> Sectors are ranked by forecast demand counters (from share commitments).
                   </div>
                   <div>
-                    <span className="text-blue-400 font-medium">3. Priority Order:</span> Sectors are processed in priority order (left to right). Each sector receives consumers equal to its demand value per cycle, cycling through sectors until the Economy Score is fully consumed.
+                    <span className="text-blue-400 font-medium">3. Fixed Split:</span> 1st place sector receives 50% of economy score, 2nd place receives 30%, 3rd place receives 20% (all rounded down).
                   </div>
                   <div>
-                    <span className="text-blue-400 font-medium">4. Consumer Pool:</span> Consumers move from the Consumer Pool (shown above) into sectors based on their demand. The pool depletes as the Economy Score is consumed.
+                    <span className="text-blue-400 font-medium">4. Consumer Pool:</span> Consumers move from the Consumer Pool into sectors based on forecast rankings. The pool depletes as the Economy Score is consumed.
                   </div>
                 </div>
               </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { trpc } from "@sectors/app/trpc";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { usePusher } from "@sectors/app/components/Pusher.context";
 import { Room, RoomUser, User } from "@server/prisma/prisma.client";
 import {
@@ -55,6 +55,28 @@ const RoomComponent = ({ room }: { room: RoomWithUsersAndGames }) => {
   } = trpc.roomUser.listRoomUsers.useQuery({
     where: { roomId: room?.id },
   });
+  const handleJoin = useCallback((roomId: number) => {
+    if (!user) return;
+    joinRoomMutation.mutate({
+      roomId,
+      userId: user.id,
+    });
+  }, [user, joinRoomMutation]);
+
+  const handleRoomMessage = useCallback((data: RoomMessageWithRoomUser, roomId: number) => {
+    utils.roomMessage.listRoomMessages.setData(
+      { where: { roomId } },
+      (oldData: RoomMessageWithRoomUser[] | undefined) => {
+        const exists = oldData?.some((msg) => msg.id === data.id);
+        if (exists) return oldData;
+        return [
+          ...(oldData || []),
+          { ...data, timestamp: new Date(data.timestamp).toISOString() },
+        ];
+      }
+    );
+  }, [utils.roomMessage.listRoomMessages]);
+
   useEffect(() => {
     if (roomUsersStatus === "success") {
       //check roomUsers for user
@@ -65,7 +87,7 @@ const RoomComponent = ({ room }: { room: RoomWithUsersAndGames }) => {
         handleJoin(room.id);
       }
     }
-  }, [roomUsersStatus]);
+  }, [roomUsersStatus, roomUsers, user?.id, room.id, handleJoin]);
 
   useEffect(() => {
     if (!pusher) return;
@@ -113,29 +135,10 @@ const RoomComponent = ({ room }: { room: RoomWithUsersAndGames }) => {
       channel.unbind(EVENT_EXECUTIVE_GAME_STARTED);
       channel.unsubscribe();
     };
-  }, [pusher, room?.id, isLoadingRoomUsers, isLoadingMessages]);
+  }, [pusher, room?.id, isLoadingRoomUsers, isLoadingMessages, refetchRoomUsers, handleRoomMessage, user?.id, router]);
 
   if (!user) return null;
 
-  const handleJoin = (roomId: number) => {
-    joinRoomMutation.mutate({
-      roomId,
-      userId: user.id,
-    });
-  };
-  const handleRoomMessage = (data: RoomMessageWithRoomUser, roomId: number) => {
-    utils.roomMessage.listRoomMessages.setData(
-      { where: { roomId } },
-      (oldData: RoomMessageWithRoomUser[] | undefined) => {
-        const exists = oldData?.some((msg) => msg.id === data.id);
-        if (exists) return oldData;
-        return [
-          ...(oldData || []),
-          { ...data, timestamp: new Date(data.timestamp).toISOString() },
-        ];
-      }
-    );
-  };
   if (isLoadingRoomUsers || isLoadingMessages) {
     return <div>Loading Inner Component...</div>;
   }

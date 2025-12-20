@@ -66,6 +66,7 @@ import { FactoryConstructionOrderService } from '@server/factory-construction/fa
 import { ResourceService } from '@server/resource/resource.service';
 import { ConsumptionMarkerService } from '@server/consumption-marker/consumption-marker.service';
 import { FactoryProductionService } from '@server/factory-production/factory-production.service';
+import { ForecastService } from '@server/forecast/forecast.service';
 
 @Module({
   imports: [PrismaModule],
@@ -137,6 +138,7 @@ import { FactoryProductionService } from '@server/factory-production/factory-pro
     ResourceService,
     ConsumptionMarkerService,
     FactoryProductionService,
+    ForecastService,
   ],
 })
 export class TrpcModule {}

@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { trpc } from '@sectors/app/trpc';
 import { useGame } from '../../Game/GameContext';
-import { PhaseName } from '@server/prisma/prisma.client';
+import { PhaseName, CompanyStatus } from '@server/prisma/prisma.client';
 
 interface ResearchSlotProps {
   companyId: string;
@@ -73,6 +73,8 @@ export function ResearchSlot({ companyId, gameId, isCEO = false }: ResearchSlotP
   const handleSlotClick = () => {
     // Only allow clicks during MODERN_OPERATIONS phase and if user is CEO
     if (!isModernOperationsPhase || !isCEO) return;
+    // Only active or insolvent companies can operate
+    if (company?.status !== CompanyStatus.ACTIVE && company?.status !== CompanyStatus.INSOLVENT) return;
     if (canResearch && !showResearchCreation) {
       setShowResearchCreation(true);
     }
@@ -102,8 +104,8 @@ export function ResearchSlot({ companyId, gameId, isCEO = false }: ResearchSlotP
         className={cn(
           'relative w-full rounded border transition-all flex flex-col items-center justify-center p-2',
           researchProgress > 0 && 'border-blue-400 bg-blue-400/20 text-blue-200 cursor-default h-auto min-h-[48px]',
-          // Only allow interaction during MODERN_OPERATIONS phase and if user is CEO
-          isModernOperationsPhase && isCEO && canResearch && researchProgress === 0
+          // Only allow interaction during MODERN_OPERATIONS phase, if user is CEO, company is active or insolvent, and can afford research
+          isModernOperationsPhase && isCEO && (company?.status === CompanyStatus.ACTIVE || company?.status === CompanyStatus.INSOLVENT) && canResearch && researchProgress === 0
             ? 'border-blue-400/60 bg-blue-400/10 text-blue-300 hover:bg-blue-400/20 h-auto min-h-[48px] cursor-pointer'
             : 'border-gray-600/40 bg-gray-700/30 text-gray-500 cursor-not-allowed h-12',
           // Dim if not in correct phase or not CEO

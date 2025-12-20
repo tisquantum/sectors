@@ -134,7 +134,7 @@ export function SpotMarket({
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [currentPhase?.id, currentPhase?.name]);
+  }, [currentPhase?.id, currentPhase?.name, refetchPhasesOfStockRound, refetchPlayerOrdersConcealed]);
 
   if (isLoadingCompanies || isLoadingOrders) {
     return (

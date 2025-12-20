@@ -67,7 +67,7 @@ const InfluenceBids = ({
     trpc.executiveInfluence.moveInfluenceBidToPlayer.useMutation();
   useEffect(() => {
     refetch();
-  }, [pingCounter, currentPhase?.id]);
+  }, [pingCounter, currentPhase?.id, refetch]);
 
   // Create a stable key for all selfPlayerIds in the bids
   const bidsKey = useMemo(() => {
@@ -310,7 +310,7 @@ const Relationships = ({ playerId }: { playerId: string }) => {
   });
   useEffect(() => {
     refetch();
-  }, [pingCounter, currentPhase?.id]);
+  }, [pingCounter, currentPhase?.id, refetch]);
   if (isLoading) {
     return <div>Loading...</div>;
   }
@@ -385,7 +385,7 @@ const Gifts = ({
   });
   useEffect(() => {
     refetch();
-  }, [pingCounter, currentPhase?.id]);
+  }, [pingCounter, currentPhase?.id, refetch]);
   if (isLoading) {
     return <div>Loading...</div>;
   }
@@ -468,7 +468,7 @@ const PlayerInfluence = ({
   });
   useEffect(() => {
     refetch();
-  }, [pingCounter, currentPhase?.id]);
+  }, [pingCounter, currentPhase?.id, refetch]);
   const [influenceToSubmit, setInfluenceToSubmit] = useState(1);
   if (!gameId) {
     return <div>Game ID not found</div>;
@@ -628,7 +628,7 @@ const Hand = ({
   });
   useEffect(() => {
     refetch();
-  }, [pingCounter, currentPhase?.id]);
+  }, [pingCounter, currentPhase?.id, refetch]);
   const handCards = playerHand?.filter((card) => card.cardLocation === "HAND");
   if (isLoading) {
     return <div>Loading...</div>;
@@ -684,7 +684,7 @@ const Bribe = ({
   });
   useEffect(() => {
     refetch();
-  }, [pingCounter, currentPhase?.id]);
+  }, [pingCounter, currentPhase?.id, refetch]);
   if (!authPlayer) {
     return <div>No auth player</div>;
   }

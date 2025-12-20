@@ -15,6 +15,7 @@ import { ModernOperationsLayout, ModernOperationsSection } from '../layouts';
 import { useModernOperations } from '../hooks';
 import { Spinner, Button, Tabs, Tab } from '@nextui-org/react';
 import { RiBuilding3Fill, RiPriceTag3Fill } from '@remixicon/react';
+import { CompanyStatus } from '@server/prisma/prisma.client';
 
 const FactoryConstructionPhase = () => {
   const { gameId, authPlayer, currentPhase } = useGame();
@@ -23,9 +24,13 @@ const FactoryConstructionPhase = () => {
   const [selectedCompany, setSelectedCompany] = useState<{ id: string; size: 'FACTORY_I' | 'FACTORY_II' | 'FACTORY_III' | 'FACTORY_IV' } | null>(null);
   const [showFactoryCreation, setShowFactoryCreation] = useState(false);
   
-  // Get companies where the current player is CEO
+  // Get companies where the current player is CEO (ACTIVE and INSOLVENT companies can operate)
   const { data: companies, isLoading: companiesLoading } = trpc.company.listCompanies.useQuery({
-    where: { gameId, ceoId: authPlayer?.id },
+    where: { 
+      gameId, 
+      ceoId: authPlayer?.id,
+      status: { in: [CompanyStatus.ACTIVE, CompanyStatus.INSOLVENT] },
+    },
     orderBy: { name: 'asc' },
   });
 

@@ -105,7 +105,7 @@ const InfluenceBid = ({ isRevealRound }: { isRevealRound?: boolean }) => {
     if (isRevealRound) {
       revealRefetch();
     }
-  }, [currentPhase?.name]);
+  }, [currentPhase?.name, isRevealRound, revealRefetch]);
 
   if (!currentPhase?.influenceRoundId) {
     return null;

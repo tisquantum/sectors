@@ -13,7 +13,7 @@ const PrestigeIcon = ({
         size: 64,
         seed: prestigeType || "default",
       }).toDataUri();
-    }, []);
+    }, [prestigeType]);
     return <img src={icon} alt={prestigeType} className="w-full h-full max-w-24" />;
   };
 

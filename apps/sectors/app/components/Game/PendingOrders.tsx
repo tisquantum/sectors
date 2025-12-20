@@ -77,7 +77,7 @@ const OpenOptionContracts = () => {
   });
   useEffect(() => {
     refetch();
-  }, [currentPhase?.name]);
+  }, [currentPhase?.name, refetch]);
   if (isLoading) return <div>Loading...</div>;
   if (!openOptionContracts) return <div>No open option contracts.</div>;
   return (

@@ -98,8 +98,15 @@ export function determineNextGamePhase(
   switch (phaseName) {
     case PhaseName.START_TURN:
       return {
+        phaseName: PhaseName.FORECAST_COMMITMENT_START_TURN,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.FORECAST_COMMITMENT_START_TURN:
+      // Two turns for players to commit shares
+      // This is handled by phase timer/ready system, so we just move to next phase after 2 turns
+      return {
         phaseName: PhaseName.SET_COMPANY_IPO_PRICES,
-        roundType: RoundType.INFLUENCE,
+        roundType: RoundType.STOCK,
       };
     case PhaseName.HEADLINE_RESOLVE:
       return {
@@ -326,6 +333,18 @@ export function determineNextGamePhase(
         roundType: RoundType.OPERATING,
       };
     case PhaseName.RUSTED_FACTORY_UPGRADE:
+      return {
+        phaseName: PhaseName.FORECAST_COMMITMENT_END_TURN,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.FORECAST_COMMITMENT_END_TURN:
+      // Two turns for players to commit shares before end turn
+      // This is handled by phase timer/ready system
+      return {
+        phaseName: PhaseName.FORECAST_RESOLVE,
+        roundType: RoundType.OPERATING,
+      };
+    case PhaseName.FORECAST_RESOLVE:
       return {
         phaseName: PhaseName.CONSUMPTION_PHASE,
         roundType: RoundType.OPERATING,

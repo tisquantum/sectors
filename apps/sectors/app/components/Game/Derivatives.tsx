@@ -30,7 +30,7 @@ const Derivatives = ({ isInteractive = false }: { isInteractive: boolean }) => {
   });
   useEffect(() => {
     refetch();
-  }, [currentPhase?.name]);
+  }, [currentPhase?.name, refetch]);
 
   if (isLoading) return <div>Loading...</div>;
   if (!optionsContracts) return <div>No options contracts found</div>;

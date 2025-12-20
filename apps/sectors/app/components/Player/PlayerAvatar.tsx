@@ -48,7 +48,7 @@ const PlayerAvatar = ({
       seed: player.nickname,
       backgroundColor: [hashStringToColor(player.nickname)],
     }).toDataUri();
-  }, []);
+  }, [player.nickname, size]);
   const playerWithShares = playersWithShares.find((p) => p.id === player.id);
   return (
     <div className="flex flex-col items-center">

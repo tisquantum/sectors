@@ -26,7 +26,7 @@ export const Votes = ({
   });
   useEffect(() => {
     refetch();
-  }, [currentPhase?.id, pingCounter]);
+  }, [currentPhase?.id, pingCounter, refetch]);
   if (isLoading) {
     return <div>Loading...</div>;
   }

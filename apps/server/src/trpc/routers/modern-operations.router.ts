@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { TrpcService } from '../trpc.service';
-import { MarketingCampaignTier, MarketingCampaignStatus, PhaseName, ResourceType, OperationMechanicsVersion } from '@prisma/client';
+import { MarketingCampaignTier, MarketingCampaignStatus, PhaseName, ResourceType, OperationMechanicsVersion, CompanyStatus } from '@prisma/client';
 import { checkIsPlayerAction, checkSubmissionTime } from '../trpc.middleware';
 import { PlayersService } from '@server/players/players.service';
 import { PhaseService } from '@server/phase/phase.service';
@@ -62,6 +62,11 @@ export default (trpc: TrpcService, ctx: Context) =>
           throw new Error('Only the CEO can submit marketing campaigns');
         }
 
+        // Check if company is active or insolvent (inactive companies cannot operate)
+        if (company.status !== CompanyStatus.ACTIVE && company.status !== CompanyStatus.INSOLVENT) {
+          throw new Error(`Only active or insolvent companies can create marketing campaigns. Company status: ${company.status}`);
+        }
+
         // Get game to determine operation mechanics version
         const game = await ctx.gamesService.game({ id: input.gameId });
         if (!game) {
@@ -111,6 +116,11 @@ export default (trpc: TrpcService, ctx: Context) =>
 
         if (company.ceoId !== ctxMiddleware.submittingPlayerId) {
           throw new Error('Only the CEO can submit research actions');
+        }
+
+        // Check if company is active or insolvent (inactive companies cannot operate)
+        if (company.status !== CompanyStatus.ACTIVE && company.status !== CompanyStatus.INSOLVENT) {
+          throw new Error(`Only active or insolvent companies can perform research. Company status: ${company.status}`);
         }
 
         // Get current game and phase

@@ -97,7 +97,7 @@ const SectorConsumerDistributionAnimation = ({
       setSectorConsumers(consumerOveride || sector.consumers);
       setCurrentConsumersMovedAcrossAllCompaniesInSector(0);
     }
-  }, [currentCompanyIndex]);
+  }, [currentCompanyIndex, consumerOveride, sector.consumers]);
 
   useEffect(() => {
     if (
@@ -113,10 +113,10 @@ const SectorConsumerDistributionAnimation = ({
         return newEarnings;
       });
     }
-  }, [currentConsumersMovedAcrossAllCompaniesInSector]);
+  }, [currentConsumersMovedAcrossAllCompaniesInSector, currentCompanyIndex, currentCompany.unitPrice, maximumConsumersWhoWillVisit, moneyEarned]);
   useEffect(() => {
     handleConsumerMove();
-  }, [moneyEarned]);
+  }, [moneyEarned, handleConsumerMove]);
 
   const list = {
     visible: {

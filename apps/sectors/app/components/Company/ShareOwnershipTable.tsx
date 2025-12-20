@@ -33,7 +33,7 @@ const ShareOwnershipTable = ({
   });
   useEffect(() => {
     refetch();
-  }, [currentPhase?.id]);
+  }, [currentPhase?.id, refetch]);
   if (isLoading) return <div>Loading...</div>;
   if (isError) return <div>Error loading players with shares</div>;
   if (!playersWithShares) return <div>No players with shares</div>;

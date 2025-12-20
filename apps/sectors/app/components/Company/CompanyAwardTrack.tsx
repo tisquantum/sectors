@@ -31,7 +31,7 @@ const CompanyAwardTrack = ({
   });
   useEffect(() => {
     refetchAwardTrackSpaces();
-  }, [currentPhase?.id]);
+  }, [currentPhase?.id, refetchAwardTrackSpaces]);
   const awardTrackDescription = (awardTrackType: AwardTrackType) => {
     switch (awardTrackType) {
       case AwardTrackType.RESEARCH:

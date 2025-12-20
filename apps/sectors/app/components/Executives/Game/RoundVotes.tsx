@@ -21,7 +21,7 @@ export const RoundVotes = ({ gameId }: { gameId: string }) => {
 
   useEffect(() => {
     refetch();
-  }, [pingCounter, currentPhase?.id]);
+  }, [pingCounter, currentPhase?.id, refetch]);
 
   if (!players) {
     return <div>Players not found</div>;

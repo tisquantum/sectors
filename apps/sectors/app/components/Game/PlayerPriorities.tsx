@@ -60,7 +60,7 @@ const PlayerPriorities = () => {
       refetchPlayerPriority();
       refetchPlayerReadiness();
     }
-  }, [currentPhase?.name]);
+  }, [currentPhase?.name, currentPhase, refetchPlayerPriority, refetchPlayerReadiness]);
   useEffect(() => {
     if (!channel) return;
 
@@ -71,7 +71,7 @@ const PlayerPriorities = () => {
     return () => {
       channel.unbind(EVENT_PLAYER_READINESS_CHANGED);
     };
-  }, [channel, isLoadingPlayerReadinessData]);
+  }, [channel, isLoadingPlayerReadinessData, refetchPlayerReadiness]);
   if (isLoadingRoomUsers || isLoadingPlayerReadinessData) {
     return <div>Loading...</div>;
   }

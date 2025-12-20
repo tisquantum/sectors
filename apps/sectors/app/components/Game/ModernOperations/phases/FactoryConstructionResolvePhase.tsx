@@ -18,28 +18,32 @@ export function FactoryConstructionResolvePhase() {
   const { gameId, gameState, currentTurn } = useGame();
 
   // Query factories for each company in the game
-  const companyQueries = gameState?.Company?.map(company => 
-    trpc.factory.getCompanyFactoriesWithProduction.useQuery(
-      {
-        companyId: company.id,
-        gameId,
-        gameTurnId: currentTurn?.id,
-      },
-      { enabled: !!gameId && !!company.id }
-    )
-  ) || [];
+  const companyQueries = useMemo(() => {
+    return gameState?.Company?.map(company => 
+      trpc.factory.getCompanyFactoriesWithProduction.useQuery(
+        {
+          companyId: company.id,
+          gameId,
+          gameTurnId: currentTurn?.id,
+        },
+        { enabled: !!gameId && !!company.id }
+      )
+    ) || [];
+  }, [gameState?.Company, gameId, currentTurn?.id]);
 
   // Also query outstanding orders to see what was supposed to be built
-  const orderQueries = gameState?.Company?.map(company =>
-    trpc.factoryConstruction.getOutstandingOrders.useQuery(
-      {
-        companyId: company.id,
-        gameId,
-        gameTurnId: currentTurn?.id,
-      },
-      { enabled: !!gameId && !!company.id && !!currentTurn?.id }
-    )
-  ) || [];
+  const orderQueries = useMemo(() => {
+    return gameState?.Company?.map(company =>
+      trpc.factoryConstruction.getOutstandingOrders.useQuery(
+        {
+          companyId: company.id,
+          gameId,
+          gameTurnId: currentTurn?.id,
+        },
+        { enabled: !!gameId && !!company.id && !!currentTurn?.id }
+      )
+    ) || [];
+  }, [gameState?.Company, gameId, currentTurn?.id]);
 
   const isLoading = companyQueries.some(q => q.isLoading) || orderQueries.some(q => q.isLoading);
   

@@ -442,7 +442,7 @@ const DistributePrizes = () => {
   });
   useEffect(() => {
     refetch();
-  }, [currentPhase?.id]);
+  }, [currentPhase?.id, refetch]);
   const usePrizeDistributionMutation = trpc.game.prizeDistribution.useMutation({
     onSettled: () => {
       setIsLoadingSubmission(false);

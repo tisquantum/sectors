@@ -92,7 +92,7 @@ const GameOptions: React.FC<GameOptionsProps> = ({ onOptionsChange }) => {
 
   useEffect(() => {
     onOptionsChange && onOptionsChange(options);
-  }, [options]);
+  }, [options, onOptionsChange]);
 
   const valueMap: ValueMap = {
     bankPoolNumber: {

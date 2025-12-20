@@ -161,10 +161,7 @@ const CompanyMoreInfo = ({
             className={tooltipStyle}
             content={
               <p className={tooltipParagraphStyle}>
-                Sector demand determins how many customers will visit this
-                sector every turn. Everytime a new company opens in this sector,
-                this demand increases permanently by 1. The company lobby action
-                will also increase this value temporarily.
+                Historical sector demand value. Both consumer distribution and worker salaries are now determined by Forecast rankings (from share commitments to forecast quarters).
               </p>
             }
           >
@@ -376,7 +373,7 @@ const CompanyInfo = ({
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
   useEffect(() => {
     refetchCompany();
-  }, [currentPhase?.id]);
+  }, [currentPhase?.id, refetchCompany]);
   const companyHasPassiveAction = companyActions?.some(
     (action) => action.isPassive
   );

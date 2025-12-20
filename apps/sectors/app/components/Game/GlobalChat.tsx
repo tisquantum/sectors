@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import {
   EVENT_ROOM_JOINED,
   EVENT_ROOM_LEFT,
@@ -44,6 +44,28 @@ const GlobalChat = ({ classes }: { classes: string }) => {
   } = trpc.roomUser.listRoomUsers.useQuery({
     where: { roomId: globalRoomId },
   });
+  const handleRoomMessage = useCallback((data: RoomMessageWithRoomUser, roomId: number) => {
+    utils.roomMessage.listRoomMessages.setData(
+      { where: { roomId } },
+      (oldData: RoomMessageWithRoomUser[] | undefined) => {
+        const exists = oldData?.some((msg) => msg.id === data.id);
+        if (exists) return oldData;
+        return [
+          ...(oldData || []),
+          { ...data, timestamp: new Date(data.timestamp).toISOString() },
+        ];
+      }
+    );
+  }, [utils.roomMessage.listRoomMessages]);
+
+  const handleJoin = useCallback((roomId: number) => {
+    if (!user) return;
+    joinRoomMutation.mutate({
+      roomId,
+      userId: user.id,
+    });
+  }, [user, joinRoomMutation]);
+
   useEffect(() => {
     if (roomUsersStatus === "success") {
       //check roomUsers for user
@@ -54,7 +76,7 @@ const GlobalChat = ({ classes }: { classes: string }) => {
         handleJoin(globalRoomId);
       }
     }
-  }, [roomUsersStatus]);
+  }, [roomUsersStatus, globalRoomId, roomUsers, user?.id, handleJoin]);
 
   useEffect(() => {
     if (!pusher) return;
@@ -79,29 +101,7 @@ const GlobalChat = ({ classes }: { classes: string }) => {
       channel.unbind(EVENT_ROOM_MESSAGE);
       channel.unsubscribe();
     };
-  }, [pusher, globalRoomId, isLoadingRoomUsers, isLoadingMessages]);
-
-  const handleRoomMessage = (data: RoomMessageWithRoomUser, roomId: number) => {
-    utils.roomMessage.listRoomMessages.setData(
-      { where: { roomId } },
-      (oldData: RoomMessageWithRoomUser[] | undefined) => {
-        const exists = oldData?.some((msg) => msg.id === data.id);
-        if (exists) return oldData;
-        return [
-          ...(oldData || []),
-          { ...data, timestamp: new Date(data.timestamp).toISOString() },
-        ];
-      }
-    );
-  };
-
-  const handleJoin = (roomId: number) => {
-    if (!user) return;
-    joinRoomMutation.mutate({
-      roomId,
-      userId: user.id,
-    });
-  };
+  }, [pusher, globalRoomId, isLoadingRoomUsers, isLoadingMessages, refetchRoomUsers, handleRoomMessage]);
 
   if (isLoadingRoomUsers || isLoadingMessages) {
     return <div>Loading Inner Component...</div>;

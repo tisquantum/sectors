@@ -20,7 +20,7 @@ export const CeoInfluence = () => {
   });
   useEffect(() => {
     refetch();
-  }, [pingCounter, currentPhase?.id]);
+  }, [pingCounter, currentPhase?.id, refetch]);
   if (isLoading) {
     return <div>Loading...</div>;
   }

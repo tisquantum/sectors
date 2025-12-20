@@ -146,7 +146,7 @@ const StockChart = () => {
   }, [selectedCompany]);
   useEffect(() => {
     refetch();
-  }, [currentPhase?.name]);
+  }, [currentPhase?.name, refetch]);
 
   if (isLoading) return <div>Loading...</div>;
   if (companies == undefined) return null;

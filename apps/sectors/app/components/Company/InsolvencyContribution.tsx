@@ -173,7 +173,7 @@ const InsolvencyContributionComponent = ({
     return () => {
       channel.unbind(EVENT_NEW_INVOLVENCY_CONTRIBUTION);
     };
-  }, [channel, isLoading]);
+  }, [channel, isLoading, refetchInsolvencyContributions, refetchAuthPlayer, refetchPlayerWithShares, refetchPlayersWithShares]);
   if (isLoading) {
     return <div>Loading...</div>;
   }

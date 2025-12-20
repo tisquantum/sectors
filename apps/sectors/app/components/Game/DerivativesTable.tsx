@@ -73,7 +73,7 @@ const DerivativesTable = ({ isInteractive }: { isInteractive: boolean }) => {
   useEffect(() => {
     refetch();
     refetchOptionsContracts();
-  }, [currentPhase?.name]);
+  }, [currentPhase?.name, refetch, refetchOptionsContracts]);
   const [bidAmounts, setBidAmounts] = useState<{ [key: string]: string }>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
   if (isLoading) return <div>Loading...</div>;

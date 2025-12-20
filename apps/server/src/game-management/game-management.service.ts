@@ -8290,9 +8290,20 @@ export class GameManagementService {
         playerId: order.playerId,
         companyId,
         location: ShareLocation.PLAYER,
+        isCommitted: false, // Cannot sell committed shares
       },
     });
     if (playerActualSharesOwned.length < order.quantity!) {
+      // Check if player has shares but they're committed
+      const allPlayerShares = await this.shareService.shares({
+        where: {
+          playerId: order.playerId,
+          companyId,
+          location: ShareLocation.PLAYER,
+        },
+      });
+      const committedShares = allPlayerShares.filter((s) => s.isCommitted).length;
+      
       //reject the order
       await this.prisma.playerOrder.update({
         where: { id: order.id },
@@ -8301,12 +8312,15 @@ export class GameManagementService {
         },
       });
       //game log
+      const errorMessage = committedShares > 0
+        ? `Player ${order.Player.nickname} does not have enough uncommitted shares to sell (${committedShares} shares are committed to forecast quarters)`
+        : `Player ${order.Player.nickname} does not have enough shares to sell`;
       await this.gameLogService.createGameLog({
         game: { connect: { id: order.gameId } },
-        content: `Player ${order.Player.nickname} does not have enough shares to sell`,
+        content: errorMessage,
       });
       //throw
-      throw new Error('Not enough shares to sell');
+      throw new Error(errorMessage);
     }
     const sharesToSell = Math.min(playerActualSharesOwned.length, sellAmount);
     try {
@@ -8339,6 +8353,7 @@ export class GameManagementService {
           playerId: order.playerId,
           companyId,
           location: ShareLocation.PLAYER,
+          isCommitted: false, // Cannot sell committed shares
         },
         take: sellAmount,
       });

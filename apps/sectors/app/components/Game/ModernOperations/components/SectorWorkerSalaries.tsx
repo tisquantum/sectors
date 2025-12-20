@@ -4,19 +4,38 @@ import { trpc } from "@sectors/app/trpc";
 import { Spinner, Card, CardBody } from "@nextui-org/react";
 import { RiMoneyDollarCircleFill, RiTrophyFill, RiUserFill } from "@remixicon/react";
 import { useGame } from "../../GameContext";
+import { useMemo } from "react";
 
 /**
- * Component to display sector demand ranking and worker salaries
- * Shows which sectors pay how much per worker based on their demand ranking
+ * Component to display Forecast ranking and worker salaries
+ * Shows which sectors pay how much per worker based on Forecast rankings (1st, 2nd, 3rd)
  */
 export function SectorWorkerSalaries() {
   const { gameId } = useGame();
 
-  // Get all sectors with their demand data
-  const { data: sectors, isLoading } = trpc.sector.listSectors.useQuery({
-    where: { gameId },
-    orderBy: { demand: "desc" },
+  // Get Forecast rankings
+  const { data: forecastRankings, isLoading: rankingsLoading } = trpc.forecast.getRankings.useQuery({
+    gameId,
   });
+
+  // Get all sectors for display
+  const { data: sectors, isLoading: sectorsLoading } = trpc.sector.listSectors.useQuery({
+    where: { gameId },
+  });
+
+  // Create map of sectorId -> ranking (must be before early returns)
+  const rankingMap = useMemo(() => {
+    const map = new Map<string, { rank: number; demandCounters: number }>();
+    forecastRankings?.forEach((ranking) => {
+      map.set(ranking.sectorId, {
+        rank: ranking.rank,
+        demandCounters: ranking.demandCounters,
+      });
+    });
+    return map;
+  }, [forecastRankings]);
+
+  const isLoading = rankingsLoading || sectorsLoading;
 
   if (isLoading) {
     return (
@@ -34,42 +53,55 @@ export function SectorWorkerSalaries() {
     );
   }
 
-  // Calculate effective demand and sort sectors
-  const sectorsWithEffectiveDemand = sectors.map((sector) => ({
-    ...sector,
-    effectiveDemand: (sector.demand || 0) + (sector.demandBonus || 0),
-  }));
-
-  // Sort by effective demand (descending)
-  const sortedSectors = [...sectorsWithEffectiveDemand].sort(
-    (a, b) => b.effectiveDemand - a.effectiveDemand
-  );
-
-  // Calculate worker salary for each sector based on ranking
-  const sectorsWithSalaries = sortedSectors.map((sector, index) => {
+  // Calculate worker salary for each sector based on Forecast ranking
+  const sectorsWithSalaries = sectors.map((sector) => {
+    const ranking = rankingMap.get(sector.id);
     let salary: number;
-    if (index === 0) {
-      salary = 8; // Highest demand: $8
-    } else if (index === 1) {
-      salary = 4; // Second highest: $4
+    let rank: number;
+    let demandCounters: number;
+
+    if (ranking) {
+      rank = ranking.rank;
+      demandCounters = ranking.demandCounters;
+      if (rank === 1) {
+        salary = 8; // 1st place: $8
+      } else if (rank === 2) {
+        salary = 4; // 2nd place: $4
+      } else {
+        salary = 2; // 3rd and below: $2
+      }
     } else {
-      salary = 2; // Third and below: $2
+      // No forecast commitments for this sector
+      rank = sectors.length; // Last place
+      demandCounters = 0;
+      salary = 2; // Default: $2
     }
+
     return {
       ...sector,
-      rank: index + 1,
+      rank,
       workerSalary: salary,
+      demandCounters,
     };
+  });
+
+  // Sort by rank (1st, 2nd, 3rd, then unranked)
+  sectorsWithSalaries.sort((a, b) => {
+    if (a.rank !== b.rank) {
+      return a.rank - b.rank;
+    }
+    // If same rank, sort by sector name
+    return (a.name || a.sectorName).localeCompare(b.name || b.sectorName);
   });
 
   return (
     <div className="space-y-4">
       <div className="mb-4">
         <h3 className="text-lg font-semibold text-white mb-2">
-          Sector Demand Ranking & Worker Salaries
+          Forecast Ranking & Worker Salaries
         </h3>
         <p className="text-sm text-gray-400">
-          Worker salaries are determined by sector demand ranking. Higher demand sectors pay more per worker.
+          Worker salaries are determined by Forecast rankings (based on share commitments to forecast quarters). 1st place pays $8/worker, 2nd pays $4/worker, 3rd+ pays $2/worker.
         </p>
       </div>
 
@@ -115,18 +147,18 @@ export function SectorWorkerSalaries() {
                 </div>
 
                 <div>
-                  <div className="text-sm text-gray-400">Effective Demand</div>
+                  <div className="text-sm text-gray-400">Forecast Demand Counters</div>
                   <div className="flex items-center gap-1">
                     <RiUserFill size={14} className="text-gray-400" />
                     <span className="text-white font-medium">
-                      {sector.effectiveDemand}
+                      {sector.demandCounters || 0}
                     </span>
                   </div>
                 </div>
 
-                {sector.demandBonus && sector.demandBonus > 0 && (
+                {!sector.demandCounters && (
                   <div className="text-xs text-gray-500">
-                    (Base: {sector.demand || 0} + Bonus: {sector.demandBonus})
+                    No forecast commitments
                   </div>
                 )}
               </div>
@@ -140,12 +172,12 @@ export function SectorWorkerSalaries() {
           <div>
             <strong className="text-gray-300">Salary Rules:</strong>
           </div>
-          <div>• Rank #1 (Highest Demand): $8 per worker</div>
+          <div>• Rank #1 (Highest Forecast Demand Counters): $8 per worker</div>
           <div>• Rank #2: $4 per worker</div>
           <div>• Rank #3+: $2 per worker</div>
           <div className="mt-2 text-xs text-gray-500">
-            Salaries are recalculated each turn based on sector demand ranking
-            during the Earnings Call phase.
+            Salaries are recalculated each turn based on Forecast rankings
+            (from share commitments to forecast quarters) during the Earnings Call phase.
           </div>
         </div>
       </div>

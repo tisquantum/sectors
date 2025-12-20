@@ -6,7 +6,7 @@ import { ModernCompany } from '../Company/CompanyV2/ModernCompany';
 import { FactoryCreation, ConstructionOrders } from '../Company/Factory';
 import { ResourceTrack } from './ResourceTrack';
 import { ResourceType } from '@/components/Company/Factory/Factory.types';
-import { SectorName, ResourceTrackType } from '@server/prisma/prisma.client';
+import { SectorName, ResourceTrackType, CompanyStatus } from '@server/prisma/prisma.client';
 import CompanyInfoV2 from '../Company/CompanyV2/CompanyInfoV2';
 import { 
   RESOURCE_PRICES_CIRCLE,
@@ -23,9 +23,13 @@ const FactoryConstructionPhase = () => {
   const [selectedCompany, setSelectedCompany] = useState<{ id: string; size: 'FACTORY_I' | 'FACTORY_II' | 'FACTORY_III' | 'FACTORY_IV' } | null>(null);
   const [showFactoryCreation, setShowFactoryCreation] = useState(false);
   
-  // Get companies where the current player is CEO
+  // Get companies where the current player is CEO (ACTIVE and INSOLVENT companies can operate)
   const { data: companies, isLoading } = trpc.company.listCompanies.useQuery({
-    where: { gameId, ceoId: authPlayer?.id },
+    where: { 
+      gameId, 
+      ceoId: authPlayer?.id,
+      status: { in: [CompanyStatus.ACTIVE, CompanyStatus.INSOLVENT] },
+    },
     orderBy: { name: 'asc' },
   });
 

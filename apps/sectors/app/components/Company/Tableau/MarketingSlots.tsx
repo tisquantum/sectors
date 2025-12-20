@@ -8,7 +8,7 @@ import { createPortal } from 'react-dom';
 import { MarketingCreation } from '../Marketing/MarketingCreation';
 import { trpc } from '@sectors/app/trpc';
 import { getSectorResourceForSectorName } from '@server/data/constants';
-import { SectorName, PhaseName } from '@server/prisma/prisma.client';
+import { SectorName, PhaseName, CompanyStatus } from '@server/prisma/prisma.client';
 import { useGame } from '../../Game/GameContext';
 
 interface MarketingSlot {
@@ -130,6 +130,8 @@ export function MarketingSlots({ companyId, gameId, isCEO = false }: MarketingSl
   const handleSlotClick = (slot: MarketingSlot) => {
     // Only allow clicks during MODERN_OPERATIONS phase and if user is CEO
     if (!isModernOperationsPhase || !isCEO) return;
+    // Only active or insolvent companies can operate
+    if (company?.status !== CompanyStatus.ACTIVE && company?.status !== CompanyStatus.INSOLVENT) return;
     if (slot.isAvailable && !slot.isOccupied) {
       setSelectedSlot(slot);
       setShowMarketingCreation(true);
@@ -160,8 +162,8 @@ export function MarketingSlots({ companyId, gameId, isCEO = false }: MarketingSl
               'relative w-full rounded border transition-all flex items-center justify-center',
               slot.isOccupied ? 'h-auto' : 'h-8',
               slot.isOccupied && 'border-purple-400 bg-purple-400/20 text-purple-200 cursor-default',
-              // Only allow interaction during MODERN_OPERATIONS phase and if user is CEO
-              isModernOperationsPhase && isCEO && slot.isAvailable && !slot.isOccupied
+              // Only allow interaction during MODERN_OPERATIONS phase, if user is CEO, and company is active or insolvent
+              isModernOperationsPhase && isCEO && (company?.status === CompanyStatus.ACTIVE || company?.status === CompanyStatus.INSOLVENT) && slot.isAvailable && !slot.isOccupied
                 ? 'border-purple-400/60 bg-purple-400/10 text-purple-300 cursor-pointer hover:bg-purple-400/20'
                 : 'border-gray-600/40 bg-gray-700/30 text-gray-500 cursor-not-allowed',
               // Dim available slots if not in correct phase or not CEO

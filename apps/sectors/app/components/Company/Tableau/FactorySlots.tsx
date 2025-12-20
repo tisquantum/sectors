@@ -8,7 +8,7 @@ import { Factory } from '../Factory/Factory';
 import { trpc } from '@sectors/app/trpc';
 import { useGame } from '../../Game/GameContext';
 import { FACTORY_CUSTOMER_LIMITS } from '@server/data/constants';
-import { PhaseName, FactorySize } from '@server/prisma/prisma.client';
+import { PhaseName, FactorySize, CompanyStatus } from '@server/prisma/prisma.client';
 import { Popover, PopoverContent, PopoverTrigger } from '@nextui-org/react';
 import { RiInformationLine } from '@remixicon/react';
 
@@ -219,6 +219,8 @@ export function FactorySlots({ companyId, gameId, currentPhase, isCEO = false }:
   const handleSlotClick = (slot: FactorySlot) => {
     // Only allow clicks during MODERN_OPERATIONS phase and if user is CEO
     if (!isModernOperationsPhase || !isCEO) return;
+    // Only active or insolvent companies can operate
+    if (company?.status !== CompanyStatus.ACTIVE && company?.status !== CompanyStatus.INSOLVENT) return;
     if (slot.isAvailable && !slot.isOccupied) {
       setSelectedSlot(slot);
       setShowFactoryCreation(true);
@@ -302,8 +304,8 @@ export function FactorySlots({ companyId, gameId, currentPhase, isCEO = false }:
                 'relative w-full rounded border transition-all flex items-center justify-center',
                 slot.isOccupied ? 'h-auto' : 'h-8',
                 slot.isOccupied && 'border-orange-400 bg-orange-400/20 text-orange-200 cursor-default',
-                // Only allow interaction during MODERN_OPERATIONS phase and if user is CEO
-                isModernOperationsPhase && isCEO && slot.isAvailable && !slot.isOccupied
+                // Only allow interaction during MODERN_OPERATIONS phase, if user is CEO, and company is active or insolvent
+                isModernOperationsPhase && isCEO && (company?.status === CompanyStatus.ACTIVE || company?.status === CompanyStatus.INSOLVENT) && slot.isAvailable && !slot.isOccupied
                   ? 'border-orange-400/60 bg-orange-400/10 text-orange-300 hover:bg-orange-400/20 cursor-pointer hover:border-orange-400'
                   : 'border-gray-600/40 bg-gray-700/30 text-gray-500 cursor-not-allowed',
                 // Dim available slots if not in correct phase or not CEO

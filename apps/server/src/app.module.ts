@@ -67,6 +67,7 @@ import { ConsumptionMarkerModule } from './consumption-marker/consumption-marker
 import { MarketingModule } from './marketing/marketing.module';
 import { FactoryModule } from './factory/factory.module';
 import { FactoryProductionModule } from './factory-production/factory-production.module';
+import { ForecastModule } from './forecast/forecast.module';
 
 const yourPusherOptions = {
   cluster: process.env.PUSHER_CLUSTER ?? 'CLUSTER',
@@ -150,6 +151,7 @@ const chunkingOptions = {
     MarketingModule,
     FactoryModule,
     FactoryProductionModule,
+    ForecastModule,
   ],
   controllers: [AppController],
   providers: [AppService],

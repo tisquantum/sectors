@@ -64,7 +64,7 @@ const OrderChipChitWithPlayer = ({
       seed: order.Player.nickname,
       backgroundColor: [hashStringToColor(order.Player.nickname)],
     }).toDataUri();
-  }, []);
+  }, [order.Player.nickname]);
   const playerWithShares = playersWithShares.find(
     (p) => p.id === order.Player.id
   );

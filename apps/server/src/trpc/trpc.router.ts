@@ -112,6 +112,8 @@ import resourceRouter from './routers/resource.router';
 import consumptionMarkerRouter from './routers/consumption-marker.router';
 import factoryProductionRouter from './routers/factory-production.router';
 import modernOperationsRouter from './routers/modern-operations.router';
+import { forecastRouter } from './routers/forecast.router';
+import { ForecastService } from '@server/forecast/forecast.service';
 
 @Injectable()
 export class TrpcRouter {
@@ -174,6 +176,7 @@ export class TrpcRouter {
     private readonly resourceService: ResourceService,
     private readonly consumptionMarkerService: ConsumptionMarkerService,
     private readonly factoryProductionService: FactoryProductionService,
+    private readonly forecastService: ForecastService,
   ) {}
 
   appRouter = this.trpc.router({
@@ -412,6 +415,13 @@ export class TrpcRouter {
       gamesService: this.gamesService,
       prismaService: this.prismaService,
       sectorService: this.sectorService,
+      gameTurnService: this.gameTurnService,
+    }),
+    forecast: forecastRouter(this.trpc, {
+      forecastService: this.forecastService,
+      playerService: this.playersService,
+      phaseService: this.phaseService,
+      gamesService: this.gamesService,
       gameTurnService: this.gameTurnService,
     }),
   });

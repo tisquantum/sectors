@@ -76,7 +76,7 @@ const ShortOrderInput: React.FC<{
 
   useEffect(() => {
     setMinimumMarginAccount((company.currentStockPrice || 0) * shareValue);
-  }, [shareValue]);
+  }, [shareValue, company.currentStockPrice]);
 
   const handleShareChange = (value: number | number[]) => {
     //if array, use zero
@@ -167,7 +167,7 @@ const LimitOrderInput = ({
   );
   useEffect(() => {
     handleLimitOrder(limitOrderValue);
-  }, [limitOrderValue]);
+  }, [limitOrderValue, handleLimitOrder]);
   return (
     <>
       <BuyOrSell handleSelectionIsBuy={handleSelectionIsBuy} />
@@ -282,7 +282,7 @@ const TabContentMO: React.FC<TabContentProps> = ({
   useEffect(() => {
     handleShares(minValue);
     handleValueChange(defaultValue || 0);
-  }, []);
+  }, [defaultValue, minValue, handleShares, handleValueChange]);
   return (
     <div className="flex flex-col text-center items-center center-content justify-center gap-2">
       {/* 
@@ -467,7 +467,7 @@ const PseudoBalance = ({
   });
   useEffect(() => {
     refetch();
-  }, [currentPhase?.name]);
+  }, [currentPhase?.name, refetch]);
   if (isLoading) return null;
   if (!authPlayer) return null;
   return (
@@ -673,7 +673,7 @@ const PlayerOrderInput = ({
       setMinValue(1);
       setMaxValue(company?.Share.length || 0);
     }
-  }, [isBuy, isIpo, company?.Share]);
+  }, [isBuy, isIpo, company?.Share, orderType]);
   const companySector = gameState.sectors.find(
     (sector) => sector.id === currentOrder.sectorId
   );

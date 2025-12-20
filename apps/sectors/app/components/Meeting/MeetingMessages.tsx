@@ -39,7 +39,7 @@ const MeetingMessages = () => {
     return () => {
       channel.unbind(EVENT_MEETING_MESSAGE_CREATED);
     };
-  }, [channel, isLoading]);
+  }, [channel, isLoading, gameId, utils.meetingMessage.listMessages]);
 
   if (isLoading) return <div>Loading...</div>;
   if (isError) return <div>Error...</div>;

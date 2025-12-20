@@ -107,6 +107,7 @@ model Player {
   researchOrders           ResearchOrder[]
   isBot                    Boolean                    @default(false)
   companiesAsCEO           Company[]                  @relation("CompanyCEO")
+  forecastCommitments       ForecastCommitment[]
 }
 
 enum AccountStatus {
@@ -137,10 +138,12 @@ model Share {
   Company           Company                @relation(fields: [companyId], references: [id])
   Player            Player?                @relation(fields: [playerId], references: [id])
   Game              Game                   @relation(fields: [gameId], references: [id])
+  isCommitted       Boolean                 @default(false) // True if share is committed to a forecast quarter
   createdAt         DateTime               @default(now())
   updatedAt         DateTime               @updatedAt
   Transactions      TransactionsOnShares[]
   ShareContribution ShareContribution[]
+  forecastCommitments ForecastCommitment[]
 }
 
 enum ShareLocation {
@@ -772,6 +775,7 @@ model Sector {
   factories              Factory[]
   technologyLevel        Int               @default(0)
   consumptionMarkers     ConsumptionMarker[]
+  forecastCommitments    ForecastCommitment[]
 }
 
 enum SectorName {
@@ -859,6 +863,8 @@ model Game {
   researchOrders            ResearchOrder[]
   consumptionMarkers        ConsumptionMarker[]
   factoryProductions        FactoryProduction[]
+  forecastQuarters           ForecastQuarter[]
+  forecastCommitments        ForecastCommitment[]
 }
 
 model SectorPriority {
@@ -966,6 +972,7 @@ model GameTurn {
   researchOrders         ResearchOrder[]
   factoryProductions     FactoryProduction[]
   marketingCampaigns     MarketingCampaign[]
+  forecastCommitments    ForecastCommitment[]
 }
 
 enum ResourceType {
@@ -1067,6 +1074,7 @@ model Phase {
   GameLogs                 GameLog[]
   factoryConstructionOrders FactoryConstructionOrder[]
   researchOrders           ResearchOrder[]
+  forecastCommitments      ForecastCommitment[]
   phaseStartTime           DateTime?
   createdAt                DateTime                   @default(now())
   updatedAt                DateTime                   @updatedAt
@@ -1126,6 +1134,9 @@ enum PhaseName {
   CONSUMPTION_PHASE
   EARNINGS_CALL //profit and stock adjustment
   RESOLVE_INSOLVENCY //resolve insolvent companies after earnings call
+  FORECAST_COMMITMENT_END_TURN
+  FORECAST_RESOLVE
+  FORECAST_COMMITMENT_START_TURN
 }
 
 model InfluenceRound {
@@ -1859,4 +1870,50 @@ model ResearchOrder {
   game              Game     @relation(fields: [gameId], references: [id])
   phase             Phase    @relation(fields: [phaseId], references: [id])
   gameTurn          GameTurn @relation(fields: [gameTurnId], references: [id])
+}
+
+// Forecast Quarter - represents one of 4 quarters in the forecast system
+model ForecastQuarter {
+  id                String                 @id @default(uuid())
+  gameId            String
+  quarterNumber     Int                     // 1, 2, 3, or 4 (Q1=4 shares, Q2=3, Q3=2, Q4=1)
+  shareCost         Int                     // Cost in shares: Q1=4, Q2=3, Q3=2, Q4=1
+  totalSharesCommitted Int                  @default(0) // Total shares committed to this quarter
+  demandCounters    Int                     @default(0) // Demand counters = totalSharesCommitted / shareCost
+  sectorId          String?                 // Sector that committed shares (null if multiple sectors)
+  isActive          Boolean                 @default(false) // True when Q1 moves to active slot
+  Game              Game                    @relation(fields: [gameId], references: [id])
+  commitments       ForecastCommitment[]
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+
+  @@unique([gameId, quarterNumber])
+  @@index([gameId])
+}
+
+// Forecast Commitment - tracks player share commitments to quarters
+model ForecastCommitment {
+  id                String                 @id @default(uuid())
+  gameId            String
+  gameTurnId        String
+  phaseId           String
+  playerId          String
+  quarterId         String
+  sectorId          String                  // Sector of companies whose shares are committed
+  shareCount        Int                     // Number of shares committed
+  ForecastQuarter   ForecastQuarter         @relation(fields: [quarterId], references: [id])
+  Player            Player                  @relation(fields: [playerId], references: [id])
+  Game              Game                    @relation(fields: [gameId], references: [id])
+  GameTurn          GameTurn               @relation(fields: [gameTurnId], references: [id])
+  Phase             Phase                   @relation(fields: [phaseId], references: [id])
+  Sector            Sector                  @relation(fields: [sectorId], references: [id])
+  shares            Share[]                // Shares that are committed
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+
+  @@unique([playerId, quarterId, gameTurnId]) // One commitment per player per quarter per turn
+  @@index([gameId])
+  @@index([gameTurnId])
+  @@index([playerId])
+  @@index([quarterId])
 }

@@ -50,6 +50,7 @@ import { FactoryModule } from '@server/factory/factory.module';
 import { ConsumptionMarkerModule } from '@server/consumption-marker/consumption-marker.module';
 import { MarketingModule } from '@server/marketing/marketing.module';
 import { FactoryProductionModule } from '@server/factory-production/factory-production.module';
+import { ForecastModule } from '@server/forecast/forecast.module';
 
 @Module({
   imports: [
@@ -102,6 +103,7 @@ import { FactoryProductionModule } from '@server/factory-production/factory-prod
     ConsumptionMarkerModule,
     MarketingModule,
     FactoryProductionModule,
+    ForecastModule,
   ],
   providers: [
     GameManagementService,

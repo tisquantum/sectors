@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { publicProcedure, router } from '../trpc';
 import { FactoryConstructionService } from '../../factory-construction/factory-construction.service';
-import { Company, FactorySize, PhaseName, ResourceType, Sector } from '@prisma/client';
+import { Company, FactorySize, PhaseName, ResourceType, Sector, CompanyStatus } from '@prisma/client';
 import { checkIsPlayerAction, checkSubmissionTime } from '../trpc.middleware';
 import { TrpcService } from '../trpc.service';
 import { PlayersService } from '@server/players/players.service';
@@ -62,6 +62,11 @@ export const factoryConstructionRouter = (trpc: TrpcService, ctx: Context) => ro
 
       if (company.ceoId !== ctxMiddleware.submittingPlayerId) {
         throw new Error('Only the CEO can submit factory construction orders');
+      }
+
+      // Check if company is active or insolvent (inactive companies cannot operate)
+      if (company.status !== CompanyStatus.ACTIVE && company.status !== CompanyStatus.INSOLVENT) {
+        throw new Error(`Only active or insolvent companies can construct factories. Company status: ${company.status}`);
       }
       
       if (!company.sectorId) {

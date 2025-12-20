@@ -120,25 +120,25 @@ export const GameProvider: React.FC<{
     return () => {
       channel.unbind(EVENT_EXECUTIVE_NEW_PHASE, handleNewPhase);
     };
-  }, [gameId, channel]);
+  }, [gameId, channel, currentPhase?.phaseName, refetchAuthPlayer, refetchCurrentPhase, refetchCurrentTurn, refetchGameState]);
 
   useEffect(() => {
     refetchCurrentPhase();
-  }, [gameState?.phases.length]);
+  }, [gameState?.phases.length, refetchCurrentPhase]);
 
   useEffect(() => {
     console.log("gameState player refetch", gameState);
     if(gameState && gameState.players.length > 0) {
       refetchGameState();
     }
-  }, [gameState?.players.length]);
+  }, [gameState?.players.length, gameState, refetchGameState]);
 
   useEffect(() => {
     if (!currentPhase) {
       return;
     }
     setIsAuthPlayerPhasing(player?.id === currentPhase?.activePlayerId);
-  }, [currentPhase?.id, player]);
+  }, [currentPhase?.id, currentPhase, player]);
 
   if (isLoading || currentTurnIsLoading) {
     return <div>Loading...</div>;

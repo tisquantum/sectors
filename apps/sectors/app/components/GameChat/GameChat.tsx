@@ -46,7 +46,7 @@ const AtList = forwardRef<HTMLTextAreaElement, AtListProps>(
         const rect = sendMessageRef.current.getBoundingClientRect();
         setSendMessageTop(rect.top);
       }
-    }, [showAtList]);
+    }, [showAtList, sendMessageRef]);
 
     // Calculate the height of AtList when it mounts
     useEffect(() => {

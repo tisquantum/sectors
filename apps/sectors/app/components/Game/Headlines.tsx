@@ -301,7 +301,7 @@ const Headlines = () => {
     return () => {
       channel.unbind(EVENT_NEW_PLAYER_HEADLINE);
     };
-  }, [channel, isLoading]);
+  }, [channel, isLoading, refetch]);
   return (
     <div className="flex flex-col justify-center items-center bg-gray-200 p-8 shadow-lg rounded-lg max-w-3xl mx-auto">
       <div className="border-b-4 border-black mb-4">

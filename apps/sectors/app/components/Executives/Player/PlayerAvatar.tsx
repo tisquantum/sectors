@@ -47,7 +47,7 @@ const PlayerAvatar = ({
       seed: player.nickname,
       backgroundColor: [hashStringToColor(player.nickname)],
     }).toDataUri();
-  }, []);
+  }, [player.nickname, size]);
   return (
     <div className="flex flex-col items-center">
       <Tooltip

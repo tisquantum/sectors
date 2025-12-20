@@ -15,6 +15,7 @@ import { GameTurnService } from '../game-turn/game-turn.service';
 import { GamesService } from '../games/games.service';
 import { TransactionService } from '../transaction/transaction.service';
 import { ShareService } from '../share/share.service';
+import { ForecastService } from '../forecast/forecast.service';
 import { getResourcePriceForResourceType, getSectorResourceForSectorName, BASE_WORKER_SALARY, CompanyTierData, BANKRUPTCY_SHARE_PERCENTAGE_RETAINED, DEFAULT_SHARE_DISTRIBUTION } from '@server/data/constants';
 import { PlayerPriorityService } from '@server/player-priority/player-priority.service';
 import { PlayersService } from '@server/players/players.service';
@@ -46,6 +47,7 @@ export class ModernOperationMechanicsService {
     private playerPriorityService: PlayerPriorityService,
     private playersService: PlayersService,
     private shareService: ShareService,
+    private forecastService: ForecastService,
   ) {}
 
   async handlePhase(phase: Phase, game: Game) {
@@ -58,6 +60,20 @@ export class ModernOperationMechanicsService {
         await this.updateSectorPriority(phase);
         await this.determinePriorityOrderBasedOnNetWorth(phase);
         await this.handleOpeningNewCompany(phase);
+        // Initialize forecast quarters if not already done
+        await this.forecastService.initializeForecastQuarters(phase.gameId);
+        break;
+
+      case PhaseName.FORECAST_COMMITMENT_START_TURN:
+        // Players commit shares (handled by client)
+        break;
+
+      case PhaseName.FORECAST_COMMITMENT_END_TURN:
+        // Players commit shares before end turn (handled by client)
+        break;
+
+      case PhaseName.FORECAST_RESOLVE:
+        await this.handleForecastResolve(phase);
         break;
 
       case PhaseName.SHAREHOLDER_MEETING:
@@ -1863,42 +1879,56 @@ export class ModernOperationMechanicsService {
     
     console.log(`[EARNINGS_CALL] Resource price map:`, Array.from(resourcePriceMap.entries()));
 
-    // Calculate worker salaries based on sector demand ranking
-    // 1st highest demand = $10, 2nd = $8, 3rd+ = $6
+    // Calculate worker salaries based on Forecast rankings
+    // 1st place = $8, 2nd = $4, 3rd+ = $2
+    const forecastRankings = await this.forecastService.getForecastRankings(phase.gameId);
+    
+    // Get all sectors to map sectorId to sectorName
     const sectors = await this.sectorService.sectors({
       where: { gameId: phase.gameId },
     });
-    
-    // Sort sectors by demand (descending) - using effective demand (demand + demandBonus)
-    const sortedSectors = [...sectors].sort((a, b) => {
-      const aDemand = a.demand + (a.demandBonus || 0);
-      const bDemand = b.demand + (b.demandBonus || 0);
-      return bDemand - aDemand; // Descending order
+    const sectorMap = new Map(sectors.map(s => [s.id, s]));
+
+    // Create map: sectorId -> worker salary based on Forecast ranking
+    const sectorWorkerSalaryMap = new Map<string, number>();
+    forecastRankings.forEach((ranking) => {
+      let salary: number;
+      if (ranking.rank === 1) {
+        salary = 8; // 1st place: $8
+      } else if (ranking.rank === 2) {
+        salary = 4; // 2nd place: $4
+      } else {
+        salary = 2; // 3rd and below: $2
+      }
+      sectorWorkerSalaryMap.set(ranking.sectorId, salary);
     });
 
-    // Create map: sectorId -> worker salary
-    const sectorWorkerSalaryMap = new Map<string, number>();
-    sortedSectors.forEach((sector, index) => {
-      let salary: number;
-      if (index === 0) {
-        salary = 8; // Highest demand: $8
-      } else if (index === 1) {
-        salary = 4; // Second highest: $4
-      } else {
-        salary = 2; // Third and below: $2
+    // For sectors not in forecast rankings (no commitments), assign default salary of $2
+    sectors.forEach((sector) => {
+      if (!sectorWorkerSalaryMap.has(sector.id)) {
+        sectorWorkerSalaryMap.set(sector.id, 2);
       }
-      sectorWorkerSalaryMap.set(sector.id, salary);
     });
 
     // Log worker salary assignments for debugging
     const salaryLogEntries: Array<{ gameId: string; content: string }> = [];
-    sortedSectors.forEach((sector, index) => {
-      const salary = sectorWorkerSalaryMap.get(sector.id) || 6;
-      const effectiveDemand = sector.demand + (sector.demandBonus || 0);
+    forecastRankings.forEach((ranking) => {
+      const sector = sectorMap.get(ranking.sectorId);
+      const salary = sectorWorkerSalaryMap.get(ranking.sectorId) || 2;
+      const sectorName = sector?.sectorName || ranking.sectorId;
       salaryLogEntries.push({
         gameId: phase.gameId,
-        content: `${sector.sectorName} ranked #${index + 1} (demand: ${effectiveDemand}) → Worker salary: $${salary}/worker`,
+        content: `${sectorName} ranked #${ranking.rank} (forecast demand counters: ${ranking.demandCounters}) → Worker salary: $${salary}/worker`,
       });
+    });
+    // Log sectors with no forecast commitments
+    sectors.forEach((sector) => {
+      if (!forecastRankings.find(r => r.sectorId === sector.id)) {
+        salaryLogEntries.push({
+          gameId: phase.gameId,
+          content: `${sector.sectorName} (no forecast commitments) → Worker salary: $2/worker`,
+        });
+      }
     });
     if (salaryLogEntries.length > 0) {
       await this.gameLogService.createManyGameLogs(
@@ -2966,8 +2996,25 @@ export class ModernOperationMechanicsService {
   }
 
   /**
-   * Distribute consumers from global pool to sectors based on economy score
-   * Uses proportional distribution based on sector demand values
+   * Handle forecast resolution: apply sector abilities, calculate demand counters, shift quarters
+   */
+  private async handleForecastResolve(phase: Phase) {
+    // Add brand bonus to Q1
+    await this.forecastService.addBrandBonusToQ1(phase.gameId);
+    
+    // Apply sector abilities
+    await this.forecastService.applySectorAbilities(phase.gameId);
+    
+    // Calculate demand counters from share commitments
+    await this.forecastService.calculateDemandCounters(phase.gameId);
+    
+    // Shift quarters left (before end turn resolution)
+    await this.forecastService.shiftQuartersLeft(phase.gameId);
+  }
+
+  /**
+   * Distribute consumers from global pool to sectors based on forecast demand scores
+   * Uses 50/30/20 split based on forecast quarter rankings
    */
   private async distributeConsumersToSectors(phase: Phase) {
     const [sectors, game] = await Promise.all([
@@ -2984,79 +3031,41 @@ export class ModernOperationMechanicsService {
       throw new Error('Game not found');
     }
 
-    // Calculate total demand across all sectors
-    const totalDemand = sectors.reduce(
-      (sum, sector) => sum + (sector.demand + (sector.demandBonus || 0)),
-      0
+    // Get forecast demand scores (50/30/20 split) - returns sectorId -> consumer count
+    const forecastScores = await this.forecastService.getForecastDemandScores(
+      phase.gameId,
+      game.economyScore,
     );
 
-    if (totalDemand === 0) {
-      // No demand in any sector, skip distribution
-      await this.gameLogService.createGameLog({
-        game: { connect: { id: phase.gameId } },
-        content: 'No sector demand found. Skipping consumer distribution.',
-      });
-      return;
-    }
-
     const maxConsumersToDistribute = Math.min(game.economyScore, game.consumerPoolNumber);
-    const sectorUpdates: Array<{ id: string; consumers: number; proportionalShare: number }> = [];
+    const sectorUpdates: Array<{ id: string; consumers: number }> = [];
     const gameLogEntries: Array<{ gameId: string; content: string }> = [];
 
-    // Calculate proportional distribution for each sector
-    for (const sector of sectors) {
-      const sectorDemand = sector.demand + (sector.demandBonus || 0);
-      if (sectorDemand === 0) continue;
-
-      // Calculate proportional share: (sector demand / total demand) * economy score
-      const proportionalShare = (sectorDemand / totalDemand) * game.economyScore;
-      
-      sectorUpdates.push({
-        id: sector.id,
-        consumers: sector.consumers,
-        proportionalShare,
-      });
-    }
-
-    // Sort by proportional share (descending) to handle rounding
-    sectorUpdates.sort((a, b) => b.proportionalShare - a.proportionalShare);
-
-    // Distribute consumers using largest remainder method to handle rounding
-    let remainingConsumers = maxConsumersToDistribute;
-    const roundedShares: Array<{ id: string; floor: number; remainder: number }> = [];
-
-    // First pass: assign floor values
-    for (const update of sectorUpdates) {
-      const floor = Math.floor(update.proportionalShare);
-      const remainder = update.proportionalShare - floor;
-      roundedShares.push({ id: update.id, floor, remainder });
-      update.consumers += floor;
-      remainingConsumers -= floor;
-    }
-
-    // Second pass: distribute remaining consumers to sectors with largest remainders
-    roundedShares.sort((a, b) => b.remainder - a.remainder);
-    for (let i = 0; i < remainingConsumers && i < roundedShares.length; i++) {
-      const share = roundedShares[i];
-      const update = sectorUpdates.find(u => u.id === share.id);
-      if (update) {
-        update.consumers += 1;
-        remainingConsumers -= 1;
-      }
-    }
-
-    // Create game log entries
-    for (const update of sectorUpdates) {
-      const sector = sectors.find(s => s.id === update.id);
-      if (!sector) continue;
-      
-      const sectorDemand = sector.demand + (sector.demandBonus || 0);
-      const consumersAdded = update.consumers - sector.consumers;
-      
-      if (consumersAdded > 0) {
+    // Distribute based on forecast sector rankings
+    // 1st place sector gets 50%, 2nd gets 30%, 3rd gets 20%
+    let consumersDistributed = 0;
+    
+    // Get sectors sorted by their scores to determine ranking
+    const sortedSectorEntries = Object.entries(forecastScores)
+      .sort(([, a], [, b]) => b - a);
+    
+    const rankLabels = ['1st', '2nd', '3rd'];
+    const rankPercentages = [0.5, 0.3, 0.2];
+    
+    for (let i = 0; i < sortedSectorEntries.length && i < 3; i++) {
+      const [sectorId, consumers] = sortedSectorEntries[i];
+      const sector = sectors.find((s) => s.id === sectorId);
+      if (sector && consumers > 0) {
+        const rank = i + 1;
+        const percentage = rankPercentages[i];
+        sectorUpdates.push({
+          id: sector.id,
+          consumers: sector.consumers + consumers,
+        });
+        consumersDistributed += consumers;
         gameLogEntries.push({
           gameId: phase.gameId,
-          content: `${sector.sectorName} received ${consumersAdded} consumers (${((sectorDemand / totalDemand) * 100).toFixed(1)}% of economy score ${game.economyScore})`,
+          content: `${sector.sectorName} (${rankLabels[i]} place) received ${consumers} consumers (${(percentage * 100).toFixed(0)}% of economy score ${game.economyScore})`,
         });
       }
     }
@@ -3074,13 +3083,7 @@ export class ModernOperationMechanicsService {
     }
 
     // Update game consumer pool
-    const totalConsumersDistributed = sectorUpdates.reduce(
-      (sum, update) => {
-        const sector = sectors.find(s => s.id === update.id);
-        return sum + (update.consumers - (sector?.consumers || 0));
-      },
-      0
-    );
+    const totalConsumersDistributed = consumersDistributed;
     
     if (totalConsumersDistributed > 0) {
       await this.prisma.game.update({

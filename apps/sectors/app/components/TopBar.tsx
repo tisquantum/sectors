@@ -154,7 +154,7 @@ const TopBar = () => {
     () => (
       <AuthMenu loading={loading} user={user} handleLogout={handleLogout} />
     ),
-    [loading, user]
+    [loading, user, handleLogout]
   );
 
   return (

@@ -83,6 +83,7 @@ import {
 } from "./ModernOperations/phases";
 import InsolvencyContributionComponent from "../Company/InsolvencyContribution";
 import { CompanyStatus } from "@server/prisma/prisma.client";
+import ForecastPhase from "./ForecastPhase";
 
 const determineGameRound = (
   game: GameState
@@ -218,7 +219,7 @@ const Game = ({ gameId }: { gameId: string }) => {
       }
     }, 1000);
     return () => clearInterval(timer);
-  }, [currentPhase?.name, currentPhase?.phaseStartTime, currentPhase?.phaseTime]);
+  }, [currentPhase?.name, currentPhase?.phaseStartTime, currentPhase?.phaseTime, currentPhase]);
   const handleCurrentView = (view: string) => {
     console.log(`[Game] handleCurrentView called with: ${view}`);
     setCurrentView(view);
@@ -396,6 +397,16 @@ const Game = ({ gameId }: { gameId: string }) => {
             </div>
           ))
         )}
+      </div>
+    ) : currentRoundData?.phase.name === PhaseName.FORECAST_COMMITMENT_START_TURN ? (
+      <ForecastPhase />
+    ) : currentRoundData?.phase.name === PhaseName.FORECAST_COMMITMENT_END_TURN ? (
+      <ForecastPhase />
+    ) : currentRoundData?.phase.name === PhaseName.FORECAST_RESOLVE ? (
+      <div className="flex flex-col items-center justify-center h-full gap-4">
+        <h2 className="text-2xl font-bold">Resolving Forecast</h2>
+        <p className="text-gray-400">Applying sector abilities, calculating demand counters, and shifting quarters...</p>
+        <Spinner size="lg" />
       </div>
     )
     : null;
