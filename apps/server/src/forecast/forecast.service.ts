@@ -110,6 +110,7 @@ export class ForecastService {
         commitments: {
           include: {
             Sector: true,
+            Player: true,
           },
         },
       },

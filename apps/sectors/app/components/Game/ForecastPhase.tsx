@@ -75,13 +75,19 @@ const ForecastPhase = () => {
   );
 
   // Use quarters with breakdown directly
-  const quarters: ForecastQuarter[] = React.useMemo(() => {
+  const quarters = React.useMemo(() => {
     if (!quartersWithBreakdown) return [];
     return quartersWithBreakdown.map(q => ({
       ...q,
-      commitments: q.commitments || [],
+      commitments: (q.commitments || []).map(c => ({
+        id: c.id,
+        playerId: c.playerId,
+        shareCount: c.shareCount,
+        Sector: c.Sector,
+        Player: c.Player ? { nickname: c.Player.nickname } : { nickname: '' },
+      })),
       sectorBreakdown: q.sectorBreakdown || [],
-    }));
+    })) as ForecastQuarter[];
   }, [quartersWithBreakdown]);
 
   // Get player's shares from playersWithShares
@@ -167,6 +173,30 @@ const ForecastPhase = () => {
     });
     return grouped;
   }, [playerShares, gameState?.sectors]);
+
+  // Get sector rankings for display (from backend, handles ties properly)
+  // Show all sectors with demand counters > 0, grouped by rank
+  const rankedSectors = React.useMemo(() => {
+    if (!sectorRankings || sectorRankings.length === 0) return [];
+    
+    // Filter to only sectors with demand counters > 0 and get top 3 ranks
+    const sectorsWithCounters = sectorRankings.filter(s => s.demandCounters > 0);
+    
+    // Group by rank to handle ties
+    const groupedByRank = sectorsWithCounters.reduce((acc, sector) => {
+      if (!acc[sector.rank]) {
+        acc[sector.rank] = [];
+      }
+      acc[sector.rank].push(sector);
+      return acc;
+    }, {} as Record<number, typeof sectorsWithCounters>);
+
+    // Get top 3 ranks (1st, 2nd, 3rd) - all sectors at those ranks
+    return [1, 2, 3]
+      .map(rank => groupedByRank[rank])
+      .filter(Boolean)
+      .flat();
+  }, [sectorRankings]);
 
   const handleSelectQuarter = (quarterId: string, quarter: ForecastQuarter) => {
     // Check if player already committed to this quarter this turn
@@ -265,30 +295,6 @@ const ForecastPhase = () => {
   const sortedQuarters = [...quarters].sort(
     (a, b) => a.quarterNumber - b.quarterNumber
   );
-
-  // Get sector rankings for display (from backend, handles ties properly)
-  // Show all sectors with demand counters > 0, grouped by rank
-  const rankedSectors = React.useMemo(() => {
-    if (!sectorRankings || sectorRankings.length === 0) return [];
-    
-    // Filter to only sectors with demand counters > 0 and get top 3 ranks
-    const sectorsWithCounters = sectorRankings.filter(s => s.demandCounters > 0);
-    
-    // Group by rank to handle ties
-    const groupedByRank = sectorsWithCounters.reduce((acc, sector) => {
-      if (!acc[sector.rank]) {
-        acc[sector.rank] = [];
-      }
-      acc[sector.rank].push(sector);
-      return acc;
-    }, {} as Record<number, typeof sectorsWithCounters>);
-
-    // Get top 3 ranks (1st, 2nd, 3rd) - all sectors at those ranks
-    return [1, 2, 3]
-      .map(rank => groupedByRank[rank])
-      .filter(Boolean)
-      .flat();
-  }, [sectorRankings]);
 
   return (
     <div className="flex flex-col gap-6 p-6">
