@@ -112,4 +112,14 @@ export const forecastRouter = (trpc: TrpcService, ctx: Context) =>
       .query(async ({ input }) => {
         return ctx.forecastService.getForecastRankings(input.gameId);
       }),
+
+    getForecastConsumerDistribution: publicProcedure
+      .input(z.object({ gameId: z.string() }))
+      .query(async ({ input }) => {
+        const game = await ctx.gamesService.game({ id: input.gameId });
+        if (!game || !game.economyScore) {
+          throw new Error('Game not found or economy score not available');
+        }
+        return ctx.forecastService.getForecastDemandScores(input.gameId, game.economyScore);
+      }),
   });

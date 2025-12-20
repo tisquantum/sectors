@@ -31,6 +31,17 @@ import ForecastPhase from "./ForecastPhase";
 const EndTurnEconomy = () => {
   const { currentPhase, gameState, gameId } = useGame();
   
+  // Get forecast-based consumer distribution (for modern operations)
+  const { data: forecastConsumerDistribution } = trpc.forecast.getForecastConsumerDistribution.useQuery(
+    { gameId: gameId || "" },
+    { 
+      enabled: !!gameId && gameState?.operationMechanicsVersion === OperationMechanicsVersion.MODERN,
+      refetchOnMount: false,
+      refetchOnWindowFocus: false,
+      staleTime: 5000, // 5 seconds
+    }
+  );
+  
   // Track query calls to detect infinite loops
   const queryCallCountRef = useRef(0);
   const { data: companiesWithSector, isLoading: isLoadingCompanies } =
@@ -171,14 +182,22 @@ const EndTurnEconomy = () => {
                   </Tooltip>
                 </div>
                 <div className="flex flex-wrap gap-3">
-                  {sectors.map((sector, index) => (
-                    <EconomySector
-                      key={sector.id}
-                      sector={sector}
-                      sectorColor={sectorColors[sector.name]}
-                      sectorIndex={index}
-                    />
-                  ))}
+                  {sectors.map((sector, index) => {
+                    // Use forecast-based distribution for modern operations, legacy for others
+                    const consumerCount: number = gameState?.operationMechanicsVersion === OperationMechanicsVersion.MODERN
+                      ? (forecastConsumerDistribution?.[sector.id] ?? 0)
+                      : (sector.consumers || 0);
+                    
+                    return (
+                      <EconomySector
+                        key={sector.id}
+                        sector={sector}
+                        sectorColor={sectorColors[sector.name]}
+                        sectorIndex={index}
+                        consumerCount={consumerCount}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             )}
