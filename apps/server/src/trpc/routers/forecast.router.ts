@@ -25,6 +25,12 @@ export const forecastRouter = (trpc: TrpcService, ctx: Context) =>
         return ctx.forecastService.getForecastQuarters(input.gameId);
       }),
 
+    getQuartersWithSectorBreakdown: publicProcedure
+      .input(z.object({ gameId: z.string() }))
+      .query(async ({ input }) => {
+        return ctx.forecastService.getForecastQuartersWithSectorBreakdown(input.gameId);
+      }),
+
     getPlayerCommitments: publicProcedure
       .input(
         z.object({

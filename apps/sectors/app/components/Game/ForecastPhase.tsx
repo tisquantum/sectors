@@ -43,6 +43,12 @@ interface ForecastQuarter {
     Sector: Sector;
     Player: { nickname: string };
   }>;
+  sectorBreakdown?: Array<{
+    sectorId: string;
+    sectorName: string;
+    sharesCommitted: number;
+    demandCounters: number;
+  }>;
 }
 
 const ForecastPhase = () => {
@@ -52,15 +58,31 @@ const ForecastPhase = () => {
   const [selectedShares, setSelectedShares] = useState<string[]>([]);
   const { isOpen, onOpen, onClose } = useDisclosure();
 
-  // Fetch forecast quarters
+  // Fetch forecast quarters with sector breakdowns
   const {
-    data: quarters,
+    data: quartersWithBreakdown,
     isLoading: quartersLoading,
     refetch: refetchQuarters,
-  } = trpc.forecast.getQuarters.useQuery(
+  } = trpc.forecast.getQuartersWithSectorBreakdown.useQuery(
     { gameId: gameId || "" },
     { enabled: !!gameId }
   );
+
+  // Also fetch sector rankings for display
+  const { data: sectorRankings } = trpc.forecast.getRankings.useQuery(
+    { gameId: gameId || "" },
+    { enabled: !!gameId }
+  );
+
+  // Use quarters with breakdown directly
+  const quarters: ForecastQuarter[] = React.useMemo(() => {
+    if (!quartersWithBreakdown) return [];
+    return quartersWithBreakdown.map(q => ({
+      ...q,
+      commitments: q.commitments || [],
+      sectorBreakdown: q.sectorBreakdown || [],
+    }));
+  }, [quartersWithBreakdown]);
 
   // Get player's shares from playersWithShares
   const playerShares = React.useMemo(() => {
@@ -244,10 +266,29 @@ const ForecastPhase = () => {
     (a, b) => a.quarterNumber - b.quarterNumber
   );
 
-  // Get rankings for display (sorted by demand counters)
-  const rankedQuarters = [...quarters]
-    .filter((q) => q.demandCounters > 0)
-    .sort((a, b) => b.demandCounters - a.demandCounters);
+  // Get sector rankings for display (from backend, handles ties properly)
+  // Show all sectors with demand counters > 0, grouped by rank
+  const rankedSectors = React.useMemo(() => {
+    if (!sectorRankings || sectorRankings.length === 0) return [];
+    
+    // Filter to only sectors with demand counters > 0 and get top 3 ranks
+    const sectorsWithCounters = sectorRankings.filter(s => s.demandCounters > 0);
+    
+    // Group by rank to handle ties
+    const groupedByRank = sectorsWithCounters.reduce((acc, sector) => {
+      if (!acc[sector.rank]) {
+        acc[sector.rank] = [];
+      }
+      acc[sector.rank].push(sector);
+      return acc;
+    }, {} as Record<number, typeof sectorsWithCounters>);
+
+    // Get top 3 ranks (1st, 2nd, 3rd) - all sectors at those ranks
+    return [1, 2, 3]
+      .map(rank => groupedByRank[rank])
+      .filter(Boolean)
+      .flat();
+  }, [sectorRankings]);
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -274,28 +315,38 @@ const ForecastPhase = () => {
         </div>
       </div>
 
-      {/* Rankings */}
-      {rankedQuarters.length > 0 && (
+      {/* Sector Rankings */}
+      {rankedSectors.length > 0 && (
         <Card className="bg-gray-800/50 border border-gray-700">
           <CardHeader>
             <h3 className="text-lg font-semibold flex items-center gap-2">
               <RiTrophyFill className="text-yellow-500" />
-              Current Rankings
+              Current Sector Rankings
             </h3>
+            <p className="text-sm text-gray-400 mt-1">
+              Rankings based on total demand counters across all quarters. Tied sectors share the same rank.
+            </p>
           </CardHeader>
           <CardBody>
-            <div className="flex gap-4">
-              {rankedQuarters.slice(0, 3).map((quarter, index) => {
+            <div className="flex gap-4 flex-wrap">
+              {rankedSectors.map((sectorRanking) => {
                 const sector = gameState?.sectors?.find(
-                  (s) => s.id === quarter.sectorId
+                  (s) => s.id === sectorRanking.sectorId
                 );
-                const rank = index + 1;
-                const percentage =
-                  rank === 1 ? "50%" : rank === 2 ? "30%" : "20%";
+                const rank = sectorRanking.rank;
+                // Calculate percentage based on rank (1st=50%, 2nd=30%, 3rd=20%)
+                // If multiple sectors share a rank, they split the percentage equally
+                const sectorsAtThisRank = rankedSectors.filter(s => s.rank === rank).length;
+                const basePercentage = rank === 1 ? 50 : rank === 2 ? 30 : 20;
+                const percentagePerSector = basePercentage / sectorsAtThisRank;
+                const percentage = sectorsAtThisRank > 1 
+                  ? `${percentagePerSector.toFixed(1)}% each (${basePercentage}% total shared)`
+                  : `${basePercentage}%`;
+                
                 return (
                   <div
-                    key={quarter.id}
-                    className="flex-1 bg-gray-700/50 rounded-lg p-4 border border-gray-600"
+                    key={sectorRanking.sectorId}
+                    className="flex-1 min-w-[200px] bg-gray-700/50 rounded-lg p-4 border border-gray-600"
                   >
                     <div className="flex items-center gap-2 mb-2">
                       <Chip
@@ -310,21 +361,17 @@ const ForecastPhase = () => {
                       >
                         {rank === 1 ? "🥇" : rank === 2 ? "🥈" : "🥉"} {rank}
                         {rank === 1 ? "st" : rank === 2 ? "nd" : "rd"}
+                        {sectorsAtThisRank > 1 && ` (tied)`}
                       </Chip>
-                      {quarter.isActive && (
-                        <Chip color="success" size="sm">
-                          Active
-                        </Chip>
-                      )}
                     </div>
-                    <div className="text-sm text-gray-400">
-                      {sector?.name || "Multiple Sectors"}
+                    <div className="text-sm text-gray-400 mb-1">
+                      {sectorRanking.sectorName}
                     </div>
                     <div className="text-2xl font-bold mt-2">
-                      {quarter.demandCounters}
+                      {sectorRanking.demandCounters}
                     </div>
                     <div className="text-xs text-gray-500 mt-1">
-                      Demand Counters
+                      Total Demand Counters
                     </div>
                     <div className="text-xs text-gray-400 mt-2">
                       Gets {percentage} of economy score
@@ -381,15 +428,76 @@ const ForecastPhase = () => {
               <CardBody className="space-y-4">
                 <div>
                   <div className="text-sm text-gray-400 mb-1">
-                    Shares Committed
+                    Total Shares Committed
                   </div>
                   <div className="text-2xl font-bold">
                     {quarter.totalSharesCommitted}
                   </div>
                 </div>
+                
+                {/* Sector Breakdown */}
+                {(() => {
+                  const breakdown = quarter.sectorBreakdown || [];
+                  
+                  if (breakdown.length > 0) {
+                    return (
+                      <div className="space-y-2 pt-2 border-t border-gray-700">
+                        <div className="text-sm font-semibold text-gray-300 mb-2">
+                          Breakdown by Sector
+                        </div>
+                        {breakdown.map((sectorData) => {
+                          const sector = gameState?.sectors?.find(s => s.id === sectorData.sectorId);
+                          const sectorColor = sector 
+                            ? (sectorColors[sector.sectorName] || "#gray")
+                            : "#gray";
+                          
+                          return (
+                            <div
+                              key={sectorData.sectorId}
+                              className="bg-gray-700/30 rounded p-2 border border-gray-600"
+                            >
+                              <div className="flex items-center justify-between mb-1">
+                                <Chip
+                                  size="sm"
+                                  style={{ backgroundColor: sectorColor }}
+                                >
+                                  {sectorData.sectorName}
+                                </Chip>
+                                <span className="text-xs text-gray-400">
+                                  {sectorData.sharesCommitted} shares
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs text-gray-400">Demand Counters:</span>
+                                <span className="text-sm font-bold text-blue-400">
+                                  {sectorData.demandCounters}
+                                </span>
+                              </div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                = {sectorData.sharesCommitted} ÷ {quarter.shareCost}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  }
+                  // Show message when no commitments yet
+                  if (quarter.totalSharesCommitted === 0) {
+                    return (
+                      <div className="pt-2 border-t border-gray-700">
+                        <div className="text-xs text-gray-500 text-center">
+                          No shares committed yet
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+                
                 <div>
                   <div className="text-sm text-gray-400 mb-1">
-                    Demand Counters
+                    Total Demand Counters
                   </div>
                   <div className="text-2xl font-bold text-blue-400">
                     {quarter.demandCounters}
@@ -398,19 +506,6 @@ const ForecastPhase = () => {
                     = {quarter.totalSharesCommitted} ÷ {quarter.shareCost}
                   </div>
                 </div>
-                {sector && (
-                  <div>
-                    <div className="text-sm text-gray-400 mb-1">Sector</div>
-                    <Chip
-                      size="sm"
-                      style={{
-                        backgroundColor: sectorColors[sector.sectorName] || "#gray",
-                      }}
-                    >
-                      {sector.name}
-                    </Chip>
-                  </div>
-                )}
                 {playerCommitment && (
                   <div className="pt-2 border-t border-gray-700">
                     <div className="text-xs text-gray-400 mb-1">

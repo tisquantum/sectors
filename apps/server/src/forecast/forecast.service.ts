@@ -101,6 +101,50 @@ export class ForecastService {
   }
 
   /**
+   * Get forecast quarters with sector breakdowns (shares committed and demand counters per sector per quarter)
+   */
+  async getForecastQuartersWithSectorBreakdown(gameId: string) {
+    const quarters = await this.prisma.forecastQuarter.findMany({
+      where: { gameId },
+      include: {
+        commitments: {
+          include: {
+            Sector: true,
+          },
+        },
+      },
+      orderBy: { quarterNumber: 'asc' },
+    });
+
+    // Calculate sector breakdowns for each quarter
+    return quarters.map((quarter) => {
+      // Group commitments by sector
+      const sectorBreakdown: Record<string, { sectorId: string; sectorName: string; sharesCommitted: number; demandCounters: number }> = {};
+      
+      for (const commitment of quarter.commitments) {
+        const sectorId = commitment.sectorId;
+        if (!sectorBreakdown[sectorId]) {
+          sectorBreakdown[sectorId] = {
+            sectorId,
+            sectorName: commitment.Sector.name,
+            sharesCommitted: 0,
+            demandCounters: 0,
+          };
+        }
+        sectorBreakdown[sectorId].sharesCommitted += commitment.shareCount;
+        // Calculate demand counters for this commitment: shareCount / quarter.shareCost (rounded down)
+        const contribution = Math.floor(commitment.shareCount / quarter.shareCost);
+        sectorBreakdown[sectorId].demandCounters += contribution;
+      }
+
+      return {
+        ...quarter,
+        sectorBreakdown: Object.values(sectorBreakdown),
+      };
+    });
+  }
+
+  /**
    * Commit shares to a forecast quarter
    */
   async commitSharesToQuarter({
@@ -525,8 +569,9 @@ export class ForecastService {
 
   /**
    * Get sector rankings based on forecast demand counters
-   * Returns array of { sectorId, rank, demandCounters } sorted by rank (1st, 2nd, 3rd, etc.)
-   * Used for worker salary calculations
+   * Returns array of { sectorId, rank, demandCounters, sectorName } sorted by rank (1st, 2nd, 3rd, etc.)
+   * Handles ties - sectors with the same demand counters share the same rank
+   * Used for worker salary calculations and display
    */
   async getForecastRankings(gameId: string) {
     // Get all quarters with their commitments
@@ -542,30 +587,55 @@ export class ForecastService {
     });
 
     // Tally demand counters per sector from all quarters
-    const sectorDemandCounters: Record<string, number> = {};
+    const sectorDemandCounters: Record<string, { counters: number; sectorName: string }> = {};
     
     for (const quarter of quarters) {
       for (const commitment of quarter.commitments) {
         const sectorId = commitment.sectorId;
         if (!sectorDemandCounters[sectorId]) {
-          sectorDemandCounters[sectorId] = 0;
+          sectorDemandCounters[sectorId] = {
+            counters: 0,
+            sectorName: commitment.Sector.name,
+          };
         }
         // Calculate this commitment's contribution to demand counters
         const contribution = Math.floor(commitment.shareCount / quarter.shareCost);
-        sectorDemandCounters[sectorId] += contribution;
+        sectorDemandCounters[sectorId].counters += contribution;
       }
     }
 
-    // Sort sectors by total demand counters (descending) and assign ranks
+    // Sort sectors by total demand counters (descending)
     const sortedSectors = Object.entries(sectorDemandCounters)
-      .sort(([, a], [, b]) => b - a)
-      .map(([sectorId, counters], index) => ({
+      .sort(([, a], [, b]) => b.counters - a.counters)
+      .map(([sectorId, data]) => ({
         sectorId,
-        rank: index + 1,
-        demandCounters: counters,
+        demandCounters: data.counters,
+        sectorName: data.sectorName,
       }));
 
-    return sortedSectors;
+    // Assign ranks, handling ties (sectors with same demand counters share rank)
+    const rankings: Array<{ sectorId: string; rank: number; demandCounters: number; sectorName: string }> = [];
+    let currentRank = 1;
+    
+    for (let i = 0; i < sortedSectors.length; i++) {
+      const sector = sortedSectors[i];
+      
+      // If this sector has the same demand counters as the previous one, it shares the rank
+      if (i > 0 && sortedSectors[i - 1].demandCounters === sector.demandCounters) {
+        rankings.push({
+          ...sector,
+          rank: rankings[i - 1].rank, // Share the previous rank
+        });
+      } else {
+        rankings.push({
+          ...sector,
+          rank: currentRank,
+        });
+        currentRank = i + 2; // Next rank (accounting for potential ties)
+      }
+    }
+
+    return rankings;
   }
 
   /**
