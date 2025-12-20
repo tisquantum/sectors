@@ -336,8 +336,15 @@ export class GameManagementService {
         phase,
         game,
       );
-      // If the modern service handled the phase, we're done
+      // If the modern service handled the phase, check if we need to auto-transition
       if (handled) {
+        // Auto-transition FORECAST_RESOLVE after completion (timerless games)
+        if (phase.name === PhaseName.FORECAST_RESOLVE && game.isTimerless) {
+          await this.handlePhaseTransition({
+            phase,
+            gameId: phase.gameId,
+          });
+        }
         return;
       }
       // Otherwise, fall through to legacy handling

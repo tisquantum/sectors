@@ -46,7 +46,7 @@ interface ForecastQuarter {
 }
 
 const ForecastPhase = () => {
-  const { gameId, authPlayer, currentTurn, gameState, playersWithShares } = useGame();
+  const { gameId, authPlayer, currentTurn, gameState, playersWithShares, currentPhase } = useGame();
   const [selectedQuarter, setSelectedQuarter] = useState<string | null>(null);
   const [selectedSector, setSelectedSector] = useState<string | null>(null);
   const [selectedShares, setSelectedShares] = useState<string[]>([]);
@@ -88,6 +88,15 @@ const ForecastPhase = () => {
       enabled: !!gameId && !!currentTurn?.id && !!authPlayer?.id,
     }
   );
+
+  // Count commitments in current phase (limit: 2 per phase)
+  const commitmentsInCurrentPhase = React.useMemo(() => {
+    if (!playerCommitments || !currentPhase?.id) return [];
+    return playerCommitments.filter(c => c.phaseId === currentPhase.id);
+  }, [playerCommitments, currentPhase?.id]);
+
+  const commitmentsRemaining = 2 - commitmentsInCurrentPhase.length;
+  const canMakeMoreCommitments = commitmentsRemaining > 0;
 
   // Commit shares mutation
   const commitSharesMutation = trpc.forecast.commitShares.useMutation({
@@ -143,7 +152,13 @@ const ForecastPhase = () => {
       (c) => c.quarterId === quarterId
     );
     if (existingCommitment) {
-      toast.error("You have already committed to this quarter this turn");
+      toast.error("You have already committed to this quarter this turn. You cannot commit to the same quarter again until the next turn.");
+      return;
+    }
+
+    // Check if player has reached the 2 commitment limit for this phase
+    if (!canMakeMoreCommitments) {
+      toast.error("You have reached the 2 commitment limit for this phase.");
       return;
     }
 
@@ -246,6 +261,16 @@ const ForecastPhase = () => {
             Commit shares from one sector to forecast quarters. Each quarter has
             a different share cost.
           </p>
+          {currentPhase && (
+            <div className="mt-2">
+              <Chip 
+                color={canMakeMoreCommitments ? "primary" : "warning"} 
+                size="sm"
+              >
+                {commitmentsRemaining} commitment{commitmentsRemaining !== 1 ? 's' : ''} remaining this phase
+              </Chip>
+            </div>
+          )}
         </div>
       </div>
 
@@ -323,6 +348,7 @@ const ForecastPhase = () => {
           );
           const canCommit =
             !playerCommitment &&
+            canMakeMoreCommitments &&
             authPlayer?.id &&
             sharesBySector &&
             Object.keys(sharesBySector).length > 0;
@@ -408,7 +434,9 @@ const ForecastPhase = () => {
                 )}
                 {!canCommit && !playerCommitment && (
                   <div className="text-xs text-gray-500 text-center">
-                    No shares available to commit
+                    {!canMakeMoreCommitments 
+                      ? "You have reached the 2 commitment limit for this phase"
+                      : "No shares available to commit"}
                   </div>
                 )}
               </CardBody>

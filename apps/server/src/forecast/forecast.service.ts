@@ -120,6 +120,40 @@ export class ForecastService {
     quarterId: string;
     shareIds: string[];
   }) {
+    // Get the phase to check its name
+    const phase = await this.prisma.phase.findUnique({
+      where: { id: phaseId },
+    });
+
+    if (!phase) {
+      throw new Error('Phase not found');
+    }
+
+    // Check if this is a forecast commitment phase
+    const isForecastCommitmentPhase = 
+      phase.name === 'FORECAST_COMMITMENT_START_TURN' || 
+      phase.name === 'FORECAST_COMMITMENT_END_TURN';
+
+    if (!isForecastCommitmentPhase) {
+      throw new Error('Can only commit shares during forecast commitment phases');
+    }
+
+    // Count commitments made in this specific phase (limit: 2 per phase)
+    const commitmentsInThisPhase = await this.prisma.forecastCommitment.findMany({
+      where: {
+        gameId,
+        gameTurnId,
+        playerId,
+        phaseId,
+      },
+    });
+
+    if (commitmentsInThisPhase.length >= 2) {
+      throw new Error(
+        `You can only make 2 commitments per phase. You have already made ${commitmentsInThisPhase.length} commitment(s) in this phase.`,
+      );
+    }
+
     // Validate shares belong to player and are from the specified sector
     const shares = await this.prisma.share.findMany({
       where: {
@@ -147,21 +181,18 @@ export class ForecastService {
     }
 
     // Check if player already committed to this quarter this turn
-    const existingCommitment = await this.prisma.forecastCommitment.findUnique(
-      {
-        where: {
-          playerId_quarterId_gameTurnId: {
-            playerId,
-            quarterId,
-            gameTurnId,
-          },
-        },
+    // (prevents committing to the same quarter twice in the same turn)
+    const existingCommitment = await this.prisma.forecastCommitment.findFirst({
+      where: {
+        playerId,
+        quarterId,
+        gameTurnId,
       },
-    );
+    });
 
     if (existingCommitment) {
       throw new Error(
-        'Player has already committed to this quarter this turn',
+        'You have already committed to this quarter this turn. You cannot commit to the same quarter again until the next turn.',
       );
     }
 
@@ -412,6 +443,11 @@ export class ForecastService {
     // Clear old commitments (they've moved to history)
     await this.prisma.forecastCommitment.deleteMany({
       where: { gameId },
+    });
+
+    await this.gameLogService.createGameLog({
+      game: { connect: { id: gameId } },
+      content: 'Shifted quarters left: Q1→Active, Q2→Q1, Q3→Q2, Q4→Q3, new Q4 created',
     });
 
     // Uncommit all shares
