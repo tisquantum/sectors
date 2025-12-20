@@ -132,6 +132,12 @@ export function friendlyPhaseName(name: PhaseName | undefined): string {
       return "Resolve Modern Operations";
     case PhaseName.RUSTED_FACTORY_UPGRADE:
       return "Rusted Factory Upgrade";
+    case PhaseName.FORECAST_COMMITMENT_START_TURN:
+      return "Forecast Commitment Start Turn";
+    case PhaseName.FORECAST_COMMITMENT_END_TURN:
+      return "Forecast Commitment End Turn";
+    case PhaseName.FORECAST_RESOLVE:
+      return "Forecast Resolve";
     default:
       return "Unknown Phase";
   }

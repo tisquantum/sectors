@@ -460,7 +460,7 @@ const Game = ({ gameId }: { gameId: string }) => {
                 <AnimatePresence mode="wait">
                   {currentView === "action" && (
                     <motion.div
-                      key={`action-${currentRoundData?.phase.name || currentPhase?.name || 'default'}`}
+                      key={`action-${currentRoundData?.phase.id || currentPhase?.id || 'loading'}`}
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -20 }}
