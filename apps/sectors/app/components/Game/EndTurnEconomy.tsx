@@ -26,6 +26,7 @@ import { sortSectorIdsByPriority } from "@server/data/helpers";
 import { WorkforceTrack, SectorResearchTracks } from "./Tracks";
 import CapitalGains from "./CapitalGains";
 import Divestment from "./Divestment";
+import ForecastPhase from "./ForecastPhase";
 
 const EndTurnEconomy = () => {
   const { currentPhase, gameState, gameId } = useGame();
@@ -235,6 +236,12 @@ const EndTurnEconomy = () => {
         <Tab key="divestment" title="Divestment">
           <div className="w-full p-4">
             <Divestment />
+          </div>
+        </Tab>
+        
+        <Tab key="forecast" title="FORECAST">
+          <div className="w-full p-4">
+            <ForecastPhase />
           </div>
         </Tab>
       </Tabs>
