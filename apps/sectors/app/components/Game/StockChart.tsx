@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import {
   Divider,
@@ -9,6 +9,7 @@ import {
   Tab,
   Tabs,
   useDisclosure,
+  Switch,
 } from "@nextui-org/react";
 import {
   stockGridPrices,
@@ -29,6 +30,7 @@ import {
 } from "@remixicon/react";
 import "./StockChart.css";
 import CompanyInfo from "../Company/CompanyInfo";
+import CompanyInfoV2 from "../Company/CompanyV2/CompanyInfoV2";
 
 interface ChartData {
   phaseId: string;
@@ -117,6 +119,8 @@ const TierSharesFulfilled = ({
 
 const StockChart = () => {
   const { gameId, currentPhase } = useGame();
+  const gridRef = useRef<HTMLDivElement>(null);
+  const cellRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const {
     data: companies,
     isLoading,
@@ -128,6 +132,7 @@ const StockChart = () => {
     CompanyWithSectorAndStockHistory | undefined
   >(undefined);
   const [chartData, setChartData] = useState<ChartData[] | null>(null);
+  const [showOversoldLines, setShowOversoldLines] = useState<boolean>(false);
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
   useEffect(() => {
     if (selectedCompany) {
@@ -259,7 +264,24 @@ const StockChart = () => {
         <Tab key="stock-grid" title="Stock Grid">
           <>
             <Legend />
-            <div className="grid grid-cols-1 @sm:grid-cols-3 @lg:grid-cols-5 @3xl:grid-cols-7 @5xl:grid-cols-8 @7xl:grid-cols-10 gap-3 p-4">
+            <div className="flex items-center gap-4 p-4">
+              <Switch
+                isSelected={showOversoldLines}
+                onValueChange={setShowOversoldLines}
+                color="danger"
+              >
+                Show Oversold Impact
+              </Switch>
+              {showOversoldLines && (
+                <span className="text-sm text-gray-400">
+                  Red lines show price drop due to oversold shares
+                </span>
+              )}
+            </div>
+            <div
+              ref={gridRef}
+              className="relative grid grid-cols-1 @sm:grid-cols-3 @lg:grid-cols-5 @3xl:grid-cols-7 @5xl:grid-cols-8 @7xl:grid-cols-10 gap-3 p-4"
+            >
               {stockGridPrices.map((value, index) => {
                 const companiesOnCell = companies.filter(
                   (company) => company.currentStockPrice === value
@@ -270,6 +292,11 @@ const StockChart = () => {
                 return (
                   <div
                     key={index}
+                    ref={(el) => {
+                      if (el) {
+                        cellRefs.current.set(value, el);
+                      }
+                    }}
                     className={`relative ring-1 p-2 text-center min-h-[81px] ${backgroundColor} ${
                       value === 0 ? "text-red-500 font-bold" : ""
                     }`}
@@ -352,6 +379,125 @@ const StockChart = () => {
                   </div>
                 );
               })}
+              {/* Oversold lines overlay - horizontal lines through grid */}
+              {showOversoldLines && gridRef.current && (
+                <svg
+                  className="absolute inset-0 pointer-events-none"
+                  style={{ zIndex: 10, width: '100%', height: '100%' }}
+                >
+                  {companies
+                    .filter(
+                      (company) =>
+                        (company as any).oversoldShares &&
+                        (company as any).oversoldShares > 0 &&
+                        company.currentStockPrice !== null &&
+                        company.currentStockPrice !== undefined
+                    )
+                    .flatMap((company) => {
+                      const currentPrice = company.currentStockPrice || 0;
+                      const oversoldAmount = (company as any).oversoldShares || 0;
+                      
+                      // Find the price without oversold (current price + oversold steps)
+                      const currentPriceIndex = stockGridPrices.indexOf(currentPrice);
+                      if (currentPriceIndex === -1) return [];
+                      
+                      // Calculate theoretical price without oversold
+                      const theoreticalPriceIndex = Math.min(
+                        currentPriceIndex + oversoldAmount,
+                        stockGridPrices.length - 1
+                      );
+                      const theoreticalPrice = stockGridPrices[theoreticalPriceIndex];
+                      
+                      if (currentPrice === theoreticalPrice) return []; // No line needed if same position
+                      
+                      // Get actual DOM positions for start and end
+                      const currentCell = cellRefs.current.get(currentPrice);
+                      const theoreticalCell = cellRefs.current.get(theoreticalPrice);
+                      
+                      if (!currentCell || !theoreticalCell) return [];
+                      
+                      const gridRect = gridRef.current.getBoundingClientRect();
+                      const currentRect = currentCell.getBoundingClientRect();
+                      const theoreticalRect = theoreticalCell.getBoundingClientRect();
+                      
+                      // Calculate all prices between current and theoretical
+                      const pricesToDraw = [];
+                      for (let i = currentPriceIndex; i <= theoreticalPriceIndex; i++) {
+                        pricesToDraw.push(stockGridPrices[i]);
+                      }
+                      
+                      // Draw horizontal line segments through each cell
+                      const segments: JSX.Element[] = [];
+                      for (let i = 0; i < pricesToDraw.length; i++) {
+                        const price = pricesToDraw[i];
+                        const cell = cellRefs.current.get(price);
+                        if (!cell) continue;
+                        
+                        const cellRect = cell.getBoundingClientRect();
+                        const cellTop = cellRect.top - gridRect.top;
+                        const cellBottom = cellRect.bottom - gridRect.top;
+                        const cellLeft = cellRect.left - gridRect.left;
+                        const cellRight = cellRect.right - gridRect.left;
+                        
+                        // Calculate horizontal line Y position (middle of cell)
+                        const lineY = cellTop + cellRect.height / 2;
+                        
+                        // Determine start and end X for this segment
+                        let startX: number;
+                        let endX: number;
+                        
+                        if (i === 0) {
+                          // First segment starts from current cell center
+                          startX = cellLeft + cellRect.width / 2;
+                        } else {
+                          // Subsequent segments start from left edge
+                          startX = cellLeft;
+                        }
+                        
+                        if (i === pricesToDraw.length - 1) {
+                          // Last segment ends at theoretical cell center
+                          endX = cellLeft + cellRect.width / 2;
+                        } else {
+                          // Intermediate segments go to right edge
+                          endX = cellRight;
+                        }
+                        
+                        // Only draw if startX < endX (line goes left to right)
+                        if (startX < endX) {
+                          segments.push(
+                            <line
+                              key={`${company.id}-${i}`}
+                              x1={startX}
+                              y1={lineY}
+                              x2={endX}
+                              y2={lineY}
+                              stroke="#ef4444"
+                              strokeWidth="12"
+                              strokeLinecap="round"
+                            />
+                          );
+                        }
+                      }
+                      
+                      // Add arrow at the start (theoretical price) pointing LEFT to show price moved DOWN
+                      if (segments.length > 0 && theoreticalCell) {
+                        const theoreticalRect = theoreticalCell.getBoundingClientRect();
+                        const arrowY = theoreticalRect.top - gridRect.top + theoreticalRect.height / 2;
+                        const arrowX = theoreticalRect.left - gridRect.left + theoreticalRect.width / 2;
+                        
+                        segments.push(
+                          <polygon
+                            key={`${company.id}-arrow`}
+                            points={`${arrowX},${arrowY - 6} ${arrowX - 10},${arrowY} ${arrowX},${arrowY + 6}`}
+                            fill="#ef4444"
+                          />
+                        );
+                      }
+                      
+                      return segments;
+                    })}
+                </svg>
+              )}
             </div>
           </>
         </Tab>
@@ -377,7 +523,7 @@ const StockChart = () => {
               <>
                 <ModalHeader>
                   <div className="flex flex-col">
-                    <CompanyInfo companyId={selectedCompany.id} />
+                    <CompanyInfoV2 companyId={selectedCompany.id} isMinimal={false} />
                   </div>
                 </ModalHeader>
                 <ModalBody>

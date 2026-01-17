@@ -151,9 +151,23 @@ export default (trpc: TrpcService, ctx: Context) =>
         const researchStage = Math.min(Math.floor(sector.researchMarker / 5) + 1, 4);
         const researchCost = RESEARCH_COSTS_BY_PHASE[researchStage - 1] || RESEARCH_COSTS_BY_PHASE[0];
 
-        // Check if company can afford research
-        if (company.cashOnHand < researchCost) {
-          throw new Error(`Insufficient funds. Research costs $${researchCost} but company has $${company.cashOnHand}.`);
+        // Get pending research orders for this company in this turn
+        const pendingResearchOrders = await ctx.prismaService.researchOrder.findMany({
+          where: {
+            companyId: input.companyId,
+            gameId: input.gameId,
+            gameTurnId: game.currentTurn,
+            researchProgressGain: null, // Only unresolved orders
+          },
+        });
+        
+        // Calculate total cost of pending research orders
+        const totalPendingResearchCost = pendingResearchOrders.reduce((sum, order) => sum + order.cost, 0);
+        
+        // Check if company can afford this research plus all pending research orders
+        const totalCost = totalPendingResearchCost + researchCost;
+        if (company.cashOnHand < totalCost) {
+          throw new Error(`Insufficient funds. This research costs $${researchCost}, and you have $${totalPendingResearchCost} in pending research orders. Total needed: $${totalCost}, but company only has $${company.cashOnHand}.`);
         }
 
         // Create research order (will be resolved during RESOLVE_MODERN_OPERATIONS phase)

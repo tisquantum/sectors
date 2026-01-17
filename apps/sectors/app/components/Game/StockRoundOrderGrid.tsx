@@ -1,7 +1,8 @@
 "use client";
 
-import { Button, Tab, Tabs } from "@nextui-org/react";
-import React, { useEffect, useRef, useState } from "react";
+import { Button, Tab, Tabs, Badge, Tooltip, Chip } from "@nextui-org/react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
+import { RiErrorWarningFill } from "@remixicon/react";
 import {
   isCurrentPhaseInteractive,
   organizeCompaniesBySector,
@@ -156,6 +157,31 @@ const StockRoundOrderGrid = ({
   const [selectedCompanyOrder, setSelectedCompanyOrder] = useState<
     { company: CompanyWithRelations; isIpo: boolean } | undefined
   >(undefined);
+
+  // Calculate chart data with useMemo - MUST be before any early returns (Rules of Hooks)
+  const chartData = useMemo(() => {
+    if (!selectedCompanyOrder) return [];
+    
+    const stockHistory = selectedCompanyOrder.company.StockHistory.filter(
+      (stockHistory) => stockHistory.price !== 0
+    ).map((stockHistory, index) => ({
+      phaseId: `${index + 1} ${stockHistory.Phase.name}`,
+      stockPrice: stockHistory.price,
+      stockAction: stockHistory.action,
+      steps: stockHistory.stepsMoved,
+    }));
+    
+    // Add oversold price limit line if company is oversold
+    // (currently just returning stockHistory, but structure is ready for future enhancement)
+    if ((selectedCompanyOrder.company as any).oversoldShares && (selectedCompanyOrder.company as any).oversoldShares > 0) {
+      // Future: Could add a reference line or marker here
+      return stockHistory;
+    }
+    
+    return stockHistory;
+  }, [selectedCompanyOrder]);
+
+  // Early returns must come AFTER all hooks
   if (isLoading) return <div>Loading...</div>;
   if (isLoadingPhases) return <div>Loading...</div>;
   if (isLoadingCompanyAwardTracks) return <div>Loading...</div>;
@@ -189,6 +215,7 @@ const StockRoundOrderGrid = ({
   const valueFormatter = function (number: number) {
     return "$ " + new Intl.NumberFormat("us").format(number).toString();
   };
+
   return (
     <>
       <Tabs>
@@ -278,20 +305,38 @@ const StockRoundOrderGrid = ({
           {selectedCompanyOrder && (
             <div className="h-full relative bg-slate-900 p-4 overflow-y-scroll scrollbar">
               <div className="flex flex-col justify-center items-center">
-                <h2 className="text-white text-2xl font-bold mb-2">
-                  {selectedCompanyOrder.isIpo
-                    ? `IPO Order ${
-                        selectedCompanyOrder.company.Share.filter(
-                          (share) => share.location === ShareLocation.IPO
-                        ).length
-                      }`
-                    : `Open Market Order ${
-                        selectedCompanyOrder.company.Share.filter(
-                          (share) =>
-                            share.location === ShareLocation.OPEN_MARKET
-                        ).length
-                      }`}
-                </h2>
+                <div className="flex items-center gap-2 mb-2">
+                  <h2 className="text-white text-2xl font-bold">
+                    {selectedCompanyOrder.isIpo
+                      ? `IPO Order ${
+                          selectedCompanyOrder.company.Share.filter(
+                            (share) => share.location === ShareLocation.IPO
+                          ).length
+                        }`
+                      : `Open Market Order ${
+                          selectedCompanyOrder.company.Share.filter(
+                            (share) =>
+                              share.location === ShareLocation.OPEN_MARKET
+                          ).length
+                        }`}
+                  </h2>
+                  {(selectedCompanyOrder.company as any).oversoldShares &&
+                    (selectedCompanyOrder.company as any).oversoldShares > 0 && (
+                      <Tooltip
+                        content={`Company is oversold by ${(selectedCompanyOrder.company as any).oversoldShares} shares. Market cap reduced by ${(selectedCompanyOrder.company as any).oversoldShares} steps from normal maximum.`}
+                        placement="top"
+                      >
+                          <Chip
+                            color="danger"
+                            variant="flat"
+                            startContent={<RiErrorWarningFill className="h-4 w-4" />}
+                            className="cursor-pointer"
+                          >
+                            {(selectedCompanyOrder.company as any).oversoldShares} Oversold
+                          </Chip>
+                        </Tooltip>
+                      )}
+                    </div>
                 {currentPhase.name === PhaseName.STOCK_ACTION_ORDER && (
                   <PlayerOrderInput
                     currentOrder={selectedCompanyOrder.company}
@@ -331,17 +376,30 @@ const StockRoundOrderGrid = ({
                     </div>
                   </Tab>
                   <Tab key="drawer-stock-chart" title="Stock Chart">
-                    <div className="h-96 w-80">
+                    <div className="h-96 w-80 flex flex-col">
+                      {(selectedCompanyOrder.company as any).oversoldShares &&
+                        (selectedCompanyOrder.company as any).oversoldShares > 0 && (
+                          <div className="mb-2 p-2 bg-red-900/30 rounded-md border border-red-500/50">
+                            <div className="text-xs text-red-300 font-semibold mb-1 flex items-center gap-1">
+                              <RiErrorWarningFill className="h-3 w-3" />
+                              Oversold Impact
+                            </div>
+                            <div className="text-xs text-red-200">
+                              Company is oversold by {(selectedCompanyOrder.company as any).oversoldShares} shares
+                            </div>
+                            <div className="text-xs text-red-200 mt-1">
+                              Market cap reduced by {(selectedCompanyOrder.company as any).oversoldShares} steps
+                            </div>
+                            <div className="text-xs text-gray-400 mt-1">
+                              Maximum price limited to: $
+                              {600 - (selectedCompanyOrder.company as any).oversoldShares} 
+                              {" "}(normal max: $600 - oversold: {(selectedCompanyOrder.company as any).oversoldShares})
+                            </div>
+                          </div>
+                        )}
                       <LineChart
                         className="w-full"
-                        data={selectedCompanyOrder.company.StockHistory.filter(
-                          (stockHistory) => stockHistory.price !== 0
-                        ).map((stockHistory, index) => ({
-                          phaseId: `${index + 1} ${stockHistory.Phase.name}`,
-                          stockPrice: stockHistory.price,
-                          stockAction: stockHistory.action,
-                          steps: stockHistory.stepsMoved,
-                        }))}
+                        data={chartData}
                         index="phaseId"
                         categories={["stockPrice"]}
                         yAxisLabel="Stock Price"

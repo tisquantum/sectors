@@ -50,7 +50,7 @@ const ShareHolders = ({
   }, {} as { [key: string]: ShareWithRelations[] });
 
   return (
-    <div className="flex flex-wrap justify-start gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       <ShareComponent
         name="OM"
         quantity={shareGroups[ShareLocation.OPEN_MARKET]?.length || 0}
@@ -62,7 +62,7 @@ const ShareHolders = ({
       {isMinimal ? (
         <Popover>
           <PopoverTrigger>
-            <div className="flex justify-center items-center cursor-pointer">
+            <div className="flex items-center cursor-pointer">
               <ShareComponent
                 name="Player"
                 icon={<RiUserFill className={"text-slate-800"} size={18} />}

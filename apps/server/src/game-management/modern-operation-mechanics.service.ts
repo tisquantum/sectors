@@ -1612,6 +1612,26 @@ export class ModernOperationMechanicsService {
         researchProgressGain,
       });
 
+      // Create transaction record for research action
+      try {
+        await this.transactionService.createTransactionEntityToEntity({
+          gameId: phase.gameId,
+          gameTurnId: phase.gameTurnId,
+          phaseId: phase.id,
+          fromEntityType: EntityType.COMPANY,
+          toEntityType: EntityType.BANK,
+          fromEntityId: company.entityId || undefined,
+          amount: order.cost,
+          transactionType: TransactionType.RESEARCH,
+          fromCompanyId: company.id,
+          companyInvolvedId: company.id,
+          description: `Research action: $${order.cost} (Progress: +${researchProgressGain})`,
+        });
+      } catch (error) {
+        // Log error but don't fail the research resolution
+        console.error('Failed to create research transaction:', error);
+      }
+
       // Create game log entry
       researchGameLogEntries.push({
         gameId: phase.gameId,

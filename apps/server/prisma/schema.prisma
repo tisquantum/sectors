@@ -273,6 +273,7 @@ model Company {
   factoryProductions        FactoryProduction[]
   ceo                       Player?                    @relation("CompanyCEO", fields: [ceoId], references: [id])
   ceoId                     String?
+  oversoldShares            Int                        @default(0) // Number of shares oversold (exceeding available shares in IPO/OPEN_MARKET)
 }
 
 enum CompanyTier {

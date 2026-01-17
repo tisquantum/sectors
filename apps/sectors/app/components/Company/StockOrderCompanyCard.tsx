@@ -23,7 +23,8 @@ import PlayerOrderInput from "../Player/PlayerOrderInput";
 import { set } from "lodash";
 import { motion, AnimatePresence } from "framer-motion";
 import { Drawer } from "vaul";
-import { RiCurrencyFill } from "@remixicon/react";
+import { RiCurrencyFill, RiErrorWarningFill } from "@remixicon/react";
+import { Badge, Tooltip } from "@nextui-org/react";
 import { useGame } from "../Game/GameContext";
 import CompanyInfoV2 from "./CompanyV2/CompanyInfoV2";
 
@@ -173,14 +174,39 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
   };
   isRevealRound = !gameState?.playerOrdersConcealed || isRevealRound;
 
+  const isOversold = company.oversoldShares && company.oversoldShares > 0;
+  console.log('company', company);
   return (
     <Card
       className={`z-3 max-w-[300px] ${
         company.status === "INACTIVE" ? "inactive-stripes" : ""
-      }`}
+      } ${isOversold ? "ring-2 ring-red-500" : ""}`}
     >
       <CardHeader className="bg-gray-950">
         <div className="flex flex-col w-full">
+          <div className="flex items-center justify-between mb-2">
+            {isOversold && (
+              <Tooltip
+                content={`Company is oversold by ${company.oversoldShares} shares. Market cap reduced by ${(company as any).oversoldShares} steps.`}
+                placement="top"
+              >
+                <div className="flex items-center gap-2 cursor-pointer">
+                  <div className="relative">
+                    <RiErrorWarningFill className="h-5 w-5 text-red-400" />
+                    <Badge
+                      children={company.oversoldShares.toString()}
+                      content={company.oversoldShares.toString()}
+                      color="danger"
+                      size="sm"
+                      variant="solid"
+                      className="absolute -top-2 -right-2 min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-bold"
+                    />
+                  </div>
+                  <span className="text-xs font-bold text-red-400">OVERSOLD</span>
+                </div>
+              </Tooltip>
+            )}
+          </div>
           {operationMechanicsVersion == OperationMechanicsVersion.MODERN ? (
             <CompanyInfoV2 companyId={company.id} showBarChart />
           ) : (

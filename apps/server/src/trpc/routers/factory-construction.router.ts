@@ -102,6 +102,56 @@ export const factoryConstructionRouter = (trpc: TrpcService, ctx: Context) => ro
         throw new Error('Resource types exceed the factory size');
       }
 
+      // Calculate factory construction cost to validate cash
+      // Get current resource prices
+      const resources = await ctx.prismaService.resource.findMany({
+        where: { gameId: input.gameId },
+      });
+      const resourcePriceMap = new Map(resources.map(r => [r.type, r.price]));
+      
+      // Calculate total resource cost (sum of current prices, one of each resource type)
+      let totalResourceCost = 0;
+      for (const resourceType of resourceTypes) {
+        const price = resourcePriceMap.get(resourceType) || 0;
+        totalResourceCost += price;
+      }
+      
+      // Factory construction cost = (sum of resource prices) × factory size + $100
+      const factorySizeNumber = getNumberForFactorySize(factorySize);
+      const constructionCost = (totalResourceCost * factorySizeNumber) + 100;
+      
+      // Get pending factory construction orders for this company in this turn
+      const game = await ctx.gamesService.game({ id: input.gameId });
+      if (!game?.currentTurn) {
+        throw new Error('Game has no current turn');
+      }
+      
+      const pendingOrders = await ctx.factoryConstructionOrderService.factoryConstructionOrdersWithRelations({
+        where: {
+          companyId: input.companyId,
+          gameId: input.gameId,
+          gameTurnId: game.currentTurn,
+        },
+      });
+      
+      // Calculate total cost of pending orders (using same calculation)
+      let totalPendingCost = 0;
+      for (const order of pendingOrders) {
+        let orderResourceCost = 0;
+        for (const resourceType of order.resourceTypes) {
+          const price = resourcePriceMap.get(resourceType) || 0;
+          orderResourceCost += price;
+        }
+        const orderFactorySizeNumber = getNumberForFactorySize(order.size);
+        totalPendingCost += (orderResourceCost * orderFactorySizeNumber) + 100;
+      }
+      
+      // Check if company can afford this order plus all pending orders
+      const totalCost = totalPendingCost + constructionCost;
+      if (company.cashOnHand < totalCost) {
+        throw new Error(`Insufficient funds. This factory costs $${constructionCost}, and you have $${totalPendingCost} in pending orders. Total needed: $${totalCost}, but company only has $${company.cashOnHand}.`);
+      }
+
       // Create the factory construction order
       return ctx.factoryConstructionService.createOrder({
         ...input,

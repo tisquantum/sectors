@@ -8202,6 +8202,7 @@ export class GameManagementService {
             game,
             this.prisma,
             game.distributionStrategy,
+            phase,
           );
         } else {
           await this.distributeShares(
@@ -8231,6 +8232,7 @@ export class GameManagementService {
             game,
             this.prisma,
             game.distributionStrategy,
+            phase,
           );
         } else {
           await this.distributeShares(
@@ -8433,17 +8435,16 @@ export class GameManagementService {
     orderStatusUpdates: any[],
     gameLogEntries: any[],
     playersWithShares: PlayerWithShares[], //we need this reference because we are now actively checking stock ownership and cash on hand
-  ): { currentShareIndex: number; remainingShares: number } {
+  ): { currentShareIndex: number; remainingShares: number; oversoldShares: number; oversoldShareCreations: Array<{ companyId: string; gameId: string; price: number; location: ShareLocation; playerId: string; quantity: number }> } {
     // CRITICAL: Track pending cash decrements per player to prevent over-spending
     const pendingCashDecrements = new Map<string, number>();
+    let oversoldShares = 0;
+    const oversoldShareCreations: Array<{ companyId: string; gameId: string; price: number; location: ShareLocation; playerId: string; quantity: number }> = [];
     
     for (const order of sortedOrders) {
-      if (remainingShares <= 0) {
-        orderStatusUpdates.push({
-          where: { id: order.id },
-          data: { orderStatus: OrderStatus.REJECTED },
-        });
-      } else {
+      // Allow orders even when remainingShares <= 0 (oversold scenario)
+      // We still need to check other constraints like ownership percentage and cash
+      {
         //TODO: I don't think we need this since we're updating shares per phase now
         // const shareUpdatesForPlayerAndCompany = shareUpdates.filter(
         //   (update) =>
@@ -8494,22 +8495,16 @@ export class GameManagementService {
             });
           } else {
             const sharesToGive = order.quantity || 0;
-            if (sharesToGive > remainingShares) {
-              // Reject the order if it cannot be fully fulfilled
-              orderStatusUpdates.push({
-                where: { id: order.id },
-                data: { orderStatus: OrderStatus.REJECTED },
-              });
-              gameLogEntries.push({
-                game: { connect: { id: order.gameId } },
-                content: `Player ${order.Player.nickname} was not able to purchase shares of ${order.Company.name} from ${order.location} due to their not being enough shares available.`,
-              });
-            } else {
+            const sharesAvailable = Math.min(sharesToGive, remainingShares);
+            const oversoldForThisOrder = Math.max(0, sharesToGive - remainingShares);
+            
+            // Process available shares first
+            if (sharesAvailable > 0 && currentShareIndex < allAvailableShares.length) {
               const shares = allAvailableShares.slice(
                 currentShareIndex,
-                currentShareIndex + sharesToGive,
+                currentShareIndex + sharesAvailable,
               );
-              currentShareIndex += sharesToGive;
+              currentShareIndex += sharesAvailable;
               shareUpdates.push({
                 companyId: order.companyId,
                 where: { id: { in: shares.map((share) => share.id) } },
@@ -8518,36 +8513,54 @@ export class GameManagementService {
                   playerId: order.playerId,
                 },
               });
-
-              const cashDecrement = sharesToGive * order.value!;
-              playerCashUpdates.push({
-                playerId: order.playerId,
-                decrement: cashDecrement,
-              });
-              
-              // Track pending decrement for this player to validate subsequent orders
-              pendingCashDecrements.set(
-                order.playerId,
-                (pendingCashDecrements.get(order.playerId) || 0) + cashDecrement
-              );
-
-              orderStatusUpdates.push({
-                where: { id: order.id },
-                data: { orderStatus: OrderStatus.FILLED },
-              });
-
-              gameLogEntries.push({
-                game: { connect: { id: order.gameId } },
-                content: `Player ${order.Player.nickname} has bought ${sharesToGive} shares of ${order.Company.name} at $${order.value}`,
-              });
-
-              remainingShares -= sharesToGive;
+              remainingShares -= sharesAvailable;
             }
+            
+            // Handle oversold shares - track them for later creation
+            if (oversoldForThisOrder > 0) {
+              oversoldShares += oversoldForThisOrder;
+              
+              // Track oversold share creation per player
+              oversoldShareCreations.push({
+                companyId: order.companyId,
+                gameId: order.gameId,
+                price: order.value || order.Company.currentStockPrice || 0,
+                location: order.location,
+                playerId: order.playerId,
+                quantity: oversoldForThisOrder,
+              });
+            }
+
+            // Process all shares (available + oversold) for cash and order status
+            const cashDecrement = sharesToGive * order.value!;
+            playerCashUpdates.push({
+              playerId: order.playerId,
+              decrement: cashDecrement,
+            });
+            
+            // Track pending decrement for this player to validate subsequent orders
+            pendingCashDecrements.set(
+              order.playerId,
+              (pendingCashDecrements.get(order.playerId) || 0) + cashDecrement
+            );
+
+            orderStatusUpdates.push({
+              where: { id: order.id },
+              data: { orderStatus: OrderStatus.FILLED },
+            });
+
+            const oversoldMessage = oversoldForThisOrder > 0 
+              ? ` (${oversoldForThisOrder} shares oversold)`
+              : '';
+            gameLogEntries.push({
+              game: { connect: { id: order.gameId } },
+              content: `Player ${order.Player.nickname} has bought ${sharesToGive} shares of ${order.Company.name} at $${order.value}${oversoldMessage}`,
+            });
           }
         }
       }
     }
-    return { currentShareIndex, remainingShares };
+    return { currentShareIndex, remainingShares, oversoldShares, oversoldShareCreations };
   }
 
   private processOrdersPriorityStrategy(
@@ -8587,6 +8600,7 @@ export class GameManagementService {
     game: Game,
     prisma: any,
     strategy: DistributionStrategy,
+    phase?: Phase,
   ) {
     let currentShareIndex = 0;
 
@@ -8653,6 +8667,8 @@ export class GameManagementService {
     const {
       currentShareIndex: _currentShareIndex,
       remainingShares: _remainingShares,
+      oversoldShares: _oversoldShares,
+      oversoldShareCreations: _oversoldShareCreations,
     } = this.processBidOrdersBidStrategy(
       sortedOrders,
       remainingShares,
@@ -8666,6 +8682,90 @@ export class GameManagementService {
     );
     currentShareIndex = _currentShareIndex;
     remainingShares = _remainingShares;
+    
+    // Create oversold shares and assign them directly to players
+    if (_oversoldShares > 0 && _oversoldShareCreations.length > 0) {
+      const oversoldSharesToCreate: Array<{
+        price: number;
+        location: ShareLocation;
+        companyId: string;
+        gameId: string;
+        playerId: string;
+      }> = [];
+      
+      // Group oversold shares by company to track total oversold per company
+      const oversoldByCompany = new Map<string, number>();
+      
+      for (const oversold of _oversoldShareCreations) {
+        for (let i = 0; i < oversold.quantity; i++) {
+          oversoldSharesToCreate.push({
+            price: oversold.price,
+            location: ShareLocation.PLAYER, // Oversold shares go directly to players
+            companyId: oversold.companyId,
+            gameId: oversold.gameId,
+            playerId: oversold.playerId,
+          });
+        }
+        
+        // Track total oversold per company
+        const currentOversold = oversoldByCompany.get(oversold.companyId) || 0;
+        oversoldByCompany.set(oversold.companyId, currentOversold + oversold.quantity);
+      }
+      
+      if (oversoldSharesToCreate.length > 0) {
+        await this.shareService.createManyShares(oversoldSharesToCreate);
+        
+        // Update company oversoldShares and adjust market cap
+        for (const [companyId, oversoldAmount] of oversoldByCompany.entries()) {
+          const company = phaseOrders[0].Company;
+          if (company.id === companyId) {
+            // Get current phase for stock price adjustment
+            const currentPhase = phase || await this.phaseService.phase({
+              id: game.currentPhaseId || '',
+            });
+            
+            if (currentPhase) {
+              // Get current company state to check existing oversold
+              const currentCompany = await this.companyService.company({
+                id: companyId,
+              });
+              
+              if (currentCompany) {
+                const previousOversold = currentCompany.oversoldShares || 0;
+                const newOversoldTotal = previousOversold + oversoldAmount;
+                
+                // Update company's oversold shares (add to existing)
+                const updatedCompany = await this.companyService.updateCompany({
+                  where: { id: companyId },
+                  data: {
+                    oversoldShares: newOversoldTotal,
+                  },
+                });
+                
+                // Adjust market cap by moving stock price down (left) by the NEW oversold amount
+                // Only move if there's an increase in oversold
+                if (updatedCompany.currentStockPrice && oversoldAmount > 0) {
+                  await this.stockHistoryService.moveStockPriceDown(
+                    game.id,
+                    companyId,
+                    currentPhase.id,
+                    updatedCompany.currentStockPrice,
+                    oversoldAmount,
+                    StockAction.MARKET_BUY, // Using MARKET_BUY as the action type for oversold
+                  );
+                  
+                  // Add game log entry
+                  gameLogEntries.push({
+                    game: { connect: { id: game.id } },
+                    content: `${company.name} is oversold by ${oversoldAmount} shares (total: ${newOversoldTotal}). Market cap adjusted down by ${oversoldAmount} steps.`,
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
+    }
 
     const _shareUpdates = shareUpdates.map((update) => {
       const { companyId, ...rest } = update;

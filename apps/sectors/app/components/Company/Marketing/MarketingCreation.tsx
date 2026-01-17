@@ -6,7 +6,8 @@ import { ResourceType } from '@/components/Company/Factory/Factory.types';
 import { trpc } from '@sectors/app/trpc';
 import { MarketingCampaignTier } from '@server/prisma/prisma.client';
 import { useGame } from '../../Game/GameContext';
-import { Spinner } from '@nextui-org/react';
+import { Spinner, Popover, PopoverContent, PopoverTrigger } from '@nextui-org/react';
+import { RiInformationLine } from '@remixicon/react';
 
 type CampaignSize = 'CAMPAIGN_I' | 'CAMPAIGN_II' | 'CAMPAIGN_III';
 
@@ -185,15 +186,66 @@ export function MarketingCreation({
 
       <div className="flex justify-around text-center p-2 bg-gray-700/30 rounded-lg">
         <div>
-          <p className="text-sm text-gray-400">Workers</p>
+          <div className="flex items-center justify-center gap-1">
+            <p className="text-sm text-gray-400">Workers</p>
+            <Popover placement="top">
+              <PopoverTrigger>
+                <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer">
+                  <RiInformationLine size={14} />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent>
+                <div className="px-1 py-1 max-w-xs">
+                  <div className="text-small font-semibold mb-1">Workers</div>
+                  <div className="text-small text-default-500">
+                    The number of workers required to operate this marketing campaign. Workers must be available from your company's workforce.
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
           <p className="text-lg font-semibold text-gray-200">{campaignConfig.workers}</p>
         </div>
         <div>
-          <p className="text-sm text-gray-400">Brand Bonus</p>
+          <div className="flex items-center justify-center gap-1">
+            <p className="text-sm text-gray-400">Brand Bonus</p>
+            <Popover placement="top">
+              <PopoverTrigger>
+                <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer">
+                  <RiInformationLine size={14} />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent>
+                <div className="px-1 py-1 max-w-xs">
+                  <div className="text-small font-semibold mb-1">Brand Bonus</div>
+                  <div className="text-small text-default-500">
+                    The brand score bonus provided by this campaign. Brand score decreases the perceived unit price for attraction rating calculations, making your products more attractive to consumers.
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
           <p className="text-lg font-semibold text-green-400">+{campaignConfig.brandBonus}</p>
         </div>
         <div>
-          <p className="text-sm text-gray-400">Campaign Cost</p>
+          <div className="flex items-center justify-center gap-1">
+            <p className="text-sm text-gray-400">Campaign Cost</p>
+            <Popover placement="top">
+              <PopoverTrigger>
+                <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer">
+                  <RiInformationLine size={14} />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent>
+                <div className="px-1 py-1 max-w-xs">
+                  <div className="text-small font-semibold mb-1">Campaign Cost</div>
+                  <div className="text-small text-default-500">
+                    The upfront cash cost to create this marketing campaign. This cost must be paid from your company's cash on hand.
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
           <p className="text-lg font-semibold text-gray-200">${totalCost}</p>
         </div>
       </div>

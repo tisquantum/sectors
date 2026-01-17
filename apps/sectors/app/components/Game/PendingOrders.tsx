@@ -47,6 +47,7 @@ import OptionContract from "./OptionContract";
 import { useEffect, useMemo } from "react";
 import OrderChipChitWithPlayer from "./OrderChipChitWithPlayer";
 import CompanyInfo from "../Company/CompanyInfo";
+import CompanyInfoV2 from "../Company/CompanyV2/CompanyInfoV2";
 
 const containerVariants = {
   hidden: { opacity: 0, y: -20 }, // Defines the initial state of the component: invisible and slightly shifted upward
@@ -233,7 +234,7 @@ const PendingMarketOrders = ({
                       </div>
                     </PopoverTrigger>
                     <PopoverContent>
-                      <CompanyInfo companyId={orders[0].companyId} />
+                      <CompanyInfoV2 companyId={orders[0].companyId} />
                     </PopoverContent>
                   </Popover>
                   <div className="flex flex-wrap gap-2">

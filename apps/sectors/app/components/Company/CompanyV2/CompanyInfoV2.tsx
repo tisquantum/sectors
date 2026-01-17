@@ -26,6 +26,7 @@ import {
   RiGovernmentFill,
   RiHandCoinFill,
   RiIncreaseDecreaseFill,
+  RiInformationLine,
   RiPriceTag3Fill,
   RiSailboatFill,
   RiShapesFill,
@@ -159,36 +160,46 @@ const CompanyMoreInfo = ({
           <span>{company.Sector.name}</span>
         </div>
         <div className="flex items-center gap-1">
-          <Tooltip
-            classNames={{ base: baseToolTipStyle }}
-            className={tooltipStyle}
-            content={
-              <p className={tooltipParagraphStyle}>
-                Historical sector demand value. Both consumer distribution and worker salaries are now determined by Forecast rankings (from share commitments to forecast quarters).
-              </p>
-            }
-          >
-            <div className="flex items-center">
-              <RiHandCoinFill size={18} className="ml-2" />
-              <span className="ml-1">
-                {company.Sector.demand + (company.Sector.demandBonus || 0)}
-              </span>
-            </div>
-          </Tooltip>
-          <Tooltip
-            classNames={{ base: baseToolTipStyle }}
-            className={tooltipStyle}
-            content={
-              <p className={tooltipParagraphStyle}>
-                The amount of consumers currently looking to buy in this sector.
-              </p>
-            }
-          >
-            <div className="flex items-center">
-              <RiTeamFill size={18} className="ml-2" />
-              <span className="ml-1">{company.Sector.consumers}</span>
-            </div>
-          </Tooltip>
+          <div className="flex items-center gap-1">
+            <RiHandCoinFill size={18} className="ml-2" />
+            <span className="ml-1">
+              {company.Sector.demand + (company.Sector.demandBonus || 0)}
+            </span>
+            <Popover placement="top">
+              <PopoverTrigger>
+                <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer">
+                  <RiInformationLine size={14} />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent>
+                <div className="px-1 py-1 max-w-xs">
+                  <div className="text-small font-semibold mb-1">Sector Demand</div>
+                  <div className="text-small text-default-500">
+                    Historical sector demand value. Both consumer distribution and worker salaries are now determined by Forecast rankings (from share commitments to forecast quarters).
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+          <div className="flex items-center gap-1">
+            <RiTeamFill size={18} className="ml-2" />
+            <span className="ml-1">{company.Sector.consumers}</span>
+            <Popover placement="top">
+              <PopoverTrigger>
+                <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer">
+                  <RiInformationLine size={14} />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent>
+                <div className="px-1 py-1 max-w-xs">
+                  <div className="text-small font-semibold mb-1">Consumers</div>
+                  <div className="text-small text-default-500">
+                    The amount of consumers currently looking to buy in this sector.
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
       </div>
       <ShareHolders companyId={company.id} isMinimal/>
@@ -349,38 +360,22 @@ const CompanyInfoV2 = ({
           <span>{company.name}</span>
           <div className="flex gap-1">
             <span>{company.stockSymbol}</span>
-            <Tooltip
-              classNames={{ base: baseToolTipStyle }}
-              className={tooltipStyle}
-              content={
-                <p className={tooltipParagraphStyle}>The current stock price</p>
-              }
-            >
-              <Popover>
-                <PopoverTrigger>
-                  <div className="flex items-center gap-1 cursor-pointer">
-                    <RiFundsFill size={20} />
-                    <span>${company.currentStockPrice}</span>
-                  </div>
-                </PopoverTrigger>
-                <PopoverContent>
-                  <CompanyLineChart companyId={company.id} />
-                </PopoverContent>
-              </Popover>
-            </Tooltip>
+            <Popover>
+              <PopoverTrigger>
+                <div className="flex items-center gap-1 cursor-pointer">
+                  <RiFundsFill size={20} />
+                  <span>${company.currentStockPrice}</span>
+                </div>
+              </PopoverTrigger>
+              <PopoverContent>
+                <CompanyLineChart companyId={company.id} />
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
 
         <div className="flex gap-1 flex-wrap">
-          <Tooltip
-            classNames={{ base: baseToolTipStyle }}
-            className={tooltipStyle}
-            content={
-              <p className={tooltipParagraphStyle}>
-                The company status. INACTIVE companies have not yet floated.
-              </p>
-            }
-          >
+          <div className="flex items-center gap-1">
             <span
               className={
                 company.status == CompanyStatus.ACTIVE
@@ -392,18 +387,25 @@ const CompanyInfoV2 = ({
             >
               {company.status}
             </span>
-          </Tooltip>
+            <Popover placement="top">
+              <PopoverTrigger>
+                <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer">
+                  <RiInformationLine size={14} />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent>
+                <div className="px-1 py-1 max-w-xs">
+                  <div className="text-small font-semibold mb-1">Company Status</div>
+                  <div className="text-small text-default-500">
+                    The company status. INACTIVE companies have not yet floated.
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
           {(company.status == CompanyStatus.INACTIVE ||
             company.status == CompanyStatus.ACTIVE) && (
-            <Tooltip
-              classNames={{ base: baseToolTipStyle }}
-              className={tooltipStyle}
-              content={
-                <p className={tooltipParagraphStyle}>
-                  Share percentage required to float companies in this sector.
-                </p>
-              }
-            >
+            <div className="flex items-center gap-1">
               <div
                 className={`flex items-center gap-1 ${
                   company.status == CompanyStatus.ACTIVE
@@ -416,36 +418,65 @@ const CompanyInfoV2 = ({
                 <RiSailboatFill size={20} />
                 <span>{company.Sector.sharePercentageToFloat}%</span>
               </div>
-            </Tooltip>
+              <Popover placement="top">
+                <PopoverTrigger>
+                  <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer">
+                    <RiInformationLine size={14} />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent>
+                  <div className="px-1 py-1 max-w-xs">
+                    <div className="text-small font-semibold mb-1">Float Percentage</div>
+                    <div className="text-small text-default-500">
+                      Share percentage required to float companies in this sector.
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
           )}
-          <Tooltip
-            classNames={{ base: baseToolTipStyle }}
-            className={tooltipStyle}
-            content={
-              <p className={tooltipParagraphStyle}>
-                Corporate treasury or cash on hand.
-              </p>
-            }
-          >
+          <div className="flex items-center gap-1">
             <div className="flex items-center gap-1" onClick={onOpen}>
               <RiWallet3Fill size={20} /> <span>${company.cashOnHand}</span>
             </div>
-          </Tooltip>
+            <Popover placement="top">
+              <PopoverTrigger>
+                <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer">
+                  <RiInformationLine size={14} />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent>
+                <div className="px-1 py-1 max-w-xs">
+                  <div className="text-small font-semibold mb-1">Cash on Hand</div>
+                  <div className="text-small text-default-500">
+                    Corporate treasury or cash on hand.
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
           {ceoPlayer && (
-            <Tooltip
-              classNames={{ base: baseToolTipStyle }}
-              className={tooltipStyle}
-              content={
-                <p className={tooltipParagraphStyle}>
-                  The CEO (Chief Executive Officer) of this company.
-                </p>
-              }
-            >
+            <div className="flex items-center gap-1">
               <div className="flex items-center gap-1">
                 <RiVipCrown2Fill size={20} />
                 <PlayerAvatar player={ceoPlayer as Player} size="sm" showNameLabel />
               </div>
-            </Tooltip>
+              <Popover placement="top">
+                <PopoverTrigger>
+                  <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer">
+                    <RiInformationLine size={14} />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent>
+                  <div className="px-1 py-1 max-w-xs">
+                    <div className="text-small font-semibold mb-1">CEO</div>
+                    <div className="text-small text-default-500">
+                      The CEO (Chief Executive Officer) of this company.
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
           )}
         </div>
       </div>
@@ -465,31 +496,30 @@ const CompanyInfoV2 = ({
             {companyPriority && (companyPriority.global || companyPriority.sector) && (
               <div className="flex items-center gap-1">
                 {companyPriority.global && (
-                  <Tooltip
-                    classNames={{ base: baseToolTipStyle }}
-                    className={tooltipStyle}
-                    content={
-                      <p className={tooltipParagraphStyle}>
-                        Global company priority based on stock price (highest to lowest), then stacking order across all sectors.
-                      </p>
-                    }
-                  >
+                  <div className="flex items-center gap-1">
                     <div className="flex items-center gap-1 px-2 py-1 rounded bg-gray-700/50 border border-gray-600">
-                      <RiHashtag size={14} />
-                      <span className="text-sm font-semibold">{companyPriority.global}</span>
+                      <RiHashtag size={16} />
+                      <span className="text-base font-semibold">{companyPriority.global}</span>
                     </div>
-                  </Tooltip>
+                    <Popover placement="top">
+                      <PopoverTrigger>
+                        <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer">
+                          <RiInformationLine size={14} />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent>
+                        <div className="px-1 py-1 max-w-xs">
+                          <div className="text-small font-semibold mb-1">Global Priority</div>
+                          <div className="text-small text-default-500">
+                            Global company priority based on stock price (highest to lowest), then stacking order across all sectors.
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                 )}
                 {companyPriority.sector && (
-                  <Tooltip
-                    classNames={{ base: baseToolTipStyle }}
-                    className={tooltipStyle}
-                    content={
-                      <p className={tooltipParagraphStyle}>
-                        Sector company priority based on stock price (highest to lowest), then stacking order within this sector.
-                      </p>
-                    }
-                  >
+                  <div className="flex items-center gap-1">
                     <div
                       className="flex items-center gap-1 px-2 py-1 rounded border"
                       style={{
@@ -497,47 +527,44 @@ const CompanyInfoV2 = ({
                         borderColor: company?.Sector ? sectorColors[company.Sector.name] : 'rgb(37, 99, 235)',
                       }}
                     >
-                      <RiHashtag size={14} />
-                      <span className="text-sm font-semibold">{companyPriority.sector}</span>
+                      <RiHashtag size={16} />
+                      <span className="text-base font-semibold">{companyPriority.sector}</span>
                     </div>
-                  </Tooltip>
+                    <Popover placement="top">
+                      <PopoverTrigger>
+                        <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer">
+                          <RiInformationLine size={14} />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent>
+                        <div className="px-1 py-1 max-w-xs">
+                          <div className="text-small font-semibold mb-1">Sector Priority</div>
+                          <div className="text-small text-default-500">
+                            Sector company priority based on stock price (highest to lowest), then stacking order within this sector.
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                 )}
               </div>
             )}
             <div className="flex items-center gap-1">
-              <span className="text-sm text-gray-400">{company.stockSymbol}</span>
-              <Tooltip
-                classNames={{ base: baseToolTipStyle }}
-                className={tooltipStyle}
-                content={
-                  <p className={tooltipParagraphStyle}>
-                    The current stock price
-                  </p>
-                }
-              >
-                <Popover>
-                  <PopoverTrigger>
-                    <div className="flex items-center gap-1 cursor-pointer">
-                      <RiFundsFill size={18} />
-                      <span className="text-sm">${company.currentStockPrice}</span>
-                    </div>
-                  </PopoverTrigger>
-                  <PopoverContent>
-                    <CompanyLineChart companyId={company.id} />
-                  </PopoverContent>
-                </Popover>
-              </Tooltip>
+              <span className="text-base text-gray-400">{company.stockSymbol}</span>
+              <Popover>
+                <PopoverTrigger>
+                  <div className="flex items-center gap-1 cursor-pointer">
+                    <RiFundsFill size={18} />
+                    <span className="text-base">${company.currentStockPrice}</span>
+                  </div>
+                </PopoverTrigger>
+                <PopoverContent>
+                  <CompanyLineChart companyId={company.id} />
+                </PopoverContent>
+              </Popover>
             </div>
-            <Tooltip
-              classNames={{ base: baseToolTipStyle }}
-              className={tooltipStyle}
-              content={
-                <p className={tooltipParagraphStyle}>
-                  The company status. INACTIVE companies have not yet floated.
-                </p>
-              }
-            >
-              <span className={`text-sm ${
+            <div className="flex items-center gap-1">
+              <span className={`text-base ${
                 company.status == CompanyStatus.ACTIVE
                   ? "text-green-500"
                   : company.status == CompanyStatus.INACTIVE
@@ -546,19 +573,26 @@ const CompanyInfoV2 = ({
               }`}>
                 {company.status}
               </span>
-            </Tooltip>
+              <Popover placement="top">
+                <PopoverTrigger>
+                  <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer">
+                    <RiInformationLine size={14} />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent>
+                  <div className="px-1 py-1 max-w-xs">
+                    <div className="text-small font-semibold mb-1">Company Status</div>
+                    <div className="text-small text-default-500">
+                      The company status. INACTIVE companies have not yet floated.
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
             {(company.status == CompanyStatus.INACTIVE ||
               company.status == CompanyStatus.ACTIVE) && (
-              <Tooltip
-                classNames={{ base: baseToolTipStyle }}
-                className={tooltipStyle}
-                content={
-                  <p className={tooltipParagraphStyle}>
-                    Share percentage required to float companies in this sector.
-                  </p>
-                }
-              >
-                <div className={`flex items-center gap-1 text-sm ${
+              <div className="flex items-center gap-1">
+                <div className={`flex items-center gap-1 text-base ${
                   company.status == CompanyStatus.ACTIVE
                     ? "text-green-500"
                     : company.status == CompanyStatus.INACTIVE
@@ -568,53 +602,89 @@ const CompanyInfoV2 = ({
                   <RiSailboatFill size={18} />
                   <span>{company.Sector.sharePercentageToFloat}%</span>
                 </div>
-              </Tooltip>
+                <Popover placement="top">
+                  <PopoverTrigger>
+                    <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer">
+                      <RiInformationLine size={14} />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent>
+                    <div className="px-1 py-1 max-w-xs">
+                      <div className="text-small font-semibold mb-1">Float Percentage</div>
+                      <div className="text-small text-default-500">
+                        Share percentage required to float companies in this sector.
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
             )}
-            <Tooltip
-              classNames={{ base: baseToolTipStyle }}
-              className={tooltipStyle}
-              content={
-                <p className={tooltipParagraphStyle}>
-                  Corporate treasury or cash on hand.
-                </p>
-              }
-            >
+            <div className="flex items-center gap-1">
               <div className="flex items-center gap-1 cursor-pointer" onClick={onOpen}>
                 <RiWallet3Fill size={18} />
-                <span className="text-sm">${company.cashOnHand}</span>
+                <span className="text-base">${company.cashOnHand}</span>
               </div>
-            </Tooltip>
+              <Popover placement="top">
+                <PopoverTrigger>
+                  <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer">
+                    <RiInformationLine size={14} />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent>
+                  <div className="px-1 py-1 max-w-xs">
+                    <div className="text-small font-semibold mb-1">Cash on Hand</div>
+                    <div className="text-small text-default-500">
+                      Corporate treasury or cash on hand.
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
             {company.ipoAndFloatPrice && (
-              <Tooltip
-                classNames={{ base: baseToolTipStyle }}
-                className={tooltipStyle}
-                content={
-                  <p className={tooltipParagraphStyle}>
-                    The initial public offering price.
-                  </p>
-                }
-              >
-                <div className="flex items-center gap-1 text-sm">
+              <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 text-base">
                   <span>IPO</span>
                   <span>${company.ipoAndFloatPrice}</span>
                 </div>
-              </Tooltip>
+                <Popover placement="top">
+                  <PopoverTrigger>
+                    <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer">
+                      <RiInformationLine size={14} />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent>
+                    <div className="px-1 py-1 max-w-xs">
+                      <div className="text-small font-semibold mb-1">IPO Price</div>
+                      <div className="text-small text-default-500">
+                        The initial public offering price.
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
             )}
             {ceoPlayer && (
-              <Tooltip
-                classNames={{ base: baseToolTipStyle }}
-                className={tooltipStyle}
-                content={
-                  <p className={tooltipParagraphStyle}>
-                    The CEO (Chief Executive Officer) of this company.
-                  </p>
-                }
-              >
+              <div className="flex items-center gap-1">
                 <div className="flex items-center gap-1">
                   <RiVipCrown2Fill size={18} />
                   <PlayerAvatar player={ceoPlayer as Player} size="sm" showNameLabel />
                 </div>
-              </Tooltip>
+                <Popover placement="top">
+                  <PopoverTrigger>
+                    <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer">
+                      <RiInformationLine size={14} />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent>
+                    <div className="px-1 py-1 max-w-xs">
+                      <div className="text-small font-semibold mb-1">CEO</div>
+                      <div className="text-small text-default-500">
+                        The CEO (Chief Executive Officer) of this company.
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
             )}
           </div>
 

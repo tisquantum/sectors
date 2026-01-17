@@ -11,6 +11,7 @@ import {
   getStockPriceClosestEqualOrLess,
   getStockPriceStepsUp,
   getStockPriceWithStepsDown,
+  stockGridPrices,
   stockTierChartRanges,
 } from '@server/data/constants';
 import { getTierMaxValue, getTierMinValue } from '@server/data/helpers';
@@ -88,8 +89,30 @@ export class StockHistoryService {
     steps: number,
     action: StockAction,
   ): Promise<StockHistory> {
-    //get new stock price
-    const newPrice = getStockPriceStepsUp(currentStockPrice, steps);
+    // Get company to check for oversold shares
+    const company = await this.prisma.company.findUnique({
+      where: { id: companyId },
+      select: { oversoldShares: true },
+    });
+    
+    // Calculate new price
+    let newPrice = getStockPriceStepsUp(currentStockPrice, steps);
+    
+    // If company is oversold, reduce the maximum price by oversold amount
+    if (company && company.oversoldShares && company.oversoldShares > 0) {
+      const maxPriceIndex = stockGridPrices.length - 1;
+      const maxAllowedIndex = Math.max(0, maxPriceIndex - company.oversoldShares);
+      const newPriceIndex = stockGridPrices.indexOf(newPrice);
+      const currentPriceIndex = stockGridPrices.indexOf(currentStockPrice);
+      
+      // If the new price would exceed the oversold-adjusted maximum, cap it
+      if (newPriceIndex > maxAllowedIndex) {
+        newPrice = stockGridPrices[maxAllowedIndex];
+        // Adjust steps to reflect the actual movement (capped price - current price)
+        steps = maxAllowedIndex - currentPriceIndex;
+      }
+    }
+    
     //update company stock price
     await this.prisma.company.update({
       where: { id: companyId },
