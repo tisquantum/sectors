@@ -2,11 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma, Resource, ResourceType, ResourceTrackType } from '@prisma/client';
 import { getResourcePriceForResourceType } from '@server/data/constants';
+import { GameLogService } from '@server/game-log/game-log.service';
 
 @Injectable()
 export class ResourceService {
   constructor(
     private prisma: PrismaService,
+    private gameLogService: GameLogService,
   ) {}
 
   async resource(
@@ -160,7 +162,13 @@ export class ResourceService {
   }
 
   // Consume resources and update track position (moves down the track = cheaper prices)
-  async consumeResources(gameId: string, resourceConsumptions: { type: ResourceType; count: number }[]): Promise<void> {
+  async consumeResources(
+    gameId: string, 
+    resourceConsumptions: { type: ResourceType; count: number }[],
+    reason?: string,
+  ): Promise<void> {
+    const trackPositionChanges: Array<{ type: ResourceType; oldPosition: number; newPosition: number; count: number }> = [];
+
     await this.prisma.$transaction(async (tx) => {
       for (const consumption of resourceConsumptions) {
         const resource = await tx.resource.findFirst({
@@ -175,6 +183,7 @@ export class ResourceService {
         }
 
         // Move track position down (consumed resources make them cheaper)
+        const oldTrackPosition = resource.trackPosition;
         const newTrackPosition = resource.trackPosition + consumption.count;
         
         await tx.resource.update({
@@ -183,12 +192,41 @@ export class ResourceService {
             trackPosition: newTrackPosition,
           },
         });
+
+        // Track changes for logging after transaction
+        trackPositionChanges.push({
+          type: consumption.type,
+          oldPosition: oldTrackPosition,
+          newPosition: newTrackPosition,
+          count: consumption.count,
+        });
       }
     });
+
+    // Log trackPosition changes after transaction completes
+    for (const change of trackPositionChanges) {
+      if (reason) {
+        await this.gameLogService.createGameLog({
+          game: { connect: { id: gameId } },
+          content: `${change.type} resource trackPosition: ${change.oldPosition} → ${change.newPosition} (${change.count} consumed). Reason: ${reason}`,
+        });
+      } else {
+        await this.gameLogService.createGameLog({
+          game: { connect: { id: gameId } },
+          content: `${change.type} resource trackPosition: ${change.oldPosition} → ${change.newPosition} (${change.count} consumed)`,
+        });
+      }
+    }
   }
 
   // Add resources back to pool (moves track position up = more expensive)
-  async addResources(gameId: string, resourceAdditions: { type: ResourceType; count: number }[]): Promise<void> {
+  async addResources(
+    gameId: string, 
+    resourceAdditions: { type: ResourceType; count: number }[],
+    reason?: string,
+  ): Promise<void> {
+    const trackPositionChanges: Array<{ type: ResourceType; oldPosition: number; newPosition: number; count: number }> = [];
+
     await this.prisma.$transaction(async (tx) => {
       for (const addition of resourceAdditions) {
         const resource = await tx.resource.findFirst({
@@ -198,6 +236,7 @@ export class ResourceService {
         if (resource) {
           // Move track position up (more resources = more expensive)
           // Don't go below 0
+          const oldTrackPosition = resource.trackPosition;
           const newTrackPosition = Math.max(0, resource.trackPosition - addition.count);
           
           await tx.resource.update({
@@ -206,9 +245,34 @@ export class ResourceService {
               trackPosition: newTrackPosition,
             },
           });
+
+          // Track changes for logging after transaction (only if it actually changed)
+          if (newTrackPosition !== oldTrackPosition) {
+            trackPositionChanges.push({
+              type: addition.type,
+              oldPosition: oldTrackPosition,
+              newPosition: newTrackPosition,
+              count: addition.count,
+            });
+          }
         }
       }
     });
+
+    // Log trackPosition changes after transaction completes
+    for (const change of trackPositionChanges) {
+      if (reason) {
+        await this.gameLogService.createGameLog({
+          game: { connect: { id: gameId } },
+          content: `${change.type} resource trackPosition: ${change.oldPosition} → ${change.newPosition} (${change.count} added back). Reason: ${reason}`,
+        });
+      } else {
+        await this.gameLogService.createGameLog({
+          game: { connect: { id: gameId } },
+          content: `${change.type} resource trackPosition: ${change.oldPosition} → ${change.newPosition} (${change.count} added back)`,
+        });
+      }
+    }
   }
 
   // Get resource price for a specific type

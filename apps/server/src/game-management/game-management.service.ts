@@ -8166,26 +8166,29 @@ export class GameManagementService {
       }),
     );
   }
-  //TODO: Orders should be processed in player priority order for priority strategy, regardless of order type.
+  // Process ALL sell orders first across all companies, then ALL buy orders
+  // This allows money from selling shares to be used for subsequent buy orders
   async processMarketOrdersByCompany(
     groupedMarketOrders: Record<string, PlayerOrderWithPlayerCompany[]>,
     game: Game,
     phase: Phase,
   ) {
-    // CRITICAL: Process companies sequentially (not in parallel) to ensure proper cash validation
-    // When processing in parallel, each company fetches fresh player data independently,
-    // which can allow total deductions across companies to exceed available cash.
-    // By processing sequentially, each company sees the updated cash from previous companies.
-    for (const [companyId, orders] of Object.entries(groupedMarketOrders)) {
-      // Process sell orders first (they don't affect cash for buy orders)
-      await Promise.all(
-        orders.map(async (order) => {
-          if (order.isSell) {
-            await this.resolveSellOrder(order, companyId);
-          }
-        }),
-      );
+    // Track shares that were sold in this phase (in "holding" - cannot be bought back)
+    const soldShareIds = new Set<string>();
 
+    // STEP 1: Process ALL sell orders first across ALL companies
+    // This gives players cash that can be used for buy orders
+    for (const [companyId, orders] of Object.entries(groupedMarketOrders)) {
+      const sellOrders = orders.filter((order) => order.isSell);
+      for (const order of sellOrders) {
+        const soldIds = await this.resolveSellOrder(order, companyId, soldShareIds);
+        // soldIds are already added to soldShareIds in resolveSellOrder
+      }
+    }
+
+    // STEP 2: Process ALL buy orders after all sells are complete
+    // Players now have cash from sells available for buys
+    for (const [companyId, orders] of Object.entries(groupedMarketOrders)) {
       const buyOrdersIPO = orders.filter(
         (order) => !order.isSell && order.location == ShareLocation.IPO,
       );
@@ -8233,6 +8236,7 @@ export class GameManagementService {
             this.prisma,
             game.distributionStrategy,
             phase,
+            soldShareIds, // Exclude shares that were just sold
           );
         } else {
           await this.distributeShares(
@@ -8241,10 +8245,16 @@ export class GameManagementService {
             companyId,
             this.shareService,
             this.prisma,
+            soldShareIds, // Exclude shares that were just sold
           );
         }
       }
     }
+
+    // NOTE: Sold shares are already moved to OPEN_MARKET in resolveSellOrder.
+    // The soldShareIds Set is only used during this phase resolution to prevent
+    // buying shares that were just sold. After phase resolution, soldShareIds
+    // is discarded, so those shares become available for purchase in subsequent turns.
   }
 
   async setIpoPriceAndCreateSharesAndInjectCapital(
@@ -8296,7 +8306,8 @@ export class GameManagementService {
   async resolveSellOrder(
     order: PlayerOrderWithPlayerCompany,
     companyId: string,
-  ) {
+    soldShareIds?: Set<string>,
+  ): Promise<string[]> {
     const sellAmount = order.quantity || 0;
     const sharePrice = order.Company.currentStockPrice || 0;
     const playerActualSharesOwned = await this.shareService.shares({
@@ -8372,19 +8383,31 @@ export class GameManagementService {
         take: sellAmount,
       });
       const shareIds = sharesToUpdate.map((share) => share.id);
+      
+      // Mark shares as sold (in "holding") - they cannot be bought back in this phase
+      // Shares are moved to OPEN_MARKET but tracked as in holding
+      if (soldShareIds) {
+        shareIds.forEach(id => soldShareIds.add(id));
+      }
+      
       await this.shareService.updateManySharesUnchecked({
         where: { id: { in: shareIds } },
         data: {
           playerId: null,
           location: ShareLocation.OPEN_MARKET,
+          // Note: Shares are in OPEN_MARKET but in "holding" (tracked in soldShareIds Set)
+          // They will be available for purchase in subsequent turns
         },
       });
       await this.prisma.playerOrder.update({
         where: { id: order.id },
         data: { orderStatus: OrderStatus.FILLED },
       });
+      
+      return shareIds;
     } catch (error) {
       console.error('Error updating shares:', error);
+      return [];
     }
   }
   sortByBidValue(
@@ -8601,6 +8624,7 @@ export class GameManagementService {
     prisma: any,
     strategy: DistributionStrategy,
     phase?: Phase,
+    soldShareIds?: Set<string>, // Shares that were just sold (in holding - cannot be bought back this phase)
   ) {
     let currentShareIndex = 0;
 
@@ -8628,15 +8652,28 @@ export class GameManagementService {
       (acc, order) => acc + (order.quantity || 0),
       0,
     );
+    // Count available shares excluding those in holding (just sold)
+    const availableShareCount = company.Share.filter(
+      (share) => share.location == location && (!soldShareIds || !soldShareIds.has(share.id))
+    ).length;
+    
     let remainingShares = Math.min(
-      company.Share.filter((share) => share.location == location).length,
+      availableShareCount,
       totalBuyOrderShares,
     );
 
-    const allAvailableShares = await shareService.shares({
+    const allAvailableSharesRaw = await shareService.shares({
       where: { companyId, location },
-      take: remainingShares,
+      take: remainingShares * 2, // Get more to account for filtering
     });
+    
+    // Exclude shares that were just sold (in holding) - they cannot be bought back in this phase
+    const allAvailableShares = soldShareIds && soldShareIds.size > 0
+      ? allAvailableSharesRaw.filter(share => !soldShareIds.has(share.id))
+      : allAvailableSharesRaw;
+    
+    // Limit to remainingShares after filtering
+    const limitedAvailableShares = allAvailableShares.slice(0, remainingShares);
 
     const playerIds = phaseOrders.map((order) => order.playerId);
     const playerPriorities = await this.fetchPlayerPriorities(
@@ -8671,8 +8708,8 @@ export class GameManagementService {
       oversoldShareCreations: _oversoldShareCreations,
     } = this.processBidOrdersBidStrategy(
       sortedOrders,
-      remainingShares,
-      allAvailableShares,
+      Math.min(remainingShares, limitedAvailableShares.length),
+      limitedAvailableShares,
       currentShareIndex,
       shareUpdates,
       playerCashUpdates,
@@ -8804,6 +8841,7 @@ export class GameManagementService {
     companyId: string,
     shareService: ShareService,
     prisma: any,
+    soldShareIds?: Set<string>, // Shares that were just sold (in holding - cannot be bought back this phase)
   ) {
     let currentShareIndex = 0;
 
@@ -8840,15 +8878,28 @@ export class GameManagementService {
       (acc, order) => acc + (order.quantity || 0),
       0,
     );
+    // Count available shares excluding those in holding (just sold)
+    const availableShareCount = company.Share.filter(
+      (share) => share.location == location && (!soldShareIds || !soldShareIds.has(share.id))
+    ).length;
+    
     let remainingShares = Math.min(
-      company.Share.filter((share) => share.location == location).length,
+      availableShareCount,
       totalBuyOrderShares,
     );
 
-    const allAvailableShares = await shareService.shares({
+    const allAvailableSharesRaw = await shareService.shares({
       where: { companyId, location },
-      take: remainingShares,
+      take: remainingShares * 2, // Get more to account for filtering
     });
+    
+    // Exclude shares that were just sold (in holding) - they cannot be bought back in this phase
+    const allAvailableShares = soldShareIds && soldShareIds.size > 0
+      ? allAvailableSharesRaw.filter(share => !soldShareIds.has(share.id))
+      : allAvailableSharesRaw;
+    
+    // Limit to remainingShares after filtering
+    const limitedAvailableShares = allAvailableShares.slice(0, remainingShares);
 
     // Note: Cash validation happens in executeDatabaseOperations, which aggregates
     // all cash updates per player and validates against fresh database data.
@@ -8856,8 +8907,8 @@ export class GameManagementService {
     // each company will see updated cash from previous companies.
     this.distributeWithinPhase(
       validBuyOrders,
-      allAvailableShares,
-      remainingShares,
+      limitedAvailableShares,
+      Math.min(remainingShares, limitedAvailableShares.length),
       currentShareIndex,
       shareUpdates,
       playerCashUpdates,

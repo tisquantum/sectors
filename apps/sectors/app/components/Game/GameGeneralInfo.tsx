@@ -37,6 +37,7 @@ import {
   OrderType,
   PhaseName,
   OperationMechanicsVersion,
+  ShareLocation,
 } from "@server/prisma/prisma.client";
 import {
   baseToolTipStyle,
@@ -98,12 +99,21 @@ const GameGeneralInfo = () => {
     playersWithShares,
   } = useGame();
   if (!gameState) return notFound();
-  const pseudoSpend = authPlayer?.PlayerOrder?.filter(
+  // Calculate net cash impact: (buy costs) - (sell profits)
+  // Positive = net spending needed, Negative = net profit
+  // Sell orders add money (reduce needed cash), buy orders cost money (increase needed cash)
+  const marketOrders = authPlayer?.PlayerOrder?.filter(
     (order) =>
       order.stockSubRoundId === currentPhase?.stockSubRoundId &&
       order.orderType == OrderType.MARKET
-  ).reduce((acc, order) => {
-    const orderValue = (order.value || 0) * (order.quantity || 0);
+  ) || [];
+  
+  // Calculate net cash impact: (buy costs) - (sell profits)
+  // order.value should already contain the correct price (IPO or market price)
+  const pseudoSpend = marketOrders.reduce((acc, order) => {
+    const price = order.value ?? 0;
+    const orderValue = price * (order.quantity || 0);
+    // Sells add money (negative impact on needed cash), buys cost money (positive impact)
     return order.isSell ? acc - orderValue : acc + orderValue;
   }, 0);
   const authPlayerWithShares = playersWithShares.find(
@@ -125,8 +135,9 @@ const GameGeneralInfo = () => {
                     className={tooltipStyle}
                     content={
                       <p className={tooltipParagraphStyle}>
-                        The potential maximum amount of money you&apos;ve queued
-                        for orders this stock round.
+                        Net cash impact of your orders: buy costs minus sell profits.
+                        Positive = net spending needed, Negative = net profit from sells.
+                        Sell orders are resolved first, so money from selling can be used for subsequent buy orders.
                       </p>
                     }
                   >

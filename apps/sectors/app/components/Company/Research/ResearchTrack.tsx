@@ -33,13 +33,13 @@ export function ResearchTrack({
         <div className="absolute left-1/2 top-0 h-full w-1 -translate-x-1/2 bg-border" />
         
         {/* Spaces */}
-        <div className="relative grid grid-cols-10 gap-2">
+        <div className="relative grid grid-cols-10 gap-2 pb-6">
           {spaces.map((space) => (
             <div
               key={space.id}
               className={cn(
                 'relative z-10 flex h-12 w-full items-center justify-center',
-                space.number % 5 === 0 && 'mb-8' // Add extra space for stage markers
+                space.number % 5 === 0 && 'mb-12' // Add extra space for stage markers (was mb-8)
               )}
             >
               {/* Space circle */}
@@ -59,27 +59,27 @@ export function ResearchTrack({
 
               {/* Stage marker */}
               {space.number % 5 === 0 && (
-                <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-0.5">
-                  <div className="text-xs text-muted-foreground">
+                <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 whitespace-nowrap">
+                  <div className="text-xs text-muted-foreground leading-tight">
                     Stage {space.number / 5}
                   </div>
                   {space.number === 5 && (
-                    <div className="text-[10px] text-muted-foreground/70">
-                      +0 demand
+                    <div className="text-[10px] text-muted-foreground/70 leading-tight">
+                      +1 demand
                     </div>
                   )}
                   {space.number === 10 && (
-                    <div className="text-[10px] text-green-400/80">
+                    <div className="text-[10px] text-green-400/80 leading-tight">
                       +2 demand
                     </div>
                   )}
                   {space.number === 15 && (
-                    <div className="text-[10px] text-green-400/80">
+                    <div className="text-[10px] text-green-400/80 leading-tight">
                       +3 demand
                     </div>
                   )}
                   {space.number === 20 && (
-                    <div className="text-[10px] text-green-400/80">
+                    <div className="text-[10px] text-green-400/80 leading-tight">
                       +5 demand
                     </div>
                   )}

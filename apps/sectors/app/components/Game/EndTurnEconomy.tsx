@@ -258,7 +258,7 @@ const EndTurnEconomy = () => {
           </div>
         </Tab>
         
-        <Tab key="forecast" title="FORECAST">
+        <Tab key="forecast" title="Forecast">
           <div className="w-full p-4">
             <ForecastPhase />
           </div>

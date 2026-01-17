@@ -416,6 +416,7 @@ export class TrpcRouter {
       prismaService: this.prismaService,
       sectorService: this.sectorService,
       gameTurnService: this.gameTurnService,
+      factoryConstructionOrderService: this.factoryConstructionOrderService,
     }),
     forecast: forecastRouter(this.trpc, {
       forecastService: this.forecastService,

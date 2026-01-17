@@ -1,10 +1,11 @@
 import { trpc } from "@sectors/app/trpc";
 import { useGame } from "../Game/GameContext";
-import { Card, CardBody, CardHeader, Spinner } from "@nextui-org/react";
-import { OrderType, ShareLocation } from "@server/prisma/prisma.client";
+import { Card, CardBody, CardHeader, Spinner, Button } from "@nextui-org/react";
+import { OrderType, ShareLocation, PhaseName } from "@server/prisma/prisma.client";
 import { PlayerOrderWithCompany } from "@server/prisma/prisma.types";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import OrderChip from "../Game/OrderChip";
+import { RiDeleteBinLine } from "@remixicon/react";
 
 const renderBasedOnOrderType = (playerOrder: PlayerOrderWithCompany) => {
   return (
@@ -79,22 +80,69 @@ const PlayerCurrentQueuedOrders = ({
       <span className="text-sm text-gray-400">Loading orders...</span>
     </div>
   );
+  const utils = trpc.useUtils();
+  const deleteAllOrders = trpc.playerOrder.deleteAllPlayerOrdersForPhase.useMutation({
+    onSuccess: () => {
+      utils.playerOrder.listPlayerOrdersWithCompany.invalidate();
+      refetch();
+    },
+  });
+
+  const isPlaceOrdersPhase = currentPhase?.name === PhaseName.STOCK_ACTION_ORDER;
+  const hasOrders = playerOrders && playerOrders.length > 0;
+
   if (playerOrders == undefined) return null;
+
+  const handleClearAll = async () => {
+    if (!currentPhase?.id || !authPlayer?.id) return;
+    if (!confirm('Are you sure you want to clear all your orders? This cannot be undone.')) {
+      return;
+    }
+    try {
+      await deleteAllOrders.mutateAsync({
+        phaseId: currentPhase.id,
+        playerId: authPlayer.id,
+      });
+    } catch (error) {
+      console.error('Failed to clear orders:', error);
+    }
+  };
 
   return (
     <div>
-      <h3>Current Queued Orders</h3>
-      <div className="grid grid-cols-2 gap-3">
-        {playerOrders.map((playerOrder) => (
-          <Card
-            className="flex flex-col justify-center p-2 gap-1"
-            key={playerOrder.id}
+      <div className="flex items-center justify-between mb-2">
+        <h3>Current Queued Orders</h3>
+        {isPlaceOrdersPhase && hasOrders && (
+          <Button
+            size="sm"
+            variant="flat"
+            color="danger"
+            onPress={handleClearAll}
+            isLoading={deleteAllOrders.isPending}
+            className="text-xs"
           >
-            <span>{playerOrder.Company.name}</span>
-            {renderBasedOnOrderType(playerOrder)}
-          </Card>
-        ))}
+            <RiDeleteBinLine size={14} />
+            Clear All
+          </Button>
+        )}
       </div>
+      {hasOrders ? (
+        <div className="grid grid-cols-2 gap-3">
+          {playerOrders.map((playerOrder) => (
+            <Card
+              className="flex flex-col justify-center p-2 gap-1"
+              key={playerOrder.id}
+            >
+              <span>{playerOrder.Company.name}</span>
+              {renderBasedOnOrderType(playerOrder)}
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="text-sm text-gray-500 text-center py-4">
+          No orders placed
+        </div>
+      )}
     </div>
   );
 };

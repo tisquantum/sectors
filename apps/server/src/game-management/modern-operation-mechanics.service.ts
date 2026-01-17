@@ -298,9 +298,13 @@ export class ModernOperationMechanicsService {
         resourcesNeeded.push({ type: resourceType, count: 1 });
       }
 
-      // Calculate factory construction cost: (sum of resource prices) × factory size + $100
+      // Factory construction cost: (sum of resource prices) × factory size + $100 plot fee.
+      // The $100 plot fee applies only to fresh plots. Upgrading an existing factory (e.g. via
+      // RustedFactoryUpgradePhase) uses a different cost model and does not include this fee.
+      // FactoryConstructionOrder is always for new construction (fresh plot), so we always add it.
       const factorySizeNumber = getNumberForFactorySize(order.size);
-      const constructionCost = (totalResourceCost * factorySizeNumber) + 100;
+      const PLOT_FEE_FRESH = 100;
+      const constructionCost = (totalResourceCost * factorySizeNumber) + PLOT_FEE_FRESH;
 
       // Check if company can afford it
       if (company.cashOnHand < constructionCost) {
@@ -505,7 +509,12 @@ export class ModernOperationMechanicsService {
     // Only consume resources for orders that succeeded (tracked before deletion)
     for (const order of factoryConstructionOrders) {
       if (successfulOrderIds.has(order.id)) {
+        // Get the company to find its sector resource type
+        const company = companyMap.get(order.companyId);
+        const sectorResourceType = company ? this.getSectorResourceType(company.Sector.sectorName) : null;
+        
         // Consume blueprint resources (what the player selected)
+        // NOTE: The sector resource may already be in order.resourceTypes, so we track it separately
         for (const resourceType of order.resourceTypes) {
           totalResourceConsumptions.set(
             resourceType,
@@ -514,16 +523,12 @@ export class ModernOperationMechanicsService {
         }
         
         // Also consume the sector base resource (required for factory construction)
-        // Get the company to find its sector
-        const company = companyMap.get(order.companyId);
-        if (company) {
-          const sectorResourceType = this.getSectorResourceType(company.Sector.sectorName);
-          if (sectorResourceType) {
-            totalResourceConsumptions.set(
-              sectorResourceType,
-              (totalResourceConsumptions.get(sectorResourceType) || 0) + 1
-            );
-          }
+        // IMPORTANT: Only add if NOT already in blueprint (to avoid double consumption)
+        if (sectorResourceType && !order.resourceTypes.includes(sectorResourceType)) {
+          totalResourceConsumptions.set(
+            sectorResourceType,
+            (totalResourceConsumptions.get(sectorResourceType) || 0) + 1
+          );
         }
       }
     }
@@ -533,7 +538,10 @@ export class ModernOperationMechanicsService {
     );
     
     if (consumptions.length > 0) {
-      await this.resourceService.consumeResources(phase.gameId, consumptions);
+      // Build reason string describing what consumed resources
+      const consumptionDescriptions = consumptions.map(c => `${c.count}×${c.type}`).join(', ');
+      const reason = `Factory construction: ${successfulOrderIds.size} factory/factories built consuming ${consumptionDescriptions}`;
+      await this.resourceService.consumeResources(phase.gameId, consumptions, reason);
       await this.resourceService.updateResourcePrices(phase.gameId);
     }
     
@@ -1771,7 +1779,10 @@ export class ModernOperationMechanicsService {
           ([type, count]) => ({ type, count })
         );
 
-        await this.resourceService.consumeResources(phase.gameId, consumptions);
+        // Build reason string describing research milestones reached
+        const milestoneDescriptions = resourceConsumptionsForMilestones.map(c => c.type).join(', ');
+        const reason = `Research milestones: ${resourceConsumptionsForMilestones.length} milestone(s) reached consuming ${milestoneDescriptions} resources (economies of scale)`;
+        await this.resourceService.consumeResources(phase.gameId, consumptions, reason);
         await this.resourceService.updateResourcePrices(phase.gameId);
       }
     }

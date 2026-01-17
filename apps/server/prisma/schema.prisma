@@ -105,6 +105,7 @@ model Player {
   CompanyIpoPriceVote      CompanyIpoPriceVote[]
   factoryConstructionOrders FactoryConstructionOrder[]
   researchOrders           ResearchOrder[]
+  marketingCampaignOrders MarketingCampaignOrder[]
   isBot                    Boolean                    @default(false)
   companiesAsCEO           Company[]                  @relation("CompanyCEO")
   forecastCommitments       ForecastCommitment[]
@@ -269,6 +270,7 @@ model Company {
   sectorMarketing           SectorMarketing[]
   factoryConstructionOrders FactoryConstructionOrder[]
   researchOrders            ResearchOrder[]
+  marketingCampaignOrders   MarketingCampaignOrder[]
   consumptionMarkers        ConsumptionMarker[]
   factoryProductions        FactoryProduction[]
   ceo                       Player?                    @relation("CompanyCEO", fields: [ceoId], references: [id])
@@ -862,6 +864,7 @@ model Game {
   workers                   Int                        @default(0)
   factoryConstructionOrders FactoryConstructionOrder[]
   researchOrders            ResearchOrder[]
+  marketingCampaignOrders MarketingCampaignOrder[]
   consumptionMarkers        ConsumptionMarker[]
   factoryProductions        FactoryProduction[]
   forecastQuarters           ForecastQuarter[]
@@ -971,6 +974,7 @@ model GameTurn {
   CompanyIpoPriceVote    CompanyIpoPriceVote[]
   factoryConstructionOrders FactoryConstructionOrder[]
   researchOrders         ResearchOrder[]
+  marketingCampaignOrders MarketingCampaignOrder[]
   factoryProductions     FactoryProduction[]
   marketingCampaigns     MarketingCampaign[]
   forecastCommitments    ForecastCommitment[]
@@ -1075,6 +1079,7 @@ model Phase {
   GameLogs                 GameLog[]
   factoryConstructionOrders FactoryConstructionOrder[]
   researchOrders           ResearchOrder[]
+  marketingCampaignOrders MarketingCampaignOrder[]
   forecastCommitments      ForecastCommitment[]
   phaseStartTime           DateTime?
   createdAt                DateTime                   @default(now())
@@ -1833,7 +1838,30 @@ model FactoryConstructionOrder {
   gameTurn      GameTurn       @relation(fields: [gameTurnId], references: [id])
 }
 
-// New model for Marketing Campaigns
+// Marketing Campaign Orders - submitted during MODERN_OPERATIONS, resolved during RESOLVE_MODERN_OPERATIONS
+model MarketingCampaignOrder {
+  id            String                @id @default(uuid())
+  companyId     String
+  gameId        String
+  gameTurnId    String
+  phaseId       String
+  playerId      String
+  sectorId      String
+  tier          MarketingCampaignTier
+  slot          Int                   // Marketing slot (1-3)
+  cost          Int                   // Campaign cost (TIER_1=$100, TIER_2=$200, TIER_3=$300)
+  resourceTypes ResourceType[]        // Resources selected by player to add to consumption bag
+  failureReason String?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  player        Player                @relation(fields: [playerId], references: [id])
+  company       Company               @relation(fields: [companyId], references: [id])
+  game          Game                  @relation(fields: [gameId], references: [id])
+  phase         Phase                 @relation(fields: [phaseId], references: [id])
+  gameTurn      GameTurn              @relation(fields: [gameTurnId], references: [id])
+}
+
+// New model for Marketing Campaigns (created from resolved orders)
 model MarketingCampaign {
   id           String                  @id @default(uuid())
   companyId    String

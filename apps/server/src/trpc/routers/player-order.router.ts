@@ -310,4 +310,82 @@ export default (trpc: TrpcService, ctx: Context) =>
           data,
         });
       }),
+
+    deletePlayerOrder: trpc.procedure
+      .input(z.object({ id: z.string() }))
+      .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
+      .use(async (opts) =>
+        checkSubmissionTime(
+          [PhaseName.STOCK_ACTION_ORDER],
+          opts,
+          ctx.phaseService,
+          ctx.gameService,
+        ),
+      )
+      .mutation(async ({ input, ctx: ctxMiddleware }) => {
+        if (!ctxMiddleware.submittingPlayerId) {
+          throw new Error('Player ID is required');
+        }
+        
+        // Verify the order belongs to the player
+        const order = await ctx.playerOrdersService.playerOrder({ id: input.id });
+        if (!order) {
+          throw new Error('Order not found');
+        }
+        if (order.playerId !== ctxMiddleware.submittingPlayerId) {
+          throw new Error('You can only delete your own orders');
+        }
+        
+        // Only allow deletion if order is not yet filled
+        if (order.orderStatus === OrderStatus.FILLED) {
+          throw new Error('Cannot delete a filled order');
+        }
+        
+        return ctx.playerOrdersService.deletePlayerOrder({ id: input.id });
+      }),
+
+    deleteAllPlayerOrdersForPhase: trpc.procedure
+      .input(
+        z.object({
+          phaseId: z.string(),
+          playerId: z.string(),
+        }),
+      )
+      .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
+      .use(async (opts) =>
+        checkSubmissionTime(
+          [PhaseName.STOCK_ACTION_ORDER],
+          opts,
+          ctx.phaseService,
+          ctx.gameService,
+        ),
+      )
+      .mutation(async ({ input, ctx: ctxMiddleware }) => {
+        if (!ctxMiddleware.submittingPlayerId) {
+          throw new Error('Player ID is required');
+        }
+        
+        // Verify the player ID matches
+        if (input.playerId !== ctxMiddleware.submittingPlayerId) {
+          throw new Error('You can only delete your own orders');
+        }
+        
+        // Get all orders for this player in this phase that are not filled
+        const orders = await ctx.playerOrdersService.playerOrders({
+          where: {
+            phaseId: input.phaseId,
+            playerId: input.playerId,
+            orderStatus: { not: OrderStatus.FILLED },
+          },
+        });
+        
+        // Delete all orders
+        const deletePromises = orders.map((order) =>
+          ctx.playerOrdersService.deletePlayerOrder({ id: order.id }),
+        );
+        
+        await Promise.all(deletePromises);
+        
+        return { deletedCount: orders.length };
+      }),
   });

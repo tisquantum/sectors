@@ -11,6 +11,8 @@ import { PrismaService } from '@server/prisma/prisma.service';
 import { SectorService } from '@server/sector/sector.service';
 import { RESEARCH_COSTS_BY_PHASE } from '@server/data/constants';
 import { GameTurnService } from '@server/game-turn/game-turn.service';
+import { getNumberForFactorySize } from '@server/data/helpers';
+import { FactoryConstructionOrderService } from '@server/factory-construction/factory-construction-order.service';
 
 type Context = {
   marketingService: MarketingService;
@@ -21,6 +23,7 @@ type Context = {
   prismaService: PrismaService;
   sectorService: SectorService;
   gameTurnService: GameTurnService;
+  factoryConstructionOrderService: FactoryConstructionOrderService;
 };
 
 export default (trpc: TrpcService, ctx: Context) =>
@@ -163,11 +166,42 @@ export default (trpc: TrpcService, ctx: Context) =>
         
         // Calculate total cost of pending research orders
         const totalPendingResearchCost = pendingResearchOrders.reduce((sum, order) => sum + order.cost, 0);
+
+        // Get pending factory construction orders for this company in this turn
+        const pendingFactoryOrders = await ctx.factoryConstructionOrderService.factoryConstructionOrdersWithRelations({
+          where: {
+            companyId: input.companyId,
+            gameId: input.gameId,
+            gameTurnId: game.currentTurn,
+          },
+        });
+
+        // Get current resource prices to calculate factory order costs
+        const resources = await ctx.prismaService.resource.findMany({
+          where: { gameId: input.gameId },
+        });
+        const resourcePriceMap = new Map(resources.map(r => [r.type, r.price]));
+
+        // Calculate total cost of pending factory orders
+        let totalPendingFactoryCost = 0;
+        const PLOT_FEE_FRESH = 100;
+        for (const order of pendingFactoryOrders) {
+          let orderResourceCost = 0;
+          for (const resourceType of order.resourceTypes) {
+            const price = resourcePriceMap.get(resourceType) || 0;
+            orderResourceCost += price;
+          }
+          const orderFactorySizeNumber = getNumberForFactorySize(order.size);
+          totalPendingFactoryCost += (orderResourceCost * orderFactorySizeNumber) + PLOT_FEE_FRESH;
+        }
+
+        // Total cost of ALL pending operation orders (factories + research)
+        const totalPendingCost = totalPendingFactoryCost + totalPendingResearchCost;
         
-        // Check if company can afford this research plus all pending research orders
-        const totalCost = totalPendingResearchCost + researchCost;
+        // Check if company can afford this research plus all pending orders
+        const totalCost = totalPendingCost + researchCost;
         if (company.cashOnHand < totalCost) {
-          throw new Error(`Insufficient funds. This research costs $${researchCost}, and you have $${totalPendingResearchCost} in pending research orders. Total needed: $${totalCost}, but company only has $${company.cashOnHand}.`);
+          throw new Error(`Insufficient funds. This research costs $${researchCost}, and you have $${totalPendingFactoryCost} in pending factory orders and $${totalPendingResearchCost} in pending research orders (total: $${totalPendingCost}). Total needed: $${totalCost}, but company only has $${company.cashOnHand}.`);
         }
 
         // Create research order (will be resolved during RESOLVE_MODERN_OPERATIONS phase)

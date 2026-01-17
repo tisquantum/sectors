@@ -4,13 +4,23 @@ import { useState, useMemo, useEffect } from 'react';
 import { trpc } from '@sectors/app/trpc';
 import { cn } from '@/lib/utils';
 import { ResourceType } from './Factory.types';
-import { ResourceTrackType } from '@server/prisma/prisma.client';
+import { ResourceTrackType, FactorySize } from '@server/prisma/prisma.client';
+import { getNumberForFactorySize } from '@server/data/helpers';
 import { ResourceIcon } from '../../Game/ConsumptionPhase/ResourceIcon';
-import { Spinner } from '@nextui-org/react';
-import { RiCloseLine } from '@remixicon/react';
+import { Spinner, Popover, PopoverContent, PopoverTrigger } from '@nextui-org/react';
+import { RiCloseLine, RiInformationLine, RiErrorWarningFill } from '@remixicon/react';
 import { useGame } from '../../Game/GameContext';
 
-type FactorySize = 'FACTORY_I' | 'FACTORY_II' | 'FACTORY_III' | 'FACTORY_IV';
+const PLOT_FEE_FRESH = 100;
+
+function getBuildErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) return error.message;
+  const e = error as { message?: string; data?: { json?: { message?: string }; message?: string } };
+  if (typeof e?.message === 'string') return e.message;
+  if (typeof e?.data?.json?.message === 'string') return e.data.json.message;
+  if (typeof e?.data?.message === 'string') return e.data.message;
+  return 'Failed to create factory order.';
+}
 
 interface FactoryCreationProps {
   companyId: string;
@@ -51,7 +61,7 @@ const getSectorResourceType = (sectorName: string): ResourceType => {
   }
 };
 
-const RESOURCE_LIMITS: Record<FactorySize, number> = {
+const RESOURCE_LIMITS: Record<string, number> = {
   FACTORY_I: 2,
   FACTORY_II: 3,
   FACTORY_III: 4,
@@ -92,6 +102,8 @@ export function FactoryCreation({
     // Start with empty array, will be populated by useEffect when sector data loads
     return [];
   });
+
+  const [buildError, setBuildError] = useState<string | null>(null);
 
   // Update schematic when sector resource becomes available
   useEffect(() => {
@@ -186,11 +198,13 @@ export function FactoryCreation({
 
   const handleSubmit = async () => {
     if (schematic.length === 0) return;
-    
+
     if (!authPlayer?.id) {
       console.error('No authenticated player found');
       return;
     }
+
+    setBuildError(null);
 
     try {
       await createFactoryOrder.mutateAsync({
@@ -203,10 +217,19 @@ export function FactoryCreation({
       onClose();
     } catch (error) {
       console.error('Failed to create factory order:', error);
+      setBuildError(getBuildErrorMessage(error));
     }
   };
 
-  const totalCost = schematic.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const handleCloseError = () => {
+    setBuildError(null);
+    onClose();
+  };
+
+  // Formula: (sum of resource prices) × factory size + $100 plot fee (fresh plots only)
+  const resourceCost = schematic.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const factorySizeNumber = getNumberForFactorySize(factorySize);
+  const totalCost = resourceCost * factorySizeNumber + PLOT_FEE_FRESH;
 
   if (resourcesLoading) {
     return (
@@ -357,10 +380,92 @@ export function FactoryCreation({
 
       {/* Total Cost */}
       {schematic.length > 0 && (
-        <div className="border-t border-gray-700 pt-4">
+        <div className="border-t border-gray-700 pt-4 space-y-2">
+          <div className="flex justify-between items-center text-sm text-gray-400">
+            <span className="flex items-center gap-1.5">
+              Resources × factory size multiplier (×{factorySizeNumber})
+              <Popover placement="top">
+                <PopoverTrigger>
+                  <button
+                    type="button"
+                    className="text-gray-500 hover:text-gray-300 transition-colors cursor-pointer"
+                    aria-label="How resources cost is calculated"
+                  >
+                    <RiInformationLine size={14} />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent>
+                  <div className="px-2 py-2 max-w-[260px] text-sm">
+                    <div className="font-semibold text-gray-200 mb-1">Resources × factory size</div>
+                    <p className="text-gray-400">
+                      The sum of current market prices for all resources in your schematic. This is
+                      multiplied by the factory size (Factory I = ×1, II = ×2, III = ×3, IV = ×4)
+                      because larger factories require more materials.
+                    </p>
+                    <p className="text-gray-500 mt-2 text-xs">
+                      Formula: (sum of resource prices) × {factorySizeNumber} = ${resourceCost * factorySizeNumber}
+                    </p>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </span>
+            <span>${resourceCost * factorySizeNumber}</span>
+          </div>
+          <div className="flex justify-between items-center text-sm text-gray-400">
+            <span className="flex items-center gap-1.5">
+              Plot fee (fresh plot)
+              <Popover placement="top">
+                <PopoverTrigger>
+                  <button
+                    type="button"
+                    className="text-gray-500 hover:text-gray-300 transition-colors cursor-pointer"
+                    aria-label="What is the plot fee"
+                  >
+                    <RiInformationLine size={14} />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent>
+                  <div className="px-2 py-2 max-w-[260px] text-sm">
+                    <div className="font-semibold text-gray-200 mb-1">Plot fee (fresh plot)</div>
+                    <p className="text-gray-400">
+                      A $100 one-time fee for building on a new plot. This covers the cost of
+                      securing and preparing the land for construction.
+                    </p>
+                    <p className="text-gray-500 mt-2 text-xs">
+                      This fee is <strong>not</strong> charged when upgrading an existing factory
+                      (e.g. repairing a rusted factory).
+                    </p>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </span>
+            <span>${PLOT_FEE_FRESH}</span>
+          </div>
           <div className="flex justify-between items-center bg-gray-900/50 rounded-lg p-3">
             <span className="text-sm font-medium text-gray-300">Total Cost:</span>
             <span className="text-2xl font-bold text-orange-400">${totalCost}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Build error */}
+      {buildError && (
+        <div className="rounded-lg border border-red-700/50 bg-red-900/20 p-4 space-y-3">
+          <div className="flex gap-3">
+            <RiErrorWarningFill className="text-red-400 flex-shrink-0 mt-0.5" size={20} />
+            <div>
+              <div className="text-sm font-semibold text-red-300">Build failed</div>
+              <p className="text-sm text-red-200/90 mt-1">{buildError}</p>
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={handleCloseError}
+              className="px-4 py-2 rounded-lg bg-red-700/50 hover:bg-red-700/70 border border-red-600/50 text-red-100 font-medium transition-colors"
+            >
+              Close
+            </button>
           </div>
         </div>
       )}

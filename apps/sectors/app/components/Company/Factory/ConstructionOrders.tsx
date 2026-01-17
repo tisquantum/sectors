@@ -8,6 +8,7 @@ import { Spinner, Chip } from '@nextui-org/react';
 import { RiTimeLine, RiHistoryLine, RiErrorWarningFill } from '@remixicon/react';
 import { cn } from '@/lib/utils';
 import { ResourceType } from './Factory.types';
+import { getNumberForFactorySize } from '@server/data/helpers';
 
 interface ConstructionOrdersProps {
   companyId: string;
@@ -77,19 +78,41 @@ export function ConstructionOrders({ companyId, gameId, showHistory = true }: Co
       {/* Outstanding Orders */}
       {hasOutstanding && (
         <div className="space-y-2">
-          <div className="flex items-center gap-2 text-xs font-semibold text-orange-400 uppercase tracking-wide">
-            <RiTimeLine size={16} />
-            <span>Outstanding Orders</span>
-            <Chip size="sm" variant="flat" color="warning" className="ml-auto">
-              {outstandingOrders.length}
-            </Chip>
-          </div>
+          {(() => {
+            // Calculate total cost of all outstanding orders
+            const totalOutstandingCost = outstandingOrders.reduce((sum, order) => {
+              const resourceCost = order.resourceTypes.reduce((resourceSum, type) => {
+                const price = resourcePriceMap.get(type as ResourceType) || 0;
+                return resourceSum + price;
+              }, 0);
+              const factorySizeNumber = getNumberForFactorySize(order.size);
+              const PLOT_FEE_FRESH = 100;
+              const totalCost = resourceCost * factorySizeNumber + PLOT_FEE_FRESH;
+              return sum + totalCost;
+            }, 0);
+
+            return (
+              <div className="flex items-center gap-2 text-xs font-semibold text-orange-400 uppercase tracking-wide">
+                <RiTimeLine size={16} />
+                <span>Outstanding Orders</span>
+                <span className="text-orange-300 normal-case font-normal">
+                  (TOTAL ${totalOutstandingCost})
+                </span>
+                <Chip size="sm" variant="flat" color="warning" className="ml-auto">
+                  {outstandingOrders.length}
+                </Chip>
+              </div>
+            );
+          })()}
           <div className="space-y-2 pl-4 border-l-2 border-orange-500/30">
             {outstandingOrders.map((order) => {
-              const totalCost = order.resourceTypes.reduce((sum, type) => {
+              const resourceCost = order.resourceTypes.reduce((sum, type) => {
                 const price = resourcePriceMap.get(type as ResourceType) || 0;
                 return sum + price;
               }, 0);
+              const factorySizeNumber = getNumberForFactorySize(order.size);
+              const PLOT_FEE_FRESH = 100;
+              const totalCost = resourceCost * factorySizeNumber + PLOT_FEE_FRESH;
 
               return (
                 <div
@@ -125,6 +148,7 @@ export function ConstructionOrders({ companyId, gameId, showHistory = true }: Co
                     </span>
                     <span className="text-orange-300 font-semibold">
                       Total: ${totalCost}
+                      <span className="text-gray-500 font-normal ml-1">(incl. $100 plot fee)</span>
                     </span>
                   </div>
                   {order.failureReason && (

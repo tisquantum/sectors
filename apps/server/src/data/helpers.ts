@@ -384,16 +384,10 @@ export const getPseudoSpend = (orders: PlayerOrderWithCompany[]) => {
     (order) => order.location == ShareLocation.OPEN_MARKET,
   );
 
-  //calculate total spend
+  // Calculate total buy costs (money going out)
   const totalBuyIpo = buyOrdersIpo.reduce(
     (acc, order) =>
-      acc + (order.quantity ?? 0) * (order.Company.currentStockPrice ?? 0),
-    0,
-  );
-
-  const totalSellIpo = sellOrdersIpo.reduce(
-    (acc, order) =>
-      acc + (order.quantity ?? 0) * (order.Company.currentStockPrice ?? 0),
+      acc + (order.quantity ?? 0) * (order.Company.ipoAndFloatPrice ?? order.Company.currentStockPrice ?? 0),
     0,
   );
 
@@ -403,12 +397,24 @@ export const getPseudoSpend = (orders: PlayerOrderWithCompany[]) => {
     0,
   );
 
+  // Calculate total sell profits (money coming in)
+  const totalSellIpo = sellOrdersIpo.reduce(
+    (acc, order) =>
+      acc + (order.quantity ?? 0) * (order.Company.ipoAndFloatPrice ?? order.Company.currentStockPrice ?? 0),
+    0,
+  );
+
   const totalSellOpenMarket = sellOrdersOpenMarket.reduce(
     (acc, order) =>
       acc + (order.quantity ?? 0) * (order.Company.currentStockPrice ?? 0),
     0,
   );
-  return totalBuyIpo - totalSellIpo + totalBuyOpenMarket - totalSellOpenMarket;
+
+  // Net cash impact: (buy costs) - (sell profits)
+  // Positive = net spending, Negative = net profit
+  const totalBuyCosts = totalBuyIpo + totalBuyOpenMarket;
+  const totalSellProfits = totalSellIpo + totalSellOpenMarket;
+  return totalBuyCosts - totalSellProfits;
 };
 
 export function determineFloatPrice(sector: Sector) {

@@ -7,7 +7,16 @@ import { trpc } from '@sectors/app/trpc';
 import { MarketingCampaignTier } from '@server/prisma/prisma.client';
 import { useGame } from '../../Game/GameContext';
 import { Spinner, Popover, PopoverContent, PopoverTrigger } from '@nextui-org/react';
-import { RiInformationLine } from '@remixicon/react';
+import { RiInformationLine, RiErrorWarningFill } from '@remixicon/react';
+
+function getCampaignErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) return error.message;
+  const e = error as { message?: string; data?: { json?: { message?: string }; message?: string } };
+  if (typeof e?.message === 'string') return e.message;
+  if (typeof e?.data?.json?.message === 'string') return e.data.json.message;
+  if (typeof e?.data?.message === 'string') return e.data.message;
+  return 'Failed to create campaign.';
+}
 
 type CampaignSize = 'CAMPAIGN_I' | 'CAMPAIGN_II' | 'CAMPAIGN_III';
 
@@ -69,6 +78,7 @@ export function MarketingCreation({
   const { authPlayer, gameState } = useGame();
   const [selectedSize, setSelectedSize] = useState<CampaignSize>('CAMPAIGN_I');
   const [schematic, setSchematic] = useState<ResourceSchematic[]>([]);
+  const [campaignError, setCampaignError] = useState<string | null>(null);
   
   // Get company to find its sector
   const company = gameState?.Company?.find(c => c.id === companyId);
@@ -116,10 +126,6 @@ export function MarketingCreation({
     onSuccess: () => {
       onClose();
     },
-    onError: (error) => {
-      console.error('Failed to create marketing campaign:', error);
-      alert(`Failed to create campaign: ${error.message}`);
-    },
   });
 
   const campaignConfig = CAMPAIGN_CONFIG[selectedSize];
@@ -141,18 +147,30 @@ export function MarketingCreation({
 
   const handleSubmit = async () => {
     if (schematic.length === 0 || !authPlayer) return;
-    
+
     const campaignConfig = CAMPAIGN_CONFIG[selectedSize];
     const resourceTypes = schematic.map(s => s.type);
-    
-    await submitCampaign.mutateAsync({
-      companyId,
-      gameId,
-      playerId: authPlayer.id,
-      tier: campaignConfig.tier,
-      slot: 1, // TODO: Get actual slot number
-      resourceTypes,
-    });
+
+    setCampaignError(null);
+
+    try {
+      await submitCampaign.mutateAsync({
+        companyId,
+        gameId,
+        playerId: authPlayer.id,
+        tier: campaignConfig.tier,
+        slot: 1, // TODO: Get actual slot number
+        resourceTypes,
+      });
+    } catch (error) {
+      console.error('Failed to create marketing campaign:', error);
+      setCampaignError(getCampaignErrorMessage(error));
+    }
+  };
+
+  const handleCloseCampaignError = () => {
+    setCampaignError(null);
+    onClose();
   };
 
   const totalCost = campaignConfig.cost;
@@ -171,6 +189,7 @@ export function MarketingCreation({
             onClick={() => {
               setSelectedSize(size);
               setSchematic([]); // Reset schematic when size changes
+              setCampaignError(null);
             }}
             className={cn(
               'px-4 py-2 rounded font-medium transition-colors',
@@ -298,6 +317,27 @@ export function MarketingCreation({
           </div>
         )}
       </div>
+
+      {campaignError && (
+        <div className="rounded-lg border border-red-700/50 bg-red-900/20 p-4 space-y-3">
+          <div className="flex gap-3">
+            <RiErrorWarningFill className="text-red-400 flex-shrink-0 mt-0.5" size={20} />
+            <div>
+              <div className="text-sm font-semibold text-red-300">Campaign failed</div>
+              <p className="text-sm text-red-200/90 mt-1">{campaignError}</p>
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={handleCloseCampaignError}
+              className="px-4 py-2 rounded-lg bg-red-700/50 hover:bg-red-700/70 border border-red-600/50 text-red-100 font-medium transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-2 pt-2">
         <button onClick={onClose} className="flex-1 px-4 py-2 rounded border border-gray-600 text-gray-300 hover:bg-gray-700/50 transition-colors">Cancel</button>

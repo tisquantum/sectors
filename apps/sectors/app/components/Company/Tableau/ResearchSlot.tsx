@@ -6,6 +6,16 @@ import { createPortal } from 'react-dom';
 import { trpc } from '@sectors/app/trpc';
 import { useGame } from '../../Game/GameContext';
 import { PhaseName, CompanyStatus } from '@server/prisma/prisma.client';
+import { RiErrorWarningFill } from '@remixicon/react';
+
+function getSubmitErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) return error.message;
+  const e = error as { message?: string; data?: { json?: { message?: string }; message?: string } };
+  if (typeof e?.message === 'string') return e.message;
+  if (typeof e?.data?.json?.message === 'string') return e.data.json.message;
+  if (typeof e?.data?.message === 'string') return e.data.message;
+  return 'Failed to submit research.';
+}
 
 interface ResearchSlotProps {
   companyId: string;
@@ -36,18 +46,17 @@ export function ResearchSlot({ companyId, gameId, isCEO = false }: ResearchSlotP
     gameId,
   });
 
+  const [researchError, setResearchError] = useState<string | null>(null);
+
   const utils = trpc.useUtils();
   const submitResearch = trpc.modernOperations.submitResearchAction.useMutation({
     onSuccess: () => {
       setShowResearchCreation(false);
+      setResearchError(null);
       // Invalidate queries to refresh data
       utils.company.getCompanyWithSector.invalidate({ id: companyId });
       utils.game.getGameState.invalidate({ gameId });
       utils.modernOperations.getPendingResearchOrders.invalidate({ companyId, gameId });
-    },
-    onError: (error) => {
-      console.error('Failed to submit research:', error);
-      alert(`Error: ${error.message}`);
     },
   });
 
@@ -76,19 +85,32 @@ export function ResearchSlot({ companyId, gameId, isCEO = false }: ResearchSlotP
     // Only active or insolvent companies can operate
     if (company?.status !== CompanyStatus.ACTIVE && company?.status !== CompanyStatus.INSOLVENT) return;
     if (canResearch && !showResearchCreation) {
+      setResearchError(null);
       setShowResearchCreation(true);
     }
   };
 
   const handleResearch = async () => {
     if (!company || !company.sectorId) return;
-    
-    submitResearch.mutate({
-      companyId: company.id,
-      gameId,
-      playerId: company.ceoId || '',
-      sectorId: company.sectorId,
-    });
+
+    setResearchError(null);
+
+    try {
+      await submitResearch.mutateAsync({
+        companyId: company.id,
+        gameId,
+        playerId: company.ceoId || '',
+        sectorId: company.sectorId,
+      });
+    } catch (error) {
+      console.error('Failed to submit research:', error);
+      setResearchError(getSubmitErrorMessage(error));
+    }
+  };
+
+  const handleCloseResearchError = () => {
+    setResearchError(null);
+    setShowResearchCreation(false);
   };
 
   if (!company) {
@@ -139,6 +161,28 @@ export function ResearchSlot({ companyId, gameId, isCEO = false }: ResearchSlotP
                   Research investment will increase your company&apos;s research progress by a random amount (0-2).
                 </p>
               </div>
+
+              {researchError && (
+                <div className="rounded-lg border border-red-700/50 bg-red-900/20 p-4 space-y-3">
+                  <div className="flex gap-3">
+                    <RiErrorWarningFill className="text-red-400 flex-shrink-0 mt-0.5" size={20} />
+                    <div>
+                      <div className="text-sm font-semibold text-red-300">Research failed</div>
+                      <p className="text-sm text-red-200/90 mt-1">{researchError}</p>
+                    </div>
+                  </div>
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleCloseResearchError}
+                      className="px-4 py-2 rounded-lg bg-red-700/50 hover:bg-red-700/70 border border-red-600/50 text-red-100 font-medium transition-colors"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="flex gap-3">
                 <button
                   onClick={handleResearch}

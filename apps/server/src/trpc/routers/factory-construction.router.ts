@@ -116,9 +116,12 @@ export const factoryConstructionRouter = (trpc: TrpcService, ctx: Context) => ro
         totalResourceCost += price;
       }
       
-      // Factory construction cost = (sum of resource prices) × factory size + $100
+      // Factory construction cost = (sum of resource prices) × factory size + $100 plot fee.
+      // The $100 plot fee applies only to fresh plots; upgrading existing factories does not
+      // include it. createOrder is always for new construction (fresh plot).
       const factorySizeNumber = getNumberForFactorySize(factorySize);
-      const constructionCost = (totalResourceCost * factorySizeNumber) + 100;
+      const PLOT_FEE_FRESH = 100;
+      const constructionCost = (totalResourceCost * factorySizeNumber) + PLOT_FEE_FRESH;
       
       // Get pending factory construction orders for this company in this turn
       const game = await ctx.gamesService.game({ id: input.gameId });
@@ -126,7 +129,7 @@ export const factoryConstructionRouter = (trpc: TrpcService, ctx: Context) => ro
         throw new Error('Game has no current turn');
       }
       
-      const pendingOrders = await ctx.factoryConstructionOrderService.factoryConstructionOrdersWithRelations({
+      const pendingFactoryOrders = await ctx.factoryConstructionOrderService.factoryConstructionOrdersWithRelations({
         where: {
           companyId: input.companyId,
           gameId: input.gameId,
@@ -134,22 +137,38 @@ export const factoryConstructionRouter = (trpc: TrpcService, ctx: Context) => ro
         },
       });
       
-      // Calculate total cost of pending orders (using same calculation)
-      let totalPendingCost = 0;
-      for (const order of pendingOrders) {
+      // Calculate total cost of pending factory orders (same formula: resources × size + plot fee)
+      let totalPendingFactoryCost = 0;
+      for (const order of pendingFactoryOrders) {
         let orderResourceCost = 0;
         for (const resourceType of order.resourceTypes) {
           const price = resourcePriceMap.get(resourceType) || 0;
           orderResourceCost += price;
         }
         const orderFactorySizeNumber = getNumberForFactorySize(order.size);
-        totalPendingCost += (orderResourceCost * orderFactorySizeNumber) + 100;
+        totalPendingFactoryCost += (orderResourceCost * orderFactorySizeNumber) + PLOT_FEE_FRESH;
       }
+
+      // Get pending research orders for this company in this turn
+      const pendingResearchOrders = await ctx.prismaService.researchOrder.findMany({
+        where: {
+          companyId: input.companyId,
+          gameId: input.gameId,
+          gameTurnId: game.currentTurn,
+          researchProgressGain: null, // Only unresolved orders
+        },
+      });
+
+      // Calculate total cost of pending research orders
+      const totalPendingResearchCost = pendingResearchOrders.reduce((sum, order) => sum + order.cost, 0);
+
+      // Total cost of ALL pending operation orders (factories + research)
+      const totalPendingCost = totalPendingFactoryCost + totalPendingResearchCost;
       
       // Check if company can afford this order plus all pending orders
       const totalCost = totalPendingCost + constructionCost;
       if (company.cashOnHand < totalCost) {
-        throw new Error(`Insufficient funds. This factory costs $${constructionCost}, and you have $${totalPendingCost} in pending orders. Total needed: $${totalCost}, but company only has $${company.cashOnHand}.`);
+        throw new Error(`Insufficient funds. This factory costs $${constructionCost}, and you have $${totalPendingFactoryCost} in pending factory orders and $${totalPendingResearchCost} in pending research orders (total: $${totalPendingCost}). Total needed: $${totalCost}, but company only has $${company.cashOnHand}.`);
       }
 
       // Create the factory construction order
