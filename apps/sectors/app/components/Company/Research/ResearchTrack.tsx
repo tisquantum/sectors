@@ -65,7 +65,7 @@ export function ResearchTrack({
                   </div>
                   {space.number === 5 && (
                     <div className="text-[10px] text-muted-foreground/70 leading-tight">
-                      +1 demand
+                      +0 demand
                     </div>
                   )}
                   {space.number === 10 && (
