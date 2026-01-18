@@ -157,14 +157,9 @@ export function SectorResearchTracks() {
                     <strong className="text-white">Additional Benefits:</strong>
                   </p>
                   <ul className="list-disc list-inside space-y-1 ml-2">
-                    <li><strong>Demand Bonuses:</strong> As sectors reach research stages, they gain demand bonuses:
-                      <ul className="list-disc list-inside ml-4 mt-1 space-y-0.5">
-                        <li>Stage 1 (0-3): +0 demand</li>
-                        <li>Stage 2 (4-6): +2 demand</li>
-                        <li>Stage 3 (7-9): +3 demand</li>
-                        <li>Stage 4 (10-12): +5 demand</li>
-                      </ul>
-                    </li>
+                    <li>Each research action performed adds 1 demand counter to Forecast Quarter 2</li>
+                    <li>Demand bonuses: Stage 1 = +0, Stage 2 = +2, Stage 3 = +3, Stage 4 = +5</li>
+                    <li>Reaching research stages unlocks more factory and marketing slots</li>
                   </ul>
                   <p className="pt-2 mt-2 border-t border-gray-700 text-gray-400 italic">
                     Note: Research progress is shared across all companies in a sector, so multiple companies can contribute to advancing the same research track.
