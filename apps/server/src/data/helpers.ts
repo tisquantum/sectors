@@ -1147,10 +1147,10 @@ export function getNumberForFactorySize(factorySize: FactorySize) {
 /**
  * Check if a factory size is valid for a given research stage
  * Research stages determine which factory sizes are available:
- * Stage 1 (0-5): FACTORY_I only
- * Stage 2 (6-10): FACTORY_I, FACTORY_II
- * Stage 3 (11-15): FACTORY_II, FACTORY_III
- * Stage 4 (16-20+): FACTORY_III, FACTORY_IV
+ * Stage 1 (0-3): FACTORY_I only
+ * Stage 2 (4-6): FACTORY_I, FACTORY_II
+ * Stage 3 (7-9): FACTORY_II, FACTORY_III
+ * Stage 4 (10-12+): FACTORY_III, FACTORY_IV
  */
 export function validFactorySizeForResearchStage(factorySize: FactorySize, researchStage: number): boolean {
   switch (factorySize) {

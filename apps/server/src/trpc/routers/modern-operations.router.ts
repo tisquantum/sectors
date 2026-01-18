@@ -149,9 +149,9 @@ export default (trpc: TrpcService, ctx: Context) =>
         }
 
         // Calculate research cost based on sector research stage (researchMarker)
-        // Research track has 20 spaces divided into 4 stages of 5 spaces each
-        // Stage 1: 0-5 ($100), Stage 2: 6-10 ($200), Stage 3: 11-15 ($300), Stage 4: 16-20 ($400)
-        const researchStage = Math.min(Math.floor(sector.researchMarker / 5) + 1, 4);
+        // Research track has 12 spaces divided into 4 stages of 3 spaces each
+        // Stage 1: 0-3 ($100), Stage 2: 4-6 ($200), Stage 3: 7-9 ($300), Stage 4: 10-12 ($400)
+        const researchStage = Math.min(Math.floor(sector.researchMarker / 3) + 1, 4);
         const researchCost = RESEARCH_COSTS_BY_PHASE[researchStage - 1] || RESEARCH_COSTS_BY_PHASE[0];
 
         // Get pending research orders for this company in this turn
@@ -379,14 +379,14 @@ export default (trpc: TrpcService, ctx: Context) =>
         });
 
         return sectors.map(sector => {
-          // Calculate research stage from researchMarker (0-5 = Stage 1, 6-10 = Stage 2, 11-15 = Stage 3, 16-20+ = Stage 4)
+          // Calculate research stage from researchMarker (0-3 = Stage 1, 4-6 = Stage 2, 7-9 = Stage 3, 10-12+ = Stage 4)
           const researchMarker = sector.researchMarker || 0;
           let researchStage = 1;
-          if (researchMarker >= 16) {
+          if (researchMarker >= 10) {
             researchStage = 4;
-          } else if (researchMarker >= 11) {
+          } else if (researchMarker >= 7) {
             researchStage = 3;
-          } else if (researchMarker >= 6) {
+          } else if (researchMarker >= 4) {
             researchStage = 2;
           }
 

@@ -53,7 +53,7 @@ const SectorComponentAnimation = ({
             <div className="mt-2 text-xs space-y-1">
               <div>Base Demand: {sector.baseDemand || 0}</div>
               <div>Demand Bonus: {sector.demandBonus || 0}</div>
-              <div>Research Stage: {sector.researchMarker >= 16 ? 4 : sector.researchMarker >= 11 ? 3 : sector.researchMarker >= 6 ? 2 : 1}</div>
+              <div>Research Stage: {sector.researchMarker >= 10 ? 4 : sector.researchMarker >= 7 ? 3 : sector.researchMarker >= 4 ? 2 : 1}</div>
             </div>
           </div>
         }
@@ -192,9 +192,9 @@ const EndTurnSectorConsumerDistributionAnimation = ({
 
   // Calculate research stage for display
   const getResearchStage = (researchMarker: number): number => {
-    if (researchMarker >= 16) return 4;
-    if (researchMarker >= 11) return 3;
-    if (researchMarker >= 6) return 2;
+    if (researchMarker >= 10) return 4;
+    if (researchMarker >= 7) return 3;
+    if (researchMarker >= 4) return 2;
     return 1;
   };
 

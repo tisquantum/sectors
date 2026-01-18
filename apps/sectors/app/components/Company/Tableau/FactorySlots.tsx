@@ -92,9 +92,9 @@ export function FactorySlots({ companyId, gameId, currentPhase, isCEO = false }:
 
   // Calculate research stage from sector researchMarker
   const getResearchStage = (researchMarker: number): number => {
-    if (researchMarker >= 16) return 4;
-    if (researchMarker >= 11) return 3;
-    if (researchMarker >= 6) return 2;
+    if (researchMarker >= 10) return 4;
+    if (researchMarker >= 7) return 3;
+    if (researchMarker >= 4) return 2;
     return 1;
   };
 

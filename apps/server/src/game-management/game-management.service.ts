@@ -9893,9 +9893,9 @@ export class GameManagementService {
   /**
    * Check if any sector has just transitioned to a new research stage
    * The phase should only run when transitioning between stages:
-   * - Stage 1 → Stage 2: researchMarker = 6 (crossed from 0-5 to 6-10)
-   * - Stage 2 → Stage 3: researchMarker = 11 (crossed from 6-10 to 11-15)
-   * - Stage 3 → Stage 4: researchMarker = 16 (crossed from 11-15 to 16-20)
+   * - Stage 1 → Stage 2: researchMarker = 4 (crossed from 0-3 to 4-6)
+   * - Stage 2 → Stage 3: researchMarker = 7 (crossed from 4-6 to 7-9)
+   * - Stage 3 → Stage 4: researchMarker = 10 (crossed from 7-9 to 10-12)
    * @param currentPhase - The current phase object
    * @returns true if any sector is at a stage boundary (6, 11, or 16), false otherwise
    */
@@ -9905,13 +9905,13 @@ export class GameManagementService {
     }
 
     // Check if any sector is at a stage transition boundary
-    // Stage 1→2: researchMarker = 6
-    // Stage 2→3: researchMarker = 11
-    // Stage 3→4: researchMarker = 16
+    // Stage 1→2: researchMarker = 4
+    // Stage 2→3: researchMarker = 7
+    // Stage 3→4: researchMarker = 10
     const sectorCount = await this.prisma.sector.count({
       where: {
         gameId: currentPhase.gameId,
-        researchMarker: { in: [6, 11, 16] },
+        researchMarker: { in: [4, 7, 10] },
       },
     });
 

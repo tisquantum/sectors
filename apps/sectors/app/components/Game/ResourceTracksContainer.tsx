@@ -54,11 +54,11 @@ export function ResourceTracksContainer() {
 
       const researchMarker = sector.researchMarker || 0;
       let researchStage = 1;
-      if (researchMarker >= 16) {
+      if (researchMarker >= 10) {
         researchStage = 4;
-      } else if (researchMarker >= 11) {
+      } else if (researchMarker >= 7) {
         researchStage = 3;
-      } else if (researchMarker >= 6) {
+      } else if (researchMarker >= 4) {
         researchStage = 2;
       }
 

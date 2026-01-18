@@ -79,14 +79,14 @@ export const factoryConstructionRouter = (trpc: TrpcService, ctx: Context) => ro
         throw new Error('Sector not found');
       }
       
-      // Calculate research stage from researchMarker (0-5 = Stage 1, 6-10 = Stage 2, 11-15 = Stage 3, 16-20+ = Stage 4)
+      // Calculate research stage from researchMarker (0-3 = Stage 1, 4-6 = Stage 2, 7-9 = Stage 3, 10-12+ = Stage 4)
       const researchMarker = sector.researchMarker || 0;
       let researchStage = 1;
-      if (researchMarker >= 16) {
+      if (researchMarker >= 10) {
         researchStage = 4;
-      } else if (researchMarker >= 11) {
+      } else if (researchMarker >= 7) {
         researchStage = 3;
-      } else if (researchMarker >= 6) {
+      } else if (researchMarker >= 4) {
         researchStage = 2;
       }
       

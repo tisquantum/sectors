@@ -24,10 +24,10 @@ interface ResearchSlotProps {
 }
 
 const RESEARCH_COSTS = {
-  1: 100, // Stage 1 (researchMarker 0-5)
-  2: 200, // Stage 2 (researchMarker 6-10)
-  3: 300, // Stage 3 (researchMarker 11-15)
-  4: 400, // Stage 4 (researchMarker 16-20)
+  1: 100, // Stage 1 (researchMarker 0-3)
+  2: 200, // Stage 2 (researchMarker 4-6)
+  3: 300, // Stage 3 (researchMarker 7-9)
+  4: 400, // Stage 4 (researchMarker 10-12)
 };
 
 export function ResearchSlot({ companyId, gameId, isCEO = false }: ResearchSlotProps) {
@@ -61,10 +61,10 @@ export function ResearchSlot({ companyId, gameId, isCEO = false }: ResearchSlotP
   });
 
   // Calculate research cost based on sector research stage (researchMarker)
-  // Research track has 20 spaces divided into 4 stages of 5 spaces each
-  // Stage 1: 0-5 ($100), Stage 2: 6-10 ($200), Stage 3: 11-15 ($300), Stage 4: 16-20 ($400)
+  // Research track has 12 spaces divided into 4 stages of 3 spaces each
+  // Stage 1: 0-3 ($100), Stage 2: 4-6 ($200), Stage 3: 7-9 ($300), Stage 4: 10-12 ($400)
   const sectorResearchMarker = company?.Sector?.researchMarker || 0;
-  const researchStage = Math.min(Math.floor(sectorResearchMarker / 5) + 1, 4);
+  const researchStage = Math.min(Math.floor(sectorResearchMarker / 3) + 1, 4);
   const researchCost = RESEARCH_COSTS[researchStage as keyof typeof RESEARCH_COSTS] || 100;
   
   const researchProgress = company?.researchProgress || 0;

@@ -33,19 +33,19 @@ export function ResearchProgressTracker({ gameId }: Props) {
       
       <div className="space-y-4">
         {sectorsProgress.map((sector) => {
-          // Calculate research stage from researchMarker (0-5 = Stage 1, 6-10 = Stage 2, 11-15 = Stage 3, 16-20+ = Stage 4)
+          // Calculate research stage from researchMarker (0-3 = Stage 1, 4-6 = Stage 2, 7-9 = Stage 3, 10-12+ = Stage 4)
           const researchMarker = sector.researchMarker || 0;
           let researchStage = 1;
-          if (researchMarker >= 16) {
+          if (researchMarker >= 10) {
             researchStage = 4;
-          } else if (researchMarker >= 11) {
+          } else if (researchMarker >= 7) {
             researchStage = 3;
-          } else if (researchMarker >= 6) {
+          } else if (researchMarker >= 4) {
             researchStage = 2;
           }
 
           const nextMilestone = researchStage < 4 ? researchStage + 1 : 4;
-          const requiredMarkers = nextMilestone === 2 ? 6 : nextMilestone === 3 ? 11 : nextMilestone === 4 ? 16 : 20;
+          const requiredMarkers = nextMilestone === 2 ? 4 : nextMilestone === 3 ? 7 : nextMilestone === 4 ? 10 : 12;
           const progressPercentage = researchStage === 4 ? 100 : ((researchMarker / requiredMarkers) * 100);
           const unlockedSizes = getUnlockedFactorySizes(researchStage);
 

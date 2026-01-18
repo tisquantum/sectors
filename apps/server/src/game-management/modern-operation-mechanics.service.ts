@@ -1557,6 +1557,9 @@ export class ModernOperationMechanicsService {
     // This ensures multiple orders from the same company are processed correctly
     const companyCashTracking = new Map<string, number>();
     const companyProgressTracking = new Map<string, number>();
+    
+    // Track all research actions (successful or not) to add demand counters to Q2
+    let researchActionsCount = 0;
 
     // Process each research order
     for (const order of researchOrders) {
@@ -1581,6 +1584,9 @@ export class ModernOperationMechanicsService {
         });
         continue;
       }
+
+      // Count this research action for Q2 demand counter (only if it proceeds)
+      researchActionsCount++;
 
       // Generate random research progress gain (1, or 2)
       const researchProgressGain = Math.floor(Math.random() * 2) + 1; // 1 or 2
@@ -1645,6 +1651,25 @@ export class ModernOperationMechanicsService {
         gameId: phase.gameId,
         content: `${company.name} invested $${order.cost} in research. Progress: +${researchProgressGain} (Total: ${newProgress}).`,
       });
+    }
+
+    // Add demand counters to Q2 for each research action (regardless of success/failure)
+    if (researchActionsCount > 0) {
+      const q2 = await this.prisma.forecastQuarter.findFirst({
+        where: { gameId: phase.gameId, quarterNumber: 2 },
+      });
+
+      if (q2) {
+        await this.prisma.forecastQuarter.update({
+          where: { id: q2.id },
+          data: { demandCounters: { increment: researchActionsCount } },
+        });
+
+        researchGameLogEntries.push({
+          gameId: phase.gameId,
+          content: `${researchActionsCount} research action(s) performed. Added ${researchActionsCount} demand counter(s) to Q2.`,
+        });
+      }
     }
 
     // OPTIMIZATION: Batch update research orders with results
@@ -2366,7 +2391,7 @@ export class ModernOperationMechanicsService {
   private async updateResearchProgress(phase: Phase) {
     // Research stages are calculated dynamically from researchMarker
     // No need to update a separate technology level field
-    // Research stages: 0-5 → Stage 1, 6-10 → Stage 2, 11-15 → Stage 3, 16-20+ → Stage 4
+    // Research stages: 0-3 → Stage 1, 4-6 → Stage 2, 7-9 → Stage 3, 10-12+ → Stage 4
     // This method is kept for potential future research-related updates
   }
 
@@ -2377,10 +2402,10 @@ export class ModernOperationMechanicsService {
    * Worker allocation = total workers in factories + marketing campaigns + research for that sector
    * Worker allocation is divided by 2 before being added to demand.
    * Research stage bonus:
-   *   - Stage 1 (researchMarker 0-5): +0
-   *   - Stage 2 (researchMarker 6-10): +2
-   *   - Stage 3 (researchMarker 11-15): +3
-   *   - Stage 4 (researchMarker 16-20): +5
+   *   - Stage 1 (researchMarker 0-3): +0
+   *   - Stage 2 (researchMarker 4-6): +2
+   *   - Stage 3 (researchMarker 7-9): +3
+   *   - Stage 4 (researchMarker 10-12): +5
    * 
    * The sector's `baseDemand` field stores the initial demand from gameData (preserved).
    * The `demand` field is updated each turn to reflect effective demand (base + brand + workers/2 + research stage).
@@ -2466,9 +2491,9 @@ export class ModernOperationMechanicsService {
       const workerAllocation = workerAllocationBySector.get(sector.id) || 0;
 
       // Calculate research stage bonus based on sector researchMarker
-      // Stage 1 (0-5): +0, Stage 2 (6-10): +2, Stage 3 (11-15): +3, Stage 4 (16-20): +5
+      // Stage 1 (0-3): +0, Stage 2 (4-6): +2, Stage 3 (7-9): +3, Stage 4 (10-12): +5
       const researchMarker = sector.researchMarker || 0;
-      const researchStage = Math.min(Math.floor(researchMarker / 5) + 1, 4);
+      const researchStage = Math.min(Math.floor(researchMarker / 3) + 1, 4);
       const researchStageBonus = researchStage === 1 ? 0 : researchStage === 2 ? 2 : researchStage === 3 ? 3 : 5;
 
       // Base demand should be 0 for modern operations - demand comes from workers + brand bonus + research stage only
@@ -2684,12 +2709,12 @@ export class ModernOperationMechanicsService {
 
   /**
    * Get research stage from sector researchMarker
-   * Stage 1: 0-5, Stage 2: 6-10, Stage 3: 11-15, Stage 4: 16-20
+   * Stage 1: 0-3, Stage 2: 4-6, Stage 3: 7-9, Stage 4: 10-12
    */
   private getResearchStage(researchMarker: number): number {
-    if (researchMarker >= 16) return 4;
-    if (researchMarker >= 11) return 3;
-    if (researchMarker >= 6) return 2;
+    if (researchMarker >= 10) return 4;
+    if (researchMarker >= 7) return 3;
+    if (researchMarker >= 4) return 2;
     return 1;
   }
 

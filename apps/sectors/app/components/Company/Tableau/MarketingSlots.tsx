@@ -31,7 +31,7 @@ interface MarketingSlotsProps {
 }
 
 // Helper to get max marketing slots based on research stage (same as factories)
-// Research stages: 0-5 = Stage 1, 6-10 = Stage 2, 11-15 = Stage 3, 16-20+ = Stage 4
+// Research stages: 0-3 = Stage 1, 4-6 = Stage 2, 7-9 = Stage 3, 10-12+ = Stage 4
 const getMaxMarketingSlots = (researchStage: number): number => {
   switch (researchStage) {
     case 1: return 2;
@@ -44,9 +44,9 @@ const getMaxMarketingSlots = (researchStage: number): number => {
 
 // Calculate research stage from researchMarker
 const getResearchStage = (researchMarker: number): number => {
-  if (researchMarker >= 16) return 4;
-  if (researchMarker >= 11) return 3;
-  if (researchMarker >= 6) return 2;
+  if (researchMarker >= 10) return 4;
+  if (researchMarker >= 7) return 3;
+  if (researchMarker >= 4) return 2;
   return 1;
 };
 
