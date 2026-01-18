@@ -414,7 +414,7 @@ const StockChart = () => {
                       const currentCell = cellRefs.current.get(currentPrice);
                       const theoreticalCell = cellRefs.current.get(theoreticalPrice);
                       
-                      if (!currentCell || !theoreticalCell) return [];
+                      if (!currentCell || !theoreticalCell || !gridRef.current) return [];
                       
                       const gridRect = gridRef.current.getBoundingClientRect();
                       const currentRect = currentCell.getBoundingClientRect();

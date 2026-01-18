@@ -192,15 +192,15 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
               >
                 <div className="flex items-center gap-2 cursor-pointer">
                   <div className="relative">
-                    <RiErrorWarningFill className="h-5 w-5 text-red-400" />
                     <Badge
-                      children={company.oversoldShares.toString()}
                       content={company.oversoldShares.toString()}
                       color="danger"
                       size="sm"
                       variant="solid"
                       className="absolute -top-2 -right-2 min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-bold"
-                    />
+                    >
+                      <RiErrorWarningFill className="h-5 w-5 text-red-400" />
+                    </Badge>
                   </div>
                   <span className="text-xs font-bold text-red-400">OVERSOLD</span>
                 </div>

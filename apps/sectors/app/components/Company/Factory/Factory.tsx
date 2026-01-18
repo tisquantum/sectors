@@ -162,7 +162,7 @@ export function Factory({
               <div className="px-1 py-1 max-w-xs">
                 <div className="text-small font-semibold mb-1">Resource Types</div>
                 <div className="text-small text-default-500">
-                  Resource types required for this factory. Each resource contributes to the factory's revenue when customers are served.
+                  Resource types required for this factory. Each resource contributes to the factory&apos;s revenue when customers are served.
                 </div>
               </div>
             </PopoverContent>
@@ -207,7 +207,7 @@ export function Factory({
               <div className="px-1 py-1 max-w-xs">
                 <div className="text-small font-semibold mb-1">Workers</div>
                 <div className="text-small text-default-500">
-                  Number of workers assigned to this factory. Workers determine the factory's capacity and cost (workers × sector salary).
+                  Number of workers assigned to this factory. Workers determine the factory&apos;s capacity and cost (workers × sector salary).
                 </div>
               </div>
             </PopoverContent>

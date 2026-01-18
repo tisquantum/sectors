@@ -217,7 +217,7 @@ export function MarketingCreation({
                 <div className="px-1 py-1 max-w-xs">
                   <div className="text-small font-semibold mb-1">Workers</div>
                   <div className="text-small text-default-500">
-                    The number of workers required to operate this marketing campaign. Workers must be available from your company's workforce.
+                    The number of workers required to operate this marketing campaign. Workers must be available from your company&apos;s workforce.
                   </div>
                 </div>
               </PopoverContent>
@@ -259,7 +259,7 @@ export function MarketingCreation({
                 <div className="px-1 py-1 max-w-xs">
                   <div className="text-small font-semibold mb-1">Campaign Cost</div>
                   <div className="text-small text-default-500">
-                    The upfront cash cost to create this marketing campaign. This cost must be paid from your company's cash on hand.
+                    The upfront cash cost to create this marketing campaign. This cost must be paid from your company&apos;s cash on hand.
                   </div>
                 </div>
               </PopoverContent>

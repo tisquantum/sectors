@@ -149,7 +149,7 @@ export function SectorResearchTracks() {
                   </p>
                   <ul className="list-disc list-inside space-y-1 ml-2">
                     <li>Each sector has a shared research track with 12 spaces (4 stages of 3 spaces each)</li>
-                    <li>Companies in a sector contribute to that sector's overall research progress</li>
+                    <li>Companies in a sector contribute to that sector&apos;s overall research progress</li>
                     <li>Research progress advances when companies complete research milestones</li>
                     <li>Each research action costs cash and requires available workers</li>
                   </ul>
