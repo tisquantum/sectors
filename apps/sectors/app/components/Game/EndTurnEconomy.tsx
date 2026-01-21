@@ -121,6 +121,24 @@ const EndTurnEconomy = () => {
               <EndTurnSectorConsumerDistributionAnimation sectors={sectors} />
             ) : (
               <div className="flex flex-col flex-wrap items-center gap-4">
+                {/* Economy Overview Explanation */}
+                <div className="w-full max-w-3xl mb-2 p-4 bg-gray-800/50 border border-gray-700 rounded-lg">
+                  <h3 className="text-lg font-semibold text-white mb-2">Economy Overview</h3>
+                  <div className="text-sm text-gray-300 space-y-2">
+                    <p>
+                      The <strong className="text-white">Economy Score</strong> is the key driver of consumer distribution in the game. It represents the overall economic strength and is determined by worker allocation on the workforce track.
+                    </p>
+                    <p>
+                      <strong className="text-white">How it works:</strong> As workers are allocated to factories, marketing campaigns, and research, the economy score increases. The score starts at 8 when no workers are allocated and improves as more workers are put to work.
+                    </p>
+                    <p>
+                      <strong className="text-white">Consumer Distribution:</strong> The Economy Score determines how many consumers can be distributed from the Consumer Pool to sectors each turn. Higher economy scores mean more consumers can flow into sectors, leading to increased economic activity.
+                    </p>
+                    <p className="text-xs text-gray-400 italic mt-2">
+                      View the Workforce Track in the Modern Operations section below to see how worker allocation directly impacts the economy score.
+                    </p>
+                  </div>
+                </div>
                 <div className="flex flex-wrap relative">
                   <Tooltip
                     classNames={{ base: baseToolTipStyle }}
@@ -167,12 +185,19 @@ const EndTurnEconomy = () => {
                     classNames={{ base: baseToolTipStyle }}
                     className={tooltipStyle}
                     content={
-                      <p className={tooltipParagraphStyle}>
-                        The economy score is determined by worker allocation. It starts at 10
-                        and increases by 1 for every 2 workers allocated to factories, marketing
-                        campaigns, or research. As more workers are employed across the economy,
-                        the economy score increases, reflecting a stronger economy.
-                      </p>
+                      <div>
+                        <p className={tooltipParagraphStyle}>
+                          The economy score is determined by worker allocation on the workforce track. It starts at 8
+                          and increases as workers are allocated to factories, marketing campaigns, or research.
+                        </p>
+                        <p className={tooltipParagraphStyle}>
+                          The score is determined by the rightmost allocated worker&apos;s position on the track. As more workers are employed across the economy,
+                          the economy score increases, reflecting a stronger economy.
+                        </p>
+                        <p className={tooltipParagraphStyle}>
+                          The Economy Score determines how many consumers can be distributed from the Consumer Pool to sectors each turn.
+                        </p>
+                      </div>
                     }
                   >
                     <div className="flex gap-1 text-base lg:text-xl">

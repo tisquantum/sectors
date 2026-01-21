@@ -3,10 +3,11 @@
 import { trpc } from '@sectors/app/trpc';
 import { useGame } from '../GameContext';
 import { ModernOperationsSection } from '../ModernOperations/layouts';
-import { Spinner } from '@nextui-org/react';
-import { DEFAULT_WORKERS } from '@server/data/constants';
+import { Spinner, Popover, PopoverTrigger, PopoverContent } from '@nextui-org/react';
+import { DEFAULT_WORKERS, ECONOMY_SCORE_VALUES } from '@server/data/constants';
 import { sectorColors } from '@server/data/gameData';
 import { useMemo } from 'react';
+import { RiInformationLine } from '@remixicon/react';
 
 /**
  * Workforce Track Component
@@ -19,7 +20,9 @@ import { useMemo } from 'react';
  * The track has 40 spaces representing workers. As workers are allocated
  * to factories, marketing campaigns, and research, they are replaced with
  * sector-colored cubes showing where workers have been allocated.
- * The Economy Score starts at 10 and increases by 1 for every 2 allocated workers.
+ * The Economy Score is driven by the worker track - as workers are put to work,
+ * the spaces reflect an improving economy. The economy score is determined by
+ * the rightmost allocated worker's position.
  */
 export function WorkforceTrack() {
   const { gameId, gameState } = useGame();
@@ -67,11 +70,13 @@ export function WorkforceTrack() {
   
   const allocatedWorkers = totalWorkers - availableWorkers;
   
-  // Economy score should represent the rightmost filled allocated square
-  // If no workers allocated, economy score is 10 (starting position before track)
-  // If 5 workers allocated (positions 1-5), economy score should be 10 + 5 = 15
-  // Use calculated value from allocated workers to ensure it matches the rightmost allocated position
-  const economyScore = allocatedWorkers > 0 ? 10 + allocatedWorkers : 10;
+  // Economy score is determined by the rightmost allocated worker's position
+  // Use the economy score array value at that position
+  // If no workers allocated, economy score is 8 (first position in array, index 0)
+  // If allocatedWorkers = 9, use index 8 (space 9 - 1 = 8) which is 10
+  const economyScore = allocatedWorkers > 0 
+    ? ECONOMY_SCORE_VALUES[allocatedWorkers - 1] 
+    : ECONOMY_SCORE_VALUES[0];
 
   // Create a mapping of space number to sector color
   // Workers are allocated left to right (starting from space 1), so we need to map which spaces belong to which sectors
@@ -131,17 +136,50 @@ export function WorkforceTrack() {
           </div>
           <div className="flex items-center gap-2">
             <span className="font-medium text-gray-300">Economy Score:</span>
-            <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded font-semibold">
-              {economyScore}
-            </span>
+            <Popover placement="top" showArrow>
+              <PopoverTrigger>
+                <button
+                  type="button"
+                  className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded font-semibold hover:bg-blue-500/30 transition-colors flex items-center gap-1 cursor-help"
+                  aria-label="Economy Score information"
+                >
+                  {economyScore}
+                  <RiInformationLine size={14} className="text-blue-400/70" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="bg-gray-900 border border-gray-700 max-w-md">
+                <div className="p-4 space-y-3">
+                  <div className="text-sm font-semibold text-white mb-2">Economy Score Explained</div>
+                  <div className="text-xs space-y-2 text-gray-300">
+                    <p>
+                      <strong className="text-white">What it is:</strong> The Economy Score represents the overall economic strength of the game economy, driven purely by worker allocation on the workforce track.
+                    </p>
+                    <p>
+                      <strong className="text-white">How it works:</strong> As workers are allocated to factories, marketing campaigns, and research, the economy score increases. The score is determined by the rightmost allocated worker&apos;s position on the track.
+                    </p>
+                    <p>
+                      <strong className="text-white">What it&apos;s used for:</strong>
+                    </p>
+                    <ul className="list-disc list-inside space-y-1 ml-2">
+                      <li><strong>Consumer Distribution:</strong> Determines how many consumers can be distributed from the Consumer Pool to sectors each turn</li>
+                      <li><strong>Economic Indicator:</strong> Higher scores indicate a stronger economy with more active workers</li>
+                      <li><strong>Game Balance:</strong> More allocated workers = stronger economy = more consumer activity</li>
+                    </ul>
+                    <p className="pt-2 mt-2 border-t border-gray-700 text-gray-400 italic">
+                      The track shows economy score values for each position (8, 8, 8, 8, 9, 9...). The current economy score is highlighted with a blue outline at the rightmost allocated worker position.
+                    </p>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
 
-        {/* Economy Score Starting Indicator (when economy score = 10) */}
-        {economyScore === 10 && (
+        {/* Economy Score Starting Indicator (when economy score = 8, no workers allocated) */}
+        {allocatedWorkers === 0 && (
           <div className="text-xs text-gray-400 mb-2 flex items-center gap-2">
             <div className="w-3 h-3 border-2 border-blue-500 rounded" />
-            <span>Economy Score: 10 (starting position, before track)</span>
+            <span>Economy Score: {economyScore} (starting position, no workers allocated)</span>
           </div>
         )}
 
@@ -151,16 +189,13 @@ export function WorkforceTrack() {
             // Workers are allocated from left to right, starting at space 1
             // So spaces 1 to allocatedWorkers are allocated, and spaces allocatedWorkers+1 to 40 are available
             const isAvailable = space > allocatedWorkers;
-            // Economy score represents the rightmost filled allocated square
-            // Economy score = 10 + allocatedWorkers (where allocatedWorkers is the position of the rightmost allocated worker)
-            // So economy score 15 = position 5 (15 - 10 = 5), economy score 12 = position 2 (12 - 10 = 2)
-            // If no workers allocated, economy score is 10 (before track starts, position 0)
-            const economyScorePosition = economyScore > 10 ? economyScore - 10 : 0;
             // The economy score indicator should be at the rightmost allocated worker's position
             const rightmostAllocatedPosition = allocatedWorkers > 0 ? allocatedWorkers : 0;
             // Show economy score indicator at the rightmost allocated position
             const isEconomyScore = allocatedWorkers > 0 && space === rightmostAllocatedPosition;
             const sectorInfo = spaceToSectorMap.get(space);
+            // Get the economy score value for this space (space is 1-indexed, array is 0-indexed)
+            const spaceEconomyScore = ECONOMY_SCORE_VALUES[space - 1];
 
             return (
               <div
@@ -178,16 +213,16 @@ export function WorkforceTrack() {
                 `}
                 title={
                   isEconomyScore
-                    ? `Economy Score: ${economyScore} (increases by 1 for every 2 allocated workers)`
+                    ? `Economy Score: ${economyScore} (rightmost allocated worker position)`
                     : isAvailable
-                    ? `Available Worker ${space}`
+                    ? `Available Worker - Economy Score: ${spaceEconomyScore}`
                     : sectorInfo
-                    ? `Allocated Worker ${space} - ${sectorInfo.sectorName}`
-                    : `Allocated Worker ${space}`
+                    ? `Allocated Worker - ${sectorInfo.sectorName} - Economy Score: ${spaceEconomyScore}`
+                    : `Allocated Worker - Economy Score: ${spaceEconomyScore}`
                 }
               >
                 <div className="absolute top-1 left-1 text-xs text-gray-400">
-                  {space}
+                  {spaceEconomyScore}
                 </div>
                 {isAvailable && (
                   <div className="w-4 h-4 bg-green-500 shadow-md border border-green-700 rounded-full" />

@@ -16,7 +16,7 @@ import { GamesService } from '../games/games.service';
 import { TransactionService } from '../transaction/transaction.service';
 import { ShareService } from '../share/share.service';
 import { ForecastService } from '../forecast/forecast.service';
-import { getResourcePriceForResourceType, getSectorResourceForSectorName, BASE_WORKER_SALARY, CompanyTierData, BANKRUPTCY_SHARE_PERCENTAGE_RETAINED, DEFAULT_SHARE_DISTRIBUTION } from '@server/data/constants';
+import { getResourcePriceForResourceType, getSectorResourceForSectorName, BASE_WORKER_SALARY, CompanyTierData, BANKRUPTCY_SHARE_PERCENTAGE_RETAINED, DEFAULT_SHARE_DISTRIBUTION, ECONOMY_SCORE_VALUES } from '@server/data/constants';
 import { PlayerPriorityService } from '@server/player-priority/player-priority.service';
 import { PlayersService } from '@server/players/players.service';
 import { calculateAverageStockPrice, calculateNetWorth, getRandomCompany, getNumberForFactorySize } from '@server/data/helpers';
@@ -654,10 +654,12 @@ export class ModernOperationMechanicsService {
     const availableWorkers = Math.max(0, DEFAULT_WORKERS - totalAllocatedWorkers);
     
     // Calculate economy score: represents the rightmost filled allocated square
-    // Economy score = 10 + position of rightmost allocated worker
-    // If 0 workers allocated, economy score is 10 (starting position before track)
-    // If 5 workers allocated (positions 1-5), economy score is 10 + 5 = 15
-    const economyScore = 10 + totalAllocatedWorkers;
+    // Economy score is determined by the rightmost allocated worker's position using the ECONOMY_SCORE_VALUES array
+    // If no workers allocated, economy score is 8 (first position in array, index 0)
+    // If totalAllocatedWorkers = 9, use index 8 (space 9 - 1 = 8) which is 10
+    const economyScore = totalAllocatedWorkers > 0 
+      ? ECONOMY_SCORE_VALUES[totalAllocatedWorkers - 1] 
+      : ECONOMY_SCORE_VALUES[0];
     
     // Get current game state to check if workforcePool needs initialization
     const currentGame = await this.prisma.game.findUnique({

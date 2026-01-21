@@ -305,10 +305,10 @@ const EndTurnSectorConsumerDistributionAnimation = ({
                     The Economy Score determines how many consumers can be distributed from the Consumer Pool to sectors.
                   </p>
                   <p className={tooltipParagraphStyle}>
-                    It starts at 10 and increases by 1 for every 2 workers allocated to factories, marketing campaigns, or research.
+                    It is determined by worker allocation on the workforce track. It starts at 8 when no workers are allocated and increases as workers are put to work in factories, marketing campaigns, or research.
                   </p>
                   <p className={tooltipParagraphStyle}>
-                    Higher economy score = more consumers can be distributed to sectors this turn.
+                    The score is determined by the rightmost allocated worker&apos;s position on the track. Higher economy score = more consumers can be distributed to sectors this turn.
                   </p>
                 </div>
               }

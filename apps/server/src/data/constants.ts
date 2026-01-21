@@ -182,6 +182,15 @@ export const workerTrackValues = [
   28, 28, 28, 28, 29, 29, 29, 29, 30, 30
 ]
 
+/**
+ * Economy score values for each position on the workforce track.
+ * As workers are allocated, the economy score improves based on the rightmost allocated position.
+ * This array has 40 values corresponding to the 40 spaces on the track.
+ */
+export const ECONOMY_SCORE_VALUES = [
+  8, 8, 8, 8, 9, 9, 9, 9, 10, 10, 10, 10, 11, 11, 11, 12, 12, 12, 13, 13, 13, 14, 14, 15, 15, 16, 16, 17, 17, 18, 18, 19, 20, 21, 22, 23, 24, 26, 28, 30
+];
+
 export const DEFAULT_WORKERS = 40;
 
 export function getSectorResourceForSectorName(sectorName: SectorName) {
