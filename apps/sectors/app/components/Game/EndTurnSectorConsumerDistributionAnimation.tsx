@@ -10,6 +10,7 @@ import {
   tooltipStyle,
   tooltipParagraphStyle,
 } from "@sectors/app/helpers/tailwind.helpers";
+import { SectorDemandRankings } from "./SectorDemandRankings";
 
 const SectorComponentAnimation = ({
   sector,
@@ -48,7 +49,7 @@ const SectorComponentAnimation = ({
               <strong>Sector Demand:</strong> {sector.demand + (sector.demandBonus || 0)}
             </p>
             <p className={tooltipParagraphStyle}>
-              Historical sector demand value. Both consumer distribution and worker salaries are now determined by Forecast rankings.
+              Sector demand is based on research bonuses. Consumer distribution and worker salaries are determined by sector demand rankings (1st: 50% economy score, 2nd: 30%, 3rd: 20%).
             </p>
             <div className="mt-2 text-xs space-y-1">
               <div>Base Demand: {sector.baseDemand || 0}</div>
@@ -198,14 +199,12 @@ const EndTurnSectorConsumerDistributionAnimation = ({
     return 1;
   };
 
-  const getResearchStageBonus = (researchMarker: number): number => {
-    const stage = getResearchStage(researchMarker);
-    switch (stage) {
-      case 2: return 2;
-      case 3: return 3;
-      case 4: return 5;
-      default: return 0;
-    }
+  const getResearchSlotBonus = (researchMarker: number): number => {
+    if (researchMarker >= 12) return 4;
+    if (researchMarker >= 9) return 3;
+    if (researchMarker >= 6) return 2;
+    if (researchMarker >= 3) return 1;
+    return 0;
   };
 
   return (
@@ -227,25 +226,31 @@ const EndTurnSectorConsumerDistributionAnimation = ({
           }}
         >
           <div className="space-y-4 pb-2">
-            {/* Forecast System Explanation */}
+            {/* Sector Demand System Explanation */}
             <div className="bg-gray-900/50 p-3 rounded border border-gray-700">
-              <h4 className="font-semibold text-white mb-2">Forecast System</h4>
+              <h4 className="font-semibold text-white mb-2">Sector Demand System</h4>
               <p className={tooltipParagraphStyle}>
-                Consumer distribution is determined by the Forecast system, where players commit shares to forecast quarters:
+                Consumer distribution is determined by <strong>sector demand rankings</strong>, which are based on research bonuses earned from advancing on sector research tracks:
               </p>
               <div className="mt-2 space-y-1 text-xs">
                 <div className="space-y-2">
                   <div>
-                    <span className="text-blue-400 font-medium">1. Share Commitments:</span> Players commit shares from one sector to forecast quarters (Q1=4 shares, Q2=3, Q3=2, Q4=1).
+                    <span className="text-blue-400 font-medium">1. Research Bonuses:</span> As companies research in a sector, they advance the sector research track. Each research slot grants a bonus to sector demand:
+                    <ul className="list-disc list-inside ml-4 mt-1">
+                      <li>Slot 3: +1 demand bonus</li>
+                      <li>Slot 6: +2 demand bonus</li>
+                      <li>Slot 9: +3 demand bonus</li>
+                      <li>Slot 12: +4 demand bonus</li>
+                    </ul>
                   </div>
                   <div>
-                    <span className="text-blue-400 font-medium">2. Demand Counters:</span> Each quarter calculates demand counters = total shares committed ÷ quarter cost.
+                    <span className="text-blue-400 font-medium">2. Sector Demand:</span> Each sector&apos;s total demand = base demand + research slot bonus. Higher demand = higher ranking.
                   </div>
                   <div>
-                    <span className="text-blue-400 font-medium">3. Sector Ranking:</span> Sectors are ranked by total demand counters across all quarters.
+                    <span className="text-blue-400 font-medium">3. Sector Ranking:</span> Sectors are ranked by their total demand value. Sectors with the same demand share the same rank.
                   </div>
                   <div>
-                    <span className="text-blue-400 font-medium">4. Distribution:</span> 1st place sector gets 50% of economy score, 2nd gets 30%, 3rd gets 20%.
+                    <span className="text-blue-400 font-medium">4. Consumer Distribution:</span> Rankings determine consumer distribution using a 50/30/20 split (see below).
                   </div>
                 </div>
               </div>
@@ -255,7 +260,7 @@ const EndTurnSectorConsumerDistributionAnimation = ({
             <div className="bg-gray-900/50 p-3 rounded border border-gray-700">
               <h4 className="font-semibold text-white mb-2">Consumer Distribution Process</h4>
               <p className={tooltipParagraphStyle}>
-                Consumers are distributed from the Consumer Pool based on Forecast rankings:
+                Consumers are distributed from the Consumer Pool based on sector demand rankings:
               </p>
               <div className="mt-2 space-y-1 text-xs">
                 <div className="space-y-2">
@@ -263,16 +268,24 @@ const EndTurnSectorConsumerDistributionAnimation = ({
                     <span className="text-blue-400 font-medium">1. Distribution Amount:</span> The Economy Score determines how many consumers can be distributed from the Consumer Pool.
                   </div>
                   <div>
-                    <span className="text-blue-400 font-medium">2. Forecast Rankings:</span> Sectors are ranked by forecast demand counters (from share commitments).
+                    <span className="text-blue-400 font-medium">2. Sector Demand Rankings:</span> Sectors are ranked by sector demand (from research bonuses). Tied sectors share the rank and split the percentage evenly.
                   </div>
                   <div>
-                    <span className="text-blue-400 font-medium">3. Fixed Split:</span> 1st place sector receives 50% of economy score, 2nd place receives 30%, 3rd place receives 20% (all rounded down).
+                    <span className="text-blue-400 font-medium">3. Fixed Split:</span> 1st place sector receives 50% of economy score, 2nd place receives 30%, 3rd place receives 20%. If sectors are tied, they split the percentage evenly (e.g., 3 sectors tied for 1st = 16.67% each).
                   </div>
                   <div>
-                    <span className="text-blue-400 font-medium">4. Consumer Pool:</span> Consumers move from the Consumer Pool into sectors based on forecast rankings. The pool depletes as the Economy Score is consumed.
+                    <span className="text-blue-400 font-medium">4. Bonus Consumers:</span> In addition to the economy score distribution, each sector also receives bonus consumers equal to its sector demand value (guaranteed, outside the 50/30/20 split).
+                  </div>
+                  <div>
+                    <span className="text-blue-400 font-medium">5. Consumer Pool:</span> Consumers move from the Consumer Pool into sectors based on sector demand rankings. The pool depletes as the Economy Score is consumed.
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Sector Demand Rankings Breakdown */}
+            <div className="bg-gray-900/50 p-3 rounded border border-gray-700">
+              <SectorDemandRankings />
             </div>
           </div>
         </AccordionItem>

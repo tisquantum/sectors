@@ -60,20 +60,6 @@ export class ModernOperationMechanicsService {
         await this.updateSectorPriority(phase);
         await this.determinePriorityOrderBasedOnNetWorth(phase);
         await this.handleOpeningNewCompany(phase);
-        // Initialize forecast quarters if not already done
-        await this.forecastService.initializeForecastQuarters(phase.gameId);
-        break;
-
-      case PhaseName.FORECAST_COMMITMENT_START_TURN:
-        // Players commit shares (handled by client)
-        break;
-
-      case PhaseName.FORECAST_COMMITMENT_END_TURN:
-        // Players commit shares before end turn (handled by client)
-        break;
-
-      case PhaseName.FORECAST_RESOLVE:
-        await this.handleForecastResolve(phase);
         break;
 
       case PhaseName.SHAREHOLDER_MEETING:
@@ -1560,9 +1546,6 @@ export class ModernOperationMechanicsService {
     const companyCashTracking = new Map<string, number>();
     const companyProgressTracking = new Map<string, number>();
     
-    // Track all research actions (successful or not) to add demand counters to Q2
-    let researchActionsCount = 0;
-
     // Process each research order
     for (const order of researchOrders) {
       const company = order.company;
@@ -1586,9 +1569,6 @@ export class ModernOperationMechanicsService {
         });
         continue;
       }
-
-      // Count this research action for Q2 demand counter (only if it proceeds)
-      researchActionsCount++;
 
       // Generate random research progress gain (1, or 2)
       const researchProgressGain = Math.floor(Math.random() * 2) + 1; // 1 or 2
@@ -1653,25 +1633,6 @@ export class ModernOperationMechanicsService {
         gameId: phase.gameId,
         content: `${company.name} invested $${order.cost} in research. Progress: +${researchProgressGain} (Total: ${newProgress}).`,
       });
-    }
-
-    // Add demand counters to Q2 for each research action (regardless of success/failure)
-    if (researchActionsCount > 0) {
-      const q2 = await this.prisma.forecastQuarter.findFirst({
-        where: { gameId: phase.gameId, quarterNumber: 2 },
-      });
-
-      if (q2) {
-        await this.prisma.forecastQuarter.update({
-          where: { id: q2.id },
-          data: { demandCounters: { increment: researchActionsCount } },
-        });
-
-        researchGameLogEntries.push({
-          gameId: phase.gameId,
-          content: `${researchActionsCount} research action(s) performed. Added ${researchActionsCount} demand counter(s) to Q2.`,
-        });
-      }
     }
 
     // OPTIMIZATION: Batch update research orders with results
@@ -1743,6 +1704,86 @@ export class ModernOperationMechanicsService {
             })
           )
         );
+
+        // Increase sector resource values when research happens
+        // Each research action increases the sector resource track position by 1 (decreases price, increases value)
+        const sectorResourceUpdates: Array<{ sectorId: string; resourceType: ResourceType; gain: number }> = [];
+        
+        for (const [sectorId, gain] of sectorGains.entries()) {
+          const sector = await this.prisma.sector.findUnique({
+            where: { id: sectorId },
+            select: { sectorName: true },
+          });
+          
+          if (sector) {
+            const sectorResourceType = this.getSectorResourceType(sector.sectorName);
+            if (sectorResourceType) {
+              sectorResourceUpdates.push({ sectorId, resourceType: sectorResourceType, gain });
+              console.log(`[RESEARCH] Sector ${sector.sectorName} (${sectorId}): research gain = ${gain}, resource type = ${sectorResourceType}`);
+            } else {
+              console.warn(`[RESEARCH] No resource type found for sector ${sector.sectorName}`);
+            }
+          } else {
+            console.warn(`[RESEARCH] Sector not found for sectorId: ${sectorId}`);
+          }
+        }
+
+        // Update sector resource track positions (increase value = decrease trackPosition)
+        if (sectorResourceUpdates.length > 0) {
+          // Use a transaction to ensure all updates happen atomically
+          await this.prisma.$transaction(async (tx) => {
+            for (const update of sectorResourceUpdates) {
+              const resource = await tx.resource.findFirst({
+                where: { 
+                  gameId: phase.gameId,
+                  type: update.resourceType,
+                  trackType: ResourceTrackType.SECTOR, // Ensure we're updating sector resources
+                },
+              });
+
+              if (resource) {
+                // Decrease trackPosition (move up the track = more expensive/higher value)
+                // Don't go below 0
+                const oldTrackPosition = resource.trackPosition;
+                const newTrackPosition = Math.max(0, oldTrackPosition - update.gain);
+                
+                console.log(`[RESEARCH] Updating ${update.resourceType} resource: trackPosition ${oldTrackPosition} → ${newTrackPosition} (gain: ${update.gain})`);
+                
+                await tx.resource.update({
+                  where: { id: resource.id },
+                  data: {
+                    trackPosition: newTrackPosition,
+                  },
+                });
+
+                // Verify the update
+                const updatedResource = await tx.resource.findUnique({
+                  where: { id: resource.id },
+                  select: { trackPosition: true },
+                });
+                
+                if (updatedResource && updatedResource.trackPosition !== newTrackPosition) {
+                  console.error(`[RESEARCH] ERROR: Resource ${update.resourceType} trackPosition mismatch! Expected: ${newTrackPosition}, Got: ${updatedResource.trackPosition}`);
+                }
+
+                researchGameLogEntries.push({
+                  gameId: phase.gameId,
+                  content: `${update.resourceType} resource value increased by ${update.gain} (trackPosition: ${oldTrackPosition} → ${newTrackPosition}) due to research progress`,
+                });
+              } else {
+                // Log warning if resource not found
+                researchGameLogEntries.push({
+                  gameId: phase.gameId,
+                  content: `WARNING: Sector resource ${update.resourceType} not found for sector update (gain: ${update.gain})`,
+                });
+                console.warn(`[RESEARCH] Sector resource ${update.resourceType} not found for game ${phase.gameId}. Expected gain: ${update.gain}`);
+              }
+            }
+          });
+
+          // Update prices after all track positions are updated
+          await this.resourceService.updateResourcePrices(phase.gameId);
+        }
       }
 
       // Check for sector research milestone crossings (Stage II, III, or IV)
@@ -1767,50 +1808,97 @@ export class ModernOperationMechanicsService {
 
         if (previousStage < 2 && newStage >= 2) {
           // Crossed into Stage II
-          resourceConsumptionsForMilestones.push({ type: sectorResourceType, count: 1 });
-          researchGameLogEntries.push({
-            gameId: phase.gameId,
-            content: `${sector.sectorName} reached Research Stage II! Economies of scale achieved - 1 ${sectorResourceType} resource removed from track (prices decreased).`,
-          });
+          // Note: Sector resources are not consumed for milestones - they only increase via research
+          const sectorResourceType = this.getSectorResourceType(sector.sectorName);
+          if (sectorResourceType) {
+            const resource = await this.prisma.resource.findFirst({
+              where: { gameId: phase.gameId, type: sectorResourceType },
+            });
+            if (resource && resource.trackType === ResourceTrackType.GLOBAL) {
+              resourceConsumptionsForMilestones.push({ type: sectorResourceType, count: 1 });
+            }
+            researchGameLogEntries.push({
+              gameId: phase.gameId,
+              content: `${sector.sectorName} reached Research Stage II!`,
+            });
+          }
         }
         
         if (previousStage < 3 && newStage >= 3) {
           // Crossed into Stage III
-          resourceConsumptionsForMilestones.push({ type: sectorResourceType, count: 1 });
-          researchGameLogEntries.push({
-            gameId: phase.gameId,
-            content: `${sector.sectorName} reached Research Stage III! Economies of scale achieved - 1 ${sectorResourceType} resource removed from track (prices decreased).`,
-          });
+          const sectorResourceType = this.getSectorResourceType(sector.sectorName);
+          if (sectorResourceType) {
+            const resource = await this.prisma.resource.findFirst({
+              where: { gameId: phase.gameId, type: sectorResourceType },
+            });
+            if (resource && resource.trackType === ResourceTrackType.GLOBAL) {
+              resourceConsumptionsForMilestones.push({ type: sectorResourceType, count: 1 });
+            }
+            researchGameLogEntries.push({
+              gameId: phase.gameId,
+              content: `${sector.sectorName} reached Research Stage III!`,
+            });
+          }
         }
         
         if (previousStage < 4 && newStage >= 4) {
           // Crossed into Stage IV
-          resourceConsumptionsForMilestones.push({ type: sectorResourceType, count: 1 });
-          researchGameLogEntries.push({
-            gameId: phase.gameId,
-            content: `${sector.sectorName} reached Research Stage IV! Economies of scale achieved - 1 ${sectorResourceType} resource removed from track (prices decreased).`,
-          });
+          const sectorResourceType = this.getSectorResourceType(sector.sectorName);
+          if (sectorResourceType) {
+            const resource = await this.prisma.resource.findFirst({
+              where: { gameId: phase.gameId, type: sectorResourceType },
+            });
+            if (resource && resource.trackType === ResourceTrackType.GLOBAL) {
+              resourceConsumptionsForMilestones.push({ type: sectorResourceType, count: 1 });
+            }
+            researchGameLogEntries.push({
+              gameId: phase.gameId,
+              content: `${sector.sectorName} reached Research Stage IV!`,
+            });
+          }
         }
       }
 
       // Consume resources for milestone achievements (economies of scale)
+      // NOTE: Sector resources are NOT consumed here - they only increase via research
       if (resourceConsumptionsForMilestones.length > 0) {
-        // Aggregate by resource type
-        const aggregatedConsumptions = new Map<ResourceType, number>();
+        // Filter out sector resources - they should not be consumed for milestones
+        // Sector resources only increase via research, not decrease
+        const filteredConsumptions: Array<{ type: ResourceType; count: number }> = [];
         for (const consumption of resourceConsumptionsForMilestones) {
-          const current = aggregatedConsumptions.get(consumption.type) || 0;
-          aggregatedConsumptions.set(consumption.type, current + consumption.count);
+          const resource = await this.prisma.resource.findFirst({
+            where: { gameId: phase.gameId, type: consumption.type },
+          });
+          // Only consume general resources, not sector resources
+          if (resource && resource.trackType === ResourceTrackType.GLOBAL) {
+            filteredConsumptions.push(consumption);
+          } else {
+            // Log that we're skipping sector resource consumption
+            researchGameLogEntries.push({
+              gameId: phase.gameId,
+              content: `Skipping milestone consumption for ${consumption.type} (sector resource - only increases via research)`,
+            });
+          }
         }
 
-        const consumptions = Array.from(aggregatedConsumptions.entries()).map(
-          ([type, count]) => ({ type, count })
-        );
+        if (filteredConsumptions.length > 0) {
+          // Aggregate by resource type
+          const aggregatedConsumptions = new Map<ResourceType, number>();
+          for (const consumption of filteredConsumptions) {
+            const current = aggregatedConsumptions.get(consumption.type) || 0;
+            aggregatedConsumptions.set(consumption.type, current + consumption.count);
+          }
 
-        // Build reason string describing research milestones reached
-        const milestoneDescriptions = resourceConsumptionsForMilestones.map(c => c.type).join(', ');
-        const reason = `Research milestones: ${resourceConsumptionsForMilestones.length} milestone(s) reached consuming ${milestoneDescriptions} resources (economies of scale)`;
-        await this.resourceService.consumeResources(phase.gameId, consumptions, reason);
-        await this.resourceService.updateResourcePrices(phase.gameId);
+          const consumptions = Array.from(aggregatedConsumptions.entries()).map(
+            ([type, count]) => ({ type, count })
+          );
+
+          // Build reason string describing research milestones reached
+          const milestoneDescriptions = filteredConsumptions.map(c => c.type).join(', ');
+          const reason = `Research milestones: ${filteredConsumptions.length} milestone(s) reached consuming ${milestoneDescriptions} resources (economies of scale)`;
+          await this.resourceService.consumeResources(phase.gameId, consumptions, reason);
+          await this.resourceService.updateResourcePrices(phase.gameId);
+        }
       }
     }
 
@@ -1937,9 +2025,9 @@ export class ModernOperationMechanicsService {
     
     console.log(`[EARNINGS_CALL] Resource price map:`, Array.from(resourcePriceMap.entries()));
 
-    // Calculate worker salaries based on Forecast rankings
+    // Calculate worker salaries based on sector demand rankings
     // 1st place = $8, 2nd = $4, 3rd+ = $2
-    const forecastRankings = await this.forecastService.getForecastRankings(phase.gameId);
+    const sectorDemandRankings = await this.getSectorDemandRankings(phase.gameId);
     
     // Get all sectors to map sectorId to sectorName
     const sectors = await this.sectorService.sectors({
@@ -1947,9 +2035,9 @@ export class ModernOperationMechanicsService {
     });
     const sectorMap = new Map(sectors.map(s => [s.id, s]));
 
-    // Create map: sectorId -> worker salary based on Forecast ranking
+    // Create map: sectorId -> worker salary based on sector demand ranking
     const sectorWorkerSalaryMap = new Map<string, number>();
-    forecastRankings.forEach((ranking) => {
+    sectorDemandRankings.forEach((ranking) => {
       let salary: number;
       if (ranking.rank === 1) {
         salary = 8; // 1st place: $8
@@ -1961,7 +2049,7 @@ export class ModernOperationMechanicsService {
       sectorWorkerSalaryMap.set(ranking.sectorId, salary);
     });
 
-    // For sectors not in forecast rankings (no commitments), assign default salary of $2
+    // For sectors not in rankings (no demand), assign default salary of $2
     sectors.forEach((sector) => {
       if (!sectorWorkerSalaryMap.has(sector.id)) {
         sectorWorkerSalaryMap.set(sector.id, 2);
@@ -1970,21 +2058,21 @@ export class ModernOperationMechanicsService {
 
     // Log worker salary assignments for debugging
     const salaryLogEntries: Array<{ gameId: string; content: string }> = [];
-    forecastRankings.forEach((ranking) => {
+    sectorDemandRankings.forEach((ranking) => {
       const sector = sectorMap.get(ranking.sectorId);
       const salary = sectorWorkerSalaryMap.get(ranking.sectorId) || 2;
       const sectorName = sector?.sectorName || ranking.sectorId;
       salaryLogEntries.push({
         gameId: phase.gameId,
-        content: `${sectorName} ranked #${ranking.rank} (forecast demand counters: ${ranking.demandCounters}) → Worker salary: $${salary}/worker`,
+        content: `${sectorName} ranked #${ranking.rank} (sector demand: ${ranking.demand}) → Worker salary: $${salary}/worker`,
       });
     });
-    // Log sectors with no forecast commitments
+    // Log sectors with no demand
     sectors.forEach((sector) => {
-      if (!forecastRankings.find(r => r.sectorId === sector.id)) {
+      if (!sectorDemandRankings.find(r => r.sectorId === sector.id)) {
         salaryLogEntries.push({
           gameId: phase.gameId,
-          content: `${sector.sectorName} (no forecast commitments) → Worker salary: $2/worker`,
+          content: `${sector.sectorName} (sector demand: ${sector.demand || 0}) → Worker salary: $2/worker`,
         });
       }
     });
@@ -2398,19 +2486,41 @@ export class ModernOperationMechanicsService {
   }
 
   /**
-   * Calculate and update sector demand based on base sector demand + brand scores + worker allocation (divided by 2) + research stage bonus
-   * Effective Demand = base sector demand + sum of brand scores + (worker allocation / 2) + research stage bonus
+   * Calculate research demand bonus based on sector researchMarker slots
+   * Demand bonuses are granted at specific research slots:
+   *   - Slot 3: +1 demand
+   *   - Slot 6: +2 demand  
+   *   - Slot 9: +3 demand
+   *   - Slot 12: +4 demand
    * 
-   * Worker allocation = total workers in factories + marketing campaigns + research for that sector
-   * Worker allocation is divided by 2 before being added to demand.
-   * Research stage bonus:
-   *   - Stage 1 (researchMarker 0-3): +0
-   *   - Stage 2 (researchMarker 4-6): +2
-   *   - Stage 3 (researchMarker 7-9): +3
-   *   - Stage 4 (researchMarker 10-12): +5
+   * The bonus is cumulative - if researchMarker >= 12, total bonus is +4
+   * If researchMarker >= 9, total bonus is +3
+   * If researchMarker >= 6, total bonus is +2
+   * If researchMarker >= 3, total bonus is +1
+   * Otherwise, bonus is 0
+   */
+  private getResearchDemandBonus(researchMarker: number): number {
+    if (researchMarker >= 12) return 4;
+    if (researchMarker >= 9) return 3;
+    if (researchMarker >= 6) return 2;
+    if (researchMarker >= 3) return 1;
+    return 0;
+  }
+
+  /**
+   * Calculate and update sector demand based on brand scores + research slot bonus
+   * Effective Demand = sum of brand scores + research slot bonus
+   * 
+   * Research slot bonuses:
+   *   - Slot 3: +1 demand
+   *   - Slot 6: +2 demand
+   *   - Slot 9: +3 demand
+   *   - Slot 12: +4 demand
    * 
    * The sector's `baseDemand` field stores the initial demand from gameData (preserved).
-   * The `demand` field is updated each turn to reflect effective demand (base + brand + workers/2 + research stage).
+   * The `demand` field is updated each turn to reflect effective demand (brand + research slot bonus).
+   * 
+   * Sector demand gives a bonus of consumers to that sector outside the economy score distribution.
    */
   private async updateSectorDemand(phase: Phase) {
     // Query sectors with companies directly using Prisma to include Company relation
@@ -2423,62 +2533,6 @@ export class ModernOperationMechanicsService {
       },
     });
 
-    // Get all factories and marketing campaigns grouped by sector
-    const factories = await this.prisma.factory.findMany({
-      where: { gameId: phase.gameId },
-      select: { sectorId: true, workers: true },
-    });
-
-    const marketingCampaigns = await this.prisma.marketingCampaign.findMany({
-      where: { 
-        gameId: phase.gameId,
-        status: MarketingCampaignStatus.ACTIVE,
-      },
-      include: {
-        Company: {
-          select: { sectorId: true },
-        },
-      },
-    });
-
-    // Calculate worker allocation by sector
-    const workerAllocationBySector = new Map<string, number>();
-    
-    // Add factory workers
-    for (const factory of factories) {
-      const current = workerAllocationBySector.get(factory.sectorId) || 0;
-      workerAllocationBySector.set(factory.sectorId, current + factory.workers);
-    }
-    
-    // Add marketing campaign workers
-    for (const campaign of marketingCampaigns) {
-      const sectorId = campaign.Company.sectorId;
-      const current = workerAllocationBySector.get(sectorId) || 0;
-      workerAllocationBySector.set(sectorId, current + campaign.workers);
-    }
-    
-    // Add research workers from ResearchOrder records
-    // Each research order requires workers - count ALL research orders in the game
-    // Research orders allocate workers when created and remain allocated (they don't get deleted after resolution)
-    const researchOrders = await this.prisma.researchOrder.findMany({
-      where: {
-        gameId: phase.gameId,
-        // Count all research orders - workers remain allocated throughout the game
-      },
-      include: {
-        company: {
-          select: { sectorId: true },
-        },
-      },
-    });
-
-    // Count research workers by sector (each research order = 1 worker)
-    for (const order of researchOrders) {
-      const sectorId = order.company.sectorId;
-      const current = workerAllocationBySector.get(sectorId) || 0;
-      workerAllocationBySector.set(sectorId, current + 1); // Each research order = 1 worker
-    }
-
     const sectorUpdates: Array<{ id: string; demand: number }> = [];
     const gameLogEntries: Array<{ gameId: string; content: string }> = [];
 
@@ -2489,25 +2543,16 @@ export class ModernOperationMechanicsService {
         0
       );
 
-      // Worker allocation for this sector
-      const workerAllocation = workerAllocationBySector.get(sector.id) || 0;
-
-      // Calculate research stage bonus based on sector researchMarker
-      // Stage 1 (0-3): +0, Stage 2 (4-6): +2, Stage 3 (7-9): +3, Stage 4 (10-12): +5
+      // Calculate research slot bonus based on sector researchMarker
       const researchMarker = sector.researchMarker || 0;
-      const researchStage = Math.min(Math.floor(researchMarker / 3) + 1, 4);
-      const researchStageBonus = researchStage === 1 ? 0 : researchStage === 2 ? 2 : researchStage === 3 ? 3 : 5;
+      const researchSlotBonus = this.getResearchDemandBonus(researchMarker);
 
-      // Base demand should be 0 for modern operations - demand comes from workers + brand bonus + research stage only
+      // Base demand should be 0 for modern operations - demand comes from brand bonus + research slot bonus only
       // If baseDemand exists but is > 0, it's from old gameData and should be ignored
-      const baseDemand = 0; // No base demand - all demand comes from worker allocation + brand bonus + research stage
+      const baseDemand = 0; // No base demand - all demand comes from brand bonus + research slot bonus
 
-      // Worker allocation contribution: divide by 2 and round down (no decimals allowed)
-      // Math.floor ensures we always round down: 19/2 = 9, 20/2 = 10, 21/2 = 10
-      const workerAllocationContribution = Math.floor(workerAllocation / 2);
-
-      // Effective demand = base demand + brand scores + (worker allocation / 2, rounded down) + research stage bonus
-      const effectiveDemand = baseDemand + totalBrandScore + workerAllocationContribution + researchStageBonus;
+      // Effective demand = base demand + brand scores + research slot bonus
+      const effectiveDemand = baseDemand + totalBrandScore + researchSlotBonus;
 
       // Update the sector's demand field to show effective demand
       if (effectiveDemand !== sector.demand) {
@@ -2516,9 +2561,10 @@ export class ModernOperationMechanicsService {
           demand: effectiveDemand,
         });
 
+        const slotReached = researchMarker >= 12 ? 12 : researchMarker >= 9 ? 9 : researchMarker >= 6 ? 6 : researchMarker >= 3 ? 3 : 0;
         gameLogEntries.push({
           gameId: phase.gameId,
-          content: `${sector.sectorName} effective demand: ${effectiveDemand} (base: ${baseDemand} + brand: ${totalBrandScore} + workers: ${workerAllocation}/2=${workerAllocationContribution} + research stage ${researchStage}: +${researchStageBonus})`,
+          content: `${sector.sectorName} effective demand: ${effectiveDemand} (base: ${baseDemand} + brand: ${totalBrandScore} + research slot ${slotReached}: +${researchSlotBonus})`,
         });
       }
     }
@@ -3071,8 +3117,97 @@ export class ModernOperationMechanicsService {
   }
 
   /**
-   * Distribute consumers from global pool to sectors based on forecast demand scores
-   * Uses 50/30/20 split based on forecast quarter rankings
+   * Get sector demand rankings based on sector demand (from research bonuses)
+   * Returns array of { sectorId, rank, demand, sectorName } sorted by rank
+   * Handles ties - sectors with the same demand share the same rank
+   */
+  async getSectorDemandRankings(gameId: string) {
+    const sectors = await this.sectorService.sectors({
+      where: { gameId },
+    });
+
+    // Sort sectors by demand (descending)
+    const sortedSectors = sectors
+      .map(sector => ({
+        sectorId: sector.id,
+        demand: sector.demand || 0,
+        sectorName: sector.sectorName,
+      }))
+      .sort((a, b) => b.demand - a.demand);
+
+    // Assign ranks, handling ties (sectors with same demand share rank)
+    const rankings: Array<{ sectorId: string; rank: number; demand: number; sectorName: string }> = [];
+    let currentRank = 1;
+    
+    for (let i = 0; i < sortedSectors.length; i++) {
+      const sector = sortedSectors[i];
+      
+      // If this sector has the same demand as the previous one, it shares the rank
+      if (i > 0 && sortedSectors[i - 1].demand === sector.demand) {
+        rankings.push({
+          ...sector,
+          rank: rankings[i - 1].rank, // Share the previous rank
+        });
+      } else {
+        rankings.push({
+          ...sector,
+          rank: currentRank,
+        });
+        // Move to next rank (only increment by 1, ties share the same rank)
+        currentRank++;
+      }
+    }
+
+    return rankings;
+  }
+
+  /**
+   * Get sector demand scores for economy score distribution
+   * Returns sectorId -> consumer count based on 50/30/20 split
+   * Handles ties by splitting percentages evenly
+   */
+  private async getSectorDemandScores(gameId: string, economyScore: number) {
+    const rankings = await this.getSectorDemandRankings(gameId);
+    
+    // Group sectors by rank to handle ties
+    const sectorsByRank = new Map<number, typeof rankings>();
+    for (const ranking of rankings) {
+      if (!sectorsByRank.has(ranking.rank)) {
+        sectorsByRank.set(ranking.rank, []);
+      }
+      sectorsByRank.get(ranking.rank)!.push(ranking);
+    }
+
+    // Calculate scores: 1st place = 50%, 2nd = 30%, 3rd = 20%
+    // If multiple sectors share a rank, they split the percentage evenly
+    const sectorScores: Record<string, number> = {};
+    
+    // Get top 3 ranks (1st, 2nd, 3rd)
+    const topRanks = [1, 2, 3];
+    const rankPercentages = [0.5, 0.3, 0.2];
+    
+    for (let i = 0; i < topRanks.length; i++) {
+      const rank = topRanks[i];
+      const sectorsAtRank = sectorsByRank.get(rank);
+      
+      if (sectorsAtRank && sectorsAtRank.length > 0) {
+        const basePercentage = rankPercentages[i];
+        const percentagePerSector = basePercentage / sectorsAtRank.length;
+        const consumersPerSector = Math.floor(economyScore * percentagePerSector);
+        
+        for (const sector of sectorsAtRank) {
+          sectorScores[sector.sectorId] = consumersPerSector;
+        }
+      }
+    }
+
+    return sectorScores;
+  }
+
+  /**
+   * Distribute consumers from global pool to sectors based on sector demand rankings
+   * Uses 50/30/20 split based on sector demand (from research bonuses)
+   * Also distributes bonus consumers based on sector demand (outside economy score)
    */
   private async distributeConsumersToSectors(phase: Phase) {
     const [sectors, game] = await Promise.all([
@@ -3089,8 +3224,8 @@ export class ModernOperationMechanicsService {
       throw new Error('Game not found');
     }
 
-    // Get forecast demand scores (50/30/20 split) - returns sectorId -> consumer count
-    const forecastScores = await this.forecastService.getForecastDemandScores(
+    // Get sector demand scores (50/30/20 split) - returns sectorId -> consumer count
+    const sectorScores = await this.getSectorDemandScores(
       phase.gameId,
       game.economyScore,
     );
@@ -3099,32 +3234,83 @@ export class ModernOperationMechanicsService {
     const sectorUpdates: Array<{ id: string; consumers: number }> = [];
     const gameLogEntries: Array<{ gameId: string; content: string }> = [];
 
-    // Distribute based on forecast sector rankings
+    // Get rankings for logging
+    const rankings = await this.getSectorDemandRankings(phase.gameId);
+    const sectorsByRank = new Map<number, typeof rankings>();
+    for (const ranking of rankings) {
+      if (!sectorsByRank.has(ranking.rank)) {
+        sectorsByRank.set(ranking.rank, []);
+      }
+      sectorsByRank.get(ranking.rank)!.push(ranking);
+    }
+
+    // Distribute based on sector demand rankings
     // 1st place sector gets 50%, 2nd gets 30%, 3rd gets 20%
+    // Tied sectors split the percentage evenly
     let consumersDistributed = 0;
-    
-    // Get sectors sorted by their scores to determine ranking
-    const sortedSectorEntries = Object.entries(forecastScores)
-      .sort(([, a], [, b]) => b - a);
-    
-    const rankLabels = ['1st', '2nd', '3rd'];
     const rankPercentages = [0.5, 0.3, 0.2];
     
-    for (let i = 0; i < sortedSectorEntries.length && i < 3; i++) {
-      const [sectorId, consumers] = sortedSectorEntries[i];
-      const sector = sectors.find((s) => s.id === sectorId);
-      if (sector && consumers > 0) {
-        const rank = i + 1;
-        const percentage = rankPercentages[i];
-        sectorUpdates.push({
-          id: sector.id,
-          consumers: sector.consumers + consumers,
-        });
-        consumersDistributed += consumers;
-        gameLogEntries.push({
-          gameId: phase.gameId,
-          content: `${sector.sectorName} (${rankLabels[i]} place) received ${consumers} consumers (${(percentage * 100).toFixed(0)}% of economy score ${game.economyScore})`,
-        });
+    for (let rank = 1; rank <= 3; rank++) {
+      const sectorsAtRank = sectorsByRank.get(rank);
+      if (!sectorsAtRank || sectorsAtRank.length === 0) continue;
+      
+      const basePercentage = rankPercentages[rank - 1];
+      const percentagePerSector = basePercentage / sectorsAtRank.length;
+      const consumersPerSector = Math.floor(game.economyScore * percentagePerSector);
+      
+      for (const ranking of sectorsAtRank) {
+        const sector = sectors.find((s) => s.id === ranking.sectorId);
+        if (sector && consumersPerSector > 0) {
+          const sectorUpdate = sectorUpdates.find(update => update.id === sector.id) || {
+            id: sector.id,
+            consumers: sector.consumers,
+          };
+          if (!sectorUpdates.find(u => u.id === sector.id)) {
+            sectorUpdates.push(sectorUpdate);
+          }
+          
+          sectorUpdate.consumers += consumersPerSector;
+          consumersDistributed += consumersPerSector;
+          
+          const rankLabel = rank === 1 ? '1st' : rank === 2 ? '2nd' : '3rd';
+          const tieNote = sectorsAtRank.length > 1 ? ` (tied, ${(percentagePerSector * 100).toFixed(1)}% each)` : '';
+          gameLogEntries.push({
+            gameId: phase.gameId,
+            content: `${sector.sectorName} (${rankLabel} place${tieNote}, sector demand: ${ranking.demand}) received ${consumersPerSector} consumers (${(percentagePerSector * 100).toFixed(1)}% of economy score ${game.economyScore})`,
+          });
+        }
+      }
+    }
+
+    // Distribute bonus consumers based on sector demand (outside economy score)
+    // Each sector gets consumers equal to its demand value (guaranteed bonus)
+    let bonusConsumersDistributed = 0;
+    
+    for (const sector of sectors) {
+      const sectorDemand = sector.demand || 0;
+      if (sectorDemand > 0) {
+        // Check if we have enough consumers in the pool
+        const bonusConsumers = Math.min(sectorDemand, game.consumerPoolNumber - consumersDistributed - bonusConsumersDistributed);
+        
+        if (bonusConsumers > 0) {
+          // Find or create sector update
+          let sectorUpdate = sectorUpdates.find(update => update.id === sector.id);
+          if (!sectorUpdate) {
+            sectorUpdate = {
+              id: sector.id,
+              consumers: sector.consumers,
+            };
+            sectorUpdates.push(sectorUpdate);
+          }
+          
+          sectorUpdate.consumers += bonusConsumers;
+          bonusConsumersDistributed += bonusConsumers;
+          
+          gameLogEntries.push({
+            gameId: phase.gameId,
+            content: `${sector.sectorName} received ${bonusConsumers} bonus consumers from sector demand (demand: ${sectorDemand})`,
+          });
+        }
       }
     }
 
@@ -3141,7 +3327,7 @@ export class ModernOperationMechanicsService {
     }
 
     // Update game consumer pool
-    const totalConsumersDistributed = consumersDistributed;
+    const totalConsumersDistributed = consumersDistributed + bonusConsumersDistributed;
     
     if (totalConsumersDistributed > 0) {
       await this.prisma.game.update({

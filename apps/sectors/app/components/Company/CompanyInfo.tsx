@@ -161,7 +161,7 @@ const CompanyMoreInfo = ({
             className={tooltipStyle}
             content={
               <p className={tooltipParagraphStyle}>
-                Historical sector demand value. Both consumer distribution and worker salaries are now determined by Forecast rankings (from share commitments to forecast quarters).
+                Sector demand is based on research bonuses. Consumer distribution and worker salaries are determined by sector demand rankings (1st: 50% economy score, 2nd: 30%, 3rd: 20%).
               </p>
             }
           >

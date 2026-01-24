@@ -526,9 +526,9 @@ const Game = ({ gameId }: { gameId: string }) => {
                       <EndTurnEconomy />
                     </motion.div>
                   )}
-                  {currentView == "markets" && (
+                  {currentView == "companies" && (
                     <motion.div
-                      key="markets"
+                      key="companies"
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -20 }}
@@ -538,9 +538,9 @@ const Game = ({ gameId }: { gameId: string }) => {
                       <MarketsView />
                     </motion.div>
                   )}
-                  {currentView == "companies" && (
+                  {currentView == "operations" && (
                     <motion.div
-                      key="companies"
+                      key="operations"
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -20 }}

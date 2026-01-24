@@ -199,6 +199,40 @@ export class ForecastService {
       );
     }
 
+    // Get all quarters to check which are non-active
+    const allQuarters = await this.prisma.forecastQuarter.findMany({
+      where: { gameId },
+      include: {
+        commitments: {
+          where: { playerId },
+          include: {
+            shares: {
+              select: { id: true },
+            },
+          },
+        },
+      },
+    });
+
+    // Find non-active quarters (Q2, Q3, Q4 - shares committed here are locked)
+    const nonActiveQuarters = allQuarters.filter(q => !q.isActive);
+    const committedShareIdsFromNonActive = new Set<string>();
+    for (const quarter of nonActiveQuarters) {
+      for (const commitment of quarter.commitments) {
+        for (const share of commitment.shares) {
+          committedShareIdsFromNonActive.add(share.id);
+        }
+      }
+    }
+
+    // Check if any of the shares being committed are already committed to non-active quarters
+    const sharesAlreadyCommitted = shareIds.filter(id => committedShareIdsFromNonActive.has(id));
+    if (sharesAlreadyCommitted.length > 0) {
+      throw new Error(
+        `Cannot commit shares that are already committed to non-active forecast quarters. ${sharesAlreadyCommitted.length} share(s) are currently locked in Q2, Q3, or Q4.`
+      );
+    }
+
     // Validate shares belong to player and are from the specified sector
     const shares = await this.prisma.share.findMany({
       where: {
@@ -508,18 +542,21 @@ export class ForecastService {
   }
 
   /**
-   * Get demand scores for sectors based on forecast quarters
-   * Tally demand counters per sector from all quarters
+   * Get demand scores for sectors based on the ACTIVE forecast quarter only
+   * Rankings are based on demand counters in the active quarter (the one being resolved)
    * 1st place sector: 50% of economy score
    * 2nd place sector: 30% of economy score
    * 3rd place sector: 20% of economy score (rounded down)
    * 
-   * Note: After quarters shift, we tally each sector's demand counters across all quarters
+   * The active quarter is the one that moved from Q1 to the active slot after quarter shift
    */
   async getForecastDemandScores(gameId: string, economyScore: number) {
-    // Get all quarters with their commitments (after shift, so active quarter is former Q1)
-    const quarters = await this.prisma.forecastQuarter.findMany({
-      where: { gameId },
+    // Get the ACTIVE quarter only (the one being resolved this turn)
+    const activeQuarter = await this.prisma.forecastQuarter.findFirst({
+      where: { 
+        gameId,
+        isActive: true,
+      },
       include: {
         commitments: {
           include: {
@@ -529,22 +566,25 @@ export class ForecastService {
       },
     });
 
-    // Tally demand counters per sector from all quarters
+    if (!activeQuarter) {
+      // No active quarter yet - return empty scores
+      return {};
+    }
+
+    // Tally demand counters per sector from the ACTIVE quarter only
     // Each commitment contributes demand counters = shareCount / quarter.shareCost
     const sectorDemandCounters: Record<string, number> = {};
     
-    for (const quarter of quarters) {
-      // Each commitment contributes to its sector's total
-      for (const commitment of quarter.commitments) {
-        const sectorId = commitment.sectorId;
-        if (!sectorDemandCounters[sectorId]) {
-          sectorDemandCounters[sectorId] = 0;
-        }
-        // Calculate this commitment's contribution to demand counters
-        // demandCounters = shareCount / quarter.shareCost (rounded down)
-        const contribution = Math.floor(commitment.shareCount / quarter.shareCost);
-        sectorDemandCounters[sectorId] += contribution;
+    // Only count commitments in the active quarter
+    for (const commitment of activeQuarter.commitments) {
+      const sectorId = commitment.sectorId;
+      if (!sectorDemandCounters[sectorId]) {
+        sectorDemandCounters[sectorId] = 0;
       }
+      // Calculate this commitment's contribution to demand counters
+      // demandCounters = shareCount / quarter.shareCost (rounded down)
+      const contribution = Math.floor(commitment.shareCount / activeQuarter.shareCost);
+      sectorDemandCounters[sectorId] += contribution;
     }
 
     // Sort sectors by total demand counters (descending)
@@ -569,15 +609,20 @@ export class ForecastService {
   }
 
   /**
-   * Get sector rankings based on forecast demand counters
+   * Get sector rankings based on forecast demand counters from the ACTIVE quarter only
    * Returns array of { sectorId, rank, demandCounters, sectorName } sorted by rank (1st, 2nd, 3rd, etc.)
    * Handles ties - sectors with the same demand counters share the same rank
    * Used for worker salary calculations and display
+   * 
+   * Rankings are based on the active quarter (the one being resolved), not all quarters combined
    */
   async getForecastRankings(gameId: string) {
-    // Get all quarters with their commitments
-    const quarters = await this.prisma.forecastQuarter.findMany({
-      where: { gameId },
+    // Get the ACTIVE quarter only (the one being resolved this turn)
+    const activeQuarter = await this.prisma.forecastQuarter.findFirst({
+      where: { 
+        gameId,
+        isActive: true,
+      },
       include: {
         commitments: {
           include: {
@@ -587,22 +632,26 @@ export class ForecastService {
       },
     });
 
-    // Tally demand counters per sector from all quarters
+    if (!activeQuarter) {
+      // No active quarter yet - return empty rankings
+      return [];
+    }
+
+    // Tally demand counters per sector from the ACTIVE quarter only
     const sectorDemandCounters: Record<string, { counters: number; sectorName: string }> = {};
     
-    for (const quarter of quarters) {
-      for (const commitment of quarter.commitments) {
-        const sectorId = commitment.sectorId;
-        if (!sectorDemandCounters[sectorId]) {
-          sectorDemandCounters[sectorId] = {
-            counters: 0,
-            sectorName: commitment.Sector.name,
-          };
-        }
-        // Calculate this commitment's contribution to demand counters
-        const contribution = Math.floor(commitment.shareCount / quarter.shareCost);
-        sectorDemandCounters[sectorId].counters += contribution;
+    // Only count commitments in the active quarter
+    for (const commitment of activeQuarter.commitments) {
+      const sectorId = commitment.sectorId;
+      if (!sectorDemandCounters[sectorId]) {
+        sectorDemandCounters[sectorId] = {
+          counters: 0,
+          sectorName: commitment.Sector.name,
+        };
       }
+      // Calculate this commitment's contribution to demand counters
+      const contribution = Math.floor(commitment.shareCount / activeQuarter.shareCost);
+      sectorDemandCounters[sectorId].counters += contribution;
     }
 
     // Sort sectors by total demand counters (descending)
@@ -663,5 +712,45 @@ export class ForecastService {
         },
       },
     });
+  }
+
+  /**
+   * Get all share IDs that are committed to non-active forecast quarters
+   * These shares should not be available for committing to other quarters
+   * Shares committed to active quarters (Q1) are released and available again
+   */
+  async getCommittedShareIdsFromNonActiveQuarters(
+    gameId: string,
+    playerId: string,
+  ) {
+    // Get all quarters
+    const quarters = await this.prisma.forecastQuarter.findMany({
+      where: { gameId },
+      include: {
+        commitments: {
+          where: { playerId },
+          include: {
+            shares: {
+              select: { id: true },
+            },
+          },
+        },
+      },
+    });
+
+    // Find non-active quarters (Q2, Q3, Q4 - shares committed here are locked)
+    const nonActiveQuarters = quarters.filter(q => !q.isActive);
+
+    // Collect all share IDs from commitments to non-active quarters
+    const committedShareIds = new Set<string>();
+    for (const quarter of nonActiveQuarters) {
+      for (const commitment of quarter.commitments) {
+        for (const share of commitment.shares) {
+          committedShareIds.add(share.id);
+        }
+      }
+    }
+
+    return Array.from(committedShareIds);
   }
 }

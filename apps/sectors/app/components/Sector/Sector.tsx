@@ -22,6 +22,7 @@ import {
   RiTeamFill,
   RiMoneyDollarCircleFill,
   RiFundsFill,
+  RiTimeLine,
 } from "@remixicon/react";
 import { useGame } from "../Game/GameContext";
 import { trpc } from "@sectors/app/trpc";
@@ -33,6 +34,25 @@ import {
   tooltipStyle,
 } from "@sectors/app/helpers/tailwind.helpers";
 import { calculateAverageStockPrice } from "@server/data/helpers";
+
+// Helper function to calculate research stage from researchMarker
+const getResearchStage = (researchMarker: number): number => {
+  if (researchMarker >= 10) return 4;
+  if (researchMarker >= 7) return 3;
+  if (researchMarker >= 4) return 2;
+  return 1;
+};
+
+// Helper function to get waiting area capacity based on research stage
+const getWaitingAreaCapacity = (researchStage: number): number => {
+  switch (researchStage) {
+    case 1: return 3;
+    case 2: return 5;
+    case 3: return 7;
+    case 4: return 10;
+    default: return 3;
+  }
+};
 
 const SectorComponent = () => {
   const { gameId, gameState } = useGame();
@@ -83,7 +103,7 @@ const SectorComponent = () => {
                   className={tooltipStyle}
                   content={
                     <p className={tooltipParagraphStyle}>
-                      Historical sector demand value. Both consumer distribution and worker salaries are now determined by Forecast rankings (from share commitments to forecast quarters).
+                      Sector demand is based on research bonuses. Consumer distribution and worker salaries are determined by sector demand rankings (1st: 50% economy score, 2nd: 30%, 3rd: 20%).
                     </p>
                   }
                 >
@@ -120,6 +140,32 @@ const SectorComponent = () => {
                 >
                   <div className="ml-2 text-small text-default-500 flex">
                     <RiTeamFill size={18} className="mr-1" /> {sector.consumers}
+                  </div>
+                </Tooltip>
+                <Tooltip
+                  classNames={{ base: baseToolTipStyle }}
+                  className={tooltipStyle}
+                  content={
+                    <div className={tooltipParagraphStyle}>
+                      <p className="mb-2">
+                        <strong>Waiting Area:</strong> Consumers who couldn't be served by factories are placed here.
+                      </p>
+                      <p className="mb-2">
+                        <strong>Capacity:</strong> Based on research stage (Stage 1: 3, Stage 2: 5, Stage 3: 7, Stage 4: 10)
+                      </p>
+                      <p className="mb-2">
+                        <strong>If capacity not exceeded:</strong> Consumers stay and their markers return to the draw bag for next turn.
+                      </p>
+                      <p>
+                        <strong>If capacity exceeded:</strong> All waiting consumers return to global pool and sector loses 1 demand permanently.
+                      </p>
+                    </div>
+                  }
+                >
+                  <div className="ml-2 text-small text-default-500 flex">
+                    <RiTimeLine size={18} className="mr-1" />{" "}
+                    {sector.waitingArea || 0}/
+                    {getWaitingAreaCapacity(getResearchStage(sector.researchMarker || 0))}
                   </div>
                 </Tooltip>
               </div>

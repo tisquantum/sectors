@@ -8,6 +8,8 @@ import { getResourcePriceForResourceType, getSectorResourceForSectorName } from 
 import { useGame } from './GameContext';
 import { useMemo } from 'react';
 import { SectorName } from '@server/prisma/prisma.client';
+import { Popover, PopoverTrigger, PopoverContent } from '@nextui-org/react';
+import { RiInformationLine } from '@remixicon/react';
 
 export function ResourceTracksContainer() {
   const { gameId } = useGame();
@@ -89,7 +91,38 @@ export function ResourceTracksContainer() {
       {/* General Resources */}
       {generalResources.length > 0 && (
         <div>
-          <h3 className="text-lg font-semibold text-white mb-3">General Resources</h3>
+          <div className="flex items-center gap-2 mb-3">
+            <h3 className="text-lg font-semibold text-white">General Resources</h3>
+            <Popover placement="top" showArrow>
+              <PopoverTrigger>
+                <button className="text-gray-400 hover:text-gray-300 transition-colors">
+                  <RiInformationLine size={16} />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="bg-gray-900 border border-gray-700">
+                <div className="p-3 space-y-2 min-w-[250px]">
+                  <div className="text-sm font-semibold text-white mb-2">General Resources</div>
+                  <div className="text-xs text-gray-300 space-y-2">
+                    <p>
+                      <strong>Value decreases when consumed in factory construction.</strong>
+                    </p>
+                    <p>
+                      • Each time a general resource is consumed in factory construction, the track moves down (value decreases, becomes cheaper)
+                    </p>
+                    <p>
+                      • Lower resource value = lower price = cheaper to use in factory construction
+                    </p>
+                    <p>
+                      • This creates a supply and demand dynamic where frequently used resources become more affordable
+                    </p>
+                    <p>
+                      • Available to all sectors for factory construction
+                    </p>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
           <div className="space-y-4">
             {generalResources.map((resource: any) => {
               const priceTrack = getResourcePriceForResourceType(resource.type);
@@ -110,7 +143,38 @@ export function ResourceTracksContainer() {
       {/* Sector Resources */}
       {sectorResources.length > 0 && (
         <div>
-          <h3 className="text-lg font-semibold text-white mb-3">Sector Resources</h3>
+          <div className="flex items-center gap-2 mb-3">
+            <h3 className="text-lg font-semibold text-white">Sector Resources</h3>
+            <Popover placement="top" showArrow>
+              <PopoverTrigger>
+                <button className="text-gray-400 hover:text-gray-300 transition-colors">
+                  <RiInformationLine size={16} />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="bg-gray-900 border border-gray-700">
+                <div className="p-3 space-y-2 min-w-[250px]">
+                  <div className="text-sm font-semibold text-white mb-2">Sector Resources</div>
+                  <div className="text-xs text-gray-300 space-y-2">
+                    <p>
+                      <strong>Research is the ONLY way to increase sector resource value.</strong>
+                    </p>
+                    <p>
+                      • Each research action performed in a sector increases that sector&apos;s resource value by 1
+                    </p>
+                    <p>
+                      • Sector resources do <strong>NOT</strong> decrease in value when consumed in factory construction (unlike General Resources)
+                    </p>
+                    <p>
+                      • Higher resource value = higher price = more expensive to use in factory construction
+                    </p>
+                    <p>
+                      • These resources are specific to each sector and can only be used by factories in that sector
+                    </p>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
           <div className="space-y-4">
             {sectorResources.map((resource: any) => {
               const priceTrack = getResourcePriceForResourceType(resource.type);

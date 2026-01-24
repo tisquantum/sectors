@@ -90,20 +90,35 @@ const ForecastPhase = () => {
     })) as ForecastQuarter[];
   }, [quartersWithBreakdown]);
 
-  // Get player's shares from playersWithShares
+  // Get share IDs that are committed to non-active quarters (should be unavailable)
+  const { data: committedShareIdsFromNonActiveQuarters } = trpc.forecast.getCommittedShareIdsFromNonActiveQuarters.useQuery(
+    {
+      gameId: gameId || "",
+      playerId: authPlayer?.id || "",
+    },
+    {
+      enabled: !!gameId && !!authPlayer?.id,
+    }
+  );
+
+  // Get player's shares from playersWithShares, excluding those committed to non-active quarters
   const playerShares = React.useMemo(() => {
     if (!playersWithShares || !authPlayer?.id) return [];
     const authPlayerWithShares = playersWithShares.find(
       (p) => p.id === authPlayer.id
     );
     if (!authPlayerWithShares) return [];
+    
+    const committedShareIdsSet = new Set(committedShareIdsFromNonActiveQuarters || []);
+    
     return authPlayerWithShares.Share.filter(
       (share) =>
         share.location === "PLAYER" &&
         !share.isCommitted &&
-        !share.shortOrderId
+        !share.shortOrderId &&
+        !committedShareIdsSet.has(share.id) // Exclude shares committed to non-active quarters
     );
-  }, [playersWithShares, authPlayer?.id]);
+  }, [playersWithShares, authPlayer?.id, committedShareIdsFromNonActiveQuarters]);
 
   // Fetch player's existing commitments
   const { data: playerCommitments } = trpc.forecast.getPlayerCommitments.useQuery(
@@ -330,7 +345,7 @@ const ForecastPhase = () => {
               Current Sector Rankings
             </h3>
             <p className="text-sm text-gray-400 mt-1">
-              Rankings based on total demand counters across all quarters. Tied sectors share the same rank.
+              Rankings based on demand counters in the active quarter (the one being resolved). Tied sectors share the same rank.
             </p>
           </CardHeader>
           <CardBody>
@@ -377,7 +392,7 @@ const ForecastPhase = () => {
                       {sectorRanking.demandCounters}
                     </div>
                     <div className="text-xs text-gray-500 mt-1">
-                      Total Demand Counters
+                      Demand Counters (Active Quarter)
                     </div>
                     <div className="text-xs text-gray-400 mt-2">
                       Gets {percentage} of economy score
@@ -475,9 +490,22 @@ const ForecastPhase = () => {
                               </div>
                               <div className="flex items-center justify-between">
                                 <span className="text-xs text-gray-400">Demand Counters:</span>
-                                <span className="text-sm font-bold text-blue-400">
-                                  {sectorData.demandCounters}
-                                </span>
+                                <div className="flex items-center gap-1">
+                                  <span className="text-sm font-bold text-blue-400">
+                                    {sectorData.demandCounters}
+                                  </span>
+                                  {/* Visual tokens for this sector's demand counters */}
+                                  <div className="flex gap-0.5 ml-1">
+                                    {Array.from({ length: sectorData.demandCounters }, (_, i) => (
+                                      <div
+                                        key={`token-${sectorData.sectorId}-${i}`}
+                                        className="w-3 h-3 rounded-full border border-white/30"
+                                        style={{ backgroundColor: sectorColor }}
+                                        title={`${sectorData.sectorName} token`}
+                                      />
+                                    ))}
+                                  </div>
+                                </div>
                               </div>
                               <div className="text-xs text-gray-500 mt-1">
                                 = {sectorData.sharesCommitted} ÷ {quarter.shareCost}
@@ -502,13 +530,41 @@ const ForecastPhase = () => {
                 })()}
                 
                 <div>
-                  <div className="text-sm text-gray-400 mb-1">
+                  <div className="text-sm text-gray-400 mb-2">
                     Total Demand Counters
                   </div>
-                  <div className="text-2xl font-bold text-blue-400">
-                    {quarter.demandCounters}
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="text-2xl font-bold text-blue-400">
+                      {quarter.demandCounters}
+                    </div>
+                    {/* Visual tokens showing sector breakdown */}
+                    {(() => {
+                      const breakdown = quarter.sectorBreakdown || [];
+                      if (breakdown.length > 0) {
+                        return (
+                          <div className="flex flex-wrap gap-1 ml-2">
+                            {breakdown.flatMap((sectorData) => {
+                              const sector = gameState?.sectors?.find(s => s.id === sectorData.sectorId);
+                              const sectorColor = sector 
+                                ? (sectorColors[sector.sectorName] || "#gray")
+                                : "#gray";
+                              // Create visual tokens for each demand counter from this sector
+                              return Array.from({ length: sectorData.demandCounters }, (_, i) => (
+                                <div
+                                  key={`${sectorData.sectorId}-${i}`}
+                                  className="w-4 h-4 rounded-full border-2 border-white/30"
+                                  style={{ backgroundColor: sectorColor }}
+                                  title={`${sectorData.sectorName} demand counter`}
+                                />
+                              ));
+                            })}
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
-                  <div className="text-xs text-gray-500 mt-1">
+                  <div className="text-xs text-gray-500">
                     = {quarter.totalSharesCommitted} ÷ {quarter.shareCost}
                   </div>
                 </div>

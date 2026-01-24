@@ -7,14 +7,15 @@ import { useGame } from "../../GameContext";
 import { useMemo } from "react";
 
 /**
- * Component to display Forecast ranking and worker salaries
- * Shows which sectors pay how much per worker based on Forecast rankings (1st, 2nd, 3rd)
+ * Component to display sector demand ranking and worker salaries
+ * Shows which sectors pay how much per worker based on sector demand rankings (1st, 2nd, 3rd)
+ * Rankings are based on sector demand (from research bonuses)
  */
 export function SectorWorkerSalaries() {
   const { gameId } = useGame();
 
-  // Get Forecast rankings
-  const { data: forecastRankings, isLoading: rankingsLoading } = trpc.forecast.getRankings.useQuery({
+  // Get sector demand rankings (based on sector demand from research bonuses)
+  const { data: sectorDemandRankings, isLoading: rankingsLoading } = trpc.modernOperations.getSectorDemandRankings.useQuery({
     gameId,
   });
 
@@ -25,15 +26,15 @@ export function SectorWorkerSalaries() {
 
   // Create map of sectorId -> ranking (must be before early returns)
   const rankingMap = useMemo(() => {
-    const map = new Map<string, { rank: number; demandCounters: number }>();
-    forecastRankings?.forEach((ranking) => {
+    const map = new Map<string, { rank: number; demand: number }>();
+    sectorDemandRankings?.forEach((ranking) => {
       map.set(ranking.sectorId, {
         rank: ranking.rank,
-        demandCounters: ranking.demandCounters,
+        demand: ranking.demand,
       });
     });
     return map;
-  }, [forecastRankings]);
+  }, [sectorDemandRankings]);
 
   const isLoading = rankingsLoading || sectorsLoading;
 
@@ -53,16 +54,16 @@ export function SectorWorkerSalaries() {
     );
   }
 
-  // Calculate worker salary for each sector based on Forecast ranking
+  // Calculate worker salary for each sector based on sector demand ranking
   const sectorsWithSalaries = sectors.map((sector) => {
     const ranking = rankingMap.get(sector.id);
     let salary: number;
     let rank: number;
-    let demandCounters: number;
+    let demand: number;
 
     if (ranking) {
       rank = ranking.rank;
-      demandCounters = ranking.demandCounters;
+      demand = ranking.demand;
       if (rank === 1) {
         salary = 8; // 1st place: $8
       } else if (rank === 2) {
@@ -71,9 +72,9 @@ export function SectorWorkerSalaries() {
         salary = 2; // 3rd and below: $2
       }
     } else {
-      // No forecast commitments for this sector
+      // No demand for this sector
       rank = sectors.length; // Last place
-      demandCounters = 0;
+      demand = sector.demand || 0;
       salary = 2; // Default: $2
     }
 
@@ -81,7 +82,7 @@ export function SectorWorkerSalaries() {
       ...sector,
       rank,
       workerSalary: salary,
-      demandCounters,
+      demand,
     };
   });
 
@@ -98,10 +99,10 @@ export function SectorWorkerSalaries() {
     <div className="space-y-4">
       <div className="mb-4">
         <h3 className="text-lg font-semibold text-white mb-2">
-          Forecast Ranking & Worker Salaries
+          Sector Demand Ranking & Worker Salaries
         </h3>
         <p className="text-sm text-gray-400">
-          Worker salaries are determined by Forecast rankings (based on share commitments to forecast quarters). 1st place pays $8/worker, 2nd pays $4/worker, 3rd+ pays $2/worker.
+          Worker salaries are determined by sector demand rankings (based on research bonuses). 1st place pays $8/worker, 2nd pays $4/worker, 3rd+ pays $2/worker.
         </p>
       </div>
 
@@ -147,18 +148,18 @@ export function SectorWorkerSalaries() {
                 </div>
 
                 <div>
-                  <div className="text-sm text-gray-400">Forecast Demand Counters</div>
+                  <div className="text-sm text-gray-400">Sector Demand</div>
                   <div className="flex items-center gap-1">
                     <RiUserFill size={14} className="text-gray-400" />
                     <span className="text-white font-medium">
-                      {sector.demandCounters || 0}
+                      {sector.demand || 0}
                     </span>
                   </div>
                 </div>
 
-                {!sector.demandCounters && (
+                {!sector.demand && (
                   <div className="text-xs text-gray-500">
-                    No forecast commitments
+                    No sector demand (from research bonuses)
                   </div>
                 )}
               </div>
@@ -172,12 +173,12 @@ export function SectorWorkerSalaries() {
           <div>
             <strong className="text-gray-300">Salary Rules:</strong>
           </div>
-          <div>• Rank #1 (Highest Forecast Demand Counters): $8 per worker</div>
+          <div>• Rank #1 (Highest Sector Demand): $8 per worker</div>
           <div>• Rank #2: $4 per worker</div>
           <div>• Rank #3+: $2 per worker</div>
           <div className="mt-2 text-xs text-gray-500">
-            Salaries are recalculated each turn based on Forecast rankings
-            (from share commitments to forecast quarters) during the Earnings Call phase.
+            Salaries are recalculated each turn based on sector demand rankings
+            (from research bonuses) during the Earnings Call phase.
           </div>
         </div>
       </div>

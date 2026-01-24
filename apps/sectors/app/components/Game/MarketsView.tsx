@@ -4,13 +4,11 @@ import { Tab, Tabs } from '@nextui-org/react';
 import { useGame } from './GameContext';
 import { Spinner } from '@nextui-org/react';
 import { SpotMarket } from './Markets/SpotMarket';
-import { ResourceMarket } from './Markets/ResourceMarket';
 import Derivatives from './Derivatives';
-import { OperationMechanicsVersion } from '@server/prisma/prisma.client';
 
 /**
- * Markets View - Refactored and cleaned up
- * Shows stock trading, resource prices, and derivatives
+ * Companies View - Stock trading and derivatives
+ * Shows stock trading and derivatives (Resource Market moved to Economy)
  */
 export function MarketsView() {
   const { gameState, gameId } = useGame();
@@ -23,23 +21,13 @@ export function MarketsView() {
     );
   }
 
-  // Ensure gameId is a valid string before rendering ResourceMarket
-  const isValidGameId = gameId && typeof gameId === 'string' && gameId.length > 0;
-
   return (
     <div className="w-full h-full">
-      <Tabs aria-label="Markets" className="w-full">
-        {/* Spot Market - Stock Trading */}
-        <Tab key="spot-market" title="Spot Market">
+      <Tabs aria-label="Companies" className="w-full">
+        {/* Companies - Organized by Sector */}
+        <Tab key="companies" title="Companies">
           <SpotMarket />
         </Tab>
-
-        {/* Resource Market - Resource Tracks (Modern Operations) */}
-        {gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN && isValidGameId && (
-          <Tab key="resource-market" title="Resource Market">
-            <ResourceMarket gameId={gameId} />
-          </Tab>
-        )}
 
         {/* Derivatives - Option Orders (if enabled) */}
         {gameState.useOptionOrders && (

@@ -251,7 +251,9 @@ const GameGeneralInfo = () => {
             </p>
           }
         >
-          <BankInfo />
+          <div>
+            <BankInfo />
+          </div>
         </Tooltip>
       </div>
       <div className="flex flex-col gap-1 items-start">

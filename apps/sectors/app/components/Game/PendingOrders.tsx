@@ -1,3 +1,4 @@
+import React from "react";
 import {
   ArrowRightIcon,
   ArrowTrendingUpIcon,
@@ -239,11 +240,11 @@ const PendingMarketOrders = ({
                   </Popover>
                   <div className="flex flex-wrap gap-2">
                     {Object.entries(groupedOrdersByPhase).map(
-                      ([phaseId, { orders, subRound }], index) => (
-                        <>
-                          {orders.map((order, index) => (
+                      ([phaseId, { orders, subRound }], phaseIndex) => (
+                        <React.Fragment key={phaseId}>
+                          {orders.map((order, orderIndex) => (
                             <motion.div
-                              key={index}
+                              key={order.id || `order-${orderIndex}`}
                               initial="hidden"
                               animate="visible"
                               variants={containerVariants}
@@ -272,7 +273,7 @@ const PendingMarketOrders = ({
                               </>
                             </motion.div>
                           ))}
-                        </>
+                        </React.Fragment>
                       )
                     )}
                   </div>

@@ -2,7 +2,7 @@
 
 import { cn } from '@/lib/utils';
 import { ResourceType } from '@/components/Company/Factory/Factory.types';
-import { Tooltip, Popover, PopoverTrigger, PopoverContent } from '@nextui-org/react';
+import { Popover, PopoverTrigger, PopoverContent } from '@nextui-org/react';
 import { RiInformationLine } from '@remixicon/react';
 import { sectorColors } from '@server/data/gameData';
 
@@ -75,6 +75,53 @@ export function ResourceTrack({ resourceType, title, track, currentPrice, breakd
       <div className="flex justify-between items-center mb-2">
         <div className="flex items-center gap-2">
           <h3 className="text-lg font-semibold text-white">{title || resourceType}</h3>
+          <Popover placement="top" showArrow>
+            <PopoverTrigger>
+              <button className="text-gray-400 hover:text-gray-300 transition-colors">
+                <RiInformationLine size={16} />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="bg-gray-900 border border-gray-700">
+              <div className="p-3 space-y-2 min-w-[250px]">
+                <div className="text-sm font-semibold text-white mb-2">
+                  {isSectorResource ? 'Sector Resource Value' : 'General Resource Value'}
+                </div>
+                <div className="text-xs text-gray-300 space-y-2">
+                  {isSectorResource ? (
+                    <>
+                      <p>
+                        <strong>Research is the ONLY way to increase sector resource value.</strong>
+                      </p>
+                      <p>
+                        • Each research action performed in this sector increases the resource value by 1
+                      </p>
+                      <p>
+                        • Sector resources do <strong>NOT</strong> decrease in value when consumed in factory construction (unlike General Resources)
+                      </p>
+                      <p>
+                        • Higher resource value = higher price = more expensive to use in factory construction
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p>
+                        <strong>Resource value decreases when consumed in factory construction.</strong>
+                      </p>
+                      <p>
+                        • Each time a resource is consumed in factory construction, the track moves down (value decreases, becomes cheaper)
+                      </p>
+                      <p>
+                        • Lower resource value = lower price = cheaper to use in factory construction
+                      </p>
+                      <p>
+                        • This creates a supply and demand dynamic where frequently used resources become more affordable
+                      </p>
+                    </>
+                  )}
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
           {breakdown && (
             <Popover placement="top" showArrow>
               <PopoverTrigger>
@@ -105,11 +152,24 @@ export function ResourceTrack({ resourceType, title, track, currentPrice, breakd
                       </div>
                     )}
                     <div className="pt-2 mt-2 border-t border-gray-700 text-gray-500 text-xs">
-                      Each factory consumes 1 sector resource. Research Stage II, III, and IV each consume 1 resource (economies of scale).
-                      {unaccountedFor > 0 && (
-                        <div className="mt-1 text-yellow-400">
-                          Note: {unaccountedFor} resource(s) consumed from other sources (check game logs for details).
-                        </div>
+                      {isSectorResource ? (
+                        <>
+                          <p className="mb-1">
+                            <strong>Note:</strong> Sector resources do NOT decrease in value when consumed. They only increase via research.
+                          </p>
+                          <p>
+                            Each factory construction consumes 1 sector resource, but this does not affect the resource value. Research milestones also do not affect sector resource values.
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          Each factory consumes 1 general resource, decreasing its value (making it cheaper). Research Stage II, III, and IV each consume 1 resource (economies of scale).
+                          {unaccountedFor > 0 && (
+                            <div className="mt-1 text-yellow-400">
+                              Note: {unaccountedFor} resource(s) consumed from other sources (check game logs for details).
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>

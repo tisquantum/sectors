@@ -61,7 +61,7 @@ export const useKeyboardShortcuts = ({
               break;
             case '4':
               event.preventDefault();
-              onViewChange('markets');
+              onViewChange('companies');
               break;
             case '5':
               event.preventDefault();
@@ -69,7 +69,7 @@ export const useKeyboardShortcuts = ({
               break;
             case '6':
               event.preventDefault();
-              onViewChange('companies');
+              onViewChange('operations');
               break;
           }
         }

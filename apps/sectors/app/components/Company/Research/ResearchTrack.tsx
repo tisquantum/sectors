@@ -64,8 +64,8 @@ export function ResearchTrack({
                     Stage {space.number / 3}
                   </div>
                   {space.number === 3 && (
-                    <div className="text-[10px] text-muted-foreground/70 leading-tight">
-                      +0 demand
+                    <div className="text-[10px] text-green-400/80 leading-tight">
+                      +1 demand
                     </div>
                   )}
                   {space.number === 6 && (
@@ -80,7 +80,7 @@ export function ResearchTrack({
                   )}
                   {space.number === 12 && (
                     <div className="text-[10px] text-green-400/80 leading-tight">
-                      +5 demand
+                      +4 demand
                     </div>
                   )}
                 </div>

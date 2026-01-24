@@ -23,10 +23,10 @@ import { RiInformationLine } from '@remixicon/react';
  * advances as companies complete research milestones.
  * 
  * Research stages provide demand bonuses to the sector's baseline demand:
- * - Stage 1 (0-3): +0 demand
- * - Stage 2 (4-6): +2 demand
- * - Stage 3 (7-9): +3 demand
- * - Stage 4 (10-12): +5 demand
+ * - Slot 3: +1 demand
+ * - Slot 6: +2 demand
+ * - Slot 9: +3 demand
+ * - Slot 12: +4 demand
  */
 export function SectorResearchTracks() {
   const { gameId } = useGame();
@@ -150,15 +150,14 @@ export function SectorResearchTracks() {
                   <ul className="list-disc list-inside space-y-1 ml-2">
                     <li>Each sector has a shared research track with 12 spaces (4 stages of 3 spaces each)</li>
                     <li>Companies in a sector contribute to that sector&apos;s overall research progress</li>
-                    <li>Research progress advances when companies complete research milestones</li>
                     <li>Each research action costs cash and requires available workers</li>
                   </ul>
                   <p>
                     <strong className="text-white">Additional Benefits:</strong>
                   </p>
                   <ul className="list-disc list-inside space-y-1 ml-2">
-                    <li>Each research action performed adds 1 demand counter to Forecast Quarter 2</li>
-                    <li>Demand bonuses: Stage 1 = +0, Stage 2 = +2, Stage 3 = +3, Stage 4 = +5</li>
+                    <li>Demand bonuses at research slots: Slot 3 = +1, Slot 6 = +2, Slot 9 = +3, Slot 12 = +4</li>
+                    <li>Research increases sector resource value (each research action increases sector resource value by 1)</li>
                     <li>Reaching research stages unlocks more factory and marketing slots</li>
                   </ul>
                   <p className="pt-2 mt-2 border-t border-gray-700 text-gray-400 italic">
@@ -211,7 +210,7 @@ export function SectorResearchTracks() {
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-gray-500">Demand Bonus:</span>
                   <span className="px-2 py-1 bg-green-900/30 border border-green-700/50 rounded text-xs font-semibold text-green-300">
-                    {researchStage === 1 ? '+0' : researchStage === 2 ? '+2' : researchStage === 3 ? '+3' : '+5'}
+                    {sectorProgress >= 12 ? '+4' : sectorProgress >= 9 ? '+3' : sectorProgress >= 6 ? '+2' : sectorProgress >= 3 ? '+1' : '+0'}
                   </span>
                 </div>
               </div>

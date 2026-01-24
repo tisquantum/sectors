@@ -1183,7 +1183,6 @@ export const phasesInOrder = [
   PhaseName.INFLUENCE_BID_ACTION,
   PhaseName.INFLUENCE_BID_RESOLVE,
   PhaseName.START_TURN,
-  PhaseName.FORECAST_COMMITMENT_START_TURN, // Players commit shares (2 turns)
   // PhaseName.HEADLINE_RESOLVE,
   PhaseName.SET_COMPANY_IPO_PRICES,
   PhaseName.RESOLVE_SET_COMPANY_IPO_PRICES,
@@ -1218,8 +1217,6 @@ export const phasesInOrder = [
   PhaseName.MODERN_OPERATIONS,
   PhaseName.RESOLVE_MODERN_OPERATIONS,
   PhaseName.RUSTED_FACTORY_UPGRADE,
-  PhaseName.FORECAST_COMMITMENT_END_TURN, // Players commit shares before end turn (2 turns)
-  PhaseName.FORECAST_RESOLVE, // Apply abilities, calculate counters, shift quarters
   PhaseName.CONSUMPTION_PHASE,
   PhaseName.EARNINGS_CALL,
   PhaseName.OPERATING_PRODUCTION_VOTE,

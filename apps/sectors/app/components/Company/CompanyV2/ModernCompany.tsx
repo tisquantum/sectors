@@ -222,8 +222,8 @@ export function ModernCompany({
                     <strong className="text-white">Additional Benefits:</strong>
                   </p>
                   <ul className="list-disc list-inside space-y-1 ml-2">
-                    <li>Each research action performed adds 1 demand counter to Forecast Quarter 2</li>
-                    <li>Demand bonuses: Stage 1 = +0, Stage 2 = +2, Stage 3 = +3, Stage 4 = +5</li>
+                    <li>Demand bonuses at research slots: Slot 3 = +1, Slot 6 = +2, Slot 9 = +3, Slot 12 = +4</li>
+                    <li>Research increases sector resource value (each research action increases sector resource value by 1)</li>
                     <li>Reaching research stages unlocks more factory and marketing slots</li>
                   </ul>
                 </div>

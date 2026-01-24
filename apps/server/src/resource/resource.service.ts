@@ -162,6 +162,8 @@ export class ResourceService {
   }
 
   // Consume resources and update track position (moves down the track = cheaper prices)
+  // NOTE: Sector resources (ResourceTrackType.SECTOR) are NOT updated when consumed
+  // They only increase in value through research actions
   async consumeResources(
     gameId: string, 
     resourceConsumptions: { type: ResourceType; count: number }[],
@@ -179,6 +181,12 @@ export class ResourceService {
           // Log warning and skip - resource type might not be initialized for this game
           // This can happen if a resource type like GENERAL is used but wasn't created during game initialization
           console.warn(`Resource ${consumption.type} not found for game ${gameId}. Skipping consumption.`);
+          continue;
+        }
+
+        // Skip sector resources - they only increase via research, not consumption
+        if (resource.trackType === ResourceTrackType.SECTOR) {
+          console.log(`Skipping track position update for sector resource ${consumption.type} - sector resources only increase via research`);
           continue;
         }
 

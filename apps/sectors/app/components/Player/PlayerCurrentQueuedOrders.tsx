@@ -74,12 +74,8 @@ const PlayerCurrentQueuedOrders = ({
       return () => clearTimeout(timeoutId);
     }
   }, [newOrderCount, refetch]);
-  if (isLoading) return (
-    <div className="flex items-center justify-center gap-2 p-4">
-      <Spinner size="sm" color="primary" />
-      <span className="text-sm text-gray-400">Loading orders...</span>
-    </div>
-  );
+  
+  // All hooks must be called before any early returns
   const utils = trpc.useUtils();
   const deleteAllOrders = trpc.playerOrder.deleteAllPlayerOrdersForPhase.useMutation({
     onSuccess: () => {
@@ -87,6 +83,13 @@ const PlayerCurrentQueuedOrders = ({
       refetch();
     },
   });
+  
+  if (isLoading) return (
+    <div className="flex items-center justify-center gap-2 p-4">
+      <Spinner size="sm" color="primary" />
+      <span className="text-sm text-gray-400">Loading orders...</span>
+    </div>
+  );
 
   const isPlaceOrdersPhase = currentPhase?.name === PhaseName.STOCK_ACTION_ORDER;
   const hasOrders = playerOrders && playerOrders.length > 0;

@@ -26,21 +26,11 @@ import { sortSectorIdsByPriority } from "@server/data/helpers";
 import { WorkforceTrack, SectorResearchTracks } from "./Tracks";
 import CapitalGains from "./CapitalGains";
 import Divestment from "./Divestment";
-import ForecastPhase from "./ForecastPhase";
+import { SectorDemandRankings } from "./SectorDemandRankings";
+import { ResourceMarket } from "./Markets/ResourceMarket";
 
 const EndTurnEconomy = () => {
   const { currentPhase, gameState, gameId } = useGame();
-  
-  // Get forecast-based consumer distribution (for modern operations)
-  const { data: forecastConsumerDistribution } = trpc.forecast.getForecastConsumerDistribution.useQuery(
-    { gameId: gameId || "" },
-    { 
-      enabled: !!gameId && gameState?.operationMechanicsVersion === OperationMechanicsVersion.MODERN,
-      refetchOnMount: false,
-      refetchOnWindowFocus: false,
-      staleTime: 5000, // 5 seconds
-    }
-  );
   
   // Track query calls to detect infinite loops
   const queryCallCountRef = useRef(0);
@@ -139,6 +129,13 @@ const EndTurnEconomy = () => {
                     </p>
                   </div>
                 </div>
+
+                {/* Sector Demand Rankings Breakdown */}
+                {gameState?.operationMechanicsVersion === OperationMechanicsVersion.MODERN && (
+                  <div className="w-full max-w-4xl mb-4">
+                    <SectorDemandRankings />
+                  </div>
+                )}
                 <div className="flex flex-wrap relative">
                   <Tooltip
                     classNames={{ base: baseToolTipStyle }}
@@ -208,18 +205,13 @@ const EndTurnEconomy = () => {
                 </div>
                 <div className="flex flex-wrap gap-3">
                   {sectors.map((sector, index) => {
-                    // Use forecast-based distribution for modern operations, legacy for others
-                    const consumerCount: number = gameState?.operationMechanicsVersion === OperationMechanicsVersion.MODERN
-                      ? (forecastConsumerDistribution?.[sector.id] ?? 0)
-                      : (sector.consumers || 0);
-                    
                     return (
                       <EconomySector
                         key={sector.id}
                         sector={sector}
                         sectorColor={sectorColors[sector.name]}
                         sectorIndex={index}
-                        consumerCount={consumerCount}
+                        consumerCount={sector.consumers || 0}
                       />
                     );
                   })}
@@ -282,12 +274,15 @@ const EndTurnEconomy = () => {
             <Divestment />
           </div>
         </Tab>
-        
-        <Tab key="forecast" title="Forecast">
-          <div className="w-full p-4">
-            <ForecastPhase />
-          </div>
-        </Tab>
+
+        {/* Resource Market - Resource Tracks (Modern Operations) */}
+        {gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN && gameId && (
+          <Tab key="resource-market" title="Resource Market">
+            <div className="w-full h-full">
+              <ResourceMarket gameId={gameId} />
+            </div>
+          </Tab>
+        )}
       </Tabs>
     </div>
   );

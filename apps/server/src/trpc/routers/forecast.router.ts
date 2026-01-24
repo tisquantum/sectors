@@ -128,4 +128,18 @@ export const forecastRouter = (trpc: TrpcService, ctx: Context) =>
         }
         return ctx.forecastService.getForecastDemandScores(input.gameId, game.economyScore);
       }),
+
+    getCommittedShareIdsFromNonActiveQuarters: publicProcedure
+      .input(
+        z.object({
+          gameId: z.string(),
+          playerId: z.string(),
+        }),
+      )
+      .query(async ({ input }) => {
+        return ctx.forecastService.getCommittedShareIdsFromNonActiveQuarters(
+          input.gameId,
+          input.playerId,
+        );
+      }),
   });

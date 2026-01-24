@@ -13,6 +13,7 @@ import { RESEARCH_COSTS_BY_PHASE } from '@server/data/constants';
 import { GameTurnService } from '@server/game-turn/game-turn.service';
 import { getNumberForFactorySize } from '@server/data/helpers';
 import { FactoryConstructionOrderService } from '@server/factory-construction/factory-construction-order.service';
+import { ModernOperationMechanicsService } from '@server/game-management/modern-operation-mechanics.service';
 
 type Context = {
   marketingService: MarketingService;
@@ -24,6 +25,7 @@ type Context = {
   sectorService: SectorService;
   gameTurnService: GameTurnService;
   factoryConstructionOrderService: FactoryConstructionOrderService;
+  modernOperationMechanicsService: ModernOperationMechanicsService;
 };
 
 export default (trpc: TrpcService, ctx: Context) =>
@@ -499,6 +501,15 @@ export default (trpc: TrpcService, ctx: Context) =>
         return Array.from(workerAllocationBySector.values())
           .filter(sector => sector.totalWorkers > 0)
           .sort((a, b) => b.totalWorkers - a.totalWorkers);
+      }),
+
+    // Get sector demand rankings based on sector demand (from research bonuses)
+    getSectorDemandRankings: trpc.procedure
+      .input(z.object({
+        gameId: z.string(),
+      }))
+      .query(async ({ input }) => {
+        return ctx.modernOperationMechanicsService.getSectorDemandRankings(input.gameId);
       }),
   });
 

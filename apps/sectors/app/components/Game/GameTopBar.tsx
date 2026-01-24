@@ -84,12 +84,12 @@ const GameTopBar = ({
             Chart
           </Button>
           <Button
-            className={getButtonClass("markets")}
-            onClick={() => handleViewChange("markets")}
+            className={getButtonClass("companies")}
+            onClick={() => handleViewChange("companies")}
             size="sm"
-            title="View markets (Press 4)"
+            title="View companies (Press 4)"
           >
-            Markets
+            Companies
           </Button>
           <Button
             className={getButtonClass("economy")}
@@ -100,8 +100,8 @@ const GameTopBar = ({
             Economy
           </Button>
           <Button
-            className={getButtonClass("companies")}
-            onClick={() => handleViewChange("companies")}
+            className={getButtonClass("operations")}
+            onClick={() => handleViewChange("operations")}
             size="sm"
             title="View operations (Press 6)"
           >
@@ -151,7 +151,7 @@ const GameTopBar = ({
             >
               <div className="flex items-center gap-2">
                 <RiTextWrap className="text-white" size={20} />
-                <span className="text-lg font-extrabold">
+                <span className="font-extrabold">
                   {friendlyPhaseName(currentPhase?.name)}
                 </span>
               </div>

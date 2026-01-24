@@ -175,7 +175,7 @@ const CompanyMoreInfo = ({
                 <div className="px-1 py-1 max-w-xs">
                   <div className="text-small font-semibold mb-1">Sector Demand</div>
                   <div className="text-small text-default-500">
-                    Historical sector demand value. Both consumer distribution and worker salaries are now determined by Forecast rankings (from share commitments to forecast quarters).
+                    Sector demand is based on research bonuses. Consumer distribution and worker salaries are determined by sector demand rankings (1st: 50% economy score, 2nd: 30%, 3rd: 20%).
                   </div>
                 </div>
               </PopoverContent>
@@ -487,121 +487,124 @@ const CompanyInfoV2 = ({
     <>
       <div className="flex flex-row gap-1 items-start h-full w-full">
         <div className="flex flex-col gap-1 flex-1">
-          {/* Condensed Header */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex items-center gap-1 text-base lg:text-lg font-bold">
-              <RiBuilding3Fill size={18} />
-              <span>{company.name}</span>
-            </div>
-            {companyPriority && (companyPriority.global || companyPriority.sector) && (
-              <div className="flex items-center gap-1">
-                {companyPriority.global && (
-                  <div className="flex items-center gap-1">
-                    <div className="flex items-center gap-1 px-2 py-1 rounded bg-gray-700/50 border border-gray-600">
-                      <RiHashtag size={16} />
-                      <span className="text-base font-semibold">{companyPriority.global}</span>
-                    </div>
-                    <Popover placement="top">
-                      <PopoverTrigger>
-                        <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer">
-                          <RiInformationLine size={14} />
-                        </button>
-                      </PopoverTrigger>
-                      <PopoverContent>
-                        <div className="px-1 py-1 max-w-xs">
-                          <div className="text-small font-semibold mb-1">Global Priority</div>
-                          <div className="text-small text-default-500">
-                            Global company priority based on stock price (highest to lowest), then stacking order across all sectors.
-                          </div>
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                )}
-                {companyPriority.sector && (
-                  <div className="flex items-center gap-1">
-                    <div
-                      className="flex items-center gap-1 px-2 py-1 rounded border"
-                      style={{
-                        backgroundColor: company?.Sector ? `${sectorColors[company.Sector.name]}80` : 'rgba(59, 130, 246, 0.5)',
-                        borderColor: company?.Sector ? sectorColors[company.Sector.name] : 'rgb(37, 99, 235)',
-                      }}
-                    >
-                      <RiHashtag size={16} />
-                      <span className="text-base font-semibold">{companyPriority.sector}</span>
-                    </div>
-                    <Popover placement="top">
-                      <PopoverTrigger>
-                        <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer">
-                          <RiInformationLine size={14} />
-                        </button>
-                      </PopoverTrigger>
-                      <PopoverContent>
-                        <div className="px-1 py-1 max-w-xs">
-                          <div className="text-small font-semibold mb-1">Sector Priority</div>
-                          <div className="text-small text-default-500">
-                            Sector company priority based on stock price (highest to lowest), then stacking order within this sector.
-                          </div>
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                )}
+          {/* Condensed Header - 3 Rows */}
+          <div className="flex flex-col gap-1">
+            {/* Row 1: NAME SECTOR NAME STOCK PRICE IPO PRICE */}
+            <div className="flex items-center gap-1 flex-wrap">
+              <div className="flex items-center gap-1 text-base lg:text-lg font-bold">
+                <RiBuilding3Fill size={18} />
+                <span>{company.name}</span>
               </div>
-            )}
-            <div className="flex items-center gap-1">
-              <span className="text-base text-gray-400">{company.stockSymbol}</span>
-              <Popover>
-                <PopoverTrigger>
-                  <div className="flex items-center gap-1 cursor-pointer">
-                    <RiFundsFill size={18} />
-                    <span className="text-base">${company.currentStockPrice}</span>
-                  </div>
-                </PopoverTrigger>
-                <PopoverContent>
-                  <CompanyLineChart companyId={company.id} />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className={`text-base ${
-                company.status == CompanyStatus.ACTIVE
-                  ? "text-green-500"
-                  : company.status == CompanyStatus.INACTIVE
-                  ? "text-yellow-500"
-                  : "text-red-500"
-              }`}>
-                {company.status}
-              </span>
-              <Popover placement="top">
-                <PopoverTrigger>
-                  <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer">
-                    <RiInformationLine size={14} />
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent>
-                  <div className="px-1 py-1 max-w-xs">
-                    <div className="text-small font-semibold mb-1">Company Status</div>
-                    <div className="text-small text-default-500">
-                      The company status. INACTIVE companies have not yet floated.
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
-            </div>
-            {(company.status == CompanyStatus.INACTIVE ||
-              company.status == CompanyStatus.ACTIVE) && (
               <div className="flex items-center gap-1">
-                <div className={`flex items-center gap-1 text-base ${
+                <RiShapesFill size={18} />
+                <span className="text-base">{company.Sector.name}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Popover>
+                  <PopoverTrigger>
+                    <div className="flex items-center gap-1 cursor-pointer">
+                      <RiFundsFill size={18} />
+                      <span className="text-base">${company.currentStockPrice}</span>
+                    </div>
+                  </PopoverTrigger>
+                  <PopoverContent>
+                    <CompanyLineChart companyId={company.id} />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              {company.ipoAndFloatPrice && (
+                <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 text-base">
+                    <span>IPO</span>
+                    <span>${company.ipoAndFloatPrice}</span>
+                  </div>
+                  <Popover placement="top">
+                    <PopoverTrigger>
+                      <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer">
+                        <RiInformationLine size={14} />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent>
+                      <div className="px-1 py-1 max-w-xs">
+                        <div className="text-small font-semibold mb-1">IPO Price</div>
+                        <div className="text-small text-default-500">
+                          The initial public offering price.
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              )}
+            </div>
+
+            {/* Row 2: PRIORITY NUMBERS ACTIVE STATUS FLOAT STATUS CASH ON HAND */}
+            <div className="flex items-center gap-1 flex-wrap">
+              {companyPriority && (companyPriority.global || companyPriority.sector) && (
+                <div className="flex items-center gap-1">
+                  {companyPriority.global && (
+                    <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 px-2 py-1 rounded bg-gray-700/50 border border-gray-600">
+                        <RiHashtag size={16} />
+                        <span className="text-base font-semibold">{companyPriority.global}</span>
+                      </div>
+                      <Popover placement="top">
+                        <PopoverTrigger>
+                          <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer">
+                            <RiInformationLine size={14} />
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent>
+                          <div className="px-1 py-1 max-w-xs">
+                            <div className="text-small font-semibold mb-1">Global Priority</div>
+                            <div className="text-small text-default-500">
+                              Global company priority based on stock price (highest to lowest), then stacking order across all sectors.
+                            </div>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  )}
+                  {companyPriority.sector && (
+                    <div className="flex items-center gap-1">
+                      <div
+                        className="flex items-center gap-1 px-2 py-1 rounded border"
+                        style={{
+                          backgroundColor: company?.Sector ? `${sectorColors[company.Sector.name]}80` : 'rgba(59, 130, 246, 0.5)',
+                          borderColor: company?.Sector ? sectorColors[company.Sector.name] : 'rgb(37, 99, 235)',
+                        }}
+                      >
+                        <RiHashtag size={16} />
+                        <span className="text-base font-semibold">{companyPriority.sector}</span>
+                      </div>
+                      <Popover placement="top">
+                        <PopoverTrigger>
+                          <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer">
+                            <RiInformationLine size={14} />
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent>
+                          <div className="px-1 py-1 max-w-xs">
+                            <div className="text-small font-semibold mb-1">Sector Priority</div>
+                            <div className="text-small text-default-500">
+                              Sector company priority based on stock price (highest to lowest), then stacking order within this sector.
+                            </div>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className="flex items-center gap-1">
+                <span className={`text-base ${
                   company.status == CompanyStatus.ACTIVE
                     ? "text-green-500"
                     : company.status == CompanyStatus.INACTIVE
                     ? "text-yellow-500"
                     : "text-red-500"
                 }`}>
-                  <RiSailboatFill size={18} />
-                  <span>{company.Sector.sharePercentageToFloat}%</span>
-                </div>
+                  {company.status}
+                </span>
                 <Popover placement="top">
                   <PopoverTrigger>
                     <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer">
@@ -610,64 +613,48 @@ const CompanyInfoV2 = ({
                   </PopoverTrigger>
                   <PopoverContent>
                     <div className="px-1 py-1 max-w-xs">
-                      <div className="text-small font-semibold mb-1">Float Percentage</div>
+                      <div className="text-small font-semibold mb-1">Company Status</div>
                       <div className="text-small text-default-500">
-                        Share percentage required to float companies in this sector.
+                        The company status. INACTIVE companies have not yet floated.
                       </div>
                     </div>
                   </PopoverContent>
                 </Popover>
               </div>
-            )}
-            <div className="flex items-center gap-1">
-              <div className="flex items-center gap-1 cursor-pointer" onClick={onOpen}>
-                <RiWallet3Fill size={18} />
-                <span className="text-base">${company.cashOnHand}</span>
-              </div>
-              <Popover placement="top">
-                <PopoverTrigger>
-                  <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer">
-                    <RiInformationLine size={14} />
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent>
-                  <div className="px-1 py-1 max-w-xs">
-                    <div className="text-small font-semibold mb-1">Cash on Hand</div>
-                    <div className="text-small text-default-500">
-                      Corporate treasury or cash on hand.
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
-            </div>
-            {company.ipoAndFloatPrice && (
-              <div className="flex items-center gap-1">
-                <div className="flex items-center gap-1 text-base">
-                  <span>IPO</span>
-                  <span>${company.ipoAndFloatPrice}</span>
-                </div>
-                <Popover placement="top">
-                  <PopoverTrigger>
-                    <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer">
-                      <RiInformationLine size={14} />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent>
-                    <div className="px-1 py-1 max-w-xs">
-                      <div className="text-small font-semibold mb-1">IPO Price</div>
-                      <div className="text-small text-default-500">
-                        The initial public offering price.
-                      </div>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              </div>
-            )}
-            {ceoPlayer && (
-              <div className="flex items-center gap-1">
+              {(company.status == CompanyStatus.INACTIVE ||
+                company.status == CompanyStatus.ACTIVE) && (
                 <div className="flex items-center gap-1">
-                  <RiVipCrown2Fill size={18} />
-                  <PlayerAvatar player={ceoPlayer as Player} size="sm" showNameLabel />
+                  <div className={`flex items-center gap-1 text-base ${
+                    company.status == CompanyStatus.ACTIVE
+                      ? "text-green-500"
+                      : company.status == CompanyStatus.INACTIVE
+                      ? "text-yellow-500"
+                      : "text-red-500"
+                  }`}>
+                    <RiSailboatFill size={18} />
+                    <span>{company.Sector.sharePercentageToFloat}%</span>
+                  </div>
+                  <Popover placement="top">
+                    <PopoverTrigger>
+                      <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer">
+                        <RiInformationLine size={14} />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent>
+                      <div className="px-1 py-1 max-w-xs">
+                        <div className="text-small font-semibold mb-1">Float Percentage</div>
+                        <div className="text-small text-default-500">
+                          Share percentage required to float companies in this sector.
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              )}
+              <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 cursor-pointer" onClick={onOpen}>
+                  <RiWallet3Fill size={18} />
+                  <span className="text-base">${company.cashOnHand}</span>
                 </div>
                 <Popover placement="top">
                   <PopoverTrigger>
@@ -677,15 +664,43 @@ const CompanyInfoV2 = ({
                   </PopoverTrigger>
                   <PopoverContent>
                     <div className="px-1 py-1 max-w-xs">
-                      <div className="text-small font-semibold mb-1">CEO</div>
+                      <div className="text-small font-semibold mb-1">Cash on Hand</div>
                       <div className="text-small text-default-500">
-                        The CEO (Chief Executive Officer) of this company.
+                        Corporate treasury or cash on hand.
                       </div>
                     </div>
                   </PopoverContent>
                 </Popover>
               </div>
-            )}
+            </div>
+
+            {/* Row 3: Other stuff (Research Marker, CEO, etc.) */}
+            <div className="flex items-center gap-1 flex-wrap">
+              <span className="text-base text-gray-400">{company.Sector.researchMarker}</span>
+              {ceoPlayer && (
+                <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1">
+                    <RiVipCrown2Fill size={18} />
+                    <PlayerAvatar player={ceoPlayer as Player} size="sm" showNameLabel />
+                  </div>
+                  <Popover placement="top">
+                    <PopoverTrigger>
+                      <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer">
+                        <RiInformationLine size={14} />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent>
+                      <div className="px-1 py-1 max-w-xs">
+                        <div className="text-small font-semibold mb-1">CEO</div>
+                        <div className="text-small text-default-500">
+                          The CEO (Chief Executive Officer) of this company.
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              )}
+            </div>
           </div>
 
           {!isMinimal && (
