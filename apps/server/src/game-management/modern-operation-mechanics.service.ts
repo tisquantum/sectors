@@ -1706,7 +1706,7 @@ export class ModernOperationMechanicsService {
         );
 
         // Increase sector resource values when research happens
-        // Each research action increases the sector resource track position by 1 (decreases price, increases value)
+        // Each research gain increases the sector resource track position (higher position = higher price in the price array)
         const sectorResourceUpdates: Array<{ sectorId: string; resourceType: ResourceType; gain: number }> = [];
         
         for (const [sectorId, gain] of sectorGains.entries()) {
@@ -1742,10 +1742,12 @@ export class ModernOperationMechanicsService {
               });
 
               if (resource) {
-                // Decrease trackPosition (move up the track = more expensive/higher value)
-                // Don't go below 0
+                // Increase trackPosition to increase price (sector resource value)
+                // Price array is index-based: higher index = higher price (e.g. MATERIALS: [1,2,...,10])
+                const priceArray = getResourcePriceForResourceType(update.resourceType);
+                const maxPosition = Math.max(0, (priceArray?.length ?? 1) - 1);
                 const oldTrackPosition = resource.trackPosition;
-                const newTrackPosition = Math.max(0, oldTrackPosition - update.gain);
+                const newTrackPosition = Math.min(maxPosition, oldTrackPosition + update.gain);
                 
                 console.log(`[RESEARCH] Updating ${update.resourceType} resource: trackPosition ${oldTrackPosition} → ${newTrackPosition} (gain: ${update.gain})`);
                 
