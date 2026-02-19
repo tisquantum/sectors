@@ -1,12 +1,7 @@
-import { Avatar, Badge, BadgeProps, Tooltip } from "@nextui-org/react";
-import { Player, User } from "@server/prisma/prisma.client";
+import { Avatar, Badge, BadgeProps, Popover, PopoverContent, PopoverTrigger } from "@nextui-org/react";
 import { lorelei } from "@dicebear/collection";
 import { createAvatar } from "@dicebear/core";
 import React, { useMemo } from "react";
-import {
-  baseToolTipStyle,
-  tooltipStyle,
-} from "@sectors/app/helpers/tailwind.helpers";
 
 function hashStringToColor(str: string): string {
   // Simple hash function to generate a consistent hash from a string
@@ -62,26 +57,27 @@ const UserAvatar = ({
 
   return (
     <div className="flex flex-col items-center">
-      <Tooltip
-        classNames={{ base: baseToolTipStyle }}
-        className={tooltipStyle}
-        content={user.name}
-      >
-        <div className="flex items-center">
-          {badgeContent ? (
-            <Badge
-              color="secondary"
-              content={badgeContent}
-              isOneChar={badgeIsOneChar}
-              placement={badgePlacement}
-            >
+      <Popover placement="bottom">
+        <PopoverTrigger>
+          <div className="flex items-center cursor-pointer">
+            {badgeContent ? (
+              <Badge
+                color="secondary"
+                content={badgeContent}
+                isOneChar={badgeIsOneChar}
+                placement={badgePlacement}
+              >
+                <Avatar size={size} name={user.name} src={avatar} />
+              </Badge>
+            ) : (
               <Avatar size={size} name={user.name} src={avatar} />
-            </Badge>
-          ) : (
-            <Avatar size={size} name={user.name} src={avatar} />
-          )}
-        </div>
-      </Tooltip>
+            )}
+          </div>
+        </PopoverTrigger>
+        <PopoverContent className="bg-slate-800 border border-gray-700 p-3">
+          <span className="text-sm">{user.name}</span>
+        </PopoverContent>
+      </Popover>
       {showNameLabel && <span>{user.name}</span>}
     </div>
   );
