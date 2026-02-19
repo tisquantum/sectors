@@ -51,7 +51,7 @@ export function SectorDemandRankings() {
     const rankPercentages = [0.5, 0.3, 0.2]; // 1st: 50%, 2nd: 30%, 3rd: 20%
     const breakdown: Array<{
       rank: number;
-      sectors: typeof sectorDemandRankings;
+      sectors: NonNullable<typeof sectorDemandRankings>;
       percentage: number;
       consumersPerSector: number;
       totalConsumers: number;
@@ -76,7 +76,7 @@ export function SectorDemandRankings() {
     }
     
     return breakdown;
-  }, [sectorsByRank, gameState?.economyScore, sectorDemandRankings]);
+  }, [sectorsByRank, gameState?.economyScore]);
 
   if (isLoading) {
     return (

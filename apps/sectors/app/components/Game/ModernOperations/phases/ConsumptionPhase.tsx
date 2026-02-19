@@ -60,7 +60,7 @@ export function ConsumptionPhase() {
       refetchModernOps.consumptionBags();
       refetchModernOps.sectors();
     }
-  }, [currentPhase?.id, currentPhase?.name, gameId, currentTurn?.id]);
+  }, [currentPhase?.id, currentPhase?.name, gameId, currentTurn?.id, refetchProduction, refetchModernOps]);
 
   // Refetch production data when phase transitions to EARNINGS_CALL
   // (This is when production records are created from consumption phase resolution)
@@ -71,7 +71,7 @@ export function ConsumptionPhase() {
       // Production records should now exist, refetch to show results
       refetchProduction();
     }
-  }, [currentPhase?.id, currentPhase?.name, currentTurn?.id]);
+  }, [currentPhase?.id, currentPhase?.name, currentTurn?.id, refetchProduction]);
 
   // Get operational factories for preview (when phase hasn't resolved yet)
   // MUST be called before any conditional returns to follow React hooks rules

@@ -132,7 +132,7 @@ const ForecastResolve = () => {
         );
       }
     }
-  }, [gameState?.currentPhaseId]);
+  }, [gameState?.currentPhaseId, gameState?.Phase]);
 
   const getStepIcon = (status: StepStatus) => {
     switch (status) {

@@ -22,7 +22,7 @@ import { createClient } from "@sectors/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import UserAvatar from "./Room/UserAvatar";
 import { RiDiscordFill, RiFundsFill } from "@remixicon/react";
-import { useState, useMemo, memo } from "react";
+import { useState, useMemo, memo, useCallback } from "react";
 import { User } from "@server/prisma/prisma.client";
 import { HandshakeIcon } from "lucide-react";
 import Image from "next/image";
@@ -144,10 +144,10 @@ const TopBar = () => {
   const supabase = createClient();
   const router = useRouter();
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     await supabase.auth.signOut();
     router.push("/account/login");
-  };
+  }, [supabase, router]);
 
   // Memoize dropdown content to prevent unnecessary re-renders
   const MemoizedAuthMenu = useMemo(

@@ -2,6 +2,7 @@ import { createAvatar } from "@dicebear/core";
 import { identicon, rings } from "@dicebear/collection";
 import { PrestigeReward } from "@server/prisma/prisma.client";
 import { useMemo } from "react";
+import Image from "next/image";
 
 const PrestigeIcon = ({
     prestigeType,
@@ -14,7 +15,7 @@ const PrestigeIcon = ({
         seed: prestigeType || "default",
       }).toDataUri();
     }, [prestigeType]);
-    return <img src={icon} alt={prestigeType} className="w-full h-full max-w-24" />;
+    return <Image src={icon} alt={prestigeType ?? "Prestige"} className="w-full h-full max-w-24" width={64} height={64} unoptimized />;
   };
 
 export default PrestigeIcon;

@@ -74,7 +74,7 @@ const SectorConsumerDistributionAnimation = ({
     setCalculatedCompanySupply(companySupply);
     setCalculatedCompanyDemand(companyDemand);
   }, [companySupply, companyDemand]);
-  const handleConsumerMove = () => {
+  const handleConsumerMove = useCallback(() => {
     if (
       sectorConsumers > 0 &&
       moneyEarned[currentCompanyIndex] <
@@ -90,7 +90,14 @@ const SectorConsumerDistributionAnimation = ({
         }
       });
     }
-  };
+  }, [
+    sectorConsumers,
+    moneyEarned,
+    currentCompanyIndex,
+    maximumConsumersWhoWillVisit,
+    currentCompany.unitPrice,
+    sortedCompanies.length,
+  ]);
 
   useEffect(() => {
     if (currentCompanyIndex === 0) {

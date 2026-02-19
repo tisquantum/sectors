@@ -148,7 +148,7 @@ const SectorComponent = () => {
                   content={
                     <div className={tooltipParagraphStyle}>
                       <p className="mb-2">
-                        <strong>Waiting Area:</strong> Consumers who couldn't be served by factories are placed here.
+                        <strong>Waiting Area:</strong> Consumers who couldn&apos;t be served by factories are placed here.
                       </p>
                       <p className="mb-2">
                         <strong>Capacity:</strong> Based on research stage (Stage 1: 3, Stage 2: 5, Stage 3: 7, Stage 4: 10)

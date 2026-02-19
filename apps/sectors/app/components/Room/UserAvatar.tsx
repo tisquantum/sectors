@@ -58,7 +58,7 @@ const UserAvatar = ({
       seed: user.name,
       backgroundColor: [hashStringToColor(user.name)],
     }).toDataUri();
-  }, [user.name]);
+  }, [user.name, size]);
 
   return (
     <div className="flex flex-col items-center">

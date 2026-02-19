@@ -31,6 +31,7 @@ import {
   PlayerOrderAllRelations,
 } from "@server/prisma/prisma.types";
 import React, { useMemo } from "react";
+import Image from "next/image";
 import PlayerAvatar from "../Player/PlayerAvatar";
 import {
   RiCheckboxCircleFill,
@@ -107,10 +108,12 @@ const OrderChipChitWithPlayer = ({
             order.orderType,
             order.isSell
           )} */}
-              <img
+              <Image
                 src={avatarUri}
                 alt="Avatar Background"
                 className="absolute inset-0 w-full h-full object-cover z-0 opacity-25"
+                fill
+                unoptimized
               />
 
               <CardHeader className="z-20 p-1 pt-2 pb-0 flex justify-center gap-2">
