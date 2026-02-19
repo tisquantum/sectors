@@ -15,9 +15,9 @@ import {
   RiCurrencyFill,
   RiTextWrap,
   RiUserFill,
+  RiInformationLine,
 } from "@remixicon/react";
 import {
-  Avatar,
   Button,
   Modal,
   ModalBody,
@@ -27,7 +27,6 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-  Tooltip,
   useDisclosure,
 } from "@nextui-org/react";
 import PlayerAvatar from "../Player/PlayerAvatar";
@@ -39,11 +38,7 @@ import {
   OperationMechanicsVersion,
   ShareLocation,
 } from "@server/prisma/prisma.client";
-import {
-  baseToolTipStyle,
-  tooltipParagraphStyle,
-  tooltipStyle,
-} from "@sectors/app/helpers/tailwind.helpers";
+import { tooltipParagraphStyle } from "@sectors/app/helpers/tailwind.helpers";
 import { MoneyTransactionByEntityType } from "./MoneyTransactionHistory";
 import WalletInfo from "./WalletInfo";
 import { MAX_SHARE_PERCENTAGE } from "@server/data/constants";
@@ -130,19 +125,20 @@ const GameGeneralInfo = () => {
                 <WalletInfo player={authPlayer} />{" "}
                 {(currentPhase?.name === PhaseName.STOCK_ACTION_ORDER ||
                   currentPhase?.name === PhaseName.STOCK_ACTION_RESULT) && (
-                  <Tooltip
-                    classNames={{ base: baseToolTipStyle }}
-                    className={tooltipStyle}
-                    content={
+                  <Popover placement="bottom" showArrow>
+                    <PopoverTrigger>
+                      <span className="cursor-pointer underline decoration-dotted">
+                        {"($" + pseudoSpend + ")"}
+                      </span>
+                    </PopoverTrigger>
+                    <PopoverContent className="bg-slate-800 border border-gray-700 p-4 max-w-[24rem]">
                       <p className={tooltipParagraphStyle}>
                         Net cash impact of your orders: buy costs minus sell profits.
                         Positive = net spending needed, Negative = net profit from sells.
                         Sell orders are resolved first, so money from selling can be used for subsequent buy orders.
                       </p>
-                    }
-                  >
-                    {"($" + pseudoSpend + ")"}
-                  </Tooltip>
+                    </PopoverContent>
+                  </Popover>
                 )}
                 {authPlayerWithShares && (
                   <div className="flex gap-1 items-center content-center">
@@ -176,32 +172,31 @@ const GameGeneralInfo = () => {
                 </div>
               )}
             </div>
-            <Tooltip
-              classNames={{ base: baseToolTipStyle }}
-              className={tooltipStyle}
-              content={
+            <Popover placement="bottom" showArrow>
+              <PopoverTrigger>
+                <div className="flex items-center text-md cursor-pointer">
+                  {(gameState?.useLimitOrders ||
+                    gameState?.useShortOrders ||
+                    gameState?.useOptionOrders) && (
+                    <RiFunctionAddFill size={24} />
+                  )}
+                  {gameState?.useLimitOrders && (
+                    <>LO {authPlayer.limitOrderActions}</>
+                  )}
+                  {gameState?.useShortOrders && (
+                    <> SO {authPlayer.shortOrderActions} </>
+                  )}
+                </div>
+              </PopoverTrigger>
+              <PopoverContent className="bg-slate-800 border border-gray-700 p-4 max-w-[24rem]">
                 <p className={tooltipParagraphStyle}>
                   The remaining actions you have for order types in a stock
                   round. Limit Order and Short Order actions only replenish as
                   existing orders are filled or rejected. Market Orders
                   replenish each stock round.
                 </p>
-              }
-            >
-              <div className="flex items-center text-md">
-                {(gameState?.useLimitOrders ||
-                  gameState?.useShortOrders ||
-                  gameState?.useOptionOrders) && (
-                  <RiFunctionAddFill size={24} />
-                )}
-                {gameState?.useLimitOrders && (
-                  <>LO {authPlayer.limitOrderActions}</>
-                )}
-                {gameState?.useShortOrders && (
-                  <> SO {authPlayer.shortOrderActions} </>
-                )}
-              </div>
-            </Tooltip>
+              </PopoverContent>
+            </Popover>
           </>
         ) : (
           <div className="flex justify-center items-center ">
@@ -212,10 +207,23 @@ const GameGeneralInfo = () => {
         )}
       </div>
       <div>
-        <Tooltip
-          classNames={{ base: baseToolTipStyle }}
-          className={tooltipStyle}
-          content={
+        <Popover placement="bottom" showArrow>
+          <PopoverTrigger>
+            <div className="flex flex-col items-center gap-1 cursor-pointer">
+              <div className="flex items-center gap-2">
+                <RiTeamFill className="text-yellow-400" size={18} />
+                {gameState.consumerPoolNumber}
+              </div>
+              {gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN && (
+                <div className="flex items-center gap-2 text-xs text-gray-400">
+                  <RiUserFill className="text-green-400" size={14} />
+                  {/* If workforcePool is 0, default to DEFAULT_WORKERS (40) for new games */}
+                  {gameState.workforcePool > 0 ? gameState.workforcePool : DEFAULT_WORKERS}
+                </div>
+              )}
+            </div>
+          </PopoverTrigger>
+          <PopoverContent className="bg-slate-800 border border-gray-700 p-4 max-w-[24rem]">
             <div>
               <p className={tooltipParagraphStyle}>The global consumer pool.</p>
               {gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN && (
@@ -224,103 +232,98 @@ const GameGeneralInfo = () => {
                 </p>
               )}
             </div>
-          }
-        >
-          <div className="flex flex-col items-center gap-1">
-            <div className="flex items-center gap-2">
-              <RiTeamFill className="text-yellow-400" size={18} />
-              {gameState.consumerPoolNumber}
-            </div>
-            {gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN && (
-              <div className="flex items-center gap-2 text-xs text-gray-400">
-                <RiUserFill className="text-green-400" size={14} />
-                {/* If workforcePool is 0, default to DEFAULT_WORKERS (40) for new games */}
-                {gameState.workforcePool > 0 ? gameState.workforcePool : DEFAULT_WORKERS}
-              </div>
-            )}
-          </div>
-        </Tooltip>
+          </PopoverContent>
+        </Popover>
       </div>
-      <div>
-        <Tooltip
-          classNames={{ base: baseToolTipStyle }}
-          className={tooltipStyle}
-          content={
+      <div className="flex items-center gap-1">
+        <BankInfo />
+        <Popover placement="bottom" showArrow>
+          <PopoverTrigger>
+            <button
+              type="button"
+              className="cursor-pointer text-gray-400 hover:text-gray-300 p-0 min-w-0"
+              aria-label="Bank pool info"
+            >
+              <RiInformationLine size={14} />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="bg-slate-800 border border-gray-700 p-4 max-w-[24rem]">
             <p className={tooltipParagraphStyle}>
               The bank pool. Once the bank pool is exhausted, the game ends.
             </p>
-          }
-        >
-          <div>
-            <BankInfo />
-          </div>
-        </Tooltip>
+          </PopoverContent>
+        </Popover>
       </div>
       <div className="flex flex-col gap-1 items-start">
         <div>
-          <Tooltip
-            classNames={{ base: baseToolTipStyle }}
-            className={tooltipStyle}
-            content={
+          <Popover placement="bottom" showArrow>
+            <PopoverTrigger>
+              <div className="flex gap-1 items-center cursor-pointer">
+                <RiTicket2Fill size={18} /> {gameState.certificateLimit}
+              </div>
+            </PopoverTrigger>
+            <PopoverContent className="bg-slate-800 border border-gray-700 p-4 max-w-[24rem]">
               <p className={tooltipParagraphStyle}>
                 The share limit. If a player exceeds this limit, they must
                 divest down to the limit.
               </p>
-            }
-          >
-            <div className="flex gap-1 items-center">
-              <RiTicket2Fill size={18} /> {gameState.certificateLimit}
-            </div>
-          </Tooltip>
+            </PopoverContent>
+          </Popover>
         </div>
         <div>
-          <Tooltip
-            classNames={{ base: baseToolTipStyle }}
-            className={tooltipStyle}
-            content={
+          <Popover placement="bottom" showArrow>
+            <PopoverTrigger>
+              <div className="flex gap-1 items-center cursor-pointer">
+                <RiDiscountPercentFill size={18} /> {MAX_SHARE_PERCENTAGE}
+              </div>
+            </PopoverTrigger>
+            <PopoverContent className="bg-slate-800 border border-gray-700 p-4 max-w-[24rem]">
               <p className={tooltipParagraphStyle}>
                 The company ownership limit percentage. A player may never own
                 more shares than this percentage of a company unless they
                 incidentally fall above this percentage due to company share
                 issues or share buybacks.
               </p>
-            }
-          >
-            <div className="flex gap-1 items-center">
-              <RiDiscountPercentFill size={18} /> {MAX_SHARE_PERCENTAGE}
-            </div>
-          </Tooltip>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
       <div>
         <div className="text-lg font-bold">Round</div>
         <div>{gameState.currentRound ?? "0"}</div>
       </div>
-      <Tooltip
-        classNames={{ base: baseToolTipStyle }}
-        className={tooltipStyle}
-        content={
+      <Popover placement="bottom" showArrow>
+        <PopoverTrigger>
+          <div className="flex flex-col items-center cursor-pointer">
+            <div className="text-lg font-bold">
+              <RiListOrdered2 className="text-green-400" />
+            </div>
+            <div>
+              {currentTurn.turn ?? "0"} of {gameState.gameMaxTurns}
+            </div>
+          </div>
+        </PopoverTrigger>
+        <PopoverContent className="bg-slate-800 border border-gray-700 p-4 max-w-[24rem]">
           <p className={tooltipParagraphStyle}>
             The current turn out of the maximum turns in the game. The game ends
             in one of two ways, either the bank pool is exhausted or the maximum
             turns are reached.
           </p>
-        }
-      >
-        <div className="flex flex-col items-center">
-          <div className="text-lg font-bold">
-            <RiListOrdered2 className="text-green-400" />
+        </PopoverContent>
+      </Popover>
+      <Popover placement="bottom" showArrow>
+        <PopoverTrigger>
+          <div className="flex flex-col items-center cursor-pointer">
+            <div className="text-lg font-bold">
+              <RiDiscFill className="text-blue-400" />
+            </div>
+            <div>
+              {friendlyDistributionStrategyName(gameState.distributionStrategy)}
+            </div>
           </div>
-          <div>
-            {currentTurn.turn ?? "0"} of {gameState.gameMaxTurns}
-          </div>
-        </div>
-      </Tooltip>
-      <Tooltip
-        classNames={{ base: baseToolTipStyle }}
-        className={tooltipStyle}
-        content={
-          gameState.distributionStrategy ==
+        </PopoverTrigger>
+        <PopoverContent className="bg-slate-800 border border-gray-700 p-4 max-w-[24rem]">
+          {gameState.distributionStrategy ==
           DistributionStrategy.BID_PRIORITY ? (
             <p className={tooltipParagraphStyle}>
               Bids are placed in priority according to the highest ask price of
@@ -344,18 +347,9 @@ const GameGeneralInfo = () => {
               distributed on a lottery to a random player who has placed an
               order for this company in that stock round.
             </p>
-          )
-        }
-      >
-        <div className="flex flex-col items-center">
-          <div className="text-lg font-bold">
-            <RiDiscFill className="text-blue-400" />
-          </div>
-          <div>
-            {friendlyDistributionStrategyName(gameState.distributionStrategy)}
-          </div>
-        </div>
-      </Tooltip>
+          )}
+        </PopoverContent>
+      </Popover>
       <Popover>
         <PopoverTrigger>
           <Button>Icon Legend</Button>

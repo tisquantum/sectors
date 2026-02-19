@@ -4,7 +4,6 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-  Tooltip,
 } from "@nextui-org/react";
 import { Player } from "@server/prisma/prisma.client";
 import { lorelei } from "@dicebear/collection";
@@ -13,10 +12,6 @@ import { useMemo } from "react";
 import { hashStringToColor } from "@sectors/app/helpers";
 import PlayerOverview from "./PlayerOverview";
 import { useGame } from "../Game/GameContext";
-import {
-  baseToolTipStyle,
-  tooltipStyle,
-} from "@sectors/app/helpers/tailwind.helpers";
 
 const PlayerAvatar = ({
   player,
@@ -52,30 +47,24 @@ const PlayerAvatar = ({
   const playerWithShares = playersWithShares.find((p) => p.id === player.id);
   return (
     <div className="flex flex-col items-center">
-      <Tooltip
-        classNames={{ base: baseToolTipStyle }}
-        className={tooltipStyle}
-        content={player.nickname}
-      >
-        <Popover placement="bottom">
-          <PopoverTrigger>
-            <div className="flex items-center cursor-pointer">
-              {badgeContent ? (
-                <Badge color="secondary" content={badgeContent}>
-                  <Avatar size={size} name={player.nickname} src={avatar} />
-                </Badge>
-              ) : (
+      <Popover placement="bottom">
+        <PopoverTrigger>
+          <div className="flex items-center cursor-pointer">
+            {badgeContent ? (
+              <Badge color="secondary" content={badgeContent}>
                 <Avatar size={size} name={player.nickname} src={avatar} />
-              )}
-            </div>
-          </PopoverTrigger>
-          <PopoverContent className="p-0 m-0">
-            {playerWithShares && (
-              <PlayerOverview playerWithShares={playerWithShares} />
+              </Badge>
+            ) : (
+              <Avatar size={size} name={player.nickname} src={avatar} />
             )}
-          </PopoverContent>
-        </Popover>
-      </Tooltip>
+          </div>
+        </PopoverTrigger>
+        <PopoverContent className="p-0 m-0">
+          {playerWithShares && (
+            <PlayerOverview playerWithShares={playerWithShares} />
+          )}
+        </PopoverContent>
+      </Popover>
       {showNameLabel && <span>{player.nickname}</span>}
     </div>
   );
