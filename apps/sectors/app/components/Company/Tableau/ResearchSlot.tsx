@@ -32,7 +32,7 @@ const RESEARCH_COSTS = {
 
 export function ResearchSlot({ companyId, gameId, isCEO = false }: ResearchSlotProps) {
   const [showResearchCreation, setShowResearchCreation] = useState(false);
-  const { currentPhase } = useGame();
+  const { currentPhase, currentTurn } = useGame();
 
   // Check if we're in the MODERN_OPERATIONS phase
   const isModernOperationsPhase = currentPhase?.name === PhaseName.MODERN_OPERATIONS;
@@ -70,6 +70,14 @@ export function ResearchSlot({ companyId, gameId, isCEO = false }: ResearchSlotP
   const researchProgress = company?.researchProgress || 0;
   const canResearch = company && company.cashOnHand >= researchCost;
 
+  // Pending research orders this turn = CEO has already taken a research action this turn
+  const { data: pendingOrders } = trpc.modernOperations.getPendingResearchOrders.useQuery(
+    { companyId, gameId, gameTurnId: currentTurn?.id },
+    { enabled: !!currentTurn?.id && !!companyId && !!gameId }
+  );
+  const hasTakenResearchThisTurn = (pendingOrders?.length ?? 0) > 0;
+  const canTakeResearchThisTurn = canResearch && !hasTakenResearchThisTurn;
+
   // Get research workers count (each research order = 1 worker)
   const { data: researchWorkers = 0 } = trpc.modernOperations.getResearchWorkers.useQuery(
     {
@@ -84,7 +92,8 @@ export function ResearchSlot({ companyId, gameId, isCEO = false }: ResearchSlotP
     if (!isModernOperationsPhase || !isCEO) return;
     // Only active or insolvent companies can operate
     if (company?.status !== CompanyStatus.ACTIVE && company?.status !== CompanyStatus.INSOLVENT) return;
-    if (canResearch && !showResearchCreation) {
+    // Only open modal if can afford research and haven't already taken a research action this turn
+    if (canTakeResearchThisTurn && !showResearchCreation) {
       setResearchError(null);
       setShowResearchCreation(true);
     }
@@ -125,13 +134,14 @@ export function ResearchSlot({ companyId, gameId, isCEO = false }: ResearchSlotP
         onClick={handleSlotClick}
         className={cn(
           'relative w-full rounded border transition-all flex flex-col items-center justify-center p-2',
-          researchProgress > 0 && 'border-blue-400 bg-blue-400/20 text-blue-200 cursor-default h-auto min-h-[48px]',
-          // Only allow interaction during MODERN_OPERATIONS phase, if user is CEO, company is active or insolvent, and can afford research
-          isModernOperationsPhase && isCEO && (company?.status === CompanyStatus.ACTIVE || company?.status === CompanyStatus.INSOLVENT) && canResearch && researchProgress === 0
+          // Enabled: CEO, in phase, company can act, and haven't taken a research action this turn
+          isModernOperationsPhase && isCEO && (company?.status === CompanyStatus.ACTIVE || company?.status === CompanyStatus.INSOLVENT) && canTakeResearchThisTurn
             ? 'border-blue-400/60 bg-blue-400/10 text-blue-300 hover:bg-blue-400/20 h-auto min-h-[48px] cursor-pointer'
-            : 'border-gray-600/40 bg-gray-700/30 text-gray-500 cursor-not-allowed h-12',
+            : researchProgress > 0
+              ? 'border-blue-400 bg-blue-400/20 text-blue-200 cursor-default h-auto min-h-[48px]'
+              : 'border-gray-600/40 bg-gray-700/30 text-gray-500 cursor-not-allowed h-12',
           // Dim if not in correct phase or not CEO
-          (!isModernOperationsPhase || !isCEO) && canResearch && researchProgress === 0 && 'opacity-50'
+          (!isModernOperationsPhase || !isCEO) && 'opacity-50'
         )}
       >
         {researchProgress > 0 ? (

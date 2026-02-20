@@ -216,27 +216,30 @@ export function AnimatedConsumptionFlow({
   };
 
   // Get remaining markers in bag (returns actual marker objects, not just count)
+  // Each drawn marker consumes exactly one matching sector marker (1:1), so "in bag" = total - drawn.
   const getRemainingMarkers = (sectorId: string) => {
     const sectorMarkers = consumptionBags.filter(m => m.sectorId === sectorId);
     
     if (!currentStepData) return sectorMarkers;
     
-    // Track which markers have been drawn so far
     const drawnMarkers = animationSteps
       .slice(0, currentStep + 1)
       .filter(s => s.sectorId === sectorId && s.markerDrawn)
       .map(s => s.markerDrawn!);
     
-    // Return markers that haven't been drawn yet
-    // We match by resource type and permanence status
-    const remaining = sectorMarkers.filter(marker => {
-      const wasDrawn = drawnMarkers.some(drawn => 
-        drawn.resourceType === marker.resourceType && 
-        drawn.isPermanent === marker.isPermanent
+    // Remove exactly one sector marker per drawn marker (match by resourceType + isPermanent)
+    const drawnCopy = drawnMarkers.map(d => ({ ...d }));
+    const remaining: typeof sectorMarkers = [];
+    for (const marker of sectorMarkers) {
+      const matchIndex = drawnCopy.findIndex(
+        d => d.resourceType === marker.resourceType && d.isPermanent === marker.isPermanent
       );
-      return !wasDrawn;
-    });
-    
+      if (matchIndex === -1) {
+        remaining.push(marker);
+      } else {
+        drawnCopy.splice(matchIndex, 1);
+      }
+    }
     return remaining;
   };
 
