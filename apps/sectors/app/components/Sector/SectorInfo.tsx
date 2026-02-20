@@ -32,7 +32,7 @@ const SectorInfo = ({ sector }: { sector: SectorWithCompanies }) => (
         className={tooltipStyle}
             content={
               <p className={tooltipParagraphStyle}>
-                Sector demand is based on research bonuses. Consumer distribution and worker salaries are determined by sector demand rankings (1st: 50% economy score, 2nd: 30%, 3rd: 20%).
+                Sector demand is based on brand score (from marketing) and research slot bonuses. Consumer distribution and worker salaries are determined by sector demand rankings (1st: 50% economy score, 2nd: 30%, 3rd: 20%).
               </p>
             }
       >

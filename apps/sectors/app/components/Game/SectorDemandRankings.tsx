@@ -14,7 +14,7 @@ import { sectorColors } from "@server/data/gameData";
 export function SectorDemandRankings() {
   const { gameId, gameState } = useGame();
 
-  // Get sector demand rankings (based on sector demand from research bonuses)
+  // Get sector demand rankings (based on sector demand: brand score + research slot bonus)
   const { data: sectorDemandRankings, isLoading: rankingsLoading } = trpc.modernOperations.getSectorDemandRankings.useQuery({
     gameId: gameId || "",
   }, {
@@ -107,7 +107,7 @@ export function SectorDemandRankings() {
             <div>
               <strong className="text-white">How Sector Demand Works:</strong>
               <ul className="list-disc list-inside mt-1 space-y-1 ml-2">
-                <li>Sector demand is calculated from <strong>research bonuses</strong> earned by advancing on the sector research track</li>
+                <li>Sector demand = <strong>brand score</strong> (sum of companies&apos; brand scores in the sector, from marketing) + <strong>research slot bonus</strong></li>
                 <li>Research Slot 3: +1 bonus, Slot 6: +2, Slot 9: +3, Slot 12: +4</li>
                 <li>Higher sector demand = higher ranking = more consumers distributed</li>
               </ul>

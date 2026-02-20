@@ -9,12 +9,12 @@ import { useMemo } from "react";
 /**
  * Component to display sector demand ranking and worker salaries
  * Shows which sectors pay how much per worker based on sector demand rankings (1st, 2nd, 3rd)
- * Rankings are based on sector demand (from research bonuses)
+ * Rankings are based on sector demand (brand score + research slot bonus)
  */
 export function SectorWorkerSalaries() {
   const { gameId } = useGame();
 
-  // Get sector demand rankings (based on sector demand from research bonuses)
+  // Get sector demand rankings (brand score + research slot bonus)
   const { data: sectorDemandRankings, isLoading: rankingsLoading } = trpc.modernOperations.getSectorDemandRankings.useQuery({
     gameId,
   });
@@ -102,7 +102,7 @@ export function SectorWorkerSalaries() {
           Sector Demand Ranking & Worker Salaries
         </h3>
         <p className="text-sm text-gray-400">
-          Worker salaries are determined by sector demand rankings (based on research bonuses). 1st place pays $8/worker, 2nd pays $4/worker, 3rd+ pays $2/worker.
+          Worker salaries are determined by sector demand rankings (brand score + research slot bonus). 1st place pays $8/worker, 2nd pays $4/worker, 3rd+ pays $2/worker.
         </p>
       </div>
 
@@ -159,7 +159,7 @@ export function SectorWorkerSalaries() {
 
                 {!sector.demand && (
                   <div className="text-xs text-gray-500">
-                    No sector demand (from research bonuses)
+                    No sector demand (brand score + research bonus)
                   </div>
                 )}
               </div>

@@ -175,7 +175,7 @@ const CompanyMoreInfo = ({
                 <div className="px-1 py-1 max-w-xs">
                   <div className="text-small font-semibold mb-1">Sector Demand</div>
                   <div className="text-small text-default-500">
-                    Sector demand is based on research bonuses. Consumer distribution and worker salaries are determined by sector demand rankings (1st: 50% economy score, 2nd: 30%, 3rd: 20%).
+                    Sector demand is based on brand score (from marketing) and research slot bonuses. Consumer distribution and worker salaries are determined by sector demand rankings (1st: 50% economy score, 2nd: 30%, 3rd: 20%).
                   </div>
                 </div>
               </PopoverContent>
