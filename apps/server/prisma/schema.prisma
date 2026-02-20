@@ -779,6 +779,13 @@ model Sector {
   technologyLevel        Int               @default(0)
   consumptionMarkers     ConsumptionMarker[]
   forecastCommitments    ForecastCommitment[]
+  // New company opens when sector demand meets thresholds (2, 4, 8); each threshold triggers once per sector (max 4 companies)
+  demandThreshold2Reached Boolean          @default(false)
+  demandThreshold4Reached Boolean          @default(false)
+  demandThreshold8Reached Boolean          @default(false)
+  pendingNewCompanyAt2   Boolean           @default(false)
+  pendingNewCompanyAt4   Boolean           @default(false)
+  pendingNewCompanyAt8   Boolean           @default(false)
 }
 
 enum SectorName {

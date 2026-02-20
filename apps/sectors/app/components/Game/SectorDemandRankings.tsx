@@ -6,6 +6,7 @@ import { RiTrophyFill, RiHandCoinFill, RiInformationLine } from "@remixicon/reac
 import { useGame } from "./GameContext";
 import { useMemo } from "react";
 import { sectorColors } from "@server/data/gameData";
+import { NewCompanyDemandThresholds } from "./NewCompanyDemandThresholds";
 
 /**
  * Component to display sector demand rankings breakdown
@@ -124,6 +125,11 @@ export function SectorDemandRankings() {
           </div>
         </CardBody>
       </Card>
+
+      {/* New company demand thresholds (2, 4, 8) */}
+      {sectors && sectors.length > 0 && (
+        <NewCompanyDemandThresholds sectors={sectors} />
+      )}
 
       {/* Rankings Display */}
       <div className="space-y-3">

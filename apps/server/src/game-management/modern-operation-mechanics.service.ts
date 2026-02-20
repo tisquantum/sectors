@@ -27,6 +27,19 @@ interface RequiredResource {
   quantity: number;
 }
 
+/** Sector demand thresholds for opening new companies. Each threshold can trigger once per sector (max 4 companies per sector). */
+const NEW_COMPANY_DEMAND_THRESHOLDS = [2, 4, 8] as const;
+
+/** Sector with new-company threshold fields (from migration; Prisma client may not have types until generate) */
+type SectorWithThresholds = Sector & {
+  demandThreshold2Reached?: boolean;
+  demandThreshold4Reached?: boolean;
+  demandThreshold8Reached?: boolean;
+  pendingNewCompanyAt2?: boolean;
+  pendingNewCompanyAt4?: boolean;
+  pendingNewCompanyAt8?: boolean;
+};
+
 @Injectable()
 export class ModernOperationMechanicsService {
   constructor(
@@ -117,6 +130,7 @@ export class ModernOperationMechanicsService {
         await this.degradeMarketingCampaigns(phase);
         await this.updateResearchProgress(phase);
         await this.distributeConsumersToSectors(phase);
+        await this.recordNewCompanyDemandThresholds(phase);
         await this.createNewTurn(phase);
         break;
 
@@ -909,126 +923,91 @@ export class ModernOperationMechanicsService {
         data: { demand: (sector.demand || 0) + 1 },
       });
     }
-   /**
-   * Every third turn, look for the sector with the highest average stock price.
-   * A new company is opened in this sector. If there are zero companies active, we skip this.
-   * If there are no active, inactive or insolvent companies in a sector, we open a company in that sector.
-   * @param phase
+  /**
+   * Open new companies at start of turn:
+   * 1. Any sector with no companies gets one (empty-sector fallback).
+   * 2. Sectors that met a demand threshold (2, 4, 8) last turn get a new company; each threshold triggers once per sector (max 4 companies per sector).
    */
-   async handleOpeningNewCompany(phase: Phase) {
-    // Get the current game turn
-    const gameTurn = await this.gameTurnService.getCurrentTurn(phase.gameId);
-    if (!gameTurn) {
-      throw new Error('Game turn not found');
-    }
-
-    // Get the game to check max turns
-    const game = await this.gamesService.game({ id: phase.gameId });
-    if (!game) {
-      throw new Error('Game not found');
-    }
-
-    // If game has 10 turns or less, create a new company every 2 turns
-    // Otherwise, create a new company every 3 turns
-    const turnInterval = game.gameMaxTurns && game.gameMaxTurns <= 10 ? 2 : 3;
-    if (gameTurn.turn % turnInterval !== 0) {
-      return;
-    }
-
-    //get all sectors for the game
-    const sectors = await this.sectorService.sectors({
+  async handleOpeningNewCompany(phase: Phase) {
+    const sectors = await this.prisma.sector.findMany({
       where: { gameId: phase.gameId },
     });
-    if (!sectors) {
-      throw new Error('Sectors not found');
-    }
+    if (!sectors.length) return;
 
-    // Get all active companies and group by sector
-    const companies = await this.companyService.companiesWithSector({
+    const playableCompanies = await this.companyService.companiesWithSector({
       where: {
         gameId: phase.gameId,
         OR: [
           { status: CompanyStatus.ACTIVE },
+          { status: CompanyStatus.INACTIVE },
           { status: CompanyStatus.INSOLVENT },
         ],
       },
     });
-    if (!companies || companies.length === 0) {
-      throw new Error('No active companies found');
-    }
-
-    const groupedCompanies = companies.reduce(
+    const groupedBySector = playableCompanies.reduce(
       (acc, company) => {
-        if (!acc[company.sectorId]) {
-          acc[company.sectorId] = [];
-        }
+        if (!acc[company.sectorId]) acc[company.sectorId] = [];
         acc[company.sectorId].push(company);
         return acc;
       },
       {} as { [key: string]: CompanyWithSector[] },
     );
 
-    //find the average stock price of each sector
-    const sectorAverages = Object.entries(groupedCompanies).map(
-      ([sectorId, companies]) => {
-        const averageStockPrice = calculateAverageStockPrice(companies);
-        return { sectorId, averageStockPrice };
-      },
-    );
+    // 1. Empty sectors: open one company each (e.g. game start)
+    const emptySectors = sectors.filter((s) => !groupedBySector[s.id]?.length);
+    for (const sector of emptySectors) {
+      await this.createCompanyInSector(phase, sector.id, [], CompanyTier.STARTUP);
+    }
 
-    //find the sector with the highest average stock price
-    const topSector = sectorAverages.reduce((prev, curr) => {
-      return curr.averageStockPrice > prev.averageStockPrice ? curr : prev;
+    // Re-fetch grouped companies so newly created companies are included
+    const playableAfterEmpty = await this.companyService.companiesWithSector({
+      where: {
+        gameId: phase.gameId,
+        OR: [
+          { status: CompanyStatus.ACTIVE },
+          { status: CompanyStatus.INACTIVE },
+          { status: CompanyStatus.INSOLVENT },
+        ],
+      },
     });
-
-    //create a new company in this sector
-    this.createCompanyInSector(
-      phase,
-      topSector.sectorId,
-      groupedCompanies[topSector.sectorId],
-      CompanyTier.GROWTH,
-    );
-
-    //if any sectors are empty, create one company in each of those sectors
-    const companiesThatArePlayableInSector =
-      await this.companyService.companiesWithSector({
-        where: {
-          gameId: phase.gameId,
-          OR: [
-            { status: CompanyStatus.ACTIVE },
-            { status: CompanyStatus.INACTIVE },
-            { status: CompanyStatus.INSOLVENT },
-          ],
-        },
-      });
-
-    // Group these companies by sector
-    const playableGroupedCompanies = companiesThatArePlayableInSector.reduce(
+    const groupedAfterEmpty = playableAfterEmpty.reduce(
       (acc, company) => {
-        if (!acc[company.sectorId]) {
-          acc[company.sectorId] = [];
-        }
+        if (!acc[company.sectorId]) acc[company.sectorId] = [];
         acc[company.sectorId].push(company);
         return acc;
       },
       {} as { [key: string]: CompanyWithSector[] },
     );
 
-    // Check for any sectors without active, inactive, or insolvent companies
-    const emptySectors = sectors.filter(
-      (sector) => !playableGroupedCompanies[sector.id],
-    );
-    if (emptySectors.length === 0) {
-      return;
-    }
-    // Create one company in each empty sector
-    for (const emptySector of emptySectors) {
-      await this.createCompanyInSector(
-        phase,
-        emptySector.id,
-        [],
-        CompanyTier.STARTUP,
-      );
+    // 2. Pending demand-threshold opens (recorded at END_TURN of previous turn)
+    for (const sector of sectors) {
+      const s = sector as SectorWithThresholds;
+      let companies = groupedAfterEmpty[sector.id] ?? [];
+      const pendingUpdates: Record<string, boolean> = {};
+      if (s.pendingNewCompanyAt2) {
+        await this.createCompanyInSector(phase, sector.id, companies, CompanyTier.GROWTH);
+        pendingUpdates.pendingNewCompanyAt2 = false;
+        companies = await this.companyService.companiesWithSector({
+          where: { gameId: phase.gameId, sectorId: sector.id, OR: [{ status: CompanyStatus.ACTIVE }, { status: CompanyStatus.INACTIVE }, { status: CompanyStatus.INSOLVENT }] },
+        });
+      }
+      if (s.pendingNewCompanyAt4) {
+        await this.createCompanyInSector(phase, sector.id, companies, CompanyTier.GROWTH);
+        pendingUpdates.pendingNewCompanyAt4 = false;
+        companies = await this.companyService.companiesWithSector({
+          where: { gameId: phase.gameId, sectorId: sector.id, OR: [{ status: CompanyStatus.ACTIVE }, { status: CompanyStatus.INACTIVE }, { status: CompanyStatus.INSOLVENT }] },
+        });
+      }
+      if (s.pendingNewCompanyAt8) {
+        await this.createCompanyInSector(phase, sector.id, companies, CompanyTier.GROWTH);
+        pendingUpdates.pendingNewCompanyAt8 = false;
+      }
+      if (Object.keys(pendingUpdates).length > 0) {
+        await this.prisma.sector.update({
+          where: { id: sector.id },
+          data: pendingUpdates,
+        });
+      }
     }
   }
 
@@ -3348,6 +3327,40 @@ export class ModernOperationMechanicsService {
           content: entry.content,
         }))
       );
+    }
+  }
+
+  /**
+   * Record when a sector's demand meets or passes a new company threshold (2, 4, 8).
+   * Each threshold can only trigger once per sector. Pending opens are processed at start of next turn.
+   */
+  private async recordNewCompanyDemandThresholds(phase: Phase) {
+    const sectors = await this.prisma.sector.findMany({
+      where: { gameId: phase.gameId },
+    });
+    const updates: Array<{ id: string; data: Record<string, boolean> }> = [];
+    for (const sector of sectors) {
+      const s = sector as SectorWithThresholds;
+      const demand = sector.demand ?? 0;
+      const data: Partial<Record<string, boolean>> = {};
+      if (demand >= 2 && !s.demandThreshold2Reached) {
+        data.demandThreshold2Reached = true;
+        data.pendingNewCompanyAt2 = true;
+      }
+      if (demand >= 4 && !s.demandThreshold4Reached) {
+        data.demandThreshold4Reached = true;
+        data.pendingNewCompanyAt4 = true;
+      }
+      if (demand >= 8 && !s.demandThreshold8Reached) {
+        data.demandThreshold8Reached = true;
+        data.pendingNewCompanyAt8 = true;
+      }
+      if (Object.keys(data).length > 0) {
+        updates.push({ id: sector.id, data: data as any });
+      }
+    }
+    for (const { id, data } of updates) {
+      await this.prisma.sector.update({ where: { id }, data });
     }
   }
 
