@@ -3,7 +3,7 @@
 import { cn } from "@/lib/utils";
 import { ResourceType } from './Factory.types';
 import { Popover, PopoverContent, PopoverTrigger } from "@nextui-org/react";
-import { RiInformationLine } from "@remixicon/react";
+import { RiHeartFill, RiInformationLine } from "@remixicon/react";
 
 interface FactoryProps {
   id: string;
@@ -13,6 +13,8 @@ interface FactoryProps {
   resources: { type: ResourceType; price: number }[];
   isOperational: boolean;
   totalValue: number;
+  /** Attraction = unit price − brand score; used at consumer determination for where to shop. Shown when provided (modern operations). */
+  attraction?: number;
 }
 
 const RESOURCE_COLORS: Record<ResourceType, string> = {
@@ -104,6 +106,7 @@ export function Factory({
   resources,
   isOperational,
   totalValue,
+  attraction,
 }: FactoryProps) {
   return (
     <div
@@ -228,12 +231,35 @@ export function Factory({
               <div className="px-1 py-1 max-w-xs">
                 <div className="text-small font-semibold mb-1">Consumers</div>
                 <div className="text-small text-default-500">
-                  Number of consumers this factory can serve (max capacity). Determined by factory size: I=3, II=6, III=9, IV=12 customers.
+                  Number of customers this factory can serve. Customers are allocated during consumer determination based on attraction (unit price − brand score); lower attraction is preferred.
                 </div>
               </div>
             </PopoverContent>
           </Popover>
         </div>
+
+        {/* Attraction (product-level; used at consumer determination for where to shop) */}
+        {typeof attraction === 'number' && (
+          <div className="flex items-center gap-1">
+            <RiHeartFill size={14} className="text-amber-400 shrink-0" />
+            <span className="text-xs font-medium text-gray-200">{attraction}</span>
+            <Popover placement="top">
+              <PopoverTrigger>
+                <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer" aria-label="Attraction info">
+                  <RiInformationLine size={12} />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent>
+                <div className="px-1 py-1 max-w-xs">
+                  <div className="text-small font-semibold mb-1">Attraction</div>
+                  <div className="text-small text-default-500">
+                    Attraction = unit price − brand score. Used when customers choose where to shop: lower is better (your product is cheaper to them). Ties go to more complex factories.
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+        )}
       </div>
     </div>
   );
