@@ -152,6 +152,14 @@ export default (trpc: TrpcService, ctx: Context) =>
               'Cannot view orders during stock action order or result phase',
           });
         }
+        // Prisma PlayerOrder.stockRoundId is required (String), so we must not pass
+        // stockRoundId: null in where. Strip null/undefined values from where.
+        const sanitizedWhere = where
+          ? Object.fromEntries(
+              Object.entries(where).filter(([_, v]) => v != null)
+            )
+          : {};
+
         if (phase.name == PhaseName.STOCK_ACTION_ORDER) {
           // We do not want to show orders made during this phase as players are not
           // allowed to view orders until all players are ready to reveal them.
@@ -160,7 +168,8 @@ export default (trpc: TrpcService, ctx: Context) =>
             take,
             cursor: cursor ? { id: cursor } : undefined,
             where: {
-              ...where,
+              ...sanitizedWhere,
+              gameId,
               phaseId: {
                 not: phase.id,
               },
@@ -172,7 +181,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           skip,
           take,
           cursor: cursor ? { id: cursor } : undefined,
-          where,
+          where: { ...sanitizedWhere, gameId },
           orderBy,
         });
       }),
