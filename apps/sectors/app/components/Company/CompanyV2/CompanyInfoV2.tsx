@@ -25,8 +25,10 @@ import {
   RiGlasses2Fill,
   RiGovernmentFill,
   RiHandCoinFill,
+  RiHeartFill,
   RiIncreaseDecreaseFill,
   RiInformationLine,
+  RiMegaphoneFill,
   RiPriceTag3Fill,
   RiSailboatFill,
   RiShapesFill,
@@ -478,6 +480,48 @@ const CompanyInfoV2 = ({
               </Popover>
             </div>
           )}
+          <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-purple-500/20 border border-purple-400/50">
+              <RiMegaphoneFill size={16} className="text-purple-400" />
+              <span className="text-sm font-medium">{company.brandScore ?? 0}</span>
+            </div>
+            <Popover placement="top">
+              <PopoverTrigger>
+                <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer" aria-label="Brand score info">
+                  <RiInformationLine size={14} />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent>
+                <div className="px-1 py-1 max-w-xs">
+                  <div className="text-small font-semibold mb-1">Brand Score</div>
+                  <div className="text-small text-default-500">
+                    Increased by marketing campaigns. Higher brand improves attraction (products cheaper to customers). Attraction = unit price − brand score.
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/20 border border-amber-400/50">
+              <RiHeartFill size={16} className="text-amber-400" />
+              <span className="text-sm font-medium">{(company.unitPrice ?? 0) - (company.brandScore ?? 0)}</span>
+            </div>
+            <Popover placement="top">
+              <PopoverTrigger>
+                <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer" aria-label="Attraction score info">
+                  <RiInformationLine size={14} />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent>
+                <div className="px-1 py-1 max-w-xs">
+                  <div className="text-small font-semibold mb-1">Attraction</div>
+                  <div className="text-small text-default-500">
+                    Unit price − brand score. Lower is better; customers prefer lower attraction. Ties go to more complex factories.
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
       </div>
     );
@@ -674,7 +718,7 @@ const CompanyInfoV2 = ({
               </div>
             </div>
 
-            {/* Row 3: Other stuff (Research Marker, CEO, etc.) */}
+            {/* Row 3: Research Marker, CEO, Brand score, Attraction score */}
             <div className="flex items-center gap-1 flex-wrap">
               <span className="text-base text-gray-400">{company.Sector.researchMarker}</span>
               {ceoPlayer && (
@@ -700,6 +744,50 @@ const CompanyInfoV2 = ({
                   </Popover>
                 </div>
               )}
+              {/* Brand score */}
+              <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 px-2 py-1 rounded bg-purple-500/20 border border-purple-400/50">
+                  <RiMegaphoneFill size={16} className="text-purple-400" />
+                  <span className="text-base font-medium">{company.brandScore ?? 0}</span>
+                </div>
+                <Popover placement="top">
+                  <PopoverTrigger>
+                    <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer" aria-label="Brand score info">
+                      <RiInformationLine size={14} />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent>
+                    <div className="px-1 py-1 max-w-xs">
+                      <div className="text-small font-semibold mb-1">Brand Score</div>
+                      <div className="text-small text-default-500">
+                        Increased by marketing campaigns. Higher brand score improves your attraction rating (makes your products cheaper to customers). Attraction = unit price − brand score; lower attraction means customers prefer your company.
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+              {/* Attraction score (unit price − brand; lower is better) */}
+              <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 px-2 py-1 rounded bg-amber-500/20 border border-amber-400/50">
+                  <RiHeartFill size={16} className="text-amber-400" />
+                  <span className="text-base font-medium">{(company.unitPrice ?? 0) - (company.brandScore ?? 0)}</span>
+                </div>
+                <Popover placement="top">
+                  <PopoverTrigger>
+                    <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer" aria-label="Attraction score info">
+                      <RiInformationLine size={14} />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent>
+                    <div className="px-1 py-1 max-w-xs">
+                      <div className="text-small font-semibold mb-1">Attraction</div>
+                      <div className="text-small text-default-500">
+                        Attraction = unit price − brand score. Lower is better: customers prefer companies with lower attraction (cheaper to them). Ties go to more complex factories.
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
           </div>
 

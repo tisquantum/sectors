@@ -148,7 +148,7 @@ export function ModernCompany({
                   <ul className="list-disc list-inside space-y-1 ml-2">
                     <li>Each campaign requires workers from your company&apos;s workforce</li>
                     <li>You select resource types that add temporary markers to your sector&apos;s consumption bag</li>
-                    <li>Brand score improves your attraction rating (lower attraction = better, cheaper to customers)</li>
+                    <li>Brand score improves your attraction rating (lower is better for attraction, cheaper to customers)</li>
                     <li>Marketing slots are limited by research stage (Stage 1: 2 slots, Stage 2: 3 slots, Stage 3: 4 slots, Stage 4: 5 slots)</li>
                     <li>Campaigns degrade over time: ACTIVE → DECAYING → EXPIRED (workers return to pool)</li>
                   </ul>
