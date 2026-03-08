@@ -340,6 +340,7 @@ const OperatingRoundRevenueVoteResolveV2 = () => {
                 <div className="flex flex-col gap-1 mt-2">
                   <div className="text-sm text-green-400">Dividends Paid: <span className="font-bold">${dividendTotal.toLocaleString()}</span> {dividendTotal > 0 && shareCount > 0 && <span className="text-xs text-gray-400">(${dividendPerShare}/share)</span>}</div>
                   <div className="text-sm text-yellow-400">Retained by Company: <span className="font-bold">${retained.toLocaleString()}</span></div>
+                  <div className="text-sm text-cyan-400">Cash on Hand: <span className="font-bold">${(company.cashOnHand ?? 0).toLocaleString()}</span></div>
                 </div>
                 {/* Shareholder breakdown */}
                 {dividendTotal > 0 && shareCount > 0 && (
