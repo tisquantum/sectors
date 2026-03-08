@@ -24,7 +24,7 @@ import { set } from "lodash";
 import { motion, AnimatePresence } from "framer-motion";
 import { Drawer } from "vaul";
 import { RiCurrencyFill, RiErrorWarningFill } from "@remixicon/react";
-import { Badge, Tooltip } from "@nextui-org/react";
+import { Badge, Popover, PopoverContent, PopoverTrigger } from "@nextui-org/react";
 import { useGame } from "../Game/GameContext";
 import CompanyInfoV2 from "./CompanyV2/CompanyInfoV2";
 
@@ -186,25 +186,29 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
         <div className="flex flex-col w-full">
           <div className="flex items-center justify-between mb-2">
             {isOversold && (
-              <Tooltip
-                content={`Company is oversold by ${company.oversoldShares} shares. Market cap reduced by ${(company as any).oversoldShares} steps.`}
-                placement="top"
-              >
-                <div className="flex items-center gap-2 cursor-pointer">
-                  <div className="relative">
-                    <Badge
-                      content={company.oversoldShares.toString()}
-                      color="danger"
-                      size="sm"
-                      variant="solid"
-                      className="absolute -top-2 -right-2 min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-bold"
-                    >
-                      <RiErrorWarningFill className="h-5 w-5 text-red-400" />
-                    </Badge>
-                  </div>
-                  <span className="text-xs font-bold text-red-400">OVERSOLD</span>
-                </div>
-              </Tooltip>
+              <Popover placement="top">
+                <PopoverTrigger>
+                  <button type="button" className="flex items-center gap-2 cursor-pointer bg-transparent border-none text-inherit p-0">
+                    <div className="relative">
+                      <Badge
+                        content={company.oversoldShares.toString()}
+                        color="danger"
+                        size="sm"
+                        variant="solid"
+                        className="absolute -top-2 -right-2 min-w-[18px] h-[18px] flex items-center justify-center text-[10px] font-bold"
+                      >
+                        <RiErrorWarningFill className="h-5 w-5 text-red-400" />
+                      </Badge>
+                    </div>
+                    <span className="text-xs font-bold text-red-400">OVERSOLD</span>
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent>
+                  <p className="text-sm p-2">
+                    Company is oversold by {company.oversoldShares} shares. Market cap reduced by {(company as any).oversoldShares} steps.
+                  </p>
+                </PopoverContent>
+              </Popover>
             )}
           </div>
           {operationMechanicsVersion == OperationMechanicsVersion.MODERN ? (

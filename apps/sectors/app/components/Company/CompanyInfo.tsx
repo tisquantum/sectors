@@ -11,7 +11,6 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-  Tooltip,
   useDisclosure,
 } from "@nextui-org/react";
 import {
@@ -430,7 +429,7 @@ const CompanyInfo = ({
                 <Popover placement="top">
                   <PopoverTrigger>
                     <button type="button" className="cursor-pointer bg-transparent border-none text-inherit p-0" aria-label="Cash on hand info">
-                      <RiGameFill size={14} className="text-default-400 hover:text-foreground" />
+                      <RiInformationLine size={14} className="text-default-400 hover:text-foreground" />
                     </button>
                   </PopoverTrigger>
                   <PopoverContent className={tooltipStyle}>

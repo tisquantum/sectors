@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Tab, Tabs, Badge, Tooltip, Chip } from "@nextui-org/react";
+import { Button, Tab, Tabs, Badge, Popover, PopoverContent, PopoverTrigger, Chip } from "@nextui-org/react";
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import { RiErrorWarningFill } from "@remixicon/react";
 import {
@@ -322,10 +322,8 @@ const StockRoundOrderGrid = ({
                   </h2>
                   {(selectedCompanyOrder.company as any).oversoldShares &&
                     (selectedCompanyOrder.company as any).oversoldShares > 0 && (
-                      <Tooltip
-                        content={`Company is oversold by ${(selectedCompanyOrder.company as any).oversoldShares} shares. Market cap reduced by ${(selectedCompanyOrder.company as any).oversoldShares} steps from normal maximum.`}
-                        placement="top"
-                      >
+                      <Popover placement="top">
+                        <PopoverTrigger>
                           <Chip
                             color="danger"
                             variant="flat"
@@ -334,7 +332,13 @@ const StockRoundOrderGrid = ({
                           >
                             {(selectedCompanyOrder.company as any).oversoldShares} Oversold
                           </Chip>
-                        </Tooltip>
+                        </PopoverTrigger>
+                        <PopoverContent>
+                          <p className="text-sm p-2">
+                            Company is oversold by {(selectedCompanyOrder.company as any).oversoldShares} shares. Market cap reduced by {(selectedCompanyOrder.company as any).oversoldShares} steps from normal maximum.
+                          </p>
+                        </PopoverContent>
+                      </Popover>
                       )}
                     </div>
                 {currentPhase.name === PhaseName.STOCK_ACTION_ORDER && (

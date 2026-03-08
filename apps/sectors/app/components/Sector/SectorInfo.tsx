@@ -1,8 +1,7 @@
-import { Tooltip } from "@nextui-org/react";
+import { Popover, PopoverContent, PopoverTrigger } from "@nextui-org/react";
 import { RiFundsFill, RiHandCoinFill, RiSailboatFill, RiTeamFill, RiTimeLine } from "@remixicon/react";
-import { baseToolTipStyle, tooltipParagraphStyle, tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
+import { tooltipParagraphStyle, tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
 import { calculateAverageStockPrice } from "@server/data/helpers";
-import { Sector } from "@server/prisma/prisma.client";
 import { SectorWithCompanies } from "@server/prisma/prisma.types";
 
 // Helper function to calculate research stage from researchMarker
@@ -27,51 +26,53 @@ const getWaitingAreaCapacity = (researchStage: number): number => {
 const SectorInfo = ({ sector }: { sector: SectorWithCompanies }) => (
   <div className="flex flex-col">
     <div className="flex items-center">
-      <Tooltip
-        classNames={{ base: baseToolTipStyle }}
-        className={tooltipStyle}
-            content={
-              <p className={tooltipParagraphStyle}>
-                Sector demand is based on brand score (from marketing) and research slot bonuses. Consumer distribution and worker salaries are determined by sector demand rankings (1st: 50% economy score, 2nd: 30%, 3rd: 20%).
-              </p>
-            }
-      >
-        <div className="ml-2 text-small text-default-500 flex">
-          <RiHandCoinFill size={18} className="mr-1" />{" "}
-          {sector.demand + (sector.demandBonus || 0)}
-        </div>
-      </Tooltip>
-      <Tooltip
-        classNames={{ base: baseToolTipStyle }}
-        className={tooltipStyle}
-        content={
+      <Popover placement="top">
+        <PopoverTrigger>
+          <button type="button" className="ml-2 text-small text-default-500 flex cursor-pointer bg-transparent border-none text-inherit">
+            <RiHandCoinFill size={18} className="mr-1" />{" "}
+            {sector.demand + (sector.demandBonus || 0)}
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className={tooltipStyle}>
+          <p className={tooltipParagraphStyle}>
+            Sector demand is based on brand score (from marketing) and research slot bonuses. Consumer distribution and worker salaries are determined by sector demand rankings (1st: 50% economy score, 2nd: 30%, 3rd: 20%).
+          </p>
+        </PopoverContent>
+      </Popover>
+      <Popover placement="top">
+        <PopoverTrigger>
+          <button type="button" className="ml-2 text-small text-default-500 flex cursor-pointer bg-transparent border-none text-inherit">
+            <RiSailboatFill size={18} className="ml-2" />
+            <span className="ml-1">{sector.sharePercentageToFloat}%</span>
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className={tooltipStyle}>
           <p className={tooltipParagraphStyle}>
             Share percentage required to float companies in this sector.
           </p>
-        }
-      >
-        <div className="ml-2 text-small text-default-500 flex">
-          <RiSailboatFill size={18} className="ml-2" />
-          <span className="ml-1">{sector.sharePercentageToFloat}%</span>
-        </div>
-      </Tooltip>
-      <Tooltip
-        classNames={{ base: baseToolTipStyle }}
-        className={tooltipStyle}
-        content={
+        </PopoverContent>
+      </Popover>
+      <Popover placement="top">
+        <PopoverTrigger>
+          <button type="button" className="ml-2 text-small text-default-500 flex cursor-pointer bg-transparent border-none text-inherit">
+            <RiTeamFill size={18} className="mr-1" /> {sector.consumers}
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className={tooltipStyle}>
           <p className={tooltipParagraphStyle}>
             The consumers waiting to buy product from this sector.
           </p>
-        }
-      >
-        <div className="ml-2 text-small text-default-500 flex">
-          <RiTeamFill size={18} className="mr-1" /> {sector.consumers}
-        </div>
-      </Tooltip>
-      <Tooltip
-        classNames={{ base: baseToolTipStyle }}
-        className={tooltipStyle}
-        content={
+        </PopoverContent>
+      </Popover>
+      <Popover placement="top">
+        <PopoverTrigger>
+          <button type="button" className="ml-2 text-small text-default-500 flex cursor-pointer bg-transparent border-none text-inherit">
+            <RiTimeLine size={18} className="mr-1" />{" "}
+            {sector.waitingArea || 0}/
+            {getWaitingAreaCapacity(getResearchStage(sector.researchMarker || 0))}
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className={tooltipStyle}>
           <div className={tooltipParagraphStyle}>
             <p className="mb-2">
               <strong>Waiting Area:</strong> Consumers who couldn&apos;t be served by factories are placed here.
@@ -86,73 +87,64 @@ const SectorInfo = ({ sector }: { sector: SectorWithCompanies }) => (
               <strong>If capacity exceeded:</strong> All waiting consumers return to global pool and sector loses 1 demand permanently.
             </p>
           </div>
-        }
-      >
-        <div className="ml-2 text-small text-default-500 flex">
-          <RiTimeLine size={18} className="mr-1" />{" "}
-          {sector.waitingArea || 0}/
-          {getWaitingAreaCapacity(getResearchStage(sector.researchMarker || 0))}
-        </div>
-      </Tooltip>
+        </PopoverContent>
+      </Popover>
     </div>
     <div className="flex items-center gap-2">
-      <Tooltip
-        classNames={{ base: baseToolTipStyle }}
-        className={tooltipStyle}
-        content={
+      <Popover placement="top">
+        <PopoverTrigger>
+          <button type="button" className="text-small text-default-500 flex cursor-pointer bg-transparent border-none text-inherit">
+            <span>UNIT &nbsp;</span>
+            <div className="text-small text-default-500 flex">
+              {sector.unitPriceMin}
+            </div>
+            |
+            <div className="text-small text-default-500 flex">
+              {sector.unitPriceMax}
+            </div>
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className={tooltipStyle}>
           <p className={tooltipParagraphStyle}>
             Minimum|Maximum starting unit price for a company created in this
             sector.
           </p>
-        }
-      >
-        <div className="text-small text-default-500 flex">
-          <span>UNIT &nbsp;</span>
-          <div className="text-small text-default-500 flex">
-            {sector.unitPriceMin}
-          </div>
-          |
-          <div className="text-small text-default-500 flex">
-            {sector.unitPriceMax}
-          </div>
-        </div>
-      </Tooltip>
-      <Tooltip
-        classNames={{ base: baseToolTipStyle }}
-        className={tooltipStyle}
-        content={
+        </PopoverContent>
+      </Popover>
+      <Popover placement="top">
+        <PopoverTrigger>
+          <button type="button" className="text-small text-default-500 flex cursor-pointer bg-transparent border-none text-inherit">
+            <span>IPO &nbsp;</span>
+            <div className="text-small text-default-500 flex">
+              {sector.ipoMin}
+            </div>
+            |
+            <div className="text-small text-default-500 flex">
+              {sector.ipoMax}
+            </div>
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className={tooltipStyle}>
           <p className={tooltipParagraphStyle}>
             Minimum|Maximum starting ipo price for a company created in this
             sector.
           </p>
-        }
-      >
-        <div className="text-small text-default-500 flex">
-          <span>IPO &nbsp;</span>
-          <div className="text-small text-default-500 flex">
-            {sector.ipoMin}
-          </div>
-          |
-          <div className="text-small text-default-500 flex">
-            {sector.ipoMax}
-          </div>
-        </div>
-      </Tooltip>
-      <Tooltip
-        classNames={{ base: baseToolTipStyle }}
-        className={tooltipStyle}
-        content={
+        </PopoverContent>
+      </Popover>
+      <Popover placement="top">
+        <PopoverTrigger>
+          <button type="button" className="text-small text-default-500 flex cursor-pointer bg-transparent border-none text-inherit">
+            <RiFundsFill size={18} className="mr-1" />
+            {calculateAverageStockPrice(sector.Company)}
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className={tooltipStyle}>
           <p className={tooltipParagraphStyle}>
             Average stock price across all ACTIVE and INSOLVENT companies in the
             sector.
           </p>
-        }
-      >
-        <div className="text-small text-default-500 flex">
-          <RiFundsFill size={18} className="mr-1" />
-          {calculateAverageStockPrice(sector.Company)}
-        </div>
-      </Tooltip>
+        </PopoverContent>
+      </Popover>
     </div>
   </div>
 );
