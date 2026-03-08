@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { RiHandCoinFill, RiTeamFill, RiInformationLine } from "@remixicon/react";
 import { Tooltip, Accordion, AccordionItem } from "@nextui-org/react";
@@ -172,6 +172,17 @@ const EndTurnSectorConsumerDistributionAnimation = ({
   const [cumulativeConsumers, setCumulativeConsumers] = useState(
     calculatePreviousSectorConsumers(sectors, gameState?.economyScore || 0)
   );
+
+  // Initial pool size and economy score - keep stable so the animating list doesn't change length
+  const initialPoolCount =
+    (gameState?.consumerPoolNumber ?? 0) + (gameState?.economyScore ?? 0);
+  const initialEconomyScore = gameState?.economyScore ?? 0;
+
+  // Refs so onAnimationComplete always sees latest values (avoids stale closure when batching)
+  const consumersMovingRef = useRef(consumersMoving);
+  const currentSectorIndexRef = useRef(currentSectorIndex);
+  consumersMovingRef.current = consumersMoving;
+  currentSectorIndexRef.current = currentSectorIndex;
   
   // Safety check: ensure sectors array is valid
   if (!sectors || sectors.length === 0) {
@@ -305,7 +316,7 @@ const EndTurnSectorConsumerDistributionAnimation = ({
             >
               <div className="flex gap-2 text-base lg:text-xl">
                 <span>Consumer Pool</span>
-                <span>{currentConsumerPool + gameState.economyScore}</span>
+                <span>{currentConsumerPool + economyScore}</span>
               </div>
             </Tooltip>
           </div>
@@ -337,52 +348,68 @@ const EndTurnSectorConsumerDistributionAnimation = ({
           </div>
         </div>
         <ul className="flex flex-wrap space-x-1">
-          {Array.from({
-            length: gameState.consumerPoolNumber + economyScore,
-          }).map((_, index) => (
-            <motion.li
-              key={index}
-              initial={{ opacity: 1, y: 0 }}
-              animate={
-                index < gameState.economyScore && {
-                  opacity: 0,
-                  y: 30,
+          {Array.from({ length: initialPoolCount }).map((_, index) => {
+            const isAnimatingOut = index < initialEconomyScore;
+            return (
+              <motion.li
+                key={index}
+                initial={{ opacity: 1, y: 0 }}
+                animate={
+                  isAnimatingOut ? { opacity: 0, y: 30 } : undefined
                 }
-              }
-              transition={{ duration: 0.5, delay: index * 1 }}
-              className="relative"
-              style={{ width: 30, height: 30 }}
-              onAnimationComplete={() => {
-                // Safety checks: ensure we have valid data and sectorDemand > 0
-                if (currentConsumerPool > 0 && economyScore > 0 && sectorDemand > 0) {
-                  if (consumersMoving < sectorDemand) {
-                    setConsumersMoving((prev) => prev + 1);
-                    setCurrentConsumerPool((prev) => Math.max(0, prev - 1));
-                    setEconomyScore((prev) => Math.max(0, prev - 1));
-                  } else {
-                    setCumulativeConsumers((prev) => {
-                      const newCumulative = [...prev];
-                      // Use safe index to prevent out-of-bounds access
-                      const safeIndex = Math.max(0, Math.min(currentSectorIndex, sectors.length - 1));
-                      newCumulative[safeIndex] = (newCumulative[safeIndex] || 0) + consumersMoving;
-                      return newCumulative;
-                    });
-                    setConsumersMoving(0); // Reset consumers for the next sector
-                    // Move to the next sector with bounds checking
-                    setCurrentSectorIndex((prev) => {
-                      const nextIndex = prev + 1;
-                      return nextIndex < sectors.length ? nextIndex : 0;
-                    });
-                    setConsumersMoving((prev) => prev + 1);
-                    setCurrentConsumerPool((prev) => Math.max(0, prev - 1));
-                    setEconomyScore((prev) => Math.max(0, prev - 1));
-                  }
+                transition={{
+                  duration: 0.5,
+                  delay: isAnimatingOut ? index * 1 : 0,
+                }}
+                className="relative"
+                style={{ width: 30, height: 30 }}
+                onAnimationComplete={
+                  isAnimatingOut
+                    ? () => {
+                        if (
+                          currentConsumerPool > 0 &&
+                          economyScore > 0 &&
+                          sectorDemand > 0
+                        ) {
+                          if (consumersMoving < sectorDemand) {
+                            setConsumersMoving((prev) => prev + 1);
+                            setCurrentConsumerPool((prev) =>
+                              Math.max(0, prev - 1)
+                            );
+                            setEconomyScore((prev) => Math.max(0, prev - 1));
+                          } else {
+                            const moving = consumersMovingRef.current;
+                            const sectorIdx = currentSectorIndexRef.current;
+                            setCumulativeConsumers((prev) => {
+                              const newCumulative = [...prev];
+                              const safeIndex = Math.max(
+                                0,
+                                Math.min(sectorIdx, sectors.length - 1)
+                              );
+                              newCumulative[safeIndex] =
+                                (newCumulative[safeIndex] || 0) + moving;
+                              return newCumulative;
+                            });
+                            setConsumersMoving(0);
+                            setCurrentSectorIndex((prev) => {
+                              const nextIndex = prev + 1;
+                              return nextIndex < sectors.length ? nextIndex : 0;
+                            });
+                            setConsumersMoving(1);
+                            setCurrentConsumerPool((prev) =>
+                              Math.max(0, prev - 1)
+                            );
+                            setEconomyScore((prev) => Math.max(0, prev - 1));
+                          }
+                        }
+                      }
+                    : undefined
                 }
-              }}
-            >
-              <RiTeamFill size={24} />
-            </motion.li>
-          ))}
+              >
+                <RiTeamFill size={24} />
+              </motion.li>
+            );
+          })}
         </ul>
       </div>
 
