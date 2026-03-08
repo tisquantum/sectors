@@ -188,7 +188,7 @@ const RoomComponent = ({ room }: { room: RoomWithUsersAndGames }) => {
             </Drawer.Content>
           </Drawer.Portal>
           {roomUsers && (
-            <div className="hidden h-full lg:block lg:w-1/4 bg-gray-800">
+            <div className="hidden h-full min-h-0 lg:flex lg:w-1/4 lg:flex-col lg:overflow-hidden bg-gray-800">
               <Sidebar
                 roomUsers={roomUsers}
                 room={room}
