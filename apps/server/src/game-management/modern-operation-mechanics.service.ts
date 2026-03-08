@@ -2006,56 +2006,35 @@ export class ModernOperationMechanicsService {
     
     console.log(`[EARNINGS_CALL] Resource price map:`, Array.from(resourcePriceMap.entries()));
 
-    // Calculate worker salaries based on sector demand rankings
-    // 1st place = $8, 2nd = $4, 3rd+ = $2
-    const sectorDemandRankings = await this.getSectorDemandRankings(phase.gameId);
-    
-    // Get all sectors to map sectorId to sectorName
+    // Worker salary is determined purely by sector demand (not by ranking/placing)
+    // demand >= 4 → $8, >= 3 → $6, >= 2 → $4, >= 1 → $2, >= 0 → $1
+    const getSalaryForDemand = (demand: number): number => {
+      if (demand >= 4) return 8;
+      if (demand >= 3) return 6;
+      if (demand >= 2) return 4;
+      if (demand >= 1) return 2;
+      return 1;
+    };
+
     const sectors = await this.sectorService.sectors({
       where: { gameId: phase.gameId },
     });
     const sectorMap = new Map(sectors.map(s => [s.id, s]));
 
-    // Create map: sectorId -> worker salary based on sector demand ranking
     const sectorWorkerSalaryMap = new Map<string, number>();
-    sectorDemandRankings.forEach((ranking) => {
-      let salary: number;
-      if (ranking.rank === 1) {
-        salary = 8; // 1st place: $8
-      } else if (ranking.rank === 2) {
-        salary = 4; // 2nd place: $4
-      } else {
-        salary = 2; // 3rd and below: $2
-      }
-      sectorWorkerSalaryMap.set(ranking.sectorId, salary);
-    });
-
-    // For sectors not in rankings (no demand), assign default salary of $2
     sectors.forEach((sector) => {
-      if (!sectorWorkerSalaryMap.has(sector.id)) {
-        sectorWorkerSalaryMap.set(sector.id, 2);
-      }
+      const demand = sector.demand ?? 0;
+      sectorWorkerSalaryMap.set(sector.id, getSalaryForDemand(demand));
     });
 
-    // Log worker salary assignments for debugging
     const salaryLogEntries: Array<{ gameId: string; content: string }> = [];
-    sectorDemandRankings.forEach((ranking) => {
-      const sector = sectorMap.get(ranking.sectorId);
-      const salary = sectorWorkerSalaryMap.get(ranking.sectorId) || 2;
-      const sectorName = sector?.sectorName || ranking.sectorId;
+    sectors.forEach((sector) => {
+      const demand = sector.demand ?? 0;
+      const salary = sectorWorkerSalaryMap.get(sector.id) ?? 1;
       salaryLogEntries.push({
         gameId: phase.gameId,
-        content: `${sectorName} ranked #${ranking.rank} (sector demand: ${ranking.demand}) → Worker salary: $${salary}/worker`,
+        content: `${sector.sectorName} (sector demand: ${demand}) → Worker salary: $${salary}/worker`,
       });
-    });
-    // Log sectors with no demand
-    sectors.forEach((sector) => {
-      if (!sectorDemandRankings.find(r => r.sectorId === sector.id)) {
-        salaryLogEntries.push({
-          gameId: phase.gameId,
-          content: `${sector.sectorName} (sector demand: ${sector.demand || 0}) → Worker salary: $2/worker`,
-        });
-      }
     });
     if (salaryLogEntries.length > 0) {
       await this.gameLogService.createManyGameLogs(
@@ -2100,7 +2079,7 @@ export class ModernOperationMechanicsService {
       console.log(`[EARNINGS_CALL] Factory ${factory.id} factoryRevenue = $${factoryRevenue}`);
 
       // Calculate worker costs based on sector demand ranking
-      const workerSalary = sectorWorkerSalaryMap.get(factory.sectorId) || 6; // Default to $6 if sector not found
+      const workerSalary = sectorWorkerSalaryMap.get(factory.sectorId) ?? 1;
       const factoryCosts = factory.workers * workerSalary;
 
       // Calculate profit

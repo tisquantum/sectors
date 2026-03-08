@@ -2,43 +2,30 @@
 
 import { trpc } from "@sectors/app/trpc";
 import { Spinner, Card, CardBody } from "@nextui-org/react";
-import { RiMoneyDollarCircleFill, RiTrophyFill, RiUserFill } from "@remixicon/react";
+import { RiMoneyDollarCircleFill, RiUserFill } from "@remixicon/react";
 import { useGame } from "../../GameContext";
-import { useMemo } from "react";
+
+/** Worker salary from sector demand: >=4 → $8, >=3 → $6, >=2 → $4, >=1 → $2, >=0 → $1 */
+function getSalaryForDemand(demand: number): number {
+  if (demand >= 4) return 8;
+  if (demand >= 3) return 6;
+  if (demand >= 2) return 4;
+  if (demand >= 1) return 2;
+  return 1;
+}
 
 /**
- * Component to display sector demand ranking and worker salaries
- * Shows which sectors pay how much per worker based on sector demand rankings (1st, 2nd, 3rd)
- * Rankings are based on sector demand (brand score + research slot bonus)
+ * Component to display sector demand and worker salaries
+ * Salaries are determined purely by each sector's demand (brand score + research slot bonus), not by ranking.
  */
 export function SectorWorkerSalaries() {
   const { gameId } = useGame();
 
-  // Get sector demand rankings (brand score + research slot bonus)
-  const { data: sectorDemandRankings, isLoading: rankingsLoading } = trpc.modernOperations.getSectorDemandRankings.useQuery({
-    gameId,
-  });
-
-  // Get all sectors for display
   const { data: sectors, isLoading: sectorsLoading } = trpc.sector.listSectors.useQuery({
     where: { gameId },
   });
 
-  // Create map of sectorId -> ranking (must be before early returns)
-  const rankingMap = useMemo(() => {
-    const map = new Map<string, { rank: number; demand: number }>();
-    sectorDemandRankings?.forEach((ranking) => {
-      map.set(ranking.sectorId, {
-        rank: ranking.rank,
-        demand: ranking.demand,
-      });
-    });
-    return map;
-  }, [sectorDemandRankings]);
-
-  const isLoading = rankingsLoading || sectorsLoading;
-
-  if (isLoading) {
+  if (sectorsLoading) {
     return (
       <div className="flex items-center justify-center h-32">
         <Spinner size="sm" />
@@ -54,55 +41,37 @@ export function SectorWorkerSalaries() {
     );
   }
 
-  // Calculate worker salary for each sector based on sector demand ranking
   const sectorsWithSalaries = sectors.map((sector) => {
-    const ranking = rankingMap.get(sector.id);
-    let salary: number;
-    let rank: number;
-    let demand: number;
-
-    if (ranking) {
-      rank = ranking.rank;
-      demand = ranking.demand;
-      if (rank === 1) {
-        salary = 8; // 1st place: $8
-      } else if (rank === 2) {
-        salary = 4; // 2nd place: $4
-      } else {
-        salary = 2; // 3rd and below: $2
-      }
-    } else {
-      // No demand for this sector
-      rank = sectors.length; // Last place
-      demand = sector.demand || 0;
-      salary = 2; // Default: $2
-    }
-
+    const demand = sector.demand ?? 0;
     return {
       ...sector,
-      rank,
-      workerSalary: salary,
       demand,
+      workerSalary: getSalaryForDemand(demand),
     };
   });
 
-  // Sort by rank (1st, 2nd, 3rd, then unranked)
+  // Sort by demand descending, then by sector name
   sectorsWithSalaries.sort((a, b) => {
-    if (a.rank !== b.rank) {
-      return a.rank - b.rank;
-    }
-    // If same rank, sort by sector name
+    if (a.demand !== b.demand) return b.demand - a.demand;
     return (a.name || a.sectorName).localeCompare(b.name || b.sectorName);
   });
+
+  const cardBorderClass = (salary: number) => {
+    if (salary >= 8) return "border-yellow-500 bg-yellow-500/10";
+    if (salary >= 6) return "border-amber-500 bg-amber-500/10";
+    if (salary >= 4) return "border-blue-500 bg-blue-500/10";
+    if (salary >= 2) return "border-gray-500 bg-gray-700/30";
+    return "border-gray-600 bg-gray-700/30";
+  };
 
   return (
     <div className="space-y-4">
       <div className="mb-4">
         <h3 className="text-lg font-semibold text-white mb-2">
-          Sector Demand Ranking & Worker Salaries
+          Sector Demand & Worker Salaries
         </h3>
         <p className="text-sm text-gray-400">
-          Worker salaries are determined by sector demand rankings (brand score + research slot bonus). 1st place pays $8/worker, 2nd pays $4/worker, 3rd+ pays $2/worker.
+          Worker salaries are determined purely by each sector&apos;s demand (brand score + research slot bonus). Higher demand means higher pay.
         </p>
       </div>
 
@@ -110,25 +79,14 @@ export function SectorWorkerSalaries() {
         {sectorsWithSalaries.map((sector) => (
           <Card
             key={sector.id}
-            className={`${
-              sector.rank === 1
-                ? "border-yellow-500 bg-yellow-500/10"
-                : sector.rank === 2
-                ? "border-blue-500 bg-blue-500/10"
-                : "border-gray-600 bg-gray-700/30"
-            }`}
+            className={cardBorderClass(sector.workerSalary)}
           >
             <CardBody className="p-4">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  {sector.rank === 1 && (
-                    <RiTrophyFill className="text-yellow-400" size={20} />
-                  )}
-                  {sector.rank === 2 && (
-                    <RiTrophyFill className="text-blue-400" size={20} />
-                  )}
+                  <RiUserFill size={18} className="text-gray-400" />
                   <span className="text-lg font-bold text-white">
-                    #{sector.rank}
+                    Demand {sector.demand}
                   </span>
                 </div>
                 <div className="text-right">
@@ -147,17 +105,7 @@ export function SectorWorkerSalaries() {
                   </div>
                 </div>
 
-                <div>
-                  <div className="text-sm text-gray-400">Sector Demand</div>
-                  <div className="flex items-center gap-1">
-                    <RiUserFill size={14} className="text-gray-400" />
-                    <span className="text-white font-medium">
-                      {sector.demand || 0}
-                    </span>
-                  </div>
-                </div>
-
-                {!sector.demand && (
+                {sector.demand === 0 && (
                   <div className="text-xs text-gray-500">
                     No sector demand (brand score + research bonus)
                   </div>
@@ -171,14 +119,15 @@ export function SectorWorkerSalaries() {
       <div className="mt-4 p-3 bg-gray-800/50 rounded-lg border border-gray-700">
         <div className="text-sm text-gray-400 space-y-1">
           <div>
-            <strong className="text-gray-300">Salary Rules:</strong>
+            <strong className="text-gray-300">Salary by sector demand:</strong>
           </div>
-          <div>• Rank #1 (Highest Sector Demand): $8 per worker</div>
-          <div>• Rank #2: $4 per worker</div>
-          <div>• Rank #3+: $2 per worker</div>
+          <div>• Demand ≥ 4: $8 per worker</div>
+          <div>• Demand ≥ 3: $6 per worker</div>
+          <div>• Demand ≥ 2: $4 per worker</div>
+          <div>• Demand ≥ 1: $2 per worker</div>
+          <div>• Demand ≥ 0: $1 per worker</div>
           <div className="mt-2 text-xs text-gray-500">
-            Salaries are recalculated each turn based on sector demand rankings
-            (from research bonuses) during the Earnings Call phase.
+            Salaries are recalculated each turn from sector demand during the Earnings Call phase.
           </div>
         </div>
       </div>
