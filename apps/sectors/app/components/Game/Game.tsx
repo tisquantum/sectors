@@ -464,12 +464,12 @@ const Game = ({ gameId }: { gameId: string }) => {
                       transition={{ duration: 0.3, ease: "easeInOut" }}
                       className="h-full"
                     >
-                      {!currentRoundData || !currentPhase ? (
+                      {!currentRoundData ? (
                         <div className="flex items-center justify-center h-full">
                           <div className="text-center">
                             <div className="text-lg font-semibold mb-2">Loading phase...</div>
                             <div className="text-sm text-gray-400">
-                              {currentPhase?.name ? `Preparing ${friendlyPhaseName(currentPhase.name)}` : 'Waiting for phase data'}
+                              {(currentPhase?.name ?? gameState?.Phase?.find(p => p.id === gameState?.currentPhaseId)?.name) ? `Preparing ${friendlyPhaseName(currentPhase?.name ?? gameState?.Phase?.find(p => p.id === gameState?.currentPhaseId)?.name)}` : 'Waiting for phase data'}
                             </div>
                           </div>
                         </div>
@@ -480,7 +480,7 @@ const Game = ({ gameId }: { gameId: string }) => {
                           <div className="text-center">
                             <div className="text-lg font-semibold mb-2">Phase Component Not Found</div>
                             <div className="text-sm text-gray-400">
-                              Phase: {friendlyPhaseName(currentPhase.name)}
+                              Phase: {friendlyPhaseName(currentRoundData.phase.name ?? currentPhase?.name)}
                             </div>
                             <div className="text-xs text-gray-500 mt-2">
                               If this phase should have a component, please check the Game.tsx render logic.
