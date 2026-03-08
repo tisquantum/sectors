@@ -16,7 +16,7 @@ import { RiInformationLine } from '@remixicon/react';
  * - Sector-level research progress (20 spaces, 4 stages)
  * - Individual company progress within each sector
  * - Rewards at milestones (spaces 5, 10, 15, 20)
- * - Research stage demand bonuses (Stage 1: +0, Stage 2: +2, Stage 3: +3, Stage 4: +5)
+ * - Research stage demand bonuses (Stage 1: +2, Stage 2: +3, Stage 3: +4, Stage 4: +5)
  * 
  * Each sector has one shared research track. Companies in that sector
  * advance research by allocating workers to research actions. Sector progress
@@ -210,7 +210,7 @@ export function SectorResearchTracks() {
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-gray-500">Demand Bonus:</span>
                   <span className="px-2 py-1 bg-green-900/30 border border-green-700/50 rounded text-xs font-semibold text-green-300">
-                    {sectorProgress >= 12 ? '+4' : sectorProgress >= 9 ? '+3' : sectorProgress >= 6 ? '+2' : sectorProgress >= 3 ? '+1' : '+0'}
+                    {sectorProgress >= 12 ? '+5' : sectorProgress >= 9 ? '+4' : sectorProgress >= 6 ? '+3' : sectorProgress >= 3 ? '+2' : '+0'}
                   </span>
                 </div>
               </div>

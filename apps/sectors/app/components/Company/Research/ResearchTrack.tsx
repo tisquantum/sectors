@@ -65,22 +65,22 @@ export function ResearchTrack({
                   </div>
                   {space.number === 3 && (
                     <div className="text-[10px] text-green-400/80 leading-tight">
-                      +1 demand
+                      +2 demand
                     </div>
                   )}
                   {space.number === 6 && (
                     <div className="text-[10px] text-green-400/80 leading-tight">
-                      +2 demand
+                      +3 demand
                     </div>
                   )}
                   {space.number === 9 && (
                     <div className="text-[10px] text-green-400/80 leading-tight">
-                      +3 demand
+                      +4 demand
                     </div>
                   )}
                   {space.number === 12 && (
                     <div className="text-[10px] text-green-400/80 leading-tight">
-                      +4 demand
+                      +5 demand
                     </div>
                   )}
                 </div>
