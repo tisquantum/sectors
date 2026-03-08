@@ -48,10 +48,10 @@ const MOCK_RESOURCES = [
     { type: 'GENERAL' as ResourceType, price: 70 },
 ];
 
-const CAMPAIGN_CONFIG: Record<CampaignSize, { workers: number; brandBonus: number; resources: number; cost: number; tier: MarketingCampaignTier }> = {
-  CAMPAIGN_I: { workers: 1, brandBonus: 1, resources: 1, cost: 100, tier: MarketingCampaignTier.TIER_1 },
-  CAMPAIGN_II: { workers: 2, brandBonus: 2, resources: 2, cost: 200, tier: MarketingCampaignTier.TIER_2 },
-  CAMPAIGN_III: { workers: 3, brandBonus: 3, resources: 3, cost: 300, tier: MarketingCampaignTier.TIER_3 },
+const CAMPAIGN_CONFIG: Record<CampaignSize, { workers: number; brandBonus: number; demandBonus: number; resources: number; cost: number; tier: MarketingCampaignTier }> = {
+  CAMPAIGN_I: { workers: 1, brandBonus: 1, demandBonus: 0, resources: 1, cost: 50, tier: MarketingCampaignTier.TIER_1 },
+  CAMPAIGN_II: { workers: 2, brandBonus: 2, demandBonus: 1, resources: 2, cost: 100, tier: MarketingCampaignTier.TIER_2 },
+  CAMPAIGN_III: { workers: 3, brandBonus: 3, demandBonus: 2, resources: 3, cost: 200, tier: MarketingCampaignTier.TIER_3 },
 };
 
 const RESOURCE_COLORS: Record<ResourceType, string> = {
@@ -245,6 +245,27 @@ export function MarketingCreation({
             </Popover>
           </div>
           <p className="text-lg font-semibold text-green-400">+{campaignConfig.brandBonus}</p>
+        </div>
+        <div>
+          <div className="flex items-center justify-center gap-1">
+            <p className="text-sm text-gray-400">Sector demand bonus</p>
+            <Popover placement="top">
+              <PopoverTrigger>
+                <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer">
+                  <RiInformationLine size={14} />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent>
+                <div className="px-1 py-1 max-w-xs">
+                  <div className="text-small font-semibold mb-1">Sector demand bonus</div>
+                  <div className="text-small text-default-500">
+                    Temporary bonus to your sector&apos;s demand while this campaign is active. Affects consumer distribution and worker salaries.
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+          <p className="text-lg font-semibold text-cyan-400">+{campaignConfig.demandBonus}</p>
         </div>
         <div>
           <div className="flex items-center justify-center gap-1">

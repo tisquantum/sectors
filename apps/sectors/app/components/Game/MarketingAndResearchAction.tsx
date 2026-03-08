@@ -19,17 +19,20 @@ const MARKETING_CONFIG = {
   [MarketingCampaignTier.TIER_1]: {
     workers: 1,
     brandBonus: 1,
-    cost: 100,
+    demandBonus: 0,
+    cost: 50,
   },
   [MarketingCampaignTier.TIER_2]: {
     workers: 2,
     brandBonus: 2,
-    cost: 200,
+    demandBonus: 1,
+    cost: 100,
   },
   [MarketingCampaignTier.TIER_3]: {
     workers: 3,
     brandBonus: 3,
-    cost: 300,
+    demandBonus: 2,
+    cost: 200,
   },
 };
 

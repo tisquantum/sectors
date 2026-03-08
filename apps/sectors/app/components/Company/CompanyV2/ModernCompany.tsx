@@ -132,9 +132,9 @@ export function ModernCompany({
                     <strong className="text-white">Campaign Tiers & Costs:</strong>
                   </p>
                   <ul className="list-disc list-inside space-y-1 ml-2">
-                    <li><strong>Tier I:</strong> $100 base + slot penalty, 1 worker, +1 brand score, +1 consumption marker</li>
-                    <li><strong>Tier II:</strong> $200 base + slot penalty, 2 workers, +2 brand score, +2 consumption markers</li>
-                    <li><strong>Tier III:</strong> $300 base + slot penalty, 3 workers, +3 brand score, +3 consumption markers</li>
+                    <li><strong>Tier I:</strong> $50 base + slot penalty, 1 worker, +1 brand score, +0 sector demand bonus, +1 consumption marker</li>
+                    <li><strong>Tier II:</strong> $100 base + slot penalty, 2 workers, +2 brand score, +1 sector demand bonus, +2 consumption markers</li>
+                    <li><strong>Tier III:</strong> $200 base + slot penalty, 3 workers, +3 brand score, +2 sector demand bonus, +3 consumption markers</li>
                   </ul>
                   <p>
                     <strong className="text-white">Slot Penalty:</strong>

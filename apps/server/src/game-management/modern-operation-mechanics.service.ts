@@ -1965,6 +1965,16 @@ export class ModernOperationMechanicsService {
     }
   }
 
+  /** Temporary sector demand bonus while campaign is active. Marketing I: +0, II: +1, III: +2 */
+  private getMarketingDemandBonus(tier: MarketingCampaignTier): number {
+    switch (tier) {
+      case MarketingCampaignTier.TIER_1: return 0;
+      case MarketingCampaignTier.TIER_2: return 1;
+      case MarketingCampaignTier.TIER_3: return 2;
+      default: return 0;
+    }
+  }
+
   /**
    * EARNINGS_CALL
    * Calculate profits based on actual customers served (from FactoryProduction records).
@@ -2483,12 +2493,20 @@ export class ModernOperationMechanicsService {
    * Sector demand gives a bonus of consumers to that sector outside the economy score distribution.
    */
   private async updateSectorDemand(phase: Phase) {
-    // Query sectors with companies directly using Prisma to include Company relation
+    // Query sectors with companies and their active marketing campaigns (for demand bonus)
     const sectors = await this.prisma.sector.findMany({
       where: { gameId: phase.gameId },
       include: {
         Company: {
-          select: { id: true, brandScore: true, researchProgress: true },
+          select: {
+            id: true,
+            brandScore: true,
+            researchProgress: true,
+            marketingCampaigns: {
+              where: { status: MarketingCampaignStatus.ACTIVE },
+              select: { tier: true },
+            },
+          },
         },
       },
     });
@@ -2503,16 +2521,27 @@ export class ModernOperationMechanicsService {
         0
       );
 
+      // Sum of temporary sector demand bonus from active marketing campaigns in this sector
+      const marketingDemandBonus = sector.Company.reduce(
+        (sum: number, company: { marketingCampaigns: { tier: MarketingCampaignTier }[] }) => {
+          const campaignBonus = company.marketingCampaigns.reduce(
+            (campSum: number, c: { tier: MarketingCampaignTier }) => campSum + this.getMarketingDemandBonus(c.tier),
+            0
+          );
+          return sum + campaignBonus;
+        },
+        0
+      );
+
       // Calculate research slot bonus based on sector researchMarker
       const researchMarker = sector.researchMarker || 0;
       const researchSlotBonus = this.getResearchDemandBonus(researchMarker);
 
-      // Base demand should be 0 for modern operations - demand comes from brand bonus + research slot bonus only
-      // If baseDemand exists but is > 0, it's from old gameData and should be ignored
-      const baseDemand = 0; // No base demand - all demand comes from brand bonus + research slot bonus
+      // Base demand should be 0 for modern operations - demand comes from brand + research slot + marketing campaign bonus
+      const baseDemand = 0;
 
-      // Effective demand = base demand + brand scores + research slot bonus
-      const effectiveDemand = baseDemand + totalBrandScore + researchSlotBonus;
+      // Effective demand = base + brand + research slot bonus + temporary marketing demand bonus
+      const effectiveDemand = baseDemand + totalBrandScore + researchSlotBonus + marketingDemandBonus;
 
       // Update the sector's demand field to show effective demand
       if (effectiveDemand !== sector.demand) {
@@ -2522,9 +2551,12 @@ export class ModernOperationMechanicsService {
         });
 
         const slotReached = researchMarker >= 12 ? 12 : researchMarker >= 9 ? 9 : researchMarker >= 6 ? 6 : researchMarker >= 3 ? 3 : 0;
+        const demandBreakdown = marketingDemandBonus > 0
+          ? `base: ${baseDemand} + brand: ${totalBrandScore} + research slot ${slotReached}: +${researchSlotBonus} + marketing: +${marketingDemandBonus}`
+          : `base: ${baseDemand} + brand: ${totalBrandScore} + research slot ${slotReached}: +${researchSlotBonus}`;
         gameLogEntries.push({
           gameId: phase.gameId,
-          content: `${sector.sectorName} effective demand: ${effectiveDemand} (base: ${baseDemand} + brand: ${totalBrandScore} + research slot ${slotReached}: +${researchSlotBonus})`,
+          content: `${sector.sectorName} effective demand: ${effectiveDemand} (${demandBreakdown})`,
         });
       }
     }

@@ -129,10 +129,20 @@ export class MarketingService {
 
   private getBaseCostForTier(tier: MarketingCampaignTier): number {
     switch (tier) {
-      case MarketingCampaignTier.TIER_1: return 100;
-      case MarketingCampaignTier.TIER_2: return 200;
-      case MarketingCampaignTier.TIER_3: return 300;
+      case MarketingCampaignTier.TIER_1: return 50;
+      case MarketingCampaignTier.TIER_2: return 100;
+      case MarketingCampaignTier.TIER_3: return 200;
       default: throw new Error(`Unknown marketing tier: ${tier}`);
+    }
+  }
+
+  /** Temporary sector demand bonus while campaign is active. Marketing I: +0, II: +1, III: +2 */
+  getDemandBonusForTier(tier: MarketingCampaignTier): number {
+    switch (tier) {
+      case MarketingCampaignTier.TIER_1: return 0;
+      case MarketingCampaignTier.TIER_2: return 1;
+      case MarketingCampaignTier.TIER_3: return 2;
+      default: return 0;
     }
   }
 

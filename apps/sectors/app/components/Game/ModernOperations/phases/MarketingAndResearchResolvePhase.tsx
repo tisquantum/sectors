@@ -251,16 +251,17 @@ export default function MarketingAndResearchResolvePhase() {
                         </p>
                         <ul className="space-y-1 list-disc list-inside text-sm">
                           <li>
-                            <strong>Costs:</strong> Marketing I ($100), II ($200),
-                            III ($300), IV ($400) base cost
+                            <strong>Costs:</strong> Marketing I ($50), II ($100),
+                            III ($200) base cost
                           </li>
                           <li>
-                            <strong>Brand Bonuses:</strong> +1 (I), +2 (II), +3
-                            (III), +4 (IV) brand score per tier
+                            <strong>Sector demand bonus (while active):</strong> I: +0, II: +1, III: +2
                           </li>
                           <li>
-                            <strong>Effect:</strong> Brand bonus reduces perceived
-                            price
+                            <strong>Brand Bonuses:</strong> +1 (I), +2 (II), +3 (III) brand score per tier
+                          </li>
+                          <li>
+                            <strong>Effect:</strong> Brand bonus reduces perceived price; demand bonus boosts sector demand
                           </li>
                         </ul>
                       </div>

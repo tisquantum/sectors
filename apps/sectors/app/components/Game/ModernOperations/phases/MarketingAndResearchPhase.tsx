@@ -39,17 +39,20 @@ const MARKETING_CONFIG = {
   [MarketingCampaignTier.TIER_1]: {
     workers: 1,
     brandBonus: 1,
-    cost: 100,
+    demandBonus: 0,
+    cost: 50,
   },
   [MarketingCampaignTier.TIER_2]: {
     workers: 2,
     brandBonus: 2,
-    cost: 200,
+    demandBonus: 1,
+    cost: 100,
   },
   [MarketingCampaignTier.TIER_3]: {
     workers: 3,
     brandBonus: 3,
-    cost: 300,
+    demandBonus: 2,
+    cost: 200,
   },
 };
 
@@ -592,6 +595,7 @@ export default function MarketingAndResearchPhase() {
                              <div className="text-sm text-gray-400 space-y-1 mt-1">
                                <div>Workers: {config.workers}</div>
                                <div>Brand Bonus: +{config.brandBonus}</div>
+                               <div>Sector demand bonus: +{config.demandBonus}</div>
                                <div>Cost: ${config.cost}</div>
                                {currentCompany && (
                                  <div
