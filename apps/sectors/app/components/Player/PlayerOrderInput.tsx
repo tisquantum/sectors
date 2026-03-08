@@ -283,6 +283,13 @@ const TabContentMO: React.FC<TabContentProps> = ({
     handleShares(minValue);
     handleValueChange(defaultValue || 0);
   }, [defaultValue, minValue, handleShares, handleValueChange]);
+  // When maxValue drops (e.g. switching to sell with fewer shares owned), clamp selection
+  useEffect(() => {
+    if (shareValue > maxValue) {
+      setShareValue(maxValue);
+      handleShares(maxValue);
+    }
+  }, [maxValue]);
   return (
     <div className="flex flex-col text-center items-center center-content justify-center gap-2">
       {/* 
@@ -643,6 +650,11 @@ const PlayerOrderInput = ({
   useEffect(() => {
     setIsSubmit(false);
   }, [currentPhase?.name]);
+  const sharesOwnedForCompany =
+    playerWithShares?.Share.filter(
+      (s) => s.companyId === currentOrder.id
+    ).length ?? 0;
+
   useEffect(() => {
     if (orderType === OrderType.MARKET) {
       if (isBuy) {
@@ -658,22 +670,26 @@ const PlayerOrderInput = ({
           setMinValue(1);
         }
       } else {
-        setMaxValue(company?.Share.length || 1);
-        setMinValue(1);
+        // Sell mode: cap at shares the player actually owns
+        const cap = Math.max(0, sharesOwnedForCompany);
+        setMaxValue(cap);
+        setMinValue(cap > 0 ? 1 : 0);
+        setShare((prev) => Math.min(prev, cap));
       }
     } else if (orderType === OrderType.LIMIT) {
       if (isBuy) {
         setMaxValue(1);
         setMinValue(1);
       } else {
-        setMaxValue(company?.Share.length || 0);
-        setMinValue(1);
+        const cap = Math.max(0, sharesOwnedForCompany);
+        setMaxValue(cap);
+        setMinValue(cap > 0 ? 1 : 0);
       }
     } else {
       setMinValue(1);
       setMaxValue(company?.Share.length || 0);
     }
-  }, [isBuy, isIpo, company?.Share, orderType]);
+  }, [isBuy, isIpo, company?.Share, orderType, currentOrder.id, playerWithShares?.Share, sharesOwnedForCompany]);
   const companySector = gameState.sectors.find(
     (sector) => sector.id === currentOrder.sectorId
   );
@@ -719,11 +735,8 @@ const PlayerOrderInput = ({
   const handleIpoFloatValueChange = (value: number) => {
     setIpoFloatValue(value);
   };
-  const sharesOwnedInCompany =
-    playerWithShares?.Share.filter(
-      (share) => share.companyId === currentOrder.id
-    ).length || 0;
-  
+  const sharesOwnedInCompany = sharesOwnedForCompany;
+
   // Validation hints for new stock round rules
   const checkBuySellConflict = (): string | null => {
     if (!playerOrders || !currentPhase || orderType !== OrderType.MARKET) return null;
