@@ -3197,7 +3197,11 @@ export class ModernOperationMechanicsService {
       }),
       this.prisma.game.findUnique({
         where: { id: phase.gameId },
-        select: { economyScore: true, consumerPoolNumber: true },
+        select: {
+          economyScore: true,
+          consumerPoolNumber: true,
+          sectorPriority: { orderBy: { priority: 'asc' }, select: { sectorId: true, priority: true } },
+        },
       }),
     ]);
 
@@ -3205,17 +3209,14 @@ export class ModernOperationMechanicsService {
       throw new Error('Game not found');
     }
 
-    // Get sector demand scores (50/30/20 split) - returns sectorId -> consumer count
-    const sectorScores = await this.getSectorDemandScores(
-      phase.gameId,
-      game.economyScore,
-    );
-
     const maxConsumersToDistribute = Math.min(game.economyScore, game.consumerPoolNumber);
-    const sectorUpdates: Array<{ id: string; consumers: number }> = [];
+    const sectorUpdates: Array<{ id: string; consumers: number }> = sectors.map((s) => ({
+      id: s.id,
+      consumers: s.consumers,
+    }));
     const gameLogEntries: Array<{ gameId: string; content: string }> = [];
 
-    // Get rankings for logging
+    // Get rankings for logging and distribution
     const rankings = await this.getSectorDemandRankings(phase.gameId);
     const sectorsByRank = new Map<number, typeof rankings>();
     for (const ranking of rankings) {
@@ -3225,39 +3226,93 @@ export class ModernOperationMechanicsService {
       sectorsByRank.get(ranking.rank)!.push(ranking);
     }
 
-    // Distribute based on sector demand rankings
-    // 1st place sector gets 50%, 2nd gets 30%, 3rd gets 20%
-    // Tied sectors split the percentage evenly
+    // Sectors in global priority order (1st = highest priority) for remainder assignment
+    const priorityOrder = (game.sectorPriority ?? [])
+      .sort((a, b) => a.priority - b.priority)
+      .map((p) => sectors.find((s) => s.id === p.sectorId))
+      .filter((s): s is (typeof sectors)[0] => s != null);
+    const inPriorityIds = new Set(priorityOrder.map((s) => s.id));
+    const missing = sectors.filter((s) => !inPriorityIds.has(s.id));
+    const orderedSectors =
+      priorityOrder.length > 0 ? [...priorityOrder, ...missing] : [...sectors];
+
     let consumersDistributed = 0;
     const rankPercentages = [0.5, 0.3, 0.2];
-    
-    for (let rank = 1; rank <= 3; rank++) {
-      const sectorsAtRank = sectorsByRank.get(rank);
-      if (!sectorsAtRank || sectorsAtRank.length === 0) continue;
-      
-      const basePercentage = rankPercentages[rank - 1];
-      const percentagePerSector = basePercentage / sectorsAtRank.length;
-      const consumersPerSector = Math.floor(game.economyScore * percentagePerSector);
-      
-      for (const ranking of sectorsAtRank) {
-        const sector = sectors.find((s) => s.id === ranking.sectorId);
-        if (sector && consumersPerSector > 0) {
-          const sectorUpdate = sectorUpdates.find(update => update.id === sector.id) || {
-            id: sector.id,
-            consumers: sector.consumers,
-          };
-          if (!sectorUpdates.find(u => u.id === sector.id)) {
-            sectorUpdates.push(sectorUpdate);
-          }
-          
-          sectorUpdate.consumers += consumersPerSector;
-          consumersDistributed += consumersPerSector;
-          
-          const rankLabel = rank === 1 ? '1st' : rank === 2 ? '2nd' : '3rd';
-          const tieNote = sectorsAtRank.length > 1 ? ` (tied, ${(percentagePerSector * 100).toFixed(1)}% each)` : '';
+
+    // When all sectors share the same rank, split 100% of economy score evenly (per rules: ties split evenly)
+    const allSameRank =
+      sectorsByRank.size === 1 &&
+      rankings.length > 0 &&
+      sectorsByRank.get(rankings[0].rank)?.length === sectors.length;
+
+    if (allSameRank && sectors.length > 0 && maxConsumersToDistribute > 0) {
+      const totalToDistribute = maxConsumersToDistribute;
+      const basePerSector = Math.floor(totalToDistribute / sectors.length);
+      let remainder = totalToDistribute - basePerSector * sectors.length;
+      for (const sector of orderedSectors) {
+        const update = sectorUpdates.find((u) => u.id === sector.id);
+        if (!update) continue;
+        const add = basePerSector + (remainder > 0 ? 1 : 0);
+        if (add > 0) {
+          update.consumers += add;
+          consumersDistributed += add;
+          if (remainder > 0) remainder--;
           gameLogEntries.push({
             gameId: phase.gameId,
-            content: `${sector.sectorName} (${rankLabel} place${tieNote}, sector demand: ${ranking.demand}) received ${consumersPerSector} consumers (${(percentagePerSector * 100).toFixed(1)}% of economy score ${game.economyScore})`,
+            content: `${sector.sectorName} (tied for 1st, ${(100 / sectors.length).toFixed(1)}% each) received ${add} consumers from economy score ${game.economyScore}`,
+          });
+        }
+      }
+    } else {
+      // Distribute by 50/30/20; tied sectors split that rank's percentage evenly; remainder to priority order
+      for (let rank = 1; rank <= 3; rank++) {
+        const sectorsAtRank = sectorsByRank.get(rank);
+        if (!sectorsAtRank || sectorsAtRank.length === 0) continue;
+
+        const basePercentage = rankPercentages[rank - 1];
+        const totalForRank = Math.floor(game.economyScore * basePercentage);
+        const basePerSector = Math.floor(totalForRank / sectorsAtRank.length);
+        let remainder = totalForRank - basePerSector * sectorsAtRank.length;
+
+        // Order sectors at this rank by global priority for remainder
+        const atRankOrdered = orderedSectors.filter((s) =>
+          sectorsAtRank.some((r) => r.sectorId === s.id),
+        );
+
+        for (const sector of atRankOrdered) {
+          const add = basePerSector + (remainder > 0 ? 1 : 0);
+          if (add <= 0) continue;
+          const sectorUpdate = sectorUpdates.find((u) => u.id === sector.id);
+          if (!sectorUpdate) continue;
+          sectorUpdate.consumers += add;
+          consumersDistributed += add;
+          if (remainder > 0) remainder--;
+          const rankLabel = rank === 1 ? '1st' : rank === 2 ? '2nd' : '3rd';
+          const tieNote =
+            sectorsAtRank.length > 1
+              ? ` (tied, ${((basePercentage / sectorsAtRank.length) * 100).toFixed(1)}% each)`
+              : '';
+          const ranking = sectorsAtRank.find((r) => r.sectorId === sector.id);
+          gameLogEntries.push({
+            gameId: phase.gameId,
+            content: `${sector.sectorName} (${rankLabel} place${tieNote}, sector demand: ${ranking?.demand ?? 0}) received ${add} consumers (${((basePercentage / sectorsAtRank.length) * 100).toFixed(1)}% of economy score ${game.economyScore})`,
+          });
+        }
+      }
+
+      // Assign any remaining consumers (from floor rounding) to first sector in priority order
+      let leftover = maxConsumersToDistribute - consumersDistributed;
+      if (leftover > 0) {
+        for (const sector of orderedSectors) {
+          if (leftover <= 0) break;
+          const sectorUpdate = sectorUpdates.find((u) => u.id === sector.id);
+          if (!sectorUpdate) continue;
+          sectorUpdate.consumers += 1;
+          consumersDistributed += 1;
+          leftover -= 1;
+          gameLogEntries.push({
+            gameId: phase.gameId,
+            content: `${sector.sectorName} received 1 consumer (remainder from economy score distribution)`,
           });
         }
       }
