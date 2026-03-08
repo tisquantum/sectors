@@ -274,10 +274,10 @@ const EndTurnSectorConsumerDistributionAnimation = ({
                   <div>
                     <span className="text-blue-400 font-medium">2. Research Bonuses:</span> As companies research in a sector, they advance the sector research track. Each research slot grants a bonus to sector demand:
                     <ul className="list-disc list-inside ml-4 mt-1">
-                      <li>Slot 3: +1 demand bonus</li>
-                      <li>Slot 6: +2 demand bonus</li>
-                      <li>Slot 9: +3 demand bonus</li>
-                      <li>Slot 12: +4 demand bonus</li>
+                      <li>Slot 3: +2 demand bonus</li>
+                      <li>Slot 6: +3 demand bonus</li>
+                      <li>Slot 9: +4 demand bonus</li>
+                      <li>Slot 12: +5 demand bonus</li>
                     </ul>
                   </div>
                   <div>

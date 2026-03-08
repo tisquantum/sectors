@@ -23,10 +23,10 @@ import { RiInformationLine } from '@remixicon/react';
  * advances as companies complete research milestones.
  * 
  * Research stages provide demand bonuses to the sector's baseline demand:
- * - Slot 3: +1 demand
- * - Slot 6: +2 demand
- * - Slot 9: +3 demand
- * - Slot 12: +4 demand
+ * - Slot 3: +2 demand
+ * - Slot 6: +3 demand
+ * - Slot 9: +4 demand
+ * - Slot 12: +5 demand
  */
 export function SectorResearchTracks() {
   const { gameId } = useGame();
@@ -156,7 +156,7 @@ export function SectorResearchTracks() {
                     <strong className="text-white">Additional Benefits:</strong>
                   </p>
                   <ul className="list-disc list-inside space-y-1 ml-2">
-                    <li>Demand bonuses at research slots: Slot 3 = +1, Slot 6 = +2, Slot 9 = +3, Slot 12 = +4</li>
+                    <li>Demand bonuses at research slots: Slot 3 = +2, Slot 6 = +3, Slot 9 = +4, Slot 12 = +5</li>
                     <li>Research increases sector resource value (each research action increases sector resource value by 1)</li>
                     <li>Reaching research stages unlocks more factory and marketing slots</li>
                   </ul>

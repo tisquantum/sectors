@@ -109,7 +109,7 @@ export function SectorDemandRankings() {
               <strong className="text-white">How Sector Demand Works:</strong>
               <ul className="list-disc list-inside mt-1 space-y-1 ml-2">
                 <li>Sector demand = <strong>brand score</strong> (sum of companies&apos; brand scores in the sector, from marketing) + <strong>research slot bonus</strong></li>
-                <li>Research Slot 3: +1 bonus, Slot 6: +2, Slot 9: +3, Slot 12: +4</li>
+                <li>Research Slot 3: +2 bonus, Slot 6: +3, Slot 9: +4, Slot 12: +5</li>
                 <li>Higher sector demand = higher ranking = more consumers distributed</li>
               </ul>
             </div>

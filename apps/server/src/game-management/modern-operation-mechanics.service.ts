@@ -2458,22 +2458,22 @@ export class ModernOperationMechanicsService {
   /**
    * Calculate research demand bonus based on sector researchMarker slots
    * Demand bonuses are granted at specific research slots:
-   *   - Slot 3: +1 demand
-   *   - Slot 6: +2 demand  
-   *   - Slot 9: +3 demand
-   *   - Slot 12: +4 demand
-   * 
-   * The bonus is cumulative - if researchMarker >= 12, total bonus is +4
-   * If researchMarker >= 9, total bonus is +3
-   * If researchMarker >= 6, total bonus is +2
-   * If researchMarker >= 3, total bonus is +1
+   *   - Slot 3: +2 demand
+   *   - Slot 6: +3 demand
+   *   - Slot 9: +4 demand
+   *   - Slot 12: +5 demand
+   *
+   * The bonus is cumulative - if researchMarker >= 12, total bonus is +5
+   * If researchMarker >= 9, total bonus is +4
+   * If researchMarker >= 6, total bonus is +3
+   * If researchMarker >= 3, total bonus is +2
    * Otherwise, bonus is 0
    */
   private getResearchDemandBonus(researchMarker: number): number {
-    if (researchMarker >= 12) return 4;
-    if (researchMarker >= 9) return 3;
-    if (researchMarker >= 6) return 2;
-    if (researchMarker >= 3) return 1;
+    if (researchMarker >= 12) return 5;
+    if (researchMarker >= 9) return 4;
+    if (researchMarker >= 6) return 3;
+    if (researchMarker >= 3) return 2;
     return 0;
   }
 
@@ -2482,10 +2482,10 @@ export class ModernOperationMechanicsService {
    * Effective Demand = sum of brand scores + research slot bonus
    * 
    * Research slot bonuses:
-   *   - Slot 3: +1 demand
-   *   - Slot 6: +2 demand
-   *   - Slot 9: +3 demand
-   *   - Slot 12: +4 demand
+   *   - Slot 3: +2 demand
+   *   - Slot 6: +3 demand
+   *   - Slot 9: +4 demand
+   *   - Slot 12: +5 demand
    * 
    * The sector's `baseDemand` field stores the initial demand from gameData (preserved).
    * The `demand` field is updated each turn to reflect effective demand (brand + research slot bonus).
