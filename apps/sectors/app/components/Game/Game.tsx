@@ -155,6 +155,13 @@ const TimesUp = () => (
   </div>
 );
 
+const VALID_VIEWS = ["action", "pending", "chart", "companies", "economy", "operations"] as const;
+type GameView = (typeof VALID_VIEWS)[number];
+
+function normalizeView(view: string): GameView {
+  return VALID_VIEWS.includes(view as GameView) ? (view as GameView) : "action";
+}
+
 const Game = ({ gameId }: { gameId: string }) => {
   const { gameState, currentPhase } = useGame();
   const {
@@ -163,27 +170,15 @@ const Game = ({ gameId }: { gameId: string }) => {
     closeDrawer,
     toggleDrawer,
   } = useDrawer();
-  const [currentView, setCurrentView] = useState<string>("action");
+  const [currentView, setCurrentViewState] = useState<string>("action");
+  const currentView = normalizeView(currentViewState);
+  const setCurrentView = (view: string) => setCurrentViewState(normalizeView(view));
   const [showPhaseList, setShowPhaseList] = useState<boolean>(true);
   const constraintsRef = useRef(null);
   const [isTimerAtZero, setIsTimerAtZero] = useState(false);
   
   // Phase transition tracking
   const previousPhaseRef = useRef<PhaseName | undefined>(undefined);
-  
-  // Track renders and view changes
-  const renderCountRef = useRef(0);
-  renderCountRef.current += 1;
-  if (renderCountRef.current % 10 === 0) {
-    console.log(`[Game] Render count: ${renderCountRef.current}, currentView: ${currentView}`);
-  }
-  
-  // Track view changes
-  const viewChangeCountRef = useRef(0);
-  useEffect(() => {
-    viewChangeCountRef.current += 1;
-    console.log(`[Game] View changed to: ${currentView} (change #${viewChangeCountRef.current})`);
-  }, [currentView]);
   const { isOpen, onOpen, onClose, onOpenChange } = useDisclosure();
   const {
     isOpen: isSidebarModalOpen,
@@ -436,7 +431,8 @@ const Game = ({ gameId }: { gameId: string }) => {
             )}
 
             <GameTopBar
-              handleCurrentView={handleCurrentView}
+              currentView={currentView}
+              onViewChange={setCurrentView}
               handleTogglePhaseList={() => setShowPhaseList((prev) => !prev)}
               isTimerAtZero={isTimerAtZero}
             />
@@ -454,7 +450,7 @@ const Game = ({ gameId }: { gameId: string }) => {
               <div
                 className={`@container active-panel flex flex-col h-full max-h-full w-full p-4 overflow-y-auto scrollbar`}
               >
-                <AnimatePresence mode="wait">
+                <AnimatePresence mode="sync">
                   {currentView === "action" && (
                     <motion.div
                       key={`action-${currentRoundData?.phase.id || currentPhase?.id || 'loading'}`}

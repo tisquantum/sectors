@@ -2,7 +2,6 @@ import { ButtonGroup, Navbar, Spinner, Badge } from "@nextui-org/react";
 import GameGeneralInfo from "./GameGeneralInfo";
 import Timer from "./Timer";
 import { useGame } from "./GameContext";
-import { useState } from "react";
 import { isActivePhase } from "@server/data/helpers";
 import Button from "@sectors/app/components/General/DebounceButton";
 import { friendlyPhaseName } from "@sectors/app/helpers";
@@ -14,15 +13,16 @@ import { trpc } from "@sectors/app/trpc";
 const PassiveLoading = () => <Spinner color="secondary" />;
 
 const GameTopBar = ({
-  handleCurrentView,
+  currentView,
+  onViewChange,
   handleTogglePhaseList,
   isTimerAtZero,
 }: {
+  currentView: string;
+  onViewChange: (view: string) => void;
   handleTogglePhaseList: () => void;
-  handleCurrentView: (view: string) => void;
   isTimerAtZero?: boolean;
 }) => {
-  const [currentView, setCurrentView] = useState<string>("action");
   const { currentPhase, gameState, authPlayer } = useGame();
 
   // Get pending orders count for badge
@@ -47,8 +47,7 @@ const GameTopBar = ({
   const pendingOrdersCount = playerOrders?.length || 0;
 
   const handleViewChange = (view: string) => {
-    setCurrentView(view);
-    handleCurrentView(view);
+    onViewChange(view);
   };
   const getButtonClass = (view: string) =>
     currentView === view
