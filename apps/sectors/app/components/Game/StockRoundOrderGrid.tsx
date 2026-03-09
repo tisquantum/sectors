@@ -20,7 +20,6 @@ import {
   Player,
   ShareLocation,
   Sector,
-  AwardTrackType,
 } from "@server/prisma/prisma.client";
 import {
   CompanyWithRelations,
@@ -39,7 +38,6 @@ import SpotMarketTable from "./SpotMarketTable";
 import DerivativesTable from "./DerivativesTable";
 import OrderResults from "./OrderResults";
 import { useDrawer } from "../Drawer.context";
-import CompanyAwardTrack from "../Company/CompanyAwardTrack";
 import { ResourceTracksContainer } from "./ResourceTracksContainer";
 
 function isOrderInputOpenPlayerOrderCounter(
@@ -64,12 +62,6 @@ const StockRoundOrderGrid = ({
 }) => {
   const { closeDrawer } = useDrawer();
   const { gameId, currentPhase, gameState, authPlayer } = useGame();
-  const { data: companyAwardTracks, isLoading: isLoadingCompanyAwardTracks } =
-    trpc.companyAwardTrack.listCompanyAwardTracks.useQuery({
-      where: {
-        gameId,
-      },
-    });
   const { data: companies, isLoading } =
     trpc.company.listCompaniesWithRelations.useQuery({
       where: { gameId, status: { not: CompanyStatus.BANKRUPT } },
@@ -184,7 +176,6 @@ const StockRoundOrderGrid = ({
   // Early returns must come AFTER all hooks
   if (isLoading) return <div>Loading...</div>;
   if (isLoadingPhases) return <div>Loading...</div>;
-  if (isLoadingCompanyAwardTracks) return <div>Loading...</div>;
   if (!companies) return <div>No companies found</div>;
   if (!currentPhase) return <div>No current phase found</div>;
   if (!gameState) return <div>No game state found</div>;
@@ -283,19 +274,6 @@ const StockRoundOrderGrid = ({
                 <DerivativesTable isInteractive={isInteractive} />
               </>
             )}
-          </div>
-        </Tab>
-        <Tab key="company-awards" title="Awards Track">
-          <div className="p-4 max-w-full scrollbar">
-            <div className="flex flex-col gap-4">
-              {companyAwardTracks &&
-                companyAwardTracks.map((awardTrack) => (
-                  <CompanyAwardTrack
-                    key={awardTrack.id}
-                    companyAwardTrackId={awardTrack.id}
-                  />
-                ))}
-            </div>
           </div>
         </Tab>
       </Tabs>

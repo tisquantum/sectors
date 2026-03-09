@@ -89,7 +89,6 @@ import {
 import CompanyPriorityList from "./CompanyPriorityOperatingRound";
 import InsolvencyContributionComponent from "./InsolvencyContribution";
 import { friendlyResearchName } from "@sectors/app/helpers";
-import CompanyAwardTrack from "./CompanyAwardTrack";
 import { Info } from "lucide-react";
 
 const renderSymbolDisplay = (operatingRoundAction: OperatingRoundAction) => {
@@ -806,12 +805,6 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
   const [currentCompany, setCurrentCompany] = useState<string | undefined>(
     undefined
   );
-  const { data: companyAwardTracks, isLoading: isLoadingCompanyAwardTracks } =
-    trpc.companyAwardTrack.listCompanyAwardTracks.useQuery({
-      where: {
-        gameId,
-      },
-    });
   useEffect(() => {
     if (companies && currentPhase) {
       setCurrentCompany(
@@ -830,7 +823,6 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
   if (!currentPhase) return <div>No current phase found</div>;
   if (currentTurnIsLoading) return <div>Loading...</div>;
   if (!currentTurnWithRelations) return <div>No turn found</div>;
-  if (isLoadingCompanyAwardTracks) return <div>Loading...</div>;
   if (error) return <div>Error: {error.message}</div>;
   if (withResult && isLoadingCompanyVoteResults) return <div>Loading...</div>;
   if (withResult && !companyVoteResults) return <div>No results found</div>;
@@ -989,17 +981,6 @@ const CompanyActionSlider = ({ withResult }: { withResult?: boolean }) => {
                 </div>
               </motion.div>
             </AnimatePresence>
-          </div>
-        </Tab>
-        <Tab key="company-award" title="Company Awards">
-          <div className="flex flex-col gap-4">
-            {companyAwardTracks &&
-              companyAwardTracks.map((awardTrack) => (
-                <CompanyAwardTrack
-                  key={awardTrack.id}
-                  companyAwardTrackId={awardTrack.id}
-                />
-              ))}
           </div>
         </Tab>
       </Tabs>
