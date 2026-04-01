@@ -197,6 +197,15 @@ export default (trpc: TrpcService, ctx: Context) =>
       )
       .query(async ({ input }) => {
         const { skip, take, cursor, where, orderBy } = input;
+        // PlayerOrder.stockRoundId is required; Prisma rejects stockRoundId: null in where.
+        if (
+          where &&
+          typeof where === 'object' &&
+          Object.prototype.hasOwnProperty.call(where, 'stockRoundId') &&
+          where.stockRoundId == null
+        ) {
+          return [];
+        }
         return ctx.playerOrdersService.playerOrdersConcealed({
           skip,
           take,

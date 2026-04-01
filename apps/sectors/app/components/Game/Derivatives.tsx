@@ -20,17 +20,22 @@ const Derivatives = ({ isInteractive = false }: { isInteractive: boolean }) => {
     data: playerOrders,
     isLoading: playerOrdersLoading,
     refetch,
-  } = trpc.playerOrder.listPlayerOrdersConcealed.useQuery({
-    where: {
-      gameId,
-      orderStatus: OrderStatus.PENDING,
-      stockRoundId: currentPhase?.stockRoundId,
-      orderType: OrderType.OPTION,
+  } = trpc.playerOrder.listPlayerOrdersConcealed.useQuery(
+    {
+      where: {
+        gameId,
+        orderStatus: OrderStatus.PENDING,
+        stockRoundId: currentPhase?.stockRoundId,
+        orderType: OrderType.OPTION,
+      },
     },
-  });
+    { enabled: !!currentPhase?.stockRoundId }
+  );
   useEffect(() => {
-    refetch();
-  }, [currentPhase?.name, refetch]);
+    if (currentPhase?.stockRoundId) {
+      refetch();
+    }
+  }, [currentPhase?.name, currentPhase?.stockRoundId, refetch]);
 
   if (isLoading) return <div>Loading...</div>;
   if (!optionsContracts) return <div>No options contracts found</div>;

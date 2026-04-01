@@ -28,13 +28,13 @@ import {
   RiIncreaseDecreaseFill,
   RiInformationLine,
   RiMegaphoneFill,
+  RiFlaskFill,
   RiPriceTag3Fill,
   RiSailboatFill,
   RiShapesFill,
   RiSparkling2Fill,
   RiStackFill,
   RiTeamFill,
-  RiUserFill,
   RiWallet3Fill,
   RiVipCrown2Fill,
   RiHashtag,
@@ -57,13 +57,8 @@ import {
   CompanyStatus,
   OperationMechanicsVersion,
   Player,
-  Share,
-  ShareLocation,
 } from "@server/prisma/prisma.client";
-import {
-  CompanyWithSector,
-  ShareWithPlayer,
-} from "@server/prisma/prisma.types";
+import { CompanyWithSector } from "@server/prisma/prisma.types";
 import { BarList, LineChart } from "@tremor/react";
 import ThroughputLegend from "../../Game/ThroughputLegend";
 import { trpc } from "@sectors/app/trpc";
@@ -71,77 +66,12 @@ import CompanyTiers from "../CompanyTiers";
 import { MoneyTransactionHistoryByCompany } from "../../Game/MoneyTransactionHistory";
 import { useGame } from "../../Game/GameContext";
 import { useEffect } from "react";
-import { renderLocationShortHand } from "@sectors/app/helpers";
 import PlayerAvatar from "../../Player/PlayerAvatar";
 import { CompanyLineChart } from "../CompanyLineChart";
 import CompanyResearchCards from "../CompanyResearchCards";
 import { ModernCompany } from "./ModernCompany";
-import ShareComponent from "../Share";
 import { MarketingSlots } from "../Tableau/MarketingSlots";
 import ShareHolders from "../ShareHolders";
-
-const buildBarChart = (shares: ShareWithPlayer[]) => {
-  //group shares by location and sum the quantity
-  const groupedShares = shares.reduce((acc, share) => {
-    if (!acc[share.location]) {
-      acc[share.location] = 0;
-    }
-    acc[share.location] += 1;
-    return acc;
-  }, {} as Record<string, number>);
-  //convert object to array
-  return Object.entries(groupedShares).map(([location, quantity], index) =>
-    location == ShareLocation.PLAYER ? (
-      <Popover key={index}>
-        <PopoverTrigger>
-          <div className="flex justify-center items-center cursor-pointer">
-            <ShareComponent
-              name={"Player"}
-              icon={<RiUserFill className={"text-slate-800"} size={18} />}
-              quantity={quantity}
-            />
-          </div>
-        </PopoverTrigger>
-        <PopoverContent>
-          <div className="flex flex-wrap gap-1">
-            {Object.values(
-              shares
-                .filter((share) => share.location === ShareLocation.PLAYER)
-                .reduce((acc, share) => {
-                  const playerId = share.Player?.id;
-                  if (playerId && share.Player) {
-                    if (!acc[playerId]) {
-                      acc[playerId] = {
-                        quantity: 0,
-                        Player: share.Player,
-                      };
-                    }
-                    acc[playerId].quantity += 1; // Sum the quantity for each player
-                  }
-                  return acc;
-                }, {} as Record<string, { quantity: number; Player: Player }>) // Accumulate by player ID
-            ).map((shareData, index) => (
-              <div key={index} className="flex gap-2 items-center">
-                <div className="flex items-center">
-                  {shareData.Player && (
-                    <PlayerAvatar player={shareData.Player} />
-                  )}
-                </div>
-                <span>{shareData.quantity}</span>
-              </div>
-            ))}
-          </div>
-        </PopoverContent>
-      </Popover>
-    ) : (
-      <ShareComponent
-        key={index}
-        name={renderLocationShortHand(location as ShareLocation)}
-        quantity={quantity}
-      />
-    )
-  );
-};
 
 const CompanyMoreInfo = ({
   company,
@@ -311,12 +241,10 @@ const ResearchInfo = ({ companyId, gameId }: { companyId: string; gameId: string
 
 const CompanyInfoV2 = ({
   companyId,
-  showBarChart,
   showingProductionResults,
   isMinimal,
 }: {
   companyId: string;
-  showBarChart?: boolean;
   showingProductionResults?: boolean;
   isMinimal?: boolean;
 }) => {
@@ -521,49 +449,74 @@ const CompanyInfoV2 = ({
                 <RiShapesFill size={18} />
                 <span className="text-base">{company.Sector.name}</span>
               </div>
-              <div className="flex items-center gap-1">
+              {company.ipoAndFloatPrice != null &&
+              company.currentStockPrice === company.ipoAndFloatPrice ? (
                 <Popover>
                   <PopoverTrigger>
-                    <div className="flex items-center gap-1 cursor-pointer">
+                    <div className="flex items-center gap-1 cursor-pointer text-base">
                       <RiFundsFill size={18} />
-                      <span className="text-base">${company.currentStockPrice}</span>
+                      <span>${company.currentStockPrice}</span>
+                      <span className="text-xs font-normal text-gray-400">
+                        (IPO / float)
+                      </span>
                     </div>
                   </PopoverTrigger>
                   <PopoverContent>
+                    <div className="px-1 py-1 max-w-xs mb-2 text-small text-default-500">
+                      Stock price matches IPO and float price.
+                    </div>
                     <CompanyLineChart companyId={company.id} />
                   </PopoverContent>
                 </Popover>
-              </div>
-              {company.ipoAndFloatPrice && (
-                <div className="flex items-center gap-1">
-                  <div className="flex items-center gap-1 text-base">
-                    <span>IPO</span>
-                    <span>${company.ipoAndFloatPrice}</span>
-                  </div>
-                  <Popover placement="top">
-                    <PopoverTrigger>
-                      <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer">
-                        <RiInformationLine size={14} />
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent>
-                      <div className="px-1 py-1 max-w-xs">
-                        <div className="text-small font-semibold mb-1">IPO Price</div>
-                        <div className="text-small text-default-500">
-                          The initial public offering price.
+              ) : (
+                <>
+                  <div className="flex items-center gap-1">
+                    <Popover>
+                      <PopoverTrigger>
+                        <div className="flex items-center gap-1 cursor-pointer">
+                          <RiFundsFill size={18} />
+                          <span className="text-base">${company.currentStockPrice}</span>
                         </div>
+                      </PopoverTrigger>
+                      <PopoverContent>
+                        <CompanyLineChart companyId={company.id} />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  {company.ipoAndFloatPrice != null && (
+                    <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 text-base">
+                        <span>IPO</span>
+                        <span>${company.ipoAndFloatPrice}</span>
                       </div>
-                    </PopoverContent>
-                  </Popover>
-                </div>
+                      <Popover placement="top">
+                        <PopoverTrigger>
+                          <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer">
+                            <RiInformationLine size={14} />
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent>
+                          <div className="px-1 py-1 max-w-xs">
+                            <div className="text-small font-semibold mb-1">IPO Price</div>
+                            <div className="text-small text-default-500">
+                              The initial public offering price.
+                            </div>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
             {/* Row 2: PRIORITY NUMBERS ACTIVE STATUS FLOAT STATUS CASH ON HAND */}
             <div className="flex items-center gap-1 flex-wrap">
-              {companyPriority && (companyPriority.global || companyPriority.sector) && (
+              {companyPriority &&
+                (companyPriority.global != null ||
+                  companyPriority.sector != null) && (
                 <div className="flex items-center gap-1">
-                  {companyPriority.global && (
+                  {companyPriority.global != null && (
                     <div className="flex items-center gap-1">
                       <div className="flex items-center gap-1 px-2 py-1 rounded bg-gray-700/50 border border-gray-600">
                         <RiHashtag size={16} />
@@ -586,7 +539,7 @@ const CompanyInfoV2 = ({
                       </Popover>
                     </div>
                   )}
-                  {companyPriority.sector && (
+                  {companyPriority.sector != null && (
                     <div className="flex items-center gap-1">
                       <div
                         className="flex items-center gap-1 px-2 py-1 rounded border"
@@ -698,7 +651,33 @@ const CompanyInfoV2 = ({
 
             {/* Row 3: Research Marker, CEO, Brand score, Attraction score */}
             <div className="flex items-center gap-1 flex-wrap">
-              <span className="text-base text-gray-400">{company.Sector.researchMarker}</span>
+              <Popover placement="top" showArrow>
+                <PopoverTrigger>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1.5 rounded-md border border-cyan-500/35 bg-cyan-950/35 px-2 py-1 text-xs text-cyan-50 hover:bg-cyan-900/45 transition-colors"
+                    aria-label={`Sector research track ${company.Sector.researchMarker}, open details`}
+                  >
+                    <RiFlaskFill size={16} className="text-cyan-400 shrink-0" />
+                    <span className="font-medium tabular-nums">
+                      {company.Sector.researchMarker}
+                    </span>
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="max-w-xs">
+                  <div className="px-1 py-1">
+                    <div className="text-small font-semibold mb-1 flex items-center gap-2">
+                      <RiFlaskFill size={18} className="text-cyan-400 shrink-0" />
+                      Sector research track
+                    </div>
+                    <p className="text-small text-default-500">
+                      Shared progress for every company in this sector. A higher marker
+                      unlocks advanced research stages and sector-wide bonuses in modern
+                      operations.
+                    </p>
+                  </div>
+                </PopoverContent>
+              </Popover>
               {ceoPlayer && (
                 <div className="flex items-center gap-1">
                   <div className="flex items-center gap-1">
@@ -753,12 +732,6 @@ const CompanyInfoV2 = ({
                 company={company}
                 showingProductionResults={showingProductionResults}
               />
-            </div>
-          )}
-
-          {showBarChart && (
-            <div className="flex gap-1 justify-between mt-1">
-              {buildBarChart(company.Share)}
             </div>
           )}
 

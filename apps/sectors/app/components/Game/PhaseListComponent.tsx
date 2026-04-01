@@ -1,9 +1,7 @@
 import { PhaseName } from "@server/prisma/prisma.client";
 import { useGame } from "./GameContext";
 import { friendlyPhaseName } from "@sectors/app/helpers";
-import { getPhaseColor } from "@sectors/app/helpers/phaseColors";
 import { phasesInOrder } from "@server/data/constants";
-import _ from "lodash";
 
 const PhaseListComponent = () => {
   const { currentPhase, gameState, currentTurn } = useGame();
@@ -49,28 +47,22 @@ const PhaseListComponent = () => {
   }
   return (
     <div className="flex flex-col gap-2 max-w-[150px] md:max-w-[250px] lg:max-w-[300px] xl:max-w-[450px]">
-      {_phasesInOrder.map((phase) => (
-        <div key={phase}>
-          {(() => {
-            const phaseColors = getPhaseColor(phase);
-            const isCurrentPhase = phase === currentPhase?.name;
-            return (
-              <div
-                className={`flex items-center p-1 border-3 ${
-                  isCurrentPhase
-                    ? `border-pink-500 bg-pink-500/20 ${phaseColors.bg}/20`
-                    : `${phaseColors.border} ${phaseColors.bg}/10`
-                }`}
-              >
-                <div className={isCurrentPhase ? phaseColors.text : "text-gray-300"}>
-                  {friendlyPhaseName(phase) || phase}
-                  {/* Removed sub-round display - stock rounds no longer use sub-rounds */}
-                </div>
-              </div>
-            );
-          })()}
-        </div>
-      ))}
+      {_phasesInOrder.map((phase) => {
+        const isCurrentPhase = phase === currentPhase?.name;
+        return (
+          <div
+            key={phase}
+            className={
+              isCurrentPhase
+                ? "flex items-center rounded-md border-2 border-zinc-100 bg-zinc-100 px-2 py-1.5 text-sm font-semibold text-zinc-950 shadow-md"
+                : "flex items-center rounded-md border border-zinc-600/70 bg-zinc-950/50 px-2 py-1.5 text-sm text-zinc-500"
+            }
+            aria-current={isCurrentPhase ? "step" : undefined}
+          >
+            {friendlyPhaseName(phase) || phase}
+          </div>
+        );
+      })}
     </div>
   );
 };

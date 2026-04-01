@@ -1,4 +1,6 @@
-import React from "react";
+"use client";
+
+import React, { useMemo } from "react";
 import {
   CompanyWithRelations,
   CompanyWithSector,
@@ -16,7 +18,53 @@ import {
   TableRow,
 } from "@nextui-org/react";
 import { sectorColors } from "@server/data/gameData";
-import ShareOwnershipTable from "../Company/ShareOwnershipTable";
+import { OperationMechanicsVersion } from "@server/prisma/prisma.client";
+import { useGame } from "./GameContext";
+
+const LEGACY_COLUMNS = [
+  "Company Name",
+  "Ownership",
+  "Stock Symbol",
+  "Stock Price",
+  "OM Shares",
+  "IPO Price",
+  "IPO Shares",
+  "Orders",
+  "Unit Price",
+  "Cash on Hand",
+  "Company Status",
+  "Company Tier",
+  "Operational Cost",
+  "Actions / OR",
+  "Float %",
+  "Demand",
+  "Sector",
+  "Sector Demand",
+  "Has Economies of Scale",
+  "Loan",
+];
+
+const MODERN_COLUMNS = [
+  "Company Name",
+  "Ownership",
+  "Stock Symbol",
+  "Stock Price",
+  "OM Shares",
+  "IPO Price",
+  "IPO Shares",
+  "Orders",
+  "Cash on Hand",
+  "Company Status",
+  "Float %",
+  "Brand",
+  "Research",
+  "Attraction",
+  "Sector",
+  "Sector Demand",
+  "Consumers",
+  "Sector Research",
+  "Oversold",
+];
 
 const SpotMarketTable = ({
   companies,
@@ -40,29 +88,14 @@ const SpotMarketTable = ({
   isInteractive: boolean;
   isRevealRound: boolean;
 }) => {
-  const columns = [
-    "Company Name",
-    "Ownership",
-    "Stock Symbol",
-    "Stock Price",
-    "OM Shares",
-    "IPO Price",
-    "IPO Shares",
-    "Orders",
-    "Unit Price",
-    "Cash on Hand",
-    "Company Status",
-    "Company Tier",
-    "Operational Cost",
-    "Actions / OR",
-    "Float %",
-    // "Prestige", // Removed - not used in modern game
-    "Demand",
-    "Sector",
-    "Sector Demand",
-    "Has Economies of Scale",
-    "Loan",
-  ];
+  const { gameState } = useGame();
+  const columns = useMemo(
+    () =>
+      gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN
+        ? MODERN_COLUMNS
+        : LEGACY_COLUMNS,
+    [gameState.operationMechanicsVersion]
+  );
 
   return (
     <Table>

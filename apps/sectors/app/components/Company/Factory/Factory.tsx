@@ -242,7 +242,7 @@ export function Factory({
         {typeof attraction === 'number' && (
           <div className="flex items-center gap-1">
             <RiHeartFill size={14} className="text-amber-400 shrink-0" />
-            <span className="text-xs font-semibold text-green-400/90">${attraction}</span>
+            <span className="text-xs font-semibold text-green-400/90">{attraction}</span>
             <Popover placement="top">
               <PopoverTrigger>
                 <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer" aria-label="Attraction info">
@@ -251,7 +251,7 @@ export function Factory({
               </PopoverTrigger>
               <PopoverContent>
                 <div className="px-1 py-1 max-w-xs">
-                  <div className="text-small font-semibold mb-1">Attraction (unit price)</div>
+                  <div className="text-small font-semibold mb-1">Attraction</div>
                   <div className="text-small text-default-500">
                     Unit price of the factory product (unit price − brand score). This is the effective price to customers when they choose where to shop; lower is better. Ties go to more complex factories.
                   </div>

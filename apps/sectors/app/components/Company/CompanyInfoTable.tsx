@@ -10,10 +10,7 @@ import {
   RiFundsFill,
   RiPriceTag3Fill,
   RiWallet3Fill,
-  RiSparkling2Fill,
   RiHandCoinFill,
-  RiBox2Fill,
-  RiIncreaseDecreaseFill,
   RiExpandUpDownFill,
   RiGovernmentFill,
   RiBankCard2Fill,
@@ -21,16 +18,27 @@ import {
   RiTeamFill,
   RiFundsBoxFill,
   RiCurrencyFill,
+  RiMegaphoneFill,
+  RiFlaskFill,
+  RiStackFill,
+  RiErrorWarningFill,
 } from "@remixicon/react";
 import {
   CompanyTierData,
   LOAN_AMOUNT,
   LOAN_INTEREST_RATE,
 } from "@server/data/constants";
-import { calculateCompanySupply, calculateDemand } from "@server/data/helpers";
+import { calculateDemand } from "@server/data/helpers";
 import { sectorColors } from "@server/data/gameData";
 import DebounceButton from "../General/DebounceButton";
-import { AvatarGroup, Button, TableCell } from "@nextui-org/react";
+import {
+  AvatarGroup,
+  Button,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  TableCell,
+} from "@nextui-org/react";
 import { Drawer } from "vaul";
 import {
   CompanyStatus,
@@ -308,6 +316,98 @@ const CompanyInfoTable = ({
             {CompanyTierData[company.companyTier].companyActions}
           </>
         );
+      case "Brand":
+        return (
+          <>
+            <RiMegaphoneFill size={20} className="text-purple-400" />{" "}
+            {company.brandScore ?? 0}
+          </>
+        );
+      case "Research": {
+        const researchProgress = company.researchProgress ?? 0;
+        return (
+          <Popover placement="top" showArrow>
+            <PopoverTrigger>
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 rounded-md border border-cyan-500/35 bg-cyan-950/35 px-2 py-1 text-sm text-cyan-50 hover:bg-cyan-900/45 transition-colors"
+                aria-label={`Research progress ${researchProgress}, open details`}
+              >
+                <RiFlaskFill size={20} className="text-cyan-400 shrink-0" />
+                <span className="font-medium tabular-nums">{researchProgress}</span>
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="max-w-xs">
+              <div className="px-1 py-1">
+                <div className="text-small font-semibold mb-1 flex items-center gap-2">
+                  <RiFlaskFill size={18} className="text-cyan-400 shrink-0" />
+                  Research progress
+                </div>
+                <p className="text-small text-default-500">
+                  How many spaces this company has advanced on its research track.
+                  Research actions in operations add progress (random 0–2 per investment)
+                  and can unlock grants and market favors at higher totals.
+                </p>
+              </div>
+            </PopoverContent>
+          </Popover>
+        );
+      }
+      case "Attraction":
+        return (
+          <>
+            <RiPriceTag3Fill size={20} />{" "}
+            {company.unitPrice - (company.brandScore ?? 0)}
+          </>
+        );
+      case "Consumers":
+        return (
+          <>
+            <RiTeamFill size={20} /> {company.Sector.consumers}
+          </>
+        );
+      case "Sector Research": {
+        const marker = company.Sector.researchMarker;
+        return (
+          <Popover placement="top" showArrow>
+            <PopoverTrigger>
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 rounded-md border border-slate-500/40 bg-slate-900/60 px-2 py-1 text-sm text-slate-100 hover:bg-slate-800/80 transition-colors"
+                aria-label={`Sector research track ${marker}, open details`}
+              >
+                <RiStackFill size={18} className="text-slate-400 shrink-0" />
+                <span className="font-medium tabular-nums">{marker}</span>
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="max-w-xs">
+              <div className="px-1 py-1">
+                <div className="text-small font-semibold mb-1 flex items-center gap-2">
+                  <RiStackFill size={18} className="text-slate-400 shrink-0" />
+                  Sector research track
+                </div>
+                <p className="text-small text-default-500">
+                  Shared progress for all companies in this sector. As the marker rises,
+                  the sector unlocks higher research stages, slot bonuses, and demand effects
+                  for operating rounds.
+                </p>
+              </div>
+            </PopoverContent>
+          </Popover>
+        );
+      }
+      case "Oversold": {
+        const n = company.oversoldShares ?? 0;
+        if (n <= 0) {
+          return <span className="text-slate-500">—</span>;
+        }
+        return (
+          <span className="flex items-center gap-1 text-red-400 font-semibold">
+            <RiErrorWarningFill size={18} />
+            {n}
+          </span>
+        );
+      }
       default:
         return null;
     }

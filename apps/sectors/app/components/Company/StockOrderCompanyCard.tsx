@@ -174,7 +174,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
   };
   isRevealRound = !gameState?.playerOrdersConcealed || isRevealRound;
 
-  const isOversold = company.oversoldShares && company.oversoldShares > 0;
+  const isOversold = (company.oversoldShares ?? 0) > 0;
   console.log('company', company);
   return (
     <Card
@@ -212,7 +212,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
             )}
           </div>
           {operationMechanicsVersion == OperationMechanicsVersion.MODERN ? (
-            <CompanyInfoV2 companyId={company.id} showBarChart />
+            <CompanyInfoV2 companyId={company.id} />
           ) : (
             <CompanyInfo companyId={company.id} showBarChart />
           )}

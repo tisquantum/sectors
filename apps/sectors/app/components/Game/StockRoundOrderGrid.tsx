@@ -33,6 +33,7 @@ import Derivatives from "./Derivatives";
 import { Drawer } from "vaul";
 import PlayerOrderInput from "../Player/PlayerOrderInput";
 import CompanyInfo from "../Company/CompanyInfo";
+import CompanyInfoV2 from "../Company/CompanyV2/CompanyInfoV2";
 import { LineChart } from "@tremor/react";
 import SpotMarketTable from "./SpotMarketTable";
 import DerivativesTable from "./DerivativesTable";
@@ -75,7 +76,9 @@ const StockRoundOrderGrid = ({
       where: { stockRoundId: currentPhase?.stockRoundId },
     },
     {
-      enabled: currentPhase?.name == PhaseName.STOCK_ACTION_REVEAL,
+      enabled:
+        currentPhase?.name == PhaseName.STOCK_ACTION_REVEAL &&
+        !!currentPhase?.stockRoundId,
     }
   );
   const {
@@ -94,7 +97,9 @@ const StockRoundOrderGrid = ({
       },
     },
     {
-      enabled: currentPhase?.name == PhaseName.STOCK_ACTION_REVEAL,
+      enabled:
+        currentPhase?.name == PhaseName.STOCK_ACTION_REVEAL &&
+        !!currentPhase?.stockRoundId,
     }
   );
   const {
@@ -133,11 +138,25 @@ const StockRoundOrderGrid = ({
   }, [isInteractive]);
   useEffect(() => {
     setIsInteractive(isCurrentPhaseInteractive(currentPhase?.name));
-    refetchPlayerOrdersConcealed();
-    refetchPlayerOrdersConcealedSpotMarket();
+    // refetch() bypasses useQuery `enabled`; only refetch concealed queries when they are valid.
+    if (
+      currentPhase?.name === PhaseName.STOCK_ACTION_REVEAL &&
+      currentPhase?.stockRoundId
+    ) {
+      refetchPlayerOrdersConcealed();
+      refetchPlayerOrdersConcealedSpotMarket();
+    }
     refetchPhasesOfStockRound();
     refetchPlayerOrdersRevealed();
-  }, [currentPhase?.id, currentPhase?.name, refetchPhasesOfStockRound, refetchPlayerOrdersConcealed, refetchPlayerOrdersConcealedSpotMarket, refetchPlayerOrdersRevealed]);
+  }, [
+    currentPhase?.id,
+    currentPhase?.name,
+    currentPhase?.stockRoundId,
+    refetchPhasesOfStockRound,
+    refetchPlayerOrdersConcealed,
+    refetchPlayerOrdersConcealedSpotMarket,
+    refetchPlayerOrdersRevealed,
+  ]);
   useEffect(() => {
     // NEW: Allow multiple orders per phase - don't auto-close drawer after first order
     // Players can manually close the drawer when done placing orders
@@ -298,8 +317,8 @@ const StockRoundOrderGrid = ({
                           ).length
                         }`}
                   </h2>
-                  {(selectedCompanyOrder.company as any).oversoldShares &&
-                    (selectedCompanyOrder.company as any).oversoldShares > 0 && (
+                  {((selectedCompanyOrder.company as CompanyWithRelations)
+                    .oversoldShares ?? 0) > 0 && (
                       <Popover placement="top">
                         <PopoverTrigger>
                           <Chip
@@ -308,16 +327,30 @@ const StockRoundOrderGrid = ({
                             startContent={<RiErrorWarningFill className="h-4 w-4" />}
                             className="cursor-pointer"
                           >
-                            {(selectedCompanyOrder.company as any).oversoldShares} Oversold
+                            {
+                              (selectedCompanyOrder.company as CompanyWithRelations)
+                                .oversoldShares
+                            }{" "}
+                            Oversold
                           </Chip>
                         </PopoverTrigger>
                         <PopoverContent>
                           <p className="text-sm p-2">
-                            Company is oversold by {(selectedCompanyOrder.company as any).oversoldShares} shares. Market cap reduced by {(selectedCompanyOrder.company as any).oversoldShares} steps from normal maximum.
+                            Company is oversold by{" "}
+                            {
+                              (selectedCompanyOrder.company as CompanyWithRelations)
+                                .oversoldShares
+                            }{" "}
+                            shares. Market cap reduced by{" "}
+                            {
+                              (selectedCompanyOrder.company as CompanyWithRelations)
+                                .oversoldShares
+                            }{" "}
+                            steps from normal maximum.
                           </p>
                         </PopoverContent>
                       </Popover>
-                      )}
+                    )}
                     </div>
                 {currentPhase.name === PhaseName.STOCK_ACTION_ORDER && (
                   <PlayerOrderInput
@@ -350,32 +383,54 @@ const StockRoundOrderGrid = ({
                 )}
                 <Tabs className="mt-4">
                   <Tab key="drawer-company-info" title="Company Info">
-                    <div className="h-96">
-                      <CompanyInfo
-                        companyId={selectedCompanyOrder.company.id}
-                        showBarChart
-                      />
+                    <div className="h-96 overflow-y-auto">
+                      {gameState.operationMechanicsVersion ===
+                      OperationMechanicsVersion.MODERN ? (
+                        <CompanyInfoV2 companyId={selectedCompanyOrder.company.id} />
+                      ) : (
+                        <CompanyInfo
+                          companyId={selectedCompanyOrder.company.id}
+                          showBarChart
+                        />
+                      )}
                     </div>
                   </Tab>
                   <Tab key="drawer-stock-chart" title="Stock Chart">
                     <div className="h-96 w-80 flex flex-col">
-                      {(selectedCompanyOrder.company as any).oversoldShares &&
-                        (selectedCompanyOrder.company as any).oversoldShares > 0 && (
+                      {((selectedCompanyOrder.company as CompanyWithRelations)
+                        .oversoldShares ?? 0) > 0 && (
                           <div className="mb-2 p-2 bg-red-900/30 rounded-md border border-red-500/50">
                             <div className="text-xs text-red-300 font-semibold mb-1 flex items-center gap-1">
                               <RiErrorWarningFill className="h-3 w-3" />
                               Oversold Impact
                             </div>
                             <div className="text-xs text-red-200">
-                              Company is oversold by {(selectedCompanyOrder.company as any).oversoldShares} shares
+                              Company is oversold by{" "}
+                              {
+                                (selectedCompanyOrder.company as CompanyWithRelations)
+                                  .oversoldShares
+                              }{" "}
+                              shares
                             </div>
                             <div className="text-xs text-red-200 mt-1">
-                              Market cap reduced by {(selectedCompanyOrder.company as any).oversoldShares} steps
+                              Market cap reduced by{" "}
+                              {
+                                (selectedCompanyOrder.company as CompanyWithRelations)
+                                  .oversoldShares
+                              }{" "}
+                              steps
                             </div>
                             <div className="text-xs text-gray-400 mt-1">
                               Maximum price limited to: $
-                              {600 - (selectedCompanyOrder.company as any).oversoldShares} 
-                              {" "}(normal max: $600 - oversold: {(selectedCompanyOrder.company as any).oversoldShares})
+                              {600 -
+                                (selectedCompanyOrder.company as CompanyWithRelations)
+                                  .oversoldShares}{" "}
+                              (normal max: $600 - oversold:{" "}
+                              {
+                                (selectedCompanyOrder.company as CompanyWithRelations)
+                                  .oversoldShares
+                              }
+                              )
                             </div>
                           </div>
                         )}

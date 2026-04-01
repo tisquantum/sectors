@@ -170,7 +170,7 @@ const Game = ({ gameId }: { gameId: string }) => {
     closeDrawer,
     toggleDrawer,
   } = useDrawer();
-  const [currentView, setCurrentViewState] = useState<string>("action");
+  const [currentViewState, setCurrentViewState] = useState<string>("action");
   const currentView = normalizeView(currentViewState);
   const setCurrentView = (view: string) => setCurrentViewState(normalizeView(view));
   const [showPhaseList, setShowPhaseList] = useState<boolean>(true);
@@ -236,6 +236,7 @@ const Game = ({ gameId }: { gameId: string }) => {
     enabled: true,
   });
   const currentRoundData = determineGameRound(gameState);
+  console.log(`[Game] currentRoundData: ${JSON.stringify(currentRoundData)}`);
   const renderCurrentPhase =
     currentRoundData?.phase.name === PhaseName.STOCK_MEET ? (
       <Meeting />

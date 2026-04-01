@@ -61,19 +61,29 @@ const DerivativesTable = ({ isInteractive }: { isInteractive: boolean }) => {
     data: playerOrders,
     isLoading: playerOrdersLoading,
     refetch,
-  } = trpc.playerOrder.listPlayerOrdersConcealed.useQuery({
-    where: {
-      gameId,
-      orderStatus: OrderStatus.PENDING,
-      stockRoundId: currentPhase?.stockRoundId,
-      orderType: OrderType.OPTION,
+  } = trpc.playerOrder.listPlayerOrdersConcealed.useQuery(
+    {
+      where: {
+        gameId,
+        orderStatus: OrderStatus.PENDING,
+        stockRoundId: currentPhase?.stockRoundId,
+        orderType: OrderType.OPTION,
+      },
     },
-  });
+    { enabled: !!currentPhase?.stockRoundId }
+  );
 
   useEffect(() => {
-    refetch();
+    if (currentPhase?.stockRoundId) {
+      refetch();
+    }
     refetchOptionsContracts();
-  }, [currentPhase?.name, refetch, refetchOptionsContracts]);
+  }, [
+    currentPhase?.name,
+    currentPhase?.stockRoundId,
+    refetch,
+    refetchOptionsContracts,
+  ]);
   const [bidAmounts, setBidAmounts] = useState<{ [key: string]: string }>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
   if (isLoading) return <div>Loading...</div>;

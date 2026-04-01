@@ -5,7 +5,6 @@ import { useGame } from "./GameContext";
 import { isActivePhase } from "@server/data/helpers";
 import Button from "@sectors/app/components/General/DebounceButton";
 import { friendlyPhaseName } from "@sectors/app/helpers";
-import { getPhaseColor } from "@sectors/app/helpers/phaseColors";
 import { RiClockwiseFill, RiTextWrap, RiWallet3Fill } from "@remixicon/react";
 import PlayerPriorities from "./PlayerPriorities";
 import { trpc } from "@sectors/app/trpc";
@@ -140,23 +139,18 @@ const GameTopBar = ({
           </div>
         )}
         <GameGeneralInfo />
-        {(() => {
-          const phaseColors = getPhaseColor(currentPhase?.name);
-          return (
-            <Button
-              onClick={handleTogglePhaseList}
-              className={`bg-gradient-to-r ${phaseColors.gradient} text-white font-bold px-4 py-2 shadow-lg hover:opacity-90 transition-all`}
-              title="Toggle phase list (Press Ctrl+K or Cmd+K)"
-            >
-              <div className="flex items-center gap-2">
-                <RiTextWrap className="text-white" size={20} />
-                <span className="font-extrabold">
-                  {friendlyPhaseName(currentPhase?.name)}
-                </span>
-              </div>
-            </Button>
-          );
-        })()}
+        <Button
+          onClick={handleTogglePhaseList}
+          className="border border-zinc-400 bg-zinc-200 font-bold text-zinc-900 px-4 py-2 shadow-lg transition-colors hover:bg-zinc-100"
+          title="Toggle phase list (Press Ctrl+K or Cmd+K)"
+        >
+          <div className="flex items-center gap-2">
+            <RiTextWrap className="text-zinc-900" size={20} />
+            <span className="font-extrabold">
+              {friendlyPhaseName(currentPhase?.name)}
+            </span>
+          </div>
+        </Button>
       </div>
     </div>
   );

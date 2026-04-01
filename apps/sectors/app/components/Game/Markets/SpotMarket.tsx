@@ -86,7 +86,7 @@ export function SpotMarket({
                 (company: any) => (
                   <Card key={company.id} className="min-w-[300px]">
                     <CardBody>
-                      <CompanyInfoV2 companyId={company.id} showBarChart />
+                      <CompanyInfoV2 companyId={company.id} />
                     </CardBody>
                   </Card>
                 )
