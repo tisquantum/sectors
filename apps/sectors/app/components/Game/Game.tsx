@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import GameSidebar from "./GameSidebar";
 import GameTopBar from "./GameTopBar";
 import { MarketsView } from "./MarketsView";
@@ -449,105 +449,43 @@ const Game = ({ gameId }: { gameId: string }) => {
                   </div>
                 )} */}
               <div
-                className={`@container active-panel flex flex-col h-full max-h-full w-full p-4 overflow-y-auto scrollbar`}
+                className="@container active-panel min-h-0 h-full max-h-full w-full overflow-y-auto scrollbar p-4"
               >
-                <AnimatePresence mode="sync">
-                  {currentView === "action" && (
-                    <motion.div
-                      key={`action-${currentRoundData?.phase.id || currentPhase?.id || 'loading'}`}
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                      transition={{ duration: 0.3, ease: "easeInOut" }}
-                      className="h-full"
-                    >
-                      {!currentRoundData ? (
-                        <div className="flex items-center justify-center h-full">
-                          <div className="text-center">
-                            <div className="text-lg font-semibold mb-2">Loading phase...</div>
-                            <div className="text-sm text-gray-400">
-                              {(currentPhase?.name ?? gameState?.Phase?.find(p => p.id === gameState?.currentPhaseId)?.name) ? `Preparing ${friendlyPhaseName(currentPhase?.name ?? gameState?.Phase?.find(p => p.id === gameState?.currentPhaseId)?.name)}` : 'Waiting for phase data'}
-                            </div>
+                {currentView === "action" && (
+                  <div
+                    key={`action-${currentRoundData?.phase.id || currentPhase?.id || "loading"}`}
+                  >
+                    {!currentRoundData ? (
+                      <div className="flex items-center justify-center min-h-[40vh]">
+                        <div className="text-center">
+                          <div className="text-lg font-semibold mb-2">Loading phase...</div>
+                          <div className="text-sm text-gray-400">
+                            {(currentPhase?.name ?? gameState?.Phase?.find(p => p.id === gameState?.currentPhaseId)?.name) ? `Preparing ${friendlyPhaseName(currentPhase?.name ?? gameState?.Phase?.find(p => p.id === gameState?.currentPhaseId)?.name)}` : 'Waiting for phase data'}
                           </div>
                         </div>
-                      ) : renderCurrentPhase ? (
-                        renderCurrentPhase
-                      ) : (
-                        <div className="flex items-center justify-center h-full">
-                          <div className="text-center">
-                            <div className="text-lg font-semibold mb-2">Phase Component Not Found</div>
-                            <div className="text-sm text-gray-400">
-                              Phase: {friendlyPhaseName(currentRoundData.phase.name ?? currentPhase?.name)}
-                            </div>
-                            <div className="text-xs text-gray-500 mt-2">
-                              If this phase should have a component, please check the Game.tsx render logic.
-                            </div>
+                      </div>
+                    ) : renderCurrentPhase ? (
+                      renderCurrentPhase
+                    ) : (
+                      <div className="flex items-center justify-center min-h-[40vh]">
+                        <div className="text-center">
+                          <div className="text-lg font-semibold mb-2">Phase Component Not Found</div>
+                          <div className="text-sm text-gray-400">
+                            Phase: {friendlyPhaseName(currentRoundData.phase.name ?? currentPhase?.name)}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-2">
+                            If this phase should have a component, please check the Game.tsx render logic.
                           </div>
                         </div>
-                      )}
-                    </motion.div>
-                  )}
-                  {currentView === "chart" && (
-                    <motion.div
-                      key="chart"
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                      transition={{ duration: 0.3, ease: "easeInOut" }}
-                      className="h-full"
-                    >
-                      <StockChart />
-                    </motion.div>
-                  )}
-                  {currentView === "pending" && (
-                    <motion.div
-                      key="pending"
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                      transition={{ duration: 0.3, ease: "easeInOut" }}
-                      className="h-full"
-                    >
-                      <PendingOrders />
-                    </motion.div>
-                  )}
-                  {currentView == "economy" && (
-                    <motion.div
-                      key="economy"
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                      transition={{ duration: 0.3, ease: "easeInOut" }}
-                      className="h-full"
-                    >
-                      <EndTurnEconomy />
-                    </motion.div>
-                  )}
-                  {currentView == "companies" && (
-                    <motion.div
-                      key="companies"
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                      transition={{ duration: 0.3, ease: "easeInOut" }}
-                      className="h-full"
-                    >
-                      <MarketsView />
-                    </motion.div>
-                  )}
-                  {currentView == "operations" && (
-                    <motion.div
-                      key="operations"
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                      transition={{ duration: 0.3, ease: "easeInOut" }}
-                      className="h-full"
-                    >
-                      <OperationsView />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {currentView === "chart" && <StockChart />}
+                {currentView === "pending" && <PendingOrders />}
+                {currentView === "economy" && <EndTurnEconomy />}
+                {currentView === "companies" && <MarketsView />}
+                {currentView === "operations" && <OperationsView />}
                 {gameState.gameStatus == GameStatus.FINISHED && (
                   <GameResults
                     isOpen={isOpen}
@@ -557,19 +495,11 @@ const Game = ({ gameId }: { gameId: string }) => {
                   />
                 )}
               </div>
-              <AnimatePresence>
-                {showPhaseList && (
-                  <motion.div
-                    className="overflow-y-auto max-h-full scrollbar"
-                    initial={{ x: 300 }}
-                    animate={{ x: 0 }}
-                    exit={{ x: 300 }}
-                    transition={{ duration: 0.5 }}
-                  >
-                    <PhaseListComponent />
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              {showPhaseList && (
+                <div className="overflow-y-auto max-h-full scrollbar">
+                  <PhaseListComponent />
+                </div>
+              )}
             </div>
           </div>
           <div className="z-50 fixed bottom-4 right-4 lg:hidden">

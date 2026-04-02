@@ -385,14 +385,14 @@ const CompanyInfoV2 = ({
             </Popover>
           </div>
           {ceoPlayer && (
-            <div className="flex items-center gap-1">
-              <div className="flex items-center gap-1">
-                <RiVipCrown2Fill size={20} />
+            <div className="flex items-center gap-1 shrink-0">
+              <div className="flex items-center gap-1.5">
+                <RiVipCrown2Fill size={20} className="shrink-0 text-amber-400/90" />
                 <PlayerAvatar player={ceoPlayer as Player} size="sm" showNameLabel />
               </div>
               <Popover placement="top">
                 <PopoverTrigger>
-                  <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer">
+                  <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer shrink-0">
                     <RiInformationLine size={14} />
                   </button>
                 </PopoverTrigger>
@@ -407,7 +407,33 @@ const CompanyInfoV2 = ({
               </Popover>
             </div>
           )}
-          <div className="flex items-center gap-1">
+          <Popover placement="top" showArrow>
+            <PopoverTrigger>
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 rounded-md border border-cyan-500/35 bg-cyan-950/35 px-2 py-1 text-xs text-cyan-50 hover:bg-cyan-900/45 transition-colors shrink-0"
+                aria-label={`Sector research track ${company.Sector.researchMarker}, open details`}
+              >
+                <RiFlaskFill size={16} className="text-cyan-400 shrink-0" />
+                <span className="font-medium tabular-nums">
+                  {company.Sector.researchMarker}
+                </span>
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="max-w-xs">
+              <div className="px-1 py-1">
+                <div className="text-small font-semibold mb-1 flex items-center gap-2">
+                  <RiFlaskFill size={18} className="text-cyan-400 shrink-0" />
+                  Sector research track
+                </div>
+                <p className="text-small text-default-500">
+                  Shared progress for every company in this sector. A higher marker unlocks
+                  advanced research stages and sector-wide bonuses in modern operations.
+                </p>
+              </div>
+            </PopoverContent>
+          </Popover>
+          <div className="flex items-center gap-1 shrink-0">
             <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-purple-500/20 border border-purple-400/50">
               <RiMegaphoneFill size={16} className="text-purple-400" />
               <span className="text-sm font-medium">{company.brandScore ?? 0}</span>
@@ -422,7 +448,7 @@ const CompanyInfoV2 = ({
                 <div className="px-1 py-1 max-w-xs">
                   <div className="text-small font-semibold mb-1">Brand Score</div>
                   <div className="text-small text-default-500">
-                    Increased by marketing campaigns. Higher brand improves attraction (products cheaper to customers). Attraction = unit price − brand score.
+                    Increased by marketing campaigns. Higher brand improves attraction (lowers effective price). Per factory: product unit price (sum of resource prices) − brand score.
                   </div>
                 </div>
               </PopoverContent>
@@ -649,13 +675,36 @@ const CompanyInfoV2 = ({
               </div>
             </div>
 
-            {/* Row 3: Research Marker, CEO, Brand score, Attraction score */}
-            <div className="flex items-center gap-1 flex-wrap">
+            {/* Row 3: CEO | Rewards (sector research) | Brand score */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {ceoPlayer && (
+                <div className="flex items-center gap-1 shrink-0">
+                  <div className="flex items-center gap-1.5">
+                    <RiVipCrown2Fill size={18} className="shrink-0 text-amber-400/90" />
+                    <PlayerAvatar player={ceoPlayer as Player} size="sm" showNameLabel />
+                  </div>
+                  <Popover placement="top">
+                    <PopoverTrigger>
+                      <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer shrink-0">
+                        <RiInformationLine size={14} />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent>
+                      <div className="px-1 py-1 max-w-xs">
+                        <div className="text-small font-semibold mb-1">CEO</div>
+                        <div className="text-small text-default-500">
+                          The CEO (Chief Executive Officer) of this company.
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              )}
               <Popover placement="top" showArrow>
                 <PopoverTrigger>
                   <button
                     type="button"
-                    className="inline-flex items-center gap-1.5 rounded-md border border-cyan-500/35 bg-cyan-950/35 px-2 py-1 text-xs text-cyan-50 hover:bg-cyan-900/45 transition-colors"
+                    className="inline-flex items-center gap-1.5 rounded-md border border-cyan-500/35 bg-cyan-950/35 px-2 py-1 text-xs text-cyan-50 hover:bg-cyan-900/45 transition-colors shrink-0"
                     aria-label={`Sector research track ${company.Sector.researchMarker}, open details`}
                   >
                     <RiFlaskFill size={16} className="text-cyan-400 shrink-0" />
@@ -678,31 +727,8 @@ const CompanyInfoV2 = ({
                   </div>
                 </PopoverContent>
               </Popover>
-              {ceoPlayer && (
-                <div className="flex items-center gap-1">
-                  <div className="flex items-center gap-1">
-                    <RiVipCrown2Fill size={18} />
-                    <PlayerAvatar player={ceoPlayer as Player} size="sm" showNameLabel />
-                  </div>
-                  <Popover placement="top">
-                    <PopoverTrigger>
-                      <button className="text-gray-400 hover:text-gray-200 transition-colors cursor-pointer">
-                        <RiInformationLine size={14} />
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent>
-                      <div className="px-1 py-1 max-w-xs">
-                        <div className="text-small font-semibold mb-1">CEO</div>
-                        <div className="text-small text-default-500">
-                          The CEO (Chief Executive Officer) of this company.
-                        </div>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              )}
               {/* Brand score */}
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 shrink-0">
                 <div className="flex items-center gap-1 px-2 py-1 rounded bg-purple-500/20 border border-purple-400/50">
                   <RiMegaphoneFill size={16} className="text-purple-400" />
                   <span className="text-base font-medium">{company.brandScore ?? 0}</span>
@@ -717,7 +743,7 @@ const CompanyInfoV2 = ({
                     <div className="px-1 py-1 max-w-xs">
                       <div className="text-small font-semibold mb-1">Brand Score</div>
                       <div className="text-small text-default-500">
-                        Increased by marketing campaigns. Higher brand score improves your attraction rating (makes your products cheaper to customers). Attraction = unit price − brand score; shown on each factory card.
+                        Increased by marketing campaigns. Brand score lowers effective attraction per factory (product unit price − brand score); shown on each factory card.
                       </div>
                     </div>
                   </PopoverContent>

@@ -321,7 +321,12 @@ export function FactorySlots({ companyId, gameId, currentPhase, isCEO = false }:
                   resources={slot.factory.resources as any}
                   isOperational={slot.factory.isOperational}
                   totalValue={slot.factory.totalValue}
-                  attraction={company ? (company.unitPrice ?? 0) - (company.brandScore ?? 0) : undefined}
+                  attraction={
+                    company
+                      ? slot.factory.resources.reduce((sum, r) => sum + r.price, 0) -
+                        (company.brandScore ?? 0)
+                      : undefined
+                  }
                 />
               ) : (
                 <span className="text-xs font-medium">

@@ -238,7 +238,7 @@ export function MarketingCreation({
                 <div className="px-1 py-1 max-w-xs">
                   <div className="text-small font-semibold mb-1">Brand Bonus</div>
                   <div className="text-small text-default-500">
-                    The brand score bonus provided by this campaign. Brand score decreases the perceived unit price for attraction rating calculations, making your products more attractive to consumers.
+                    The brand score bonus provided by this campaign. Brand score lowers attraction (factory product unit price − brand score) for consumer routing, making your factories more attractive.
                   </div>
                 </div>
               </PopoverContent>

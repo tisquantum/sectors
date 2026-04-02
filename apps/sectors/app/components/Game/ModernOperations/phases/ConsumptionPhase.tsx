@@ -292,10 +292,10 @@ export function ConsumptionPhase() {
                     customers will be drawn from consumption bags and assigned to factories based on:
                   </p>
                   <ul className="text-gray-400 text-sm space-y-1 list-disc list-inside">
-                    <li>Attraction rating (unit price - brand score)</li>
+                    <li>Attraction rating per factory (product unit price − brand score)</li>
                     <li>Factory capacity limits</li>
                     <li>Resource type matching</li>
-                    <li>Factory complexity (tie-breaker)</li>
+                    <li>Share price, then factory slot order (tie-breakers)</li>
                   </ul>
                 </div>
               </div>

@@ -97,8 +97,9 @@ const OrderChipChitWithPlayer = ({
             <p className={tooltipParagraphStyle}>{order.Player.nickname}</p>
           }
         >
-          <PopoverTrigger>
-            <Card
+          <span className="inline-flex">
+            <PopoverTrigger>
+              <Card
               className={`relative bg-${determineColorByOrderType(
                 order.orderType,
                 order.isSell
@@ -176,7 +177,8 @@ const OrderChipChitWithPlayer = ({
                 </div>
               </CardBody>
             </Card>
-          </PopoverTrigger>
+            </PopoverTrigger>
+          </span>
         </Tooltip>
       </Badge>
       <PopoverContent className="p-0 m-0">

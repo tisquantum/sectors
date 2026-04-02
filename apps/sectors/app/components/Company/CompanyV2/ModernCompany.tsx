@@ -156,7 +156,7 @@ export function ModernCompany({
                     <strong className="text-white">Attraction Rating:</strong>
                   </p>
                   <p>
-                    Attraction = unit price - brand score. Lower attraction rating means customers prefer your products (cheaper to them). Ties go to more complex factories.
+                    Attraction = each factory&apos;s product unit price (sum of its resource prices) minus brand score. Lower attraction means customers prefer that factory. Ties use share price, then factory slot order.
                   </p>
                 </div>
               </div>

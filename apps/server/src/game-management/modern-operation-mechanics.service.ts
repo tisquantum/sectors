@@ -790,6 +790,17 @@ export class ModernOperationMechanicsService {
     }
   }
 
+  /** Workers required once a factory of this size is operational (bots / automation). */
+  getRequiredWorkersForFactorySize(size: FactorySize): number {
+    return this.getRequiredWorkers(size);
+  }
+
+  /** Max factories allowed for a sector at this research marker (bots / automation). */
+  getMaxFactorySlotsForResearchMarker(researchMarker: number): number {
+    const stage = this.getResearchStage(researchMarker);
+    return this.getSlotPhasesForResearchStage(stage).length;
+  }
+
   private getFactoryConsumerLimit(size: FactorySize): number {
     switch (size) {
       case FactorySize.FACTORY_I:
@@ -1040,7 +1051,7 @@ export class ModernOperationMechanicsService {
    * Consumer Routing Logic:
    * 1. Consumer draws a marker (resource preference)
    * 2. Consumer goes to factory that produces that resource
-   * 3. If multiple factories match, prefer cheaper factory (lower total unit price = sum of resource prices)
+   * 3. If multiple factories match, prefer lower attraction (factory product unit price = sum of resource prices, minus company brand score)
    * 4. If price tied, use company priority (higher share value = higher priority)
    * 5. If share value tied, use "top to bottom" order (factory slot, lower = better)
    * 6. Factories have maxCustomers limit - once full, consumers go to next available factory
@@ -1184,12 +1195,20 @@ export class ModernOperationMechanicsService {
             return currentCustomers < maxCustomers;
           })
           .sort((a, b) => {
-            // 1. Sort by total unit price (sum of resource prices) - lower is better
-            const aTotalPrice = this.calculateFactoryTotalPrice(a, resourcePriceMap);
-            const bTotalPrice = this.calculateFactoryTotalPrice(b, resourcePriceMap);
-            
-            if (aTotalPrice !== bTotalPrice) {
-              return aTotalPrice - bTotalPrice;
+            // 1. Sort by attraction (factory product price − brand score) — lower is better
+            const aAttraction = this.calculateFactoryAttractionRating(
+              a,
+              resourcePriceMap,
+              a.company.brandScore ?? 0,
+            );
+            const bAttraction = this.calculateFactoryAttractionRating(
+              b,
+              resourcePriceMap,
+              b.company.brandScore ?? 0,
+            );
+
+            if (aAttraction !== bAttraction) {
+              return aAttraction - bAttraction;
             }
             
             // 2. If price tied, sort by company share value (currentStockPrice) - higher is better
@@ -1386,15 +1405,15 @@ export class ModernOperationMechanicsService {
   }
 
   /**
-   * Calculate attraction rating for a company
-   * Lower rating = more attractive to customers
+   * Attraction for consumer routing: this factory's product unit price (sum of resource prices) minus company brand score.
+   * Lower = more attractive.
    */
-  private calculateAttractionRating(company: any): number {
-    const totalBrandBonus = company.marketingCampaigns.reduce(
-      (sum: number, campaign: any) => sum + campaign.brandBonus,
-      0,
-    );
-    return company.unitPrice - totalBrandBonus;
+  private calculateFactoryAttractionRating(
+    factory: any,
+    resourcePriceMap: Map<ResourceType, number>,
+    brandScore: number,
+  ): number {
+    return this.calculateFactoryTotalPrice(factory, resourcePriceMap) - brandScore;
   }
 
   /**
@@ -2773,7 +2792,7 @@ export class ModernOperationMechanicsService {
   }
 
   /**
-   * Calculate total unit price for a factory (sum of all resource prices)
+   * Product unit price for a factory (sum of current resource prices for its blueprint).
    */
   private calculateFactoryTotalPrice(
     factory: any,

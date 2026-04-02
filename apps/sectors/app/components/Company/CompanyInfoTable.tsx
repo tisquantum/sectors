@@ -42,6 +42,7 @@ import {
 import { Drawer } from "vaul";
 import {
   CompanyStatus,
+  OperationMechanicsVersion,
   OrderType,
   ShareLocation,
 } from "@server/prisma/prisma.client";
@@ -354,6 +355,35 @@ const CompanyInfoTable = ({
         );
       }
       case "Attraction":
+        if (gameState?.operationMechanicsVersion === OperationMechanicsVersion.MODERN) {
+          return (
+            <Popover placement="top" showArrow>
+              <PopoverTrigger>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 rounded-md border border-amber-500/35 bg-amber-950/35 px-2 py-1 text-sm text-amber-50 hover:bg-amber-900/45 transition-colors"
+                  aria-label="Attraction is per factory; open details"
+                >
+                  <RiPriceTag3Fill size={20} className="text-amber-400 shrink-0" />
+                  <span className="font-medium">Per factory</span>
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="max-w-xs">
+                <div className="px-1 py-1">
+                  <div className="text-small font-semibold mb-1 flex items-center gap-2">
+                    <RiPriceTag3Fill size={18} className="text-amber-400 shrink-0" />
+                    Attraction
+                  </div>
+                  <p className="text-small text-default-500">
+                    In modern operations, attraction is computed per factory: that factory&apos;s product unit price
+                    (sum of its resource prices) minus company brand score. See each factory card on the company
+                    tableau for the number; lower is better for winning customers.
+                  </p>
+                </div>
+              </PopoverContent>
+            </Popover>
+          );
+        }
         return (
           <>
             <RiPriceTag3Fill size={20} />{" "}

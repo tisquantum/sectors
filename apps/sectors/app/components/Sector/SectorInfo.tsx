@@ -28,10 +28,10 @@ const SectorInfo = ({ sector }: { sector: SectorWithCompanies }) => (
     <div className="flex items-center">
       <Popover placement="top">
         <PopoverTrigger>
-          <button type="button" className="ml-2 text-small text-default-500 flex cursor-pointer bg-transparent border-none text-inherit">
+          <span className="ml-2 text-small text-default-500 inline-flex items-center cursor-pointer rounded-sm outline-none ring-offset-2 ring-offset-background focus-visible:ring-2 focus-visible:ring-primary">
             <RiHandCoinFill size={18} className="mr-1" />{" "}
             {sector.demand + (sector.demandBonus || 0)}
-          </button>
+          </span>
         </PopoverTrigger>
         <PopoverContent className={tooltipStyle}>
           <p className={tooltipParagraphStyle}>
@@ -41,10 +41,10 @@ const SectorInfo = ({ sector }: { sector: SectorWithCompanies }) => (
       </Popover>
       <Popover placement="top">
         <PopoverTrigger>
-          <button type="button" className="ml-2 text-small text-default-500 flex cursor-pointer bg-transparent border-none text-inherit">
+          <span className="ml-2 text-small text-default-500 inline-flex items-center cursor-pointer rounded-sm outline-none ring-offset-2 ring-offset-background focus-visible:ring-2 focus-visible:ring-primary">
             <RiSailboatFill size={18} className="ml-2" />
             <span className="ml-1">{sector.sharePercentageToFloat}%</span>
-          </button>
+          </span>
         </PopoverTrigger>
         <PopoverContent className={tooltipStyle}>
           <p className={tooltipParagraphStyle}>
@@ -54,9 +54,9 @@ const SectorInfo = ({ sector }: { sector: SectorWithCompanies }) => (
       </Popover>
       <Popover placement="top">
         <PopoverTrigger>
-          <button type="button" className="ml-2 text-small text-default-500 flex cursor-pointer bg-transparent border-none text-inherit">
+          <span className="ml-2 text-small text-default-500 inline-flex items-center cursor-pointer rounded-sm outline-none ring-offset-2 ring-offset-background focus-visible:ring-2 focus-visible:ring-primary">
             <RiTeamFill size={18} className="mr-1" /> {sector.consumers}
-          </button>
+          </span>
         </PopoverTrigger>
         <PopoverContent className={tooltipStyle}>
           <p className={tooltipParagraphStyle}>
@@ -66,11 +66,11 @@ const SectorInfo = ({ sector }: { sector: SectorWithCompanies }) => (
       </Popover>
       <Popover placement="top">
         <PopoverTrigger>
-          <button type="button" className="ml-2 text-small text-default-500 flex cursor-pointer bg-transparent border-none text-inherit">
+          <span className="ml-2 text-small text-default-500 inline-flex items-center cursor-pointer rounded-sm outline-none ring-offset-2 ring-offset-background focus-visible:ring-2 focus-visible:ring-primary">
             <RiTimeLine size={18} className="mr-1" />{" "}
             {sector.waitingArea || 0}/
             {getWaitingAreaCapacity(getResearchStage(sector.researchMarker || 0))}
-          </button>
+          </span>
         </PopoverTrigger>
         <PopoverContent className={tooltipStyle}>
           <div className={tooltipParagraphStyle}>
@@ -93,16 +93,16 @@ const SectorInfo = ({ sector }: { sector: SectorWithCompanies }) => (
     <div className="flex items-center gap-2">
       <Popover placement="top">
         <PopoverTrigger>
-          <button type="button" className="text-small text-default-500 flex cursor-pointer bg-transparent border-none text-inherit">
+          <span className="text-small text-default-500 inline-flex items-center cursor-pointer rounded-sm outline-none ring-offset-2 ring-offset-background focus-visible:ring-2 focus-visible:ring-primary">
             <span>UNIT &nbsp;</span>
-            <div className="text-small text-default-500 flex">
+            <span className="text-small text-default-500 inline-flex">
               {sector.unitPriceMin}
-            </div>
+            </span>
             |
-            <div className="text-small text-default-500 flex">
+            <span className="text-small text-default-500 inline-flex">
               {sector.unitPriceMax}
-            </div>
-          </button>
+            </span>
+          </span>
         </PopoverTrigger>
         <PopoverContent className={tooltipStyle}>
           <p className={tooltipParagraphStyle}>
@@ -113,16 +113,16 @@ const SectorInfo = ({ sector }: { sector: SectorWithCompanies }) => (
       </Popover>
       <Popover placement="top">
         <PopoverTrigger>
-          <button type="button" className="text-small text-default-500 flex cursor-pointer bg-transparent border-none text-inherit">
+          <span className="text-small text-default-500 inline-flex items-center cursor-pointer rounded-sm outline-none ring-offset-2 ring-offset-background focus-visible:ring-2 focus-visible:ring-primary">
             <span>IPO &nbsp;</span>
-            <div className="text-small text-default-500 flex">
+            <span className="text-small text-default-500 inline-flex">
               {sector.ipoMin}
-            </div>
+            </span>
             |
-            <div className="text-small text-default-500 flex">
+            <span className="text-small text-default-500 inline-flex">
               {sector.ipoMax}
-            </div>
-          </button>
+            </span>
+          </span>
         </PopoverTrigger>
         <PopoverContent className={tooltipStyle}>
           <p className={tooltipParagraphStyle}>
@@ -133,10 +133,10 @@ const SectorInfo = ({ sector }: { sector: SectorWithCompanies }) => (
       </Popover>
       <Popover placement="top">
         <PopoverTrigger>
-          <button type="button" className="text-small text-default-500 flex cursor-pointer bg-transparent border-none text-inherit">
+          <span className="text-small text-default-500 inline-flex items-center cursor-pointer rounded-sm outline-none ring-offset-2 ring-offset-background focus-visible:ring-2 focus-visible:ring-primary">
             <RiFundsFill size={18} className="mr-1" />
             {calculateAverageStockPrice(sector.Company)}
-          </button>
+          </span>
         </PopoverTrigger>
         <PopoverContent className={tooltipStyle}>
           <p className={tooltipParagraphStyle}>

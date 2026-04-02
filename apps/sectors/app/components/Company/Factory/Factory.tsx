@@ -13,7 +13,7 @@ interface FactoryProps {
   resources: { type: ResourceType; price: number }[];
   isOperational: boolean;
   totalValue: number;
-  /** Attraction = unit price − brand score; used at consumer determination for where to shop. Shown when provided (modern operations). */
+  /** Attraction = this factory's product unit price (sum of resource prices) − company brand score. Shown when provided (modern operations). */
   attraction?: number;
 }
 
@@ -231,14 +231,14 @@ export function Factory({
               <div className="px-1 py-1 max-w-xs">
                 <div className="text-small font-semibold mb-1">Consumers</div>
                 <div className="text-small text-default-500">
-                  Number of customers this factory can serve. Customers are allocated during consumer determination based on attraction (unit price − brand score); lower attraction is preferred.
+                  Number of customers this factory can serve. Customers are allocated during consumer determination based on attraction (this factory&apos;s product unit price − brand score); lower attraction is preferred.
                 </div>
               </div>
             </PopoverContent>
           </Popover>
         </div>
 
-        {/* Attraction (unit price of factory product; used at consumer determination for where to shop) */}
+        {/* Attraction (product unit price − brand score; used at consumer determination) */}
         {typeof attraction === 'number' && (
           <div className="flex items-center gap-1">
             <RiHeartFill size={14} className="text-amber-400 shrink-0" />
@@ -253,7 +253,7 @@ export function Factory({
                 <div className="px-1 py-1 max-w-xs">
                   <div className="text-small font-semibold mb-1">Attraction</div>
                   <div className="text-small text-default-500">
-                    Unit price of the factory product (unit price − brand score). This is the effective price to customers when they choose where to shop; lower is better. Ties go to more complex factories.
+                    This factory&apos;s product unit price (sum of resource prices above) minus your company brand score. Effective price customers use when choosing where to shop; lower is better. Ties use share price, then factory slot order.
                   </div>
                 </div>
               </PopoverContent>

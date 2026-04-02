@@ -54,11 +54,16 @@ import {
   OperationMechanicsVersion,
   ResourceType,
   ResourceTrackType,
+  FactorySize,
+  MarketingCampaignTier,
 } from '@prisma/client';
 import { GamesService } from '@server/games/games.service';
 import { CompanyService } from '@server/company/company.service';
 import { SectorService } from '@server/sector/sector.service';
 import { FactoryProductionService } from '@server/factory-production/factory-production.service';
+import { FactoryConstructionService } from '@server/factory-construction/factory-construction.service';
+import { FactoryConstructionOrderService } from '@server/factory-construction/factory-construction-order.service';
+import { MarketingService } from '@server/marketing/marketing.service';
 import { gameDataJson } from '@server/data/gameData';
 import { StartGameInput } from './game-management.interface';
 import {
@@ -158,6 +163,7 @@ import {
   getSectorResourceForSectorName,
   getResourcePriceForResourceType,
   DEFAULT_WORKERS,
+  RESEARCH_COSTS_BY_PHASE,
 } from '@server/data/constants';
 import { TimerService } from '@server/timer/timer.service';
 import {
@@ -183,6 +189,8 @@ import {
   getCompanyActionCost,
   sortSectorIdsByPriority,
   getPassiveEffectForSector,
+  getNumberForFactorySize,
+  validFactorySizeForResearchStage,
 } from '@server/data/helpers';
 import { PusherService } from 'nestjs-pusher';
 import {
@@ -238,6 +246,14 @@ import {
 } from 'unique-names-generator';
 import { randomUUID } from 'crypto';
 import { AiBotService } from '@server/ai-bot/ai-bot.service';
+import {
+  BOT_MODERN_OPS_PROFILES,
+  buildFactorySizeTryOrder,
+  getBotModernOperationsPersonality,
+  marketingTierResourceCount,
+  pickMarketingTierWeighted,
+  shouldSkipBotMarketing,
+} from '@server/ai-bot/bot-modern-operations-personality';
 import { RevenueDistributionVoteService } from '@server/revenue-distribution-vote/revenue-distribution-vote.service';
 import { OperatingRoundVoteService } from '@server/operating-round-vote/operating-round-vote.service';
 import { ModernOperationMechanicsService } from './modern-operation-mechanics.service';
@@ -316,6 +332,9 @@ export class GameManagementService {
     private resourceService: ResourceService,
     private factoryProductionService: FactoryProductionService,
     private forecastService: ForecastService,
+    private factoryConstructionService: FactoryConstructionService,
+    private factoryConstructionOrderService: FactoryConstructionOrderService,
+    private marketingService: MarketingService,
   ) {}
 
   /**
@@ -338,6 +357,13 @@ export class GameManagementService {
       );
       // If the modern service handled the phase, check if we need to auto-transition
       if (handled) {
+        if (phase.name === PhaseName.MODERN_OPERATIONS) {
+          try {
+            await this.botHandleModernOperations(phase);
+          } catch (err) {
+            console.error('botHandleModernOperations failed:', err);
+          }
+        }
         // Auto-transition FORECAST_RESOLVE after completion (timerless games)
         if (phase.name === PhaseName.FORECAST_RESOLVE && game.isTimerless) {
           await this.handlePhaseTransition({
@@ -11239,24 +11265,105 @@ export class GameManagementService {
   /**
    * OPERATING_PRODUCTION_VOTE
    *
-   * Each bot will fetch the same OperatingRound + ProductionResults
-   * that humans see, then cast a RevenueDistribution vote.
+   * Legacy: one vote per ProductionResult per bot (productionResult linked).
+   * Modern: one vote per company the bot holds PLAYER shares in (no ProductionResult;
+   * matches OperatingRoundRevenueVoteV2 / calculateAndDistributeDividendsModern).
    */
   private async botHandleOperatingProductionVote(
     gameId: string,
   ): Promise<void> {
-    // 1) Grab bot players
-    const botPlayers = await this.aiBotService.getBotPlayers(gameId);
-    if (!botPlayers.length) return;
-
-    // 2) Get current phase with an operatingRoundId
     const currentPhase = await this.phaseService.currentPhase(gameId);
     if (!currentPhase?.operatingRoundId) {
       console.log(`No operatingRoundId found for phase in gameId=${gameId}.`);
       return;
     }
 
-    // 3) Fetch the operating round + production results
+    const game = await this.gamesService.game({ id: gameId });
+    if (!game) {
+      console.log(`Game not found for gameId=${gameId}.`);
+      return;
+    }
+
+    const votePromises: Promise<void>[] = [];
+
+    if (game.operationMechanicsVersion === OperationMechanicsVersion.MODERN) {
+      const botsWithShares =
+        await this.aiBotService.getBotPlayersWithShares(gameId);
+      if (!botsWithShares.length) return;
+
+      for (const bot of botsWithShares) {
+        const heldCompanyIds = new Set(
+          bot.Share.filter(
+            (s) =>
+              s.location === ShareLocation.PLAYER && s.shortOrderId == null,
+          ).map((s) => s.companyId),
+        );
+
+        for (const companyId of heldCompanyIds) {
+          const company = await this.companyService.company({
+            id: companyId,
+          });
+          if (
+            !company ||
+            (company.status !== CompanyStatus.ACTIVE &&
+              company.status !== CompanyStatus.INSOLVENT)
+          ) {
+            continue;
+          }
+
+          let chosenDistribution: RevenueDistribution;
+          const turnRevenue =
+            await this.factoryProductionService.getCompanyTurnRevenue(
+              companyId,
+              currentPhase.gameTurnId,
+            );
+          if (turnRevenue < 0) {
+            chosenDistribution = RevenueDistribution.RETAINED;
+          } else {
+            const companyCash = company.cashOnHand || 0;
+            if (companyCash < 80) {
+              chosenDistribution = RevenueDistribution.RETAINED;
+            } else if (companyCash < 150) {
+              chosenDistribution = RevenueDistribution.DIVIDEND_FIFTY_FIFTY;
+            } else {
+              chosenDistribution = RevenueDistribution.DIVIDEND_FULL;
+            }
+          }
+
+          votePromises.push(
+            (async () => {
+              try {
+                await this.revenueDistributionVoteService.createRevenueDistributionVote(
+                  {
+                    OperatingRound: {
+                      connect: { id: currentPhase.operatingRoundId! },
+                    },
+                    Player: { connect: { id: bot.id } },
+                    Company: { connect: { id: companyId } },
+                    revenueDistribution: chosenDistribution,
+                  },
+                );
+                console.log(
+                  `Bot [${bot.nickname}] voted ${chosenDistribution} for ${company.name} (modern operations).`,
+                );
+              } catch (error) {
+                console.error(
+                  `Bot [${bot.nickname}] failed modern revenue vote for companyId=${companyId}:`,
+                  error,
+                );
+              }
+            })(),
+          );
+        }
+      }
+
+      await Promise.all(votePromises);
+      return;
+    }
+
+    const botPlayers = await this.aiBotService.getBotPlayers(gameId);
+    if (!botPlayers.length) return;
+
     const operatingRound =
       await this.operatingRoundService.operatingRoundWithProductionResults({
         id: currentPhase.operatingRoundId,
@@ -11274,18 +11381,10 @@ export class GameManagementService {
       return;
     }
 
-    // We'll collect all votes in an array of promises for parallel execution
-    const votePromises: Promise<void>[] = [];
-
-    // 4) For each bot, for each ProductionResult, pick the distribution + create vote promise
     for (const bot of botPlayers) {
       for (const result of operatingRound.productionResults) {
-        // only ACTIVE companies
         if (result.Company?.status !== CompanyStatus.ACTIVE) continue;
 
-        // a) Decide distribution based on company cash
-        //    e.g. if result.Company.cashOnHand < 80 => RETAINED
-        //    or < 150 => FIFTY_FIFTY, else FULL
         let chosenDistribution: RevenueDistribution;
 
         const companyCash = result.Company.cashOnHand || 0;
@@ -11297,37 +11396,354 @@ export class GameManagementService {
           chosenDistribution = RevenueDistribution.DIVIDEND_FULL;
         }
 
-        // b) Build a promise for the vote
-        const votePromise = (async () => {
-          try {
-            await this.revenueDistributionVoteService.createRevenueDistributionVote(
-              {
-                OperatingRound: { connect: { id: operatingRound.id } },
-                ProductionResult: { connect: { id: result.id } },
-                Player: { connect: { id: bot.id } },
-                Company: { connect: { id: result.companyId } },
-                revenueDistribution: chosenDistribution,
-              },
-            );
+        votePromises.push(
+          (async () => {
+            try {
+              await this.revenueDistributionVoteService.createRevenueDistributionVote(
+                {
+                  OperatingRound: { connect: { id: operatingRound.id } },
+                  ProductionResult: { connect: { id: result.id } },
+                  Player: { connect: { id: bot.id } },
+                  Company: { connect: { id: result.companyId } },
+                  revenueDistribution: chosenDistribution,
+                },
+              );
 
-            console.log(
-              `Bot [${bot.nickname}] voted ${chosenDistribution} for Company ${result.Company?.name}.`,
-            );
-          } catch (error) {
-            console.error(
-              `Bot [${bot.nickname}] failed to cast vote for ProductionResult=${result.id}:`,
-              error,
-            );
-          }
-        })();
-
-        // c) Push promise into the array
-        votePromises.push(votePromise);
+              console.log(
+                `Bot [${bot.nickname}] voted ${chosenDistribution} for Company ${result.Company?.name}.`,
+              );
+            } catch (error) {
+              console.error(
+                `Bot [${bot.nickname}] failed to cast vote for ProductionResult=${result.id}:`,
+                error,
+              );
+            }
+          })(),
+        );
       }
     }
 
-    // 5) Execute all votes in parallel
     await Promise.all(votePromises);
+  }
+
+  /**
+   * Bot CEOs submit modern operations (factory orders, research, marketing) like humans.
+   * Each bot has a stable {@link getBotModernOperationsPersonality} driving priorities,
+   * random tier/size bias, optional marketing skips when cash is tight, and 1–3 factory tries.
+   */
+  private async botHandleModernOperations(phase: Phase): Promise<void> {
+    if (phase.name !== PhaseName.MODERN_OPERATIONS) return;
+
+    const bots = await this.aiBotService.getBotPlayers(phase.gameId);
+    if (!bots.length) return;
+
+    const nicknameById = new Map(bots.map((b) => [b.id, b.nickname]));
+    const botIdSet = new Set(bots.map((b) => b.id));
+    const companies = await this.prisma.company.findMany({
+      where: {
+        gameId: phase.gameId,
+        ceoId: { in: Array.from(botIdSet) },
+        status: { in: [CompanyStatus.ACTIVE, CompanyStatus.INSOLVENT] },
+      },
+      include: { Sector: true },
+    });
+    if (!companies.length) return;
+
+    const gameRow = await this.prisma.game.findUnique({
+      where: { id: phase.gameId },
+      select: { workers: true, currentTurn: true },
+    });
+    if (!gameRow?.currentTurn) return;
+
+    const resources = await this.prisma.resource.findMany({
+      where: { gameId: phase.gameId },
+    });
+    const resourcePriceMap = new Map<ResourceType, number>(
+      resources.map((r) => [r.type, r.price]),
+    );
+
+    let plannedWorkerSpend = 0;
+
+    for (const company of companies) {
+      if (!company.ceoId || !company.sectorId || !company.Sector) continue;
+
+      const rng = Math.random;
+      const personality = getBotModernOperationsPersonality(company.ceoId);
+      const profile = BOT_MODERN_OPS_PROFILES[personality];
+      const botLabel =
+        nicknameById.get(company.ceoId) ?? company.ceoId.slice(0, 8);
+
+      const sector = company.Sector;
+      const rm = sector.researchMarker || 0;
+
+      let factoryResearchStage = 1;
+      if (rm >= 10) factoryResearchStage = 4;
+      else if (rm >= 7) factoryResearchStage = 3;
+      else if (rm >= 4) factoryResearchStage = 2;
+
+      const maxSlots =
+        this.modernOperationMechanicsService.getMaxFactorySlotsForResearchMarker(
+          rm,
+        );
+
+      let pendingFactoryOrders =
+        await this.factoryConstructionOrderService.factoryConstructionOrdersWithRelations(
+          {
+            where: {
+              companyId: company.id,
+              gameId: phase.gameId,
+              gameTurnId: gameRow.currentTurn,
+            },
+          },
+        );
+
+      const existingFactoryCount = await this.prisma.factory.count({
+        where: { companyId: company.id, gameId: phase.gameId },
+      });
+
+      let pendingResearchOrders = await this.prisma.researchOrder.findMany({
+        where: {
+          companyId: company.id,
+          gameId: phase.gameId,
+          gameTurnId: gameRow.currentTurn,
+          researchProgressGain: null,
+        },
+      });
+
+      const computeFactoryPendingCost = () =>
+        this.botComputePendingFactoryOrdersCost(
+          pendingFactoryOrders.map((o) => ({
+            size: o.size,
+            resourceTypes: o.resourceTypes as ResourceType[],
+          })),
+          resourcePriceMap,
+        );
+
+      let totalPendingFactoryCost = computeFactoryPendingCost();
+      let totalPendingResearchCost = pendingResearchOrders.reduce(
+        (s, o) => s + o.cost,
+        0,
+      );
+
+      const researchStageForCost = Math.min(Math.floor(rm / 3) + 1, 4);
+      const researchCost =
+        RESEARCH_COSTS_BY_PHASE[researchStageForCost - 1] ??
+        RESEARCH_COSTS_BY_PHASE[0];
+
+      // 1) Research (personality may skip)
+      if (rng() >= profile.researchSkipProbability) {
+        const totalWithResearchOnly =
+          totalPendingFactoryCost + totalPendingResearchCost + researchCost;
+        const companyForResearch = await this.companyService.company({
+          id: company.id,
+        });
+        if (
+          companyForResearch &&
+          companyForResearch.cashOnHand >= totalWithResearchOnly
+        ) {
+          try {
+            await this.prisma.researchOrder.create({
+              data: {
+                companyId: company.id,
+                gameId: phase.gameId,
+                gameTurnId: gameRow.currentTurn,
+                phaseId: phase.id,
+                playerId: company.ceoId,
+                sectorId: company.sectorId,
+                cost: researchCost,
+              },
+            });
+            pendingResearchOrders = await this.prisma.researchOrder.findMany({
+              where: {
+                companyId: company.id,
+                gameId: phase.gameId,
+                gameTurnId: gameRow.currentTurn,
+                researchProgressGain: null,
+              },
+            });
+            totalPendingResearchCost = pendingResearchOrders.reduce(
+              (s, o) => s + o.cost,
+              0,
+            );
+            console.log(
+              `Bot [${botLabel}] (${profile.label}) research $${researchCost} — ${company.name}`,
+            );
+          } catch (e) {
+            console.error(`Bot research order failed for ${company.name}:`, e);
+          }
+        }
+      }
+
+      // 2) Factory construction — up to profile.maxFactoryAttempts per phase
+      for (
+        let attempt = 0;
+        attempt < profile.maxFactoryAttempts;
+        attempt++
+      ) {
+        if (existingFactoryCount + pendingFactoryOrders.length >= maxSlots) {
+          break;
+        }
+
+        const factorySizesToTry = buildFactorySizeTryOrder(
+          personality,
+          factoryResearchStage,
+          rng,
+        );
+
+        let placedThisAttempt = false;
+        for (const size of factorySizesToTry) {
+          if (existingFactoryCount + pendingFactoryOrders.length >= maxSlots) {
+            break;
+          }
+
+          const requiredW =
+            this.modernOperationMechanicsService.getRequiredWorkersForFactorySize(
+              size,
+            );
+          if (gameRow.workers < plannedWorkerSpend + requiredW) {
+            continue;
+          }
+
+          const blueprint =
+            await this.modernOperationMechanicsService.getRequiredResourcesForFactory(
+              size,
+              sector.sectorName,
+            );
+          const resourceTypes: ResourceType[] = [];
+          for (const entry of blueprint) {
+            for (let i = 0; i < entry.quantity; i++) {
+              resourceTypes.push(entry.type);
+            }
+          }
+          if (resourceTypes.length > getNumberForFactorySize(size) + 1) {
+            continue;
+          }
+
+          let totalResourceCost = 0;
+          for (const rt of resourceTypes) {
+            totalResourceCost += resourcePriceMap.get(rt) || 0;
+          }
+          const factorySizeNumber = getNumberForFactorySize(size);
+          const PLOT_FEE_FRESH = 100;
+          const constructionCost =
+            totalResourceCost * factorySizeNumber + PLOT_FEE_FRESH;
+
+          const totalCost =
+            totalPendingFactoryCost +
+            totalPendingResearchCost +
+            constructionCost;
+          const freshCompany = await this.companyService.company({
+            id: company.id,
+          });
+          if (!freshCompany || freshCompany.cashOnHand < totalCost) {
+            continue;
+          }
+
+          try {
+            await this.factoryConstructionService.createOrder({
+              companyId: company.id,
+              gameId: phase.gameId,
+              size,
+              resourceTypes,
+              playerId: company.ceoId,
+            });
+            plannedWorkerSpend += requiredW;
+            pendingFactoryOrders =
+              await this.factoryConstructionOrderService.factoryConstructionOrdersWithRelations(
+                {
+                  where: {
+                    companyId: company.id,
+                    gameId: phase.gameId,
+                    gameTurnId: gameRow.currentTurn,
+                  },
+                },
+              );
+            totalPendingFactoryCost = computeFactoryPendingCost();
+            console.log(
+              `Bot [${botLabel}] (${profile.label}) factory ${size} — ${company.name} (attempt ${attempt + 1}/${profile.maxFactoryAttempts})`,
+            );
+            placedThisAttempt = true;
+            break;
+          } catch (e) {
+            console.error(`Bot factory order failed for ${company.name}:`, e);
+          }
+        }
+
+        if (!placedThisAttempt) {
+          break;
+        }
+      }
+
+      // 3) Marketing — may skip when cash is tight (or loosely) per personality; tier is weighted random
+      const companyForMarketing = await this.companyService.company({
+        id: company.id,
+      });
+      if (!companyForMarketing) continue;
+
+      if (
+        shouldSkipBotMarketing(
+          profile,
+          companyForMarketing.cashOnHand,
+          researchCost,
+          rng,
+        )
+      ) {
+        console.log(
+          `Bot [${botLabel}] (${profile.label}) skipped marketing — ${company.name}`,
+        );
+        continue;
+      }
+
+      const tier = pickMarketingTierWeighted(
+        profile,
+        personality,
+        companyForMarketing.cashOnHand,
+        rng,
+      );
+      if (!tier) continue;
+
+      const needCount = marketingTierResourceCount(tier);
+      const sortedByPrice = [...resources].sort((a, b) => a.price - b.price);
+      if (!sortedByPrice.length) continue;
+
+      const chosenResources: ResourceType[] = [];
+      for (let i = 0; i < needCount; i++) {
+        chosenResources.push(sortedByPrice[i % sortedByPrice.length].type);
+      }
+
+      try {
+        await this.marketingService.createCampaign({
+          companyId: company.id,
+          gameId: phase.gameId,
+          tier,
+          operationMechanicsVersion: OperationMechanicsVersion.MODERN,
+          resourceTypes: chosenResources,
+        });
+        console.log(
+          `Bot [${botLabel}] (${profile.label}) marketing ${tier} — ${company.name}`,
+        );
+      } catch (e) {
+        console.error(`Bot marketing failed for ${company.name}:`, e);
+      }
+    }
+  }
+
+  private botComputePendingFactoryOrdersCost(
+    orders: { size: FactorySize; resourceTypes: ResourceType[] }[],
+    resourcePriceMap: Map<ResourceType, number>,
+  ): number {
+    const PLOT_FEE_FRESH = 100;
+    let total = 0;
+    for (const order of orders) {
+      let orderResourceCost = 0;
+      for (const resourceType of order.resourceTypes) {
+        orderResourceCost += resourcePriceMap.get(resourceType) || 0;
+      }
+      total +=
+        orderResourceCost * getNumberForFactorySize(order.size) +
+        PLOT_FEE_FRESH;
+    }
+    return total;
   }
 
   /**

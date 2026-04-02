@@ -6,7 +6,6 @@ import { trpc } from "@sectors/app/trpc";
 import { Spinner, Chip, Popover, PopoverContent, PopoverTrigger, Switch, Tab, Tabs } from "@nextui-org/react";
 import { RiVipCrown2Fill, RiInformationLine, RiMegaphoneFill, RiTestTubeFill } from "@remixicon/react";
 import { cn } from "@/lib/utils";
-import PlayerAvatar from "../../../Player/PlayerAvatar";
 import CompanyInfoV2 from "../../../Company/CompanyV2/CompanyInfoV2";
 import { ModernOperationsLayout, ModernOperationsSection } from "../layouts";
 import { SectorResearchTracks } from "../../Tracks";
@@ -239,27 +238,18 @@ export default function ModernOperationsResolve() {
                     >
                       <div className="p-4">
                         <CompanyInfoV2 companyId={company.id} />
+                        {/* Flow layout: absolute overlay collided with the IPO/stock row in CompanyInfoV2. */}
+                        {company.isCEO ? (
+                          <div className="mt-3 pt-3 border-t border-white/10 flex flex-wrap items-center gap-2 text-green-400 text-xs font-semibold">
+                            <RiVipCrown2Fill size={14} className="shrink-0" />
+                            <span>You are CEO</span>
+                          </div>
+                        ) : !company.ceoPlayer ? (
+                          <div className="mt-3 pt-3 border-t border-white/10 text-gray-500 text-xs">
+                            CEO: Unknown
+                          </div>
+                        ) : null}
                       </div>
-
-                      {/* CEO Indicator */}
-                      {company.isCEO ? (
-                        <div className="absolute top-2 right-2 flex items-center gap-1 text-green-400 text-xs font-semibold">
-                          <RiVipCrown2Fill size={14} />
-                          <span>You are CEO</span>
-                        </div>
-                      ) : company.ceoPlayer ? (
-                        <div className="absolute top-2 right-2 flex items-center gap-1 text-gray-400 text-xs">
-                          <span>CEO:</span>
-                          <PlayerAvatar player={company.ceoPlayer} size="sm" />
-                          <span className="text-gray-300">
-                            {company.ceoPlayer.nickname}
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="absolute top-2 right-2 text-gray-500 text-xs">
-                          CEO: Unknown
-                        </div>
-                      )}
                     </div>
                   );
                 })}
