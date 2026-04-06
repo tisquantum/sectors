@@ -117,10 +117,8 @@ const FactoryConstructionPhase = () => {
                         />
                       </div>
 
-                      {/* Outstanding Orders & History */}
-                      <div className="pt-2 border-t border-gray-700">
-                        <ConstructionOrders companyId={company.id} gameId={gameId} />
-                      </div>
+                      {/* Outstanding Orders & History (border only when content exists) */}
+                      <ConstructionOrders companyId={company.id} gameId={gameId} />
 
                       {/* Build Factory Button */}
                       <Button

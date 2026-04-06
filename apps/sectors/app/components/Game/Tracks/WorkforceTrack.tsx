@@ -104,7 +104,7 @@ export function WorkforceTrack() {
     return map;
   }, [workerAllocationBySector, allocatedWorkers]);
 
-  const spaces = Array.from({ length: 40 }, (_, i) => i + 1);
+  const spaces = Array.from({ length: 50 }, (_, i) => i + 1);
   const isLoading = isLoadingGame || isLoadingAllocation;
 
   if (isLoading) {

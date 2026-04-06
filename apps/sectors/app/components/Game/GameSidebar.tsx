@@ -11,7 +11,7 @@ const GameSidebar = () => {
   const [isVertical, setIsVertical] = useState(false);
 
   return (
-    <div className="w-auto max-w-full lg:max-w-md relative flex flex-col md:h-[calc(100vh-64px)]">
+    <div className="w-auto max-w-full lg:max-w-md relative flex flex-col md:h-full min-h-0">
       <div className="text-white p-4">
         <h1 className="text-xl font-bold">{gameState.name}</h1>
       </div>

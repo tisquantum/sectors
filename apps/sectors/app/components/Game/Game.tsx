@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import GameSidebar from "./GameSidebar";
 import GameTopBar from "./GameTopBar";
@@ -85,6 +85,12 @@ import InsolvencyContributionComponent from "../Company/InsolvencyContribution";
 import { CompanyStatus } from "@server/prisma/prisma.client";
 import ForecastPhase from "./ForecastPhase";
 import ForecastResolve from "./ForecastResolve";
+import {
+  formatGameHash,
+  normalizeGameView,
+  parseGameHash,
+  sanitizeGameNavForState,
+} from "./gameHashNavigation";
 
 const determineGameRound = (
   game: GameState
@@ -155,13 +161,6 @@ const TimesUp = () => (
   </div>
 );
 
-const VALID_VIEWS = ["action", "pending", "chart", "companies", "economy", "operations"] as const;
-type GameView = (typeof VALID_VIEWS)[number];
-
-function normalizeView(view: string): GameView {
-  return VALID_VIEWS.includes(view as GameView) ? (view as GameView) : "action";
-}
-
 const Game = ({ gameId }: { gameId: string }) => {
   const { gameState, currentPhase } = useGame();
   const {
@@ -171,8 +170,106 @@ const Game = ({ gameId }: { gameId: string }) => {
     toggleDrawer,
   } = useDrawer();
   const [currentViewState, setCurrentViewState] = useState<string>("action");
-  const currentView = normalizeView(currentViewState);
-  const setCurrentView = (view: string) => setCurrentViewState(normalizeView(view));
+  const [economyTabKey, setEconomyTabKey] = useState<string>("overview");
+  const [operationsTabKey, setOperationsTabKey] = useState<string>("consumption");
+  const [companiesTabKey, setCompaniesTabKey] = useState<string>("companies");
+  const currentView = normalizeGameView(currentViewState);
+  const tabsRef = useRef({
+    economyTab: economyTabKey,
+    operationsTab: operationsTabKey,
+    companiesTab: companiesTabKey,
+  });
+  tabsRef.current = {
+    economyTab: economyTabKey,
+    operationsTab: operationsTabKey,
+    companiesTab: companiesTabKey,
+  };
+
+  const replaceUrlHash = useCallback((fragment: string) => {
+    if (typeof window === "undefined") return;
+    const url = `${window.location.pathname}${window.location.search}#${fragment}`;
+    window.history.replaceState(null, "", url);
+  }, []);
+
+  const navigateToPrimaryView = useCallback((view: string) => {
+    const v = normalizeGameView(view);
+    if (v === "economy") {
+      window.location.hash = "economy";
+    } else if (v === "operations") {
+      window.location.hash = "operations";
+    } else if (v === "companies") {
+      window.location.hash = "companies";
+    } else {
+      window.location.hash = v;
+    }
+  }, []);
+
+  const handleEconomyTabChange = useCallback(
+    (key: string) => {
+      setEconomyTabKey(key);
+      const { operationsTab, companiesTab } = tabsRef.current;
+      replaceUrlHash(
+        formatGameHash("economy", {
+          economyTab: key,
+          operationsTab,
+          companiesTab,
+        })
+      );
+    },
+    [replaceUrlHash]
+  );
+
+  const handleOperationsTabChange = useCallback(
+    (key: string) => {
+      setOperationsTabKey(key);
+      const { economyTab, companiesTab } = tabsRef.current;
+      replaceUrlHash(
+        formatGameHash("operations", {
+          economyTab,
+          operationsTab: key,
+          companiesTab,
+        })
+      );
+    },
+    [replaceUrlHash]
+  );
+
+  const handleCompaniesTabChange = useCallback(
+    (key: string) => {
+      setCompaniesTabKey(key);
+      const { economyTab, operationsTab } = tabsRef.current;
+      replaceUrlHash(
+        formatGameHash("companies", {
+          economyTab,
+          operationsTab,
+          companiesTab: key,
+        })
+      );
+    },
+    [replaceUrlHash]
+  );
+
+  useEffect(() => {
+    const applyHash = () => {
+      const parsed = parseGameHash(window.location.hash);
+      const sanitized = sanitizeGameNavForState(parsed, {
+        isModernOps:
+          gameState?.operationMechanicsVersion ===
+          OperationMechanicsVersion.MODERN,
+        useOptionOrders: !!gameState?.useOptionOrders,
+      });
+      setCurrentViewState(sanitized.view);
+      setEconomyTabKey(sanitized.economyTab);
+      setOperationsTabKey(sanitized.operationsTab);
+      setCompaniesTabKey(sanitized.companiesTab);
+    };
+    applyHash();
+    window.addEventListener("hashchange", applyHash);
+    return () => window.removeEventListener("hashchange", applyHash);
+  }, [
+    gameState?.operationMechanicsVersion,
+    gameState?.useOptionOrders,
+  ]);
   const [showPhaseList, setShowPhaseList] = useState<boolean>(true);
   const constraintsRef = useRef(null);
   const [isTimerAtZero, setIsTimerAtZero] = useState(false);
@@ -216,11 +313,6 @@ const Game = ({ gameId }: { gameId: string }) => {
     }, 1000);
     return () => clearInterval(timer);
   }, [currentPhase?.name, currentPhase?.phaseStartTime, currentPhase?.phaseTime, currentPhase]);
-  const handleCurrentView = (view: string) => {
-    console.log(`[Game] handleCurrentView called with: ${view}`);
-    setCurrentView(view);
-  };
-
   // Keyboard shortcuts
   useKeyboardShortcuts({
     onEscape: () => {
@@ -231,7 +323,7 @@ const Game = ({ gameId }: { gameId: string }) => {
         closeSidebarModal();
       }
     },
-    onViewChange: handleCurrentView,
+    onViewChange: navigateToPrimaryView,
     onTogglePhaseList: () => setShowPhaseList((prev) => !prev),
     enabled: true,
   });
@@ -411,7 +503,7 @@ const Game = ({ gameId }: { gameId: string }) => {
         onOpenChange={toggleDrawer}
         direction="right"
       >
-        <div className="relative flex flex-col lg:flex-row flex-grow w-full overflow-y scrollbar lg:overflow-hidden bg-background">
+        <div className="relative flex flex-col lg:flex-row flex-grow w-full h-full min-h-0 overflow-y scrollbar lg:overflow-hidden bg-background">
           <div className="hidden lg:block">
             <GameSidebar />
           </div>
@@ -433,7 +525,6 @@ const Game = ({ gameId }: { gameId: string }) => {
 
             <GameTopBar
               currentView={currentView}
-              onViewChange={setCurrentView}
               handleTogglePhaseList={() => setShowPhaseList((prev) => !prev)}
               isTimerAtZero={isTimerAtZero}
             />
@@ -483,9 +574,24 @@ const Game = ({ gameId }: { gameId: string }) => {
                 )}
                 {currentView === "chart" && <StockChart />}
                 {currentView === "pending" && <PendingOrders />}
-                {currentView === "economy" && <EndTurnEconomy />}
-                {currentView === "companies" && <MarketsView />}
-                {currentView === "operations" && <OperationsView />}
+                {currentView === "economy" && (
+                  <EndTurnEconomy
+                    selectedTabKey={economyTabKey}
+                    onTabChange={handleEconomyTabChange}
+                  />
+                )}
+                {currentView === "companies" && (
+                  <MarketsView
+                    selectedTabKey={companiesTabKey}
+                    onTabChange={handleCompaniesTabChange}
+                  />
+                )}
+                {currentView === "operations" && (
+                  <OperationsView
+                    selectedTabKey={operationsTabKey}
+                    onTabChange={handleOperationsTabChange}
+                  />
+                )}
                 {gameState.gameStatus == GameStatus.FINISHED && (
                   <GameResults
                     isOpen={isOpen}

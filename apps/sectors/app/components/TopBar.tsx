@@ -138,7 +138,7 @@ const AuthMenu = memo(
 
 AuthMenu.displayName = "AuthMenu";
 
-const TopBar = () => {
+const TopBar = ({ isOverlay = false }: { isOverlay?: boolean }) => {
   const { user, loading } = useAuthUser();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const supabase = createClient();
@@ -159,7 +159,14 @@ const TopBar = () => {
 
   return (
     <>
-      <Navbar isBordered shouldHideOnScroll onMenuOpenChange={setIsMenuOpen}>
+      <Navbar
+        isBordered
+        shouldHideOnScroll={!isOverlay}
+        onMenuOpenChange={setIsMenuOpen}
+        className={
+          isOverlay ? "bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80" : undefined
+        }
+      >
         <NavbarBrand>
           <Link href="/">
             <div className="flex flex-col gap-1 hover:text-primary-400">

@@ -4,20 +4,25 @@ import { Tab, Tabs } from '@nextui-org/react';
 import { useGame } from './GameContext';
 import { Spinner } from '@nextui-org/react';
 import { OperationMechanicsVersion } from '@server/prisma/prisma.client';
+import type { Key } from 'react';
 import { ConsumptionPhase as ModernConsumptionPhase } from './ModernOperations/phases';
 import { EarningsCallPhase as ModernEarningsCallPhase } from './ModernOperations/phases';
-import { MarketingAndResearchPhase as ModernMarketingAndResearchPhase } from './ModernOperations/phases';
-import { MarketingAndResearchResolvePhase as ModernMarketingAndResearchResolvePhase } from './ModernOperations/phases';
 import { ModernOperations as ModernOperationsPhase } from './ModernOperations/phases';
 import { ModernOperationsResolve as ModernOperationsResolvePhase } from './ModernOperations/phases';
-import { ResourceTracksContainer } from './ResourceTracksContainer';
-import { WorkforceTrack } from './Tracks';
+
+type OperationsViewProps = {
+  selectedTabKey: string;
+  onTabChange: (key: string) => void;
+};
 
 /**
  * Operations View - Modern Operations
  * Shows consumption phase, earnings, and marketing/research in separate tabs
  */
-export function OperationsView() {
+export function OperationsView({
+  selectedTabKey,
+  onTabChange,
+}: OperationsViewProps) {
   const { gameState, gameId } = useGame();
 
   if (!gameState || !gameId) {
@@ -39,8 +44,12 @@ export function OperationsView() {
 
   return (
     <div className="w-full h-full">
-      <Tabs aria-label="Operations" className="w-full">
-        {/* Consumption & Earnings Section */}
+      <Tabs
+        aria-label="Operations"
+        className="w-full"
+        selectedKey={selectedTabKey}
+        onSelectionChange={(key: Key) => onTabChange(String(key))}
+      >
         <Tab key="consumption" title="Consumption Phase">
           <div className="w-full h-full p-4">
             <ModernConsumptionPhase />
@@ -53,20 +62,6 @@ export function OperationsView() {
           </div>
         </Tab>
 
-        <Tab key="resource-tracks" title="Resource Tracks">
-          <div className="w-full h-full">
-            <ResourceTracksContainer />
-          </div>
-        </Tab>
-
-        {/* Workforce Track */}
-        <Tab key="workforce-track" title="Workforce Track">
-          <div className="w-full h-full p-4">
-            <WorkforceTrack />
-          </div>
-        </Tab>
-
-        {/* Operations Section (combined: Factory Construction + Marketing + Research) */}
         <Tab key="operations" title="Operations">
           <div className="w-full h-full p-4">
             <ModernOperationsPhase />
@@ -82,4 +77,3 @@ export function OperationsView() {
     </div>
   );
 }
-

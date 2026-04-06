@@ -60,7 +60,7 @@ export function ConstructionOrders({ companyId, gameId, showHistory = true }: Co
 
   if (ordersLoading || historyLoading) {
     return (
-      <div className="flex items-center justify-center py-4">
+      <div className="mt-2 pt-2 border-t border-gray-700 flex items-center justify-center py-4">
         <Spinner size="sm" />
       </div>
     );
@@ -74,7 +74,7 @@ export function ConstructionOrders({ companyId, gameId, showHistory = true }: Co
   }
 
   return (
-    <div className="space-y-4">
+    <div className="mt-2 pt-2 border-t border-gray-700 space-y-4">
       {/* Outstanding Orders */}
       {hasOutstanding && (
         <div className="space-y-2">

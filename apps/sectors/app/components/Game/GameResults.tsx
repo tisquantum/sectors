@@ -18,7 +18,10 @@ import { trpc } from "@sectors/app/trpc";
 import { RiStarFill } from "@remixicon/react";
 import { useMemo } from "react";
 import PlayerAvatar from "../Player/PlayerAvatar";
-import { CompanyStatus } from "@server/prisma/prisma.client";
+import {
+  CompanyStatus,
+  OperationMechanicsVersion,
+} from "@server/prisma/prisma.client";
 
 const PlayerResultsOverview = () => {
   const { gameState } = useGame();
@@ -82,14 +85,29 @@ const PlayerResultsOverview = () => {
 
 const GameResultsOverview = () => {
   const { gameState } = useGame();
-  const { data: productionResults, isLoading: loadingProductionResults } =
-    trpc.productionResult.listProductionResults.useQuery({
-      where: {
-        operatingRoundId: {
-          in: gameState?.OperatingRound.map((round) => round.id) || [],
+  const isModernOps =
+    gameState?.operationMechanicsVersion === OperationMechanicsVersion.MODERN;
+
+  const { data: productionResults, isLoading: loadingLegacyProduction } =
+    trpc.productionResult.listProductionResults.useQuery(
+      {
+        where: {
+          operatingRoundId: {
+            in: gameState?.OperatingRound.map((round) => round.id) || [],
+          },
         },
       },
-    });
+      { enabled: !!gameState?.id && !isModernOps }
+    );
+
+  const { data: factoryProductions, isLoading: loadingFactoryProduction } =
+    trpc.factoryProduction.listForGame.useQuery(
+      { gameId: gameState?.id ?? "" },
+      { enabled: !!gameState?.id && isModernOps }
+    );
+
+  const loadingProductionResults =
+    isModernOps ? loadingFactoryProduction : loadingLegacyProduction;
 
   const totalCompaniesOpened = gameState?.Company.length || 0;
   const remainingBankTotal = gameState?.bankPoolNumber || 0;
@@ -110,29 +128,82 @@ const GameResultsOverview = () => {
     );
   }, [gameState?.Company]);
 
-  const medianProductionResult = useMemo(() => {
-    if (!productionResults || productionResults.length === 0) return "N/A";
+  /** Legacy: one ProductionResult per company per operating round. Modern: sum factory revenue per company per turn. */
+  const {
+    medianProductionResult,
+    highestProductionResult,
+    lowestProductionResult,
+  } = useMemo(() => {
+    if (isModernOps) {
+      if (!factoryProductions?.length) {
+        return {
+          medianProductionResult: "N/A" as const,
+          highestProductionResult: null as null,
+          lowestProductionResult: null as null,
+        };
+      }
+      const byCompanyTurn = new Map<
+        string,
+        { revenue: number; name: string }
+      >();
+      for (const row of factoryProductions) {
+        const key = `${row.companyId}:${row.gameTurnId}`;
+        const prev = byCompanyTurn.get(key);
+        const name = row.Company?.name ?? "Unknown";
+        byCompanyTurn.set(key, {
+          revenue: (prev?.revenue ?? 0) + row.revenue,
+          name: prev?.name ?? name,
+        });
+      }
+      const rows = [...byCompanyTurn.values()];
+      const sorted = [...rows].sort((a, b) => a.revenue - b.revenue);
+      const middle = Math.floor(sorted.length / 2);
+      const median =
+        sorted.length === 0
+          ? ("N/A" as const)
+          : sorted.length % 2 === 0
+            ? (sorted[middle - 1].revenue + sorted[middle].revenue) / 2
+            : sorted[middle].revenue;
+      const highest = rows.reduce((a, b) => (a.revenue >= b.revenue ? a : b));
+      const lowest = rows.reduce((a, b) => (a.revenue <= b.revenue ? a : b));
+      return {
+        medianProductionResult: median,
+        highestProductionResult: {
+          Company: { name: highest.name },
+          revenue: highest.revenue,
+        },
+        lowestProductionResult: {
+          Company: { name: lowest.name },
+          revenue: lowest.revenue,
+        },
+      };
+    }
+
+    if (!productionResults?.length) {
+      return {
+        medianProductionResult: "N/A" as const,
+        highestProductionResult: null as null,
+        lowestProductionResult: null as null,
+      };
+    }
     const sorted = [...productionResults].sort((a, b) => a.revenue - b.revenue);
     const middle = Math.floor(sorted.length / 2);
-    return sorted.length % 2 === 0
-      ? (sorted[middle - 1].revenue + sorted[middle].revenue) / 2
-      : sorted[middle].revenue;
-  }, [productionResults]);
-
-  const highestProductionResult = useMemo(() => {
-    return productionResults?.reduce(
-      (highest, result) =>
-        result.revenue > highest.revenue ? result : highest,
-      productionResults[0]
+    const median =
+      sorted.length % 2 === 0
+        ? (sorted[middle - 1].revenue + sorted[middle].revenue) / 2
+        : sorted[middle].revenue;
+    const highest = productionResults.reduce((h, r) =>
+      r.revenue > h.revenue ? r : h
     );
-  }, [productionResults]);
-
-  const lowestProductionResult = useMemo(() => {
-    return productionResults?.reduce(
-      (lowest, result) => (result.revenue < lowest.revenue ? result : lowest),
-      productionResults[0]
+    const lowest = productionResults.reduce((l, r) =>
+      r.revenue < l.revenue ? r : l
     );
-  }, [productionResults]);
+    return {
+      medianProductionResult: median,
+      highestProductionResult: highest,
+      lowestProductionResult: lowest,
+    };
+  }, [isModernOps, factoryProductions, productionResults]);
 
   const totalCompaniesFloated = gameState?.Company.filter(
     (company) => company.isFloated
@@ -179,18 +250,34 @@ const GameResultsOverview = () => {
           </p>
         </div>
         <div className="p-4 bg-zinc-800 rounded shadow">
-          <h2 className="text-lg font-bold">Median Production Result</h2>
-          <p>${medianProductionResult}</p>
+          <h2 className="text-lg font-bold">
+            {isModernOps
+              ? "Median company revenue (factories / turn)"
+              : "Median Production Result"}
+          </h2>
+          <p>
+            {medianProductionResult === "N/A"
+              ? "N/A"
+              : `$${medianProductionResult.toLocaleString()}`}
+          </p>
         </div>
         <div className="p-4 bg-zinc-800 rounded shadow">
-          <h2 className="text-lg font-bold">Highest Production Result</h2>
+          <h2 className="text-lg font-bold">
+            {isModernOps
+              ? "Highest company revenue (factories / turn)"
+              : "Highest Production Result"}
+          </h2>
           <p>
             {highestProductionResult?.Company.name || "N/A"} - $
             {highestProductionResult?.revenue.toLocaleString() || "N/A"}
           </p>
         </div>
         <div className="p-4 bg-zinc-800 rounded shadow">
-          <h2 className="text-lg font-bold">Lowest Production Result</h2>
+          <h2 className="text-lg font-bold">
+            {isModernOps
+              ? "Lowest company revenue (factories / turn)"
+              : "Lowest Production Result"}
+          </h2>
           <p>
             {lowestProductionResult?.Company.name || "N/A"} - $
             {lowestProductionResult?.revenue.toLocaleString() || "N/A"}

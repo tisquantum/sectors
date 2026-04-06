@@ -240,20 +240,11 @@ export function ModernCompany({
         </div>
       </div>
 
-      {/* Construction Orders & History - Visible to all players (not just CEO) */}
-      <div className="space-y-2 pt-2 border-t border-gray-700">
-        <ConstructionOrders companyId={companyId} gameId={gameId} showHistory={false} />
-      </div>
-
-      {/* Pending Marketing Campaigns */}
-      <div className="space-y-2 pt-2 border-t border-gray-700">
-        <PendingCampaigns companyId={companyId} gameId={gameId} />
-      </div>
-
-      {/* Pending Research Orders */}
-      <div className="space-y-2 pt-2 border-t border-gray-700">
-        <PendingResearchOrders companyId={companyId} gameId={gameId} />
-      </div>
+      {/* Orders / pending blocks: borders live inside each component so empty null
+          renders do not leave stray horizontal rules */}
+      <ConstructionOrders companyId={companyId} gameId={gameId} showHistory={false} />
+      <PendingCampaigns companyId={companyId} gameId={gameId} />
+      <PendingResearchOrders companyId={companyId} gameId={gameId} />
     </div>
   );
 }

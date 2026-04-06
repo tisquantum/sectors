@@ -188,7 +188,7 @@ export const workerTrackValues = [
  * This array has 40 values corresponding to the 40 spaces on the track.
  */
 export const ECONOMY_SCORE_VALUES = [
-  8, 8, 8, 8, 9, 9, 9, 9, 10, 10, 10, 10, 11, 11, 11, 12, 12, 12, 13, 13, 13, 14, 14, 15, 15, 16, 16, 17, 17, 18, 18, 19, 20, 21, 22, 23, 24, 26, 28, 30
+  8, 8, 8, 8, 9, 9, 9, 9, 10, 10, 10, 10, 11, 11, 11, 12, 12, 12, 13, 13, 13, 14, 14, 14, 15, 15, 15, 16, 16, 17, 17, 18, 18, 19, 19, 20, 20, 21, 22, 23, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42
 ];
 
 export const DEFAULT_WORKERS = 40;
@@ -232,23 +232,23 @@ export const RESOURCE_PRICES_GEAR = [20, 22, 24, 27, 30, 34, 38, 42, 47, 53, 58,
 //because right now this track is linear like the other resources are, when you buy a resource at a price, the next spot becomes available.  if instead it was per company in the sector, it could drive differentiation.
 // alternatively, the company pays some mutliplier for the resource price given some metric of the company.
 
-export const RESOURCE_PRICES_TECHNOLOGY = [12, 18, 14, 24, 18, 30, 22, 36, 38, 40]
+export const RESOURCE_PRICES_TECHNOLOGY = [4, 5, 6, 7, 8, 9, 10, 12, 14, 18, 24, 30, 36, 42, 50]
 
 export const RESOURCE_PRICES_INDUSTRIAL = [20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40]
 
-export const RESOURCE_PRICES_ENERGY = [30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40]
+export const RESOURCE_PRICES_ENERGY = [27, 28, 29, 30, 31, 32, 33, 34, 35, 36]
 
-export const RESOURCE_PRICES_HEALTHCARE = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+export const RESOURCE_PRICES_HEALTHCARE = [20, 25, 30, 31, 32, 33, 34, 35, 38, 40]
 
-export const RESOURCE_PRICES_CONSUMER_DEFENSIVE = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+export const RESOURCE_PRICES_CONSUMER_DEFENSIVE = [22, 25, 30, 31, 32, 33, 34, 35, 38, 40]
 
-export const RESOURCE_PRICES_CONSUMER_CYCLICAL = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+export const RESOURCE_PRICES_CONSUMER_CYCLICAL = [18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46]
 
 export const RESOURCE_PRICES_CONSUMER_DISCRETIONARY = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 export const RESOURCE_PRICES_CONSUMER_STAPLES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
-export const RESOURCE_PRICES_MATERIALS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+export const RESOURCE_PRICES_MATERIALS = [30, 30, 30, 31, 31, 32, 32, 33, 33, 34, 35]
 
 export function getResourcePriceForResourceType(resourceType: ResourceType) {
   switch(resourceType) {

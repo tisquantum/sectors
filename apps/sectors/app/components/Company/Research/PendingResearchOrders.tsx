@@ -39,7 +39,7 @@ export function PendingResearchOrders({ companyId, gameId }: PendingResearchOrde
 
   if (ordersLoading) {
     return (
-      <div className="flex items-center justify-center py-2">
+      <div className="mt-2 pt-2 border-t border-gray-700 flex items-center justify-center py-2">
         <Spinner size="sm" />
       </div>
     );
@@ -50,7 +50,7 @@ export function PendingResearchOrders({ companyId, gameId }: PendingResearchOrde
   }
 
   return (
-    <div className="space-y-2">
+    <div className="mt-2 pt-2 border-t border-gray-700 space-y-2">
       <div className="flex items-center gap-2 text-xs font-semibold text-blue-400 uppercase tracking-wide">
         <RiTimeLine size={16} />
         <span>Pending Research</span>

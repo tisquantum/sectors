@@ -371,6 +371,19 @@ export class GameManagementService {
             gameId: phase.gameId,
           });
         }
+        // Modern END_TURN must run the same finale as legacy: loans, awards, options,
+        // end-game trigger (max turns / bank), then advance turn only if the game continues.
+        if (phase.name === PhaseName.END_TURN) {
+          await this.resolveCompanyLoans(phase);
+          await this.resolveCompanyAwards(phase);
+          if (game.useOptionOrders) {
+            await this.optionContractGenerate(phase);
+          }
+          const isEndGame = await this.checkAndTriggerEndGame(phase);
+          if (!isEndGame) {
+            await this.modernOperationMechanicsService.createNewTurn(phase);
+          }
+        }
         return;
       }
       // Otherwise, fall through to legacy handling
@@ -1704,16 +1717,17 @@ export class GameManagementService {
 
     //filter our all bots from players
     const humanPlayers = players.filter((player) => player.userId);
-    // Create player results
-    const playerResults = humanPlayers.map((player, index) => {
-      const placementData = placements.find((p) => p.index === index)!;
+    // Create player results (map by index in full `players` list, not human-only index)
+    const playerResults = humanPlayers.map((player) => {
+      const playerIndex = players.findIndex((p) => p.id === player.id);
+      const placementData = placements.find((p) => p.index === playerIndex)!;
       return {
         gameRecordId: gameRecord.id,
         playerId: player.id,
         userId: player.userId as string, //casting here as we ensure every player has a userId
-        netWorth: netWorths[index],
+        netWorth: netWorths[playerIndex],
         placement: placementData.placement, // Ensure correct placement for each player
-        rankingPoints: rankingPoints.find((p) => p.playerId === index)!
+        rankingPoints: rankingPoints.find((p) => p.playerId === playerIndex)!
           .rankingPoints,
       };
     });

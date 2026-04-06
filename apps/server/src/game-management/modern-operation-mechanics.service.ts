@@ -131,7 +131,8 @@ export class ModernOperationMechanicsService {
         await this.updateResearchProgress(phase);
         await this.distributeConsumersToSectors(phase);
         await this.recordNewCompanyDemandThresholds(phase);
-        await this.createNewTurn(phase);
+        // Advance to next turn is handled in GameManagementService after
+        // shared end-game checks (max turns, broken bank) and loan/awards/options.
         break;
 
       default:
@@ -3453,7 +3454,7 @@ export class ModernOperationMechanicsService {
    * END_TURN
    * Create a new turn after completing end-of-turn tasks
    */
-  private async createNewTurn(phase: Phase) {
+  async createNewTurn(phase: Phase) {
     // Get current turn
     const currentTurn = await this.gameTurnService.getCurrentTurn(phase.gameId);
 

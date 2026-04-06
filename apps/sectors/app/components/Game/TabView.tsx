@@ -7,7 +7,10 @@ import GameLog from "./GameLog";
 import GameChat from "../GameChat/GameChat";
 import { useGame } from "./GameContext";
 import { Key, useState, useRef, useEffect } from "react";
-import { RiShapesFill, RiUserFill } from "@remixicon/react";
+import { RiFundsLine, RiShapesFill, RiUserFill } from "@remixicon/react";
+import { OperationMechanicsVersion } from "@server/prisma/prisma.client";
+import { SidebarEconomyMiniView } from "./SidebarEconomyMiniView";
+import { cn } from "@/lib/utils";
 
 const TabView = ({
   isVertical,
@@ -56,6 +59,20 @@ const TabView = ({
       onSelectionChange={handleTabChange}
       isVertical={isVertical}
       className="w-full"
+      classNames={{
+        base: "w-full flex flex-col gap-0",
+        tabList: cn(
+          "w-full p-1 gap-1 rounded-lg border border-zinc-700/40 bg-zinc-950/50",
+          isVertical
+            ? "flex flex-col"
+            : "!flex-none !grid grid-cols-3 auto-rows-fr"
+        ),
+        tab: cn(
+          "max-w-full w-full justify-center px-1 py-2 h-auto min-h-[2.75rem]",
+          "text-[11px] leading-tight text-center whitespace-normal"
+        ),
+        panel: "w-full flex-1 min-h-0 pt-2",
+      }}
     >
       <Tab key="chat" title="Chat">
         <GameChat roomId={gameState.roomId} gameName={gameState.name} />
@@ -86,6 +103,22 @@ const TabView = ({
           <SectorComponent />
         </Card>
       </Tab>
+      {gameState.operationMechanicsVersion ===
+        OperationMechanicsVersion.MODERN && (
+        <Tab
+          key="economy"
+          title={
+            <div className="flex gap-1 items-center">
+              <RiFundsLine size={16} /> <span>Economy</span>
+            </div>
+          }
+          className={tabStyle}
+        >
+          <Card className="h-[calc(100vh-288px)] overflow-y-auto scrollbar border border-zinc-800/60 bg-zinc-950/40">
+            <SidebarEconomyMiniView />
+          </Card>
+        </Tab>
+      )}
       <Tab key="game-log" title="GameLog" className={tabStyle}>
         <Card className="h-[calc(100vh-288px)] overflow-y-auto scrollbar">
           <GameLog />

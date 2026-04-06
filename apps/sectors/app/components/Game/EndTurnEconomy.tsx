@@ -2,7 +2,7 @@ import { useGame } from "./GameContext";
 import "./EndTurnEconomy.css";
 import { sectorColors } from "@server/data/gameData";
 import { CompanyStatus, OperationMechanicsVersion, PhaseName, Sector } from "@server/prisma/prisma.client";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState, type Key } from "react";
 import {
   RiGlasses2Fill,
   RiHandCoinFill,
@@ -29,8 +29,28 @@ import Divestment from "./Divestment";
 import { SectorDemandRankings } from "./SectorDemandRankings";
 import { ResourceMarket } from "./Markets/ResourceMarket";
 
-const EndTurnEconomy = () => {
+type EndTurnEconomyProps = {
+  /** When set with onTabChange, tabs sync to the URL hash (Economy top-level view). */
+  selectedTabKey?: string;
+  onTabChange?: (key: string) => void;
+};
+
+const EndTurnEconomy = ({
+  selectedTabKey: controlledTabKey,
+  onTabChange,
+}: EndTurnEconomyProps = {}) => {
   const { currentPhase, gameState, gameId } = useGame();
+  const [internalTabKey, setInternalTabKey] = useState("overview");
+  const isHashControlled =
+    controlledTabKey !== undefined && onTabChange !== undefined;
+  const selectedTabKey = isHashControlled ? controlledTabKey : internalTabKey;
+  const handleTabChange = (key: string) => {
+    if (isHashControlled) {
+      onTabChange(key);
+    } else {
+      setInternalTabKey(key);
+    }
+  };
   
   // Track query calls to detect infinite loops
   const queryCallCountRef = useRef(0);
@@ -97,9 +117,11 @@ const EndTurnEconomy = () => {
   }
   return (
     <div className="flex flex-col justify-center items-center content-center w-full max-w-7xl mx-auto">
-      <Tabs 
-        aria-label="End Turn Information" 
+      <Tabs
+        aria-label="End Turn Information"
         className="w-full"
+        selectedKey={selectedTabKey}
+        onSelectionChange={(key: Key) => handleTabChange(String(key))}
         classNames={{
           tabList: "w-full",
           panel: "w-full",
@@ -125,7 +147,7 @@ const EndTurnEconomy = () => {
                       <strong className="text-white">Consumer Distribution:</strong> The Economy Score determines how many consumers can be distributed from the Consumer Pool to sectors each turn. Higher economy scores mean more consumers can flow into sectors, leading to increased economic activity.
                     </p>
                     <p className="text-xs text-gray-400 italic mt-2">
-                      View the Workforce Track in the Modern Operations section below to see how worker allocation directly impacts the economy score.
+                      Open the Workforce Track and Research Track tabs on this Economy view to see worker allocation and sector research progress.
                     </p>
                   </div>
                 </div>
@@ -235,31 +257,6 @@ const EndTurnEconomy = () => {
             <div>
               <CompanyPriorityList companies={companiesWithSector} />
             </div>
-            
-            {/* Modern Operations Tracks - Only show for MODERN operation mechanics */}
-            {gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN && (
-              <div className="mt-6 space-y-6 w-full">
-                <div className="border-t border-gray-700 pt-6">
-                  <h3 className="text-xl font-semibold text-gray-200 mb-4">
-                    Modern Operations
-                  </h3>
-                  <div className="space-y-6">
-                    <WorkforceTrack />
-                    <div className="mt-6">
-                      <div className="mb-4">
-                        <h4 className="text-lg font-semibold text-gray-300">
-                          Sector Research Tracks
-                        </h4>
-                        <p className="text-sm text-gray-400 mt-1">
-                          Track sector-wide research progress. Companies in each sector contribute to their sector&apos;s research track.
-                        </p>
-                      </div>
-                      <SectorResearchTracks />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </Tab>
         
@@ -280,6 +277,22 @@ const EndTurnEconomy = () => {
           <Tab key="resource-market" title="Resource Market">
             <div className="w-full h-full">
               <ResourceMarket gameId={gameId} />
+            </div>
+          </Tab>
+        )}
+
+        {gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN && (
+          <Tab key="research-track" title="Research Track">
+            <div className="w-full h-full p-4">
+              <SectorResearchTracks />
+            </div>
+          </Tab>
+        )}
+
+        {gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN && (
+          <Tab key="workforce-track" title="Workforce Track">
+            <div className="w-full h-full p-4">
+              <WorkforceTrack />
             </div>
           </Tab>
         )}

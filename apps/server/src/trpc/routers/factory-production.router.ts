@@ -68,6 +68,16 @@ export default (trpc: TrpcService, ctx: Context) =>
         );
       }),
 
+    /** All factory production rows for a game (e.g. end-game stats for modern operations). */
+    listForGame: trpc.procedure
+      .input(z.object({ gameId: z.string() }))
+      .query(async ({ input }) => {
+        return ctx.factoryProductionService.factoryProductionsWithRelations({
+          where: { gameId: input.gameId },
+          orderBy: { createdAt: 'desc' },
+        });
+      }),
+
     getFactoryProductionSummary: trpc.procedure
       .input(z.object({
         companyId: z.string(),
