@@ -503,11 +503,11 @@ const Game = ({ gameId }: { gameId: string }) => {
         onOpenChange={toggleDrawer}
         direction="right"
       >
-        <div className="relative flex flex-col lg:flex-row flex-grow w-full h-full min-h-0 overflow-y scrollbar lg:overflow-hidden bg-background">
-          <div className="hidden lg:block">
+        <div className="relative flex flex-1 min-h-0 w-full flex-col bg-background lg:flex-row lg:overflow-hidden">
+          <div className="hidden shrink-0 lg:block">
             <GameSidebar />
           </div>
-          <div className="flex flex-col relative w-full">
+          <div className="relative flex min-h-0 w-full min-w-0 flex-1 flex-col">
             {gameState.gameStatus == GameStatus.FINISHED && (
               <Button
                 color="primary"
@@ -529,7 +529,7 @@ const Game = ({ gameId }: { gameId: string }) => {
               isTimerAtZero={isTimerAtZero}
             />
             <div
-              className="relative flex justify-between overflow-y-auto scrollbar w-full"
+              className="relative flex min-h-0 w-full min-w-0 flex-1 justify-between overflow-hidden"
               ref={gameActionContainerRef}
             >
               {/* {currentPhase?.name &&
@@ -540,7 +540,7 @@ const Game = ({ gameId }: { gameId: string }) => {
                   </div>
                 )} */}
               <div
-                className="@container active-panel min-h-0 h-full max-h-full w-full overflow-y-auto scrollbar p-4"
+                className="@container active-panel min-h-0 min-w-0 w-full flex-1 overflow-y-auto scrollbar p-4"
               >
                 {currentView === "action" && (
                   <div
@@ -602,7 +602,7 @@ const Game = ({ gameId }: { gameId: string }) => {
                 )}
               </div>
               {showPhaseList && (
-                <div className="overflow-y-auto max-h-full scrollbar">
+                <div className="min-h-0 max-h-full shrink-0 overflow-y-auto scrollbar sm:w-72 sm:max-w-xs">
                   <PhaseListComponent />
                 </div>
               )}

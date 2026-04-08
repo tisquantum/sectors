@@ -9,11 +9,38 @@ import WalletInfo from "../Game/WalletInfo";
 import { calculateNetWorth } from "@server/data/helpers";
 import { RiCurrencyFill, RiSafe2Fill, RiScalesFill } from "@remixicon/react";
 import { PlayerWithShares } from "@server/prisma/prisma.types";
+import { ReactNode } from "react";
+
+function FinancialHint({
+  hideTooltips,
+  content,
+  children,
+}: {
+  hideTooltips?: boolean;
+  content: ReactNode;
+  children: ReactNode;
+}) {
+  const inner = (
+    <span className="flex items-center content-center">{children}</span>
+  );
+  if (hideTooltips) return inner;
+  return (
+    <Tooltip
+      classNames={{ base: baseToolTipStyle }}
+      className={tooltipStyle}
+      content={content}
+    >
+      {inner}
+    </Tooltip>
+  );
+}
 
 const PlayerOverview = ({
   playerWithShares,
+  hideFinancialTooltips,
 }: {
   playerWithShares: PlayerWithShares;
+  hideFinancialTooltips?: boolean;
 }) => (
   <Card className="p-2 max-w-[500px]">
     <CardHeader>
@@ -23,30 +50,23 @@ const PlayerOverview = ({
           <div>
             <h2>{playerWithShares.nickname}</h2>
             <div className="flex gap-2">
-              <Tooltip
-                classNames={{ base: baseToolTipStyle }}
-                className={tooltipStyle}
+              <FinancialHint
+                hideTooltips={hideFinancialTooltips}
                 content={<p>Cash on hand.</p>}
               >
-                <span className="flex items-center content-center">
-                  <WalletInfo player={playerWithShares} />
-                </span>
-              </Tooltip>
-              <Tooltip
-                classNames={{ base: baseToolTipStyle }}
-                className={tooltipStyle}
+                <WalletInfo player={playerWithShares} />
+              </FinancialHint>
+              <FinancialHint
+                hideTooltips={hideFinancialTooltips}
                 content={
                   <p>Portfolio value: the total value of all shares owned.</p>
                 }
               >
-                <span className="flex items-center content-center">
-                  <RiCurrencyFill className="h-6 w-6" /> $
-                  {calculateNetWorth(0, playerWithShares.Share)}
-                </span>
-              </Tooltip>
-              <Tooltip
-                classNames={{ base: baseToolTipStyle }}
-                className={tooltipStyle}
+                <RiCurrencyFill className="h-6 w-6" /> $
+                {calculateNetWorth(0, playerWithShares.Share)}
+              </FinancialHint>
+              <FinancialHint
+                hideTooltips={hideFinancialTooltips}
                 content={
                   <p>
                     Net worth: The total value of all shares owned plus cash on
@@ -54,18 +74,15 @@ const PlayerOverview = ({
                   </p>
                 }
               >
-                <span className="flex items-center content-center">
-                  <RiScalesFill className="h-6 w-6" /> $
-                  {calculateNetWorth(
-                    playerWithShares.cashOnHand,
-                    playerWithShares.Share
-                  )}
-                </span>
-              </Tooltip>
+                <RiScalesFill className="h-6 w-6" /> $
+                {calculateNetWorth(
+                  playerWithShares.cashOnHand,
+                  playerWithShares.Share
+                )}
+              </FinancialHint>
               {playerWithShares.marginAccount > 0 && (
-                <Tooltip
-                  classNames={{ base: baseToolTipStyle }}
-                  className={tooltipStyle}
+                <FinancialHint
+                  hideTooltips={hideFinancialTooltips}
                   content={
                     <p>
                       Margin account balance. This balance is locked for short
@@ -74,10 +91,8 @@ const PlayerOverview = ({
                     </p>
                   }
                 >
-                  <span className="flex items-center content-center">
-                    <RiSafe2Fill size={18} /> ${playerWithShares.marginAccount}
-                  </span>
-                </Tooltip>
+                  <RiSafe2Fill size={18} /> ${playerWithShares.marginAccount}
+                </FinancialHint>
               )}
             </div>
           </div>

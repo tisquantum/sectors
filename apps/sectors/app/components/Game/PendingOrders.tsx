@@ -269,6 +269,7 @@ const PendingMarketOrders = ({
                                 <OrderChipChitWithPlayer
                                   order={order}
                                   showStatus={true}
+                                  suppressOverviewTooltips={isResolving}
                                 />
                               </>
                             </motion.div>
@@ -357,6 +358,7 @@ const PendingLimitOrders = ({
                           <OrderChipChitWithPlayer
                             order={order}
                             showStatus={true}
+                            suppressOverviewTooltips={isResolving}
                           />
                         </div>
                       </div>
@@ -374,8 +376,10 @@ const PendingLimitOrders = ({
 
 const PendingShortOrders = ({
   shortOrders,
+  isResolving,
 }: {
   shortOrders: PlayerOrderAllRelations[];
+  isResolving?: boolean;
 }) => {
   // sort short orders by game turn in DESCENDING order
   shortOrders.sort((a, b) => b.GameTurn.turn - a.GameTurn.turn);
@@ -389,7 +393,11 @@ const PendingShortOrders = ({
           <div>{order.Company.name}</div>
           <div className="flex flex-col gap-2">
             <div className="flex">
-              <OrderChipChitWithPlayer order={order} showStatus={true} />
+              <OrderChipChitWithPlayer
+                order={order}
+                showStatus={true}
+                suppressOverviewTooltips={isResolving}
+              />
             </div>
           </div>
           <span>
@@ -569,7 +577,10 @@ const PendingOrders = ({ isResolving }: { isResolving?: boolean }) => {
           >
             <CardHeader>Short Orders</CardHeader>
             <CardBody>
-              <PendingShortOrders shortOrders={shortOrders} />
+              <PendingShortOrders
+                shortOrders={shortOrders}
+                isResolving={isResolving}
+              />
             </CardBody>
           </Card>
         )}

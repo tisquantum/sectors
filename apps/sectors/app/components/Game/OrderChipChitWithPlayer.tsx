@@ -9,7 +9,6 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-  Tooltip,
 } from "@nextui-org/react";
 import {
   determineColorByOrderType,
@@ -40,11 +39,6 @@ import {
   RiText,
   RiTimeFill,
 } from "@remixicon/react";
-import {
-  baseToolTipStyle,
-  tooltipParagraphStyle,
-  tooltipStyle,
-} from "@sectors/app/helpers/tailwind.helpers";
 import { useGame } from "./GameContext";
 import { CheckCircleIcon } from "@heroicons/react/24/solid";
 import { createAvatar } from "@dicebear/core";
@@ -54,9 +48,12 @@ import PlayerOverview from "../Player/PlayerOverview";
 const OrderChipChitWithPlayer = ({
   order,
   showStatus,
+  suppressOverviewTooltips,
 }: {
   order: PlayerOrder & { Player: Player } & { GameTurn: GameTurn };
   showStatus?: boolean;
+  /** When true (e.g. resolve market orders), player popover omits hover tooltips on cash/net worth rows. */
+  suppressOverviewTooltips?: boolean;
 }) => {
   const { gameState, playersWithShares } = useGame();
   const avatarUri = useMemo(() => {
@@ -90,14 +87,7 @@ const OrderChipChitWithPlayer = ({
         shape="circle"
         placement="top-right"
       >
-        <Tooltip
-          classNames={{ base: baseToolTipStyle }}
-          className={tooltipStyle}
-          content={
-            <p className={tooltipParagraphStyle}>{order.Player.nickname}</p>
-          }
-        >
-          <span className="inline-flex">
+        <span className="inline-flex">
             <PopoverTrigger>
               <Card
               className={`relative bg-${determineColorByOrderType(
@@ -179,11 +169,13 @@ const OrderChipChitWithPlayer = ({
             </Card>
             </PopoverTrigger>
           </span>
-        </Tooltip>
       </Badge>
       <PopoverContent className="p-0 m-0">
         {playerWithShares && (
-          <PlayerOverview playerWithShares={playerWithShares} />
+          <PlayerOverview
+            playerWithShares={playerWithShares}
+            hideFinancialTooltips={suppressOverviewTooltips}
+          />
         )}
       </PopoverContent>
     </Popover>
