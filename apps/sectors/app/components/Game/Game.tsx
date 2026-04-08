@@ -503,11 +503,11 @@ const Game = ({ gameId }: { gameId: string }) => {
         onOpenChange={toggleDrawer}
         direction="right"
       >
-        <div className="relative flex flex-1 min-h-0 w-full flex-col bg-background lg:flex-row lg:overflow-hidden">
-          <div className="hidden shrink-0 lg:block">
+        <div className="relative w-full bg-background max-2xl:block max-2xl:h-auto max-2xl:min-h-0 2xl:flex 2xl:h-full 2xl:min-h-0 2xl:flex-1 2xl:flex-row 2xl:overflow-hidden">
+          <div className="hidden shrink-0 2xl:block">
             <GameSidebar />
           </div>
-          <div className="relative flex min-h-0 w-full min-w-0 flex-1 flex-col">
+          <div className="relative w-full max-2xl:block max-2xl:min-h-0 2xl:flex 2xl:min-h-0 2xl:flex-1 2xl:flex-col">
             {gameState.gameStatus == GameStatus.FINISHED && (
               <Button
                 color="primary"
@@ -529,7 +529,7 @@ const Game = ({ gameId }: { gameId: string }) => {
               isTimerAtZero={isTimerAtZero}
             />
             <div
-              className="relative flex min-h-0 w-full min-w-0 flex-1 justify-between overflow-hidden"
+              className="relative w-full max-2xl:block max-2xl:min-h-0 max-2xl:flex-none max-2xl:overflow-visible 2xl:flex 2xl:min-h-0 2xl:flex-1 2xl:justify-between 2xl:overflow-hidden"
               ref={gameActionContainerRef}
             >
               {/* {currentPhase?.name &&
@@ -540,7 +540,7 @@ const Game = ({ gameId }: { gameId: string }) => {
                   </div>
                 )} */}
               <div
-                className="@container active-panel min-h-0 min-w-0 w-full flex-1 overflow-y-auto scrollbar p-4"
+                className="@container active-panel w-full p-4 max-2xl:h-auto max-2xl:min-h-0 max-2xl:flex-none max-2xl:overflow-visible 2xl:min-h-0 2xl:min-w-0 2xl:flex-1 2xl:overflow-y-auto 2xl:scrollbar"
               >
                 {currentView === "action" && (
                   <div
@@ -602,13 +602,13 @@ const Game = ({ gameId }: { gameId: string }) => {
                 )}
               </div>
               {showPhaseList && (
-                <div className="min-h-0 max-h-full shrink-0 overflow-y-auto scrollbar sm:w-72 sm:max-w-xs">
+                <div className="min-h-0 shrink-0 max-2xl:w-full max-2xl:max-h-none max-2xl:overflow-visible 2xl:max-h-full 2xl:overflow-y-auto 2xl:scrollbar sm:w-72 sm:max-w-xs">
                   <PhaseListComponent />
                 </div>
               )}
             </div>
           </div>
-          <div className="z-50 fixed bottom-4 right-4 lg:hidden">
+          <div className="z-50 fixed bottom-4 right-4 2xl:hidden">
             <Button
               className="bg-blue-500 text-white p-3 rounded-full shadow-lg"
               onPress={() => openSidebarModal()}

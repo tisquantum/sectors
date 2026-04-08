@@ -11,8 +11,13 @@ import { Toaster } from "sonner";
 import UserNameAlert from "./components/General/UserNameAlert";
 import ThemeProvider from "./components/ThemeProvider.context";
 import { RiCloseLine, RiMenu3Line } from "@remixicon/react";
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
+import { isGamePlayPathname } from "./lib/gameRoutes";
 
 const ClientLayout = ({ children }: { children: React.ReactNode }) => {
+  const pathname = usePathname();
+  const gamePlayMobileScroll = isGamePlayPathname(pathname);
   const [queryClient] = useState(() => new QueryClient());
   const [isTopBarOpen, setIsTopBarOpen] = useState(false);
 
@@ -36,7 +41,14 @@ const ClientLayout = ({ children }: { children: React.ReactNode }) => {
                   <div className="flex flex-col text-foreground bg-background h-[100vh] min-h-0 overflow-hidden relative">
                     <UserNameAlert />
                     <Toaster duration={10000} />
-                    <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                    <div
+                      className={cn(
+                        "flex min-h-0 flex-1 flex-col",
+                        gamePlayMobileScroll
+                          ? "max-2xl:overflow-y-auto max-2xl:overscroll-y-contain 2xl:overflow-hidden"
+                          : "overflow-hidden"
+                      )}
+                    >
                       {children}
                     </div>
                     {isTopBarOpen && (

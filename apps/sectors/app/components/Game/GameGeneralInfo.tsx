@@ -115,8 +115,8 @@ const GameGeneralInfo = () => {
     (player) => player.id === authPlayer?.id
   );
   return (
-    <div className="flex flex-wrap space-x-4 items-center">
-      <div className="flex flex-wrap items-center gap-2">
+    <div className="grid w-full min-w-0 max-w-full grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 2xl:flex 2xl:flex-wrap 2xl:items-center 2xl:gap-x-6 2xl:gap-y-2">
+      <div className="col-span-full flex min-w-0 max-w-full flex-wrap items-center gap-2">
         {authPlayer ? (
           <>
             <PlayerAvatar player={authPlayer} />
@@ -199,14 +199,14 @@ const GameGeneralInfo = () => {
             </Popover>
           </>
         ) : (
-          <div className="flex justify-center items-center ">
-            <span className="text-sm font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 drop-shadow-lg tracking-wide">
+          <div className="flex w-full justify-center py-1 sm:justify-start">
+            <span className="text-center text-sm font-extrabold tracking-wide text-transparent bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 bg-clip-text drop-shadow-lg">
               SPECTATOR MODE
             </span>
           </div>
         )}
       </div>
-      <div>
+      <div className="min-w-0">
         <Popover placement="bottom" showArrow>
           <PopoverTrigger>
             <div className="flex flex-col items-center gap-1 cursor-pointer">
@@ -235,7 +235,7 @@ const GameGeneralInfo = () => {
           </PopoverContent>
         </Popover>
       </div>
-      <div className="flex items-center gap-1">
+      <div className="flex min-w-0 items-center gap-1">
         <BankInfo />
         <Popover placement="bottom" showArrow>
           <PopoverTrigger>
@@ -254,7 +254,7 @@ const GameGeneralInfo = () => {
           </PopoverContent>
         </Popover>
       </div>
-      <div className="flex flex-col gap-1 items-start">
+      <div className="flex min-w-0 flex-col items-start gap-1">
         <div>
           <Popover placement="bottom" showArrow>
             <PopoverTrigger>
@@ -288,17 +288,17 @@ const GameGeneralInfo = () => {
           </Popover>
         </div>
       </div>
-      <div>
+      <div className="min-w-0">
         <div className="text-lg font-bold">Round</div>
         <div>{gameState.currentRound ?? "0"}</div>
       </div>
       <Popover placement="bottom" showArrow>
         <PopoverTrigger>
-          <div className="flex flex-col items-center cursor-pointer">
+          <div className="flex min-w-0 cursor-pointer flex-col items-center">
             <div className="text-lg font-bold">
               <RiListOrdered2 className="text-green-400" />
             </div>
-            <div>
+            <div className="text-center text-sm">
               {currentTurn.turn ?? "0"} of {gameState.gameMaxTurns}
             </div>
           </div>
@@ -313,11 +313,11 @@ const GameGeneralInfo = () => {
       </Popover>
       <Popover placement="bottom" showArrow>
         <PopoverTrigger>
-          <div className="flex flex-col items-center cursor-pointer">
+          <div className="flex min-w-0 cursor-pointer flex-col items-center">
             <div className="text-lg font-bold">
               <RiDiscFill className="text-blue-400" />
             </div>
-            <div>
+            <div className="max-w-[9rem] text-center text-xs leading-tight 2xl:max-w-none 2xl:text-sm">
               {friendlyDistributionStrategyName(gameState.distributionStrategy)}
             </div>
           </div>
@@ -352,7 +352,7 @@ const GameGeneralInfo = () => {
       </Popover>
       <Popover>
         <PopoverTrigger>
-          <Button>Icon Legend</Button>
+          <Button className="min-w-0 max-w-full shrink">Icon Legend</Button>
         </PopoverTrigger>
         <PopoverContent>
           <SymbolLegend />
