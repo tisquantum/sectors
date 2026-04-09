@@ -14,6 +14,10 @@ import { GameTurnService } from '@server/game-turn/game-turn.service';
 import { getNumberForFactorySize } from '@server/data/helpers';
 import { FactoryConstructionOrderService } from '@server/factory-construction/factory-construction-order.service';
 import { ModernOperationMechanicsService } from '@server/game-management/modern-operation-mechanics.service';
+import {
+  getMinimumResearchStageForMarketingTier,
+  isMarketingTierUnlockedForSector,
+} from '@server/data/marketing-unlock';
 
 type Context = {
   marketingService: MarketingService;
@@ -54,9 +58,10 @@ export default (trpc: TrpcService, ctx: Context) =>
           throw new Error('Player ID is required');
         }
 
-        // Validate company ownership (CEO)
-        const company = await ctx.companyService.company({
-          id: input.companyId,
+        // Validate company ownership (CEO) and sector research unlocks
+        const company = await ctx.prismaService.company.findUnique({
+          where: { id: input.companyId },
+          include: { Sector: true },
         });
 
         if (!company) {
@@ -70,6 +75,14 @@ export default (trpc: TrpcService, ctx: Context) =>
         // Check if company is active or insolvent (inactive companies cannot operate)
         if (company.status !== CompanyStatus.ACTIVE && company.status !== CompanyStatus.INSOLVENT) {
           throw new Error(`Only active or insolvent companies can create marketing campaigns. Company status: ${company.status}`);
+        }
+
+        const researchMarker = company.Sector?.researchMarker ?? 0;
+        if (!isMarketingTierUnlockedForSector(researchMarker, input.tier)) {
+          const need = getMinimumResearchStageForMarketingTier(input.tier);
+          throw new Error(
+            `This campaign tier requires sector research stage ${need} or higher. Advance the shared sector research track.`,
+          );
         }
 
         // Get game to determine operation mechanics version

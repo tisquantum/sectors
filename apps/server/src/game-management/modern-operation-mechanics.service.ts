@@ -929,11 +929,6 @@ export class ModernOperationMechanicsService {
         game: { connect: { id: phase.gameId } },
         content: `A new company ${newCompany.name} has been established in the ${sector.sectorName} sector.`,
       });
-      //add 1 base demand to the company sector
-      await this.sectorService.updateSector({
-        where: { id: sectorId },
-        data: { demand: (sector.demand || 0) + 1 },
-      });
     }
   /**
    * Open new companies at start of turn:
@@ -1985,10 +1980,10 @@ export class ModernOperationMechanicsService {
     }
   }
 
-  /** Temporary sector demand bonus while campaign is active. Marketing I: +0, II: +1, III: +2 */
+  /** Temporary sector demand bonus while campaign is active. Marketing I: +1, II: +1, III: +2 */
   private getMarketingDemandBonus(tier: MarketingCampaignTier): number {
     switch (tier) {
-      case MarketingCampaignTier.TIER_1: return 0;
+      case MarketingCampaignTier.TIER_1: return 1;
       case MarketingCampaignTier.TIER_2: return 1;
       case MarketingCampaignTier.TIER_3: return 2;
       default: return 0;
@@ -2154,8 +2149,8 @@ export class ModernOperationMechanicsService {
       );
     }
 
-    // OPTIMIZATION: Collect company updates and game logs for batch processing
-    const companyUpdates: Array<{ id: string; cashOnHand: number }> = [];
+    // Company cash from operating revenue is applied in revenue distribution vote resolve,
+    // not during the earnings call (earnings call only records production + stock movement).
     const stockPriceOperations: Array<{
       companyId: string;
       steps: number;
@@ -2166,34 +2161,6 @@ export class ModernOperationMechanicsService {
     // Process each company's total earnings
     for (const [companyId, summary] of companySummaries.entries()) {
       const { revenue, costs, profit, company } = summary;
-
-      // Collect company cash update
-      companyUpdates.push({
-        id: companyId,
-        cashOnHand: company.cashOnHand + profit,
-      });
-
-      // Create transaction for revenue retention (profit added to company)
-      if (profit > 0 && company.entityId) {
-        try {
-          await this.transactionService.createTransactionEntityToEntity({
-            gameId: phase.gameId,
-            gameTurnId: phase.gameTurnId,
-            phaseId: phase.id,
-            fromEntityType: EntityType.BANK,
-            toEntityType: EntityType.COMPANY,
-            toEntityId: company.entityId,
-            amount: profit,
-            transactionType: TransactionType.CASH,
-            transactionSubType: TransactionSubType.OPERATING_COST,
-            toCompanyId: companyId,
-            companyInvolvedId: companyId,
-            description: `Revenue retention: Revenue $${revenue} - Costs $${costs} = Profit $${profit}`,
-          });
-        } catch (error) {
-          console.error('Failed to create revenue retention transaction:', error);
-        }
-      }
 
       // Stock price adjustment based on profitability
       let stockPriceSteps = 0;
@@ -2223,18 +2190,6 @@ export class ModernOperationMechanicsService {
         gameId: phase.gameId,
         content: `${company.name} earnings: Revenue $${revenue}, Costs $${costs}, Profit $${profit}. Stock ${stockPriceSteps > 0 ? '+' : ''}${stockPriceSteps} steps.`,
       });
-    }
-
-    // OPTIMIZATION: Batch update company cash
-    if (companyUpdates.length > 0) {
-      await this.prisma.$transaction(
-        companyUpdates.map(update =>
-          this.prisma.company.update({
-            where: { id: update.id },
-            data: { cashOnHand: update.cashOnHand },
-          })
-        )
-      );
     }
 
     // Apply stock price adjustments (these may need to be sequential due to dependencies)
@@ -2268,45 +2223,6 @@ export class ModernOperationMechanicsService {
           content: entry.content,
         }))
       );
-    }
-
-    // Check for companies with negative cash and mark them as INSOLVENT
-    const insolventCompanyUpdates: Array<{ id: string }> = [];
-    const insolvencyLogEntries: Array<{ gameId: string; content: string }> = [];
-
-    for (const update of companyUpdates) {
-      if (update.cashOnHand < 0) {
-        insolventCompanyUpdates.push({ id: update.id });
-        const company = companySummaries.get(update.id)?.company;
-        if (company) {
-          insolvencyLogEntries.push({
-            gameId: phase.gameId,
-            content: `${company.name} has gone insolvent with cash of $${update.cashOnHand}.`,
-          });
-        }
-      }
-    }
-
-    // Mark companies as INSOLVENT
-    if (insolventCompanyUpdates.length > 0) {
-      await this.prisma.$transaction(
-        insolventCompanyUpdates.map(update =>
-          this.prisma.company.update({
-            where: { id: update.id },
-            data: { status: CompanyStatus.INSOLVENT },
-          })
-        )
-      );
-
-      // Log insolvency events
-      if (insolvencyLogEntries.length > 0) {
-        await this.gameLogService.createManyGameLogs(
-          insolvencyLogEntries.map(entry => ({
-            gameId: entry.gameId,
-            content: entry.content,
-          }))
-        );
-      }
     }
   }
 

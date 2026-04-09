@@ -58,7 +58,6 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
 }) => {
   const { gameState } = useGame();
   const operationMechanicsVersion = gameState.operationMechanicsVersion;
-  console.log('operationMechanicsVersion',operationMechanicsVersion);
   const [showButton, setShowButton] = useState<boolean | undefined>(
     isOrderInputOpen
   );
@@ -230,13 +229,17 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
                 company.status === "INACTIVE" && "bg-gray-950 rounded-md"
               } p-2 flex gap-1`}
             >
-              IPO <RiCurrencyFill className="h-6 w-6" />
+              <RiCurrencyFill className="h-6 w-6" aria-hidden />
               {
                 company.Share.filter(
                   (share: Share) => share.location == ShareLocation.IPO
                 ).length
               }{" "}
-              <span className="font-bold">@ ${company.ipoAndFloatPrice}</span>
+              <span className="font-bold">
+                {company.ipoAndFloatPrice != null
+                  ? `$${company.ipoAndFloatPrice} ${company.stockSymbol}`
+                  : "IPO"}
+              </span>
             </div>
           </div>
           {!isRevealRound && (

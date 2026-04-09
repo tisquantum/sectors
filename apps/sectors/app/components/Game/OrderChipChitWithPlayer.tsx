@@ -48,12 +48,9 @@ import PlayerOverview from "../Player/PlayerOverview";
 const OrderChipChitWithPlayer = ({
   order,
   showStatus,
-  suppressOverviewTooltips,
 }: {
   order: PlayerOrder & { Player: Player } & { GameTurn: GameTurn };
   showStatus?: boolean;
-  /** When true (e.g. resolve market orders), player popover omits hover tooltips on cash/net worth rows. */
-  suppressOverviewTooltips?: boolean;
 }) => {
   const { gameState, playersWithShares } = useGame();
   const avatarUri = useMemo(() => {
@@ -172,10 +169,7 @@ const OrderChipChitWithPlayer = ({
       </Badge>
       <PopoverContent className="p-0 m-0">
         {playerWithShares && (
-          <PlayerOverview
-            playerWithShares={playerWithShares}
-            hideFinancialTooltips={suppressOverviewTooltips}
-          />
+          <PlayerOverview playerWithShares={playerWithShares} />
         )}
       </PopoverContent>
     </Popover>

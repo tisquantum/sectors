@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { ResourceType } from '@/components/Company/Factory/Factory.types';
 import { trpc } from '@sectors/app/trpc';
 import { MarketingCampaignTier } from '@server/prisma/prisma.client';
+import { isMarketingTierUnlockedForSector } from '@server/data/marketing-unlock';
 import { useGame } from '../../Game/GameContext';
 import { Spinner, Popover, PopoverContent, PopoverTrigger } from '@nextui-org/react';
 import { RiInformationLine, RiErrorWarningFill } from '@remixicon/react';
@@ -49,7 +50,7 @@ const MOCK_RESOURCES = [
 ];
 
 const CAMPAIGN_CONFIG: Record<CampaignSize, { workers: number; brandBonus: number; demandBonus: number; resources: number; cost: number; tier: MarketingCampaignTier }> = {
-  CAMPAIGN_I: { workers: 1, brandBonus: 1, demandBonus: 0, resources: 1, cost: 50, tier: MarketingCampaignTier.TIER_1 },
+  CAMPAIGN_I: { workers: 1, brandBonus: 1, demandBonus: 1, resources: 1, cost: 50, tier: MarketingCampaignTier.TIER_1 },
   CAMPAIGN_II: { workers: 2, brandBonus: 2, demandBonus: 1, resources: 2, cost: 100, tier: MarketingCampaignTier.TIER_2 },
   CAMPAIGN_III: { workers: 3, brandBonus: 3, demandBonus: 2, resources: 3, cost: 200, tier: MarketingCampaignTier.TIER_3 },
 };
@@ -83,6 +84,7 @@ export function MarketingCreation({
   // Get company to find its sector
   const company = gameState?.Company?.find(c => c.id === companyId);
   const companySector = company?.sectorId ? gameState?.sectors?.find(s => s.id === company.sectorId) : null;
+  const researchMarker = companySector?.researchMarker ?? 0;
   
   // Helper function to get sector resource type
   const getSectorResourceType = (sectorName: string): ResourceType | null => {
@@ -182,25 +184,40 @@ export function MarketingCreation({
         <button onClick={onClose} className="text-gray-400 hover:text-gray-200 transition-colors">✕</button>
       </div>
 
-      <div className="flex justify-center gap-2">
-        {(Object.keys(CAMPAIGN_CONFIG) as CampaignSize[]).map((size) => (
-          <button
-            key={size}
-            onClick={() => {
-              setSelectedSize(size);
-              setSchematic([]); // Reset schematic when size changes
-              setCampaignError(null);
-            }}
-            className={cn(
-              'px-4 py-2 rounded font-medium transition-colors',
-              selectedSize === size
-                ? 'bg-purple-600 text-white'
-                : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
-            )}
-          >
-            Campaign {size.split('_')[1]}
-          </button>
-        ))}
+      <div className="flex justify-center gap-2 flex-wrap">
+        {(Object.keys(CAMPAIGN_CONFIG) as CampaignSize[]).map((size) => {
+          const tier = CAMPAIGN_CONFIG[size].tier;
+          const unlocked = isMarketingTierUnlockedForSector(researchMarker, tier);
+          return (
+            <button
+              key={size}
+              type="button"
+              disabled={!unlocked}
+              title={
+                unlocked
+                  ? undefined
+                  : 'Advance the sector research track to unlock this campaign tier.'
+              }
+              onClick={() => {
+                if (!unlocked) return;
+                setSelectedSize(size);
+                setSchematic([]);
+                setCampaignError(null);
+              }}
+              className={cn(
+                'px-4 py-2 rounded font-medium transition-colors',
+                !unlocked && 'opacity-40 cursor-not-allowed',
+                selectedSize === size && unlocked
+                  ? 'bg-purple-600 text-white'
+                  : unlocked
+                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                    : 'bg-gray-800 text-gray-500'
+              )}
+            >
+              Campaign {size.split('_')[1]}
+            </button>
+          );
+        })}
       </div>
 
       <div className="flex justify-around text-center p-2 bg-gray-700/30 rounded-lg">

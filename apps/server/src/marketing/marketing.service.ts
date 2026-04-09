@@ -136,10 +136,10 @@ export class MarketingService {
     }
   }
 
-  /** Temporary sector demand bonus while campaign is active. Marketing I: +0, II: +1, III: +2 */
+  /** Temporary sector demand bonus while campaign is active. Marketing I: +1, II: +1, III: +2 */
   getDemandBonusForTier(tier: MarketingCampaignTier): number {
     switch (tier) {
-      case MarketingCampaignTier.TIER_1: return 0;
+      case MarketingCampaignTier.TIER_1: return 1;
       case MarketingCampaignTier.TIER_2: return 1;
       case MarketingCampaignTier.TIER_3: return 2;
       default: return 0;

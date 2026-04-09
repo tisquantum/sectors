@@ -1,7 +1,15 @@
 import { PhaseName } from "@server/prisma/prisma.client";
 import { useGame } from "./GameContext";
-import { friendlyPhaseName } from "@sectors/app/helpers";
+import {
+  friendlyPhaseName,
+  phaseTooltipDescription,
+} from "@sectors/app/helpers";
 import { phasesInOrder } from "@server/data/constants";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@nextui-org/react";
 
 const PhaseListComponent = () => {
   const { currentPhase, gameState, currentTurn } = useGame();
@@ -50,17 +58,27 @@ const PhaseListComponent = () => {
       {_phasesInOrder.map((phase) => {
         const isCurrentPhase = phase === currentPhase?.name;
         return (
-          <div
-            key={phase}
-            className={
-              isCurrentPhase
-                ? "flex items-center rounded-md border-2 border-zinc-100 bg-zinc-100 px-2 py-1.5 text-sm font-semibold text-zinc-950 shadow-md"
-                : "flex items-center rounded-md border border-zinc-600/70 bg-zinc-950/50 px-2 py-1.5 text-sm text-zinc-500"
-            }
-            aria-current={isCurrentPhase ? "step" : undefined}
-          >
-            {friendlyPhaseName(phase) || phase}
-          </div>
+          <Popover key={phase} placement="left" offset={10}>
+            <PopoverTrigger>
+              <button
+                type="button"
+                className={
+                  isCurrentPhase
+                    ? "flex w-full items-center rounded-md border-2 border-zinc-100 bg-zinc-100 px-2 py-1.5 text-left text-sm font-semibold text-zinc-950 shadow-md cursor-pointer"
+                    : "flex w-full items-center rounded-md border border-zinc-600/70 bg-zinc-950/50 px-2 py-1.5 text-left text-sm text-zinc-200 cursor-pointer hover:bg-zinc-900/80"
+                }
+                aria-current={isCurrentPhase ? "step" : undefined}
+                aria-label={`${friendlyPhaseName(phase) || phase}: show phase description`}
+              >
+                {friendlyPhaseName(phase) || phase}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[min(100vw-1rem,22rem)] border border-zinc-600 bg-slate-900 p-3 text-sm text-zinc-100 shadow-xl">
+              <p className="m-0 max-w-[24rem] leading-snug text-zinc-200">
+                {phaseTooltipDescription(phase)}
+              </p>
+            </PopoverContent>
+          </Popover>
         );
       })}
     </div>

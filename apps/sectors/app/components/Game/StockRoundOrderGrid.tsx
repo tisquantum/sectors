@@ -173,14 +173,15 @@ const StockRoundOrderGrid = ({
   const chartData = useMemo(() => {
     if (!selectedCompanyOrder) return [];
     
-    const stockHistory = selectedCompanyOrder.company.StockHistory.filter(
-      (stockHistory) => stockHistory.price !== 0
-    ).map((stockHistory, index) => ({
-      phaseId: `${index + 1} ${stockHistory.Phase.name}`,
-      stockPrice: stockHistory.price,
-      stockAction: stockHistory.action,
-      steps: stockHistory.stepsMoved,
-    }));
+    const stockHistory = [...selectedCompanyOrder.company.StockHistory]
+      .filter((stockHistory) => stockHistory.price !== 0)
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+      .map((stockHistory, index) => ({
+        tick: `${index + 1}-${stockHistory.id}`,
+        stockPrice: stockHistory.price,
+        stockAction: stockHistory.action,
+        steps: stockHistory.stepsMoved,
+      }));
     
     // Add oversold price limit line if company is oversold
     // (currently just returning stockHistory, but structure is ready for future enhancement)
@@ -437,7 +438,7 @@ const StockRoundOrderGrid = ({
                       <LineChart
                         className="w-full"
                         data={chartData}
-                        index="phaseId"
+                        index="tick"
                         categories={["stockPrice"]}
                         yAxisLabel="Stock Price"
                         xAxisLabel="Stock Price Updated"

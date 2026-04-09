@@ -106,7 +106,7 @@ const CompanyMoreInfo = ({
                 <div className="px-1 py-1 max-w-xs">
                   <div className="text-small font-semibold mb-1">Sector Demand</div>
                   <div className="text-small text-default-500">
-                    Sector demand is research slot bonuses plus demand bonuses from active marketing campaigns (tier II +1, tier III +2 each). Brand score does not affect sector demand. Consumer distribution and worker salaries follow sector demand rankings (1st: 50% economy score, 2nd: 30%, 3rd: 20%).
+                    Sector demand is research slot bonuses plus demand bonuses from active marketing campaigns (tier I +1, tier II +1, tier III +2 each while active). Brand score does not affect sector demand. Consumer distribution and worker salaries follow sector demand rankings (1st: 50% economy score, 2nd: 30%, 3rd: 20%).
                   </div>
                 </div>
               </PopoverContent>

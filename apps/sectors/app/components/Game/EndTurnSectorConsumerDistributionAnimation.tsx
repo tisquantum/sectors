@@ -137,7 +137,7 @@ const SectorComponentAnimation = ({
               <strong>Sector Demand:</strong> {sector.demand + (sector.demandBonus || 0)}
             </p>
             <p className={tooltipParagraphStyle}>
-              Sector demand is research slot bonuses plus demand bonuses from active marketing (tier II +1, tier III +2 each). Brand score does not affect sector demand. Consumer distribution and worker salaries follow sector demand rankings (1st: 50% economy score, 2nd: 30%, 3rd: 20%).
+              Sector demand is research slot bonuses plus demand bonuses from active marketing (tier I +1, tier II +1, tier III +2 each while active). Brand score does not affect sector demand. Consumer distribution and worker salaries follow sector demand rankings (1st: 50% economy score, 2nd: 30%, 3rd: 20%).
             </p>
             <div className="mt-2 text-xs space-y-1">
               <div>Base Demand: {sector.baseDemand || 0}</div>
@@ -264,7 +264,7 @@ const EndTurnSectorConsumerDistributionAnimation = ({
             <div className="bg-gray-900/50 p-3 rounded border border-gray-700">
               <h4 className="font-semibold text-white mb-2">Sector Demand System</h4>
               <p className={tooltipParagraphStyle}>
-                Consumer distribution is determined by <strong>sector demand rankings</strong>. Sector demand is <strong>research slot bonus</strong> plus <strong>active marketing demand bonuses</strong> (tier II +1, tier III +2 per campaign). Brand score affects factory attraction, not sector demand.
+                Consumer distribution is determined by <strong>sector demand rankings</strong>. Sector demand is <strong>research slot bonus</strong> plus <strong>active marketing demand bonuses</strong> (tier I +1, tier II +1, tier III +2 per active campaign). Brand score affects factory attraction, not sector demand.
               </p>
               <div className="mt-2 space-y-1 text-xs">
                 <div className="space-y-2">
@@ -278,7 +278,7 @@ const EndTurnSectorConsumerDistributionAnimation = ({
                     </ul>
                   </div>
                   <div>
-                    <span className="text-blue-400 font-medium">2. Active Marketing:</span> While campaigns run, tier II adds +1 sector demand and tier III adds +2 (tier I +0). Multiple active campaigns stack.
+                    <span className="text-blue-400 font-medium">2. Active Marketing:</span> While campaigns run, tier I and tier II each add +1 sector demand and tier III adds +2. Multiple active campaigns stack.
                   </div>
                   <div>
                     <span className="text-blue-400 font-medium">3. Sector Demand:</span> Each sector&apos;s total demand = research slot bonus + marketing demand bonuses. Higher demand = higher ranking.

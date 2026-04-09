@@ -33,7 +33,7 @@ import CompanyInfo from "../Company/CompanyInfo";
 import CompanyInfoV2 from "../Company/CompanyV2/CompanyInfoV2";
 
 interface ChartData {
-  phaseId: string;
+  tick: string;
   stockPrice: number;
 }
 
@@ -141,7 +141,7 @@ const StockChart = () => {
         .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
         .filter((stockHistory) => stockHistory.price !== 0)
         .map((stockHistory, index) => ({
-          phaseId: `${index + 1} ${stockHistory.Phase.name}`,
+          tick: `${index + 1}-${stockHistory.id}`,
           stockPrice: stockHistory.price,
           stockAction: stockHistory.action,
           steps: stockHistory.stepsMoved,
@@ -176,88 +176,57 @@ const StockChart = () => {
   }, {});
 
   const colorsArray: string[] = Object.values(companyColorsMap) || [];
-  const groupedData =
-    companies
-      ?.flatMap((company) => {
-        return company.StockHistory.sort(
-          (a, b) => a.createdAt.getTime() - b.createdAt.getTime()
-        ) // Sort by createdAt
-          .filter((stockHistory) => stockHistory.price !== 0)
-          .map((stockHistory, index) => ({
-            indexer: `${index + 1} ${stockHistory.Phase.name}`,
-            phaseId: stockHistory.phaseId, // Generate consistent phaseId
-            phaseName: stockHistory.Phase.name,
-            companyName: company.name,
-            stockPrice: stockHistory.price,
-            createdAt: stockHistory.createdAt, // Ensure createdAt is included for consistency
-          }));
-      })
-      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()) ?? []; // Final sort to ensure order across companies
+
+  /** One chart row per stock history row so multiple price moves in the same phase are not collapsed. */
+  type HistoryPoint = {
+    id: number;
+    companyName: string;
+    createdAt: Date;
+    price: number;
+    phaseName: string;
+  };
+
+  const historyPoints: HistoryPoint[] =
+    companies?.flatMap((company) =>
+      company.StockHistory.filter((sh) => sh.price !== 0).map((sh) => ({
+        id: sh.id,
+        companyName: company.name,
+        createdAt: sh.createdAt,
+        price: sh.price,
+        phaseName: sh.Phase.name,
+      }))
+    ) ?? [];
+
+  historyPoints.sort(
+    (a, b) =>
+      a.createdAt.getTime() - b.createdAt.getTime() || a.id - b.id
+  );
+
+  const companyNames = companies.map((company) => company.name);
+  const runningPrices: Record<string, number> = {};
+  for (const name of companyNames) {
+    const c = companies.find((co) => co.name === name);
+    runningPrices[name] = c?.currentStockPrice ?? 0;
+  }
 
   interface PhaseEntry {
     indexer: string;
-    phaseId: string;
-    phaseName: string;
-    [key: string]: string | number; // Allows dynamic company names as keys with stock prices as values
-  }
-
-  interface LastKnownPrices {
-    [phaseId: string]: {
-      [companyName: string]: number; // Company names as keys with last known stock prices as values
-    };
+    [key: string]: string | number;
   }
 
   const allChartData: PhaseEntry[] = [];
-  const lastKnownPrices: LastKnownPrices = {}; // Keeps track of the last known price for each company
-  // Process groupedData into allChartData
-  groupedData.forEach(
-    ({ indexer, phaseId, phaseName, companyName, stockPrice }) => {
-      let phaseEntry = allChartData.find(
-        (entry) => entry.phaseId === phaseId && entry.phaseName === phaseName
-      );
-      if (!phaseEntry) {
-        phaseEntry = { indexer, phaseId, phaseName };
-        allChartData.push({
-          indexer,
-          phaseId,
-          phaseName,
-          [companyName]: stockPrice,
-        });
-      }
-
-      phaseEntry[companyName] = stockPrice;
-      // Initialize lastKnownPrices for the phaseId if it doesn't exist
-      if (!lastKnownPrices[phaseId]) {
-        lastKnownPrices[phaseId] = {};
-      }
-      // Update the last known price for the company at the current phase
-      lastKnownPrices[phaseId][companyName] = stockPrice;
+  let step = 0;
+  for (const p of historyPoints) {
+    runningPrices[p.companyName] = p.price;
+    step += 1;
+    const row: PhaseEntry = {
+      indexer: `${step} ${p.phaseName} (#${p.id})`,
+    };
+    for (const name of companyNames) {
+      row[name] = runningPrices[name];
     }
-  );
-  // Ensure every phase entry contains the price for every company
-  const companyNames = companies.map((company) => company.name);
-  allChartData.forEach((entry) => {
-    companyNames.forEach((companyName) => {
-      if (!(companyName in entry)) {
-        //get the last phase with a known price for this company by iterating over
-        //all chart data phases in reverse order from the current phase
-        let lastKnownPrice = null;
-        for (let i = allChartData.indexOf(entry) - 1; i >= 0; i--) {
-          if (companyName in allChartData[i]) {
-            if (
-              lastKnownPrices[allChartData[i].phaseId][companyName] &&
-              lastKnownPrices[allChartData[i].phaseId][companyName] !== null
-            ) {
-              lastKnownPrice =
-                lastKnownPrices[allChartData[i].phaseId][companyName];
-              break;
-            }
-          }
-        }
-        entry[companyName] = lastKnownPrice || 0;
-      }
-    });
-  });
+    allChartData.push(row);
+  }
   return (
     <div className="flex flex-col">
       <Tabs>
@@ -530,7 +499,7 @@ const StockChart = () => {
                   <div className="flex flex-col justify-center items-center">
                     <LineChart
                       data={chartData}
-                      index="phaseId"
+                      index="tick"
                       categories={["stockPrice"]}
                       yAxisLabel="Stock Price"
                       xAxisLabel="Stock Price Updated"

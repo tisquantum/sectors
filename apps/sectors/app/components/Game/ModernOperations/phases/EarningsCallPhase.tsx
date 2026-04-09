@@ -5,7 +5,13 @@ import { trpc } from '@sectors/app/trpc';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
 import { FACTORY_CUSTOMER_LIMITS, BASE_WORKER_SALARY } from '@server/data/constants';
 import { ModernOperationsLayout, ModernOperationsSection } from '../layouts';
-import { Spinner } from '@nextui-org/react';
+import {
+  Spinner,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@nextui-org/react';
+import CompanyInfoV2 from '../../../Company/CompanyV2/CompanyInfoV2';
 import { ResourceIcon } from '../../ConsumptionPhase/ResourceIcon';
 import { useMemo } from 'react';
 import { LineChart } from '@tremor/react';
@@ -205,7 +211,23 @@ export function EarningsCallPhase() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-white text-xl">{company.name}</CardTitle>
+                  <Popover placement="bottom-start">
+                    <PopoverTrigger>
+                      <button
+                        type="button"
+                        className="text-left rounded-md outline-none ring-offset-2 ring-offset-gray-800 focus-visible:ring-2 focus-visible:ring-blue-500"
+                      >
+                        <span className="block text-white text-xl font-semibold tracking-tight hover:text-blue-300 transition-colors cursor-pointer">
+                          {company.name}
+                        </span>
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto max-w-[min(100vw-2rem,420px)] p-0 dark text-foreground bg-slate-900 border border-gray-700">
+                      <div className="p-2 max-h-[70vh] overflow-y-auto">
+                        <CompanyInfoV2 companyId={company.id} />
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                   <div className="flex items-center gap-4 text-sm text-gray-400 mt-1">
                     <span>Sector: {company.sector.replace('_', ' ')}</span>
                     <span>Brand Score: {company.brandScore}</span>
@@ -415,10 +437,10 @@ export function EarningsCallPhase() {
                             .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
                             .filter(sh => sh.price !== 0)
                             .map((sh, index) => ({
-                              phaseId: `${index + 1} ${sh.Phase.name}`,
+                              tick: `${index + 1}-${sh.id}`,
                               stockPrice: sh.price,
                             }))}
-                          index="phaseId"
+                          index="tick"
                           categories={['stockPrice']}
                           yAxisLabel="Stock Price"
                           xAxisLabel="Phase"

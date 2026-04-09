@@ -1921,11 +1921,6 @@ export class GameManagementService {
       game: { connect: { id: phase.gameId } },
       content: `A new company ${newCompany.name} has been established in the ${sector.sectorName} sector.`,
     });
-    //add 1 base demand to the company sector
-    await this.sectorService.updateSector({
-      where: { id: sectorId },
-      data: { demand: (sector.demand || 0) + 1 },
-    });
   }
   /**
    * Any demand bonuses are subtracted by 1.

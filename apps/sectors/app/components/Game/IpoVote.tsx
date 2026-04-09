@@ -17,7 +17,6 @@ import {
   PopoverTrigger,
 } from "@nextui-org/react";
 import CompanyInfo from "../Company/CompanyInfo";
-import { RiPriceTag3Fill } from "@remixicon/react";
 import { sectorColors } from "@server/data/gameData";
 import CompanyInfoV2 from "../Company/CompanyV2/CompanyInfoV2";
 
@@ -70,11 +69,6 @@ const CompanyIpoVote = ({
               <span>{company.name}</span>
               <span>|</span>
               <span>{sector?.name}</span>
-              <span>|</span>
-              <div className="flex gap-1 items-center">
-                <RiPriceTag3Fill size={18} />
-                <span>${company.unitPrice}</span>
-              </div>
             </div>
           </PopoverTrigger>
           <PopoverContent>

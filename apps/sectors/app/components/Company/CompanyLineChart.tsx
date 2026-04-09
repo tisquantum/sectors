@@ -24,7 +24,8 @@ export const CompanyLineChart = ({ companyId }: { companyId: string }) => {
   )
     .filter((stockHistory) => stockHistory.price !== 0)
     .map((stockHistory, index) => ({
-      phaseId: `${index + 1} ${stockHistory.Phase.name}`,
+      // Unique index so multiple moves in the same phase are all plotted (Tremor collapses duplicate index keys).
+      tick: `${index + 1}-${stockHistory.id}`,
       stockPrice: stockHistory.price,
       stockAction: stockHistory.action,
       steps: stockHistory.stepsMoved,
@@ -34,7 +35,7 @@ export const CompanyLineChart = ({ companyId }: { companyId: string }) => {
       {company.name}
       <LineChart
         data={chartData}
-        index="phaseId"
+        index="tick"
         categories={["stockPrice"]}
         yAxisLabel="Stock Price"
         xAxisLabel="Stock Price Updated"

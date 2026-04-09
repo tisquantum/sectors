@@ -6,7 +6,6 @@ import {
   AccordionItem,
   Avatar,
   Divider,
-  Tooltip,
 } from "@nextui-org/react";
 import { CurrencyDollarIcon } from "@heroicons/react/24/solid";
 import PlayerShares from "./PlayerShares";
@@ -24,7 +23,6 @@ import {
 } from "@remixicon/react";
 import PlayerAvatar from "./PlayerAvatar";
 import { useGame } from "../Game/GameContext";
-import { baseToolTipStyle, tooltipStyle } from "@sectors/app/helpers/tailwind.helpers";
 import { calculateNetWorth } from "@server/data/helpers";
 import WalletInfo from "../Game/WalletInfo";
 
@@ -71,64 +69,25 @@ const PlayersOverview = ({ gameId }: { gameId: string }) => {
             title={playerWithShares.nickname}
             subtitle={
               <div className="flex gap-2">
-                <Tooltip
-                  classNames={{ base: baseToolTipStyle }}
-                  className={tooltipStyle}
-                  content={<p>Cash on hand.</p>}
-                >
-                  <span className="flex items-center content-center">
-                    <WalletInfo player={playerWithShares} />
-                  </span>
-                </Tooltip>
-                <Tooltip
-                  classNames={{ base: baseToolTipStyle }}
-                  className={tooltipStyle}
-                  content={
-                    <p>
-                      Portfolio Value: the total value of all shares owned.
-                    </p>
-                  }
-                >
-                  <span className="flex items-center content-center">
-                    <RiCurrencyFill className="h-6 w-6" /> $
-                    {calculateNetWorth(0, playerWithShares.Share)}
-                  </span>
-                </Tooltip>
-                <Tooltip
-                  classNames={{ base: baseToolTipStyle }}
-                  className={tooltipStyle}
-                  content={
-                    <p>
-                      Net worth: The total value of all shares owned plus cash on
-                      hand.
-                    </p>
-                  }
-                >
-                  <span className="flex items-center content-center">
-                    <RiScalesFill className="h-6 w-6" /> $
-                    {calculateNetWorth(
-                      playerWithShares.cashOnHand,
-                      playerWithShares.Share
-                    )}
-                  </span>
-                </Tooltip>
+                <span className="flex items-center content-center">
+                  <WalletInfo player={playerWithShares} />
+                </span>
+                <span className="flex items-center content-center">
+                  <RiCurrencyFill className="h-6 w-6" /> $
+                  {calculateNetWorth(0, playerWithShares.Share)}
+                </span>
+                <span className="flex items-center content-center">
+                  <RiScalesFill className="h-6 w-6" /> $
+                  {calculateNetWorth(
+                    playerWithShares.cashOnHand,
+                    playerWithShares.Share
+                  )}
+                </span>
                 {playerWithShares.marginAccount > 0 && (
-                  <Tooltip
-                    classNames={{ base: baseToolTipStyle }}
-                    className={tooltipStyle}
-                    content={
-                      <p>
-                        Margin account balance. This balance is locked for short
-                        orders until they are covered. It cannot be used for any
-                        other purpose until then.
-                      </p>
-                    }
-                  >
-                    <span className="flex items-center content-center">
-                      <RiSafe2Fill size={18} /> $
-                      {playerWithShares.marginAccount}
-                    </span>
-                  </Tooltip>
+                  <span className="flex items-center content-center">
+                    <RiSafe2Fill size={18} /> $
+                    {playerWithShares.marginAccount}
+                  </span>
                 )}
               </div>
             }

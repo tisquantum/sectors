@@ -165,9 +165,16 @@ const LimitOrderInput = ({
   const [limitOrderValue, setLimitOrderValue] = useState<number>(
     defaultValue || 0
   );
+  const [sellShareSlider, setSellShareSlider] = useState<number>(minValue);
   useEffect(() => {
     handleLimitOrder(limitOrderValue);
   }, [limitOrderValue, handleLimitOrder]);
+  useEffect(() => {
+    setSellShareSlider(minValue);
+    if (!isBuy) {
+      handleShares(minValue);
+    }
+  }, [minValue, isBuy, handleShares]);
   return (
     <>
       <BuyOrSell handleSelectionIsBuy={handleSelectionIsBuy} />
@@ -196,13 +203,14 @@ const LimitOrderInput = ({
           showSteps={true}
           maxValue={maxValue}
           minValue={minValue}
+          value={sellShareSlider}
           onChange={(value) => {
             if (Array.isArray(value)) {
               value = value[0];
             }
+            setSellShareSlider(value);
             handleShares(value);
           }}
-          defaultValue={minValue}
           className="max-w-md"
         />
       )}
@@ -275,11 +283,12 @@ const TabContentMO: React.FC<TabContentProps> = ({
   company,
 }) => {
   const { gameState } = useGame();
-  const [shareValue, setShareValue] = useState<number>(1);
+  const [shareValue, setShareValue] = useState<number>(minValue);
   const [marketOrderBidValue, setMarketOrderBidValue] = useState<number>(
     defaultValue || 0
   );
   useEffect(() => {
+    setShareValue(minValue);
     handleShares(minValue);
     handleValueChange(defaultValue || 0);
   }, [defaultValue, minValue, handleShares, handleValueChange]);
@@ -289,7 +298,7 @@ const TabContentMO: React.FC<TabContentProps> = ({
       setShareValue(maxValue);
       handleShares(maxValue);
     }
-  }, [maxValue]);
+  }, [maxValue, shareValue, handleShares]);
   return (
     <div className="flex flex-col text-center items-center center-content justify-center gap-2">
       {/* 
@@ -344,7 +353,6 @@ const TabContentMO: React.FC<TabContentProps> = ({
             handleShares(value);
             setShareValue(value);
           }}
-          defaultValue={minValue}
           className="max-w-md"
           value={shareValue}
         />

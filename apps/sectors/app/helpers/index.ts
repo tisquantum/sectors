@@ -143,6 +143,110 @@ export function friendlyPhaseName(name: PhaseName | undefined): string {
   }
 }
 
+/** Short explanation for the phase list sidebar (not every enum value may appear in a given game). */
+export function phaseTooltipDescription(name: PhaseName): string {
+  switch (name) {
+    case PhaseName.HEADLINE_RESOLVE:
+      return "Apply headline effects for this turn.";
+    case PhaseName.INFLUENCE_BID_ACTION:
+      return "Players place influence bids.";
+    case PhaseName.INFLUENCE_BID_REVEAL:
+      return "Reveal submitted influence bids.";
+    case PhaseName.INFLUENCE_BID_RESOLVE:
+      return "Resolve influence bids and update standings.";
+    case PhaseName.SET_COMPANY_IPO_PRICES:
+      return "Vote on IPO prices for companies that have not yet floated.";
+    case PhaseName.RESOLVE_SET_COMPANY_IPO_PRICES:
+      return "Average IPO votes and set float prices; create IPO shares.";
+    case PhaseName.STOCK_ACTION_ORDER:
+      return "Place stock orders (market, limit, short, options as enabled).";
+    case PhaseName.STOCK_ACTION_RESULT:
+      return "Review concealed orders before reveal.";
+    case PhaseName.STOCK_ACTION_REVEAL:
+      return "Reveal and display submitted orders.";
+    case PhaseName.STOCK_RESOLVE_LIMIT_ORDER:
+      return "Match and resolve limit orders.";
+    case PhaseName.STOCK_RESOLVE_MARKET_ORDER:
+      return "Execute market orders against the pool.";
+    case PhaseName.STOCK_SHORT_ORDER_INTEREST:
+      return "Charge interest on open short positions.";
+    case PhaseName.STOCK_ACTION_SHORT_ORDER:
+      return "Submit cover orders for shorts.";
+    case PhaseName.STOCK_RESOLVE_PENDING_SHORT_ORDER:
+      return "Resolve pending short covers.";
+    case PhaseName.STOCK_ACTION_OPTION_ORDER:
+      return "Exercise option contracts.";
+    case PhaseName.STOCK_RESOLVE_PENDING_OPTION_ORDER:
+      return "Resolve pending option exercises.";
+    case PhaseName.STOCK_RESOLVE_OPTION_ORDER:
+      return "Expire and settle option contracts.";
+    case PhaseName.STOCK_OPEN_LIMIT_ORDERS:
+      return "Open the limit order book for new resting orders.";
+    case PhaseName.STOCK_RESULTS_OVERVIEW:
+      return "Summary of the stock round.";
+    case PhaseName.STOCK_MEET:
+      return "Stockholders meet to discuss the round.";
+    case PhaseName.OPERATING_PRODUCTION:
+      return "Legacy operating production (classic rules).";
+    case PhaseName.OPERATING_PRODUCTION_VOTE:
+      return "Vote how company revenue is split: dividends, half, or retain.";
+    case PhaseName.OPERATING_PRODUCTION_VOTE_RESOLVE:
+      return "Apply revenue distribution votes and pay shareholders or retain cash.";
+    case PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT:
+      return "Move stock prices based on operating results.";
+    case PhaseName.OPERATING_ACTION_COMPANY_VOTE:
+      return "Vote on company actions.";
+    case PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT:
+      return "Show company vote totals.";
+    case PhaseName.OPERATING_MEET:
+      return "Operating round meeting.";
+    case PhaseName.OPERATING_COMPANY_VOTE_RESOLVE:
+      return "Resolve the chosen company action.";
+    case PhaseName.CONSUMPTION_PHASE:
+      return "Route consumers to factories; record production.";
+    case PhaseName.FACTORY_CONSTRUCTION:
+      return "Submit factory construction orders.";
+    case PhaseName.FACTORY_CONSTRUCTION_RESOLVE:
+      return "Resolve builds, costs, and new factories.";
+    case PhaseName.MARKETING_AND_RESEARCH_ACTION:
+      return "Spend on marketing campaigns and sector research.";
+    case PhaseName.MARKETING_AND_RESEARCH_ACTION_RESOLVE:
+      return "Apply new campaigns and research progress.";
+    case PhaseName.EARNINGS_CALL:
+      return "Review factory P&L, worker salaries, and stock price steps (cash from sales is paid when revenue votes resolve).";
+    case PhaseName.CAPITAL_GAINS:
+      return "Assess capital gains tax on realized gains.";
+    case PhaseName.DIVESTMENT:
+      return "Forced divestment / cleanup rules if applicable.";
+    case PhaseName.START_TURN:
+      return "Begin the turn: refresh timers and priorities.";
+    case PhaseName.END_TURN:
+      return "Distribute consumers, update economy, and advance the game.";
+    case PhaseName.PRIZE_VOTE_ACTION:
+      return "Vote on prize tranches.";
+    case PhaseName.PRIZE_VOTE_RESOLVE:
+      return "Resolve prize votes.";
+    case PhaseName.PRIZE_DISTRIBUTE_ACTION:
+      return "Choose how prizes are distributed.";
+    case PhaseName.PRIZE_DISTRIBUTE_RESOLVE:
+      return "Pay out prizes.";
+    case PhaseName.MODERN_OPERATIONS:
+      return "Combined modern phase: workforce, factories, marketing, research, and construction.";
+    case PhaseName.RESOLVE_MODERN_OPERATIONS:
+      return "Resolve modern operations submissions.";
+    case PhaseName.RUSTED_FACTORY_UPGRADE:
+      return "Upgrade factories that are behind the sector research track.";
+    case PhaseName.FORECAST_COMMITMENT_START_TURN:
+      return "Commit forecast choices at turn start.";
+    case PhaseName.FORECAST_COMMITMENT_END_TURN:
+      return "Update forecast commitments before turn end.";
+    case PhaseName.FORECAST_RESOLVE:
+      return "Resolve forecast outcomes.";
+    default:
+      return "Game phase in the turn sequence.";
+  }
+}
+
 export const isCurrentPhaseInteractive = (
   phaseName: PhaseName | undefined
 ): boolean => {

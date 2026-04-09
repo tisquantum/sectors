@@ -20,11 +20,20 @@ interface SpotMarketProps {
  * Companies View - Shows companies broken down by sector
  * Simplified view without order placement functionality
  */
+function sectorTotalDemand(
+  sector:
+    | { demand?: number | null; demandBonus?: number | null }
+    | undefined
+): number {
+  if (!sector) return 0;
+  return (sector.demand ?? 0) + (sector.demandBonus ?? 0);
+}
+
 export function SpotMarket({
   handleOrder,
   forwardedRef,
 }: SpotMarketProps = {}) {
-  const { gameId } = useGame();
+  const { gameId, gameState } = useGame();
 
   // Fetch companies - optimized with caching
   const { data: companies, isLoading: isLoadingCompanies } =
@@ -76,10 +85,44 @@ export function SpotMarket({
     >
       <div className="space-y-6">
         {/* Companies by Sector */}
-        {Object.keys(companiesBySector).map((sectorId) => (
+        {Object.keys(companiesBySector).map((sectorId) => {
+          const bundle = companiesBySector[sectorId];
+          const liveSector = gameState?.sectors?.find((s) => s.id === sectorId);
+          const demand = sectorTotalDemand(liveSector ?? bundle.sector);
+          const companyCount = bundle.companies.length;
+          const th2 = liveSector?.demandThreshold2Reached === true;
+          const th4 = liveSector?.demandThreshold4Reached === true;
+          const th8 = liveSector?.demandThreshold8Reached === true;
+
+          return (
           <ModernOperationsSection
             key={sectorId}
-            title={companiesBySector[sectorId].sector.name}
+            title={
+              <div className="space-y-2 w-full">
+                <div>{bundle.sector.name}</div>
+                <div className="text-sm font-normal text-gray-400 space-y-1">
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 items-baseline">
+                    <span>
+                      Sector demand:{" "}
+                      <span className="text-gray-200 font-medium">{demand}</span>
+                    </span>
+                    <span>
+                      Companies:{" "}
+                      <span className="text-gray-200 font-medium">
+                        {companyCount}
+                      </span>
+                    </span>
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    New company thresholds (demand 2 / 4 / 8):{" "}
+                    <span className="text-gray-300">
+                      {th2 ? "2 ✓" : "2 ○"} · {th4 ? "4 ✓" : "4 ○"} ·{" "}
+                      {th8 ? "8 ✓" : "8 ○"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            }
           >
             <div className="flex flex-wrap gap-4">
               {companiesBySector[sectorId].companies.map(
@@ -93,7 +136,8 @@ export function SpotMarket({
               )}
             </div>
           </ModernOperationsSection>
-        ))}
+          );
+        })}
       </div>
     </ModernOperationsLayout>
   );

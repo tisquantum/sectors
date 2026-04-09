@@ -2,7 +2,7 @@ import { useGame } from "./GameContext";
 import "./EndTurnEconomy.css";
 import { sectorColors } from "@server/data/gameData";
 import { CompanyStatus, OperationMechanicsVersion, PhaseName, Sector } from "@server/prisma/prisma.client";
-import { useRef, useEffect, useState, type Key } from "react";
+import { useRef, useEffect, useState, useMemo, type Key } from "react";
 import {
   RiGlasses2Fill,
   RiHandCoinFill,
@@ -109,6 +109,14 @@ const EndTurnEconomy = ({
       );
     });
   }
+
+  /** End-turn consumer split uses sector demand rank; list sectors highest demand first so the overview matches 1st / 2nd / 3rd place. */
+  const sectorsByDemandRank = useMemo(() => {
+    const totalDemand = (s: Sector) =>
+      (s.demand ?? 0) + (s.demandBonus ?? 0);
+    return [...sectors].sort((a, b) => totalDemand(b) - totalDemand(a));
+  }, [sectors]);
+
   if (isLoadingCompanies) {
     return <div>Loading companies...</div>;
   }
@@ -130,7 +138,9 @@ const EndTurnEconomy = ({
         <Tab key="overview" title="Overview">
           <div className="flex flex-col gap-6 text-base lg:text-xl w-full p-4">
             {currentPhase?.name == PhaseName.END_TURN ? (
-              <EndTurnSectorConsumerDistributionAnimation sectors={sectors} />
+              <EndTurnSectorConsumerDistributionAnimation
+                sectors={sectorsByDemandRank}
+              />
             ) : (
               <div className="flex flex-col flex-wrap items-center gap-4">
                 {/* Economy Overview Explanation */}

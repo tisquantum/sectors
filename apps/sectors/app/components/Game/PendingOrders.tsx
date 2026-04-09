@@ -269,7 +269,6 @@ const PendingMarketOrders = ({
                                 <OrderChipChitWithPlayer
                                   order={order}
                                   showStatus={true}
-                                  suppressOverviewTooltips={isResolving}
                                 />
                               </>
                             </motion.div>
@@ -358,7 +357,6 @@ const PendingLimitOrders = ({
                           <OrderChipChitWithPlayer
                             order={order}
                             showStatus={true}
-                            suppressOverviewTooltips={isResolving}
                           />
                         </div>
                       </div>
@@ -396,7 +394,6 @@ const PendingShortOrders = ({
               <OrderChipChitWithPlayer
                 order={order}
                 showStatus={true}
-                suppressOverviewTooltips={isResolving}
               />
             </div>
           </div>

@@ -19,7 +19,9 @@ import {
   ModalBody,
   ModalFooter,
   useDisclosure,
+  Tooltip,
 } from "@nextui-org/react";
+import { isMarketingTierUnlockedForSector } from "@server/data/marketing-unlock";
 import { ResearchTrack } from "../../../Company/Research/ResearchTrack";
 import {
   createSectorResearchTrackSpaces,
@@ -44,7 +46,7 @@ const MARKETING_CONFIG = {
   [MarketingCampaignTier.TIER_1]: {
     workers: 1,
     brandBonus: 1,
-    demandBonus: 0,
+    demandBonus: 1,
     cost: 50,
   },
   [MarketingCampaignTier.TIER_2]: {
@@ -563,9 +565,16 @@ export default function MarketingAndResearchPhase() {
                        hasCompanySelected &&
                        currentCompany &&
                        currentCompany.cashOnHand >= config.cost;
+                     const tierUnlocked =
+                       currentSector != null &&
+                       isMarketingTierUnlockedForSector(
+                         currentSector.researchMarker ?? 0,
+                         tier
+                       );
                      const isDisabled =
                        !hasCompanySelected ||
                        !canAfford ||
+                       !tierUnlocked ||
                        createMarketingCampaign.isPending;
 
                     return (
@@ -583,6 +592,7 @@ export default function MarketingAndResearchPhase() {
                         onClick={() =>
                           !isDisabled &&
                           canAfford &&
+                          tierUnlocked &&
                           setSelectedMarketingTier(tier)
                         }
                       >
@@ -596,6 +606,17 @@ export default function MarketingAndResearchPhase() {
                                <div>Brand Bonus: +{config.brandBonus}</div>
                                <div>Sector demand bonus: +{config.demandBonus}</div>
                                <div>Cost: ${config.cost}</div>
+                               {!tierUnlocked && currentSector && (
+                                 <div className="text-amber-400 text-xs">
+                                   Requires research stage{" "}
+                                   {tier === MarketingCampaignTier.TIER_2
+                                     ? "2"
+                                     : tier === MarketingCampaignTier.TIER_3
+                                       ? "3"
+                                       : "1"}{" "}
+                                   (sector track {currentSector.researchMarker ?? 0}/12)
+                                 </div>
+                               )}
                                {currentCompany && (
                                  <div
                                    className={`mt-1 ${
@@ -609,19 +630,30 @@ export default function MarketingAndResearchPhase() {
                                )}
                              </div>
                           </div>
-                          <Button
-                            size="sm"
-                            color="primary"
-                            disabled={isDisabled}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (!isDisabled) {
-                                handleOpenResourceSelection(tier);
-                              }
+                          <Tooltip
+                            isDisabled={tierUnlocked || !hasCompanySelected}
+                            content="Advance the shared sector research track to unlock this campaign tier."
+                            placement="top"
+                            classNames={{
+                              content: "max-w-xs text-xs",
                             }}
                           >
-                            Create
-                          </Button>
+                            <span className="inline-flex">
+                              <Button
+                                size="sm"
+                                color="primary"
+                                disabled={isDisabled}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (!isDisabled) {
+                                    handleOpenResourceSelection(tier);
+                                  }
+                                }}
+                              >
+                                Create
+                              </Button>
+                            </span>
+                          </Tooltip>
                         </div>
                       </div>
                     );
