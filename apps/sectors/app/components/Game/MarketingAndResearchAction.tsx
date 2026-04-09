@@ -7,6 +7,11 @@ import { MarketingCampaignTier, OperationMechanicsVersion } from '@server/prisma
 import { Button, Card, CardBody, CardHeader, Divider, Spinner } from '@nextui-org/react';
 import { MarketingCreation } from '../Company/Marketing/MarketingCreation';
 import { ResearchTrack } from '../Company/Research/ResearchTrack';
+import {
+  createSectorResearchTrackSpaces,
+  researchCostStageFromSectorMarker,
+  researchTrackStageForDisplay,
+} from '../Company/Research/sectorResearchTrackSpaces';
 
 const RESEARCH_COSTS = {
   1: 100, // Phase I
@@ -63,14 +68,6 @@ export default function MarketingAndResearchAction() {
     gameId: gameState.id,
   });
 
-  // Fetch sector research progress
-  const { data: researchProgress } = trpc.modernOperations.getSectorResearchProgress.useQuery({
-    sectorId: currentCompany.sectorId,
-    gameId: gameState.id,
-  }, {
-    enabled: !!currentCompany.sectorId,
-  });
-
   const submitResearch = trpc.modernOperations.submitResearchAction.useMutation({
     onSuccess: () => {
       setIsResearching(false);
@@ -105,7 +102,9 @@ export default function MarketingAndResearchAction() {
 
   // Calculate research cost based on sector research stage (researchMarker)
   const sectorResearchMarker = currentSector?.researchMarker || 0;
-  const researchStage = Math.min(Math.floor(sectorResearchMarker / 5) + 1, 4);
+  const researchStage = researchCostStageFromSectorMarker(sectorResearchMarker);
+  const researchTrackDisplayStage =
+    researchTrackStageForDisplay(sectorResearchMarker);
   const researchCost = RESEARCH_COSTS[researchStage as keyof typeof RESEARCH_COSTS] || 100;
   const canResearch = currentCompany.cashOnHand >= researchCost;
 
@@ -114,7 +113,7 @@ export default function MarketingAndResearchAction() {
       <div className="text-center">
         <h1 className="text-2xl font-bold text-gray-200 mb-2">Marketing & Research Phase</h1>
         <p className="text-gray-400">
-          Create marketing campaigns and advance your research track
+          Create marketing campaigns and advance the shared sector research track
         </p>
       </div>
 
@@ -192,7 +191,9 @@ export default function MarketingAndResearchAction() {
               <div className="flex justify-between items-center p-3 bg-gray-700/30 rounded-lg">
                 <div>
                   <div className="font-medium text-gray-200">Research Cost</div>
-                  <div className="text-sm text-gray-400">Stage {researchStage} (Progress: {sectorResearchMarker}/20)</div>
+                  <div className="text-sm text-gray-400">
+                    Cost tier {researchStage} · Shared sector track: {sectorResearchMarker}/12
+                  </div>
                 </div>
                 <div className="text-right">
                   <div className="font-bold text-gray-200">${researchCost}</div>
@@ -218,7 +219,7 @@ export default function MarketingAndResearchAction() {
                       Research Complete!
                     </div>
                     <div className="text-sm text-green-300">
-                      Advanced {researchResult} spaces on the research track
+                      Added {researchResult} space{researchResult === 1 ? "" : "s"} to the shared sector track
                     </div>
                   </div>
                 </div>
@@ -245,26 +246,23 @@ export default function MarketingAndResearchAction() {
         </Card>
       </div>
 
-      {/* Research Track Display */}
+      {/* Shared sector research track */}
       <Card className="bg-gray-800/50 border border-gray-700">
         <CardHeader className="pb-3">
-          <h2 className="text-xl font-semibold text-gray-200">Research Track</h2>
+          <h2 className="text-xl font-semibold text-gray-200">Sector research track (shared)</h2>
         </CardHeader>
         <CardBody>
+          {currentSector && (
+            <p className="text-sm text-gray-400 mb-3">
+              {sectorResearchMarker}/12 for {currentSector.name}. This company: +
+              {currentCompany.researchProgress || 0} lifetime spaces (paid with this
+              company&apos;s cash; workers tied to this company).
+            </p>
+          )}
           <ResearchTrack
-            currentProgress={currentCompany.researchProgress || 0}
-            currentStage={researchStage}
-            spaces={Array.from({ length: 20 }, (_, i) => ({
-              id: `space-${i + 1}`,
-              number: i + 1,
-              phase: Math.ceil((i + 1) / 5),
-              isUnlocked: i < 20,
-              hasReward: (i + 1) % 5 === 0,
-              reward: (i + 1) % 5 === 0 ? {
-                type: 'GRANT' as const,
-                amount: Math.ceil((i + 1) / 5) * 100,
-              } : undefined,
-            }))}
+            currentProgress={sectorResearchMarker}
+            currentStage={researchTrackDisplayStage}
+            spaces={createSectorResearchTrackSpaces(sectorResearchMarker)}
           />
         </CardBody>
       </Card>

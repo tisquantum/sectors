@@ -35,7 +35,7 @@ const CompanyAwardTrack = ({
   const awardTrackDescription = (awardTrackType: AwardTrackType) => {
     switch (awardTrackType) {
       case AwardTrackType.RESEARCH:
-        return "Every time the company selects a research action during operations advance one space on this track.";
+        return "Each time this company takes a research action in operations, advance one space on this award track (this is separate from the shared sector research track).";
       case AwardTrackType.MARKETING:
         return "Every time a company selects a marketing campaign action during operations advance one space on this track.";
       case AwardTrackType.CATALYST:

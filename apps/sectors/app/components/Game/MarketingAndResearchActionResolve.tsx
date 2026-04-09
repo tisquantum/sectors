@@ -3,6 +3,10 @@
 import { useGame } from './GameContext';
 import { Card, CardBody, CardHeader, Chip } from '@nextui-org/react';
 import { ResearchTrack } from '../Company/Research/ResearchTrack';
+import {
+  createSectorResearchTrackSpaces,
+  researchTrackStageForDisplay,
+} from '../Company/Research/sectorResearchTrackSpaces';
 import PlayerAvatar from '../Player/PlayerAvatar';
 import { Player } from '@server/prisma/prisma.client';
 
@@ -109,9 +113,19 @@ export default function MarketingAndResearchActionResolve() {
                   
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-400">Research Progress:</span>
+                      <span className="text-gray-400">Shared sector track:</span>
                       <span className="text-gray-200 font-medium">
-                        {company.researchProgress || 0} spaces
+                        {gameState.sectors.find((s) => s.id === company.sectorId)
+                          ?.researchMarker ?? 0}
+                        /12
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">
+                        This company (lifetime spaces):
+                      </span>
+                      <span className="text-gray-200 font-medium">
+                        +{company.researchProgress || 0}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
@@ -168,18 +182,12 @@ export default function MarketingAndResearchActionResolve() {
               
               <ResearchTrack
                 currentProgress={sector.researchMarker || 0}
-                currentStage={Math.ceil((sector.researchMarker || 0) / 5) || 1}
-                spaces={Array.from({ length: 20 }, (_, i) => ({
-                  id: `sector-${sector.id}-space-${i + 1}`,
-                  number: i + 1,
-                  phase: Math.ceil((i + 1) / 5),
-                  isUnlocked: i < 20,
-                  hasReward: (i + 1) % 5 === 0,
-                  reward: (i + 1) % 5 === 0 ? {
-                    type: 'GRANT' as const,
-                    amount: Math.ceil((i + 1) / 5) * 100,
-                  } : undefined,
-                }))}
+                currentStage={researchTrackStageForDisplay(
+                  sector.researchMarker || 0
+                )}
+                spaces={createSectorResearchTrackSpaces(
+                  sector.researchMarker || 0
+                )}
               />
               
               <div className="text-sm text-gray-400">
@@ -218,7 +226,9 @@ export default function MarketingAndResearchActionResolve() {
               <div className="text-2xl font-bold text-blue-400">
                 {companies.reduce((sum, c) => sum + (c.researchProgress || 0), 0)}
               </div>
-              <div className="text-sm text-gray-400">Total Research Progress</div>
+              <div className="text-sm text-gray-400">
+                Sum of lifetime research spaces (per company; not sector position)
+              </div>
             </div>
           </div>
         </CardBody>

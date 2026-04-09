@@ -137,7 +137,7 @@ const SectorComponentAnimation = ({
               <strong>Sector Demand:</strong> {sector.demand + (sector.demandBonus || 0)}
             </p>
             <p className={tooltipParagraphStyle}>
-              Sector demand is based on brand score (from marketing) and research slot bonuses. Consumer distribution and worker salaries are determined by sector demand rankings (1st: 50% economy score, 2nd: 30%, 3rd: 20%).
+              Sector demand is research slot bonuses plus demand bonuses from active marketing (tier II +1, tier III +2 each). Brand score does not affect sector demand. Consumer distribution and worker salaries follow sector demand rankings (1st: 50% economy score, 2nd: 30%, 3rd: 20%).
             </p>
             <div className="mt-2 text-xs space-y-1">
               <div>Base Demand: {sector.baseDemand || 0}</div>
@@ -264,15 +264,12 @@ const EndTurnSectorConsumerDistributionAnimation = ({
             <div className="bg-gray-900/50 p-3 rounded border border-gray-700">
               <h4 className="font-semibold text-white mb-2">Sector Demand System</h4>
               <p className={tooltipParagraphStyle}>
-                Consumer distribution is determined by <strong>sector demand rankings</strong>. Sector demand is the sum of <strong>brand score</strong> (from marketing) and <strong>research slot bonus</strong> (from advancing the sector research track):
+                Consumer distribution is determined by <strong>sector demand rankings</strong>. Sector demand is <strong>research slot bonus</strong> plus <strong>active marketing demand bonuses</strong> (tier II +1, tier III +2 per campaign). Brand score affects factory attraction, not sector demand.
               </p>
               <div className="mt-2 space-y-1 text-xs">
                 <div className="space-y-2">
                   <div>
-                    <span className="text-blue-400 font-medium">1. Brand Score:</span> The sum of all companies&apos; brand scores in the sector. Marketing campaigns increase brand score, which increases sector demand.
-                  </div>
-                  <div>
-                    <span className="text-blue-400 font-medium">2. Research Bonuses:</span> As companies research in a sector, they advance the sector research track. Each research slot grants a bonus to sector demand:
+                    <span className="text-blue-400 font-medium">1. Research Bonuses:</span> As companies research in a sector, they advance the sector research track. Each research slot grants a bonus to sector demand:
                     <ul className="list-disc list-inside ml-4 mt-1">
                       <li>Slot 3: +2 demand bonus</li>
                       <li>Slot 6: +3 demand bonus</li>
@@ -281,7 +278,10 @@ const EndTurnSectorConsumerDistributionAnimation = ({
                     </ul>
                   </div>
                   <div>
-                    <span className="text-blue-400 font-medium">3. Sector Demand:</span> Each sector&apos;s total demand = brand score + research slot bonus. Higher demand = higher ranking.
+                    <span className="text-blue-400 font-medium">2. Active Marketing:</span> While campaigns run, tier II adds +1 sector demand and tier III adds +2 (tier I +0). Multiple active campaigns stack.
+                  </div>
+                  <div>
+                    <span className="text-blue-400 font-medium">3. Sector Demand:</span> Each sector&apos;s total demand = research slot bonus + marketing demand bonuses. Higher demand = higher ranking.
                   </div>
                   <div>
                     <span className="text-blue-400 font-medium">4. Sector Ranking:</span> Sectors are ranked by their total demand value. Sectors with the same demand share the same rank.
@@ -305,7 +305,7 @@ const EndTurnSectorConsumerDistributionAnimation = ({
                     <span className="text-blue-400 font-medium">1. Distribution Amount:</span> The Economy Score determines how many consumers can be distributed from the Consumer Pool.
                   </div>
                   <div>
-                    <span className="text-blue-400 font-medium">2. Sector Demand Rankings:</span> Sectors are ranked by sector demand (brand score + research slot bonus). Tied sectors share the rank and split the percentage evenly.
+                    <span className="text-blue-400 font-medium">2. Sector Demand Rankings:</span> Sectors are ranked by sector demand (research slot bonus + active marketing demand bonuses). Tied sectors share the rank and split the percentage evenly.
                   </div>
                   <div>
                     <span className="text-blue-400 font-medium">3. Fixed Split:</span> 1st place sector receives 50% of economy score, 2nd place receives 30%, 3rd place receives 20%. If sectors are tied, they split the percentage evenly (e.g., 3 sectors tied for 1st = 16.67% each).

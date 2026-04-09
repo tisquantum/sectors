@@ -15,7 +15,7 @@ import { NewCompanyDemandThresholds } from "./NewCompanyDemandThresholds";
 export function SectorDemandRankings() {
   const { gameId, gameState } = useGame();
 
-  // Get sector demand rankings (based on sector demand: brand score + research slot bonus)
+  // Get sector demand rankings (sector.demand: research slot bonus + active marketing demand bonuses)
   const { data: sectorDemandRankings, isLoading: rankingsLoading } = trpc.modernOperations.getSectorDemandRankings.useQuery({
     gameId: gameId || "",
   }, {
@@ -108,7 +108,7 @@ export function SectorDemandRankings() {
             <div>
               <strong className="text-white">How Sector Demand Works:</strong>
               <ul className="list-disc list-inside mt-1 space-y-1 ml-2">
-                <li>Sector demand = <strong>brand score</strong> (sum of companies&apos; brand scores in the sector, from marketing) + <strong>research slot bonus</strong></li>
+                <li>Sector demand = <strong>research slot bonus</strong> + <strong>active marketing demand bonuses</strong> (tier II +1 and tier III +2 per campaign while active; tier I +0). Brand score does not change sector demand.</li>
                 <li>Research Slot 3: +2 bonus, Slot 6: +3, Slot 9: +4, Slot 12: +5</li>
                 <li>Higher sector demand = higher ranking = more consumers distributed</li>
               </ul>

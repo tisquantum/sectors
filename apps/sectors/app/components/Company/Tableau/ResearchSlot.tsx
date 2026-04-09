@@ -7,6 +7,7 @@ import { trpc } from '@sectors/app/trpc';
 import { useGame } from '../../Game/GameContext';
 import { PhaseName, CompanyStatus } from '@server/prisma/prisma.client';
 import { RiErrorWarningFill } from '@remixicon/react';
+import { researchCostStageFromSectorMarker } from '../Research/sectorResearchTrackSpaces';
 
 function getSubmitErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message) return error.message;
@@ -37,7 +38,7 @@ export function ResearchSlot({ companyId, gameId, isCEO = false }: ResearchSlotP
   // Check if we're in the MODERN_OPERATIONS phase
   const isModernOperationsPhase = currentPhase?.name === PhaseName.MODERN_OPERATIONS;
 
-  // Fetch company to get research progress
+  // Company includes sector marker (shared track) and per-company lifetime contribution
   const { data: company } = trpc.company.getCompanyWithSector.useQuery({
     id: companyId,
   });
@@ -64,10 +65,10 @@ export function ResearchSlot({ companyId, gameId, isCEO = false }: ResearchSlotP
   // Research track has 12 spaces divided into 4 stages of 3 spaces each
   // Stage 1: 0-3 ($100), Stage 2: 4-6 ($200), Stage 3: 7-9 ($300), Stage 4: 10-12 ($400)
   const sectorResearchMarker = company?.Sector?.researchMarker || 0;
-  const researchStage = Math.min(Math.floor(sectorResearchMarker / 3) + 1, 4);
+  const researchStage = researchCostStageFromSectorMarker(sectorResearchMarker);
   const researchCost = RESEARCH_COSTS[researchStage as keyof typeof RESEARCH_COSTS] || 100;
-  
-  const researchProgress = company?.researchProgress || 0;
+
+  const lifetimeContribution = company?.researchProgress || 0;
   const canResearch = company && company.cashOnHand >= researchCost;
 
   // Pending research orders this turn = CEO has already taken a research action this turn
@@ -137,38 +138,50 @@ export function ResearchSlot({ companyId, gameId, isCEO = false }: ResearchSlotP
           // Enabled: CEO, in phase, company can act, and haven't taken a research action this turn
           isModernOperationsPhase && isCEO && (company?.status === CompanyStatus.ACTIVE || company?.status === CompanyStatus.INSOLVENT) && canTakeResearchThisTurn
             ? 'border-blue-400/60 bg-blue-400/10 text-blue-300 hover:bg-blue-400/20 h-auto min-h-[48px] cursor-pointer'
-            : researchProgress > 0
+            : lifetimeContribution > 0 || researchWorkers > 0
               ? 'border-blue-400 bg-blue-400/20 text-blue-200 cursor-default h-auto min-h-[48px]'
               : 'border-gray-600/40 bg-gray-700/30 text-gray-500 cursor-not-allowed h-12',
           // Dim if not in correct phase or not CEO
           (!isModernOperationsPhase || !isCEO) && 'opacity-50'
         )}
       >
-        {researchProgress > 0 ? (
-          <div className="flex flex-col items-center gap-1">
-            <div className="text-xs font-bold">Research</div>
-            <div className="text-sm font-semibold">{researchProgress}</div>
-            {researchWorkers > 0 && (
-              <div className="flex items-center gap-1 text-xs text-blue-300">
-                <span>👷</span>
-                <span>{researchWorkers}</span>
-              </div>
-            )}
+        <div className="flex flex-col items-center gap-0.5 text-center px-1">
+          <div className="text-xs font-bold">Research</div>
+          <div className="text-[10px] text-blue-200/90 leading-tight">
+            Sector {sectorResearchMarker}/12
           </div>
-        ) : (
-          <span className="text-xs font-medium">Research</span>
-        )}
+          {lifetimeContribution > 0 && (
+            <div className="text-[10px] text-gray-400 leading-tight">
+              +{lifetimeContribution} from you
+            </div>
+          )}
+          <div className="flex items-center gap-1 text-[10px] text-blue-300">
+            <span>👷</span>
+            <span>{researchWorkers}</span>
+          </div>
+        </div>
       </div>
       {showResearchCreation && typeof window !== 'undefined' && createPortal(
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]">
           <div className="bg-gray-800 rounded-lg border border-gray-700 p-6 max-w-md w-full mx-4">
             <h3 className="text-xl font-bold text-white mb-4">Invest in Research</h3>
             <div className="space-y-4">
-              <div className="text-gray-300">
-                <p>Current Research Progress: <span className="font-semibold">{researchProgress}</span></p>
-                <p>Cost: <span className="font-semibold">${researchCost}</span></p>
-                <p className="text-sm text-gray-400 mt-2">
-                  Research investment will increase your company&apos;s research progress by a random amount (0-2).
+              <div className="text-gray-300 space-y-2">
+                <p>
+                  Shared sector track:{' '}
+                  <span className="font-semibold">{sectorResearchMarker}</span>/12 (all companies in the sector)
+                </p>
+                <p>
+                  Your company&apos;s lifetime research spaces:{' '}
+                  <span className="font-semibold">+{lifetimeContribution}</span>
+                </p>
+                <p>
+                  Research workers (this company):{' '}
+                  <span className="font-semibold">{researchWorkers}</span>
+                </p>
+                <p>Cost (paid by this company): <span className="font-semibold">${researchCost}</span></p>
+                <p className="text-sm text-gray-400">
+                  A successful action adds +1 or +2 to the sector track (same position for every company in the sector).
                 </p>
               </div>
 

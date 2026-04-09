@@ -21,6 +21,11 @@ import {
   useDisclosure,
 } from "@nextui-org/react";
 import { ResearchTrack } from "../../../Company/Research/ResearchTrack";
+import {
+  createSectorResearchTrackSpaces,
+  researchCostStageFromSectorMarker,
+  researchTrackStageForDisplay,
+} from "../../../Company/Research/sectorResearchTrackSpaces";
 import { ModernOperationsLayout, ModernOperationsSection } from "../layouts";
 import CompanyInfoV2 from "../../../Company/CompanyV2/CompanyInfoV2";
 import { ConsumptionBagViewer } from "../ConsumptionBagViewer";
@@ -29,10 +34,10 @@ import { cn } from "@/lib/utils";
 import PlayerAvatar from "../../../Player/PlayerAvatar";
 
 const RESEARCH_COSTS = {
-  1: 100, // Stage 1 (researchMarker 0-5)
-  2: 200, // Stage 2 (researchMarker 4-6)
-  3: 300, // Stage 3 (researchMarker 7-9)
-  4: 400, // Stage 4 (researchMarker 10-12)
+  1: 100, // Cost tier while sector marker is 0–2
+  2: 200, // 3–5
+  3: 300, // 6–8
+  4: 400, // 9+
 };
 
 const MARKETING_CONFIG = {
@@ -154,18 +159,6 @@ export default function MarketingAndResearchPhase() {
       }
     );
 
-  // Fetch sector research progress (only if company selected)
-  const { data: researchProgress } =
-    trpc.modernOperations.getSectorResearchProgress.useQuery(
-      {
-        sectorId: currentCompany?.sectorId || "",
-        gameId: gameState.id,
-      },
-      {
-        enabled: hasCompanySelected && !!currentCompany?.sectorId,
-      }
-    );
-
   const createMarketingCampaign =
     trpc.modernOperations.submitMarketingCampaign.useMutation({
       onSuccess: async () => {
@@ -254,9 +247,20 @@ export default function MarketingAndResearchPhase() {
   // Research track has 12 spaces divided into 4 stages of 3 spaces each
   // Stage 1: 0-3 ($100), Stage 2: 4-6 ($200), Stage 3: 7-9 ($300), Stage 4: 10-12 ($400)
   const sectorResearchMarker = currentSector?.researchMarker || 0;
-  const researchStage = Math.min(Math.floor(sectorResearchMarker / 5) + 1, 4);
+  const researchStage = researchCostStageFromSectorMarker(sectorResearchMarker);
   const researchCost =
     RESEARCH_COSTS[researchStage as keyof typeof RESEARCH_COSTS] || 100;
+  const researchTrackDisplayStage =
+    researchTrackStageForDisplay(sectorResearchMarker);
+  // Factory/marketing unlock stage (marker thresholds used across the app)
+  const sectorGameStage =
+    sectorResearchMarker >= 10
+      ? 4
+      : sectorResearchMarker >= 7
+        ? 3
+        : sectorResearchMarker >= 4
+          ? 2
+          : 1;
   const canResearch =
     hasCompanySelected &&
     currentCompany &&
@@ -394,26 +398,21 @@ export default function MarketingAndResearchPhase() {
             <div>
               <p className="font-medium text-gray-300 mb-2">Research</p>
               <ul className="space-y-1 text-xs">
-                <li>• Advance sector tech</li>
-                <li>• Cost varies by phase</li>
-                <li>• Random outcomes</li>
-                {currentCompany && (
+                <li>• Advances the shared sector track</li>
+                <li>• Paid with company cash; uses research workers</li>
+                <li>• +1 or +2 to the sector per success</li>
+                {currentCompany && currentSector && (
                   <>
                     <li className="text-blue-300 mt-2">
-                      Progress: {currentCompany.researchProgress || 0} spaces
+                      Sector track: {sectorResearchMarker}/12 (shared)
                     </li>
-                    {researchProgress && (
-                      <li className="text-blue-300">
-                        Sector Tech: Level{" "}
-                        {(() => {
-                          const researchMarker = researchProgress?.researchMarker || 0;
-                          if (researchMarker >= 10) return 4;
-                          if (researchMarker >= 7) return 3;
-                          if (researchMarker >= 4) return 2;
-                          return 1;
-                        })()}
-                      </li>
-                    )}
+                    <li className="text-blue-300">
+                      This company lifetime: +
+                      {currentCompany.researchProgress || 0} spaces
+                    </li>
+                    <li className="text-blue-300">
+                      Sector stage (unlocks): {sectorGameStage}
+                    </li>
                   </>
                 )}
               </ul>
@@ -453,7 +452,7 @@ export default function MarketingAndResearchPhase() {
     return (
       <ModernOperationsLayout
         title="Modern Operations"
-        description="Build factories, create marketing campaigns, and advance your research track"
+        description="Build factories, create marketing campaigns, and advance the shared sector research track"
       >
         <div className="flex items-center justify-center h-64">
           <Spinner size="lg" />
@@ -467,7 +466,7 @@ export default function MarketingAndResearchPhase() {
   return (
     <ModernOperationsLayout
       title="Modern Operations"
-      description="Build factories, create marketing campaigns, and advance your research track"
+      description="Build factories, create marketing campaigns, and advance the shared sector research track"
       sidebar={sidebar}
     >
       <div className="space-y-6">
@@ -653,7 +652,8 @@ export default function MarketingAndResearchPhase() {
                       Research Cost
                     </div>
                     <div className="text-sm text-gray-400">
-                      Stage {researchStage} (Progress: {sectorResearchMarker}/20)
+                      Cost tier {researchStage} · Shared sector track:{" "}
+                      {sectorResearchMarker}/12
                     </div>
                   </div>
                   <div className="text-right">
@@ -696,7 +696,7 @@ export default function MarketingAndResearchPhase() {
                         Research Complete!
                       </div>
                       <div className="text-sm text-green-300">
-                        Advanced {researchResult} spaces on the research track
+                        Added {researchResult} space{researchResult === 1 ? "" : "s"} to the shared sector track
                       </div>
                     </div>
                   </div>
@@ -728,26 +728,19 @@ export default function MarketingAndResearchPhase() {
           </div>
         )}
 
-        {/* Research Track Display - Show for all selected companies */}
-        {hasCompanySelected && currentCompany && (
-          <ModernOperationsSection title="Research Track">
+        {/* Shared sector research track for the selected company&apos;s sector */}
+        {hasCompanySelected && currentCompany && currentSector && (
+          <ModernOperationsSection title="Sector research track (shared)">
+            <p className="text-sm text-gray-400 mb-3">
+              Position {sectorResearchMarker}/12 applies to all companies in{" "}
+              {currentSector.name}. This company has contributed +
+              {currentCompany.researchProgress || 0} lifetime spaces (cash and workers are per
+              company).
+            </p>
             <ResearchTrack
-              currentProgress={currentCompany.researchProgress || 0}
-              currentStage={researchStage}
-              spaces={Array.from({ length: 20 }, (_, i) => ({
-                id: `space-${i + 1}`,
-                number: i + 1,
-                phase: Math.ceil((i + 1) / 5),
-                isUnlocked: i < 20,
-                hasReward: (i + 1) % 5 === 0,
-                reward:
-                  (i + 1) % 5 === 0
-                    ? {
-                        type: "GRANT" as const,
-                        amount: Math.ceil((i + 1) / 5) * 100,
-                      }
-                    : undefined,
-              }))}
+              currentProgress={sectorResearchMarker}
+              currentStage={researchTrackDisplayStage}
+              spaces={createSectorResearchTrackSpaces(sectorResearchMarker)}
             />
           </ModernOperationsSection>
         )}

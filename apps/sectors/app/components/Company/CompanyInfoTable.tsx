@@ -325,29 +325,32 @@ const CompanyInfoTable = ({
           </>
         );
       case "Research": {
-        const researchProgress = company.researchProgress ?? 0;
+        const lifetimeContribution = company.researchProgress ?? 0;
         return (
           <Popover placement="top" showArrow>
             <PopoverTrigger>
               <button
                 type="button"
                 className="inline-flex items-center gap-1.5 rounded-md border border-cyan-500/35 bg-cyan-950/35 px-2 py-1 text-sm text-cyan-50 hover:bg-cyan-900/45 transition-colors"
-                aria-label={`Research progress ${researchProgress}, open details`}
+                aria-label={`Lifetime research spaces from this company ${lifetimeContribution}, open details`}
               >
                 <RiFlaskFill size={20} className="text-cyan-400 shrink-0" />
-                <span className="font-medium tabular-nums">{researchProgress}</span>
+                <span className="font-medium tabular-nums">
+                  {lifetimeContribution > 0 ? `+${lifetimeContribution}` : "0"}
+                </span>
               </button>
             </PopoverTrigger>
             <PopoverContent className="max-w-xs">
               <div className="px-1 py-1">
                 <div className="text-small font-semibold mb-1 flex items-center gap-2">
                   <RiFlaskFill size={18} className="text-cyan-400 shrink-0" />
-                  Research progress
+                  Research (this company)
                 </div>
                 <p className="text-small text-default-500">
-                  How many spaces this company has advanced on its research track.
-                  Research actions in operations add progress (random 0–2 per investment)
-                  and can unlock grants and market favors at higher totals.
+                  Lifetime research spaces paid for by this company (+1 or +2 per successful
+                  action). The sector track position is shared — see &quot;Sector Research&quot; for the
+                  marker. Cash and workers for each action come from this company; milestones
+                  for grants and market favors use this running total.
                 </p>
               </div>
             </PopoverContent>
@@ -417,9 +420,9 @@ const CompanyInfoTable = ({
                   Sector research track
                 </div>
                 <p className="text-small text-default-500">
-                  Shared progress for all companies in this sector. As the marker rises,
-                  the sector unlocks higher research stages, slot bonuses, and demand effects
-                  for operating rounds.
+                  Position on the single 12-space research track for this sector (shared by every
+                  company in the sector). As the marker rises, the sector unlocks higher research
+                  stages, slot bonuses, and demand effects.
                 </p>
               </div>
             </PopoverContent>

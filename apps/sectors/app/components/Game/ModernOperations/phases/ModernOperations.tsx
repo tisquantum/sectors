@@ -108,7 +108,7 @@ export default function ModernOperations() {
     return (
       <ModernOperationsLayout
         title="Modern Operations"
-        description="Build factories, create marketing campaigns, and advance your research track"
+        description="Build factories, create marketing campaigns, and advance the shared sector research track"
       >
         <div className="flex items-center justify-center h-64">
           <Spinner size="lg" />
@@ -120,7 +120,7 @@ export default function ModernOperations() {
   return (
     <ModernOperationsLayout
       title="Modern Operations"
-      description="Build factories, create marketing campaigns, and advance your research track"
+      description="Build factories, create marketing campaigns, and advance the shared sector research track"
     >
       <div className="space-y-6">
         {/* Company Selection Grid */}

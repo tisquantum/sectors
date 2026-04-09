@@ -106,7 +106,7 @@ const CompanyMoreInfo = ({
                 <div className="px-1 py-1 max-w-xs">
                   <div className="text-small font-semibold mb-1">Sector Demand</div>
                   <div className="text-small text-default-500">
-                    Sector demand is based on brand score (from marketing) and research slot bonuses. Consumer distribution and worker salaries are determined by sector demand rankings (1st: 50% economy score, 2nd: 30%, 3rd: 20%).
+                    Sector demand is research slot bonuses plus demand bonuses from active marketing campaigns (tier II +1, tier III +2 each). Brand score does not affect sector demand. Consumer distribution and worker salaries follow sector demand rankings (1st: 50% economy score, 2nd: 30%, 3rd: 20%).
                   </div>
                 </div>
               </PopoverContent>
@@ -185,15 +185,6 @@ const ResearchInfo = ({ companyId, gameId }: { companyId: string; gameId: string
     id: companyId,
   });
 
-  const { data: researchProgress } = trpc.modernOperations.getSectorResearchProgress.useQuery(
-    {
-      sectorId: company?.sectorId || '',
-      gameId,
-    },
-    { enabled: !!company?.sectorId }
-  );
-
-  // Get research workers count (each research order = 1 worker)
   const { data: researchWorkers = 0 } = trpc.modernOperations.getResearchWorkers.useQuery(
     {
       companyId,
@@ -202,9 +193,8 @@ const ResearchInfo = ({ companyId, gameId }: { companyId: string; gameId: string
     { enabled: !!companyId && !!gameId }
   );
 
-  const researchProgressValue = company?.researchProgress || 0;
-  // Calculate research stage from researchMarker (0-3 = Stage 1, 4-6 = Stage 2, 7-9 = Stage 3, 10-12+ = Stage 4)
-  const researchMarker = company?.Sector?.researchMarker || 0;
+  const lifetimeContribution = company?.researchProgress || 0;
+  const researchMarker = company?.Sector?.researchMarker ?? 0;
   let researchStage = 1;
   if (researchMarker >= 10) {
     researchStage = 4;
@@ -214,25 +204,38 @@ const ResearchInfo = ({ companyId, gameId }: { companyId: string; gameId: string
     researchStage = 2;
   }
 
+  const grants = company?.researchGrants ?? 0;
+  const favors = company?.marketFavors ?? 0;
+
   return (
     <div className="mt-2 space-y-2">
       <div className="text-sm text-gray-400">
-        Company Progress: <span className="text-blue-300 font-medium">{researchProgressValue}</span> spaces
+        Shared sector track:{' '}
+        <span className="text-blue-300 font-medium">{researchMarker}</span>/12
+        <span className="text-gray-500"> (stage {researchStage})</span>
       </div>
-      {researchWorkers > 0 && (
-        <div className="text-sm text-gray-400">
-          Workers: <span className="text-blue-300 font-medium">{researchWorkers}</span>
-        </div>
-      )}
-      {researchMarker > 0 && (
-        <div className="text-sm text-gray-400">
-          Sector Research Stage: <span className="text-blue-300 font-medium">{researchStage}</span> (Marker: {researchMarker})
-        </div>
-      )}
-      {(researchProgressValue >= 5 || researchProgressValue >= 10) && (
-        <div className="text-xs text-green-400 mt-2">
-          {researchProgressValue >= 10 && '✓ Grant at 5 • '}
-          {researchProgressValue >= 10 && '✓ Market Favor at 10'}
+      <div className="text-sm text-gray-400">
+        Research workers (this company):{' '}
+        <span className="text-blue-300 font-medium">{researchWorkers}</span>
+      </div>
+      <div className="text-sm text-gray-400">
+        Lifetime spaces paid for by this company:{' '}
+        <span className="text-blue-300 font-medium">+{lifetimeContribution}</span>
+        <span className="block text-xs text-gray-500 mt-0.5">
+          Cash for each action comes from this company; +1 or +2 advances the sector track for everyone.
+        </span>
+      </div>
+      {(lifetimeContribution >= 5 || grants > 0 || favors > 0) && (
+        <div className="text-xs text-gray-500 space-y-1">
+          <p>
+            Per-company milestones use your running total: grant at 5 spaces, market favor at 10.
+          </p>
+          {grants > 0 && (
+            <p className="text-green-400">Research grants earned: {grants}</p>
+          )}
+          {favors > 0 && (
+            <p className="text-purple-400">Market favors: {favors}</p>
+          )}
         </div>
       )}
     </div>
@@ -427,8 +430,9 @@ const CompanyInfoV2 = ({
                   Sector research track
                 </div>
                 <p className="text-small text-default-500">
-                  Shared progress for every company in this sector. A higher marker unlocks
-                  advanced research stages and sector-wide bonuses in modern operations.
+                  One 12-space track per sector, shared by all companies there. This number is the
+                  sector position (not per company). Higher markers unlock stages, factory and
+                  marketing slots, and sector demand bonuses in modern operations.
                 </p>
               </div>
             </PopoverContent>
@@ -720,9 +724,9 @@ const CompanyInfoV2 = ({
                       Sector research track
                     </div>
                     <p className="text-small text-default-500">
-                      Shared progress for every company in this sector. A higher marker
-                      unlocks advanced research stages and sector-wide bonuses in modern
-                      operations.
+                      One 12-space track per sector, shared by all companies there. This number is
+                      the sector position (not per company). Higher markers unlock stages,
+                      factory and marketing slots, and sector demand bonuses in modern operations.
                     </p>
                   </div>
                 </PopoverContent>

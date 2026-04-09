@@ -16,7 +16,7 @@ function getSalaryForDemand(demand: number): number {
 
 /**
  * Component to display sector demand and worker salaries
- * Salaries are determined purely by each sector's demand (brand score + research slot bonus), not by ranking.
+ * Salaries are determined purely by each sector's demand (research slot + active marketing bonuses), not by ranking.
  */
 export function SectorWorkerSalaries() {
   const { gameId } = useGame();
@@ -71,7 +71,7 @@ export function SectorWorkerSalaries() {
           Sector Demand & Worker Salaries
         </h3>
         <p className="text-sm text-gray-400">
-          Worker salaries are determined purely by each sector&apos;s demand (brand score + research slot bonus). Higher demand means higher pay.
+          Worker salaries are determined purely by each sector&apos;s demand (research slot bonus + active marketing demand bonuses). Higher demand means higher pay.
         </p>
       </div>
 
@@ -107,7 +107,7 @@ export function SectorWorkerSalaries() {
 
                 {sector.demand === 0 && (
                   <div className="text-xs text-gray-500">
-                    No sector demand (brand score + research bonus)
+                    No sector demand (research + active marketing bonuses)
                   </div>
                 )}
               </div>

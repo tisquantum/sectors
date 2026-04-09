@@ -35,7 +35,7 @@ const SectorInfo = ({ sector }: { sector: SectorWithCompanies }) => (
         </PopoverTrigger>
         <PopoverContent className={tooltipStyle}>
           <p className={tooltipParagraphStyle}>
-            Sector demand is based on brand score (from marketing) and research slot bonuses. Consumer distribution and worker salaries are determined by sector demand rankings (1st: 50% economy score, 2nd: 30%, 3rd: 20%).
+            Sector demand is research slot bonuses plus demand bonuses from active marketing campaigns (tier II +1, tier III +2 each). Brand score does not affect sector demand. Consumer distribution and worker salaries follow sector demand rankings (1st: 50% economy score, 2nd: 30%, 3rd: 20%).
           </p>
         </PopoverContent>
       </Popover>

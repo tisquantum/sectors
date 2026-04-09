@@ -54,8 +54,9 @@ const GameTopBar = ({
       ? "bg-blue-500 text-white"
       : "bg-slate-700 text-stone-100";
 
-  const showPassivePhaseAdvance =
-    Boolean(currentPhase?.name && !isActivePhase(currentPhase.name));
+  const showPassivePhaseAdvance = Boolean(
+    currentPhase?.name && !isActivePhase(currentPhase.name),
+  );
 
   const onViewChange = (view: GameView) => {
     if (typeof window === "undefined") return;
@@ -80,40 +81,7 @@ const GameTopBar = ({
           </span>
         </ModalHeader>
         <ModalBody className="flex min-w-0 flex-col gap-4">
-          {showPassivePhaseAdvance && (
-            <div
-              className={`flex flex-row items-center justify-center gap-2 rounded-md border border-violet-500/40 bg-violet-950/40 px-3 py-2 ${
-                isTimerAtZero ? "" : "opacity-40"
-              }`}
-              aria-hidden={!isTimerAtZero}
-            >
-              <Spinner color="secondary" size="sm" />
-              <span className="text-xs font-semibold uppercase tracking-wide text-violet-200">
-                Next phase loading
-              </span>
-            </div>
-          )}
           <PlayerPriorities />
-          {currentPhase &&
-            currentPhase.phaseStartTime &&
-            !gameState.isTimerless && (
-              <div className="flex flex-col items-center gap-1 border-t border-zinc-800 pt-3">
-                <Timer
-                  countdownTime={currentPhase.phaseTime / 1000}
-                  startDate={new Date(currentPhase.phaseStartTime)}
-                  size={24}
-                  textSize={2}
-                  onEnd={() => {}}
-                />
-                <span className="text-xs text-gray-400">Time remaining</span>
-              </div>
-            )}
-          {gameState.isTimerless && (
-            <div className="flex items-center justify-center gap-2 border-t border-zinc-800 pt-3 text-sm">
-              <RiClockwiseFill className="text-yellow-400" />
-              <span>No timer</span>
-            </div>
-          )}
           <div className="min-w-0 border-t border-zinc-800 pt-2">
             <GameGeneralInfo />
           </div>
@@ -134,10 +102,7 @@ const GameTopBar = ({
           </Button>
         </ModalBody>
         <ModalFooter>
-          <Button
-            onClick={onClose}
-            className="bg-slate-700 text-white"
-          >
+          <Button onClick={onClose} className="bg-slate-700 text-white">
             Close
           </Button>
         </ModalFooter>
@@ -179,26 +144,9 @@ const GameTopBar = ({
         </div>
         {statusModal}
       </div>
-
       {/* Desktop / large tablets */}
       <div className="hidden shrink-0 flex-col bg-gradient-to-b from-slate-950 to-black 2xl:flex">
         <div className="flex w-full max-w-full flex-wrap items-center justify-center gap-4 px-2 py-3 text-2xl font-bold">
-          {showPassivePhaseAdvance && (
-            <div
-              className={`flex h-8 min-h-8 max-h-8 shrink-0 flex-row items-center justify-center gap-1.5 overflow-hidden rounded-md border border-violet-500/40 bg-violet-950/40 px-2 shadow-[0_0_16px_-4px_rgba(139,92,246,0.4)] transition-opacity duration-200 ${
-                isTimerAtZero
-                  ? "z-20 opacity-100"
-                  : "pointer-events-none z-0 opacity-0"
-              }`}
-              aria-live={isTimerAtZero ? "polite" : "off"}
-              aria-hidden={!isTimerAtZero}
-            >
-              <Spinner color="secondary" size="sm" className="scale-75" />
-              <span className="text-[9px] font-bold uppercase leading-none tracking-wide whitespace-nowrap text-violet-200">
-                Next phase loading
-              </span>
-            </div>
-          )}
           <ButtonGroup className="flex flex-wrap shadow-sm">
             <NavButton
               as="a"
@@ -255,45 +203,25 @@ const GameTopBar = ({
               Operations
             </NavButton>
           </ButtonGroup>
+          <Button
+            onClick={handleTogglePhaseList}
+            className="border border-zinc-400 bg-zinc-200 px-4 py-2 font-bold text-zinc-900 shadow-lg transition-colors hover:bg-zinc-100 sm:shrink-0"
+            title="Toggle phase list (Press Ctrl+K or Cmd+K)"
+          >
+            <div className="flex items-center gap-2">
+              <RiTextWrap className="text-zinc-900" size={20} />
+              <span className="font-extrabold">
+                {friendlyPhaseName(currentPhase?.name)}
+              </span>
+            </div>
+          </Button>
         </div>
         <div className="flex w-full flex-col gap-3 p-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-2">
           <div className="min-w-0 w-full sm:w-auto sm:flex-1">
             <PlayerPriorities />
           </div>
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
-            {currentPhase &&
-              currentPhase.phaseStartTime &&
-              !gameState.isTimerless && (
-                <div className="flex flex-col items-center gap-1">
-                  <Timer
-                    countdownTime={currentPhase.phaseTime / 1000}
-                    startDate={new Date(currentPhase.phaseStartTime)}
-                    size={24}
-                    textSize={2}
-                    onEnd={() => {}}
-                  />
-                  <span className="text-xs text-gray-400">Time Remaining</span>
-                </div>
-              )}
-            {gameState.isTimerless && (
-              <div className="flex flex-col items-center">
-                <RiClockwiseFill className="text-yellow-400" />
-                <span>No Timer</span>
-              </div>
-            )}
             <GameGeneralInfo />
-            <Button
-              onClick={handleTogglePhaseList}
-              className="border border-zinc-400 bg-zinc-200 px-4 py-2 font-bold text-zinc-900 shadow-lg transition-colors hover:bg-zinc-100 sm:shrink-0"
-              title="Toggle phase list (Press Ctrl+K or Cmd+K)"
-            >
-              <div className="flex items-center gap-2">
-                <RiTextWrap className="text-zinc-900" size={20} />
-                <span className="font-extrabold">
-                  {friendlyPhaseName(currentPhase?.name)}
-                </span>
-              </div>
-            </Button>
           </div>
         </div>
       </div>

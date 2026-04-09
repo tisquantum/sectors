@@ -1,7 +1,6 @@
 'use client';
 
 import { trpc } from '@sectors/app/trpc';
-import { RESEARCH_COSTS_BY_PHASE } from '@server/data/constants';
 
 interface Props {
   gameId: string;
@@ -24,12 +23,12 @@ export function ResearchProgressTracker({ gameId }: Props) {
       gameId,
     });
 
-  if (isLoading) return <div className="text-gray-400">Loading research progress...</div>;
+  if (isLoading) return <div className="text-gray-400">Loading sector research…</div>;
   if (!sectorsProgress || sectorsProgress.length === 0) return null;
 
   return (
     <div className="research-progress bg-gray-800 p-4 rounded-lg border border-gray-700">
-      <h4 className="font-bold text-white mb-4">Research Progress</h4>
+      <h4 className="font-bold text-white mb-4">Shared sector research</h4>
       
       <div className="space-y-4">
         {sectorsProgress.map((sector) => {
@@ -97,7 +96,7 @@ export function ResearchProgressTracker({ gameId }: Props) {
       </div>
 
       <div className="mt-4 text-xs text-gray-500 p-3 bg-gray-900 rounded">
-        💡 <strong>Tip:</strong> Submit research actions to advance technology levels and unlock larger factories!
+        💡 <strong>Tip:</strong> Any company in a sector can pay for research; all of them advance that sector&apos;s shared track and unlock factories for the whole sector.
       </div>
     </div>
   );

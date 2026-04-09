@@ -16,6 +16,7 @@ import {
   RiTextWrap,
   RiUserFill,
   RiInformationLine,
+  RiClockwiseFill,
 } from "@remixicon/react";
 import {
   Button,
@@ -45,6 +46,7 @@ import { MAX_SHARE_PERCENTAGE } from "@server/data/constants";
 import PlayerShares from "../Player/PlayerShares";
 import { calculateNetWorth } from "@server/data/helpers";
 import SymbolLegend from "./SymbolLegend";
+import Timer from "./Timer";
 
 const BankInfo = () => {
   const { gameState, gameId } = useGame();
@@ -97,12 +99,13 @@ const GameGeneralInfo = () => {
   // Calculate net cash impact: (buy costs) - (sell profits)
   // Positive = net spending needed, Negative = net profit
   // Sell orders add money (reduce needed cash), buy orders cost money (increase needed cash)
-  const marketOrders = authPlayer?.PlayerOrder?.filter(
-    (order) =>
-      order.stockSubRoundId === currentPhase?.stockSubRoundId &&
-      order.orderType == OrderType.MARKET
-  ) || [];
-  
+  const marketOrders =
+    authPlayer?.PlayerOrder?.filter(
+      (order) =>
+        order.stockSubRoundId === currentPhase?.stockSubRoundId &&
+        order.orderType == OrderType.MARKET,
+    ) || [];
+
   // Calculate net cash impact: (buy costs) - (sell profits)
   // order.value should already contain the correct price (IPO or market price)
   const pseudoSpend = marketOrders.reduce((acc, order) => {
@@ -112,7 +115,7 @@ const GameGeneralInfo = () => {
     return order.isSell ? acc - orderValue : acc + orderValue;
   }, 0);
   const authPlayerWithShares = playersWithShares.find(
-    (player) => player.id === authPlayer?.id
+    (player) => player.id === authPlayer?.id,
   );
   return (
     <div className="grid w-full min-w-0 max-w-full grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 2xl:flex 2xl:flex-wrap 2xl:items-center 2xl:gap-x-6 2xl:gap-y-2">
@@ -133,9 +136,11 @@ const GameGeneralInfo = () => {
                     </PopoverTrigger>
                     <PopoverContent className="bg-slate-800 border border-gray-700 p-4 max-w-[24rem]">
                       <p className={tooltipParagraphStyle}>
-                        Net cash impact of your orders: buy costs minus sell profits.
-                        Positive = net spending needed, Negative = net profit from sells.
-                        Sell orders are resolved first, so money from selling can be used for subsequent buy orders.
+                        Net cash impact of your orders: buy costs minus sell
+                        profits. Positive = net spending needed, Negative = net
+                        profit from sells. Sell orders are resolved first, so
+                        money from selling can be used for subsequent buy
+                        orders.
                       </p>
                     </PopoverContent>
                   </Popover>
@@ -145,7 +150,7 @@ const GameGeneralInfo = () => {
                     <RiScalesFill className="h-5 w-5" /> $
                     {calculateNetWorth(
                       authPlayerWithShares.cashOnHand,
-                      authPlayerWithShares.Share
+                      authPlayerWithShares.Share,
                     )}
                   </div>
                 )}
@@ -214,11 +219,14 @@ const GameGeneralInfo = () => {
                 <RiTeamFill className="text-yellow-400" size={18} />
                 {gameState.consumerPoolNumber}
               </div>
-              {gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN && (
+              {gameState.operationMechanicsVersion ===
+                OperationMechanicsVersion.MODERN && (
                 <div className="flex items-center gap-2 text-xs text-gray-400">
                   <RiUserFill className="text-green-400" size={14} />
                   {/* If workforcePool is 0, default to DEFAULT_WORKERS (40) for new games */}
-                  {gameState.workforcePool > 0 ? gameState.workforcePool : DEFAULT_WORKERS}
+                  {gameState.workforcePool > 0
+                    ? gameState.workforcePool
+                    : DEFAULT_WORKERS}
                 </div>
               )}
             </div>
@@ -226,9 +234,11 @@ const GameGeneralInfo = () => {
           <PopoverContent className="bg-slate-800 border border-gray-700 p-4 max-w-[24rem]">
             <div>
               <p className={tooltipParagraphStyle}>The global consumer pool.</p>
-              {gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN && (
+              {gameState.operationMechanicsVersion ===
+                OperationMechanicsVersion.MODERN && (
                 <p className={tooltipParagraphStyle}>
-                  Workers remaining: Available workers for factories, marketing, and research.
+                  Workers remaining: Available workers for factories, marketing,
+                  and research.
                 </p>
               )}
             </div>
@@ -350,6 +360,26 @@ const GameGeneralInfo = () => {
           )}
         </PopoverContent>
       </Popover>
+      {currentPhase &&
+        currentPhase.phaseStartTime &&
+        !gameState.isTimerless && (
+          <div className="flex flex-col items-center gap-1 border-t border-zinc-800 pt-3">
+            <Timer
+              countdownTime={currentPhase.phaseTime / 1000}
+              startDate={new Date(currentPhase.phaseStartTime)}
+              size={24}
+              textSize={2}
+              onEnd={() => {}}
+            />
+            <span className="text-xs text-gray-400">Time remaining</span>
+          </div>
+        )}
+      {gameState.isTimerless && (
+        <div className="flex flex-col items-center justify-center text-sm">
+          <RiClockwiseFill className="text-yellow-400" />
+          <span>No timer</span>
+        </div>
+      )}
       <Popover>
         <PopoverTrigger>
           <Button className="min-w-0 max-w-full shrink">Icon Legend</Button>

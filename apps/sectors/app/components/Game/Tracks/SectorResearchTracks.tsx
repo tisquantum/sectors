@@ -4,6 +4,10 @@ import { trpc } from '@sectors/app/trpc';
 import { useGame } from '../GameContext';
 import { ModernOperationsSection } from '../ModernOperations/layouts';
 import { ResearchTrack } from '../../Company/Research/ResearchTrack';
+import {
+  createSectorResearchTrackSpaces,
+  researchTrackStageForDisplay,
+} from '../../Company/Research/sectorResearchTrackSpaces';
 import { sectorColors } from '@server/data/gameData';
 import { Sector, Company } from '@server/prisma/prisma.client';
 import { Spinner, Popover, PopoverTrigger, PopoverContent } from '@nextui-org/react';
@@ -11,16 +15,10 @@ import { RiInformationLine } from '@remixicon/react';
 
 /**
  * Sector Research Tracks Component
- * 
- * Displays research progress tracks for each sector showing:
- * - Sector-level research progress (20 spaces, 4 stages)
- * - Individual company progress within each sector
- * - Rewards at milestones (spaces 5, 10, 15, 20)
- * - Research stage demand bonuses (Stage 1: +2, Stage 2: +3, Stage 3: +4, Stage 4: +5)
- * 
- * Each sector has one shared research track. Companies in that sector
- * advance research by allocating workers to research actions. Sector progress
- * advances as companies complete research milestones.
+ *
+ * Each sector has one shared 12-space research track (`Sector.researchMarker`).
+ * Company rows show lifetime research output from that company only — not a
+ * separate track position (all companies share the position shown above).
  * 
  * Research stages provide demand bonuses to the sector's baseline demand:
  * - Slot 3: +2 demand
@@ -92,23 +90,6 @@ export function SectorResearchTracks() {
     );
   }
 
-  // Create a 12-space track with rewards at specific milestones (every 3 steps)
-  const createResearchSpaces = (sectorProgress: number) => {
-    return Array.from({ length: 12 }, (_, i) => ({
-      id: `sector-space-${i + 1}`,
-      number: i + 1,
-      phase: Math.ceil((i + 1) / 3),
-      isUnlocked: i < sectorProgress,
-      hasReward: [3, 6, 9, 12].includes(i + 1),
-      reward: [3, 6, 9, 12].includes(i + 1)
-        ? {
-            type: i + 1 === 12 ? ('MARKET_FAVOR' as const) : ('GRANT' as const),
-            amount: i + 1 === 12 ? 2 : 1,
-          }
-        : undefined,
-    }));
-  };
-
   return (
     <div className="space-y-4">
       {/* Research Info Header */}
@@ -173,19 +154,11 @@ export function SectorResearchTracks() {
       {activeSectors.map((sector: Sector) => {
         const sectorCompanies = companiesBySector[sector.id] || [];
         const sectorColor = sectorColors[sector.name] || '#ffffff';
-        
-        // Calculate sector progress: use researchMarker if available, otherwise sum company progress
-        // This ensures the track shows progress even if researchMarker hasn't been updated yet
-        const sectorMarker = sector.researchMarker || 0;
-        const totalCompanyProgress = sectorCompanies.reduce(
-          (sum, company) => sum + (company.researchProgress || 0),
-          0
-        );
-        // Use the higher of the two to ensure we show progress (researchMarker should be updated, but fallback to sum)
-        const sectorProgress = Math.max(sectorMarker, totalCompanyProgress);
-        
-        // Calculate research stage for demand bonus display (every 3 steps: Stage 1=0-3, Stage 2=4-6, Stage 3=7-9, Stage 4=10-12)
-        const researchStage = Math.min(Math.floor(sectorProgress / 3) + 1, 4);
+
+        // Canonical shared track position for the sector (game rules use this field).
+        const sectorProgress = sector.researchMarker ?? 0;
+
+        const trackStage = researchTrackStageForDisplay(sectorProgress);
 
         return (
           <div
@@ -219,36 +192,43 @@ export function SectorResearchTracks() {
             {/* Research Track */}
             <div className="mb-3">
               <ResearchTrack
-                spaces={createResearchSpaces(sectorProgress)}
+                spaces={createSectorResearchTrackSpaces(sectorProgress)}
                 currentProgress={sectorProgress}
-                currentStage={Math.ceil(sectorProgress / 5) || 1}
+                currentStage={trackStage}
               />
             </div>
 
-            {/* Company Progress Markers */}
             {sectorCompanies.length > 0 && (
               <div className="mt-4 pt-3 border-t border-gray-700/50">
-                <div className="text-xs text-gray-400 mb-2">Company Progress:</div>
+                <div className="text-xs text-gray-400 mb-1">Companies in this sector</div>
+                <p className="text-[11px] text-gray-500 mb-2 leading-snug">
+                  The track above is shared. When any company completes research, the whole sector
+                  advances. Totals below are each company&apos;s lifetime research spaces (+1 or +2
+                  per action), not a separate position on the track.
+                </p>
                 <div className="space-y-1">
-                  {sectorCompanies.map((company: Company) => (
-                    <div
-                      key={company.id}
-                      className="flex items-center justify-between text-sm"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-3 h-3 rounded-full"
-                          style={{
-                            backgroundColor: sectorColor,
-                          }}
-                        />
-                        <span className="text-gray-300">{company.name}</span>
+                  {sectorCompanies.map((company: Company) => {
+                    const contributed = company.researchProgress || 0;
+                    return (
+                      <div
+                        key={company.id}
+                        className="flex items-center justify-between text-sm gap-2"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div
+                            className="w-3 h-3 shrink-0 rounded-full"
+                            style={{
+                              backgroundColor: sectorColor,
+                            }}
+                          />
+                          <span className="text-gray-300 truncate">{company.name}</span>
+                        </div>
+                        <span className="text-gray-400 shrink-0 tabular-nums">
+                          {contributed > 0 ? `+${contributed} spaces` : '—'}
+                        </span>
                       </div>
-                      <span className="text-gray-400">
-                        {company.researchProgress || 0}/12
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}

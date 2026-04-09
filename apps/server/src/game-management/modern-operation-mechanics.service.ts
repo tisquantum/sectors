@@ -2498,30 +2498,25 @@ export class ModernOperationMechanicsService {
   }
 
   /**
-   * Calculate and update sector demand based on brand scores + research slot bonus
-   * Effective Demand = sum of brand scores + research slot bonus
-   * 
+   * Calculate and update sector demand from research slot bonus + active marketing demand bonus only.
+   * Brand score is not included (brand still affects consumption routing via factory attraction).
+   *
    * Research slot bonuses:
    *   - Slot 3: +2 demand
    *   - Slot 6: +3 demand
    *   - Slot 9: +4 demand
    *   - Slot 12: +5 demand
-   * 
-   * The sector's `baseDemand` field stores the initial demand from gameData (preserved).
-   * The `demand` field is updated each turn to reflect effective demand (brand + research slot bonus).
-   * 
+   *
+   * The `demand` field is updated each turn to reflect effective demand (research + marketing).
+   *
    * Sector demand gives a bonus of consumers to that sector outside the economy score distribution.
    */
   private async updateSectorDemand(phase: Phase) {
-    // Query sectors with companies and their active marketing campaigns (for demand bonus)
     const sectors = await this.prisma.sector.findMany({
       where: { gameId: phase.gameId },
       include: {
         Company: {
           select: {
-            id: true,
-            brandScore: true,
-            researchProgress: true,
             marketingCampaigns: {
               where: { status: MarketingCampaignStatus.ACTIVE },
               select: { tier: true },
@@ -2535,13 +2530,6 @@ export class ModernOperationMechanicsService {
     const gameLogEntries: Array<{ gameId: string; content: string }> = [];
 
     for (const sector of sectors) {
-      // Sum of brand scores for all companies in this sector
-      const totalBrandScore = sector.Company.reduce(
-        (sum: number, company: { id: string; brandScore: number | null }) => sum + (company.brandScore || 0),
-        0
-      );
-
-      // Sum of temporary sector demand bonus from active marketing campaigns in this sector
       const marketingDemandBonus = sector.Company.reduce(
         (sum: number, company: { marketingCampaigns: { tier: MarketingCampaignTier }[] }) => {
           const campaignBonus = company.marketingCampaigns.reduce(
@@ -2553,17 +2541,11 @@ export class ModernOperationMechanicsService {
         0
       );
 
-      // Calculate research slot bonus based on sector researchMarker
       const researchMarker = sector.researchMarker || 0;
       const researchSlotBonus = this.getResearchDemandBonus(researchMarker);
 
-      // Base demand should be 0 for modern operations - demand comes from brand + research slot + marketing campaign bonus
-      const baseDemand = 0;
+      const effectiveDemand = researchSlotBonus + marketingDemandBonus;
 
-      // Effective demand = base + brand + research slot bonus + temporary marketing demand bonus
-      const effectiveDemand = baseDemand + totalBrandScore + researchSlotBonus + marketingDemandBonus;
-
-      // Update the sector's demand field to show effective demand
       if (effectiveDemand !== sector.demand) {
         sectorUpdates.push({
           id: sector.id,
@@ -2572,8 +2554,8 @@ export class ModernOperationMechanicsService {
 
         const slotReached = researchMarker >= 12 ? 12 : researchMarker >= 9 ? 9 : researchMarker >= 6 ? 6 : researchMarker >= 3 ? 3 : 0;
         const demandBreakdown = marketingDemandBonus > 0
-          ? `base: ${baseDemand} + brand: ${totalBrandScore} + research slot ${slotReached}: +${researchSlotBonus} + marketing: +${marketingDemandBonus}`
-          : `base: ${baseDemand} + brand: ${totalBrandScore} + research slot ${slotReached}: +${researchSlotBonus}`;
+          ? `research slot ${slotReached}: +${researchSlotBonus} + marketing: +${marketingDemandBonus}`
+          : `research slot ${slotReached}: +${researchSlotBonus}`;
         gameLogEntries.push({
           gameId: phase.gameId,
           content: `${sector.sectorName} effective demand: ${effectiveDemand} (${demandBreakdown})`,

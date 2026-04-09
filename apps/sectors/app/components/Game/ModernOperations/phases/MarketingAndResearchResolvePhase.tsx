@@ -19,7 +19,7 @@ import { RiMegaphoneFill, RiTestTubeFill } from "@remixicon/react";
  * Similar structure to ModernOperations but shows resolved results instead of operations.
  */
 export default function MarketingAndResearchResolvePhase() {
-  const { gameId, authPlayer, currentPhase, currentTurn } = useGame();
+  const { gameId, gameState, authPlayer, currentPhase, currentTurn } = useGame();
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
 
   const currentPhaseNumber = Math.ceil(
@@ -78,6 +78,12 @@ export default function MarketingAndResearchResolvePhase() {
   const selectedCompany = playerCompanies.find(
     (c) => c.id === selectedCompanyId
   );
+
+  const selectedSectorResearchMarker =
+    selectedCompany && gameState?.sectors
+      ? gameState.sectors.find((s) => s.id === selectedCompany.sectorId)
+          ?.researchMarker ?? 0
+      : 0;
 
   // Fetch marketing campaigns for selected company
   const { data: marketingCampaigns, isLoading: isLoadingCampaigns } =
@@ -334,14 +340,16 @@ export default function MarketingAndResearchResolvePhase() {
                             ($300), IV ($400) per action
                           </li>
                           <li>
-                            <strong>Progress:</strong> Random result: +0, +1, or +2
-                            spaces per research action
+                            <strong>Shared track:</strong> Successful actions add +1 or +2 to the
+                            sector&apos;s 12-space marker (same position for all companies in that
+                            sector).
                           </li>
                           <li>
-                            <strong>Company Milestones:</strong>
+                            <strong>Per-company milestones:</strong> Based on this company&apos;s
+                            lifetime research spaces (running total), not the sector marker alone.
                           </li>
-                          <li className="ml-4">• Progress 5: +$200 grant</li>
-                          <li className="ml-4">• Progress 10: +1 market favor</li>
+                          <li className="ml-4">• 5 lifetime spaces: +$200 grant</li>
+                          <li className="ml-4">• 10 lifetime spaces: +1 market favor</li>
                         </ul>
                       </div>
                     </PopoverContent>
@@ -353,9 +361,17 @@ export default function MarketingAndResearchResolvePhase() {
                 <div className="p-4 bg-gray-700/30 rounded-lg">
                   <div className="space-y-3">
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-400">Research Progress:</span>
+                      <span className="text-gray-400">Shared sector track:</span>
                       <span className="text-gray-200 font-medium">
-                        {selectedCompany.researchProgress || 0} spaces
+                        {selectedSectorResearchMarker}/12
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">
+                        This company (lifetime spaces):
+                      </span>
+                      <span className="text-gray-200 font-medium">
+                        +{selectedCompany.researchProgress || 0}
                       </span>
                     </div>
                     {resolvedOrders?.length && resolvedOrders?.length > 0 && (

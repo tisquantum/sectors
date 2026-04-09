@@ -126,7 +126,7 @@ export function ModernCompany({
                     <strong className="text-white">What are Marketing Campaigns?</strong>
                   </p>
                   <p>
-                    Marketing campaigns boost your company&apos;s brand score and add consumption markers to your sector&apos;s consumption bag, increasing demand for your products.
+                    Marketing campaigns raise brand (which steers consumers toward your factories), add consumption markers, and tier II/III add sector demand while the campaign is active.
                   </p>
                   <p>
                     <strong className="text-white">Campaign Tiers & Costs:</strong>
@@ -207,16 +207,20 @@ export function ModernCompany({
                     <li><strong>Stage 4 (10-12+):</strong> Factory III and Factory IV unlocked</li>
                   </ul>
                   <p>
-                    <strong className="text-white">Research Costs:</strong>
+                    <strong className="text-white">Research costs and workers:</strong>
                   </p>
                   <p>
-                    Research costs increase with sector research stage: Stage 1 = $100, Stage 2 = $200, Stage 3 = $300, Stage 4 = $400. Each research action requires 1 worker.
+                    Each research action is paid with this company&apos;s cash, costs more at higher
+                    sector stages (Stage 1 = $100 … Stage 4 = $400), and uses workers tied to this
+                    company.
                   </p>
                   <p>
-                    <strong className="text-white">Research Progress:</strong>
+                    <strong className="text-white">Shared sector track:</strong>
                   </p>
                   <p>
-                    Each research action yields random progress gain of +1 or +2. Companies contribute to their sector&apos;s shared research track (12 spaces total, 4 stages of 3 spaces each).
+                    A successful action adds +1 or +2 to the sector&apos;s single 12-space track (4
+                    stages of 3). All companies in the sector share that position — not separate
+                    tracks per company.
                   </p>
                   <p>
                     <strong className="text-white">Additional Benefits:</strong>

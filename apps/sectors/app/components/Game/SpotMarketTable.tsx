@@ -57,7 +57,7 @@ const MODERN_COLUMNS = [
   "Company Status",
   "Float %",
   "Brand",
-  "Research",
+  "Research (co.)",
   "Attraction",
   "Sector",
   "Sector Demand",
