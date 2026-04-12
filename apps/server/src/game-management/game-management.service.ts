@@ -3327,17 +3327,15 @@ export class GameManagementService {
         });
       }
       
-      // Company cash is already updated:
-      // - totalRevenue was added in earnings call phase
-      // - Open market dividends were added above (BANK → COMPANY)
-      // - Company retains moneyToCompany (which is already in cash since totalRevenue was received)
-      // No additional cash update needed here
-
-      // Update company cash on hand (for retained revenue when no dividends)
-      if (moneyToCompany !== 0 && (dividend === 0 || playerShares.length === 0)) {
+      // Operating revenue is not credited during earnings call; it is applied here.
+      // Open-market share dividends (above) credit the company separately from moneyToCompany.
+      // For DIVIDEND_FIFTY_FIFTY (and any path with moneyToCompany), always credit retention
+      // even when player dividends were paid — the old guard (dividend === 0 || no player shares)
+      // skipped the company's half whenever any player held stock.
+      if (moneyToCompany !== 0) {
         const companyUpdated = await this.companyService.updateCompany({
           where: { id: company.id },
-          data: { cashOnHand: company.cashOnHand + moneyToCompany },
+          data: { cashOnHand: { increment: moneyToCompany } },
         });
         // If company has positive cash on hand, make sure it's active
         if (companyUpdated.cashOnHand > 0) {

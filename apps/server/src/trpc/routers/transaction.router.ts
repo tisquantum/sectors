@@ -44,7 +44,7 @@ export default (trpc: TrpcService, ctx: Context) =>
       .input(
         z.object({
           entityId: z.string(),
-          transactionType: z.nativeEnum(TransactionType),
+          transactionType: z.nativeEnum(TransactionType).optional(),
         }),
       )
       .query(async ({ input }) => {

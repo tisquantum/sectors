@@ -57,6 +57,9 @@ const TransactionHistory = ({
           Sort by Value {sortOrder === "asc" ? "↑" : "↓"}
         </button>
       </div>
+      {sortedTransactions.length === 0 ? (
+        <p className="text-center text-gray-500 py-8">No transactions yet.</p>
+      ) : null}
       {sortedTransactions.map((transaction) => (
         <div
           key={transaction.id}
@@ -167,7 +170,8 @@ export const MoneyTransactionHistoryByCompany = ({
     isError,
   } = trpc.transactions.listTransactionsByEntityId.useQuery({
     entityId: company.entityId || "",
-    transactionType: TransactionType.CASH,
+    // Company cash flows use multiple transaction types (FACTORY_CONSTRUCTION,
+    // MARKETING_CAMPAIGN, RESEARCH, CASH, etc.); omit filter to show full history.
   });
   if (isLoading) {
     return <div>Loading...</div>;

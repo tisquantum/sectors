@@ -292,13 +292,22 @@ const TabContentMO: React.FC<TabContentProps> = ({
     handleShares(minValue);
     handleValueChange(defaultValue || 0);
   }, [defaultValue, minValue, handleShares, handleValueChange]);
-  // When maxValue drops (e.g. switching to sell with fewer shares owned), clamp selection
+  // When maxValue drops (e.g. switching to sell with fewer shares owned), clamp selection.
+  // While company data is loading, maxValue can be 0 with minValue 1 — do not clamp then or
+  // we push quantity 0 to the parent while the slider still looks like "1".
   useEffect(() => {
-    if (shareValue > maxValue) {
-      setShareValue(maxValue);
-      handleShares(maxValue);
+    if (maxValue < minValue) {
+      return;
     }
-  }, [maxValue, shareValue, handleShares]);
+    if (shareValue > maxValue) {
+      const next = maxValue;
+      setShareValue(next);
+      handleShares(next);
+    } else if (shareValue < minValue) {
+      setShareValue(minValue);
+      handleShares(minValue);
+    }
+  }, [maxValue, minValue, shareValue, handleShares]);
   return (
     <div className="flex flex-col text-center items-center center-content justify-center gap-2">
       {/* 

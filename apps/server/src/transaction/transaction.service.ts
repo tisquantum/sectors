@@ -67,12 +67,12 @@ export class TransactionService {
 
   async getTransactionsForEntity(
     entityId: string,
-    transactionType: TransactionType,
+    transactionType?: TransactionType,
   ): Promise<TransactionWithEntities[]> {
     return this.prisma.transaction.findMany({
       where: {
         OR: [{ fromEntityId: entityId }, { toEntityId: entityId }],
-        transactionType,
+        ...(transactionType != null ? { transactionType } : {}),
       },
       include: {
         fromEntity: {
