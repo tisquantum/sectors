@@ -8,7 +8,12 @@ import { createPortal } from 'react-dom';
 import { MarketingCreation } from '../Marketing/MarketingCreation';
 import { trpc } from '@sectors/app/trpc';
 import { getSectorResourceForSectorName } from '@server/data/constants';
-import { SectorName, PhaseName, CompanyStatus } from '@server/prisma/prisma.client';
+import {
+  SectorName,
+  PhaseName,
+  CompanyStatus,
+  MarketingCampaignTier,
+} from '@server/prisma/prisma.client';
 import { useGame } from '../../Game/GameContext';
 
 interface MarketingSlot {
@@ -48,6 +53,19 @@ const getResearchStage = (researchMarker: number): number => {
   if (researchMarker >= 7) return 3;
   if (researchMarker >= 4) return 2;
   return 1;
+};
+
+const fallbackResourceCountForTier = (tier: MarketingCampaignTier): number => {
+  switch (tier) {
+    case MarketingCampaignTier.TIER_1:
+      return 1;
+    case MarketingCampaignTier.TIER_2:
+      return 2;
+    case MarketingCampaignTier.TIER_3:
+      return 3;
+    default:
+      return 1;
+  }
 };
 
 export function MarketingSlots({ companyId, gameId, isCEO = false }: MarketingSlotsProps) {
@@ -104,6 +122,12 @@ export function MarketingSlots({ companyId, gameId, isCEO = false }: MarketingSl
       
       // If we've found an available slot, assign the campaign to it
       if (nextAvailableSlotIndex < slots.length && slots[nextAvailableSlotIndex].isAvailable) {
+        const stored = campaign.resourceTypes;
+        const typesForDisplay: ResourceType[] =
+          stored && stored.length > 0
+            ? (stored as ResourceType[])
+            : Array.from({ length: fallbackResourceCountForTier(campaign.tier) }, () => sectorResourceType);
+
         slots[nextAvailableSlotIndex] = {
           ...slots[nextAvailableSlotIndex],
           isOccupied: true,
@@ -112,12 +136,10 @@ export function MarketingSlots({ companyId, gameId, isCEO = false }: MarketingSl
             id: campaign.id,
             brandModifier: campaign.brandBonus,
             workers: campaign.workers,
-            resources: [
-              {
-                type: sectorResourceType,
-                price: 0, // Marketing campaigns don't have resource prices
-              },
-            ],
+            resources: typesForDisplay.map((type) => ({
+              type,
+              price: 0,
+            })),
           },
         };
         nextAvailableSlotIndex++;

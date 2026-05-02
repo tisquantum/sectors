@@ -1430,10 +1430,12 @@ export class ModernOperationMechanicsService {
    * Process marketing campaigns and research actions submitted by players
    */
   private async resolveMarketingAndResearchActions(phase: Phase) {
-    // Get all marketing campaigns created this turn
+    // Campaigns created during this turn only. ACTIVE persists across turns until
+    // degradation; without gameTurnId we would re-apply brand and markers every resolve.
     const newMarketingCampaigns = await this.prisma.marketingCampaign.findMany({
       where: {
         gameId: phase.gameId,
+        gameTurnId: phase.gameTurnId,
         status: MarketingCampaignStatus.ACTIVE,
       },
       include: {
@@ -1444,7 +1446,7 @@ export class ModernOperationMechanicsService {
     });
 
     // OPTIMIZATION: Collect company updates and game logs for batch processing
-    const companyBrandUpdates: Array<{ id: string; brandScore: number }> = [];
+    const companyBrandScoreAfter = new Map<string, number>();
     const marketingGameLogEntries: Array<{ gameId: string; content: string }> = [];
 
     // Add marketing markers to consumption bags using selected resources
@@ -1481,11 +1483,11 @@ export class ModernOperationMechanicsService {
         }
       }
 
-      // Collect company brand score update
-      companyBrandUpdates.push({
-        id: company.id,
-        brandScore: company.brandScore + campaign.brandBonus,
-      });
+      // Stack brand from all new campaigns this turn (include snapshot is stale across rows)
+      const nextBrand =
+        (companyBrandScoreAfter.get(company.id) ?? company.brandScore) +
+        campaign.brandBonus;
+      companyBrandScoreAfter.set(company.id, nextBrand);
 
       // Collect game log entry
       const resourceCount = selectedResources.length || this.getMarketingResourceBonus(campaign.tier);
@@ -1494,6 +1496,10 @@ export class ModernOperationMechanicsService {
         content: `${company.name} launched ${campaign.tier} marketing campaign (+${campaign.brandBonus} brand, +${resourceCount} consumption markers)`,
       });
     }
+
+    const companyBrandUpdates = Array.from(companyBrandScoreAfter.entries()).map(
+      ([id, brandScore]) => ({ id, brandScore }),
+    );
 
     // OPTIMIZATION: Batch update company brand scores
     if (companyBrandUpdates.length > 0) {
