@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { RiErrorWarningFill, RiSailboatFill } from "@remixicon/react";
 import { sectorColors } from "@server/data/gameData";
 import {
   CompanyStatus,
+  OperationMechanicsVersion,
   OrderType,
   PhaseName,
   ShareLocation,
@@ -20,6 +21,12 @@ import { useGame } from "../GameContext";
 import { BoardSection } from "./BoardSection";
 import type { FocusLevel } from "./boardFocus";
 import type { OrderTarget } from "./BoardOrderModal";
+import {
+  BoardSectorDemandModal,
+  SectorDemandStrip,
+  groupMarkers,
+  type SectorDemandTarget,
+} from "./BoardSectorDemand";
 
 /** A single order rendered as a tab on the edge of its company's tile. */
 interface OrderTab {
@@ -298,8 +305,17 @@ export function BoardSectorMap({
   onSelectCompany: (companyId: string) => void;
   onPlaceOrder: (target: OrderTarget) => void;
 }) {
-  const { gameId, gameState, authPlayer, currentPhase, playersWithShares } =
-    useGame();
+  const {
+    gameId,
+    gameState,
+    authPlayer,
+    currentPhase,
+    currentTurn,
+    playersWithShares,
+  } = useGame();
+  const [demandTarget, setDemandTarget] = useState<SectorDemandTarget | null>(
+    null
+  );
 
   const stockRoundId = currentPhase?.stockRoundId ?? undefined;
   const ordersConcealed = !!gameState.playerOrdersConcealed;
@@ -319,6 +335,31 @@ export function BoardSectorMap({
       { where: { stockRoundId } },
       { enabled: !!stockRoundId && ordersConcealed, retry: false }
     );
+
+  const isModern =
+    gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN;
+
+  const { data: bagMarkers } =
+    trpc.consumptionMarker.getAllConsumptionBags.useQuery(
+      { gameId },
+      { enabled: !!gameId && isModern }
+    );
+  const { data: production } =
+    trpc.factoryProduction.getGameTurnProduction.useQuery(
+      { gameId, gameTurnId: currentTurn?.id ?? "" },
+      { enabled: !!gameId && !!currentTurn?.id && isModern }
+    );
+
+  /** Customers served this turn, per sector, from the companies that serve them. */
+  const servedBySector = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const row of production ?? []) {
+      const sectorId = row.Factory?.sectorId;
+      if (!sectorId) continue;
+      map.set(sectorId, (map.get(sectorId) ?? 0) + row.customersServed);
+    }
+    return map;
+  }, [production]);
 
   const ownedByCompany = useMemo(() => {
     const map = new Map<string, number>();
@@ -479,6 +520,21 @@ export function BoardSectorMap({
                     ${block.value}
                   </span>
                 </div>
+                {isModern && (
+                  <SectorDemandStrip
+                    groups={groupMarkers(bagMarkers, block.sectorId)}
+                    consumers={liveSector?.consumers ?? 0}
+                    waiting={liveSector?.waitingArea ?? 0}
+                    served={servedBySector.get(block.sectorId) ?? 0}
+                    onOpen={() =>
+                      setDemandTarget({
+                        sectorId: block.sectorId,
+                        sectorName: block.name,
+                        color: block.color,
+                      })
+                    }
+                  />
+                )}
                 <div className="flex flex-1 flex-wrap items-stretch gap-1">
                   {block.companies.map((company) => (
                     <CompanyTile
@@ -506,6 +562,12 @@ export function BoardSectorMap({
           })}
         </div>
       )}
+
+      <BoardSectorDemandModal
+        target={demandTarget}
+        markers={bagMarkers}
+        onClose={() => setDemandTarget(null)}
+      />
     </BoardSection>
   );
 }

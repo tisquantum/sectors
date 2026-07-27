@@ -161,6 +161,26 @@ function FactoryChip({
           {factory.served}/{capacity}
         </span>
       </span>
+      {/* How full the factory ran this turn — the outcome of consumption. */}
+      <span className="h-1 w-full overflow-hidden rounded-full bg-zinc-800">
+        <span
+          className="block h-full rounded-full bg-emerald-500"
+          style={{
+            width: `${Math.min(100, capacity ? (factory.served / capacity) * 100 : 0)}%`,
+          }}
+        />
+      </span>
+      {factory.profit !== 0 && (
+        <span
+          className={cn(
+            "text-center text-[10px] font-semibold tabular-nums",
+            factory.profit > 0 ? "text-emerald-400" : "text-rose-400"
+          )}
+          title={`Revenue $${factory.revenue} this turn`}
+        >
+          {factory.profit > 0 ? "+" : "−"}${Math.abs(factory.profit)}
+        </span>
+      )}
     </button>
   );
 }

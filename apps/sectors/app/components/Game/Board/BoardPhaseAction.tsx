@@ -35,14 +35,12 @@ import CapitalGains from "../CapitalGains";
 import Divestment from "../Divestment";
 import EndTurnEconomy from "../EndTurnEconomy";
 import InfluenceBid from "../InfluenceBid";
-import { ConsumptionPhase } from "../ConsumptionPhase";
 import { EarningsCall } from "../EarningsCall";
 import FactoryConstructionPhase from "../FactoryConstructionPhase";
 import { ResolveFactoryConstructionPhase } from "../../Factory/ResolveFactoryConstruction";
 import MarketingAndResearchAction from "../MarketingAndResearchAction";
 import MarketingAndResearchActionResolve from "../MarketingAndResearchActionResolve";
 import {
-  ConsumptionPhase as ModernConsumptionPhase,
   EarningsCallPhase as ModernEarningsCallPhase,
   MarketingAndResearchPhase as ModernMarketingAndResearchPhase,
   MarketingAndResearchResolvePhase as ModernMarketingAndResearchResolvePhase,
@@ -50,6 +48,7 @@ import {
   RustedFactoryUpgradePhase,
 } from "../ModernOperations/phases";
 import { BoardOperationsGuide } from "./BoardOperationsGuide";
+import { BoardConsumptionRecap } from "./BoardConsumptionRecap";
 import InsolvencyContributionComponent from "../../Company/InsolvencyContribution";
 import ForecastPhase from "../ForecastPhase";
 import ForecastResolve from "../ForecastResolve";
@@ -216,8 +215,10 @@ export function BoardPhaseAction() {
       return <InfluenceBid />;
     case PhaseName.INFLUENCE_BID_RESOLVE:
       return <InfluenceBid isRevealRound />;
+    // Consumption is read on the board itself: each sector shows its bag, its
+    // shoppers and its waiting area, and factory tiles fill as they are served.
     case PhaseName.CONSUMPTION_PHASE:
-      return isModern ? <ModernConsumptionPhase /> : <ConsumptionPhase />;
+      return <BoardConsumptionRecap />;
     case PhaseName.EARNINGS_CALL:
       return isModern ? <ModernEarningsCallPhase /> : <EarningsCall />;
     case PhaseName.FACTORY_CONSTRUCTION:

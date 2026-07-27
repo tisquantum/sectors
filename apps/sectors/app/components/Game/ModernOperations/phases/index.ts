@@ -1,4 +1,3 @@
-export { ConsumptionPhase } from './ConsumptionPhase';
 export { default as FactoryConstructionPhase } from './FactoryConstructionPhase';
 export { FactoryConstructionResolvePhase } from './FactoryConstructionResolvePhase';
 export { EarningsCallPhase } from './EarningsCallPhase';
