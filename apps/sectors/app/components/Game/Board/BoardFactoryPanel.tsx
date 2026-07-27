@@ -19,7 +19,7 @@ import { RiAlarmWarningFill, RiGroupFill, RiUserFill } from "@remixicon/react";
 import { cn } from "@/lib/utils";
 import { useGame } from "../GameContext";
 import { BoardSection } from "./BoardSection";
-import { resourceColor } from "./BoardResourceColumns";
+import { resourceColor, TRACK_COLUMN_HEIGHT } from "./BoardResourceColumns";
 import type { FocusLevel } from "./boardFocus";
 
 const SIZE_LABEL: Record<FactorySize, string> = {
@@ -60,7 +60,7 @@ interface CompanyGroup {
 }
 
 /** A material in a blueprint: global materials keep their shape, sector ones are diamonds. */
-function ResourceGlyph({ type, size = 6 }: { type: string; size?: number }) {
+function ResourceGlyph({ type, size = 9 }: { type: string; size?: number }) {
   const color = resourceColor(type);
   const base = { width: size, height: size, backgroundColor: color };
   if (type === "CIRCLE") {
@@ -110,36 +110,44 @@ function FactoryChip({
         factory.slot
       } · ${status}`}
       className={cn(
-        "flex shrink-0 flex-col items-stretch gap-px rounded border px-1 py-0.5 leading-none transition-transform hover:scale-105",
+        "flex w-16 shrink-0 flex-col items-stretch gap-1 rounded border px-1.5 py-1 leading-none transition-transform hover:scale-105",
         status === "operational" && "border-zinc-700 bg-zinc-800/70",
         status === "building" &&
           "border-dashed border-zinc-700 bg-zinc-900/60 opacity-80",
         status === "rusted" && "border-amber-600/70 bg-amber-950/40"
       )}
     >
-      <span className="flex items-center gap-1">
+      <span className="flex items-center justify-between gap-1">
         <span
-          className="text-[10px] font-bold tabular-nums"
+          className="text-sm font-bold tabular-nums"
           style={{ color: factory.color }}
         >
           {SIZE_LABEL[factory.size]}
         </span>
-        <span className="flex items-center gap-px">
-          {factory.resourceTypes.map((type, index) => (
-            <ResourceGlyph key={`${type}-${index}`} type={type} />
-          ))}
-        </span>
-        {status === "rusted" && (
-          <RiAlarmWarningFill size={9} className="text-amber-400" />
+        {status === "rusted" ? (
+          <RiAlarmWarningFill size={12} className="text-amber-400" />
+        ) : (
+          status === "building" && (
+            <span className="text-[9px] uppercase tracking-wider text-zinc-500">
+              wip
+            </span>
+          )
         )}
       </span>
-      <span className="flex items-center justify-between gap-1 text-[8px] tabular-nums text-zinc-500">
-        <span className="flex items-center gap-px">
-          <RiUserFill size={7} />
+      {/* Two rows' worth of room so a Factory IV blueprint never clips. */}
+      <span className="flex h-5 flex-wrap content-start items-start gap-1">
+        {factory.resourceTypes.map((type, index) => (
+          <ResourceGlyph key={`${type}-${index}`} type={type} />
+        ))}
+      </span>
+      <span className="flex items-center justify-between gap-1 text-[10px] tabular-nums text-zinc-400">
+        <span className="flex items-center gap-0.5">
+          <RiUserFill size={9} />
           {factory.workers}
         </span>
         <span
           className={cn(
+            "font-semibold",
             factory.served > 0 ? "text-emerald-400" : "text-zinc-600"
           )}
         >
@@ -291,7 +299,7 @@ export function BoardFactoryPanel({
       className={className}
       actions={
         totals.building > 0 || totals.rusted > 0 ? (
-          <span className="flex items-center gap-2 text-[9px] uppercase tracking-wider">
+          <span className="flex items-center gap-2 text-[10px] uppercase tracking-wider">
             {totals.building > 0 && (
               <span className="text-zinc-500">{totals.building} building</span>
             )}
@@ -310,28 +318,28 @@ export function BoardFactoryPanel({
         </p>
       ) : (
         <div
-          className="flex flex-wrap content-start gap-1 overflow-y-auto scrollbar"
-          style={{ maxHeight: 160 }}
+          className="flex flex-wrap content-start gap-1.5 overflow-y-auto scrollbar"
+          style={{ maxHeight: TRACK_COLUMN_HEIGHT + 30 }}
         >
           {groups.map((group) => (
             <div
               key={group.companyId}
-              className="flex min-w-0 flex-col gap-0.5 rounded border border-zinc-800/80 bg-zinc-900/40 p-1"
+              className="flex min-w-0 flex-col gap-1 rounded border border-zinc-800/80 bg-zinc-900/40 p-1.5"
             >
-              <span className="flex items-center gap-1 leading-none">
+              <span className="flex items-center gap-1.5 leading-none">
                 <span
-                  className="h-2 w-2 shrink-0 rounded-full"
+                  className="h-2.5 w-2.5 shrink-0 rounded-full"
                   style={{ backgroundColor: group.color }}
                 />
-                <span className="text-[10px] font-bold text-zinc-200">
+                <span className="text-xs font-bold text-zinc-100">
                   {group.symbol}
                 </span>
-                <span className="ml-auto flex items-center gap-px text-[8px] tabular-nums text-zinc-500">
-                  <RiGroupFill size={8} />
+                <span className="ml-auto flex items-center gap-0.5 pl-2 text-[10px] tabular-nums text-zinc-500">
+                  <RiGroupFill size={10} />
                   {group.workers}
                 </span>
               </span>
-              <div className="flex items-start gap-1">
+              <div className="flex items-start gap-1.5">
                 {group.factories.map((factory) => (
                   <FactoryChip
                     key={factory.id}

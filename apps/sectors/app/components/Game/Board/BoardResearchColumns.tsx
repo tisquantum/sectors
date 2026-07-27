@@ -66,15 +66,14 @@ function ResearchColumn({
         className="h-1 w-full rounded-full"
         style={{ backgroundColor: entry.color }}
       />
-      <span className="flex items-baseline justify-between gap-1">
-        <span className="min-w-0 truncate text-[8px] font-medium uppercase tracking-wide text-zinc-400">
-          {entry.sector.name}
-        </span>
-        <span className="shrink-0 text-[10px] font-bold tabular-nums text-zinc-200">
-          {entry.marker}/12
-          <span className="ml-0.5 text-emerald-400">
-            +{demandBonusFor(entry.marker)}
-          </span>
+      {/* Stacked to match the resource columns, which need the width for their names. */}
+      <span className="w-full truncate text-center text-[10px] font-medium uppercase tracking-wide text-zinc-300">
+        {entry.sector.name}
+      </span>
+      <span className="text-center text-sm font-bold tabular-nums text-zinc-200">
+        {entry.marker}/12
+        <span className="ml-1 text-xs text-emerald-400">
+          +{demandBonusFor(entry.marker)}
         </span>
       </span>
       <div
@@ -89,7 +88,7 @@ function ResearchColumn({
             <span
               key={space}
               className={cn(
-                "flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-[1px] text-[7px] leading-none tabular-nums",
+                "flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-[1px] text-[9px] leading-none tabular-nums",
                 isReached
                   ? "font-semibold text-black/70"
                   : "bg-zinc-800/50 text-zinc-500",
@@ -103,7 +102,7 @@ function ResearchColumn({
           );
         })}
       </div>
-      <span className="text-center text-[8px] uppercase tracking-wider text-zinc-600">
+      <span className="text-center text-[9px] uppercase tracking-wider text-zinc-500">
         Stage {stageFor(entry.marker)}
       </span>
     </button>
@@ -162,7 +161,7 @@ export function BoardResearchColumns({
       ) : (
         <div className="flex min-w-0 flex-col gap-0.5">
           {/* Mirrors the resource groups' label so both sets of columns align. */}
-          <span className="text-[8px] font-semibold uppercase tracking-wider text-zinc-600">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
             Progress
           </span>
           <div className="flex items-start gap-1">

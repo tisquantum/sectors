@@ -74,10 +74,10 @@ interface ResourceDetail extends ResourceRow {
 }
 
 /** Every track shares this pixel height, so their bottoms line up whatever their length. */
-export const TRACK_COLUMN_HEIGHT = 132;
+export const TRACK_COLUMN_HEIGHT = 160;
 
 /** Below this a cell is too short to letter, so the number is dropped. */
-const MIN_LABELLED_CELL = 9;
+const MIN_LABELLED_CELL = 11;
 
 /** One resource's price track drawn as a vertical column, dearest at the top. */
 function ResourceColumn({
@@ -102,16 +102,15 @@ function ResourceColumn({
         className="h-1 w-full rounded-full"
         style={{ backgroundColor: resource.color }}
       />
-      <span className="flex items-baseline justify-between gap-1">
-        <span className="min-w-0 truncate text-[8px] font-medium uppercase tracking-wide text-zinc-400">
-          {shortLabel(resource.type)}
-        </span>
-        <span
-          className="shrink-0 text-[10px] font-bold tabular-nums"
-          style={{ color: resource.color }}
-        >
-          ${resource.price}
-        </span>
+      {/* Stacked rather than side by side: narrow columns need the full width for the name. */}
+      <span className="w-full truncate text-center text-[10px] font-medium uppercase tracking-wide text-zinc-300">
+        {shortLabel(resource.type)}
+      </span>
+      <span
+        className="text-center text-sm font-bold tabular-nums"
+        style={{ color: resource.color }}
+      >
+        ${resource.price}
       </span>
       <div
         className="flex flex-col gap-px"
@@ -125,7 +124,7 @@ function ResourceColumn({
             <span
               key={`${price}-${index}`}
               className={cn(
-                "flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-[1px] text-[7px] leading-none tabular-nums",
+                "flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-[1px] text-[9px] leading-none tabular-nums",
                 isFilled
                   ? "font-semibold text-black/70"
                   : "bg-zinc-800/50 text-zinc-500",
@@ -249,7 +248,7 @@ export function BoardResourceColumns({
                 )}
                 style={{ flexGrow: entry.group.length, flexBasis: 0 }}
               >
-                <span className="text-[8px] font-semibold uppercase tracking-wider text-zinc-600">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
                   {entry.label}
                 </span>
                 <div className="flex items-start gap-1">
