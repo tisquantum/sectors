@@ -78,6 +78,14 @@ export default (trpc: TrpcService, ctx: Context) =>
         });
       }),
 
+    getGameCampaigns: trpc.procedure
+      .input(z.object({
+        gameId: z.string(),
+      }))
+      .query(async ({ input }) => {
+        return ctx.marketingService.getGameCampaigns(input.gameId);
+      }),
+
     getTotalBrandBonus: trpc.procedure
       .input(z.object({
         companyId: z.string(),

@@ -46,10 +46,10 @@ import {
   EarningsCallPhase as ModernEarningsCallPhase,
   MarketingAndResearchPhase as ModernMarketingAndResearchPhase,
   MarketingAndResearchResolvePhase as ModernMarketingAndResearchResolvePhase,
-  ModernOperations as ModernOperationsPhase,
   ModernOperationsResolve as ModernOperationsResolvePhase,
   RustedFactoryUpgradePhase,
 } from "../ModernOperations/phases";
+import { BoardOperationsGuide } from "./BoardOperationsGuide";
 import InsolvencyContributionComponent from "../../Company/InsolvencyContribution";
 import ForecastPhase from "../ForecastPhase";
 import ForecastResolve from "../ForecastResolve";
@@ -245,7 +245,9 @@ export function BoardPhaseAction() {
         <MarketingAndResearchActionResolve />
       );
     case PhaseName.MODERN_OPERATIONS:
-      return <ModernOperationsPhase />;
+      // Building, marketing and research all happen on the board itself, so the
+      // panel is reference only.
+      return <BoardOperationsGuide />;
     case PhaseName.RESOLVE_MODERN_OPERATIONS:
       return <ModernOperationsResolvePhase />;
     case PhaseName.RUSTED_FACTORY_UPGRADE:

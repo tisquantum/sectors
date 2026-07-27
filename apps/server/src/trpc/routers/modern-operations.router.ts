@@ -16,7 +16,10 @@ import { calculateFactoryConstructionCost } from '@server/data/company-traits';
 import { FactoryConstructionOrderService } from '@server/factory-construction/factory-construction-order.service';
 import { ModernOperationMechanicsService } from '@server/game-management/modern-operation-mechanics.service';
 import {
+  MAX_MARKETING_SLOTS,
+  getMarketingSlotCountForMarker,
   getMinimumResearchStageForMarketingTier,
+  getResearchStageFromMarker,
   isMarketingTierUnlockedForSector,
 } from '@server/data/marketing-unlock';
 
@@ -42,7 +45,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         gameId: z.string(),
         playerId: z.string(),
         tier: z.nativeEnum(MarketingCampaignTier),
-        slot: z.number().int().min(1).max(3),
+        slot: z.number().int().min(1).max(MAX_MARKETING_SLOTS),
         resourceTypes: z.array(z.nativeEnum(ResourceType)), // Resources selected by player
       }))
       .use(async (opts) => checkIsPlayerAction(opts, ctx.playerService))
@@ -86,6 +89,34 @@ export default (trpc: TrpcService, ctx: Context) =>
           );
         }
 
+        // A company may only run as many concurrent campaigns as its sector's
+        // research stage has unlocked slots, one campaign per slot.
+        const unlockedSlots = getMarketingSlotCountForMarker(researchMarker);
+        if (input.slot > unlockedSlots) {
+          throw new Error(
+            `Marketing slot ${input.slot} is not unlocked yet. Sector research stage ${getResearchStageFromMarker(researchMarker)} unlocks ${unlockedSlots} slot(s).`,
+          );
+        }
+
+        const liveCampaigns = await ctx.prismaService.marketingCampaign.findMany({
+          where: {
+            companyId: input.companyId,
+            gameId: input.gameId,
+            status: {
+              in: [MarketingCampaignStatus.ACTIVE, MarketingCampaignStatus.DECAYING],
+            },
+          },
+          select: { slot: true },
+        });
+        if (liveCampaigns.some((campaign) => campaign.slot === input.slot)) {
+          throw new Error(`Marketing slot ${input.slot} is already running a campaign.`);
+        }
+        if (liveCampaigns.length >= unlockedSlots) {
+          throw new Error(
+            `All ${unlockedSlots} marketing slot(s) are in use. Advance sector research to unlock more.`,
+          );
+        }
+
         // Get game to determine operation mechanics version
         const game = await ctx.gamesService.game({ id: input.gameId });
         if (!game) {
@@ -99,6 +130,7 @@ export default (trpc: TrpcService, ctx: Context) =>
           tier: input.tier,
           operationMechanicsVersion: game.operationMechanicsVersion || OperationMechanicsVersion.MODERN,
           resourceTypes: input.resourceTypes,
+          slot: input.slot,
         });
       }),
 
@@ -234,10 +266,11 @@ export default (trpc: TrpcService, ctx: Context) =>
         });
       }),
 
-    // Get pending research orders (created this turn, not yet resolved)
+    // Get pending research orders (created this turn, not yet resolved).
+    // Omit companyId to get every pending order in the game, for board views.
     getPendingResearchOrders: trpc.procedure
       .input(z.object({
-        companyId: z.string(),
+        companyId: z.string().optional(),
         gameId: z.string(),
         gameTurnId: z.string().optional(),
       }))
@@ -255,7 +288,7 @@ export default (trpc: TrpcService, ctx: Context) =>
         // Get research orders for this company in the current turn that are not yet resolved
         return ctx.prismaService.researchOrder.findMany({
           where: {
-            companyId: input.companyId,
+            ...(input.companyId ? { companyId: input.companyId } : {}),
             gameId: input.gameId,
             gameTurnId: gameTurnId,
             researchProgressGain: null, // Only unresolved orders

@@ -212,6 +212,33 @@ export const factoryConstructionRouter = (trpc: TrpcService, ctx: Context) => ro
       return orders;
     }),
 
+  // Every outstanding order in the game this turn, for board-wide views
+  getGameOutstandingOrders: publicProcedure
+    .input(z.object({
+      gameId: z.string(),
+      gameTurnId: z.string().optional(),
+    }))
+    .query(async ({ input }) => {
+      let gameTurnId = input.gameTurnId;
+      if (!gameTurnId) {
+        const currentTurn = await ctx.gameTurnService.getCurrentTurn(input.gameId);
+        if (!currentTurn) {
+          return [];
+        }
+        gameTurnId = currentTurn.id;
+      }
+
+      return ctx.factoryConstructionOrderService.factoryConstructionOrdersWithRelations({
+        where: {
+          gameId: input.gameId,
+          gameTurnId,
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+    }),
+
   // Get construction history for a company (factories built)
   getConstructionHistory: publicProcedure
     .input(z.object({

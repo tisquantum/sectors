@@ -12,14 +12,33 @@ import {
   FACTORY_WORKER_REQUIREMENTS,
 } from "@server/data/constants";
 import { sectorColors } from "@server/data/gameData";
-import { FactorySize } from "@server/prisma/prisma.client";
+import {
+  CompanyStatus,
+  FactorySize,
+  PhaseName,
+} from "@server/prisma/prisma.client";
 import { trpc } from "@sectors/app/trpc";
 import { formatEnumLabel } from "@sectors/app/helpers/labels";
-import { RiAlarmWarningFill, RiGroupFill, RiUserFill } from "@remixicon/react";
+import {
+  factorySlotLabel,
+  getFactorySlotPlan,
+  getResearchStageFromMarker,
+  type FactorySlotPhase,
+} from "@sectors/app/helpers/tableauSlots";
+import {
+  RiAddLine,
+  RiAlarmWarningFill,
+  RiGroupFill,
+  RiHammerFill,
+  RiUserFill,
+  RiVipCrown2Fill,
+} from "@remixicon/react";
 import { cn } from "@/lib/utils";
 import { useGame } from "../GameContext";
 import { BoardSection } from "./BoardSection";
-import { resourceColor, TRACK_COLUMN_HEIGHT } from "./BoardResourceColumns";
+import { TRACK_COLUMN_HEIGHT } from "./BoardResourceColumns";
+import { ResourceGlyph } from "./ResourceGlyph";
+import { BoardBuildModal, type BuildTarget } from "./BoardBuildModal";
 import type { FocusLevel } from "./boardFocus";
 
 const SIZE_LABEL: Record<FactorySize, string> = {
@@ -38,7 +57,6 @@ interface FactoryRow {
   isRusted: boolean;
   resourceTypes: string[];
   originalConstructionCost: number | null;
-  companyId: string;
   companyName: string;
   symbol: string;
   sectorName: string;
@@ -54,36 +72,25 @@ interface CompanyGroup {
   symbol: string;
   companyName: string;
   sectorName: string;
+  sectorEnum: string;
   color: string;
-  factories: FactoryRow[];
+  cashOnHand: number;
+  isMine: boolean;
+  canBuild: boolean;
+  /** One entry per slot the sector's research stage has opened. */
+  slots: {
+    slotNumber: number;
+    phase: FactorySlotPhase;
+    factory?: FactoryRow;
+    queued?: QueuedBuild;
+  }[];
   workers: number;
 }
 
-/** A material in a blueprint: global materials keep their shape, sector ones are diamonds. */
-function ResourceGlyph({ type, size = 9 }: { type: string; size?: number }) {
-  const color = resourceColor(type);
-  const base = { width: size, height: size, backgroundColor: color };
-  if (type === "CIRCLE") {
-    return <span className="rounded-full" style={base} title={type} />;
-  }
-  if (type === "TRIANGLE") {
-    return (
-      <span
-        title={type}
-        style={{ ...base, clipPath: "polygon(50% 0%, 0% 100%, 100% 100%)" }}
-      />
-    );
-  }
-  if (type === "SQUARE") {
-    return <span className="rounded-[1px]" style={base} title={type} />;
-  }
-  return (
-    <span
-      title={formatEnumLabel(type)}
-      className="rotate-45 rounded-[1px]"
-      style={base}
-    />
-  );
+interface QueuedBuild {
+  id: string;
+  size: FactorySize;
+  resourceTypes: string[];
 }
 
 /** One factory as a small tile: tier, blueprint, workers and customers served. */
@@ -158,9 +165,68 @@ function FactoryChip({
   );
 }
 
+/** A commissioned build waiting on the resolve step. */
+function QueuedChip({ build }: { build: QueuedBuild }) {
+  return (
+    <span
+      title={`Factory ${SIZE_LABEL[build.size]} commissioned, builds when operations resolve`}
+      className="flex w-16 shrink-0 flex-col items-stretch gap-1 rounded border border-dashed border-sky-600/70 bg-sky-950/40 px-1.5 py-1 leading-none"
+    >
+      <span className="flex items-center justify-between gap-1">
+        <span className="text-sm font-bold tabular-nums text-sky-300">
+          {SIZE_LABEL[build.size]}
+        </span>
+        <span className="text-[9px] uppercase tracking-wider text-sky-400">
+          queued
+        </span>
+      </span>
+      <span className="flex h-5 flex-wrap content-start items-start gap-1">
+        {build.resourceTypes.map((type, index) => (
+          <ResourceGlyph key={`${type}-${index}`} type={type} />
+        ))}
+      </span>
+      <span className="text-[10px] text-zinc-500">on resolve</span>
+    </span>
+  );
+}
+
+/** An open plot. Pressable for the CEO during operations, otherwise a placeholder. */
+function EmptySlot({
+  label,
+  canBuild,
+  onOpen,
+}: {
+  label: string;
+  canBuild: boolean;
+  onOpen: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={!canBuild}
+      onClick={onOpen}
+      title={
+        canBuild
+          ? `Build a Factory ${label} here`
+          : `Empty slot · accepts Factory ${label}`
+      }
+      className={cn(
+        "flex w-16 shrink-0 flex-col items-center justify-center gap-1 rounded border border-dashed py-1.5 leading-none transition-colors",
+        canBuild
+          ? "cursor-pointer border-orange-500/70 bg-orange-500/10 text-orange-300 hover:border-orange-400 hover:bg-orange-500/20"
+          : "border-zinc-800 text-zinc-600"
+      )}
+    >
+      {canBuild ? <RiAddLine size={14} /> : <span className="h-3.5" />}
+      <span className="text-[10px] font-semibold tabular-nums">{label}</span>
+    </button>
+  );
+}
+
 /**
- * Every factory in the game, grouped under the company that built it. This is
- * where the board shows what the economy is actually able to produce.
+ * Every factory in the game, grouped under the company that built it, with the
+ * open plots of the companies you run as pressable build slots. Construction
+ * happens here rather than in a phase panel.
  */
 export function BoardFactoryPanel({
   focus,
@@ -169,8 +235,13 @@ export function BoardFactoryPanel({
   focus: FocusLevel;
   className?: string;
 }) {
-  const { gameId, currentTurn } = useGame();
+  const { gameId, gameState, currentTurn, currentPhase, authPlayer } = useGame();
   const [openFactory, setOpenFactory] = useState<FactoryRow | null>(null);
+  const [buildTarget, setBuildTarget] = useState<BuildTarget | null>(null);
+
+  const isOperationsPhase =
+    currentPhase?.name === PhaseName.MODERN_OPERATIONS ||
+    currentPhase?.name === PhaseName.FACTORY_CONSTRUCTION;
 
   const { data: factories } = trpc.factory.getGameFactories.useQuery(
     { gameId },
@@ -184,6 +255,11 @@ export function BoardFactoryPanel({
     trpc.factoryProduction.getGameTurnProduction.useQuery(
       { gameId, gameTurnId: currentTurn?.id ?? "" },
       { enabled: !!gameId && !!currentTurn?.id }
+    );
+  const { data: queuedOrders } =
+    trpc.factoryConstruction.getGameOutstandingOrders.useQuery(
+      { gameId, gameTurnId: currentTurn?.id },
+      { enabled: !!gameId }
     );
 
   const priceByType = useMemo(() => {
@@ -212,10 +288,9 @@ export function BoardFactoryPanel({
       });
     }
 
-    const byCompany = new Map<string, CompanyGroup>();
+    const factoriesByCompany = new Map<string, FactoryRow[]>();
     for (const factory of factories ?? []) {
       const sectorName = factory.Sector?.name ?? "Unknown";
-      const color = sectorColors[sectorName] ?? "#52525b";
       const stats = producedBy.get(factory.id);
       const row: FactoryRow = {
         id: factory.id,
@@ -226,48 +301,96 @@ export function BoardFactoryPanel({
         isRusted: factory.isRusted,
         resourceTypes: factory.resourceTypes ?? [],
         originalConstructionCost: factory.originalConstructionCost ?? null,
-        companyId: factory.companyId,
         companyName: factory.company?.name ?? "Unknown",
         symbol: factory.company?.stockSymbol ?? "—",
         sectorName,
         brandScore: factory.company?.brandScore ?? 0,
-        color,
+        color: sectorColors[sectorName] ?? "#52525b",
         served: stats?.served ?? 0,
         revenue: stats?.revenue ?? 0,
         profit: stats?.profit ?? 0,
       };
-
-      let group = byCompany.get(factory.companyId);
-      if (!group) {
-        group = {
-          companyId: factory.companyId,
-          symbol: row.symbol,
-          companyName: row.companyName,
-          sectorName,
-          color,
-          factories: [],
-          workers: 0,
-        };
-        byCompany.set(factory.companyId, group);
-      }
-      group.factories.push(row);
-      group.workers += row.workers;
+      const list = factoriesByCompany.get(factory.companyId) ?? [];
+      list.push(row);
+      factoriesByCompany.set(factory.companyId, list);
     }
 
-    for (const group of byCompany.values()) {
-      group.factories.sort((a, b) => a.slot - b.slot);
+    const queuedByCompany = new Map<string, QueuedBuild[]>();
+    for (const order of queuedOrders ?? []) {
+      const list = queuedByCompany.get(order.companyId) ?? [];
+      list.push({
+        id: order.id,
+        size: order.size,
+        resourceTypes: order.resourceTypes ?? [],
+      });
+      queuedByCompany.set(order.companyId, list);
     }
 
-    return [...byCompany.values()].sort(
+    /**
+     * Companies with a factory need a row; so do companies you run, since their
+     * empty plots are the whole point of this panel.
+     */
+    const rows: CompanyGroup[] = [];
+    for (const company of gameState.Company ?? []) {
+      const built = factoriesByCompany.get(company.id) ?? [];
+      const isMine = !!authPlayer && company.ceoId === authPlayer.id;
+      if (built.length === 0 && !isMine) continue;
+      if (company.status === CompanyStatus.BANKRUPT) continue;
+
+      const sector = gameState.sectors.find((s) => s.id === company.sectorId);
+      const sectorName = sector?.name ?? "Unknown";
+      const stage = getResearchStageFromMarker(sector?.researchMarker ?? 0);
+      const plan = getFactorySlotPlan(stage);
+      const operable =
+        company.status === CompanyStatus.ACTIVE ||
+        company.status === CompanyStatus.INSOLVENT;
+      // Queued builds have no slot until they resolve, so they reserve the
+      // leftmost open plots to show what the tableau will look like.
+      const queue = [...(queuedByCompany.get(company.id) ?? [])];
+
+      rows.push({
+        companyId: company.id,
+        symbol: company.stockSymbol,
+        companyName: company.name,
+        sectorName,
+        sectorEnum: sector?.sectorName ?? "",
+        color: sectorColors[sectorName] ?? "#52525b",
+        cashOnHand: company.cashOnHand,
+        isMine,
+        canBuild: isMine && operable && isOperationsPhase,
+        slots: plan.map((phase, index) => {
+          const factory = built.find((row) => row.slot === index + 1);
+          return {
+            slotNumber: index + 1,
+            phase,
+            factory,
+            queued: factory ? undefined : queue.shift(),
+          };
+        }),
+        workers: built.reduce((sum, row) => sum + row.workers, 0),
+      });
+    }
+
+    return rows.sort(
       (a, b) =>
+        Number(b.isMine) - Number(a.isMine) ||
         a.sectorName.localeCompare(b.sectorName) ||
-        b.factories.length - a.factories.length ||
         a.symbol.localeCompare(b.symbol)
     );
-  }, [factories, production]);
+  }, [
+    factories,
+    production,
+    queuedOrders,
+    gameState.Company,
+    gameState.sectors,
+    authPlayer,
+    isOperationsPhase,
+  ]);
 
   const totals = useMemo(() => {
-    const rows = groups.flatMap((group) => group.factories);
+    const rows = groups.flatMap((group) =>
+      group.slots.flatMap((slot) => (slot.factory ? [slot.factory] : []))
+    );
     return {
       count: rows.length,
       workers: rows.reduce((sum, row) => sum + row.workers, 0),
@@ -277,6 +400,13 @@ export function BoardFactoryPanel({
         .reduce((sum, row) => sum + FACTORY_CUSTOMER_LIMITS[row.size], 0),
       building: rows.filter((row) => !row.isOperational).length,
       rusted: rows.filter((row) => row.isRusted).length,
+      openPlots: groups
+        .filter((group) => group.canBuild)
+        .reduce(
+          (sum, group) =>
+            sum + group.slots.filter((slot) => !slot.factory).length,
+          0
+        ),
     };
   }, [groups]);
 
@@ -292,29 +422,32 @@ export function BoardFactoryPanel({
       title="Factories"
       hint={
         totals.count > 0
-          ? `${totals.count} built · ${totals.workers} workers · ${totals.served}/${totals.capacity} customers served`
+          ? `${totals.count} built · ${totals.workers} workers · ${totals.served}/${totals.capacity} served`
           : "Nothing built yet"
       }
       focus={focus}
       className={className}
       actions={
-        totals.building > 0 || totals.rusted > 0 ? (
-          <span className="flex items-center gap-2 text-[10px] uppercase tracking-wider">
-            {totals.building > 0 && (
-              <span className="text-zinc-500">{totals.building} building</span>
-            )}
-            {totals.rusted > 0 && (
-              <span className="text-amber-400">{totals.rusted} rusted</span>
-            )}
-          </span>
-        ) : undefined
+        <span className="flex items-center gap-2 text-[10px] uppercase tracking-wider">
+          {totals.building > 0 && (
+            <span className="text-zinc-500">{totals.building} building</span>
+          )}
+          {totals.rusted > 0 && (
+            <span className="text-amber-400">{totals.rusted} rusted</span>
+          )}
+          {totals.openPlots > 0 && (
+            <span className="flex items-center gap-1 text-orange-300">
+              <RiHammerFill size={11} />
+              {totals.openPlots} open
+            </span>
+          )}
+        </span>
       }
       bodyClassName="p-1"
     >
       {groups.length === 0 ? (
         <p className="py-4 text-center text-[11px] text-zinc-600">
-          No factories have been built. Companies construct them during
-          operations.
+          No factories have been built yet.
         </p>
       ) : (
         <div
@@ -324,7 +457,12 @@ export function BoardFactoryPanel({
           {groups.map((group) => (
             <div
               key={group.companyId}
-              className="flex min-w-0 flex-col gap-1 rounded border border-zinc-800/80 bg-zinc-900/40 p-1.5"
+              className={cn(
+                "flex min-w-0 flex-col gap-1 rounded border bg-zinc-900/40 p-1.5",
+                group.canBuild
+                  ? "border-orange-700/50"
+                  : "border-zinc-800/80"
+              )}
             >
               <span className="flex items-center gap-1.5 leading-none">
                 <span
@@ -334,25 +472,64 @@ export function BoardFactoryPanel({
                 <span className="text-xs font-bold text-zinc-100">
                   {group.symbol}
                 </span>
-                <span className="ml-auto flex items-center gap-0.5 pl-2 text-[10px] tabular-nums text-zinc-500">
-                  <RiGroupFill size={10} />
-                  {group.workers}
+                {group.isMine && (
+                  <span title="You are the CEO">
+                    <RiVipCrown2Fill
+                      size={11}
+                      className="shrink-0 text-amber-400"
+                    />
+                  </span>
+                )}
+                <span className="ml-auto flex items-center gap-2 pl-2 text-[10px] tabular-nums text-zinc-500">
+                  {group.canBuild && <span>${group.cashOnHand}</span>}
+                  <span className="flex items-center gap-0.5">
+                    <RiGroupFill size={10} />
+                    {group.workers}
+                  </span>
                 </span>
               </span>
-              <div className="flex items-start gap-1.5">
-                {group.factories.map((factory) => (
-                  <FactoryChip
-                    key={factory.id}
-                    factory={factory}
-                    capacity={FACTORY_CUSTOMER_LIMITS[factory.size]}
-                    onOpen={() => setOpenFactory(factory)}
-                  />
-                ))}
+              <div className="flex items-stretch gap-1.5">
+                {group.slots.map((slot) =>
+                  slot.factory ? (
+                    <FactoryChip
+                      key={slot.slotNumber}
+                      factory={slot.factory}
+                      capacity={FACTORY_CUSTOMER_LIMITS[slot.factory.size]}
+                      onOpen={() => setOpenFactory(slot.factory!)}
+                    />
+                  ) : slot.queued ? (
+                    <QueuedChip key={slot.slotNumber} build={slot.queued} />
+                  ) : (
+                    <EmptySlot
+                      key={slot.slotNumber}
+                      label={factorySlotLabel(slot.phase)}
+                      canBuild={group.canBuild}
+                      onOpen={() =>
+                        setBuildTarget({
+                          companyId: group.companyId,
+                          companyName: group.companyName,
+                          symbol: group.symbol,
+                          sectorName: group.sectorName,
+                          sectorEnum: group.sectorEnum,
+                          color: group.color,
+                          slotNumber: slot.slotNumber,
+                          phase: slot.phase,
+                          cashOnHand: group.cashOnHand,
+                        })
+                      }
+                    />
+                  )
+                )}
               </div>
             </div>
           ))}
         </div>
       )}
+
+      <BoardBuildModal
+        target={buildTarget}
+        onClose={() => setBuildTarget(null)}
+      />
 
       <Modal
         isOpen={!!openFactory}

@@ -8,8 +8,16 @@ import {
   ModalHeader,
 } from "@nextui-org/react";
 import { sectorColors } from "@server/data/gameData";
-import type { Company, Sector } from "@server/prisma/prisma.client";
+import { RESEARCH_COSTS_BY_PHASE } from "@server/data/constants";
+import {
+  CompanyStatus,
+  PhaseName,
+  type Company,
+  type Sector,
+} from "@server/prisma/prisma.client";
 import { trpc } from "@sectors/app/trpc";
+import { RiFlaskFill } from "@remixicon/react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useGame } from "../GameContext";
 import { BoardSection } from "./BoardSection";
@@ -36,76 +44,141 @@ function stageFor(marker: number): number {
   return 1;
 }
 
+/** Cost stage runs on thirds of the track, unlike the factory-tier stage. */
+function researchCostFor(marker: number): number {
+  const stage = Math.min(Math.floor(marker / 3) + 1, 4);
+  return RESEARCH_COSTS_BY_PHASE[stage - 1] ?? RESEARCH_COSTS_BY_PHASE[0];
+}
+
+interface Funder {
+  companyId: string;
+  symbol: string;
+  cashOnHand: number;
+  hasOrderThisTurn: boolean;
+}
+
 interface SectorResearch {
   sector: Sector;
   color: string;
   marker: number;
   companies: Company[];
+  /** Companies here that the viewing player can spend on right now. */
+  funders: Funder[];
 }
 
 /** One sector's shared 12-space research track, drawn bottom-up as a column. */
 function ResearchColumn({
   entry,
+  cost,
+  isFunding,
   onOpen,
+  onFund,
 }: {
   entry: SectorResearch;
+  cost: number;
+  isFunding: boolean;
   onOpen: () => void;
+  onFund: (funder: Funder) => void;
 }) {
   const spaces = Array.from({ length: TRACK_LENGTH }, (_, i) => TRACK_LENGTH - i);
 
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      title={`${entry.sector.name} research ${entry.marker}/12 · stage ${stageFor(
-        entry.marker
-      )}`}
-      className="flex min-w-0 flex-1 basis-0 flex-col items-stretch gap-0.5 rounded border border-zinc-800 bg-zinc-900/50 p-1 transition-colors hover:border-zinc-600"
-    >
-      <span
-        className="h-1 w-full rounded-full"
-        style={{ backgroundColor: entry.color }}
-      />
-      {/* Stacked to match the resource columns, which need the width for their names. */}
-      <span className="w-full truncate text-center text-[10px] font-medium uppercase tracking-wide text-zinc-300">
-        {entry.sector.name}
-      </span>
-      <span className="text-center text-sm font-bold tabular-nums text-zinc-200">
-        {entry.marker}/12
-        <span className="ml-1 text-xs text-emerald-400">
-          +{demandBonusFor(entry.marker)}
-        </span>
-      </span>
-      <div
-        className="flex flex-col gap-px"
-        style={{ height: `${TRACK_COLUMN_HEIGHT}px` }}
+    <div className="flex min-w-0 flex-1 basis-0 flex-col items-stretch gap-0.5 rounded border border-zinc-800 bg-zinc-900/50 p-1">
+      <button
+        type="button"
+        onClick={onOpen}
+        title={`${entry.sector.name} research ${entry.marker}/12 · stage ${stageFor(
+          entry.marker
+        )}`}
+        className="flex min-w-0 flex-col items-stretch gap-0.5 rounded transition-colors hover:bg-zinc-800/40"
       >
-        {spaces.map((space) => {
-          const isReached = space <= entry.marker;
-          const isCurrent = space === entry.marker;
-          const bonus = MILESTONE_BONUS[space];
-          return (
-            <span
-              key={space}
-              className={cn(
-                "flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-[1px] text-[9px] leading-none tabular-nums",
-                isReached
-                  ? "font-semibold text-black/70"
-                  : "bg-zinc-800/50 text-zinc-500",
-                bonus && !isReached && "bg-emerald-950/60 text-emerald-500/80",
-                isCurrent && "outline outline-1 outline-white/80"
-              )}
-              style={isReached ? { backgroundColor: entry.color } : undefined}
-            >
-              {bonus ? `+${bonus}` : space}
-            </span>
-          );
-        })}
-      </div>
-      <span className="text-center text-[9px] uppercase tracking-wider text-zinc-500">
-        Stage {stageFor(entry.marker)}
-      </span>
-    </button>
+        <span
+          className="h-1 w-full rounded-full"
+          style={{ backgroundColor: entry.color }}
+        />
+        {/* Stacked to match the resource columns, which need the width for their names. */}
+        <span className="w-full truncate text-center text-[10px] font-medium uppercase tracking-wide text-zinc-300">
+          {entry.sector.name}
+        </span>
+        <span className="text-center text-sm font-bold tabular-nums text-zinc-200">
+          {entry.marker}/12
+          <span className="ml-1 text-xs text-emerald-400">
+            +{demandBonusFor(entry.marker)}
+          </span>
+        </span>
+        <div
+          className="flex flex-col gap-px"
+          style={{ height: `${TRACK_COLUMN_HEIGHT}px` }}
+        >
+          {spaces.map((space) => {
+            const isReached = space <= entry.marker;
+            const isCurrent = space === entry.marker;
+            const bonus = MILESTONE_BONUS[space];
+            return (
+              <span
+                key={space}
+                className={cn(
+                  "flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-[1px] text-[9px] leading-none tabular-nums",
+                  isReached
+                    ? "font-semibold text-black/70"
+                    : "bg-zinc-800/50 text-zinc-500",
+                  bonus && !isReached && "bg-emerald-950/60 text-emerald-500/80",
+                  isCurrent && "outline outline-1 outline-white/80"
+                )}
+                style={isReached ? { backgroundColor: entry.color } : undefined}
+              >
+                {bonus ? `+${bonus}` : space}
+              </span>
+            );
+          })}
+        </div>
+      </button>
+      {entry.funders.length > 0 ? (
+        <div className="flex flex-col gap-px">
+          {entry.funders.map((funder) => {
+            const affordable = funder.cashOnHand >= cost;
+            const disabled =
+              isFunding || funder.hasOrderThisTurn || !affordable;
+            return (
+              <button
+                key={funder.companyId}
+                type="button"
+                disabled={disabled}
+                onClick={() => onFund(funder)}
+                title={
+                  funder.hasOrderThisTurn
+                    ? `${funder.symbol} has already funded research this turn`
+                    : affordable
+                      ? `Fund research for ${funder.symbol} — $${cost}, charged when operations resolve`
+                      : `${funder.symbol} only has $${funder.cashOnHand}`
+                }
+                className={cn(
+                  "flex items-center justify-center gap-1 rounded border border-dashed py-0.5 text-[10px] font-semibold leading-none transition-colors",
+                  funder.hasOrderThisTurn
+                    ? "border-sky-700/60 bg-sky-950/40 text-sky-400"
+                    : disabled
+                      ? "cursor-not-allowed border-zinc-800 text-zinc-600"
+                      : "cursor-pointer border-emerald-500/70 bg-emerald-500/10 text-emerald-300 hover:border-emerald-400 hover:bg-emerald-500/20"
+                )}
+              >
+                {funder.hasOrderThisTurn ? (
+                  "queued"
+                ) : (
+                  <>
+                    <RiFlaskFill size={10} />
+                    {entry.funders.length > 1 ? funder.symbol : `$${cost}`}
+                  </>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <span className="text-center text-[9px] uppercase tracking-wider text-zinc-500">
+          Stage {stageFor(entry.marker)}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -120,8 +193,14 @@ export function BoardResearchColumns({
   focus: FocusLevel;
   className?: string;
 }) {
-  const { gameId } = useGame();
+  const { gameId, currentTurn, currentPhase, authPlayer } = useGame();
   const [openEntry, setOpenEntry] = useState<SectorResearch | null>(null);
+  const [fundingCompanyId, setFundingCompanyId] = useState<string | null>(null);
+
+  const canFund =
+    currentPhase?.name === PhaseName.MODERN_OPERATIONS ||
+    currentPhase?.name === PhaseName.MARKETING_AND_RESEARCH_ACTION ||
+    currentPhase?.name === PhaseName.RESEARCH_ACTION;
 
   const { data: sectors } = trpc.sector.listSectors.useQuery(
     { where: { gameId }, orderBy: { name: "asc" } },
@@ -131,20 +210,59 @@ export function BoardResearchColumns({
     { where: { gameId }, orderBy: { name: "asc" } },
     { enabled: !!gameId }
   );
+  const { data: pendingResearch } =
+    trpc.modernOperations.getPendingResearchOrders.useQuery(
+      { gameId, gameTurnId: currentTurn?.id },
+      { enabled: !!gameId }
+    );
+
+  const utils = trpc.useUtils();
+  const fundResearch = trpc.modernOperations.submitResearchAction.useMutation({
+    onSuccess: () => {
+      toast.success("Research funded, resolves with operations", {
+        duration: 3000,
+      });
+      utils.modernOperations.getPendingResearchOrders.invalidate();
+    },
+    onError: (error) => toast.error(error.message, { duration: 6000 }),
+    onSettled: () => setFundingCompanyId(null),
+  });
 
   const entries = useMemo<SectorResearch[]>(() => {
     if (!sectors) return [];
+    const orderedCompanies = new Set(
+      (pendingResearch ?? []).map((order) => order.companyId)
+    );
     return sectors
-      .map((sector) => ({
-        sector,
-        color: sectorColors[sector.name] ?? "#52525b",
-        marker: sector.researchMarker ?? 0,
-        companies: (companies ?? []).filter(
+      .map((sector) => {
+        const inSector = (companies ?? []).filter(
           (company) => company.sectorId === sector.id
-        ),
-      }))
+        );
+        return {
+          sector,
+          color: sectorColors[sector.name] ?? "#52525b",
+          marker: sector.researchMarker ?? 0,
+          companies: inSector,
+          funders:
+            canFund && authPlayer
+              ? inSector
+                  .filter(
+                    (company) =>
+                      company.ceoId === authPlayer.id &&
+                      (company.status === CompanyStatus.ACTIVE ||
+                        company.status === CompanyStatus.INSOLVENT)
+                  )
+                  .map((company) => ({
+                    companyId: company.id,
+                    symbol: company.stockSymbol,
+                    cashOnHand: company.cashOnHand,
+                    hasOrderThisTurn: orderedCompanies.has(company.id),
+                  }))
+              : [],
+        };
+      })
       .filter((entry) => entry.companies.length > 0);
-  }, [sectors, companies]);
+  }, [sectors, companies, pendingResearch, canFund, authPlayer]);
 
   return (
     <BoardSection
@@ -169,7 +287,19 @@ export function BoardResearchColumns({
               <ResearchColumn
                 key={entry.sector.id}
                 entry={entry}
+                cost={researchCostFor(entry.marker)}
+                isFunding={fundingCompanyId === entry.sector.id}
                 onOpen={() => setOpenEntry(entry)}
+                onFund={(funder) => {
+                  if (!authPlayer || fundingCompanyId) return;
+                  setFundingCompanyId(entry.sector.id);
+                  fundResearch.mutate({
+                    companyId: funder.companyId,
+                    gameId,
+                    playerId: authPlayer.id,
+                    sectorId: entry.sector.id,
+                  });
+                }}
               />
             ))}
           </div>

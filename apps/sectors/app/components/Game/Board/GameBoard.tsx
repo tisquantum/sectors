@@ -16,6 +16,7 @@ import { BoardStockStrip } from "./BoardStockStrip";
 import { BoardResourceColumns } from "./BoardResourceColumns";
 import { BoardResearchColumns } from "./BoardResearchColumns";
 import { BoardFactoryPanel } from "./BoardFactoryPanel";
+import { BoardMarketingPanel } from "./BoardMarketingPanel";
 import { BoardSectorMap } from "./BoardSectorMap";
 import { BoardActionDock } from "./BoardActionDock";
 import { BoardCompanyModal } from "./BoardCompanyModal";
@@ -92,7 +93,7 @@ export function GameBoard() {
 
       {isModern && (
         <div className="grid shrink-0 grid-cols-1 gap-1.5 xl:grid-cols-2">
-          {/* Markets and research share the left half; factories fill the right. */}
+          {/* Markets and research share the left half; operations fill the right. */}
           <div className="flex min-w-0 gap-1.5">
             <BoardResourceColumns
               focus={focusLevelFor(focus, "resources")}
@@ -103,7 +104,17 @@ export function GameBoard() {
               className="min-w-0 flex-[2]"
             />
           </div>
-          <BoardFactoryPanel focus={focusLevelFor(focus, "factories")} />
+          {/* Marketing gets the narrower share — far fewer campaigns than factories. */}
+          <div className="flex min-w-0 gap-1.5">
+            <BoardFactoryPanel
+              focus={focusLevelFor(focus, "factories")}
+              className="min-w-0 flex-[2]"
+            />
+            <BoardMarketingPanel
+              focus={focusLevelFor(focus, "marketing")}
+              className="min-w-0 flex-1"
+            />
+          </div>
         </div>
       )}
 

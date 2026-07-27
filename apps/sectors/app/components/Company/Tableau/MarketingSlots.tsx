@@ -15,6 +15,10 @@ import {
   MarketingCampaignTier,
 } from '@server/prisma/prisma.client';
 import { useGame } from '../../Game/GameContext';
+import {
+  getMarketingSlotCount,
+  getResearchStageFromMarker,
+} from '@sectors/app/helpers/tableauSlots';
 
 interface MarketingSlot {
   id: string;
@@ -35,25 +39,8 @@ interface MarketingSlotsProps {
   isCEO?: boolean;
 }
 
-// Helper to get max marketing slots based on research stage (same as factories)
-// Research stages: 0-3 = Stage 1, 4-6 = Stage 2, 7-9 = Stage 3, 10-12+ = Stage 4
-const getMaxMarketingSlots = (researchStage: number): number => {
-  switch (researchStage) {
-    case 1: return 2;
-    case 2: return 3;
-    case 3: return 4;
-    case 4: return 5;
-    default: return 2;
-  }
-};
-
-// Calculate research stage from researchMarker
-const getResearchStage = (researchMarker: number): number => {
-  if (researchMarker >= 10) return 4;
-  if (researchMarker >= 7) return 3;
-  if (researchMarker >= 4) return 2;
-  return 1;
-};
+const getMaxMarketingSlots = getMarketingSlotCount;
+const getResearchStage = getResearchStageFromMarker;
 
 const fallbackResourceCountForTier = (tier: MarketingCampaignTier): number => {
   switch (tier) {

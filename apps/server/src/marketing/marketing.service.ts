@@ -10,6 +10,7 @@ const CreateMarketingCampaignSchema = z.object({
   tier: z.nativeEnum(MarketingCampaignTier),
   operationMechanicsVersion: z.nativeEnum(OperationMechanicsVersion),
   resourceTypes: z.array(z.nativeEnum(ResourceType)), // Resources selected by player
+  slot: z.number().int().min(1).optional(),
 });
 
 type CreateMarketingCampaignInput = z.infer<typeof CreateMarketingCampaignSchema>;
@@ -22,7 +23,7 @@ export class MarketingService {
   ) {}
 
   async createCampaign(input: CreateMarketingCampaignInput) {
-    const { companyId, gameId, tier, operationMechanicsVersion, resourceTypes } = input;
+    const { companyId, gameId, tier, operationMechanicsVersion, resourceTypes, slot } = input;
 
     // Validate resource count matches tier
     const expectedResourceCount = this.getResourceCountForTier(tier);
@@ -77,6 +78,7 @@ export class MarketingService {
           brandBonus: this.getBrandBonusForTier(tier),
           status: MarketingCampaignStatus.ACTIVE,
           resourceTypes, // Store selected resources
+          ...(slot ? { slot } : {}),
         },
       });
 
@@ -203,6 +205,23 @@ export class MarketingService {
         gameId,
         status: {
           in: [MarketingCampaignStatus.ACTIVE, MarketingCampaignStatus.DECAYING],
+        },
+      },
+    });
+  }
+
+  /** Every live campaign in the game, for board-wide views. */
+  async getGameCampaigns(gameId: string) {
+    return this.prisma.marketingCampaign.findMany({
+      where: {
+        gameId,
+        status: {
+          in: [MarketingCampaignStatus.ACTIVE, MarketingCampaignStatus.DECAYING],
+        },
+      },
+      include: {
+        Company: {
+          include: { Sector: true },
         },
       },
     });

@@ -11,6 +11,7 @@ export type BoardRegion =
   | "resources"
   | "research"
   | "factories"
+  | "marketing"
   | "companies";
 
 export interface BoardFocus {
@@ -207,9 +208,11 @@ const FOCUS_BY_PHASE: Partial<Record<PhaseName, BoardFocus>> = {
   },
 
   [PhaseName.MODERN_OPERATIONS]: {
-    regions: ["companies", "factories", "workforce", "resources", "research"],
-    prompt: "Build factories, run marketing, fund research.",
+    regions: ["factories", "marketing", "research", "workforce", "resources"],
+    prompt:
+      "Build in an open factory slot, launch a campaign, or fund a research track.",
     isActionable: true,
+    actsOnBoard: true,
   },
   [PhaseName.RESOLVE_MODERN_OPERATIONS]: {
     regions: ["factories", "workforce", "resources", "research", "companies"],
@@ -218,8 +221,9 @@ const FOCUS_BY_PHASE: Partial<Record<PhaseName, BoardFocus>> = {
   },
   [PhaseName.FACTORY_CONSTRUCTION]: {
     regions: ["factories", "companies", "resources", "workforce"],
-    prompt: "Commission new factories.",
+    prompt: "Press an open factory slot to commission a build.",
     isActionable: true,
+    actsOnBoard: true,
   },
   [PhaseName.FACTORY_CONSTRUCTION_RESOLVE]: {
     regions: ["factories", "resources", "workforce", "companies"],
@@ -227,29 +231,32 @@ const FOCUS_BY_PHASE: Partial<Record<PhaseName, BoardFocus>> = {
     isActionable: false,
   },
   [PhaseName.MARKETING_AND_RESEARCH_ACTION]: {
-    regions: ["companies", "research", "workforce"],
-    prompt: "Commit to marketing campaigns and research.",
+    regions: ["marketing", "research", "workforce", "companies"],
+    prompt: "Launch campaigns from a marketing slot, fund research on a track.",
     isActionable: true,
+    actsOnBoard: true,
   },
   [PhaseName.MARKETING_AND_RESEARCH_ACTION_RESOLVE]: {
-    regions: ["research", "workforce", "companies"],
+    regions: ["marketing", "research", "workforce", "companies"],
     prompt: "Marketing and research resolve.",
     isActionable: false,
   },
   [PhaseName.MARKETING_CAMPAIGN]: {
-    regions: ["companies", "workforce"],
-    prompt: "Launch marketing campaigns.",
+    regions: ["marketing", "companies", "workforce"],
+    prompt: "Press an open marketing slot to launch a campaign.",
     isActionable: true,
+    actsOnBoard: true,
   },
   [PhaseName.MARKETING_CAMPAIGN_RESOLVE]: {
-    regions: ["companies", "workforce"],
+    regions: ["marketing", "companies", "workforce"],
     prompt: "Marketing campaigns activate.",
     isActionable: false,
   },
   [PhaseName.RESEARCH_ACTION]: {
     regions: ["research", "workforce", "companies"],
-    prompt: "Fund research for your sectors.",
+    prompt: "Fund a research track for a sector you operate in.",
     isActionable: true,
+    actsOnBoard: true,
   },
   [PhaseName.RESEARCH_ACTION_RESOLVE]: {
     regions: ["research", "resources"],
@@ -262,7 +269,7 @@ const FOCUS_BY_PHASE: Partial<Record<PhaseName, BoardFocus>> = {
     isActionable: true,
   },
   [PhaseName.CONSUMPTION_PHASE]: {
-    regions: ["factories", "companies", "workforce"],
+    regions: ["factories", "marketing", "companies", "workforce"],
     prompt: "Consumers buy from the sectors.",
     isActionable: false,
   },

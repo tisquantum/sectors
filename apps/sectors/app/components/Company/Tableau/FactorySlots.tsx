@@ -11,11 +11,11 @@ import { FACTORY_CUSTOMER_LIMITS } from '@server/data/constants';
 import { PhaseName, FactorySize, CompanyStatus } from '@server/prisma/prisma.client';
 import { Popover, PopoverContent, PopoverTrigger } from '@nextui-org/react';
 import { RiInformationLine } from '@remixicon/react';
-
-interface SlotPhase {
-  min: FactorySize;
-  max: FactorySize;
-}
+import {
+  factorySlotLabel as formatPhaseLabel,
+  getFactorySlotPlan,
+  getResearchStageFromMarker,
+} from '@sectors/app/helpers/tableauSlots';
 
 interface FactorySlot {
   id: string;
@@ -90,70 +90,15 @@ export function FactorySlots({ companyId, gameId, currentPhase, isCEO = false }:
     return new Map(resourcePrices.map(r => [r.type, r.price]));
   }, [resourcePrices]);
 
-  // Calculate research stage from sector researchMarker
-  const getResearchStage = (researchMarker: number): number => {
-    if (researchMarker >= 10) return 4;
-    if (researchMarker >= 7) return 3;
-    if (researchMarker >= 4) return 2;
-    return 1;
-  };
-
-  // Get slot phases for a research stage
-  const getSlotPhasesForResearchStage = (stage: number): SlotPhase[] => {
-    switch (stage) {
-      case 1:
-        return [
-          { min: FactorySize.FACTORY_I, max: FactorySize.FACTORY_I },
-          { min: FactorySize.FACTORY_I, max: FactorySize.FACTORY_I },
-          { min: FactorySize.FACTORY_I, max: FactorySize.FACTORY_I },
-        ];
-      case 2:
-        return [
-          { min: FactorySize.FACTORY_I, max: FactorySize.FACTORY_II },
-          { min: FactorySize.FACTORY_I, max: FactorySize.FACTORY_II },
-          { min: FactorySize.FACTORY_II, max: FactorySize.FACTORY_II },
-        ];
-      case 3:
-        return [
-          { min: FactorySize.FACTORY_II, max: FactorySize.FACTORY_II },
-          { min: FactorySize.FACTORY_II, max: FactorySize.FACTORY_II },
-          { min: FactorySize.FACTORY_II, max: FactorySize.FACTORY_III },
-          { min: FactorySize.FACTORY_III, max: FactorySize.FACTORY_III },
-        ];
-      case 4:
-        return [
-          { min: FactorySize.FACTORY_III, max: FactorySize.FACTORY_III },
-          { min: FactorySize.FACTORY_III, max: FactorySize.FACTORY_IV },
-          { min: FactorySize.FACTORY_IV, max: FactorySize.FACTORY_IV },
-        ];
-      default:
-        return [
-          { min: FactorySize.FACTORY_I, max: FactorySize.FACTORY_I },
-          { min: FactorySize.FACTORY_I, max: FactorySize.FACTORY_I },
-          { min: FactorySize.FACTORY_I, max: FactorySize.FACTORY_I },
-        ];
-    }
-  };
-
-  // Format phase label (e.g., "I", "II", "I/II")
-  const formatPhaseLabel = (phase: SlotPhase): string => {
-    const minNum = phase.min.toString().replace('FACTORY_', '');
-    const maxNum = phase.max.toString().replace('FACTORY_', '');
-    if (minNum === maxNum) {
-      return minNum;
-    }
-    return `${minNum}/${maxNum}`;
-  };
-
   // Get current research stage
   const currentResearchStage = useMemo(() => {
     const researchMarker = company?.Sector?.researchMarker || 0;
-    return getResearchStage(researchMarker);
+    return getResearchStageFromMarker(researchMarker);
   }, [company?.Sector?.researchMarker]);
 
   // Get slot phases for current stage
   const currentSlotPhases = useMemo(() => {
-    return getSlotPhasesForResearchStage(currentResearchStage);
+    return getFactorySlotPlan(currentResearchStage);
   }, [currentResearchStage]);
 
   // Build slot configuration from real factory data and current research stage
@@ -204,7 +149,7 @@ export function FactorySlots({ companyId, gameId, currentPhase, isCEO = false }:
   const futureStagesPreview = useMemo(() => {
     const stages = [];
     for (let stage = currentResearchStage + 1; stage <= 4; stage++) {
-      const slotPhases = getSlotPhasesForResearchStage(stage);
+      const slotPhases = getFactorySlotPlan(stage);
       stages.push({
         stage,
         slots: slotPhases.map((phase, index) => ({

@@ -8,6 +8,22 @@ export function getResearchStageFromMarker(researchMarker: number): number {
   return 1;
 }
 
+/** Concurrent marketing slots unlocked at each sector research stage */
+export const MARKETING_SLOTS_BY_STAGE = [2, 3, 4, 5];
+
+export const MAX_MARKETING_SLOTS =
+  MARKETING_SLOTS_BY_STAGE[MARKETING_SLOTS_BY_STAGE.length - 1];
+
+export function getMarketingSlotCountForStage(stage: number): number {
+  return MARKETING_SLOTS_BY_STAGE[stage - 1] ?? MARKETING_SLOTS_BY_STAGE[0];
+}
+
+export function getMarketingSlotCountForMarker(researchMarker: number): number {
+  return getMarketingSlotCountForStage(
+    getResearchStageFromMarker(researchMarker),
+  );
+}
+
 /** Minimum sector research stage required to run this campaign tier */
 export function getMinimumResearchStageForMarketingTier(
   tier: MarketingCampaignTier,

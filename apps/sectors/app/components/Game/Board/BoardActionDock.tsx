@@ -85,7 +85,11 @@ export function BoardActionDock({ focus }: { focus: BoardFocus }) {
               : "bg-zinc-800 text-zinc-200 hover:bg-zinc-700"
           )}
         >
-          {focus.isActionable ? "Take action" : "Open phase"}
+          {focus.isActionable
+            ? focus.actsOnBoard
+              ? "Phase details"
+              : "Take action"
+            : "Open phase"}
         </button>
 
         <Popover placement="top-end">
