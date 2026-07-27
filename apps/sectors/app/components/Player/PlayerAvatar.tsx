@@ -13,6 +13,18 @@ import { hashStringToColor } from "@sectors/app/helpers";
 import PlayerOverview from "./PlayerOverview";
 import { useGame } from "../Game/GameContext";
 
+/**
+ * The avatar image on its own, for places that need an arbitrary pixel size or
+ * cannot nest this component's popover inside another one.
+ */
+export function createPlayerAvatarUri(nickname: string, size: number) {
+  return createAvatar(lorelei, {
+    size,
+    seed: nickname,
+    backgroundColor: [hashStringToColor(nickname)],
+  }).toDataUri();
+}
+
 const PlayerAvatar = ({
   player,
   showNameLabel,
@@ -37,13 +49,10 @@ const PlayerAvatar = ({
         return 128;
     }
   };
-  const avatar = useMemo(() => {
-    return createAvatar(lorelei, {
-      size: getSize(size),
-      seed: player.nickname,
-      backgroundColor: [hashStringToColor(player.nickname)],
-    }).toDataUri();
-  }, [player.nickname, size]);
+  const avatar = useMemo(
+    () => createPlayerAvatarUri(player.nickname, getSize(size)),
+    [player.nickname, size]
+  );
   const playerWithShares = playersWithShares.find((p) => p.id === player.id);
   return (
     <div className="flex flex-col items-center">

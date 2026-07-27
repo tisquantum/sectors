@@ -33,7 +33,7 @@ import type { PlayerReadiness } from "@server/data/constants";
 import { cn } from "@/lib/utils";
 import { useGame } from "../GameContext";
 import Timer from "../Timer";
-import PlayerAvatar from "../../Player/PlayerAvatar";
+import { createPlayerAvatarUri } from "../../Player/PlayerAvatar";
 import PlayerShares from "../../Player/PlayerShares";
 import PlayerOverview from "../../Player/PlayerOverview";
 import DebounceButton from "../../General/DebounceButton";
@@ -207,6 +207,44 @@ function SectorSharePills({
   );
 }
 
+/**
+ * A player's face at whatever size the strip can spare. The ring around it is
+ * the readiness tell, so the row does not need to change colour to show it.
+ */
+function BoardAvatar({
+  nickname,
+  px,
+  isReady,
+}: {
+  nickname: string;
+  px: number;
+  isReady?: boolean;
+}) {
+  const uri = useMemo(
+    () => createPlayerAvatarUri(nickname, px * 2),
+    [nickname, px]
+  );
+  return (
+    <span className="relative shrink-0 leading-none">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={uri}
+        alt=""
+        width={px}
+        height={px}
+        style={{ width: px, height: px }}
+        className={cn(
+          "rounded-full object-cover",
+          isReady ? "ring-2 ring-emerald-400" : "ring-1 ring-zinc-700"
+        )}
+      />
+      {isReady && (
+        <span className="absolute -bottom-px -right-px h-2 w-2 rounded-full border border-zinc-950 bg-emerald-400" />
+      )}
+    </span>
+  );
+}
+
 /** Opponents as a dense strip: priority order, readiness, cash and net worth. */
 function OpponentStrip() {
   const { gameState, authPlayer, currentPhase, playersWithShares, socketChannel } =
@@ -281,12 +319,11 @@ function OpponentStrip() {
             <PopoverTrigger>
               <button
                 type="button"
-                title={`${player.nickname}${priority ? ` · priority ${priority}` : ""}`}
+                title={`${player.nickname}${
+                  priority ? ` · priority ${priority}` : ""
+                } · ${isReady ? "ready" : "still deciding"}`}
                 className={cn(
-                  "flex items-center gap-1.5 rounded-md border px-1.5 py-1 leading-none transition-colors",
-                  isReady
-                    ? "border-emerald-600/70 bg-emerald-950/40"
-                    : "border-zinc-800 bg-zinc-900/70 hover:border-zinc-600",
+                  "flex items-center gap-1.5 rounded-md border border-zinc-800 bg-zinc-900/70 px-1.5 py-1 leading-none transition-colors hover:border-zinc-600",
                   isAuth && "ring-1 ring-sky-500/60"
                 )}
               >
@@ -295,6 +332,11 @@ function OpponentStrip() {
                     {priority}
                   </span>
                 )}
+                <BoardAvatar
+                  nickname={player.nickname}
+                  px={18}
+                  isReady={isReady}
+                />
                 <span className="max-w-[7rem] truncate text-[11px] font-medium text-zinc-200">
                   {player.nickname}
                 </span>
@@ -489,7 +531,7 @@ export function BoardPlayerBar({ focus }: { focus: FocusLevel }) {
     >
       {authPlayer && authWithShares ? (
         <div className="flex min-w-0 items-center gap-2">
-          <PlayerAvatar player={authPlayer} size="sm" />
+          <BoardAvatar nickname={authPlayer.nickname} px={24} />
           <div className="flex flex-col leading-tight">
             <span className="text-xs font-semibold text-zinc-200">
               {authPlayer.nickname}
