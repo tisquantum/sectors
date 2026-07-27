@@ -2,7 +2,7 @@ import { useGame } from "./GameContext";
 import "./EndTurnEconomy.css";
 import { sectorColors } from "@server/data/gameData";
 import { CompanyStatus, OperationMechanicsVersion, PhaseName, Sector } from "@server/prisma/prisma.client";
-import { useRef, useEffect, useState, useMemo, type Key } from "react";
+import { useRef, useEffect, useMemo } from "react";
 import {
   RiGlasses2Fill,
   RiHandCoinFill,
@@ -11,7 +11,7 @@ import {
 } from "@remixicon/react";
 // PrestigeRewards import removed - not used in modern game
 import ResearchDeck from "../ResearchDeck/ResearchDeck";
-import { Tooltip, Tabs, Tab } from "@nextui-org/react";
+import { Tooltip } from "@nextui-org/react";
 import {
   baseToolTipStyle,
   tooltipParagraphStyle,
@@ -23,35 +23,15 @@ import { sectorPriority } from "@server/data/constants";
 import EconomySector from "./EconomySector";
 import EndTurnSectorConsumerDistributionAnimation from "./EndTurnSectorConsumerDistributionAnimation";
 import { sortSectorIdsByPriority } from "@server/data/helpers";
-import { WorkforceTrack, SectorResearchTracks } from "./Tracks";
-import CapitalGains from "./CapitalGains";
-import Divestment from "./Divestment";
 import { SectorDemandRankings } from "./SectorDemandRankings";
-import { ResourceMarket } from "./Markets/ResourceMarket";
 
-type EndTurnEconomyProps = {
-  /** When set with onTabChange, tabs sync to the URL hash (Economy top-level view). */
-  selectedTabKey?: string;
-  onTabChange?: (key: string) => void;
-};
-
-const EndTurnEconomy = ({
-  selectedTabKey: controlledTabKey,
-  onTabChange,
-}: EndTurnEconomyProps = {}) => {
+/**
+ * End-of-turn economy summary. The workforce, resource and research tracks that
+ * used to live behind tabs here are now permanent fixtures of the board.
+ */
+const EndTurnEconomy = () => {
   const { currentPhase, gameState, gameId } = useGame();
-  const [internalTabKey, setInternalTabKey] = useState("overview");
-  const isHashControlled =
-    controlledTabKey !== undefined && onTabChange !== undefined;
-  const selectedTabKey = isHashControlled ? controlledTabKey : internalTabKey;
-  const handleTabChange = (key: string) => {
-    if (isHashControlled) {
-      onTabChange(key);
-    } else {
-      setInternalTabKey(key);
-    }
-  };
-  
+
   // Track query calls to detect infinite loops
   const queryCallCountRef = useRef(0);
   const { data: companiesWithSector, isLoading: isLoadingCompanies } =
@@ -125,18 +105,7 @@ const EndTurnEconomy = ({
   }
   return (
     <div className="flex flex-col justify-center items-center content-center w-full max-w-7xl mx-auto">
-      <Tabs
-        aria-label="End Turn Information"
-        className="w-full"
-        selectedKey={selectedTabKey}
-        onSelectionChange={(key: Key) => handleTabChange(String(key))}
-        classNames={{
-          tabList: "w-full",
-          panel: "w-full",
-        }}
-      >
-        <Tab key="overview" title="Overview">
-          <div className="flex flex-col gap-6 text-base lg:text-xl w-full p-4">
+      <div className="flex flex-col gap-6 text-base lg:text-xl w-full p-4">
             {currentPhase?.name == PhaseName.END_TURN ? (
               <EndTurnSectorConsumerDistributionAnimation
                 sectors={sectorsByDemandRank}
@@ -157,7 +126,7 @@ const EndTurnEconomy = ({
                       <strong className="text-white">Consumer Distribution:</strong> The Economy Score determines how many consumers can be distributed from the Consumer Pool to sectors each turn. Higher economy scores mean more consumers can flow into sectors, leading to increased economic activity.
                     </p>
                     <p className="text-xs text-gray-400 italic mt-2">
-                      Open the Workforce Track and Research Track tabs on this Economy view to see worker allocation and sector research progress.
+                      The workforce, resource and research tracks are always on the board above.
                     </p>
                   </div>
                 </div>
@@ -264,49 +233,10 @@ const EndTurnEconomy = ({
                 <ResearchDeck />
               </div>
             </div> */}
-            <div>
-              <CompanyPriorityList companies={companiesWithSector} />
-            </div>
-          </div>
-        </Tab>
-        
-        <Tab key="capital-gains" title="Capital Gains">
-          <div className="w-full p-4">
-            <CapitalGains />
-          </div>
-        </Tab>
-        
-        <Tab key="divestment" title="Divestment">
-          <div className="w-full p-4">
-            <Divestment />
-          </div>
-        </Tab>
-
-        {/* Resource Market - Resource Tracks (Modern Operations) */}
-        {gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN && gameId && (
-          <Tab key="resource-market" title="Resource Market">
-            <div className="w-full h-full">
-              <ResourceMarket gameId={gameId} />
-            </div>
-          </Tab>
-        )}
-
-        {gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN && (
-          <Tab key="research-track" title="Research Track">
-            <div className="w-full h-full p-4">
-              <SectorResearchTracks />
-            </div>
-          </Tab>
-        )}
-
-        {gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN && (
-          <Tab key="workforce-track" title="Workforce Track">
-            <div className="w-full h-full p-4">
-              <WorkforceTrack />
-            </div>
-          </Tab>
-        )}
-      </Tabs>
+        <div>
+          <CompanyPriorityList companies={companiesWithSector} />
+        </div>
+      </div>
     </div>
   );
 };
