@@ -50,7 +50,8 @@ function layoutMarkers(companies: CompanyWithSector[]): Marker[] {
       const clamped = index === -1 ? 0 : index;
       return {
         company,
-        offset: (clamped / (stockGridPrices.length - 1)) * 100,
+        // Centre of the space, so markers line up with the step grid and bands.
+        offset: ((clamped + 0.5) / stockGridPrices.length) * 100,
       };
     })
     .sort((a, b) => a.offset - b.offset);
@@ -64,6 +65,26 @@ function layoutMarkers(companies: CompanyWithSector[]): Marker[] {
     laneEnds[lane] = offset;
     return { company, offset, lane };
   });
+}
+
+/**
+ * Dotted verticals behind the markers, one per space on the chart, so the
+ * distance a company still has to climb is countable rather than guessed.
+ */
+function StepGrid() {
+  const step = 100 / stockGridPrices.length;
+  const dots = "repeating-linear-gradient(to bottom, #000 0 2px, transparent 2px 6px)";
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none absolute inset-0"
+      style={{
+        backgroundImage: `repeating-linear-gradient(to right, rgba(161,161,170,0.35) 0 1px, transparent 1px ${step}%)`,
+        maskImage: dots,
+        WebkitMaskImage: dots,
+      }}
+    />
+  );
 }
 
 function TierFill({
@@ -176,6 +197,8 @@ export function BoardStockStrip({
           className="relative w-full"
           style={{ height: `${laneCount * 26 + 2}px` }}
         >
+          <StepGrid />
+
           {markers.map(({ company, offset, lane }) => {
             const tier = tierForPrice(company.currentStockPrice ?? 0)?.tier;
             const color = sectorColors[company.Sector.name] ?? "#52525b";

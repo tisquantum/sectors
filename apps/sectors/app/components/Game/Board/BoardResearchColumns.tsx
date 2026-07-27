@@ -13,6 +13,7 @@ import { trpc } from "@sectors/app/trpc";
 import { cn } from "@/lib/utils";
 import { useGame } from "../GameContext";
 import { BoardSection } from "./BoardSection";
+import { TRACK_COLUMN_HEIGHT } from "./BoardResourceColumns";
 import type { FocusLevel } from "./boardFocus";
 
 const TRACK_LENGTH = 12;
@@ -56,25 +57,30 @@ function ResearchColumn({
     <button
       type="button"
       onClick={onOpen}
-      title={`${entry.sector.name} research ${entry.marker}/12`}
-      className="flex min-w-0 flex-1 basis-0 flex-col items-stretch gap-1 rounded-md border border-zinc-800 bg-zinc-900/50 p-1 transition-colors hover:border-zinc-600"
+      title={`${entry.sector.name} research ${entry.marker}/12 · stage ${stageFor(
+        entry.marker
+      )}`}
+      className="flex min-w-0 flex-1 basis-0 flex-col items-stretch gap-0.5 rounded border border-zinc-800 bg-zinc-900/50 p-1 transition-colors hover:border-zinc-600"
     >
-      <div className="flex flex-col items-center gap-0.5">
-        <span
-          className="h-1.5 w-full rounded-full"
-          style={{ backgroundColor: entry.color }}
-        />
-        <span className="w-full truncate text-center text-[9px] font-medium uppercase tracking-wide text-zinc-400">
+      <span
+        className="h-1 w-full rounded-full"
+        style={{ backgroundColor: entry.color }}
+      />
+      <span className="flex items-baseline justify-between gap-1">
+        <span className="min-w-0 truncate text-[8px] font-medium uppercase tracking-wide text-zinc-400">
           {entry.sector.name}
         </span>
-        <span className="text-[11px] font-bold tabular-nums text-zinc-200">
+        <span className="shrink-0 text-[10px] font-bold tabular-nums text-zinc-200">
           {entry.marker}/12
-          <span className="ml-1 text-emerald-400">
+          <span className="ml-0.5 text-emerald-400">
             +{demandBonusFor(entry.marker)}
           </span>
         </span>
-      </div>
-      <div className="flex flex-col gap-px">
+      </span>
+      <div
+        className="flex flex-col gap-px"
+        style={{ height: `${TRACK_COLUMN_HEIGHT}px` }}
+      >
         {spaces.map((space) => {
           const isReached = space <= entry.marker;
           const isCurrent = space === entry.marker;
@@ -83,12 +89,12 @@ function ResearchColumn({
             <span
               key={space}
               className={cn(
-                "relative flex h-3.5 items-center justify-center rounded-[2px] border text-[8px] tabular-nums",
+                "flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-[1px] text-[7px] leading-none tabular-nums",
                 isReached
-                  ? "border-black/40 font-semibold text-black/80"
-                  : "border-zinc-700/60 bg-zinc-800/40 text-zinc-500",
-                bonus && !isReached && "border-emerald-700/60",
-                isCurrent && "ring-1 ring-white/70"
+                  ? "font-semibold text-black/70"
+                  : "bg-zinc-800/50 text-zinc-500",
+                bonus && !isReached && "bg-emerald-950/60 text-emerald-500/80",
+                isCurrent && "outline outline-1 outline-white/80"
               )}
               style={isReached ? { backgroundColor: entry.color } : undefined}
             >
@@ -108,7 +114,13 @@ function ResearchColumn({
  * Research progress for every sector as parallel columns. Progress is shared by
  * all companies in a sector, so the column is the sector's position.
  */
-export function BoardResearchColumns({ focus }: { focus: FocusLevel }) {
+export function BoardResearchColumns({
+  focus,
+  className,
+}: {
+  focus: FocusLevel;
+  className?: string;
+}) {
   const { gameId } = useGame();
   const [openEntry, setOpenEntry] = useState<SectorResearch | null>(null);
 
@@ -138,23 +150,30 @@ export function BoardResearchColumns({ focus }: { focus: FocusLevel }) {
   return (
     <BoardSection
       title="Research"
-      hint="One shared track per sector · milestones unlock factory tiers and demand"
+      hint="Shared per sector · milestones unlock factory tiers and demand"
       focus={focus}
-      bodyClassName="p-1.5"
+      className={className}
+      bodyClassName="p-1"
     >
       {entries.length === 0 ? (
         <p className="py-4 text-center text-[11px] text-zinc-600">
           No sectors in play yet.
         </p>
       ) : (
-        <div className="flex items-start gap-1">
-          {entries.map((entry) => (
-            <ResearchColumn
-              key={entry.sector.id}
-              entry={entry}
-              onOpen={() => setOpenEntry(entry)}
-            />
-          ))}
+        <div className="flex min-w-0 flex-col gap-0.5">
+          {/* Mirrors the resource groups' label so both sets of columns align. */}
+          <span className="text-[8px] font-semibold uppercase tracking-wider text-zinc-600">
+            Progress
+          </span>
+          <div className="flex items-start gap-1">
+            {entries.map((entry) => (
+              <ResearchColumn
+                key={entry.sector.id}
+                entry={entry}
+                onOpen={() => setOpenEntry(entry)}
+              />
+            ))}
+          </div>
         </div>
       )}
 

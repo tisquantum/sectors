@@ -10,6 +10,7 @@ export type BoardRegion =
   | "stocks"
   | "resources"
   | "research"
+  | "factories"
   | "companies";
 
 export interface BoardFocus {
@@ -206,22 +207,22 @@ const FOCUS_BY_PHASE: Partial<Record<PhaseName, BoardFocus>> = {
   },
 
   [PhaseName.MODERN_OPERATIONS]: {
-    regions: ["companies", "workforce", "resources", "research"],
+    regions: ["companies", "factories", "workforce", "resources", "research"],
     prompt: "Build factories, run marketing, fund research.",
     isActionable: true,
   },
   [PhaseName.RESOLVE_MODERN_OPERATIONS]: {
-    regions: ["workforce", "resources", "research", "companies"],
+    regions: ["factories", "workforce", "resources", "research", "companies"],
     prompt: "Operations resolve across the board.",
     isActionable: false,
   },
   [PhaseName.FACTORY_CONSTRUCTION]: {
-    regions: ["companies", "resources", "workforce"],
+    regions: ["factories", "companies", "resources", "workforce"],
     prompt: "Commission new factories.",
     isActionable: true,
   },
   [PhaseName.FACTORY_CONSTRUCTION_RESOLVE]: {
-    regions: ["resources", "workforce", "companies"],
+    regions: ["factories", "resources", "workforce", "companies"],
     prompt: "Factory construction resolves.",
     isActionable: false,
   },
@@ -256,17 +257,17 @@ const FOCUS_BY_PHASE: Partial<Record<PhaseName, BoardFocus>> = {
     isActionable: false,
   },
   [PhaseName.RUSTED_FACTORY_UPGRADE]: {
-    regions: ["companies", "resources"],
+    regions: ["factories", "companies", "resources"],
     prompt: "Upgrade or scrap rusted factories.",
     isActionable: true,
   },
   [PhaseName.CONSUMPTION_PHASE]: {
-    regions: ["companies", "workforce"],
+    regions: ["factories", "companies", "workforce"],
     prompt: "Consumers buy from the sectors.",
     isActionable: false,
   },
   [PhaseName.EARNINGS_CALL]: {
-    regions: ["companies", "stocks"],
+    regions: ["factories", "companies", "stocks"],
     prompt: "Profits are reported and stocks move.",
     isActionable: false,
   },

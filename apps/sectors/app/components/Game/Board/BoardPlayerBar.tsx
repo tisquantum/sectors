@@ -109,47 +109,39 @@ function SectorSharePills({
 }) {
   const [openSector, setOpenSector] = useState<SectorHolding | null>(null);
 
-  if (holdings.length === 0) {
-    return (
-      <div className="flex items-center rounded-md border border-dashed border-zinc-800 px-2 py-1 text-[10px] text-zinc-600">
-        No shares held
-      </div>
-    );
-  }
-
   return (
     <>
-      <div className="flex min-w-0 flex-wrap items-center gap-1">
+      <div className="flex min-w-0 items-center gap-1 px-2 py-1">
         <span className="text-[9px] font-medium uppercase tracking-wider text-zinc-500">
-          Shares / sector
+          Shares
         </span>
-        {holdings.map((holding) => (
-          <button
-            key={holding.sectorId}
-            type="button"
-            onClick={() => setOpenSector(holding)}
-            title={`${holding.sectorName} — ${holding.shares} shares worth $${holding.value}`}
-            className="flex items-center gap-1 rounded-md border px-1.5 py-1 leading-none transition-transform hover:scale-[1.04]"
-            style={{
-              backgroundColor: `${holding.color}33`,
-              borderColor: `${holding.color}aa`,
-            }}
-          >
-            <span
-              className="h-2 w-2 shrink-0 rounded-full"
-              style={{ backgroundColor: holding.color }}
-            />
-            <span className="text-[11px] font-bold tabular-nums text-zinc-100">
-              {holding.shares}
-            </span>
-            <span className="text-[9px] tabular-nums text-zinc-400">
-              ${holding.value}
-            </span>
-          </button>
-        ))}
-        <span className="ml-1 text-[10px] tabular-nums text-zinc-500">
-          {totalShares} total
+        <span className="text-sm font-bold tabular-nums text-zinc-200">
+          {totalShares}
         </span>
+        {holdings.length === 0 ? (
+          <span className="text-[10px] text-zinc-600">none held</span>
+        ) : (
+          <span className="flex items-center gap-1">
+            {holdings.map((holding) => (
+              <button
+                key={holding.sectorId}
+                type="button"
+                onClick={() => setOpenSector(holding)}
+                title={`${holding.sectorName} — ${holding.shares} shares worth $${holding.value}`}
+                className="flex items-center gap-0.5 rounded px-1 leading-none transition-transform hover:scale-110"
+                style={{ backgroundColor: `${holding.color}2e` }}
+              >
+                <span
+                  className="h-2 w-2 shrink-0 rounded-full"
+                  style={{ backgroundColor: holding.color }}
+                />
+                <span className="text-[11px] font-semibold tabular-nums text-zinc-200">
+                  {holding.shares}
+                </span>
+              </button>
+            ))}
+          </span>
+        )}
       </div>
 
       <Modal
@@ -246,14 +238,30 @@ function OpponentStrip() {
     };
   }, [socketChannel, refetchReadiness]);
 
+  /**
+   * Priority rows can be written more than once for a turn, so fold them down to
+   * one entry per player and fall back to the roster for anyone missing.
+   */
   const ordered = useMemo(() => {
-    if (priorities && priorities.length > 0) {
-      return priorities.map((p) => ({
-        player: p.player,
-        priority: p.priority as number | null,
-      }));
+    const seen = new Set<string>();
+    const rows: {
+      player: { id: string; nickname: string };
+      priority: number | null;
+    }[] = [];
+
+    for (const entry of [...(priorities ?? [])].sort(
+      (a, b) => a.priority - b.priority
+    )) {
+      if (seen.has(entry.playerId)) continue;
+      seen.add(entry.playerId);
+      rows.push({ player: entry.player, priority: entry.priority });
     }
-    return gameState.Player.map((player) => ({ player, priority: null }));
+    for (const player of gameState.Player) {
+      if (seen.has(player.id)) continue;
+      seen.add(player.id);
+      rows.push({ player, priority: null });
+    }
+    return rows;
   }, [priorities, gameState.Player]);
 
   const authReady = !!readiness?.find((r) => r.playerId === authPlayer?.id)?.isReady;
@@ -494,47 +502,54 @@ export function BoardPlayerBar({ focus }: { focus: FocusLevel }) {
               </span>
             ) : null}
           </div>
-          <div className="flex flex-wrap items-center gap-1.5">
-            <BoardStat
-              label="Cash on hand"
-              value={
-                <span className="flex items-center gap-1">
-                  <RiWallet3Fill size={14} className="text-emerald-400" />$
-                  {authWithShares.cashOnHand}
-                  {showPendingImpact && (
-                    <span
-                      className={cn(
-                        "text-[10px] font-medium",
-                        pendingCashImpact > 0 ? "text-rose-400" : "text-emerald-400"
-                      )}
-                    >
-                      ({pendingCashImpact > 0 ? "-" : "+"}$
-                      {Math.abs(pendingCashImpact)})
-                    </span>
+          <div className="flex items-stretch divide-x divide-zinc-800 overflow-hidden rounded-md border border-zinc-800 bg-zinc-900/70">
+            <button
+              type="button"
+              onClick={walletModal.onOpen}
+              title="Cash on hand — press for your transactions"
+              className="flex items-center gap-1 px-2 py-1 leading-none transition-colors hover:bg-zinc-800/80"
+            >
+              <RiWallet3Fill size={13} className="text-emerald-400" />
+              <span className="text-[9px] font-medium uppercase tracking-wider text-zinc-500">
+                Cash
+              </span>
+              <span className="text-sm font-bold tabular-nums text-zinc-100">
+                ${authWithShares.cashOnHand}
+              </span>
+              {showPendingImpact && (
+                <span
+                  className={cn(
+                    "text-[10px] font-medium tabular-nums",
+                    pendingCashImpact > 0 ? "text-rose-400" : "text-emerald-400"
                   )}
+                >
+                  {pendingCashImpact > 0 ? "-" : "+"}$
+                  {Math.abs(pendingCashImpact)}
                 </span>
-              }
-              onPress={walletModal.onOpen}
-            />
-            <BoardStat
-              label="Total value"
-              value={
-                <span className="flex items-center gap-1">
-                  <RiScalesFill size={14} className="text-sky-400" />${netWorth}
-                </span>
-              }
-              onPress={sharesModal.onOpen}
-            />
-            <BoardStat
-              label="Share value"
-              value={`$${shareValue}`}
-              onPress={sharesModal.onOpen}
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={sharesModal.onOpen}
+              title={`Total value — $${shareValue} of it in shares`}
+              className="flex items-center gap-1 px-2 py-1 leading-none transition-colors hover:bg-zinc-800/80"
+            >
+              <RiScalesFill size={13} className="text-sky-400" />
+              <span className="text-[9px] font-medium uppercase tracking-wider text-zinc-500">
+                Total
+              </span>
+              <span className="text-sm font-bold tabular-nums text-zinc-100">
+                ${netWorth}
+              </span>
+              <span className="text-[10px] tabular-nums text-zinc-500">
+                ${shareValue} held
+              </span>
+            </button>
+            <SectorSharePills
+              holdings={holdings}
+              totalShares={authWithShares.Share.length}
             />
           </div>
-          <SectorSharePills
-            holdings={holdings}
-            totalShares={authWithShares.Share.length}
-          />
         </div>
       ) : (
         <span className="bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 bg-clip-text text-xs font-extrabold tracking-wide text-transparent">

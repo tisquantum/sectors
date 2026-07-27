@@ -42,7 +42,8 @@ const RESOURCE_SECTOR_NAME: Partial<Record<string, string>> = {
   TECHNOLOGY: "Technology",
 };
 
-function resourceColor(type: string): string {
+/** Shared so factory blueprints paint their materials the same as the market. */
+export function resourceColor(type: string): string {
   const sectorName = RESOURCE_SECTOR_NAME[type];
   if (sectorName && sectorColors[sectorName]) return sectorColors[sectorName];
   return GLOBAL_RESOURCE_COLOR[type] ?? "#71717a";
@@ -72,6 +73,12 @@ interface ResourceDetail extends ResourceRow {
   researchMilestones: number;
 }
 
+/** Every track shares this pixel height, so their bottoms line up whatever their length. */
+export const TRACK_COLUMN_HEIGHT = 132;
+
+/** Below this a cell is too short to letter, so the number is dropped. */
+const MIN_LABELLED_CELL = 9;
+
 /** One resource's price track drawn as a vertical column, dearest at the top. */
 function ResourceColumn({
   resource,
@@ -82,30 +89,34 @@ function ResourceColumn({
 }) {
   const currentIndex = resource.track.indexOf(resource.price);
   const cells = [...resource.track].reverse();
+  const showNumbers = TRACK_COLUMN_HEIGHT / resource.track.length >= MIN_LABELLED_CELL;
 
   return (
     <button
       type="button"
       onClick={onOpen}
       title={`${formatEnumLabel(resource.type)} · $${resource.price}`}
-      className="group flex min-w-0 flex-1 basis-0 flex-col items-stretch gap-1 rounded-md border border-zinc-800 bg-zinc-900/50 p-1 transition-colors hover:border-zinc-600"
+      className="group flex min-w-0 flex-1 basis-0 flex-col items-stretch gap-0.5 rounded border border-zinc-800 bg-zinc-900/50 p-1 transition-colors hover:border-zinc-600"
     >
-      <div className="flex flex-col items-center gap-0.5">
-        <span
-          className="h-1.5 w-full rounded-full"
-          style={{ backgroundColor: resource.color }}
-        />
-        <span className="w-full truncate text-center text-[9px] font-medium uppercase tracking-wide text-zinc-400">
+      <span
+        className="h-1 w-full rounded-full"
+        style={{ backgroundColor: resource.color }}
+      />
+      <span className="flex items-baseline justify-between gap-1">
+        <span className="min-w-0 truncate text-[8px] font-medium uppercase tracking-wide text-zinc-400">
           {shortLabel(resource.type)}
         </span>
         <span
-          className="text-[11px] font-bold tabular-nums"
+          className="shrink-0 text-[10px] font-bold tabular-nums"
           style={{ color: resource.color }}
         >
           ${resource.price}
         </span>
-      </div>
-      <div className="flex flex-col gap-px">
+      </span>
+      <div
+        className="flex flex-col gap-px"
+        style={{ height: `${TRACK_COLUMN_HEIGHT}px` }}
+      >
         {cells.map((price, reversedIndex) => {
           const index = resource.track.length - 1 - reversedIndex;
           const isFilled = index <= currentIndex;
@@ -114,17 +125,17 @@ function ResourceColumn({
             <span
               key={`${price}-${index}`}
               className={cn(
-                "relative flex h-3.5 items-center justify-center rounded-[2px] border text-[8px] tabular-nums",
+                "flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-[1px] text-[7px] leading-none tabular-nums",
                 isFilled
-                  ? "border-black/40 font-semibold text-black/80"
-                  : "border-zinc-700/60 bg-zinc-800/40 text-zinc-500",
-                isCurrent && "ring-1 ring-white/70"
+                  ? "font-semibold text-black/70"
+                  : "bg-zinc-800/50 text-zinc-500",
+                isCurrent && "outline outline-1 outline-white/80"
               )}
               style={
                 isFilled ? { backgroundColor: resource.color } : undefined
               }
             >
-              {price}
+              {showNumbers ? price : null}
             </span>
           );
         })}
@@ -137,7 +148,13 @@ function ResourceColumn({
  * The resource market: every resource price track side by side as a column, so
  * relative costs read at a glance.
  */
-export function BoardResourceColumns({ focus }: { focus: FocusLevel }) {
+export function BoardResourceColumns({
+  focus,
+  className,
+}: {
+  focus: FocusLevel;
+  className?: string;
+}) {
   const { gameId } = useGame();
   const [openResource, setOpenResource] = useState<ResourceDetail | null>(null);
 
@@ -206,49 +223,46 @@ export function BoardResourceColumns({ focus }: { focus: FocusLevel }) {
 
   return (
     <BoardSection
-      title="Resource market"
-      hint="General resources cheapen as they are consumed; sector resources only rise with research"
+      title="Resources"
+      hint="General resources cheapen as consumed · sector resources rise with research"
       focus={focus}
-      bodyClassName="p-1.5"
+      className={className}
+      bodyClassName="p-1"
     >
       {columns.length === 0 ? (
         <p className="py-4 text-center text-[11px] text-zinc-600">
           No resource tracks in play.
         </p>
       ) : (
-        <div className="flex items-start gap-2">
-          {generalColumns.length > 0 && (
-            <div className="flex min-w-0 flex-1 flex-col gap-1">
-              <span className="text-[9px] font-semibold uppercase tracking-wider text-zinc-600">
-                General
-              </span>
-              <div className="flex items-start gap-1">
-                {generalColumns.map((resource) => (
-                  <ResourceColumn
-                    key={resource.id}
-                    resource={resource}
-                    onOpen={() => setOpenResource(resource)}
-                  />
-                ))}
+        <div className="flex items-start gap-1.5">
+          {[
+            { label: "General", group: generalColumns },
+            { label: "Sector", group: sectorColumns },
+          ]
+            .filter((entry) => entry.group.length > 0)
+            .map((entry, index) => (
+              <div
+                key={entry.label}
+                className={cn(
+                  "flex min-w-0 flex-col gap-0.5",
+                  index > 0 && "border-l border-zinc-800 pl-1.5"
+                )}
+                style={{ flexGrow: entry.group.length, flexBasis: 0 }}
+              >
+                <span className="text-[8px] font-semibold uppercase tracking-wider text-zinc-600">
+                  {entry.label}
+                </span>
+                <div className="flex items-start gap-1">
+                  {entry.group.map((resource) => (
+                    <ResourceColumn
+                      key={resource.id}
+                      resource={resource}
+                      onOpen={() => setOpenResource(resource)}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
-          {sectorColumns.length > 0 && (
-            <div className="flex min-w-0 flex-[2] flex-col gap-1 border-l border-zinc-800 pl-2">
-              <span className="text-[9px] font-semibold uppercase tracking-wider text-zinc-600">
-                Sector
-              </span>
-              <div className="flex items-start gap-1">
-                {sectorColumns.map((resource) => (
-                  <ResourceColumn
-                    key={resource.id}
-                    resource={resource}
-                    onOpen={() => setOpenResource(resource)}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
+            ))}
         </div>
       )}
 
