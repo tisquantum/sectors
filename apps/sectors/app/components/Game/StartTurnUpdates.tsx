@@ -133,7 +133,6 @@ const StartTurnUpdates = () => {
   const { currentTurn, gameId } = useGame();
 
   // Get companies created in the current turn (newly opened companies)
-  // We check for companies without IPO prices set, created after the turn started
   const turnStartTime = useMemo(() => {
     if (!currentTurn?.createdAt) return null;
     return new Date(currentTurn.createdAt);
@@ -144,7 +143,6 @@ const StartTurnUpdates = () => {
       {
         where: {
           gameId: gameId || '',
-          ipoAndFloatPrice: null, // New companies don't have IPO prices yet
           status: CompanyStatus.INACTIVE, // New companies start as INACTIVE
           ...(turnStartTime && {
             createdAt: {
@@ -222,7 +220,9 @@ const StartTurnUpdates = () => {
                   <div className="flex-1">
                     <div className="font-semibold text-white">{company.name}</div>
                     <div className="text-sm text-gray-400">
-                      {company.stockSymbol} • Unit Price: ${company.unitPrice}
+                      {company.stockSymbol} • IPO: $
+                      {company.ipoAndFloatPrice ?? "—"} • Unit Price: $
+                      {company.unitPrice}
                     </div>
                   </div>
                 </div>
@@ -230,7 +230,8 @@ const StartTurnUpdates = () => {
             })}
           </div>
           <p className="text-sm text-gray-400 mt-3 italic">
-            IPO price voting will be available soon.
+            IPO prices are set at random within each sector&apos;s range. Shares
+            are available in the IPO until the company floats.
           </p>
         </motion.div>
       )}

@@ -296,20 +296,6 @@ export const GameProvider: React.FC<{
       // renderCurrentPhase becomes null, causing a black screen
       trpcUtilsRef.current.game.getGameState.invalidate({ gameId });
       
-      // Invalidate specific queries before refetching to ensure fresh data
-      if (phaseName === PhaseName.RESOLVE_SET_COMPANY_IPO_PRICES || 
-          phaseName === PhaseName.STOCK_RESOLVE_LIMIT_ORDER) {
-        // IPO prices are set during RESOLVE_SET_COMPANY_IPO_PRICES
-        // Also invalidate IPO votes query to ensure resolution phase shows correct data
-        // Use ref to get latest currentTurn value
-        const latestTurn = currentTurnRef.current;
-        if (latestTurn?.id) {
-          trpcUtilsRef.current.game.getIpoVotesForGameTurn.invalidate({
-            gameTurnId: latestTurn.id,
-          });
-        }
-      }
-      
       if (phaseName === PhaseName.EARNINGS_CALL) {
         // Factory production records created during CONSUMPTION_PHASE resolution
         // Invalidate production queries so consumption phase can show results

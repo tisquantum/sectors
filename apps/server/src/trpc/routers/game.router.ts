@@ -433,44 +433,4 @@ export default (trpc: TrpcService, ctx: Context) =>
         const playerIds = players.map((player) => player.id);
         return ctx.gameManagementService.getTurnIncome(playerIds, gameTurnId);
       }),
-    createIpoVote: trpc.procedure
-      .input(
-        z.object({
-          playerId: z.string(),
-          companyId: z.string(),
-          ipoPrice: z.number(),
-        }),
-      )
-      .mutation(async ({ input }) => {
-        const { playerId, companyId, ipoPrice } = input;
-        return ctx.gameManagementService.createIpoVote({
-          playerId,
-          companyId,
-          ipoPrice,
-        });
-      }),
-    createIpoVotesBatch: trpc.procedure
-      .input(
-        z.object({
-          votes: z.array(
-            z.object({
-              playerId: z.string(),
-              companyId: z.string(),
-              ipoPrice: z.number(),
-            }),
-          ),
-        }),
-      )
-      .mutation(async ({ input }) => {
-        return ctx.gameManagementService.createIpoVotesBatch(input.votes);
-      }),
-    getIpoVotesForGameTurn: trpc.procedure
-      .input(z.object({ gameTurnId: z.string() }))
-      .query(async ({ input }) => {
-        const { gameTurnId } = input;
-        if (!gameTurnId) {
-          throw new Error('Game Turn ID is required');
-        }
-        return ctx.gameManagementService.getIpoVotesForGameTurn(gameTurnId);
-      }),
   });

@@ -16,16 +16,25 @@ import { GamesService } from '../games/games.service';
 import { TransactionService } from '../transaction/transaction.service';
 import { ShareService } from '../share/share.service';
 import { ForecastService } from '../forecast/forecast.service';
-import { getResourcePriceForResourceType, getSectorResourceForSectorName, BASE_WORKER_SALARY, CompanyTierData, BANKRUPTCY_SHARE_PERCENTAGE_RETAINED, DEFAULT_SHARE_DISTRIBUTION, ECONOMY_SCORE_VALUES } from '@server/data/constants';
+import { getResourcePriceForResourceType, getSectorResourceForSectorName, BASE_WORKER_SALARY, CompanyTierData, BANKRUPTCY_SHARE_PERCENTAGE_RETAINED, DEFAULT_SHARE_DISTRIBUTION, ECONOMY_SCORE_VALUES, GLOBAL_RESOURCE_TYPES } from '@server/data/constants';
 import { PlayerPriorityService } from '@server/player-priority/player-priority.service';
 import { PlayersService } from '@server/players/players.service';
-import { calculateAverageStockPrice, calculateNetWorth, getRandomCompany, getNumberForFactorySize } from '@server/data/helpers';
+import { calculateAverageStockPrice, calculateNetWorth, getRandomCompany, getNumberForFactorySize, determineFloatPrice, determineStockTier, resolveFactoryBlueprint } from '@server/data/helpers';
+import {
+  COMPANY_TRAIT_DEFINITIONS,
+  EFFICIENT_TOOLING_WORKER_REDUCTION,
+  HIGH_CAPACITY_BONUS_CUSTOMERS,
+  PREMIUM_LINE_REVENUE_MULTIPLIER,
+  SIGNATURE_PRODUCT_BONUS_MARKERS,
+  TraitBearer,
+  blueprintTriggersTrait,
+  calculateFactoryConstructionCost,
+  calculateFactoryUpgradeCost,
+  getTraitResource,
+  rollCompanyTrait,
+} from '@server/data/company-traits';
+import { CompanyTraitType } from '@prisma/client';
 import { CompanyWithSector } from '@server/prisma/prisma.types';
-
-interface RequiredResource {
-  type: ResourceType;
-  quantity: number;
-}
 
 /** Sector demand thresholds for opening new companies. Each threshold can trigger once per sector (max 4 companies per sector). */
 const NEW_COMPANY_DEMAND_THRESHOLDS = [2, 4, 8] as const;
@@ -266,6 +275,7 @@ export class ModernOperationMechanicsService {
     const successfulOperations: Array<{
       order: FactoryConstructionOrder;
       company: CompanyWithSector;
+      blueprint: ResourceType[];
       blueprintCost: number;
       requiredWorkers: number;
       slot: number; // Track the slot number for this factory
@@ -289,23 +299,26 @@ export class ModernOperationMechanicsService {
         continue;
       }
 
-      // Calculate total resource cost (sum of current resource prices)
-      let totalResourceCost = 0;
-      const resourcesNeeded: { type: ResourceType; count: number }[] = [];
-      
-      for (const resourceType of order.resourceTypes) {
-        const price = resourcePriceMap.get(resourceType) || 0;
-        totalResourceCost += price;
-        resourcesNeeded.push({ type: resourceType, count: 1 });
-      }
+      // Price, staff and build from the same resolved blueprint, so the company is
+      // billed for exactly the materials its factory ends up with.
+      const blueprint = resolveFactoryBlueprint(
+        order.resourceTypes,
+        company.Sector.sectorName,
+      );
 
-      // Factory construction cost: (sum of resource prices) × factory size + $100 plot fee.
-      // The $100 plot fee applies only to fresh plots. Upgrading an existing factory (e.g. via
-      // RustedFactoryUpgradePhase) uses a different cost model and does not include this fee.
-      // FactoryConstructionOrder is always for new construction (fresh plot), so we always add it.
-      const factorySizeNumber = getNumberForFactorySize(order.size);
-      const PLOT_FEE_FRESH = 100;
-      const constructionCost = (totalResourceCost * factorySizeNumber) + PLOT_FEE_FRESH;
+      const resourcesNeeded: { type: ResourceType; count: number }[] =
+        blueprint.map((resourceType) => ({
+          type: resourceType,
+          count: 1,
+        }));
+
+      // FactoryConstructionOrder is always for new construction, so the plot fee applies.
+      const constructionCost = calculateFactoryConstructionCost(
+        order.size,
+        blueprint,
+        resourcePriceMap,
+        company,
+      );
 
       // Check if company can afford it
       if (company.cashOnHand < constructionCost) {
@@ -347,7 +360,11 @@ export class ModernOperationMechanicsService {
       const slot = existingFactories + factoriesCreatedForCompany + 1;
 
       // Check worker availability (cumulative for all orders)
-      const requiredWorkers = this.getRequiredWorkers(order.size);
+      const requiredWorkers = this.getRequiredWorkersForCompany(
+        order.size,
+        blueprint,
+        company,
+      );
       const workersNeededAfterThis = totalWorkersNeeded + requiredWorkers;
       if (game.workers < workersNeededAfterThis) {
         const failureReason = `Insufficient workers in workforce pool. Required: ${workersNeededAfterThis} (cumulative), Available: ${game.workers}`;
@@ -359,11 +376,9 @@ export class ModernOperationMechanicsService {
         continue;
       }
 
-      // Get sector resource type to ensure correct factory output resource
-      const sectorResourceType = this.getSectorResourceType(company.Sector.sectorName);
-      
-      // Determine factory output resource: use sector resource type if available, otherwise first resource
-      const factoryOutputResource = sectorResourceType || order.resourceTypes[0];
+      // The blueprint leads with the sector resource, so its first material is the
+      // factory's output for consumption marker purposes.
+      const factoryOutputResource = blueprint[0];
       
       // Increment factories created for this company
       factoriesCreatedThisPhase.set(company.id, factoriesCreatedForCompany + 1);
@@ -375,10 +390,11 @@ export class ModernOperationMechanicsService {
       successfulOperations.push({
         order,
         company,
+        blueprint,
         blueprintCost: constructionCost, // Using blueprintCost field name for backwards compatibility
         requiredWorkers,
         slot, // Use calculated slot number
-        factoryOutputResource, // Sector resource type or first resource in blueprint
+        factoryOutputResource, // Leading material of the resolved blueprint
       });
     }
 
@@ -398,26 +414,7 @@ export class ModernOperationMechanicsService {
     for (const op of successfulOperations) {
       try {
         let createdFactoryId: string | null = null;
-        
-        // Get the sector's unique resource type
-        const sectorResourceType = this.getSectorResourceType(op.company.Sector.sectorName);
-        
-        // Ensure sector resource type is always included and replace GENERAL with sector resource
-        let factoryResourceTypes = [...op.order.resourceTypes];
-        
-        if (sectorResourceType) {
-          // Remove GENERAL and any existing sector resource type (to avoid duplicates)
-          factoryResourceTypes = factoryResourceTypes.filter(rt => 
-            rt !== ResourceType.GENERAL && rt !== sectorResourceType
-          );
-          
-          // Always put sector resource type first, followed by other resources
-          factoryResourceTypes = [sectorResourceType, ...factoryResourceTypes];
-        } else {
-          // If no sector resource type, just remove GENERAL
-          factoryResourceTypes = factoryResourceTypes.filter(rt => rt !== ResourceType.GENERAL);
-        }
-        
+
         await this.prisma.$transaction(async (tx) => {
           // Deduct cash from company (construction cost = resource prices × factory size + $100)
           await tx.company.update({
@@ -426,7 +423,6 @@ export class ModernOperationMechanicsService {
           });
 
           // Create factory (will be operational next turn)
-          // Always ensure sector resource type is first, and replace GENERAL with sector resource
           const factory = await tx.factory.create({
             data: {
               companyId: op.company.id,
@@ -436,7 +432,7 @@ export class ModernOperationMechanicsService {
               workers: op.requiredWorkers,
               slot: op.slot, // Use the slot calculated during validation
               isOperational: false,
-              resourceTypes: factoryResourceTypes,
+              resourceTypes: op.blueprint,
               originalConstructionCost: op.blueprintCost, // Store for upgrade calculations (cost = resource prices × factory size + $100)
             },
           });
@@ -817,37 +813,46 @@ export class ModernOperationMechanicsService {
     }
   }
 
-  async getRequiredResourcesForFactory(size: FactorySize, sectorName: SectorName): Promise<RequiredResource[]> {
-    // Base resources required for each factory size
-    const baseResources: RequiredResource[] = [];
-    
-    switch (size) {
-      case FactorySize.FACTORY_I:
-        baseResources.push({ type: ResourceType.TRIANGLE, quantity: 1 });
-        break;
-      case FactorySize.FACTORY_II:
-        baseResources.push({ type: ResourceType.TRIANGLE, quantity: 1 });
-        baseResources.push({ type: ResourceType.SQUARE, quantity: 1 });
-        break;
-      case FactorySize.FACTORY_III:
-        baseResources.push({ type: ResourceType.TRIANGLE, quantity: 2 });
-        baseResources.push({ type: ResourceType.SQUARE, quantity: 1 });
-        baseResources.push({ type: ResourceType.CIRCLE, quantity: 1 });
-        break;
-      case FactorySize.FACTORY_IV:
-        baseResources.push({ type: ResourceType.TRIANGLE, quantity: 2 });
-        baseResources.push({ type: ResourceType.SQUARE, quantity: 2 });
-        baseResources.push({ type: ResourceType.CIRCLE, quantity: 1 });
-        break;
+  /**
+   * Picks the materials a bot puts in a new factory.
+   *
+   * Blueprints are free-form: factory size caps how many distinct materials a blueprint
+   * may hold (`size + 1`), never which ones. Bots take the sector resource, then their
+   * company's trait material so the trait actually pays off, then fill any remaining
+   * slots with the cheapest global materials available.
+   */
+  buildBotFactoryBlueprint(
+    size: FactorySize,
+    sectorName: SectorName,
+    company: TraitBearer | null | undefined,
+    resourcePriceMap: Map<ResourceType, number>,
+  ): ResourceType[] {
+    const materialLimit = getNumberForFactorySize(size) + 1;
+    const blueprint: ResourceType[] = [];
+
+    const add = (resourceType: ResourceType | null) => {
+      if (
+        resourceType &&
+        blueprint.length < materialLimit &&
+        !blueprint.includes(resourceType)
+      ) {
+        blueprint.push(resourceType);
+      }
+    };
+
+    add(this.getSectorResourceType(sectorName));
+    add(company?.traitResource ?? null);
+
+    const cheapestFirst = [...GLOBAL_RESOURCE_TYPES].sort(
+      (a, b) =>
+        (resourcePriceMap.get(a) ?? Infinity) -
+        (resourcePriceMap.get(b) ?? Infinity),
+    );
+    for (const resourceType of cheapestFirst) {
+      add(resourceType);
     }
 
-    // Add sector-specific resource requirements
-    const sectorResource = this.getSectorResourceType(sectorName);
-    if (sectorResource) {
-      baseResources.push({ type: sectorResource, quantity: 1 });
-    }
-
-    return baseResources;
+    return blueprint;
   }
 
   private getSectorResourceType(sectorName: SectorName): ResourceType | null {
@@ -890,11 +895,14 @@ export class ModernOperationMechanicsService {
       }
   
       const newCompanyInfo = getRandomCompany(sector.sectorName);
+      const ipoPrice = determineFloatPrice(sector);
+      const trait = rollCompanyTrait();
       const newCompany = await this.companyService.createCompany({
+        ...trait,
         Game: { connect: { id: phase.gameId } },
         Sector: { connect: { id: sectorId } },
         status: CompanyStatus.INACTIVE,
-        currentStockPrice: null,
+        currentStockPrice: ipoPrice,
         companyTier: startingCompanyTier,
         name: newCompanyInfo.name,
         stockSymbol: newCompanyInfo.symbol,
@@ -903,21 +911,34 @@ export class ModernOperationMechanicsService {
             sector.unitPriceMin,
         ),
         throughput: 0,
-        ipoAndFloatPrice: null,
-        cashOnHand: 0,
-        stockTier: undefined,
+        ipoAndFloatPrice: ipoPrice,
+        cashOnHand: ipoPrice * DEFAULT_SHARE_DISTRIBUTION,
+        stockTier: determineStockTier(ipoPrice),
         demandScore: 0,
         baseDemand: 0,
         supplyCurrent: 0,
         supplyMax: CompanyTierData[startingCompanyTier].supplyMax,
       });
-  
-      // Note: IPO shares are created later when the IPO price is set via setIpoPriceAndCreateSharesAndInjectCapital
-      // Do not create shares here to avoid creating duplicate shares
-  
+
+      const shares: {
+        companyId: string;
+        price: number;
+        location: ShareLocation;
+        gameId: string;
+      }[] = [];
+      for (let i = 0; i < DEFAULT_SHARE_DISTRIBUTION; i++) {
+        shares.push({
+          price: ipoPrice,
+          location: ShareLocation.IPO,
+          companyId: newCompany.id,
+          gameId: phase.gameId,
+        });
+      }
+      await this.shareService.createManyShares(shares);
+
       //create stock history
       await this.stockHistoryService.createStockHistory({
-        price: 0,
+        price: ipoPrice,
         action: StockAction.INITIAL,
         stepsMoved: 0,
         Company: { connect: { id: newCompany.id } },
@@ -927,7 +948,7 @@ export class ModernOperationMechanicsService {
   
       await this.gameLogService.createGameLog({
         game: { connect: { id: phase.gameId } },
-        content: `A new company ${newCompany.name} has been established in the ${sector.sectorName} sector.`,
+        content: `A new company ${newCompany.name} has been established in the ${sector.sectorName} sector with an IPO price of $${ipoPrice}. Trait: ${COMPANY_TRAIT_DEFINITIONS[trait.traitType].label} (${trait.traitResource}).`,
       });
     }
   /**
@@ -1017,28 +1038,6 @@ export class ModernOperationMechanicsService {
       }
     }
   }
-
-  async getFactoryCost(size: FactorySize, resources: RequiredResource[]): Promise<number> {
-    // Get current resource prices from the game
-    const resourcePrices = await this.prisma.resource.findMany({
-      where: {
-        type: {
-          in: resources.map(r => r.type),
-        },
-      },
-    });
-
-    // Calculate total resource cost (sum of current prices, one of each resource type)
-    const totalResourceCost = resources.reduce((sum, resource) => {
-      const price = resourcePrices.find(r => r.type === resource.type)?.price || 0;
-      return sum + price; // Sum prices (one of each type)
-    }, 0);
-
-    // Factory construction cost = (sum of resource prices) × factory size + $100
-    const factorySizeNumber = getNumberForFactorySize(size);
-    return (totalResourceCost * factorySizeNumber) + 100;
-  }
-
 
   /**
    * CONSUMPTION_PHASE
@@ -1187,7 +1186,7 @@ export class ModernOperationMechanicsService {
         const eligibleFactories = matchingFactories
           .filter(f => {
             const currentCustomers = factoryCustomerCounts.get(f.id) || 0;
-            const maxCustomers = this.getFactoryConsumerLimit(f.size);
+            const maxCustomers = this.getFactoryConsumerLimitForCompany(f, f.company);
             return currentCustomers < maxCustomers;
           })
           .sort((a, b) => {
@@ -1196,11 +1195,13 @@ export class ModernOperationMechanicsService {
               a,
               resourcePriceMap,
               a.company.brandScore ?? 0,
+              a.company,
             );
             const bAttraction = this.calculateFactoryAttractionRating(
               b,
               resourcePriceMap,
               b.company.brandScore ?? 0,
+              b.company,
             );
 
             if (aAttraction !== bAttraction) {
@@ -1223,7 +1224,10 @@ export class ModernOperationMechanicsService {
           // Assign to best factory
           const selectedFactory = eligibleFactories[0];
           const currentCount = factoryCustomerCounts.get(selectedFactory.id) || 0;
-          const maxCustomers = this.getFactoryConsumerLimit(selectedFactory.size);
+          const maxCustomers = this.getFactoryConsumerLimitForCompany(
+            selectedFactory,
+            selectedFactory.company,
+          );
           
           // Double-check we're not exceeding limit (safety check)
           if (currentCount < maxCustomers) {
@@ -1301,7 +1305,10 @@ export class ModernOperationMechanicsService {
         if (customers > 0) {
           const factory = factories.find(f => f.id === factoryId);
           if (factory) {
-            const maxCustomers = this.getFactoryConsumerLimit(factory.size);
+            const maxCustomers = this.getFactoryConsumerLimitForCompany(
+              factory,
+              factory.company,
+            );
             sectorGameLogEntries.push({
               gameId: phase.gameId,
               content: `${factory.company.name}'s factory (slot ${factory.slot}) served ${customers}/${maxCustomers} customers`,
@@ -1408,21 +1415,19 @@ export class ModernOperationMechanicsService {
     factory: any,
     resourcePriceMap: Map<ResourceType, number>,
     brandScore: number,
+    company?: TraitBearer | null,
   ): number {
-    return this.calculateFactoryTotalPrice(factory, resourcePriceMap) - brandScore;
-  }
-
-  /**
-   * Get factory complexity rating (higher = more complex)
-   */
-  private getFactoryComplexity(size: FactorySize): number {
-    switch (size) {
-      case FactorySize.FACTORY_I: return 1;
-      case FactorySize.FACTORY_II: return 2;
-      case FactorySize.FACTORY_III: return 3;
-      case FactorySize.FACTORY_IV: return 4;
-      default: return 1;
+    // A MARKET_DARLING company's trait material is invisible to consumers, so it
+    // attracts as though the material were free while still being paid for it.
+    const ignored = getTraitResource(company, CompanyTraitType.MARKET_DARLING);
+    let perceivedPrice = 0;
+    for (const resourceType of factory.resourceTypes) {
+      if (resourceType === ignored) {
+        continue;
+      }
+      perceivedPrice += resourcePriceMap.get(resourceType as ResourceType) || 0;
     }
+    return perceivedPrice - brandScore;
   }
 
   /**
@@ -1471,14 +1476,21 @@ export class ModernOperationMechanicsService {
           markerCount,
         );
       } else {
-        // Add one marker for each selected resource (temporary markers)
+        // Add one marker for each selected resource (temporary markers). A
+        // SIGNATURE_PRODUCT company places extras for its trait material.
+        const signatureResource = getTraitResource(
+          company,
+          CompanyTraitType.SIGNATURE_PRODUCT,
+        );
         for (const resourceType of selectedResources) {
           await this.consumptionMarkerService.addMarketingMarkersToBag(
             phase.gameId,
             company.sectorId,
             company.id,
             resourceType,
-            1, // One marker per selected resource
+            resourceType === signatureResource
+              ? 1 + SIGNATURE_PRODUCT_BONUS_MARKERS
+              : 1,
           );
         }
       }
@@ -2093,19 +2105,20 @@ export class ModernOperationMechanicsService {
       // Calculate revenue per unit sold (sum of all resource prices from resource market)
       // Revenue = sum of current resource prices (NOT including unit price)
       // Each customer buys 1:1 units, so total revenue = customersServed × revenuePerUnit
+      // A PREMIUM_LINE company's trait material contributes a multiple of its price.
       // OPTIMIZATION: Use pre-calculated price map instead of querying
-      let revenuePerUnit = 0;
-      for (const resourceType of factory.resourceTypes) {
-        const resourcePrice = resourcePriceMap.get(resourceType) || 0;
-        revenuePerUnit += resourcePrice;
-        // Debug logging for revenue calculation
-        console.log(`[EARNINGS_CALL] Factory ${factory.id} resource ${resourceType}: price = $${resourcePrice}`);
-      }
-      
+      const revenuePerUnit = this.calculateFactoryRevenuePerUnit(
+        factory,
+        resourcePriceMap,
+        company,
+      );
+
       console.log(`[EARNINGS_CALL] Factory ${factory.id} (${factory.resourceTypes.join(', ')}): revenuePerUnit = $${revenuePerUnit}, customersServed = ${production.customersServed}`);
 
       // Calculate actual revenue based on customers served (EXACT count from consumption phase)
-      const factoryRevenue = production.customersServed * revenuePerUnit;
+      const factoryRevenue = Math.round(
+        production.customersServed * revenuePerUnit,
+      );
       
       console.log(`[EARNINGS_CALL] Factory ${factory.id} factoryRevenue = $${factoryRevenue}`);
 
@@ -2711,6 +2724,64 @@ export class ModernOperationMechanicsService {
   }
 
   /**
+   * Revenue earned per customer served. A PREMIUM_LINE company's trait material
+   * contributes a multiple of its market price.
+   */
+  private calculateFactoryRevenuePerUnit(
+    factory: any,
+    resourcePriceMap: Map<ResourceType, number>,
+    company: TraitBearer | null | undefined,
+  ): number {
+    const premium = getTraitResource(company, CompanyTraitType.PREMIUM_LINE);
+    let revenuePerUnit = 0;
+    for (const resourceType of factory.resourceTypes) {
+      const price = resourcePriceMap.get(resourceType as ResourceType) || 0;
+      revenuePerUnit +=
+        resourceType === premium
+          ? price * PREMIUM_LINE_REVENUE_MULTIPLIER
+          : price;
+    }
+    return revenuePerUnit;
+  }
+
+  /**
+   * Customers a factory can serve, including the HIGH_CAPACITY bonus when the
+   * blueprint uses the company's trait material.
+   */
+  private getFactoryConsumerLimitForCompany(
+    factory: { size: FactorySize; resourceTypes: string[] },
+    company: TraitBearer | null | undefined,
+  ): number {
+    const base = this.getFactoryConsumerLimit(factory.size);
+    return blueprintTriggersTrait(
+      company,
+      CompanyTraitType.HIGH_CAPACITY,
+      factory.resourceTypes,
+    )
+      ? base + HIGH_CAPACITY_BONUS_CUSTOMERS
+      : base;
+  }
+
+  /**
+   * Workers a new factory needs, reduced by EFFICIENT_TOOLING when the blueprint uses
+   * the company's trait material. A factory always needs at least one worker.
+   */
+  private getRequiredWorkersForCompany(
+    size: FactorySize,
+    resourceTypes: ResourceType[],
+    company: TraitBearer | null | undefined,
+  ): number {
+    const base = this.getRequiredWorkers(size);
+    return blueprintTriggersTrait(
+      company,
+      CompanyTraitType.EFFICIENT_TOOLING,
+      resourceTypes,
+    )
+      ? Math.max(1, base - EFFICIENT_TOOLING_WORKER_REDUCTION)
+      : base;
+  }
+
+  /**
    * Check if a factory size is supported by a slot phase
    */
   private isFactorySizeSupported(factorySize: FactorySize, slotPhase: { min: FactorySize; max: FactorySize }): boolean {
@@ -2876,7 +2947,7 @@ export class ModernOperationMechanicsService {
       const factoryUpgradeData: Array<{
         factory: typeof rustedFactories[0];
         newSize: FactorySize;
-        requiredResources: RequiredResource[];
+        blueprint: ResourceType[];
       }> = [];
 
       // First pass: determine new sizes and collect resource types
@@ -2915,9 +2986,14 @@ export class ModernOperationMechanicsService {
           newSize = slotPhase.min;
         }
 
-        const requiredResources = await this.getRequiredResourcesForFactory(newSize, sector.sectorName);
-        requiredResources.forEach(r => allRequiredResourceTypes.add(r.type));
-        factoryUpgradeData.push({ factory, newSize, requiredResources });
+        // Price the upgrade against the blueprint the company actually built. Factory size
+        // caps how many materials a blueprint may hold, never which ones, so there is no
+        // canonical per-size material list to fall back on.
+        const blueprint = factory.resourceTypes as ResourceType[];
+        blueprint.forEach((resourceType) =>
+          allRequiredResourceTypes.add(resourceType),
+        );
+        factoryUpgradeData.push({ factory, newSize, blueprint });
       }
 
       // OPTIMIZATION: Fetch all resource prices in one query
@@ -2934,17 +3010,15 @@ export class ModernOperationMechanicsService {
         currentResourcePrices.map(r => [r.type, r.price])
       );
 
-      // Second pass: calculate upgrade costs using cached resource prices
-      for (const { factory, newSize, requiredResources } of factoryUpgradeData) {
-        // Calculate blueprint cost (sum of current resource prices, one of each type)
-        const blueprintCost = requiredResources.reduce((sum, req) => {
-          const price = resourcePriceMap.get(req.type) || 0;
-          return sum + price; // Sum prices (one of each type, regardless of quantity)
-        }, 0);
-
-        // Upgrade fee = blueprint cost × factory size (no $100 base, no refund)
-        const factorySizeNumber = getNumberForFactorySize(newSize);
-        const upgradeCost = blueprintCost * factorySizeNumber;
+      // Second pass: calculate upgrade costs using cached resource prices.
+      // Upgrade fee = blueprint cost × factory size (no plot fee, no refund).
+      for (const { factory, newSize, blueprint } of factoryUpgradeData) {
+        const upgradeCost = calculateFactoryUpgradeCost(
+          newSize,
+          blueprint,
+          resourcePriceMap,
+          company,
+        );
 
         totalUpgradeCost += upgradeCost;
         upgrades.push({

@@ -5,6 +5,7 @@ import { trpc } from '@sectors/app/trpc';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/card';
 import { FACTORY_CUSTOMER_LIMITS } from '@server/data/constants';
 import { ResourceType } from '@server/prisma/prisma.client';
+import { formatEnumLabel } from '@sectors/app/helpers/labels';
 
 export function EarningsCall() {
   const { gameState, gameId, currentTurn } = useGame();
@@ -114,7 +115,7 @@ export function EarningsCall() {
                 <div>
                   <CardTitle className="text-white text-xl">{company.name}</CardTitle>
                   <div className="flex items-center gap-4 text-sm text-gray-400 mt-1">
-                    <span>Sector: {company.sector.replace('_', ' ')}</span>
+                    <span>Sector: {formatEnumLabel(company.sector)}</span>
                     <span>Brand Score: {company.brandScore}</span>
                   </div>
                 </div>
@@ -144,7 +145,7 @@ export function EarningsCall() {
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-3">
                             <span className="text-sm font-medium text-gray-300">
-                              {factory.size.replace('_', ' ')} (Slot {factory.slot})
+                              {formatEnumLabel(factory.size)} (Slot {factory.slot})
                             </span>
                             <span className="text-xs text-gray-400">
                               {factory.workers} worker{factory.workers !== 1 ? 's' : ''}
@@ -189,7 +190,7 @@ export function EarningsCall() {
                             <div className="flex gap-2">
                               {factory.resourceTypes.map((type: ResourceType, idx: number) => (
                                 <span key={idx} className="px-2 py-1 bg-gray-800 text-gray-300 rounded text-xs">
-                                  {type.replace('_', ' ')}
+                                  {formatEnumLabel(type)}
                                 </span>
                               ))}
                             </div>

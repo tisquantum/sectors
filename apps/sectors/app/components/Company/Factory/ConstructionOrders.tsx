@@ -8,7 +8,8 @@ import { Spinner, Chip } from '@nextui-org/react';
 import { RiTimeLine, RiHistoryLine, RiErrorWarningFill } from '@remixicon/react';
 import { cn } from '@/lib/utils';
 import { ResourceType } from './Factory.types';
-import { getNumberForFactorySize } from '@server/data/helpers';
+import { calculateFactoryConstructionCost } from '@server/data/company-traits';
+import { resolveFactoryBlueprint } from '@server/data/helpers';
 
 interface ConstructionOrdersProps {
   companyId: string;
@@ -20,7 +21,11 @@ interface ConstructionOrdersProps {
  * Component to display outstanding factory construction orders and history
  */
 export function ConstructionOrders({ companyId, gameId, showHistory = true }: ConstructionOrdersProps) {
-  const { currentTurn } = useGame();
+  const { currentTurn, gameState } = useGame();
+  // Needed so quoted costs reflect a SUPPLY_CONTRACT discount.
+  const company = gameState?.Company?.find((c) => c.id === companyId);
+  const sectorName = gameState?.sectors?.find((s) => s.id === company?.sectorId)
+    ?.sectorName;
 
   // Get outstanding orders (not yet resolved)
   const { data: outstandingOrders, isLoading: ordersLoading } = trpc.factoryConstruction.getOutstandingOrders.useQuery(
@@ -80,16 +85,17 @@ export function ConstructionOrders({ companyId, gameId, showHistory = true }: Co
         <div className="space-y-2">
           {(() => {
             // Calculate total cost of all outstanding orders
-            const totalOutstandingCost = outstandingOrders.reduce((sum, order) => {
-              const resourceCost = order.resourceTypes.reduce((resourceSum, type) => {
-                const price = resourcePriceMap.get(type as ResourceType) || 0;
-                return resourceSum + price;
-              }, 0);
-              const factorySizeNumber = getNumberForFactorySize(order.size);
-              const PLOT_FEE_FRESH = 100;
-              const totalCost = resourceCost * factorySizeNumber + PLOT_FEE_FRESH;
-              return sum + totalCost;
-            }, 0);
+            const totalOutstandingCost = outstandingOrders.reduce(
+              (sum, order) =>
+                sum +
+                calculateFactoryConstructionCost(
+                  order.size,
+                  resolveFactoryBlueprint(order.resourceTypes, sectorName),
+                  resourcePriceMap,
+                  company
+                ),
+              0
+            );
 
             return (
               <div className="flex items-center gap-2 text-xs font-semibold text-orange-400 uppercase tracking-wide">
@@ -106,13 +112,12 @@ export function ConstructionOrders({ companyId, gameId, showHistory = true }: Co
           })()}
           <div className="space-y-2 pl-4 border-l-2 border-orange-500/30">
             {outstandingOrders.map((order) => {
-              const resourceCost = order.resourceTypes.reduce((sum, type) => {
-                const price = resourcePriceMap.get(type as ResourceType) || 0;
-                return sum + price;
-              }, 0);
-              const factorySizeNumber = getNumberForFactorySize(order.size);
-              const PLOT_FEE_FRESH = 100;
-              const totalCost = resourceCost * factorySizeNumber + PLOT_FEE_FRESH;
+              const totalCost = calculateFactoryConstructionCost(
+                order.size,
+                resolveFactoryBlueprint(order.resourceTypes, sectorName),
+                resourcePriceMap,
+                company
+              );
 
               return (
                 <div

@@ -16,6 +16,8 @@ import { ResourceIcon } from '../../ConsumptionPhase/ResourceIcon';
 import { useMemo } from 'react';
 import { LineChart } from '@tremor/react';
 import { sectorColors } from '@server/data/gameData';
+import { formatEnumLabel } from '@sectors/app/helpers/labels';
+import { DetailDisclosure } from '@/components/ui/DetailDisclosure';
 import { StockAction } from '@server/prisma/prisma.client';
 
 export function EarningsCallPhase() {
@@ -229,7 +231,7 @@ export function EarningsCallPhase() {
                     </PopoverContent>
                   </Popover>
                   <div className="flex items-center gap-4 text-sm text-gray-400 mt-1">
-                    <span>Sector: {company.sector.replace('_', ' ')}</span>
+                    <span>Sector: {formatEnumLabel(company.sector)}</span>
                     <span>Brand Score: {company.brandScore}</span>
                   </div>
                 </div>
@@ -259,7 +261,7 @@ export function EarningsCallPhase() {
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-3">
                             <span className="text-sm font-medium text-gray-300">
-                              {factory.size.replace('_', ' ')} (Slot {factory.slot})
+                              {formatEnumLabel(factory.size)} (Slot {factory.slot})
                             </span>
                             <span className="text-xs text-gray-400">
                               {factory.workers} worker{factory.workers !== 1 ? 's' : ''}
@@ -297,12 +299,14 @@ export function EarningsCallPhase() {
                           </div>
                         </div>
 
-                        {/* Detailed Math Breakdown */}
-                        <div className="mt-4 pt-4 border-t border-gray-600 bg-gray-800/50 rounded-lg p-3">
-                          <div className="text-xs font-semibold text-gray-300 mb-3">Calculation Breakdown:</div>
-                          
+                        {/* Detailed Math Breakdown, on demand: the derivation is
+                            reference material, not something to read every turn. */}
+                        <DetailDisclosure
+                          summary="Calculation breakdown"
+                          className="mt-3 pt-3 border-t border-gray-600"
+                        >
                           {/* Revenue Calculation */}
-                          <div className="space-y-2 text-xs">
+                          <div className="space-y-2 text-xs bg-gray-800/50 rounded-lg p-3">
                             <div className="text-gray-400 font-medium">Revenue Calculation:</div>
                             <div className="pl-2 space-y-1">
                               <div className="text-gray-500">Revenue per unit = Sum of resource prices:</div>
@@ -365,7 +369,7 @@ export function EarningsCallPhase() {
                               )}
                             </div>
                           </div>
-                        </div>
+                        </DetailDisclosure>
                       </div>
                     );
                   })}

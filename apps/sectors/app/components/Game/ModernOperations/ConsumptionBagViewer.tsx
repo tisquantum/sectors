@@ -2,6 +2,7 @@
 
 import { trpc } from '@sectors/app/trpc';
 import { cn } from '@/lib/utils';
+import { formatEnumLabel } from '@sectors/app/helpers/labels';
 
 interface Props {
   sectorId: string;
@@ -58,7 +59,7 @@ export function ConsumptionBagViewer({ sectorId, sectorName, gameId }: Props) {
                 <div className="flex items-center gap-2">
                   <div className={cn('w-4 h-4 rounded', colorClass)} />
                   <span className="text-white">
-                    {item.resourceType.replace(/_/g, ' ')}
+                    {formatEnumLabel(item.resourceType)}
                   </span>
                   <span className="text-xs">
                     {item.isPermanent ? (

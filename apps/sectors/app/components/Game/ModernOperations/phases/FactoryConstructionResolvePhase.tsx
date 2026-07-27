@@ -9,6 +9,7 @@ import { useMemo } from 'react';
 import { FACTORY_CUSTOMER_LIMITS } from '@server/data/constants';
 import { RiErrorWarningFill } from '@remixicon/react';
 import { cn } from '@/lib/utils';
+import { formatEnumLabel } from '@sectors/app/helpers/labels';
 
 /**
  * Factory Construction Resolve Phase
@@ -223,7 +224,7 @@ export function FactoryConstructionResolvePhase() {
                       <div className="flex justify-between items-center">
                         <div>
                           <div className="text-lg font-semibold text-gray-100">
-                            {factory.size.replace('_', ' ')} (Slot {factory.slot})
+                            {formatEnumLabel(factory.size)} (Slot {factory.slot})
                           </div>
                           <div className="text-sm text-gray-400">
                             Workers: {factory.workers} / Max Capacity: {maxCustomers} customers
@@ -248,7 +249,7 @@ export function FactoryConstructionResolvePhase() {
                           {factory.resourceTypes.map((type, idx) => (
                             <div key={idx} className="flex items-center gap-2">
                               <ResourceIcon resourceType={type} size="w-5 h-5" />
-                              <span className="text-gray-400 text-sm">{type.replace('_', ' ')}</span>
+                              <span className="text-gray-400 text-sm">{formatEnumLabel(type)}</span>
                             </div>
                           ))}
                         </div>

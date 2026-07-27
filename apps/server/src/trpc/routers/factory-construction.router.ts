@@ -7,7 +7,8 @@ import { TrpcService } from '../trpc.service';
 import { PlayersService } from '@server/players/players.service';
 import { PhaseService } from '@server/phase/phase.service';
 import { GamesService } from '@server/games/games.service';
-import { getNumberForFactorySize, validFactorySizeForResearchStage } from '@server/data/helpers';
+import { getMaterialLimitForFactorySize, resolveFactoryBlueprint, validFactorySizeForResearchStage } from '@server/data/helpers';
+import { calculateFactoryConstructionCost } from '@server/data/company-traits';
 import { SectorService } from '@server/sector/sector.service';
 import { CompanyService } from '@server/company/company.service';
 import { FactoryConstructionOrderService } from '../../factory-construction/factory-construction-order.service';
@@ -94,11 +95,16 @@ export const factoryConstructionRouter = (trpc: TrpcService, ctx: Context) => ro
         throw new Error(`Factory size ${input.size} is not valid for research stage ${researchStage} (researchMarker: ${researchMarker})`);
       }
 
-      //ensure resource types don't exceed the factory size
-      const resourceTypes = input.resourceTypes;
+      // Validate and price against the blueprint that will actually be built, which
+      // always leads with the sector resource. Counting the player's raw picks instead
+      // would let a blueprint that omits the sector resource exceed the material limit
+      // and be billed for one material less than it is built with.
       const factorySize = input.size;
-      const resourceTypeCounts = resourceTypes.length;
-      if(resourceTypeCounts > getNumberForFactorySize(factorySize) + 1) {
+      const blueprint = resolveFactoryBlueprint(
+        input.resourceTypes,
+        sector.sectorName,
+      );
+      if (blueprint.length > getMaterialLimitForFactorySize(factorySize)) {
         throw new Error('Resource types exceed the factory size');
       }
 
@@ -109,19 +115,13 @@ export const factoryConstructionRouter = (trpc: TrpcService, ctx: Context) => ro
       });
       const resourcePriceMap = new Map(resources.map(r => [r.type, r.price]));
       
-      // Calculate total resource cost (sum of current prices, one of each resource type)
-      let totalResourceCost = 0;
-      for (const resourceType of resourceTypes) {
-        const price = resourcePriceMap.get(resourceType) || 0;
-        totalResourceCost += price;
-      }
-      
-      // Factory construction cost = (sum of resource prices) × factory size + $100 plot fee.
-      // The $100 plot fee applies only to fresh plots; upgrading existing factories does not
-      // include it. createOrder is always for new construction (fresh plot).
-      const factorySizeNumber = getNumberForFactorySize(factorySize);
-      const PLOT_FEE_FRESH = 100;
-      const constructionCost = (totalResourceCost * factorySizeNumber) + PLOT_FEE_FRESH;
+      // createOrder is always for new construction, so the fresh plot fee applies.
+      const constructionCost = calculateFactoryConstructionCost(
+        factorySize,
+        blueprint,
+        resourcePriceMap,
+        company,
+      );
       
       // Get pending factory construction orders for this company in this turn
       const game = await ctx.gamesService.game({ id: input.gameId });
@@ -138,16 +138,17 @@ export const factoryConstructionRouter = (trpc: TrpcService, ctx: Context) => ro
       });
       
       // Calculate total cost of pending factory orders (same formula: resources × size + plot fee)
-      let totalPendingFactoryCost = 0;
-      for (const order of pendingFactoryOrders) {
-        let orderResourceCost = 0;
-        for (const resourceType of order.resourceTypes) {
-          const price = resourcePriceMap.get(resourceType) || 0;
-          orderResourceCost += price;
-        }
-        const orderFactorySizeNumber = getNumberForFactorySize(order.size);
-        totalPendingFactoryCost += (orderResourceCost * orderFactorySizeNumber) + PLOT_FEE_FRESH;
-      }
+      const totalPendingFactoryCost = pendingFactoryOrders.reduce(
+        (sum, order) =>
+          sum +
+          calculateFactoryConstructionCost(
+            order.size,
+            resolveFactoryBlueprint(order.resourceTypes, sector.sectorName),
+            resourcePriceMap,
+            company,
+          ),
+        0,
+      );
 
       // Get pending research orders for this company in this turn
       const pendingResearchOrders = await ctx.prismaService.researchOrder.findMany({

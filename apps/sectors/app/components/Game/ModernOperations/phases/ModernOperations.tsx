@@ -167,7 +167,9 @@ export default function ModernOperations() {
                       )}
                     >
                       <div className="p-4">
-                        <CompanyInfoV2 companyId={company.id} />
+                        {/* Summary only: the operations panel for the selected
+                            company is rendered once, below the grid. */}
+                        <CompanyInfoV2 companyId={company.id} isMinimal />
                       </div>
                     </div>
                   );

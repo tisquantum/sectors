@@ -6,6 +6,8 @@ import { trpc } from '@sectors/app/trpc';
 import { ResourceIcon } from './ResourceIcon';
 import { BASE_WORKER_SALARY } from '@server/data/constants';
 import { useMemo } from 'react';
+import { DetailDisclosure } from '@/components/ui/DetailDisclosure';
+import { formatEnumLabel } from '@sectors/app/helpers/labels';
 
 export function CompanyPerformance({ companies, gameId }: CompanyPerformanceProps) {
   // Fetch resource prices for reference
@@ -159,7 +161,7 @@ export function CompanyPerformance({ companies, gameId }: CompanyPerformanceProp
                       <div key={factory.id} className="bg-gray-700 rounded-lg p-3 border border-gray-600">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-sm font-medium text-gray-300">
-                            {factory.size.replace('_', ' ')}
+                            {formatEnumLabel(factory.size)}
                           </span>
                           <div className="text-right">
                             <div className="text-sm text-green-400 font-bold">
@@ -173,7 +175,12 @@ export function CompanyPerformance({ companies, gameId }: CompanyPerformanceProp
                           </div>
                         </div>
                         
-                        {/* Resource prices */}
+                        {/* Prices and the revenue derivation are reference detail; the
+                            headline profit above is what matters at a glance. */}
+                        <DetailDisclosure
+                          summary="Resource prices and revenue"
+                          className="mb-2"
+                        >
                         <div className="mb-2">
                           <div className="text-xs text-gray-400 mb-1">Resource Prices:</div>
                           <div className="flex flex-wrap gap-1.5 items-center">
@@ -249,6 +256,7 @@ export function CompanyPerformance({ companies, gameId }: CompanyPerformanceProp
                             </div>
                           </div>
                         )}
+                        </DetailDisclosure>
 
                         <div className="flex items-center justify-between text-xs text-gray-400">
                           <span>{factory.consumersReceived}/{factory.maxConsumers} consumers</span>

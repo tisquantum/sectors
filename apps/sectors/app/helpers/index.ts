@@ -46,10 +46,6 @@ export function friendlyPhaseName(name: PhaseName | undefined): string {
       return "Influence Bid Reveal";
     case PhaseName.INFLUENCE_BID_RESOLVE:
       return "Influence Bid Resolve";
-    case PhaseName.SET_COMPANY_IPO_PRICES:
-      return "Set IPO Prices";
-    case PhaseName.RESOLVE_SET_COMPANY_IPO_PRICES:
-      return "Resolve IPO Prices";
     case PhaseName.OPERATING_ACTION_COMPANY_VOTE:
       return "Company Vote";
     case PhaseName.OPERATING_ACTION_COMPANY_VOTE_RESULT:
@@ -154,10 +150,6 @@ export function phaseTooltipDescription(name: PhaseName): string {
       return "Reveal submitted influence bids.";
     case PhaseName.INFLUENCE_BID_RESOLVE:
       return "Resolve influence bids and update standings.";
-    case PhaseName.SET_COMPANY_IPO_PRICES:
-      return "Vote on IPO prices for companies that have not yet floated.";
-    case PhaseName.RESOLVE_SET_COMPANY_IPO_PRICES:
-      return "Average IPO votes and set float prices; create IPO shares.";
     case PhaseName.STOCK_ACTION_ORDER:
       return "Place stock orders (market, limit, short, options as enabled).";
     case PhaseName.STOCK_ACTION_RESULT:

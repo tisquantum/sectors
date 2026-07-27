@@ -110,6 +110,7 @@ export const phaseTimes: Record<PhaseName, number> = {
   [PhaseName.STOCK_ACTION_ORDER]: 55 * 1000,
   [PhaseName.STOCK_ACTION_RESULT]: 10 * 1000,
   [PhaseName.STOCK_ACTION_REVEAL]: 12 * 1000,
+  // Retired phases, kept only to satisfy the exhaustive PhaseName record.
   [PhaseName.RESOLVE_SET_COMPANY_IPO_PRICES]: 15 * 1000,
   [PhaseName.SET_COMPANY_IPO_PRICES]: 15 * 1000,
   [PhaseName.STOCK_RESOLVE_MARKET_ORDER]: 12 * 1000,
@@ -249,6 +250,16 @@ export const RESOURCE_PRICES_CONSUMER_DISCRETIONARY = [1, 2, 3, 4, 5, 6, 7, 8, 9
 export const RESOURCE_PRICES_CONSUMER_STAPLES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 export const RESOURCE_PRICES_MATERIALS = [30, 30, 30, 31, 31, 32, 32, 33, 33, 34, 35]
+
+/**
+ * Materials any company may put in a factory blueprint, regardless of sector.
+ * Factory size caps how many distinct materials a blueprint holds, not which ones.
+ */
+export const GLOBAL_RESOURCE_TYPES: ResourceType[] = [
+  ResourceType.TRIANGLE,
+  ResourceType.SQUARE,
+  ResourceType.CIRCLE,
+];
 
 export function getResourcePriceForResourceType(resourceType: ResourceType) {
   switch(resourceType) {
@@ -1184,8 +1195,6 @@ export const phasesInOrder = [
   PhaseName.INFLUENCE_BID_RESOLVE,
   PhaseName.START_TURN,
   // PhaseName.HEADLINE_RESOLVE,
-  PhaseName.SET_COMPANY_IPO_PRICES,
-  PhaseName.RESOLVE_SET_COMPANY_IPO_PRICES,
   PhaseName.PRIZE_VOTE_ACTION,
   PhaseName.PRIZE_VOTE_RESOLVE,
   PhaseName.PRIZE_DISTRIBUTE_ACTION,

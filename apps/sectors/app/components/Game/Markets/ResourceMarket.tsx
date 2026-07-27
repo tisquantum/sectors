@@ -8,6 +8,7 @@ import { getResourcePriceForResourceType } from '@server/data/constants';
 import { ModernOperationsLayout, ModernOperationsSection } from '../ModernOperations/layouts';
 import { Spinner, Popover, PopoverTrigger, PopoverContent } from '@nextui-org/react';
 import { RiInformationLine } from '@remixicon/react';
+import { formatEnumLabel } from '@sectors/app/helpers/labels';
 
 interface ResourceMarketProps {
   gameId: string;
@@ -193,7 +194,7 @@ export function ResourceMarket({ gameId }: ResourceMarketProps) {
                 return (
                   <ResourceTrack
                     key={resource.id}
-                    title={`${resource.type.replace('_', ' ')} (Sector)`}
+                    title={`${formatEnumLabel(resource.type)} (Sector)`}
                     resourceType={resource.type as ResourceType}
                     track={priceTrack}
                     currentPrice={resource.price}

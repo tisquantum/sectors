@@ -14,6 +14,7 @@ import { AnimatedConsumptionFlow } from '../../ConsumptionPhase/AnimatedConsumpt
 import { Spinner } from '@nextui-org/react';
 import type { Sector, Company, FlowLogEntry } from '../../ConsumptionPhase/types';
 import { ResourceIcon } from '../../ConsumptionPhase/ResourceIcon';
+import { formatEnumLabel } from '@sectors/app/helpers/labels';
 
 /**
  * Consumption Phase - Refactored to use real backend data
@@ -90,9 +91,6 @@ export function ConsumptionPhase() {
     if (!allFactoriesData) return [];
     return allFactoriesData.filter(f => f.isOperational);
   }, [allFactoriesData]);
-
-  console.log('operationalFactories', operationalFactories);
-  console.log('productionWithRelations', productionWithRelations);
 
   // Transform production data into the format expected by child components
   const transformedData = useMemo(() => {
@@ -203,7 +201,7 @@ export function ConsumptionPhase() {
           flowLog.push({
             id: `${production.id}-${i}`,
             consumerProfile: `${factory.size} - [${resourceStr}]`,
-            destination: `${company.name} ${factory.size.replace('_', ' ')} (Slot ${factory.slot})`,
+            destination: `${company.name} ${formatEnumLabel(factory.size)} (Slot ${factory.slot})`,
             reason: `Customer ${i + 1}/${production.customersServed} - Brand Score: ${company.brandScore || 0}`,
             timestamp: production.createdAt || new Date().toISOString(),
           });
@@ -392,7 +390,7 @@ export function ConsumptionPhase() {
                                     {company?.name || 'Unknown'}
                                   </span>
                                   <span className="text-xs text-gray-400">
-                                    {factory.size.replace('_', ' ')}
+                                    {formatEnumLabel(factory.size)}
                                   </span>
                                 </div>
                                 <div className="text-xs text-gray-400 mb-2">

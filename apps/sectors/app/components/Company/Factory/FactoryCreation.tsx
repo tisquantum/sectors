@@ -5,13 +5,16 @@ import { trpc } from '@sectors/app/trpc';
 import { cn } from '@/lib/utils';
 import { ResourceType } from './Factory.types';
 import { ResourceTrackType, FactorySize } from '@server/prisma/prisma.client';
-import { getNumberForFactorySize } from '@server/data/helpers';
 import { ResourceIcon } from '../../Game/ConsumptionPhase/ResourceIcon';
 import { Spinner, Popover, PopoverContent, PopoverTrigger } from '@nextui-org/react';
 import { RiCloseLine, RiInformationLine, RiErrorWarningFill } from '@remixicon/react';
 import { useGame } from '../../Game/GameContext';
-
-const PLOT_FEE_FRESH = 100;
+import { getMaterialLimitForFactorySize, getNumberForFactorySize, resolveFactoryBlueprint } from '@server/data/helpers';
+import {
+  PLOT_FEE_FRESH,
+  calculateFactoryConstructionCost,
+  describeCompanyTrait,
+} from '@server/data/company-traits';
 
 function getBuildErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message) return error.message;
@@ -29,9 +32,9 @@ interface FactoryCreationProps {
   onClose: () => void;
 }
 
+/** A blueprint is a set of distinct materials; a material appears at most once. */
 interface ResourceSchematic {
   type: ResourceType;
-  quantity: number;
   price: number;
 }
 
@@ -59,13 +62,6 @@ const getSectorResourceType = (sectorName: string): ResourceType => {
     default:
       return 'GENERAL';
   }
-};
-
-const RESOURCE_LIMITS: Record<string, number> = {
-  FACTORY_I: 2,
-  FACTORY_II: 3,
-  FACTORY_III: 4,
-  FACTORY_IV: 5,
 };
 
 export function FactoryCreation({ 
@@ -118,7 +114,6 @@ export function FactoryCreation({
           );
           return [{
             type: sectorResourceType,
-            quantity: 1,
             price: sectorResource.price
           }, ...otherResources];
         }
@@ -132,7 +127,6 @@ export function FactoryCreation({
         const withoutSector = prev.filter(item => item.type !== sectorResourceType);
         return [{
           type: sectorResourceType,
-          quantity: 1,
           price: sectorResource.price
         }, ...withoutSector];
       });
@@ -158,7 +152,7 @@ export function FactoryCreation({
       .map(r => ({ type: r.type as ResourceType, price: r.price }));
   }, [allResources]);
 
-  const maxResources = RESOURCE_LIMITS[factorySize];
+  const maxResources = getMaterialLimitForFactorySize(factorySize);
   const canAddResource = schematic.length < maxResources;
 
   const addResource = (resourceType: ResourceType) => {
@@ -169,7 +163,6 @@ export function FactoryCreation({
     if (!resource) return;
     setSchematic(prev => [...prev, {
       type: resourceType,
-      quantity: 1,
       price: resource.price
     }]);
   };
@@ -184,16 +177,8 @@ export function FactoryCreation({
     // Reset to just the sector resource
     setSchematic([{
       type: sectorResourceType,
-      quantity: 1,
       price: sectorResource?.price || 25
     }]);
-  };
-
-  const updateQuantity = (index: number, quantity: number) => {
-    if (quantity < 1) return;
-    setSchematic(prev => prev.map((item, i) => 
-      i === index ? { ...item, quantity } : item
-    ));
   };
 
   const handleSubmit = async () => {
@@ -226,10 +211,23 @@ export function FactoryCreation({
     onClose();
   };
 
-  // Formula: (sum of resource prices) × factory size + $100 plot fee (fresh plots only)
-  const resourceCost = schematic.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  // Formula: (sum of resource prices) × factory size + $100 plot fee (fresh plots only),
+  // with the company's SUPPLY_CONTRACT material discounted if the schematic uses it.
+  // Resolved the same way the server will build it, so the quote matches the charge.
+  const schematicResourceTypes = resolveFactoryBlueprint(
+    schematic.map((item) => item.type),
+    company.data?.Sector?.sectorName
+  );
+  const schematicPriceMap = new Map(schematic.map((item) => [item.type, item.price]));
   const factorySizeNumber = getNumberForFactorySize(factorySize);
-  const totalCost = resourceCost * factorySizeNumber + PLOT_FEE_FRESH;
+  const totalCost = calculateFactoryConstructionCost(
+    factorySize,
+    schematicResourceTypes,
+    schematicPriceMap,
+    company.data
+  );
+  const materialsCost = totalCost - PLOT_FEE_FRESH;
+  const traitDescription = describeCompanyTrait(company.data);
 
   if (resourcesLoading) {
     return (
@@ -403,13 +401,16 @@ export function FactoryCreation({
                       because larger factories require more materials.
                     </p>
                     <p className="text-gray-500 mt-2 text-xs">
-                      Formula: (sum of resource prices) × {factorySizeNumber} = ${resourceCost * factorySizeNumber}
+                      Formula: (sum of resource prices) × {factorySizeNumber} = ${materialsCost}
                     </p>
+                    {traitDescription && (
+                      <p className="text-emerald-400 mt-2 text-xs">{traitDescription}</p>
+                    )}
                   </div>
                 </PopoverContent>
               </Popover>
             </span>
-            <span>${resourceCost * factorySizeNumber}</span>
+            <span>${materialsCost}</span>
           </div>
           <div className="flex justify-between items-center text-sm text-gray-400">
             <span className="flex items-center gap-1.5">

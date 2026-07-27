@@ -7,6 +7,7 @@ import { Badge, Spinner } from "@nextui-org/react";
 import { FACTORY_CUSTOMER_LIMITS } from "@server/data/constants";
 import PlayerAvatar from "../../Player/PlayerAvatar";
 import { OperationMechanicsVersion } from "@server/prisma/prisma.client";
+import { formatEnumLabel } from "@sectors/app/helpers/labels";
 import { useMemo } from "react";
 
 interface FactoryPerformance {
@@ -314,7 +315,7 @@ const OperatingRoundRevenueVoteResolveV2 = () => {
                   return (
                     <div key={factory.id} className="flex justify-between items-center bg-gray-700 rounded p-2">
                       <div className="flex items-center space-x-2">
-                        <span className="text-sm text-gray-300">{factory.size.replace('_', ' ')}</span>
+                        <span className="text-sm text-gray-300">{formatEnumLabel(factory.size)}</span>
                         <Badge color="primary" variant="flat" size="sm">
                           {factory.consumersReceived}/{factory.maxConsumers}
                         </Badge>

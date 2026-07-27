@@ -11,7 +11,8 @@ import { PrismaService } from '@server/prisma/prisma.service';
 import { SectorService } from '@server/sector/sector.service';
 import { RESEARCH_COSTS_BY_PHASE } from '@server/data/constants';
 import { GameTurnService } from '@server/game-turn/game-turn.service';
-import { getNumberForFactorySize } from '@server/data/helpers';
+import { getNumberForFactorySize, resolveFactoryBlueprint } from '@server/data/helpers';
+import { calculateFactoryConstructionCost } from '@server/data/company-traits';
 import { FactoryConstructionOrderService } from '@server/factory-construction/factory-construction-order.service';
 import { ModernOperationMechanicsService } from '@server/game-management/modern-operation-mechanics.service';
 import {
@@ -198,17 +199,17 @@ export default (trpc: TrpcService, ctx: Context) =>
         const resourcePriceMap = new Map(resources.map(r => [r.type, r.price]));
 
         // Calculate total cost of pending factory orders
-        let totalPendingFactoryCost = 0;
-        const PLOT_FEE_FRESH = 100;
-        for (const order of pendingFactoryOrders) {
-          let orderResourceCost = 0;
-          for (const resourceType of order.resourceTypes) {
-            const price = resourcePriceMap.get(resourceType) || 0;
-            orderResourceCost += price;
-          }
-          const orderFactorySizeNumber = getNumberForFactorySize(order.size);
-          totalPendingFactoryCost += (orderResourceCost * orderFactorySizeNumber) + PLOT_FEE_FRESH;
-        }
+        const totalPendingFactoryCost = pendingFactoryOrders.reduce(
+          (sum, order) =>
+            sum +
+            calculateFactoryConstructionCost(
+              order.size,
+              resolveFactoryBlueprint(order.resourceTypes, sector.sectorName),
+              resourcePriceMap,
+              company,
+            ),
+          0,
+        );
 
         // Total cost of ALL pending operation orders (factories + research)
         const totalPendingCost = totalPendingFactoryCost + totalPendingResearchCost;

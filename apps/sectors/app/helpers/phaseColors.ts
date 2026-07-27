@@ -71,8 +71,6 @@ export function getPhaseColor(phaseName: PhaseName | undefined): {
   // Setup/Initialization Phases - Green
   if (
     phaseName === PhaseName.START_TURN ||
-    phaseName === PhaseName.SET_COMPANY_IPO_PRICES ||
-    phaseName === PhaseName.RESOLVE_SET_COMPANY_IPO_PRICES ||
     phaseName === PhaseName.HEADLINE_RESOLVE ||
     phaseName.startsWith("PRIZE_")
   ) {

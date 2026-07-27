@@ -8,38 +8,9 @@ import { Spinner, Badge } from '@nextui-org/react';
 import { FactorySize, CompanyStatus } from '@server/prisma/prisma.client';
 import { useMemo } from 'react';
 import CompanyInfo from '../../../Company/CompanyInfo';
-import { getSectorResourceForSectorName } from '@server/data/constants';
 import { ResourceType } from '@server/prisma/prisma.client';
-
-// Helper to get required resources for a factory size
-const getRequiredResourcesForFactory = (size: FactorySize, sectorResourceType: ResourceType): Array<{ type: ResourceType; quantity: number }> => {
-  const resources: Array<{ type: ResourceType; quantity: number }> = [];
-  
-  switch (size) {
-    case FactorySize.FACTORY_I:
-      resources.push({ type: ResourceType.TRIANGLE, quantity: 1 });
-      break;
-    case FactorySize.FACTORY_II:
-      resources.push({ type: ResourceType.TRIANGLE, quantity: 1 });
-      resources.push({ type: ResourceType.SQUARE, quantity: 1 });
-      break;
-    case FactorySize.FACTORY_III:
-      resources.push({ type: ResourceType.TRIANGLE, quantity: 2 });
-      resources.push({ type: ResourceType.SQUARE, quantity: 1 });
-      resources.push({ type: ResourceType.CIRCLE, quantity: 1 });
-      break;
-    case FactorySize.FACTORY_IV:
-      resources.push({ type: ResourceType.TRIANGLE, quantity: 2 });
-      resources.push({ type: ResourceType.SQUARE, quantity: 2 });
-      resources.push({ type: ResourceType.CIRCLE, quantity: 1 });
-      break;
-  }
-  
-  // Add sector-specific resource
-  resources.push({ type: sectorResourceType, quantity: 1 });
-  
-  return resources;
-};
+import { calculateFactoryUpgradeCost } from '@server/data/company-traits';
+import { formatEnumLabel } from '@sectors/app/helpers/labels';
 
 interface RustedFactoryInfo {
   factoryId: string;
@@ -159,27 +130,14 @@ export function RustedFactoryUpgradePhase() {
       const slotPhase = slotPhases[slotIndex];
       const requiredSize = slotPhase.min;
 
-      // Calculate upgrade cost
-      const originalCost = factory.originalConstructionCost || 0;
-      const refundAmount = Math.floor(originalCost * 0.5);
-
-      // Get resource costs for new factory size
-      const sectorResourceType = getSectorResourceForSectorName(sector.sectorName);
-      const requiredResources = getRequiredResourcesForFactory(requiredSize, sectorResourceType);
-      const resourceCost = requiredResources.reduce(
-        (sum, req) => sum + (resourcePriceMap.get(req.type) || 0) * req.quantity,
-        0
+      // Mirror the server: the upgrade is priced from the blueprint the company actually
+      // built, scaled by the new factory size, with no plot fee and no refund.
+      const upgradeCost = calculateFactoryUpgradeCost(
+        requiredSize,
+        (factory.resourceTypes ?? []) as ResourceType[],
+        resourcePriceMap,
+        company
       );
-
-      const baseCost = {
-        [FactorySize.FACTORY_I]: 100,
-        [FactorySize.FACTORY_II]: 200,
-        [FactorySize.FACTORY_III]: 300,
-        [FactorySize.FACTORY_IV]: 400,
-      }[requiredSize];
-
-      const fullBlueprintCost = baseCost + resourceCost;
-      const upgradeCost = fullBlueprintCost - refundAmount;
 
       rusted.push({
         factoryId: factory.id,
@@ -295,7 +253,7 @@ export function RustedFactoryUpgradePhase() {
                       {company?.name || 'Unknown Company'}
                     </CardTitle>
                     <div className="flex items-center gap-4 text-sm text-gray-400 mt-1">
-                      <span>Sector: {factories[0]?.sectorName.replace('_', ' ') || 'Unknown'}</span>
+                      <span>Sector: {formatEnumLabel(factories[0]?.sectorName, 'Unknown')}</span>
                       <span>Cash: ${(company?.cashOnHand || 0).toLocaleString()}</span>
                     </div>
                   </div>

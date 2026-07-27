@@ -1,6 +1,7 @@
 'use client';
 
 import { trpc } from '@sectors/app/trpc';
+import { formatEnumLabel } from '@sectors/app/helpers/labels';
 
 interface Props {
   gameId: string;
@@ -54,7 +55,7 @@ export function ResearchProgressTracker({ gameId }: Props) {
               <div className="flex justify-between items-center mb-2">
                 <div className="flex items-center gap-2">
                   <h5 className="font-semibold text-white">
-                    {sector.sectorName.replace(/_/g, ' ')}
+                    {formatEnumLabel(sector.sectorName)}
                   </h5>
                   <span className="px-2 py-1 bg-blue-900 text-blue-200 rounded text-xs">
                     {getResearchStageName(researchStage)}

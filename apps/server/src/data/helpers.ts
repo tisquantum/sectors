@@ -12,6 +12,7 @@ import {
   Prisma,
   ResearchCardEffect,
   ResearchCardEffectType,
+  ResourceType,
   RoundType,
   Sector,
   SectorName,
@@ -51,6 +52,7 @@ import {
   RESOURCE_PRICES_TECHNOLOGY,
   StockTierChartRange,
   companyActionsDescription,
+  getSectorResourceForSectorName,
   getStockPriceClosestEqualOrMore,
   stockGridPrices,
   stockTierChartRanges,
@@ -91,27 +93,17 @@ export function determineNextGamePhase(
   }
   if (phaseName === PhaseName.INFLUENCE_BID_RESOLVE) {
     return {
-      phaseName: PhaseName.SET_COMPANY_IPO_PRICES,
+      phaseName: PhaseName.STOCK_RESOLVE_LIMIT_ORDER,
       roundType: RoundType.STOCK,
     };
   }
   switch (phaseName) {
     case PhaseName.START_TURN:
       return {
-        phaseName: PhaseName.SET_COMPANY_IPO_PRICES,
+        phaseName: PhaseName.STOCK_RESOLVE_LIMIT_ORDER,
         roundType: RoundType.STOCK,
       };
     case PhaseName.HEADLINE_RESOLVE:
-      return {
-        phaseName: PhaseName.SET_COMPANY_IPO_PRICES,
-        roundType: RoundType.STOCK,
-      };
-    case PhaseName.SET_COMPANY_IPO_PRICES:
-      return {
-        phaseName: PhaseName.RESOLVE_SET_COMPANY_IPO_PRICES,
-        roundType: RoundType.STOCK,
-      };
-    case PhaseName.RESOLVE_SET_COMPANY_IPO_PRICES:
       return {
         phaseName: PhaseName.STOCK_RESOLVE_LIMIT_ORDER,
         roundType: RoundType.STOCK,
@@ -398,14 +390,23 @@ export const getPseudoSpend = (orders: PlayerOrderWithCompany[]) => {
   return totalBuyCosts - totalSellProfits;
 };
 
+/**
+ * Picks a random IPO price for a company from the grid prices available inside
+ * its sector's IPO range. Every price in the range is equally likely, which keeps
+ * company openings speculative.
+ */
 export function determineFloatPrice(sector: Sector) {
-  const { ipoMin, ipoMax } = sector;
-  const floatValue = Math.floor(Math.random() * (ipoMax - ipoMin + 1) + ipoMin);
-  // pick the number closest in the stockGridPrices array
-  const closest = stockGridPrices.reduce((a, b) => {
-    return Math.abs(b - floatValue) < Math.abs(a - floatValue) ? b : a;
-  });
-  return closest;
+  const validPrices = stockGridPrices.filter(
+    (price) => price >= sector.ipoMin && price <= sector.ipoMax,
+  );
+  if (validPrices.length === 0) {
+    // Sector range does not line up with the grid, fall back to the closest grid price.
+    const midpoint = (sector.ipoMin + sector.ipoMax) / 2;
+    return stockGridPrices.reduce((a, b) =>
+      Math.abs(b - midpoint) < Math.abs(a - midpoint) ? b : a,
+    );
+  }
+  return validPrices[Math.floor(Math.random() * validPrices.length)];
 }
 
 /**
@@ -1123,6 +1124,46 @@ export function getNumberForFactorySize(factorySize: FactorySize) {
     default:
       return 0;
   }
+}
+
+/** Distinct materials a blueprint of this size may hold. */
+export function getMaterialLimitForFactorySize(factorySize: FactorySize) {
+  return getNumberForFactorySize(factorySize) + 1;
+}
+
+/**
+ * The materials a factory is actually built from, given the player's picks.
+ *
+ * The sector resource always leads the blueprint, so a company operating in a sector
+ * is always making something out of that sector's material. GENERAL is a wildcard for
+ * consumer demand rather than a buildable material, so it is dropped.
+ *
+ * Every path that prices, staffs, or stores a blueprint must go through here, otherwise
+ * a player can be billed for one material list and handed another.
+ */
+export function resolveFactoryBlueprint(
+  chosenResourceTypes: (ResourceType | string)[],
+  sectorName: SectorName | null | undefined,
+): ResourceType[] {
+  const sectorResourceType = sectorName
+    ? getSectorResourceForSectorName(sectorName)
+    : null;
+
+  const blueprint: ResourceType[] = sectorResourceType
+    ? [sectorResourceType]
+    : [];
+
+  for (const resourceType of chosenResourceTypes as ResourceType[]) {
+    if (
+      resourceType === ResourceType.GENERAL ||
+      blueprint.includes(resourceType)
+    ) {
+      continue;
+    }
+    blueprint.push(resourceType);
+  }
+
+  return blueprint;
 }
 
 /**

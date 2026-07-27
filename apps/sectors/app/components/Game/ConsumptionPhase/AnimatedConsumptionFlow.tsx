@@ -6,6 +6,7 @@ import { Button } from '@nextui-org/react';
 import { RiPlayFill, RiPauseFill, RiSkipForwardFill, RiRestartLine, RiTeamFill } from '@remixicon/react';
 import { ConsumerFlowPerSectorProps, FlowLogEntry } from './types';
 import { ResourceIcon } from './ResourceIcon';
+import { formatEnumLabel } from '@sectors/app/helpers/labels';
 
 interface AnimationStep {
   step: number;
@@ -443,7 +444,7 @@ export function AnimatedConsumptionFlow({
                         )}
                         <span className="text-gray-400"> - </span>
                         <span className="text-gray-300">
-                          {currentStepData.customerAssigned.factorySize.replace('_', ' ')}
+                          {formatEnumLabel(currentStepData.customerAssigned.factorySize)}
                         </span>
                       </div>
                       <div>
@@ -488,7 +489,7 @@ export function AnimatedConsumptionFlow({
                         >
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-xs text-gray-300">
-                              {factory.size.replace('_', ' ')}
+                              {formatEnumLabel(factory.size)}
                             </span>
                             <span className="text-xs font-semibold text-green-400">
                               {state.current}/{state.max}

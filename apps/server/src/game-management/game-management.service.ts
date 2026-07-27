@@ -50,7 +50,6 @@ import {
   StockSubRound,
   AwardTrackType,
   GameTurn,
-  CompanyIpoPriceVote,
   OperationMechanicsVersion,
   ResourceType,
   ResourceTrackType,
@@ -189,9 +188,14 @@ import {
   getCompanyActionCost,
   sortSectorIdsByPriority,
   getPassiveEffectForSector,
-  getNumberForFactorySize,
+  resolveFactoryBlueprint,
   validFactorySizeForResearchStage,
 } from '@server/data/helpers';
+import {
+  TraitBearer,
+  calculateFactoryConstructionCost,
+  rollCompanyTrait,
+} from '@server/data/company-traits';
 import { PusherService } from 'nestjs-pusher';
 import {
   EVENT_GAME_ENDED,
@@ -398,19 +402,14 @@ export class GameManagementService {
           currentGameTurnId: phase.gameTurnId,
         });
         await this.determinePriorityOrderBasedOnNetWorth(phase);
+        // Discount before opening so companies founded this turn keep their fresh IPO price.
+        await this.discountInactiveCompanies(phase);
         await this.handleOpeningNewCompany(phase);
         await this.handleHeadlines(phase);
         await this.handlePrizeRound(phase);
-        await this.discountInactiveCompanies(phase);
         break;
       case PhaseName.HEADLINE_RESOLVE:
         await this.resolveHeadlines(phase, game.id);
-        break;
-      case PhaseName.SET_COMPANY_IPO_PRICES:
-        await this.botHandleSetCompanyIpoPrices(game.id);
-        break;
-      case PhaseName.RESOLVE_SET_COMPANY_IPO_PRICES:
-        await this.resolveSetCompanyAndIpoPrices(phase, game.id);
         break;
       case PhaseName.INFLUENCE_BID_ACTION:
         await this.botHandleInfluenceBidAction(game.id);
@@ -761,63 +760,6 @@ export class GameManagementService {
       }
     });
     await Promise.all(ceoPromises);
-  }
-
-  async resolveSetCompanyAndIpoPrices(phase: Phase, gameId: string) {
-    //get all companies that have no ipo price set
-    const companies = await this.companyService.companiesWithSector({
-      where: { gameId, ipoAndFloatPrice: null },
-    });
-    //get all company ipo price votes
-    const companyIpoVotes = await this.prisma.companyIpoPriceVote.findMany({
-      where: { gameTurnId: phase.gameTurnId },
-    });
-    //group votes by company
-    const groupedVotes = companyIpoVotes.reduce(
-      (acc, vote) => {
-        if (!acc[vote.companyId]) {
-          acc[vote.companyId] = [];
-        }
-        acc[vote.companyId].push(vote);
-        return acc;
-      },
-      {} as Record<string, CompanyIpoPriceVote[]>,
-    );
-
-    // Determine IPO prices for each company
-    const companyIpoPrices = companies.map((company) => {
-      const votes = groupedVotes[company.id] || [];
-      let averagePrice: number;
-
-      if (votes.length > 0) {
-        const total = votes.reduce((acc, vote) => acc + vote.ipoPrice, 0);
-        averagePrice = total / votes.length;
-      } else {
-        // Calculate the middle value between ipoMin and ipoMax
-        averagePrice = (company.Sector.ipoMin + company.Sector.ipoMax) / 2;
-      }
-
-      // Find the closest price on stockGridPrices
-      const closestPrice = stockGridPrices.reduce((acc, price) => {
-        return Math.abs(price - averagePrice) < Math.abs(acc - averagePrice)
-          ? price
-          : acc;
-      });
-
-      return { companyId: company.id, price: closestPrice };
-    });
-    for (const { companyId, price } of companyIpoPrices) {
-      const company = companies.find((company) => company.id === companyId);
-      if (!company) {
-        console.error('Company not found');
-        throw new Error('Company not found');
-      }
-      this.setIpoPriceAndCreateSharesAndInjectCapital(
-        price,
-        company,
-        phase.gameId,
-      );
-    }
   }
 
   async resolveCompanyAwards(phase: Phase) {
@@ -1875,11 +1817,12 @@ export class GameManagementService {
     }
 
     const newCompanyInfo = getRandomCompany(sector.sectorName);
+    const ipoPrice = determineFloatPrice(sector);
     const newCompany = await this.companyService.createCompany({
       Game: { connect: { id: phase.gameId } },
       Sector: { connect: { id: sectorId } },
       status: CompanyStatus.INACTIVE,
-      currentStockPrice: null,
+      currentStockPrice: ipoPrice,
       companyTier: startingCompanyTier,
       name: newCompanyInfo.name,
       stockSymbol: newCompanyInfo.symbol,
@@ -1888,9 +1831,9 @@ export class GameManagementService {
           sector.unitPriceMin,
       ),
       throughput: 0,
-      ipoAndFloatPrice: null,
-      cashOnHand: 0,
-      stockTier: undefined,
+      ipoAndFloatPrice: ipoPrice,
+      cashOnHand: ipoPrice * DEFAULT_SHARE_DISTRIBUTION,
+      stockTier: determineStockTier(ipoPrice),
       demandScore: 0,
       baseDemand: 0,
       supplyCurrent: 0,
@@ -1900,7 +1843,7 @@ export class GameManagementService {
     const shares = [];
     for (let i = 0; i < DEFAULT_SHARE_DISTRIBUTION; i++) {
       shares.push({
-        price: newCompany.ipoAndFloatPrice,
+        price: ipoPrice,
         location: ShareLocation.IPO,
         companyId: newCompany.id,
         gameId: phase.gameId,
@@ -1909,7 +1852,7 @@ export class GameManagementService {
     await this.shareService.createManyShares(shares);
     //create stock history
     await this.stockHistoryService.createStockHistory({
-      price: 0,
+      price: ipoPrice,
       action: StockAction.INITIAL,
       stepsMoved: 0,
       Company: { connect: { id: newCompany.id } },
@@ -1919,7 +1862,7 @@ export class GameManagementService {
 
     await this.gameLogService.createGameLog({
       game: { connect: { id: phase.gameId } },
-      content: `A new company ${newCompany.name} has been established in the ${sector.sectorName} sector.`,
+      content: `A new company ${newCompany.name} has been established in the ${sector.sectorName} sector with an IPO price of $${ipoPrice}.`,
     });
   }
   /**
@@ -6282,37 +6225,42 @@ export class GameManagementService {
           if (!sector) {
             throw new Error('Sector not found');
           }
+          const ipoPrice = determineFloatPrice(sector);
           return {
             ...company,
-            stockTier: undefined,
-            ipoAndFloatPrice: null,
-            currentStockPrice: null,
-            cashOnHand: 0,
+            stockTier: determineStockTier(ipoPrice),
+            ipoAndFloatPrice: ipoPrice,
+            currentStockPrice: ipoPrice,
+            cashOnHand: ipoPrice * DEFAULT_SHARE_DISTRIBUTION,
             gameId: game.id,
             sectorId: sector.id,
+            // Traits only have hooks in the modern operations loop.
+            ...(operationMechanicsVersion === OperationMechanicsVersion.MODERN
+              ? rollCompanyTrait()
+              : {}),
           };
         });
         companies =
           await this.companyService.createManyCompanies(newCompanyData);
 
         //iterate through companies and create ipo shares
-        // const shares: {
-        //   companyId: string;
-        //   price: number;
-        //   location: ShareLocation;
-        //   gameId: string;
-        // }[] = [];
-        // companies.forEach((company) => {
-        //   for (let i = 0; i < DEFAULT_SHARE_DISTRIBUTION; i++) {
-        //     shares.push({
-        //       price: company.ipoAndFloatPrice,
-        //       location: ShareLocation.IPO,
-        //       companyId: company.id,
-        //       gameId: game.id,
-        //     });
-        //   }
-        // });
-        // await this.shareService.createManyShares(shares);
+        const shares: {
+          companyId: string;
+          price: number;
+          location: ShareLocation;
+          gameId: string;
+        }[] = [];
+        companies.forEach((company) => {
+          for (let i = 0; i < DEFAULT_SHARE_DISTRIBUTION; i++) {
+            shares.push({
+              price: company.ipoAndFloatPrice ?? 0,
+              location: ShareLocation.IPO,
+              companyId: company.id,
+              gameId: game.id,
+            });
+          }
+        });
+        await this.shareService.createManyShares(shares);
       } catch (error) {
         console.error('Error starting game:', error);
         throw new Error('Failed to start the game');
@@ -8290,52 +8238,6 @@ export class GameManagementService {
     // is discarded, so those shares become available for purchase in subsequent turns.
   }
 
-  async setIpoPriceAndCreateSharesAndInjectCapital(
-    ipoPrice: number,
-    company: CompanyWithSector,
-    gameId: string,
-  ) {
-    const sector = company.Sector;
-    if (!sector) {
-      throw new Error('Sector not found');
-    }
-    if (ipoPrice < sector.ipoMin || ipoPrice > sector.ipoMax) {
-      throw new Error('IPO price is not within sector range');
-    }
-    //ensure the price exists on the stockPricesGrid
-    if (!stockGridPrices.includes(ipoPrice)) {
-      throw new Error('IPO price is not a valid stock price');
-    }
-    //set the ipo price, current price of the company and it's cash on hand
-    const companyUpdated = await this.companyService.updateCompany({
-      where: { id: company.id },
-      data: {
-        ipoAndFloatPrice: ipoPrice,
-        currentStockPrice: ipoPrice,
-        cashOnHand: ipoPrice * DEFAULT_SHARE_DISTRIBUTION,
-        stockTier: determineStockTier(ipoPrice),
-      },
-    });
-    //create shares
-    //iterate through companies and create ipo shares
-    const shares: {
-      companyId: string;
-      price: number;
-      location: ShareLocation;
-      gameId: string;
-    }[] = [];
-    for (let i = 0; i < DEFAULT_SHARE_DISTRIBUTION; i++) {
-      shares.push({
-        price: ipoPrice,
-        location: ShareLocation.IPO,
-        companyId: company.id,
-        gameId,
-      });
-    }
-    await this.shareService.createManyShares(shares);
-    return companyUpdated;
-  }
-
   async resolveSellOrder(
     order: PlayerOrderWithPlayerCompany,
     companyId: string,
@@ -9765,9 +9667,6 @@ export class GameManagementService {
     switch (phaseName) {
       case PhaseName.HEADLINE_RESOLVE:
         return this.doesHeadlingResolveNeedToBePlayed(currentPhase.gameId);
-      case PhaseName.SET_COMPANY_IPO_PRICES:
-      case PhaseName.RESOLVE_SET_COMPANY_IPO_PRICES:
-        return this.isThereAnyCompanyIPOPriceToSet(currentPhase.gameId);
       case PhaseName.PRIZE_VOTE_ACTION:
       case PhaseName.PRIZE_VOTE_RESOLVE:
         return this.isPrizeRoundTurn(currentPhase?.gameId || '');
@@ -9949,17 +9848,6 @@ export class GameManagementService {
     });
 
     return sectorCount > 0;
-  }
-
-  async isThereAnyCompanyIPOPriceToSet(gameId: string): Promise<boolean> {
-    const count = await this.prisma.company.count({
-      where: {
-        gameId,
-        status: CompanyStatus.INACTIVE,
-        ipoAndFloatPrice: null,
-      },
-    });
-    return count > 0;
   }
 
   async doesHeadlingResolveNeedToBePlayed(gameId: string) {
@@ -10778,189 +10666,6 @@ export class GameManagementService {
     return this.readinessStore[gameId] || [];
   }
 
-  async createIpoVote({
-    playerId,
-    companyId,
-    ipoPrice,
-  }: {
-    playerId: string;
-    companyId: string;
-    ipoPrice: number;
-  }) {
-    //get company
-    const company = await this.prisma.company.findUnique({
-      where: { id: companyId },
-    });
-    if (!company) {
-      throw new Error('Company not found');
-    }
-    const gameId = company.gameId;
-    const gameTurnId =
-      this.gameCache.get(gameId)?.currentGameTurnId ??
-      (await this.gameTurnService.getCurrentTurn(gameId))?.id;
-    if (!gameTurnId) {
-      throw new Error('Game turn not found');
-    }
-    //check if company is inactive
-    if (company.status != CompanyStatus.INACTIVE) {
-      throw new Error('Company is not inactive');
-    }
-    if (!stockGridPrices.includes(ipoPrice)) {
-      throw new Error('IPO price is not a valid stock price');
-    }
-    //get sector
-    const sector = await this.prisma.sector.findUnique({
-      where: { id: company.sectorId },
-    });
-    if (!sector) {
-      throw new Error('Sector not found');
-    }
-    if (ipoPrice < sector.ipoMin || ipoPrice > sector.ipoMax) {
-      throw new Error('IPO price is not within sector range');
-    }
-
-    //ensure player has not already cast vote for this company
-    const existingVote = await this.prisma.companyIpoPriceVote.findFirst({
-      where: {
-        playerId,
-        companyId,
-        gameTurnId,
-      },
-    });
-    if (existingVote) {
-      throw new Error('Player has already cast a vote for this company');
-    }
-    //create the IPO vote
-    return await this.prisma.companyIpoPriceVote.create({
-      data: {
-        Player: { connect: { id: playerId } },
-        Company: { connect: { id: companyId } },
-        Game: { connect: { id: gameId } },
-        GameTurn: { connect: { id: gameTurnId } },
-        ipoPrice,
-      },
-    });
-  }
-
-  async createIpoVotesBatch(
-    votes: Array<{
-      playerId: string;
-      companyId: string;
-      ipoPrice: number;
-    }>,
-  ) {
-    if (votes.length === 0) {
-      throw new Error('At least one vote is required');
-    }
-
-    // Get all unique company IDs and player ID (should be same for all)
-    const companyIds = [...new Set(votes.map((v) => v.companyId))];
-    const playerId = votes[0].playerId;
-
-    // Validate all votes have the same player
-    if (!votes.every((v) => v.playerId === playerId)) {
-      throw new Error('All votes must be from the same player');
-    }
-
-    // Fetch all companies in parallel
-    const companies = await this.prisma.company.findMany({
-      where: { id: { in: companyIds } },
-      include: { Sector: true },
-    });
-
-    if (companies.length !== companyIds.length) {
-      throw new Error('One or more companies not found');
-    }
-
-    // Get gameId and gameTurnId from first company (all should be in same game)
-    const gameId = companies[0].gameId;
-    const gameTurnId =
-      this.gameCache.get(gameId)?.currentGameTurnId ??
-      (await this.gameTurnService.getCurrentTurn(gameId))?.id;
-    if (!gameTurnId) {
-      throw new Error('Game turn not found');
-    }
-
-    // Validate all companies are in the same game
-    if (!companies.every((c) => c.gameId === gameId)) {
-      throw new Error('All companies must be in the same game');
-    }
-
-    // Create a map for quick lookup
-    const companyMap = new Map(companies.map((c) => [c.id, c]));
-
-    // Validate all votes before creating any
-    for (const vote of votes) {
-      const company = companyMap.get(vote.companyId);
-      if (!company) {
-        throw new Error(`Company ${vote.companyId} not found`);
-      }
-
-      // Check if company is inactive
-      if (company.status !== CompanyStatus.INACTIVE) {
-        throw new Error(`Company ${company.name} is not inactive`);
-      }
-
-      // Validate IPO price is valid
-      if (!stockGridPrices.includes(vote.ipoPrice)) {
-        throw new Error(`IPO price ${vote.ipoPrice} is not a valid stock price`);
-      }
-
-      // Validate IPO price is within sector range
-      const sector = company.Sector;
-      if (!sector) {
-        throw new Error(`Sector not found for company ${company.name}`);
-      }
-      if (vote.ipoPrice < sector.ipoMin || vote.ipoPrice > sector.ipoMax) {
-        throw new Error(
-          `IPO price ${vote.ipoPrice} is not within sector range (${sector.ipoMin}-${sector.ipoMax}) for company ${company.name}`,
-        );
-      }
-    }
-
-    // Check for existing votes in a single query
-    const existingVotes = await this.prisma.companyIpoPriceVote.findMany({
-      where: {
-        playerId,
-        companyId: { in: companyIds },
-        gameTurnId,
-      },
-    });
-
-    if (existingVotes.length > 0) {
-      const existingCompanyIds = existingVotes.map((v) => v.companyId);
-      throw new Error(
-        `Player has already cast votes for companies: ${existingCompanyIds.join(', ')}`,
-      );
-    }
-
-    // Create all votes in a transaction
-    return await this.prisma.$transaction(
-      votes.map((vote) =>
-        this.prisma.companyIpoPriceVote.create({
-          data: {
-            Player: { connect: { id: playerId } },
-            Company: { connect: { id: vote.companyId } },
-            Game: { connect: { id: gameId } },
-            GameTurn: { connect: { id: gameTurnId } },
-            ipoPrice: vote.ipoPrice,
-          },
-        }),
-      ),
-    );
-  }
-
-  async getIpoVotesForGameTurn(gameTurnId: string) {
-    return await this.prisma.companyIpoPriceVote.findMany({
-      where: {
-        gameTurnId,
-      },
-      include: {
-        Player: true,
-      },
-    });
-  }
-
   /**
    * 1) INFLUENCE_BID_ACTION
    *    Example: Each bot decides how much influence to bid.
@@ -11012,82 +10717,6 @@ export class GameManagementService {
         );
       }
     }
-  }
-
-  /**
-   * 2) SET_COMPANY_IPO_PRICES
-   *    Example: Each bot picks an IPO price for newly formed companies.
-   */
-  /**
-   * 2) SET_COMPANY_IPO_PRICES
-   *    Each bot picks an IPO price for newly formed companies the same way a human would.
-   */
-  private async botHandleSetCompanyIpoPrices(gameId: string): Promise<void> {
-    // 1) Get BOT players
-    const botPlayers = await this.aiBotService.getBotPlayers(gameId);
-    if (!botPlayers.length) return;
-
-    // 2) Find unpriced, inactive companies
-    const unpricedCompanies = await this.prisma.company.findMany({
-      where: {
-        gameId,
-        ipoAndFloatPrice: null,
-        status: CompanyStatus.INACTIVE,
-      },
-    });
-    if (!unpricedCompanies.length) return;
-
-    // 3) Collect all sectorIds from those companies
-    const sectorIds = [...new Set(unpricedCompanies.map((c) => c.sectorId))];
-
-    // 4) Fetch all relevant sectors once
-    const sectors = await this.prisma.sector.findMany({
-      where: { id: { in: sectorIds } },
-    });
-    // Build a quick lookup map from sectorId -> sector object
-    const sectorMap = new Map<string, Sector>();
-    for (const s of sectors) {
-      sectorMap.set(s.id, s);
-    }
-
-    // 5) Build a list of promises for parallel execution
-    const promises: Promise<any>[] = [];
-
-    for (const bot of botPlayers) {
-      for (const company of unpricedCompanies) {
-        const sector = sectorMap.get(company.sectorId);
-        if (!sector) continue;
-
-        // Filter stockGridPrices by the sector's ipoMin/ipoMax
-        const companyIpoPrices = stockGridPrices.filter(
-          (price) => price >= sector.ipoMin && price <= sector.ipoMax,
-        );
-        if (!companyIpoPrices.length) continue;
-
-        // Pick a random price
-        const randomIndex = this.aiBotService.randomInRange(
-          0,
-          companyIpoPrices.length - 1,
-        );
-        const chosenPrice = companyIpoPrices[randomIndex];
-
-        // Create the vote promise
-        const votePromise = this.createIpoVote({
-          playerId: bot.id,
-          companyId: company.id,
-          ipoPrice: chosenPrice,
-        }).then(() => {
-          console.log(
-            `Bot [${bot.nickname}] sets IPO price = ${chosenPrice} for ${company.name}.`,
-          );
-        });
-
-        promises.push(votePromise);
-      }
-    }
-
-    // 6) Execute all promises in parallel
-    await Promise.all(promises);
   }
 
   /**
@@ -11524,6 +11153,8 @@ export class GameManagementService {
             resourceTypes: o.resourceTypes as ResourceType[],
           })),
           resourcePriceMap,
+          company,
+          sector.sectorName,
         );
 
       let totalPendingFactoryCost = computeFactoryPendingCost();
@@ -11611,29 +11242,23 @@ export class GameManagementService {
             continue;
           }
 
-          const blueprint =
-            await this.modernOperationMechanicsService.getRequiredResourcesForFactory(
+          const resourceTypes =
+            this.modernOperationMechanicsService.buildBotFactoryBlueprint(
               size,
               sector.sectorName,
+              company,
+              resourcePriceMap,
             );
-          const resourceTypes: ResourceType[] = [];
-          for (const entry of blueprint) {
-            for (let i = 0; i < entry.quantity; i++) {
-              resourceTypes.push(entry.type);
-            }
-          }
-          if (resourceTypes.length > getNumberForFactorySize(size) + 1) {
+          if (resourceTypes.length === 0) {
             continue;
           }
 
-          let totalResourceCost = 0;
-          for (const rt of resourceTypes) {
-            totalResourceCost += resourcePriceMap.get(rt) || 0;
-          }
-          const factorySizeNumber = getNumberForFactorySize(size);
-          const PLOT_FEE_FRESH = 100;
-          const constructionCost =
-            totalResourceCost * factorySizeNumber + PLOT_FEE_FRESH;
+          const constructionCost = calculateFactoryConstructionCost(
+            size,
+            resourceTypes,
+            resourcePriceMap,
+            company,
+          );
 
           const totalCost =
             totalPendingFactoryCost +
@@ -11738,19 +11363,20 @@ export class GameManagementService {
   private botComputePendingFactoryOrdersCost(
     orders: { size: FactorySize; resourceTypes: ResourceType[] }[],
     resourcePriceMap: Map<ResourceType, number>,
+    company: TraitBearer | null | undefined,
+    sectorName: SectorName,
   ): number {
-    const PLOT_FEE_FRESH = 100;
-    let total = 0;
-    for (const order of orders) {
-      let orderResourceCost = 0;
-      for (const resourceType of order.resourceTypes) {
-        orderResourceCost += resourcePriceMap.get(resourceType) || 0;
-      }
-      total +=
-        orderResourceCost * getNumberForFactorySize(order.size) +
-        PLOT_FEE_FRESH;
-    }
-    return total;
+    return orders.reduce(
+      (total, order) =>
+        total +
+        calculateFactoryConstructionCost(
+          order.size,
+          resolveFactoryBlueprint(order.resourceTypes, sectorName),
+          resourcePriceMap,
+          company,
+        ),
+      0,
+    );
   }
 
   /**

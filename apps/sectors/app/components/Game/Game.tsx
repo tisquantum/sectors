@@ -62,7 +62,6 @@ import GamePlayersRecap from "./GamePlayerRecap";
 import { toast } from "sonner";
 import { friendlyPhaseName } from "@sectors/app/helpers";
 import Headlines from "./Headlines";
-import IpoVotes from "./IpoVote";
 import { ConsumptionPhase } from "./ConsumptionPhase";
 import { OperatingRoundRevenueVoteV2, OperatingRoundRevenueVoteResolveV2 } from "./OperatingRoundRevenueV2";
 import FactoryConstructionPhase from "./FactoryConstructionPhase";
@@ -72,7 +71,6 @@ import MarketingAndResearchActionResolve from "./MarketingAndResearchActionResol
 import { EarningsCall } from "./EarningsCall";
 import {
   ConsumptionPhase as ModernConsumptionPhase,
-  FactoryConstructionPhase as ModernFactoryConstructionPhase,
   FactoryConstructionResolvePhase as ModernFactoryConstructionResolvePhase,
   EarningsCallPhase as ModernEarningsCallPhase,
   MarketingAndResearchPhase as ModernMarketingAndResearchPhase,
@@ -343,12 +341,7 @@ const Game = ({ gameId }: { gameId: string }) => {
       </div>
     ) : currentRoundData?.phase.name === PhaseName.HEADLINE_RESOLVE ? (
       <Headlines />
-    ) : currentRoundData?.phase.name === PhaseName.SET_COMPANY_IPO_PRICES ? (
-      <IpoVotes isInteractive />
-    ) : currentRoundData?.phase.name === PhaseName.RESOLVE_SET_COMPANY_IPO_PRICES ? (
-      <IpoVotes />
-    ) :
-    currentRoundData?.phase.name === PhaseName.PRIZE_VOTE_ACTION ? (
+    ) : currentRoundData?.phase.name === PhaseName.PRIZE_VOTE_ACTION ? (
       <PrizeRound />
     ) : currentRoundData?.phase.name === PhaseName.PRIZE_VOTE_RESOLVE ? (
       <PrizeRound isRevealRound />

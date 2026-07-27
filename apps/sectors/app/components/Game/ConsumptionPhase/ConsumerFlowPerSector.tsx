@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/shadcn/ca
 import { ResourceIcon } from './ResourceIcon';
 import { ConsumerFlowPerSectorProps } from './types';
 import { trpc } from '@sectors/app/trpc';
+import { formatEnumLabel } from '@sectors/app/helpers/labels';
 import { BASE_WORKER_SALARY } from '@server/data/constants';
 import { useMemo } from 'react';
 
@@ -62,7 +63,7 @@ export function ConsumerFlowPerSector({ sectors, companies, gameId }: ConsumerFl
                     <div key={index} className="bg-gray-700 rounded-lg p-3 border border-gray-600">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium text-gray-300">
-                          {profile.factorySize.replace('_', ' ')}
+                          {formatEnumLabel(profile.factorySize)}
                         </span>
                         <span className="text-sm text-green-400 font-bold">
                           {profile.consumerCount} consumers
@@ -104,7 +105,7 @@ export function ConsumerFlowPerSector({ sectors, companies, gameId }: ConsumerFl
                           <div key={factory.id} className="bg-gray-600 rounded-lg p-3 border border-gray-500">
                             <div className="flex items-center justify-between mb-2">
                               <span className="text-sm font-medium text-gray-300">
-                                {factory.size.replace('_', ' ')}
+                                {formatEnumLabel(factory.size)}
                               </span>
                               <div className="text-right">
                                 <div className="text-sm text-green-400 font-bold">

@@ -243,7 +243,9 @@ export default function ModernOperationsResolve() {
                       )}
                     >
                       <div className="p-4">
-                        <CompanyInfoV2 companyId={company.id} />
+                        {/* Summary only: results for the selected company are
+                            rendered once, below the grid. */}
+                        <CompanyInfoV2 companyId={company.id} isMinimal />
                         {/* Flow layout: absolute overlay collided with the IPO/stock row in CompanyInfoV2. */}
                         {company.isCEO ? (
                           <div className="mt-3 pt-3 border-t border-white/10 flex flex-wrap items-center gap-2 text-green-400 text-xs font-semibold">

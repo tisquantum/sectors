@@ -6,6 +6,7 @@ import { ResourceTrackType } from '@server/prisma/prisma.client';
 import { trpc } from '@sectors/app/trpc';
 import { getResourcePriceForResourceType, getSectorResourceForSectorName } from '@server/data/constants';
 import { useGame } from './GameContext';
+import { formatEnumLabel } from '@sectors/app/helpers/labels';
 import { useMemo } from 'react';
 import { SectorName } from '@server/prisma/prisma.client';
 import { Popover, PopoverTrigger, PopoverContent } from '@nextui-org/react';
@@ -188,7 +189,7 @@ export function ResourceTracksContainer() {
               return (
                 <ResourceTrack
                   key={resource.id}
-                  title={`${resource.type.replace('_', ' ')} (Sector)`}
+                  title={`${formatEnumLabel(resource.type)} (Sector)`}
                   resourceType={resource.type as ResourceType}
                   track={priceTrack}
                   currentPrice={resource.price}
