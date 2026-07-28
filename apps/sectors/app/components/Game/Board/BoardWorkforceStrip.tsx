@@ -13,7 +13,7 @@ import { sectorColors } from "@server/data/gameData";
 import { trpc } from "@sectors/app/trpc";
 import { cn } from "@/lib/utils";
 import { useGame } from "../GameContext";
-import { BoardSection } from "./BoardSection";
+import { BoardInfo, BoardSection } from "./BoardSection";
 import type { FocusLevel } from "./boardFocus";
 
 const TRACK_LENGTH = ECONOMY_SCORE_VALUES.length;
@@ -66,6 +66,28 @@ export function BoardWorkforceStrip({ focus }: { focus: FocusLevel }) {
     <BoardSection
       title="Workforce · Economy"
       hint={`${availableWorkers} free · ${allocatedWorkers} working · economy score ${economyScore}`}
+      info={
+        <BoardInfo title="Workforce and economy">
+          <p>
+            One track holds every worker in the game. Green spaces on the right
+            are the <b>free pool</b>; coloured dots on the left are workers a
+            company has hired, tinted by the sector employing them. Factories,
+            marketing campaigns and research all draw from the same pool, so a
+            busy table runs short of labour.
+          </p>
+          <p>
+            The number above the last occupied space is the{" "}
+            <b>economy score</b>, and it sets how many consumers are released
+            from the pool into the sectors each turn. More people working means
+            more people shopping.
+          </p>
+          <p>
+            Workers are not free: at every earnings call a company pays its
+            sector&apos;s salary for each worker it employs, whether or not
+            customers turned up.
+          </p>
+        </BoardInfo>
+      }
       focus={focus}
       bodyClassName="p-1.5"
     >

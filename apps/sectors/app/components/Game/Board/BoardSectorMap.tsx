@@ -18,7 +18,7 @@ import type {
 import { trpc } from "@sectors/app/trpc";
 import { cn } from "@/lib/utils";
 import { useGame } from "../GameContext";
-import { BoardSection } from "./BoardSection";
+import { BoardInfo, BoardSection } from "./BoardSection";
 import type { FocusLevel } from "./boardFocus";
 import type { OrderTarget } from "./BoardOrderModal";
 import {
@@ -27,6 +27,12 @@ import {
   groupMarkers,
   type SectorDemandTarget,
 } from "./BoardSectorDemand";
+import {
+  CompanyRevenueStrip,
+  isRevenuePhase,
+  useBoardRevenue,
+  type CompanyRevenue,
+} from "./BoardCompanyRevenue";
 
 /** A single order rendered as a tab on the edge of its company's tile. */
 interface OrderTab {
@@ -145,6 +151,7 @@ function CompanyTile({
   weight,
   canOrder,
   ownedShares,
+  revenue,
   onOpenCompany,
   onOpenOrder,
 }: {
@@ -153,6 +160,8 @@ function CompanyTile({
   weight: number;
   canOrder: boolean;
   ownedShares: number;
+  /** This turn's earnings, shown on the tile while the revenue phases run. */
+  revenue?: CompanyRevenue;
   onOpenCompany: () => void;
   onOpenOrder: (isIpo: boolean) => void;
 }) {
@@ -235,6 +244,8 @@ function CompanyTile({
             </span>
           )}
         </div>
+
+        {revenue && <CompanyRevenueStrip revenue={revenue} />}
 
         {isBankrupt && (
           <span className="absolute inset-x-1 top-1/2 -translate-y-1/2 rotate-[-12deg] border border-black/70 text-center text-[9px] font-black uppercase tracking-wider text-black/80">
@@ -349,6 +360,9 @@ export function BoardSectorMap({
       { gameId, gameTurnId: currentTurn?.id ?? "" },
       { enabled: !!gameId && !!currentTurn?.id && isModern }
     );
+
+  const revenueByCompany = useBoardRevenue(companies);
+  const showRevenue = isModern && isRevenuePhase(currentPhase?.name);
 
   /** Customers served this turn, per sector, from the companies that serve them. */
   const servedBySector = useMemo(() => {
@@ -474,6 +488,41 @@ export function BoardSectorMap({
           ? "Press IPO or Trade on a tile to place an order"
           : "Sized by market value, shaded by move from float price"
       }
+      info={
+        <BoardInfo title="Companies">
+          <p>
+            Every company in the game, grouped by sector. A sector block takes
+            space in proportion to its total market value, and each tile is
+            shaded green or red by how far that company has moved from its float
+            price — so where the money is, and where it is going, read at a
+            glance.
+          </p>
+          <p>
+            A tile shows the share price, the move, and how many shares are
+            still available: <b>IPO</b> shares are bought from the company at
+            its fixed IPO price, <b>MKT</b> shares are bought from the open
+            market at the current price and move the stock chart. Orders placed
+            on a company hang off the right edge of its tile as tabs, concealed
+            until the reveal.
+          </p>
+          <p>
+            The strip under each sector heading is its{" "}
+            <b>consumption bag</b>: the materials shoppers there will ask for,
+            how many are shopping, and how many are stuck waiting. Press it to
+            see which factories will win those customers.
+          </p>
+          <p>
+            An amber sail badge means the company has not floated yet and needs
+            that percentage of its shares sold; a red badge means it is
+            oversold.
+          </p>
+          <p>
+            While revenue is being settled each tile also carries that
+            turn&apos;s earnings: money made, how full its factories ran, the
+            shareholders&apos; verdict on the split, and your own dividend.
+          </p>
+        </BoardInfo>
+      }
       focus={focus}
       className="min-h-0 flex-1"
       bodyClassName="p-1.5 min-h-0 overflow-y-auto scrollbar"
@@ -550,6 +599,11 @@ export function BoardSectorMap({
                       )}
                       canOrder={isOrderPhase && !!authPlayer}
                       ownedShares={ownedByCompany.get(company.id) ?? 0}
+                      revenue={
+                        showRevenue
+                          ? revenueByCompany.get(company.id)
+                          : undefined
+                      }
                       onOpenCompany={() => onSelectCompany(company.id)}
                       onOpenOrder={(isIpo) =>
                         onPlaceOrder({ company, isIpo })

@@ -41,7 +41,7 @@ import {
   MoneyTransactionByEntityType,
   MoneyTransactionHistoryByPlayer,
 } from "../MoneyTransactionHistory";
-import { BoardSection, BoardStat } from "./BoardSection";
+import { BoardInfo, BoardSection, BoardStat } from "./BoardSection";
 import type { FocusLevel } from "./boardFocus";
 import { friendlyPhaseName } from "@sectors/app/helpers";
 
@@ -525,6 +525,29 @@ export function BoardPlayerBar({ focus }: { focus: FocusLevel }) {
     <BoardSection
       title="Players"
       hint={friendlyPhaseName(currentPhase?.name)}
+      info={
+        <BoardInfo title="Players">
+          <p>
+            Your pill shows <b>cash on hand</b> and <b>total value</b>, which is
+            cash plus the market value of every share you hold. Total value is
+            what the game ranks you on, and what capital gains is charged
+            against at the end of a turn. The coloured dots break your holdings
+            down by sector.
+          </p>
+          <p>
+            Opponents sit to the right in <b>priority order</b> — the number
+            beside each one. Priority is won by bidding influence and decides who
+            acts first when orders collide. A green ring means that player has
+            already submitted for this phase.
+          </p>
+          <p>
+            The right-hand strip is the table state: money left in the bank,
+            consumers waiting to be released into sectors, unallocated workers,
+            the turn number, and your limits — the certificate cap on shares in
+            one company and the share of a company any one player may hold.
+          </p>
+        </BoardInfo>
+      }
       focus={focus}
       className="shrink-0"
       bodyClassName="flex flex-wrap items-center gap-x-3 gap-y-2 pr-12"

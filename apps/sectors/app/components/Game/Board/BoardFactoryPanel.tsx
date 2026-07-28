@@ -35,7 +35,7 @@ import {
 } from "@remixicon/react";
 import { cn } from "@/lib/utils";
 import { useGame } from "../GameContext";
-import { BoardSection } from "./BoardSection";
+import { BoardInfo, BoardSection } from "./BoardSection";
 import { TRACK_COLUMN_HEIGHT } from "./BoardResourceColumns";
 import { ResourceGlyph } from "./ResourceGlyph";
 import { BoardBuildModal, type BuildTarget } from "./BoardBuildModal";
@@ -444,6 +444,33 @@ export function BoardFactoryPanel({
         totals.count > 0
           ? `${totals.count} built · ${totals.workers} workers · ${totals.served}/${totals.capacity} served`
           : "Nothing built yet"
+      }
+      info={
+        <BoardInfo title="Factories">
+          <p>
+            Every company gets a row of plots. How many, and how big a factory
+            each accepts, comes from its sector&apos;s research stage — the
+            roman numeral on an empty plot is what will fit there.
+          </p>
+          <p>
+            A factory is defined by its <b>blueprint</b>: the sector material
+            plus whatever else you add. Those materials decide two things — the
+            build cost, and which shoppers the factory can serve, since a
+            customer only goes to a factory that stocks the material they drew.
+          </p>
+          <p>
+            The sum of the blueprint&apos;s prices is the factory&apos;s{" "}
+            <b>unit price</b>. Subtract the company&apos;s brand score and you
+            have its <b>attraction</b>, and customers always walk to the lowest
+            attraction first. Capacity runs from 3 customers for a Factory I up
+            to 6 for a Factory IV.
+          </p>
+          <p>
+            Orders are charged when operations resolve and the factory starts
+            producing the turn after. Rusted factories, marked amber, must be
+            upgraded or scrapped.
+          </p>
+        </BoardInfo>
       }
       focus={focus}
       className={className}

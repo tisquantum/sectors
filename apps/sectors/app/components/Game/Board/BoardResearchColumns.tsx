@@ -20,7 +20,7 @@ import { RiFlaskFill } from "@remixicon/react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useGame } from "../GameContext";
-import { BoardSection } from "./BoardSection";
+import { BoardInfo, BoardSection } from "./BoardSection";
 import { TRACK_COLUMN_HEIGHT } from "./BoardResourceColumns";
 import type { FocusLevel } from "./boardFocus";
 
@@ -268,6 +268,33 @@ export function BoardResearchColumns({
     <BoardSection
       title="Research"
       hint="Shared per sector · milestones unlock factory tiers and demand"
+      info={
+        <BoardInfo title="Research">
+          <p>
+            Each sector has one 12-space track that every company in it shares.
+            Funding research costs the company cash and moves the shared marker
+            one or two spaces, so rivals in your sector ride along on what you
+            pay for.
+          </p>
+          <p>
+            The track is what unlocks capability. Stage 1 allows Factory I;
+            stages 2, 3 and 4 add Factory II, III and IV, and each stage also
+            opens another marketing slot. Cost rises with the stage, from $
+            {RESEARCH_COSTS_BY_PHASE[0]} up to $
+            {RESEARCH_COSTS_BY_PHASE[RESEARCH_COSTS_BY_PHASE.length - 1]}.
+          </p>
+          <p>
+            Spaces 3, 6, 9 and 12 are <b>milestones</b> granting a standing +2,
+            +3, +4 and +5 to sector demand. Research also raises the sector&apos;s
+            own material by one, which makes building there dearer.
+          </p>
+          <p>
+            When you are the CEO of a company here, a fund button appears under
+            the column during operations. One research action per company per
+            turn.
+          </p>
+        </BoardInfo>
+      }
       focus={focus}
       className={className}
       bodyClassName="p-1"

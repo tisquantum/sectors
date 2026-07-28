@@ -25,10 +25,7 @@ import OperatingRoundProduction from "../OperatingRoundProduction";
 import OperatingRoundRevenueVote from "../OperatingRoundRevenueVote";
 import OperatingRoundRevenueVoteResolve from "../OperatingRoundRevenueVoteResolve";
 import OperatingRoundStockPriceAdjustment from "../OperatingRoundStockPriceAdjustment";
-import {
-  OperatingRoundRevenueVoteV2,
-  OperatingRoundRevenueVoteResolveV2,
-} from "../OperatingRoundRevenueV2";
+import { OperatingRoundRevenueVoteV2 } from "../OperatingRoundRevenueV2";
 import CompanyActionSlider from "../../Company/CompanyActionSelectionVote";
 import CompanyVoteResolve from "../../Company/CompanyVoteResolve";
 import CapitalGains from "../CapitalGains";
@@ -49,6 +46,7 @@ import {
 } from "../ModernOperations/phases";
 import { BoardOperationsGuide } from "./BoardOperationsGuide";
 import { BoardConsumptionRecap } from "./BoardConsumptionRecap";
+import { BoardRevenueRecap } from "./BoardCompanyRevenue";
 import InsolvencyContributionComponent from "../../Company/InsolvencyContribution";
 import ForecastPhase from "../ForecastPhase";
 import ForecastResolve from "../ForecastResolve";
@@ -179,7 +177,7 @@ export function BoardPhaseAction() {
     case PhaseName.STOCK_RESULTS_OVERVIEW:
       return <StockRoundResults />;
     case PhaseName.OPERATING_PRODUCTION:
-      return <OperatingRoundProduction />;
+      return isModern ? <BoardRevenueRecap /> : <OperatingRoundProduction />;
     case PhaseName.OPERATING_PRODUCTION_VOTE:
       return isModern ? (
         <OperatingRoundRevenueVoteV2 />
@@ -188,7 +186,7 @@ export function BoardPhaseAction() {
       );
     case PhaseName.OPERATING_PRODUCTION_VOTE_RESOLVE:
       return isModern ? (
-        <OperatingRoundRevenueVoteResolveV2 />
+        <BoardRevenueRecap />
       ) : (
         <OperatingRoundRevenueVoteResolve />
       );

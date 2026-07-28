@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import { Popover, PopoverContent, PopoverTrigger } from "@nextui-org/react";
 import {
   stockGridPrices,
   stockTierChartRanges,
@@ -9,9 +8,8 @@ import {
 import { sectorColors } from "@server/data/gameData";
 import { CompanyStatus, StockTier } from "@server/prisma/prisma.client";
 import type { CompanyWithSector } from "@server/prisma/prisma.types";
-import { RiInformationLine } from "@remixicon/react";
 import { cn } from "@/lib/utils";
-import { BoardSection } from "./BoardSection";
+import { BoardInfo, BoardSection } from "./BoardSection";
 import type { FocusLevel } from "./boardFocus";
 
 const TIER_BAND_COLOR: Record<StockTier, string> = {
@@ -151,43 +149,34 @@ export function BoardStockStrip({
       title="Stock chart"
       hint="Price rises left to right · press a company for detail"
       focus={focus}
-      actions={
-        <Popover placement="bottom-end" showArrow>
-          <PopoverTrigger>
-            <button
-              type="button"
-              className="text-zinc-500 transition-colors hover:text-zinc-300"
-              aria-label="Stock chart legend"
-            >
-              <RiInformationLine size={14} />
-            </button>
-          </PopoverTrigger>
-          <PopoverContent className="max-w-[22rem] border border-zinc-700 bg-zinc-950 p-3">
-            <div className="flex flex-col gap-2">
-              <p className="text-xs leading-relaxed text-zinc-300">
-                Each tier sets how many open-market shares must be bought before
-                a company advances one space. A sale always moves it one space
-                down. Operations revenue also pushes the price up, but movement
-                halts at a tier boundary.
-              </p>
-              <div className="flex flex-col gap-1">
-                {stockTierChartRanges.map((range) => (
-                  <div
-                    key={range.tier}
-                    className="flex items-center gap-2 text-[11px] text-zinc-300"
-                  >
-                    <span
-                      className="h-3 w-5 rounded-sm"
-                      style={{ backgroundColor: TIER_BAND_COLOR[range.tier] }}
-                    />
-                    Tier {range.tier.replace("TIER_", "")} · ${range.chartMinValue}–$
-                    {range.chartMaxValue} · {range.fillSize} shares
-                  </div>
-                ))}
+      info={
+        <BoardInfo title="Stock chart">
+          <p>
+            Every company sits on one shared price ladder, cheapest on the left.
+            Buying pressure walks a company to the right and selling knocks it
+            one space left, so the chart is a live picture of who the table
+            believes in.
+          </p>
+          <p>
+            The coloured bands are <b>tiers</b>. Each tier sets how many
+            open-market shares must be bought before a company advances one
+            space, so climbing gets progressively harder. A sale always costs
+            one space regardless of tier. Operations revenue pushes the price up
+            too, but a move stops at a tier boundary rather than jumping it.
+          </p>
+          <div className="flex flex-col gap-1">
+            {stockTierChartRanges.map((range) => (
+              <div key={range.tier} className="flex items-center gap-2">
+                <span
+                  className="h-3 w-5 shrink-0 rounded-sm"
+                  style={{ backgroundColor: TIER_BAND_COLOR[range.tier] }}
+                />
+                Tier {range.tier.replace("TIER_", "")} · ${range.chartMinValue}–$
+                {range.chartMaxValue} · {range.fillSize} shares per step
               </div>
-            </div>
-          </PopoverContent>
-        </Popover>
+            ))}
+          </div>
+        </BoardInfo>
       }
       bodyClassName="p-1.5"
     >

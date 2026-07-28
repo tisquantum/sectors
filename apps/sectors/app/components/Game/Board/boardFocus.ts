@@ -140,18 +140,18 @@ const FOCUS_BY_PHASE: Partial<Record<PhaseName, BoardFocus>> = {
   },
 
   [PhaseName.OPERATING_PRODUCTION]: {
-    regions: ["companies"],
-    prompt: "Companies produce and earn revenue.",
+    regions: ["companies", "factories"],
+    prompt: "Companies produce; revenue lands on the company tiles.",
     isActionable: false,
   },
   [PhaseName.OPERATING_PRODUCTION_VOTE]: {
     regions: ["companies"],
-    prompt: "Vote on how each company spends its revenue.",
+    prompt: "Vote on how each company spends the revenue on its tile.",
     isActionable: true,
   },
   [PhaseName.OPERATING_PRODUCTION_VOTE_RESOLVE]: {
     regions: ["companies", "stocks"],
-    prompt: "Revenue votes resolve.",
+    prompt: "Revenue splits are printed on each company tile.",
     isActionable: false,
   },
   [PhaseName.OPERATING_STOCK_PRICE_ADJUSTMENT]: {

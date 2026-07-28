@@ -21,7 +21,7 @@ import { trpc } from "@sectors/app/trpc";
 import { formatEnumLabel } from "@sectors/app/helpers/labels";
 import { cn } from "@/lib/utils";
 import { useGame } from "../GameContext";
-import { BoardSection } from "./BoardSection";
+import { BoardInfo, BoardSection } from "./BoardSection";
 import type { FocusLevel } from "./boardFocus";
 
 const GLOBAL_RESOURCE_COLOR: Partial<Record<string, string>> = {
@@ -224,6 +224,29 @@ export function BoardResourceColumns({
     <BoardSection
       title="Resources"
       hint="General resources cheapen as consumed · sector resources rise with research"
+      info={
+        <BoardInfo title="Resource market">
+          <p>
+            Materials are what factories are made of. The three{" "}
+            <b>general</b> materials — circle, square and triangle — are open to
+            everyone. Each <b>sector</b> also has its own material, and every
+            factory built in that sector must include it.
+          </p>
+          <p>
+            The two kinds move in opposite directions. A general material steps
+            <b> down</b> the track each time it is used in construction, so the
+            popular ones get cheap. A sector material only ever steps{" "}
+            <b>up</b>, once per research action in that sector, so a
+            well-researched sector is an expensive place to build.
+          </p>
+          <p>
+            Price does double duty: it sets what a factory costs to build, and
+            the sum of a factory&apos;s materials is the unit price its
+            customers pay. Cheap materials win customers; dear ones earn more
+            per sale.
+          </p>
+        </BoardInfo>
+      }
       focus={focus}
       className={className}
       bodyClassName="p-1"

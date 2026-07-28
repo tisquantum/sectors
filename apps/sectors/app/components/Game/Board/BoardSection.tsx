@@ -1,8 +1,46 @@
 "use client";
 
 import { ReactNode } from "react";
+import { Popover, PopoverContent, PopoverTrigger } from "@nextui-org/react";
+import { RiInformationLine } from "@remixicon/react";
 import { cn } from "@/lib/utils";
 import type { FocusLevel } from "./boardFocus";
+
+/**
+ * The rules behind a board section, one press away. Every section carries one
+ * so the board can stay dense without becoming a puzzle.
+ */
+export function BoardInfo({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <Popover placement="bottom-start" showArrow>
+      <PopoverTrigger>
+        <button
+          type="button"
+          className="shrink-0 text-zinc-600 transition-colors hover:text-zinc-300"
+          aria-label={`How ${title.toLowerCase()} works`}
+        >
+          <RiInformationLine size={13} />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="max-w-[24rem] border border-zinc-700 bg-zinc-950 p-3">
+        <div className="flex w-full flex-col gap-2 text-left">
+          <span className="text-xs font-semibold uppercase tracking-wider text-zinc-300">
+            {title}
+          </span>
+          <div className="flex flex-col gap-2 text-[11px] leading-relaxed text-zinc-400 [&_b]:font-semibold [&_b]:text-zinc-200">
+            {children}
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 /**
  * Panel chrome shared by every region of the board. The focus level drives how
@@ -13,6 +51,7 @@ export function BoardSection({
   hint,
   focus = "idle",
   actions,
+  info,
   children,
   className,
   bodyClassName,
@@ -21,6 +60,8 @@ export function BoardSection({
   hint?: ReactNode;
   focus?: FocusLevel;
   actions?: ReactNode;
+  /** Rules explainer for this region, shown behind an info icon. */
+  info?: ReactNode;
   children: ReactNode;
   className?: string;
   bodyClassName?: string;
@@ -45,6 +86,7 @@ export function BoardSection({
         >
           {title}
         </h2>
+        {info}
         {hint && (
           <span className="min-w-0 truncate text-[10px] text-zinc-600">
             {hint}

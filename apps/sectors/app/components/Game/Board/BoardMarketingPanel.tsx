@@ -10,6 +10,7 @@ import {
 } from "@server/prisma/prisma.client";
 import { trpc } from "@sectors/app/trpc";
 import {
+  MARKETING_TIERS,
   MARKETING_TIER_CONFIG,
   getMarketingSlotCount,
   getResearchStageFromMarker,
@@ -21,7 +22,7 @@ import {
 } from "@remixicon/react";
 import { cn } from "@/lib/utils";
 import { useGame } from "../GameContext";
-import { BoardSection } from "./BoardSection";
+import { BoardInfo, BoardSection } from "./BoardSection";
 import { TRACK_COLUMN_HEIGHT } from "./BoardResourceColumns";
 import { ResourceGlyph } from "./ResourceGlyph";
 import { BoardCampaignModal, type CampaignTarget } from "./BoardCampaignModal";
@@ -180,6 +181,42 @@ export function BoardMarketingPanel({
         totals.running > 0
           ? `${totals.running} running · +${totals.brand} brand`
           : "No campaigns running"
+      }
+      info={
+        <BoardInfo title="Marketing">
+          <p>
+            A campaign does two things. It raises the company&apos;s{" "}
+            <b>brand score</b>, which is subtracted from its factories&apos;
+            unit prices when customers choose where to shop, and it drops{" "}
+            <b>temporary markers</b> into the sector&apos;s consumption bag —
+            one per material you pick — pulling in shoppers who want those
+            materials. A temporary marker disappears once it brings a customer
+            in.
+          </p>
+          <p>
+            Three tiers:{" "}
+            {MARKETING_TIERS.map((tier, index) => {
+              const config = MARKETING_TIER_CONFIG[tier];
+              return (
+                <span key={tier}>
+                  {index > 0 && "; "}
+                  <b>tier {config.label}</b> costs ${config.cost} for +
+                  {config.brandBonus} brand, +{config.demandBonus} sector demand
+                  and {config.workers} worker
+                  {config.workers === 1 ? "" : "s"}
+                </span>
+              );
+            })}
+            . Higher tiers need sector research to unlock.
+          </p>
+          <p>
+            Cash leaves immediately; the effects land when operations resolve
+            and hold for two turns before the campaign decays. A company runs
+            between two and five concurrent campaigns depending on its
+            sector&apos;s research stage — that is what the open slots here
+            represent.
+          </p>
+        </BoardInfo>
       }
       focus={focus}
       className={className}

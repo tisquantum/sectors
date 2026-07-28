@@ -15,21 +15,17 @@ The V2 version of the revenue vote component that handles consumption phase reve
 - Company-specific revenue cards with factory details
 - Same voting options as V1 (Full Dividend, Half Dividend, Retain)
 
-### OperatingRoundRevenueVoteResolveV2
-The V2 version of the revenue vote resolve component that shows the results of consumption phase revenue distribution.
+### Resolving the vote
 
-**Key Features:**
-- Only renders when `gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN`
-- Displays consumption phase revenue results
-- Shows factory performance summary
-- Distribution results with dividend calculations
-- Player dividend recipients with badges
-- Summary statistics for the consumption phase
+There is no V2 resolve panel. Once the vote is cast the results are drawn onto
+the company tiles on the board by `Board/BoardCompanyRevenue.tsx`, which also
+supplies the short totals recap shown in the phase panel.
 
 ## Integration
 
-These components are automatically integrated into the main Game component and will only render when:
-1. The current phase is `OPERATING_PRODUCTION_VOTE` or `OPERATING_PRODUCTION_VOTE_RESOLVE`
+The vote component is automatically integrated into the main Game component and
+will only render when:
+1. The current phase is `OPERATING_PRODUCTION_VOTE`
 2. The game's `operationMechanicsVersion` is set to `MODERN`
 
 ## Data Structure
