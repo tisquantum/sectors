@@ -34,6 +34,12 @@ import {
   type CompanyRevenue,
 } from "./BoardCompanyRevenue";
 import { SectorInflowChips, useSectorInflow } from "./BoardSectorInflow";
+import {
+  ShareFlowBanner,
+  ShareLedger,
+  useShareFlows,
+  type CompanyShareFlow,
+} from "./BoardShareLedger";
 
 /** A single order rendered as a tab on the edge of its company's tile. */
 interface OrderTab {
@@ -153,6 +159,7 @@ function CompanyTile({
   canOrder,
   ownedShares,
   revenue,
+  flow,
   onOpenCompany,
   onOpenOrder,
 }: {
@@ -163,6 +170,8 @@ function CompanyTile({
   ownedShares: number;
   /** This turn's earnings, shown on the tile while the revenue phases run. */
   revenue?: CompanyRevenue;
+  /** Shares and price movement from the resolution happening right now. */
+  flow?: CompanyShareFlow;
   onOpenCompany: () => void;
   onOpenOrder: (isIpo: boolean) => void;
 }) {
@@ -171,132 +180,129 @@ function CompanyTile({
   const ipoShares = company.Share.filter(
     (share) => share.location === ShareLocation.IPO
   ).length;
-  const marketShares = company.Share.filter(
-    (share) => share.location === ShareLocation.OPEN_MARKET
-  ).length;
   const isBankrupt = company.status === CompanyStatus.BANKRUPT;
   const isInactive = company.status === CompanyStatus.INACTIVE;
   const oversold = company.oversoldShares ?? 0;
 
   return (
     <div
-      className="flex min-w-0 items-stretch"
+      className="flex min-w-0 flex-col"
       style={{ flexGrow: weight, flexBasis: "112px" }}
     >
-      <button
-        type="button"
-        onClick={onOpenCompany}
-        title={`${company.name} · $${company.currentStockPrice}`}
-        className={cn(
-          "relative flex min-w-0 flex-1 flex-col justify-between gap-0.5 rounded border-l-[3px] p-1 text-left transition-transform hover:z-10 hover:scale-[1.02]",
-          isBankrupt && "opacity-50 grayscale",
-          oversold > 0 && "ring-1 ring-rose-500"
-        )}
-        style={{
-          backgroundColor: heatColor(performance),
-          borderLeftColor: sectorColor,
-        }}
-      >
-        <div className="flex min-w-0 items-baseline justify-between gap-1">
-          <span className="truncate text-[11px] font-bold leading-none text-zinc-50">
-            {company.stockSymbol}
+      <div className="flex min-w-0 flex-1 items-stretch">
+        <button
+          type="button"
+          onClick={onOpenCompany}
+          title={`${company.name} · $${company.currentStockPrice}`}
+          className={cn(
+            "relative flex min-w-0 flex-1 flex-col justify-between gap-0.5 rounded-t border-l-[3px] p-1 text-left transition-transform hover:z-10",
+            isBankrupt && "opacity-50 grayscale",
+            oversold > 0 && "ring-1 ring-rose-500",
+            flow && "ring-1 ring-sky-300/70"
+          )}
+          style={{
+            backgroundColor: heatColor(performance),
+            borderLeftColor: sectorColor,
+          }}
+        >
+          <div className="flex min-w-0 items-baseline justify-between gap-1">
+            <span className="truncate text-[11px] font-bold leading-none text-zinc-50">
+              {company.stockSymbol}
+            </span>
+            {performance !== null && (
+              <span
+                className={cn(
+                  "shrink-0 text-[9px] font-semibold tabular-nums leading-none",
+                  performance >= 0 ? "text-emerald-300" : "text-rose-300"
+                )}
+              >
+                {performance >= 0 ? "+" : ""}
+                {performance.toFixed(0)}%
+              </span>
+            )}
+          </div>
+
+          <span className="text-[13px] font-bold leading-none tabular-nums text-zinc-50">
+            ${company.currentStockPrice}
           </span>
-          {performance !== null && (
-            <span
-              className={cn(
-                "shrink-0 text-[9px] font-semibold tabular-nums leading-none",
-                performance >= 0 ? "text-emerald-300" : "text-rose-300"
+
+          {/* The register below the tile carries the pile counts, so the tile
+              itself only flags what needs attention. */}
+          <div className="flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 text-[8px] leading-none text-zinc-200/85">
+            {ownedShares > 0 && (
+              <span className="rounded bg-sky-500/40 px-1 py-px font-semibold tabular-nums">
+                You {ownedShares}
+              </span>
+            )}
+            {isInactive && (
+              <span className="flex items-center gap-0.5 rounded bg-amber-500/80 px-1 py-px font-semibold text-amber-950">
+                <RiSailboatFill size={8} />
+                {company.Sector.sharePercentageToFloat}%
+              </span>
+            )}
+            {oversold > 0 && (
+              <span className="flex items-center gap-0.5 rounded bg-rose-600/80 px-1 py-px font-semibold text-rose-50">
+                <RiErrorWarningFill size={8} />
+                {oversold}
+              </span>
+            )}
+          </div>
+
+          {revenue && <CompanyRevenueStrip revenue={revenue} />}
+          {flow && <ShareFlowBanner flow={flow} />}
+
+          {isBankrupt && (
+            <span className="absolute inset-x-1 top-1/2 -translate-y-1/2 rotate-[-12deg] border border-black/70 text-center text-[9px] font-black uppercase tracking-wider text-black/80">
+              Bankrupt
+            </span>
+          )}
+
+          {canOrder && (
+            <div className="flex gap-0.5 pt-0.5">
+              {ipoShares > 0 && (
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onOpenOrder(true);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.stopPropagation();
+                      onOpenOrder(true);
+                    }
+                  }}
+                  className="flex-1 rounded bg-amber-500/90 px-1 py-0.5 text-center text-[8px] font-bold uppercase tracking-wide text-amber-950 transition-colors hover:bg-amber-400"
+                >
+                  IPO
+                </span>
               )}
-            >
-              {performance >= 0 ? "+" : ""}
-              {performance.toFixed(0)}%
-            </span>
-          )}
-        </div>
-
-        <span className="text-[13px] font-bold leading-none tabular-nums text-zinc-50">
-          ${company.currentStockPrice}
-        </span>
-
-        <div className="flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 text-[8px] leading-none text-zinc-200/85">
-          {ipoShares > 0 && (
-            <span className="rounded bg-black/35 px-1 py-px tabular-nums">
-              IPO {ipoShares}
-            </span>
-          )}
-          <span className="rounded bg-black/35 px-1 py-px tabular-nums">
-            MKT {marketShares}
-          </span>
-          {ownedShares > 0 && (
-            <span className="rounded bg-sky-500/40 px-1 py-px font-semibold tabular-nums">
-              You {ownedShares}
-            </span>
-          )}
-          {isInactive && (
-            <span className="flex items-center gap-0.5 rounded bg-amber-500/80 px-1 py-px font-semibold text-amber-950">
-              <RiSailboatFill size={8} />
-              {company.Sector.sharePercentageToFloat}%
-            </span>
-          )}
-          {oversold > 0 && (
-            <span className="flex items-center gap-0.5 rounded bg-rose-600/80 px-1 py-px font-semibold text-rose-50">
-              <RiErrorWarningFill size={8} />
-              {oversold}
-            </span>
-          )}
-        </div>
-
-        {revenue && <CompanyRevenueStrip revenue={revenue} />}
-
-        {isBankrupt && (
-          <span className="absolute inset-x-1 top-1/2 -translate-y-1/2 rotate-[-12deg] border border-black/70 text-center text-[9px] font-black uppercase tracking-wider text-black/80">
-            Bankrupt
-          </span>
-        )}
-
-        {canOrder && (
-          <div className="flex gap-0.5 pt-0.5">
-            {ipoShares > 0 && (
               <span
                 role="button"
                 tabIndex={0}
                 onClick={(event) => {
                   event.stopPropagation();
-                  onOpenOrder(true);
+                  onOpenOrder(false);
                 }}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ") {
                     event.stopPropagation();
-                    onOpenOrder(true);
+                    onOpenOrder(false);
                   }
                 }}
-                className="flex-1 rounded bg-amber-500/90 px-1 py-0.5 text-center text-[8px] font-bold uppercase tracking-wide text-amber-950 transition-colors hover:bg-amber-400"
+                className="flex-1 rounded bg-sky-500/90 px-1 py-0.5 text-center text-[8px] font-bold uppercase tracking-wide text-sky-950 transition-colors hover:bg-sky-400"
               >
-                IPO
+                Trade
               </span>
-            )}
-            <span
-              role="button"
-              tabIndex={0}
-              onClick={(event) => {
-                event.stopPropagation();
-                onOpenOrder(false);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.stopPropagation();
-                  onOpenOrder(false);
-                }
-              }}
-              className="flex-1 rounded bg-sky-500/90 px-1 py-0.5 text-center text-[8px] font-bold uppercase tracking-wide text-sky-950 transition-colors hover:bg-sky-400"
-            >
-              Trade
-            </span>
-          </div>
-        )}
-      </button>
+            </div>
+          )}
+        </button>
 
-      <OrderTabRail tabs={tabs} accent={sectorColor} onOpen={onOpenCompany} />
+        <OrderTabRail tabs={tabs} accent={sectorColor} onOpen={onOpenCompany} />
+      </div>
+
+      <ShareLedger company={company} flow={flow} onOpen={onOpenCompany} />
     </div>
   );
 }
@@ -367,6 +373,8 @@ export function BoardSectorMap({
 
   const inflowBySector = useSectorInflow(companies);
   const isEndTurn = currentPhase?.name === PhaseName.END_TURN;
+
+  const flowByCompany = useShareFlows(companies);
 
   /** Customers served this turn, per sector, from the companies that serve them. */
   const servedBySector = useMemo(() => {
@@ -531,6 +539,16 @@ export function BoardSectorMap({
             oversold.
           </p>
           <p>
+            The column under each tile is the company&apos;s{" "}
+            <b>share register</b>: one pip per share, a row for the amber{" "}
+            <b>IPO</b> pile, a row for the blue <b>open market</b>, and a row
+            per shareholder in the colour of their avatar. A red{" "}
+            <b>short</b> row is stock borrowed against open short positions.
+            When market orders resolve, the shares that just changed hands pop
+            in on the row that received them and the tile shows the trade count
+            and how far the price stepped.
+          </p>
+          <p>
             While revenue is being settled each tile also carries that
             turn&apos;s earnings: money made, how full its factories ran, the
             shareholders&apos; verdict on the split, and your own dividend.
@@ -629,6 +647,7 @@ export function BoardSectorMap({
                           ? revenueByCompany.get(company.id)
                           : undefined
                       }
+                      flow={flowByCompany.get(company.id)}
                       onOpenCompany={() => onSelectCompany(company.id)}
                       onOpenOrder={(isIpo) =>
                         onPlaceOrder({ company, isIpo })
