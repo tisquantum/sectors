@@ -160,6 +160,69 @@ export const phaseTimes: Record<PhaseName, number> = {
   [PhaseName.FORECAST_RESOLVE]: 12 * 1000,
 };
 
+/**
+ * Phases that genuinely wait on the players. Everything else is the game
+ * resolving itself, and those phases move on by themselves rather than making
+ * everyone confirm that they have nothing to do.
+ */
+export const PHASES_REQUIRING_PLAYER_INPUT: ReadonlySet<PhaseName> = new Set([
+  PhaseName.INFLUENCE_BID_ACTION,
+  PhaseName.STOCK_MEET,
+  PhaseName.STOCK_ACTION_ORDER,
+  PhaseName.STOCK_ACTION_SHORT_ORDER,
+  PhaseName.STOCK_ACTION_OPTION_ORDER,
+  PhaseName.SET_COMPANY_IPO_PRICES,
+  PhaseName.OPERATING_MEET,
+  PhaseName.OPERATING_PRODUCTION_VOTE,
+  PhaseName.OPERATING_ACTION_COMPANY_VOTE,
+  PhaseName.DIVESTMENT,
+  PhaseName.PRIZE_VOTE_ACTION,
+  PhaseName.PRIZE_DISTRIBUTE_ACTION,
+  PhaseName.MODERN_OPERATIONS,
+  PhaseName.FACTORY_CONSTRUCTION,
+  PhaseName.MARKETING_AND_RESEARCH_ACTION,
+  PhaseName.MARKETING_CAMPAIGN,
+  PhaseName.RESEARCH_ACTION,
+  PhaseName.RUSTED_FACTORY_UPGRADE,
+  PhaseName.RESOLVE_INSOLVENCY,
+  PhaseName.SHAREHOLDER_MEETING,
+  PhaseName.FORECAST_COMMITMENT_START_TURN,
+  PhaseName.FORECAST_COMMITMENT_END_TURN,
+]);
+
+export function phaseRequiresPlayerInput(phaseName: PhaseName): boolean {
+  return PHASES_REQUIRING_PLAYER_INPUT.has(phaseName);
+}
+
+/** How long a resolution phase stays on screen before the game moves on. */
+export const REVIEW_PHASE_TIME = 5 * 1000;
+
+/** Resolution phases with enough going on to deserve a longer look. */
+export const REVIEW_PHASE_TIMES: Partial<Record<PhaseName, number>> = {
+  [PhaseName.HEADLINE_RESOLVE]: 8 * 1000,
+  [PhaseName.INFLUENCE_BID_REVEAL]: 7 * 1000,
+  [PhaseName.STOCK_ACTION_REVEAL]: 8 * 1000,
+  [PhaseName.STOCK_RESOLVE_MARKET_ORDER]: 7 * 1000,
+  [PhaseName.STOCK_RESULTS_OVERVIEW]: 8 * 1000,
+  [PhaseName.OPERATING_PRODUCTION_VOTE_RESOLVE]: 8 * 1000,
+  [PhaseName.RESOLVE_MODERN_OPERATIONS]: 7 * 1000,
+  [PhaseName.CONSUMPTION_PHASE]: 10 * 1000,
+  [PhaseName.EARNINGS_CALL]: 9 * 1000,
+  [PhaseName.START_TURN]: 8 * 1000,
+  [PhaseName.END_TURN]: 10 * 1000,
+};
+
+/**
+ * The clock a phase runs on: input phases keep their full working time, while
+ * resolution phases get a short review pause and then advance on their own.
+ */
+export function getPhaseTime(phaseName: PhaseName): number {
+  if (phaseRequiresPlayerInput(phaseName)) {
+    return phaseTimes[phaseName];
+  }
+  return REVIEW_PHASE_TIMES[phaseName] ?? REVIEW_PHASE_TIME;
+}
+
 //Stock Grid Prices
 export const stockGridPrices = [
   3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 18, 20, 23, 26, 29, 32, 35, 39, 43, 47,

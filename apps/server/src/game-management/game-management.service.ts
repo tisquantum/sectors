@@ -95,6 +95,8 @@ import {
   MAX_SHORT_ORDER_ACTIONS,
   stockTierChartRanges,
   phaseTimes,
+  getPhaseTime,
+  phaseRequiresPlayerInput,
   StockTierChartRange,
   interestRatesByTerm,
   BORROW_RATE,
@@ -6334,7 +6336,7 @@ export class GameManagementService {
       //create the rewards tracks
       this.createAwardsTracks(game.id);
 
-      if (!game.isTimerless) {
+      if (this.phaseAdvancesOnItsOwn(newPhase.name, game.isTimerless)) {
         // Start the timer for advancing to the next phase
         //TODO: Once the game is fully implemented, we can start the timer service again.  Something is wrong with it right now.
         await this.startPhaseTimer({
@@ -6763,7 +6765,7 @@ export class GameManagementService {
     }
     let phase = await this.phaseService.createPhase({
       name: phaseName,
-      phaseTime: phaseTimes[phaseName] + extraPhaseTime,
+      phaseTime: getPhaseTime(phaseName) + extraPhaseTime,
       Game: { connect: { id: gameId } },
       GameTurn: { connect: { id: game?.currentTurn || '' } },
       StockRound: stockRoundId ? { connect: { id: stockRoundId } } : undefined,
@@ -6893,6 +6895,18 @@ export class GameManagementService {
     await this.timerService.clearTimer(phaseId);
   }
 
+  /**
+   * A phase runs on a clock when the game is timed, and also whenever it is a
+   * resolution phase: those have nothing to wait for, so they show their result
+   * for a moment and then move on by themselves.
+   */
+  private phaseAdvancesOnItsOwn(
+    phaseName: PhaseName,
+    isTimerless: boolean,
+  ): boolean {
+    return !isTimerless || !phaseRequiresPlayerInput(phaseName);
+  }
+
   private async handlePhaseTransition({
     phase,
     gameId,
@@ -6969,7 +6983,7 @@ export class GameManagementService {
         phase?.companyId ||
         '',
     });
-    if (!gameState.isTimerless) {
+    if (this.phaseAdvancesOnItsOwn(nextPhase.name, gameState.isTimerless)) {
       await this.startPhaseTimer({
         phase: nextPhase,
         gameId,
@@ -10589,6 +10603,21 @@ export class GameManagementService {
       this.readinessStore[gameId] = [];
     }
 
+    // A resolution phase is only being watched, so one player asking to move on
+    // moves everybody on rather than collecting a confirmation from each of them.
+    const gameForPhase = await this.gamesService.game({ id: gameId });
+    if (gameForPhase?.currentPhaseId) {
+      const phase = await this.phaseService.phase({
+        id: gameForPhase.currentPhaseId,
+      });
+      if (phase && !phaseRequiresPlayerInput(phase.name)) {
+        if (!isReady) return;
+        await this.timerService.clearGameTimer(gameId);
+        this.handlePhaseTransition({ phase, gameId });
+        return;
+      }
+    }
+
     // 1) Update or create readiness for this player
     const readinessList = this.readinessStore[gameId];
     const existing = readinessList.find((p) => p.playerId === playerId);
@@ -10639,7 +10668,7 @@ export class GameManagementService {
       const game = await this.gamesService.game({ id: gameId });
       if (!game) throw new Error('Game not found');
       if (!game.isTimerless) {
-        this.endPhaseTimer(gameId);
+        await this.timerService.clearGameTimer(gameId);
       }
 
       // Start next phase

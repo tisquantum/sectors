@@ -17,6 +17,7 @@ import {
   RiFlashlightFill,
   RiTimeLine,
 } from "@remixicon/react";
+import { phaseRequiresPlayerInput } from "@server/data/constants";
 import { friendlyPhaseName } from "@sectors/app/helpers";
 import { cn } from "@/lib/utils";
 import { useGame } from "../GameContext";
@@ -40,6 +41,9 @@ export function BoardActionDock({ focus }: { focus: BoardFocus }) {
   const lastAutoOpenedRef = useRef<string | null>(null);
 
   const phaseId = currentPhase?.id ?? null;
+  const waitsOnPlayers = currentPhase
+    ? phaseRequiresPlayerInput(currentPhase.name)
+    : false;
 
   useEffect(() => {
     if (!phaseId || !focus.isActionable || focus.actsOnBoard) return;
@@ -73,6 +77,9 @@ export function BoardActionDock({ focus }: { focus: BoardFocus }) {
         </span>
         <span className="min-w-0 flex-1 truncate text-xs text-zinc-400">
           {focus.prompt}
+          {!waitsOnPlayers && (
+            <span className="ml-1.5 text-zinc-600">· advances on its own</span>
+          )}
         </span>
 
         <button

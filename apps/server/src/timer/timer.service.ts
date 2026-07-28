@@ -55,6 +55,14 @@ export class TimerService implements OnModuleDestroy {
     }
   }
 
+  /** Cancel whatever timer a game is currently running, whichever phase set it. */
+  clearGameTimer(gameId: string): void {
+    const timerId = this.gameTimers.get(gameId);
+    if (timerId !== undefined) {
+      this.clearTimer(timerId);
+    }
+  }
+
   onModuleDestroy() {
     this.timers.forEach((timer) => clearTimeout(timer.timeout));
     this.timers.clear();

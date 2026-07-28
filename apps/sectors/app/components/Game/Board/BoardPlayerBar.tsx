@@ -18,7 +18,11 @@ import {
   RiWallet3Fill,
 } from "@remixicon/react";
 import { calculateNetWorth } from "@server/data/helpers";
-import { DEFAULT_WORKERS, MAX_SHARE_PERCENTAGE } from "@server/data/constants";
+import {
+  DEFAULT_WORKERS,
+  MAX_SHARE_PERCENTAGE,
+  phaseRequiresPlayerInput,
+} from "@server/data/constants";
 import { sectorColors } from "@server/data/gameData";
 import {
   EntityType,
@@ -308,11 +312,37 @@ function OpponentStrip() {
     readiness.length > 0 &&
     readiness.every((r) => r.isReady);
 
+  // Resolution phases run themselves down a short clock, so nobody is being
+  // waited on and the only control offered is to move on early.
+  const needsInput = currentPhase
+    ? phaseRequiresPlayerInput(currentPhase.name)
+    : false;
+  // Bots ready themselves once the humans have, so only count people.
+  const stillDeciding = needsInput
+    ? gameState.Player.filter(
+        (player) =>
+          !player.isBot &&
+          !readiness?.find((r) => r.playerId === player.id)?.isReady
+      ).length
+    : 0;
+
+  const submitReadiness = (isReady: boolean) => {
+    if (!authPlayer) return;
+    setIsSettingReadiness(true);
+    setReadiness.mutate({
+      gameId: gameState.id,
+      playerId: authPlayer.id,
+      isReady,
+    });
+  };
+
   return (
     <div className="flex min-w-0 items-center gap-1.5">
       {ordered.map(({ player, priority }) => {
         const withShares = playersWithShares.find((p) => p.id === player.id);
-        const isReady = !!readiness?.find((r) => r.playerId === player.id)?.isReady;
+        const isReady =
+          needsInput &&
+          !!readiness?.find((r) => r.playerId === player.id)?.isReady;
         const isAuth = player.id === authPlayer?.id;
         return (
           <Popover key={player.id} placement="bottom">
@@ -321,7 +351,7 @@ function OpponentStrip() {
                 type="button"
                 title={`${player.nickname}${
                   priority ? ` · priority ${priority}` : ""
-                } · ${isReady ? "ready" : "still deciding"}`}
+                }${needsInput ? (isReady ? " · done" : " · still deciding") : ""}`}
                 className={cn(
                   "flex items-center gap-1.5 rounded-md border border-zinc-800 bg-zinc-900/70 px-1.5 py-1 leading-none transition-colors hover:border-zinc-600",
                   isAuth && "ring-1 ring-sky-500/60"
@@ -357,7 +387,18 @@ function OpponentStrip() {
           </Popover>
         );
       })}
-      {authPlayer && readiness && !allReady && (
+      {!needsInput && authPlayer && (
+        <DebounceButton
+          size="sm"
+          className="h-7 min-w-0 bg-zinc-800 px-2 text-[11px] font-semibold text-zinc-200"
+          isLoading={isSettingReadiness}
+          title="This phase moves on by itself — press to skip the wait for everyone"
+          onClick={() => submitReadiness(true)}
+        >
+          Skip ahead
+        </DebounceButton>
+      )}
+      {needsInput && authPlayer && readiness && !allReady && (
         <DebounceButton
           size="sm"
           className={cn(
@@ -365,19 +406,17 @@ function OpponentStrip() {
             authReady ? "bg-zinc-700 text-zinc-300" : "bg-emerald-600 text-white"
           )}
           isLoading={isSettingReadiness}
-          onClick={() => {
-            setIsSettingReadiness(true);
-            setReadiness.mutate({
-              gameId: gameState.id,
-              playerId: authPlayer.id,
-              isReady: !authReady,
-            });
-          }}
+          title={
+            authReady
+              ? "You are done; press to take your turn back"
+              : "End your turn for this phase"
+          }
+          onClick={() => submitReadiness(!authReady)}
         >
-          {authReady ? "Unready" : "Ready"}
+          {authReady ? `Waiting on ${stillDeciding}` : "I'm done"}
         </DebounceButton>
       )}
-      {allReady && (
+      {needsInput && allReady && (
         <span className="rounded-md bg-emerald-600/90 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-white">
           All ready
         </span>
@@ -392,6 +431,12 @@ function GameMetaStrip() {
   const bankModal = useDisclosure();
   const isModern =
     gameState.operationMechanicsVersion === OperationMechanicsVersion.MODERN;
+
+  const waitsOnPlayers = currentPhase
+    ? phaseRequiresPlayerInput(currentPhase.name)
+    : false;
+  // Resolution phases always run on their review clock, timerless game or not.
+  const onAClock = !gameState.isTimerless || !waitsOnPlayers;
 
   return (
     <div className="flex shrink-0 flex-wrap items-center gap-1.5">
@@ -441,8 +486,15 @@ function GameMetaStrip() {
         </PopoverContent>
       </Popover>
 
-      {!gameState.isTimerless && currentPhase?.phaseStartTime ? (
-        <div className="flex items-center gap-1 rounded-md border border-zinc-800 bg-zinc-900/70 px-2 py-1">
+      {onAClock && currentPhase?.phaseStartTime ? (
+        <div
+          className="flex items-center gap-1 rounded-md border border-zinc-800 bg-zinc-900/70 px-2 py-1"
+          title={
+            waitsOnPlayers
+              ? "Time left in this phase"
+              : "This phase advances by itself when the clock runs out"
+          }
+        >
           <Timer
             countdownTime={currentPhase.phaseTime / 1000}
             startDate={new Date(currentPhase.phaseStartTime)}
@@ -452,12 +504,10 @@ function GameMetaStrip() {
           />
         </div>
       ) : (
-        gameState.isTimerless && (
-          <div className="flex items-center gap-1 rounded-md border border-zinc-800 bg-zinc-900/70 px-2 py-1 text-[10px] text-amber-400">
-            <RiClockwiseFill size={14} />
-            No timer
-          </div>
-        )
+        <div className="flex items-center gap-1 rounded-md border border-zinc-800 bg-zinc-900/70 px-2 py-1 text-[10px] text-amber-400">
+          <RiClockwiseFill size={14} />
+          No timer
+        </div>
       )}
 
       <Modal
@@ -537,8 +587,15 @@ export function BoardPlayerBar({ focus }: { focus: FocusLevel }) {
           <p>
             Opponents sit to the right in <b>priority order</b> — the number
             beside each one. Priority is won by bidding influence and decides who
-            acts first when orders collide. A green ring means that player has
-            already submitted for this phase.
+            acts first when orders collide.
+          </p>
+          <p>
+            Only phases that need something from you wait for the table. In
+            those, press <b>I&apos;m done</b> when you have finished and a green
+            ring appears on your avatar; the phase ends once everyone is done or
+            the clock runs out. Phases that are just the game resolving move on
+            by themselves after a short look, and anyone may press{" "}
+            <b>Skip ahead</b> to get there sooner.
           </p>
           <p>
             The right-hand strip is the table state: money left in the bank,
