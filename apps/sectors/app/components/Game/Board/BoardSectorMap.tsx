@@ -33,6 +33,7 @@ import {
   useBoardRevenue,
   type CompanyRevenue,
 } from "./BoardCompanyRevenue";
+import { SectorInflowChips, useSectorInflow } from "./BoardSectorInflow";
 
 /** A single order rendered as a tab on the edge of its company's tile. */
 interface OrderTab {
@@ -364,6 +365,9 @@ export function BoardSectorMap({
   const revenueByCompany = useBoardRevenue(companies);
   const showRevenue = isModern && isRevenuePhase(currentPhase?.name);
 
+  const inflowBySector = useSectorInflow(companies);
+  const isEndTurn = currentPhase?.name === PhaseName.END_TURN;
+
   /** Customers served this turn, per sector, from the companies that serve them. */
   const servedBySector = useMemo(() => {
     const map = new Map<string, number>();
@@ -512,6 +516,16 @@ export function BoardSectorMap({
             see which factories will win those customers.
           </p>
           <p>
+            Beside each sector name: its <b>demand rank</b> and the slice of the
+            economy score that earns it (1st takes 50%, 2nd 30%, 3rd 20%, ties
+            split evenly); its <b>pick order</b> as <b>P1</b>, <b>P2</b> and so
+            on, which decides who takes leftover consumers and is redrawn each
+            turn so the least demanded sector picks first; and the{" "}
+            <b>consumers due in</b> at the end of the turn, being that slice
+            plus a guaranteed one per point of demand. A coloured arrow on the
+            pick order means the sector is about to move up or down it.
+          </p>
+          <p>
             An amber sail badge means the company has not floated yet and needs
             that percentage of its shares sold; a red badge means it is
             oversold.
@@ -540,11 +554,19 @@ export function BoardSectorMap({
             const demand =
               (liveSector?.demand ?? 0) + (liveSector?.demandBonus ?? 0);
             const weight = Math.max(1, (block.value / totalValue) * 100);
+            const inflow = isModern
+              ? inflowBySector.get(block.sectorId)
+              : undefined;
 
             return (
               <div
                 key={block.sectorId}
-                className="flex min-w-[240px] flex-col rounded-md border p-1"
+                className={cn(
+                  "flex min-w-[240px] flex-col rounded-md border p-1",
+                  isEndTurn &&
+                    (inflow?.incoming ?? 0) > 0 &&
+                    "ring-1 ring-emerald-400/70"
+                )}
                 style={{
                   flexGrow: weight,
                   flexBasis: "260px",
@@ -552,7 +574,7 @@ export function BoardSectorMap({
                   backgroundColor: `${block.color}14`,
                 }}
               >
-                <div className="mb-1 flex items-baseline gap-2 px-0.5">
+                <div className="mb-1 flex items-center gap-1.5 px-0.5">
                   <span
                     className="truncate text-[10px] font-bold uppercase tracking-wider"
                     style={{ color: block.color }}
@@ -562,9 +584,12 @@ export function BoardSectorMap({
                   <span className="shrink-0 text-[9px] tabular-nums text-zinc-400">
                     demand {demand}
                   </span>
-                  <span className="shrink-0 text-[9px] tabular-nums text-zinc-500">
-                    {liveSector?.consumers ?? 0} consumers
-                  </span>
+                  {inflow && (
+                    <SectorInflowChips
+                      inflow={inflow}
+                      arriving={isEndTurn}
+                    />
+                  )}
                   <span className="ml-auto shrink-0 text-[9px] tabular-nums text-zinc-600">
                     ${block.value}
                   </span>

@@ -41,8 +41,8 @@ const FOCUS_BY_PHASE: Partial<Record<PhaseName, BoardFocus>> = {
     isActionable: false,
   },
   [PhaseName.END_TURN]: {
-    regions: ["workforce", "resources", "players"],
-    prompt: "The economy settles up for the turn.",
+    regions: ["companies", "workforce", "resources", "players"],
+    prompt: "Consumers move into the sectors and the pick order is redrawn.",
     isActionable: false,
   },
   [PhaseName.HEADLINE_RESOLVE]: {
