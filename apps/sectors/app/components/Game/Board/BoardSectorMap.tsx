@@ -540,9 +540,10 @@ export function BoardSectorMap({
           </p>
           <p>
             The column under each tile is the company&apos;s{" "}
-            <b>share register</b>: one pip per share, a row for the amber{" "}
-            <b>IPO</b> pile, a row for the blue <b>open market</b>, and a row
-            per shareholder in the colour of their avatar. A red{" "}
+            <b>share register</b>: a row for the amber <b>IPO</b> pile, a row
+            for the blue <b>open market</b>, and a row per shareholder behind
+            their avatar, each reading name, count and then one square per
+            share. A red{" "}
             <b>short</b> row is stock borrowed against open short positions.
             When market orders resolve, the shares that just changed hands pop
             in on the row that received them and the tile shows the trade count

@@ -16,6 +16,7 @@ import type {
 } from "@server/prisma/prisma.types";
 import { trpc } from "@sectors/app/trpc";
 import { hashStringToColor } from "@sectors/app/helpers";
+import { createPlayerAvatarUri } from "../../Player/PlayerAvatar";
 import { cn } from "@/lib/utils";
 import { useGame } from "../GameContext";
 
@@ -32,6 +33,8 @@ interface LedgerRow {
   count: number;
   delta: number;
   isAuth: boolean;
+  /** Set for shareholders; the piles get a plain coloured disc instead. */
+  avatar?: string;
 }
 
 export interface CompanyShareFlow {
@@ -149,6 +152,19 @@ export function useShareFlows(
 
 function playerColor(nickname: string): string {
   return `#${hashStringToColor(nickname)}`;
+}
+
+/**
+ * Avatars are drawn from the nickname, so the same picture the player has in the
+ * top bar can be reused on every tile without generating it over and over.
+ */
+const avatarCache = new Map<string, string>();
+function playerAvatar(nickname: string): string {
+  const cached = avatarCache.get(nickname);
+  if (cached) return cached;
+  const uri = createPlayerAvatarUri(nickname, 24);
+  avatarCache.set(nickname, uri);
+  return uri;
 }
 
 /** One share, drawn as a pip; freshly moved pips arrive with a flourish. */
@@ -269,6 +285,7 @@ export function ShareLedger({
         count: entry.owned,
         delta: flow?.byPlayer.get(playerId) ?? 0,
         isAuth,
+        avatar: playerAvatar(entry.nickname),
       });
     }
 
@@ -302,17 +319,34 @@ export function ShareLedger({
           title={row.title}
           className="flex min-w-0 items-center gap-1 leading-none"
         >
-          <span
-            className="h-[7px] w-[7px] shrink-0 rounded-full border border-black/50"
-            style={{ backgroundColor: row.color }}
-          />
+          {row.avatar ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={row.avatar}
+              alt=""
+              width={11}
+              height={11}
+              className={cn(
+                "h-[11px] w-[11px] shrink-0 rounded-full",
+                row.isAuth && "ring-1 ring-sky-300"
+              )}
+            />
+          ) : (
+            <span
+              className="h-[9px] w-[9px] shrink-0 rounded-full border border-black/50"
+              style={{ backgroundColor: row.color }}
+            />
+          )}
           <span
             className={cn(
-              "w-[34px] shrink-0 truncate text-[8px] uppercase tracking-wide",
+              "w-[44px] shrink-0 truncate text-[8px] uppercase tracking-wide",
               row.isAuth ? "font-bold text-sky-300" : "text-zinc-400"
             )}
           >
             {row.label}
+          </span>
+          <span className="w-[8px] shrink-0 text-right text-[8px] font-bold tabular-nums text-zinc-200">
+            {row.count}
           </span>
           <span className="flex min-w-0 flex-1 flex-wrap items-center gap-px">
             {Array.from({ length: row.count }).map((_, index) => (
